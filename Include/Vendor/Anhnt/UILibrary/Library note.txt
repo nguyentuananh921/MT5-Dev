@@ -1,0 +1,23 @@
+Goal:
+- Using UI Framework without change
+- Resolve conflict between old version instruction and update code
+
+
+Code update to 
+https://www.mql5.com/en/articles/3527
+
+1. Update Enum.mqh
+//To Avoid Duplicate with buildin ENUM_SORT_MODE Change To ENUM_UI_SORT_MODE
+-Change ENUM_SORT_MODE to ENUM_UI_SORT_MODE
+-Change Table.mqh CTable class as Follow
+
+
+2. Update Element.mqh CElement class
+
+-using CElementBase::IsLocked;
+-Update m_main.  ->m_main->
+
+
+4. Update class CButton : public |CElement
+
+

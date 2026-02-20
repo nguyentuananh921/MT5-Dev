@@ -1,0 +1,10 @@
+1. During working with you, i try to learn and comment to understand so
+ - Don't chang my variable name.
+ - Don't remove my comment, (Maybe it is temporary comment for other module.)
+ - Some Comment for my note if you see it is not right please tell me.
+ - You can add anything follow by comment //Chat GPT add here for doing something.
+ - You can Modify anything follow by comment //Chat GPT modify here for doing something.
+ - To avoid loop during work, dont try to guess without checking the code
+2.During Discusion we use Vietnamese. But No Need to comment in code in Vietnamese. 
+Just Comment in English after discussion I will remove Chat GPT above.
+ 
