@@ -1,5 +1,5 @@
 ﻿//+------------------------------------------------------------------+
-//|                EMA_Display.mq5                              |
+//|                EMA.mq5                              |
 //|                Visual EMA Indicator                               |
 //+------------------------------------------------------------------+
 #property indicator_chart_window
@@ -18,7 +18,7 @@
 #property indicator_type3   DRAW_LINE
 
 //--------------------------------------------------
-#include <Anhnt/Configuration/NamingConfiguration.mqh>
+#include <Vendors/Anhnt/Configuration/NamingConfiguration.mqh>
 //--------------------------------------------------
 // Inputs (controlled by EA)
 //--------------------------------------------------
@@ -38,7 +38,7 @@ input color              inp_long_EMA_Color  = clrDarkViolet;
 input ENUM_LINE_STYLE    inp_fast_EMA_Style  = STYLE_SOLID;
 input ENUM_LINE_STYLE    inp_slow_EMA_Style  = STYLE_DASHDOT;
 input ENUM_LINE_STYLE    inp_long_EMA_Style  = STYLE_DOT;
-input int                inp_EMA_Width       = 2;
+input int                inp_EMA_Width       = 1;
 
 // true  = update EMA only on closed bar
 // false = realtime EMA (bar 0)

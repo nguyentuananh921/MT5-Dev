@@ -1,4 +1,4 @@
-//This is MQL5\Indicators\Anhnt\iBand_Display.mq5
+//This is MQL5\Indicators\Vendors\Anhnt\Custom Buildin\iBand.mq5
 #ifndef __IBAND_DISPLAY_MQ5__
 #define __IBAND_DISPLAY_MQ5__
 
@@ -37,9 +37,9 @@
    input color    InpUpperColor    = clrYellow;
    input color    InpLowerColor    = clrYellow;
 
-   input int      InpMiddleWidth   = 2;
-   input int      InpUpperWidth    = 2;
-   input int      InpLowerWidth    = 2;
+   input int      InpMiddleWidth   = 1;
+   input int      InpUpperWidth    = 1;
+   input int      InpLowerWidth    = 1;
 
    input bool inp_BB_Show_Upper   = true;
    input bool inp_BB_Show_Middle  = true;
@@ -51,7 +51,7 @@
 #endif // __IBAND_DISPLAY_MQ5_INPUT_PART__
 
 //==================================================
-#include <Anhnt/Configuration/NamingConfiguration.mqh>
+#include <Vendors/Anhnt/Configuration/NamingConfiguration.mqh>
 //==================================================
 // Indicator buffers
 //==================================================
