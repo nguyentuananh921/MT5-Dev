@@ -138,7 +138,6 @@ int OnCalculate(const int rates_total,
    int min_rates = MathMax(inp_Fast_EMA_Period, inp_Slow_EMA_Period);
    if(rates_total < min_rates)
       return 0;
-
    //--- Copy EMA data
    if(CopyBuffer(g_fast_handle, 0, 0, rates_total, g_fast_ema_buf) <= 0)
       return prev_calculated;
