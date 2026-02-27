@@ -1,0 +1,14 @@
+//+------------------------------------------------------------------+
+//|                                                      Program.mqh |
+//+------------------------------------------------------------------+
+//|                           Expert Advisor featuring GUI		     |
+//|                            https://www.mql5.com/en/articles/4727 |
+//+------------------------------------------------------------------+
+
+#include <Vendors\Anatoli Kazharski\Expert Advisor featuring GUI\EasyAndFastGUI\WndEvents.mqh>
+
+Images\\EasyAndFastGUI\\Icons
+Icons
+
+Images\\EasyAndFastGUI\\Controls
+Include\\Controls\\res

@@ -72,64 +72,65 @@ int OnInit()
       //==================================================
       // Set buffers
       //==================================================
-      SetIndexBuffer(BASE_LINE,  MiddleBuffer, INDICATOR_DATA);
-      SetIndexBuffer(UPPER_BAND, UpperBuffer,  INDICATOR_DATA);
-      SetIndexBuffer(LOWER_BAND, LowerBuffer,  INDICATOR_DATA);
+         SetIndexBuffer(BASE_LINE,  MiddleBuffer, INDICATOR_DATA);
+         SetIndexBuffer(UPPER_BAND, UpperBuffer,  INDICATOR_DATA);
+         SetIndexBuffer(LOWER_BAND, LowerBuffer,  INDICATOR_DATA);
 
-      ArraySetAsSeries(MiddleBuffer, true);
-      ArraySetAsSeries(UpperBuffer,  true);
-      ArraySetAsSeries(LowerBuffer,  true);   
+         ArraySetAsSeries(MiddleBuffer, true);
+         ArraySetAsSeries(UpperBuffer,  true);
+         ArraySetAsSeries(LowerBuffer,  true);   
 
       //==================================================   
       // Apply INPUT values to plots (runtime-safe way)
       //==================================================
-      PlotIndexSetInteger(BASE_LINE,  PLOT_LINE_COLOR, InpMiddleColor);
-      PlotIndexSetInteger(UPPER_BAND, PLOT_LINE_COLOR, InpUpperColor);
-      PlotIndexSetInteger(LOWER_BAND, PLOT_LINE_COLOR, InpLowerColor);
+         PlotIndexSetInteger(BASE_LINE,  PLOT_LINE_COLOR, InpMiddleColor);
+         PlotIndexSetInteger(UPPER_BAND, PLOT_LINE_COLOR, InpUpperColor);
+         PlotIndexSetInteger(LOWER_BAND, PLOT_LINE_COLOR, InpLowerColor);
 
-      PlotIndexSetInteger(BASE_LINE,  PLOT_LINE_STYLE, InpMiddleStyle);
-      PlotIndexSetInteger(UPPER_BAND, PLOT_LINE_STYLE, InpUpperStyle);
-      PlotIndexSetInteger(LOWER_BAND, PLOT_LINE_STYLE, InpLowerStyle);
+         PlotIndexSetInteger(BASE_LINE,  PLOT_LINE_STYLE, InpMiddleStyle);
+         PlotIndexSetInteger(UPPER_BAND, PLOT_LINE_STYLE, InpUpperStyle);
+         PlotIndexSetInteger(LOWER_BAND, PLOT_LINE_STYLE, InpLowerStyle);
 
-      PlotIndexSetInteger(BASE_LINE,  PLOT_LINE_WIDTH, InpMiddleWidth);
-      PlotIndexSetInteger(UPPER_BAND, PLOT_LINE_WIDTH, InpUpperWidth);
-      PlotIndexSetInteger(LOWER_BAND, PLOT_LINE_WIDTH, InpLowerWidth);   
-      //New added
-      PlotIndexSetDouble(BASE_LINE,  PLOT_EMPTY_VALUE, EMPTY_VALUE);
-      PlotIndexSetDouble(UPPER_BAND, PLOT_EMPTY_VALUE, EMPTY_VALUE);
-      PlotIndexSetDouble(LOWER_BAND, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+         PlotIndexSetInteger(BASE_LINE,  PLOT_LINE_WIDTH, InpMiddleWidth);
+         PlotIndexSetInteger(UPPER_BAND, PLOT_LINE_WIDTH, InpUpperWidth);
+         PlotIndexSetInteger(LOWER_BAND, PLOT_LINE_WIDTH, InpLowerWidth);  
+         
+         PlotIndexSetDouble(BASE_LINE,  PLOT_EMPTY_VALUE, EMPTY_VALUE);
+         PlotIndexSetDouble(UPPER_BAND, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+         PlotIndexSetDouble(LOWER_BAND, PLOT_EMPTY_VALUE, EMPTY_VALUE);
 
       //SETTING BARS TO START PLOTTING
       //https://www.mql5.com/en/articles/17096
-      PlotIndexSetInteger(BASE_LINE, PLOT_DRAW_BEGIN, InpBBPeriod);
-      PlotIndexSetInteger(UPPER_BAND, PLOT_DRAW_BEGIN, InpBBPeriod);
-      PlotIndexSetInteger(LOWER_BAND, PLOT_DRAW_BEGIN, InpBBPeriod);
+         PlotIndexSetInteger(BASE_LINE, PLOT_DRAW_BEGIN, InpBBPeriod);
+         PlotIndexSetInteger(UPPER_BAND, PLOT_DRAW_BEGIN, InpBBPeriod);
+         PlotIndexSetInteger(LOWER_BAND, PLOT_DRAW_BEGIN, InpBBPeriod);
+      //--- BBand visibility No Change to Buffers, Plot based on input
+         PlotIndexSetInteger(
+               BASE_LINE,
+               PLOT_DRAW_TYPE,
+               inp_BB_Show_Middle ? DRAW_LINE : DRAW_NONE
+         );
 
-      PlotIndexSetInteger(
-            BASE_LINE,
-            PLOT_DRAW_TYPE,
-            inp_BB_Show_Middle ? DRAW_LINE : DRAW_NONE
-      );
+         PlotIndexSetInteger(
+               UPPER_BAND,
+               PLOT_DRAW_TYPE,
+               inp_BB_Show_Upper ? DRAW_LINE : DRAW_NONE
+         );
 
-      PlotIndexSetInteger(
-            UPPER_BAND,
-            PLOT_DRAW_TYPE,
-            inp_BB_Show_Upper ? DRAW_LINE : DRAW_NONE
-      );
-
-      PlotIndexSetInteger(
-            LOWER_BAND,
-            PLOT_DRAW_TYPE,
-            inp_BB_Show_Lower ? DRAW_LINE : DRAW_NONE
-      );
-      PlotIndexSetString(BASE_LINE, PLOT_LABEL,
-         SMT_PREFIX + SMT_BB_NAME + "(" + "Middle" + ")");
-      PlotIndexSetString(UPPER_BAND, PLOT_LABEL,
-         SMT_PREFIX + SMT_BB_NAME + "(" + "Upper" + ")");
-      PlotIndexSetString(LOWER_BAND, PLOT_LABEL,
-         SMT_PREFIX + SMT_BB_NAME + "(" + "Lower" + ")");
-
-
+         PlotIndexSetInteger(
+               LOWER_BAND,
+               PLOT_DRAW_TYPE,
+               inp_BB_Show_Lower ? DRAW_LINE : DRAW_NONE
+         );
+      //Plot Label
+         PlotIndexSetString(BASE_LINE, PLOT_LABEL,
+            SMT_PREFIX + SMT_BB_NAME + "(" + "Middle" + ")");
+         PlotIndexSetString(UPPER_BAND, PLOT_LABEL,
+            SMT_PREFIX + SMT_BB_NAME + "(" + "Upper" + ")");
+         PlotIndexSetString(LOWER_BAND, PLOT_LABEL,
+            SMT_PREFIX + SMT_BB_NAME + "(" + "Lower" + ")");
+      
+      //Setting Indicator name
       IndicatorSetInteger(INDICATOR_DIGITS, 0); // Use chart digits _Digits
 
       string short_name = SMT_PREFIX + SMT_BB_NAME +
@@ -141,114 +142,208 @@ int OnInit()
       //==================================================
       // Create iBands handle
       //==================================================
-      g_bb_handle = iBands(
-         _Symbol,
-         _Period,
-         InpBBPeriod,
-         InpBBShift,
-         InpBBDeviation,
-         inp_Applied_Price
-      );
-      if(g_bb_handle == INVALID_HANDLE)
-      {
-         Print("From Indicator iBand_Display INIT FAILED. Unable to create iBands handle. GetLastError = ", GetLastError());
-         return INIT_FAILED;
-      }
-      ChartRedraw();   
-      Print("From Indicator iBand_Display INIT SUCCESS");
-      return INIT_SUCCEEDED;
+         g_bb_handle = iBands(
+            _Symbol,
+            _Period,
+            InpBBPeriod,
+            InpBBShift,
+            InpBBDeviation,
+            inp_Applied_Price
+         );
+         if(g_bb_handle == INVALID_HANDLE)
+         {
+            Print("From Indicator iBand_Display INIT FAILED. Unable to create iBands handle. GetLastError = ", GetLastError());
+            return INIT_FAILED;
+         }
+         ChartRedraw();   
+         //Print("From Indicator iBand_Display INIT SUCCESS");
+         return INIT_SUCCEEDED;
    }
 //+------------------------------------------------------------------+
-int OnCalculate(
-   const int rates_total,
-   const int prev_calculated,
-   const datetime &time[],
-   const double &open[],
-   const double &high[],
-   const double &low[],
-   const double &close[],
-   const long &tick_volume[],
-   const long &volume[],
-   const int &spread[]
-)
-   {
-      //https://www.mql5.com/en/docs/indicators/ibands
-      if(rates_total <= InpBBPeriod)   // Not enough bars to calculate the indicator
-         return 0;
-      int calculated = BarsCalculated(g_bb_handle);//--- wait until iBands is ready
-      if(calculated <= InpBBPeriod)
-         return prev_calculated; 
-         int to_copy = MathMin(calculated, rates_total);
-         // Print("DEBUG from OnCalculate in Indicator After Waiting BarsCalculated | Symbol=", _Symbol,
-         //       " | Period=", _Period);
-         // Print(" | BarsCalculated(iBands)=", calculated,
-         //       " | Number of Bar in Chart= ",Bars(_Symbol,_Period));  
+// int OnCalculate(
+//    const int rates_total,
+//    const int prev_calculated,
+//    const datetime &time[],
+//    const double &open[],
+//    const double &high[],
+//    const double &low[],
+//    const double &close[],
+//    const long &tick_volume[],
+//    const long &volume[],
+//    const int &spread[]
+// )
+//    {
+//       //https://www.mql5.com/en/docs/indicators/ibands
+//       if(rates_total <= InpBBPeriod)   // Not enough bars to calculate the indicator
+//          return 0;
+//       int calculated = BarsCalculated(g_bb_handle);//--- wait until iBands is ready
+//       if(calculated <= InpBBPeriod)
+//          return prev_calculated; 
+//          int to_copy = MathMin(calculated, rates_total);
+//          // Print("DEBUG from OnCalculate in Indicator After Waiting BarsCalculated | Symbol=", _Symbol,
+//          //       " | Period=", _Period);
+//          // Print(" | BarsCalculated(iBands)=", calculated,
+//          //       " | Number of Bar in Chart= ",Bars(_Symbol,_Period));  
 
-      //--- This block is executed when the indicator is initially attached to a chart
-      if(prev_calculated == 0)
-      {
-         ArrayInitialize(MiddleBuffer, EMPTY_VALUE);
-         ArrayInitialize(UpperBuffer,  EMPTY_VALUE);
-         ArrayInitialize(LowerBuffer,  EMPTY_VALUE);
-         //Copy all available data at once
-         CopyBuffer(g_bb_handle, BASE_LINE,  0, to_copy, MiddleBuffer);
-         CopyBuffer(g_bb_handle, UPPER_BAND, 0, to_copy, UpperBuffer);
-         CopyBuffer(g_bb_handle, LOWER_BAND, 0, to_copy, LowerBuffer);      
+//       //--- This block is executed when the indicator is initially attached to a chart
+//       if(prev_calculated == 0)
+//       {
+//          ArrayInitialize(MiddleBuffer, EMPTY_VALUE);
+//          ArrayInitialize(UpperBuffer,  EMPTY_VALUE);
+//          ArrayInitialize(LowerBuffer,  EMPTY_VALUE);
+//          //Copy all available data at once
+//          CopyBuffer(g_bb_handle, BASE_LINE,  0, to_copy, MiddleBuffer);
+//          CopyBuffer(g_bb_handle, UPPER_BAND, 0, to_copy, UpperBuffer);
+//          CopyBuffer(g_bb_handle, LOWER_BAND, 0, to_copy, LowerBuffer);      
 
-         // Print("DEBUG from OnCalculate First Initial | Symbol=", _Symbol,
-         //       " | Period=", _Period,
-         //       " | BarsCalculated(iBands)=", calculated);
-         return rates_total;    
-      }   
-      //--- This block is executed on every new bar open
-      if(prev_calculated != rates_total && prev_calculated != 0)
-      {   
-      // NEXT RUNS:
-      // Only update the newest bar (index 0).
-      // Do NOT shift arrays manually (series handles it).
-      //==================================================
-         double tmp[1];
-         if(CopyBuffer(g_bb_handle, BASE_LINE, 0, 1, tmp) > 0)
-         MiddleBuffer[0] = tmp[0];
+//          // Print("DEBUG from OnCalculate First Initial | Symbol=", _Symbol,
+//          //       " | Period=", _Period,
+//          //       " | BarsCalculated(iBands)=", calculated);
+//          return rates_total;    
+//       }   
+//       //--- This block is executed on every new bar open
+//       if(prev_calculated != rates_total && prev_calculated != 0)
+//       {   
+//       // NEXT RUNS:
+//       // Only update the newest bar (index 0).
+//       // Do NOT shift arrays manually (series handles it).
+//       //==================================================
+//          double tmp[1];
+//          if(CopyBuffer(g_bb_handle, BASE_LINE, 0, 1, tmp) > 0)
+//          MiddleBuffer[0] = tmp[0];
 
-         if(CopyBuffer(g_bb_handle, UPPER_BAND, 0, 1, tmp) > 0)
-            UpperBuffer[0] = tmp[0];
+//          if(CopyBuffer(g_bb_handle, UPPER_BAND, 0, 1, tmp) > 0)
+//             UpperBuffer[0] = tmp[0];
 
-         if(CopyBuffer(g_bb_handle, LOWER_BAND, 0, 1, tmp) > 0)
-            LowerBuffer[0] = tmp[0];
-         // Print("DEBUG from OnCalculate New Bar Detected | Symbol=", _Symbol,
-         //       " | Period=", _Period,
-         //       " | prev_calculated=", prev_calculated,
-         //       " | rates_total=", rates_total);
+//          if(CopyBuffer(g_bb_handle, LOWER_BAND, 0, 1, tmp) > 0)
+//             LowerBuffer[0] = tmp[0];
+//          // Print("DEBUG from OnCalculate New Bar Detected | Symbol=", _Symbol,
+//          //       " | Period=", _Period,
+//          //       " | prev_calculated=", prev_calculated,
+//          //       " | rates_total=", rates_total);
          
-         return rates_total;      
-      }  
-      return rates_total;
-   }
-//+------------------------------------------------------------------+
+//          return rates_total;      
+//       }  
+//       return rates_total;
+//    }
+// //+------------------------------------------------------------------+
 
-bool FillArraysFromBuffers(
-   double &base_values  [],   // MiddleBuffer
-   double &upper_values [],   // UpperBuffer
-   double &lower_values [],   // LowerBuffer
-   int shift,                 // shift = 0 → realtime
-   int ind_handle,
-   int amount
-)
+// bool FillArraysFromBuffers(
+//    double &base_values  [],   // MiddleBuffer
+//    double &upper_values [],   // UpperBuffer
+//    double &lower_values [],   // LowerBuffer
+//    int shift,                 // shift = 0 → realtime
+//    int ind_handle,
+//    int amount
+// )
+//    {
+//       // NOTE:
+//       // Currently not used.
+//       // Kept for future helper / EA logic as planned.
+
+//       ResetLastError();
+//       if(CopyBuffer(ind_handle, BASE_LINE,  -shift, amount, base_values) < 0)
+//          return false;
+//       if(CopyBuffer(ind_handle, UPPER_BAND, -shift, amount, upper_values) < 0)
+//          return false;
+//       if(CopyBuffer(ind_handle, LOWER_BAND, -shift, amount, lower_values) < 0)
+//          return false;
+//       return true;
+//    }
+
+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   //--- not enough bars
+   if(rates_total < inp_Long_EMA_Period)
+      return 0;
+
+   //--- wait until EMA handles ready
+   if(BarsCalculated(g_fast_handle) < rates_total ||
+      BarsCalculated(g_slow_handle) < rates_total ||
+      BarsCalculated(g_long_handle) < rates_total)
+      return prev_calculated;
+
+   //--- determine start position (iBands style)
+   int start;
+
+   if(prev_calculated == 0)
+      start = 1;                   // first calculation
+   else
+      start = prev_calculated - 1; // recalc last bar
+
+   int to_copy = rates_total - start;
+
+   //--- copy EMA data only needed part
+   if(CopyBuffer(g_fast_handle, 0, start, to_copy, g_fast_ema_buf) <= 0)
+      return prev_calculated;
+
+   if(CopyBuffer(g_slow_handle, 0, start, to_copy, g_slow_ema_buf) <= 0)
+      return prev_calculated;
+
+   if(CopyBuffer(g_long_handle, 0, start, to_copy, g_long_ema_buf) <= 0)
+      return prev_calculated;
+
+   double offset = 20 * _Point;
+
+   //--- main calculation loop
+   for(int i = start; i < rates_total; i++)
    {
-      // NOTE:
-      // Currently not used.
-      // Kept for future helper / EA logic as planned.
+      double ema_fast = g_fast_ema_buf[i];
+      double ema_slow = g_slow_ema_buf[i];
+      double ema_long = g_long_ema_buf[i];
 
-      ResetLastError();
-      if(CopyBuffer(ind_handle, BASE_LINE,  -shift, amount, base_values) < 0)
-         return false;
-      if(CopyBuffer(ind_handle, UPPER_BAND, -shift, amount, upper_values) < 0)
-         return false;
-      if(CopyBuffer(ind_handle, LOWER_BAND, -shift, amount, lower_values) < 0)
-         return false;
-      return true;
+      // clear this bar first
+      g_price_fast_buy_ema_buf[i]  = EMPTY_VALUE;
+      g_price_fast_sell_ema_buf[i] = EMPTY_VALUE;
+      g_price_slow_buy_ema_buf[i]  = EMPTY_VALUE;
+      g_price_slow_sell_ema_buf[i] = EMPTY_VALUE;
+      g_price_long_buy_ema_buf[i]  = EMPTY_VALUE;
+      g_price_long_sell_ema_buf[i] = EMPTY_VALUE;
+
+      //================ FAST EMA =================
+      if(open[i] <= ema_fast && close[i] > ema_fast)
+         g_price_fast_buy_ema_buf[i] = low[i] - offset;
+
+      if(open[i] >= ema_fast && close[i] < ema_fast)
+         g_price_fast_sell_ema_buf[i] = high[i] + offset;
+
+      //================ SLOW EMA =================
+      if(open[i] <= ema_slow && close[i] > ema_slow)
+         g_price_slow_buy_ema_buf[i] = low[i] - offset;
+
+      if(open[i] >= ema_slow && close[i] < ema_slow)
+         g_price_slow_sell_ema_buf[i] = high[i] + offset;
+
+      //================ LONG EMA =================
+      if(open[i] <= ema_long && close[i] > ema_long)
+         g_price_long_buy_ema_buf[i] = low[i] - offset;
+
+      if(open[i] >= ema_long && close[i] < ema_long)
+         g_price_long_sell_ema_buf[i] = high[i] + offset;
    }
+
+   //--- prevent repaint on current forming bar
+   g_price_fast_buy_ema_buf[0]  = EMPTY_VALUE;
+   g_price_fast_sell_ema_buf[0] = EMPTY_VALUE;
+
+   g_price_slow_buy_ema_buf[0]  = EMPTY_VALUE;
+   g_price_slow_sell_ema_buf[0] = EMPTY_VALUE;
+
+   g_price_long_buy_ema_buf[0]  = EMPTY_VALUE;
+   g_price_long_sell_ema_buf[0] = EMPTY_VALUE;
+
+   return rates_total;
+}
 #endif // __IBAND_DISPLAY_MQ5__
 
 

@@ -1,0 +1,14 @@
+class CProgram : public CWndEvents
+{
+private:
+   .......
+   //--- Standard chart
+   CStandardChart    m_sub_chart1;
+........
+
+}
+
+class CStandardChart : public CElement
+{
+....
+}

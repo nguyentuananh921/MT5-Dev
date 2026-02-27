@@ -3,8 +3,8 @@ Add SeparateLine
 Add Context Menu
 Add MenuBar
 
-//|                           Graphical Interfaces IV		     |
-//|                           https://www.mql5.com/en/articles/2308  |
+//|                           Graphical Interfaces VI		     |
+//|                           https://www.mql5.com/en/articles/2468  |
 
 Images\\EasyAndFastGUI\\Controls
 Include\\Controls\\res
@@ -14,4 +14,4 @@ Images\\EasyAndFastGUI\\Icons
 Icons
 
 
-#include <Vendors\Anatoli Kazharski\Graphical Interfaces III\EasyAndFastGUI\Controls\WndEvents.mqh>
+#include <Vendors\Anatoli Kazharski\Graphical Interfaces VI\EasyAndFastGUI\Controls\WndEvents.mqh>
