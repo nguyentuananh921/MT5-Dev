@@ -1,0 +1,28 @@
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Icons" "D:\MT5-Dev\Icons"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Include\Vendor" "D:\MT5-Dev\Include\Vendor"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Indicators\Vendors" "D:\MT5-Dev\Indicators\Vendors"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Include\Vendors" "D:\MT5-Dev\Include\Vendors"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Include\Vendors" "D:\MT5-Dev\Indicators\Vendors\Anatoli Kazharski"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Experts\Alexander Fedosov" "D:\MT5-Dev\Experts\Alexander Fedosov"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Experts\Allan Munene Mutiiria" "D:\MT5-Dev\Experts\Allan Munene Mutiiria"
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Experts\Hlomohang John Borotho" "D:\MT5-Dev\Experts\Hlomohang John Borotho"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Experts\Clemence Benjamin" "D:\MT5-Dev\Experts\Clemence Benjamin"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Experts\Dmitry Voronkov" "D:\MT5-Dev\Experts\Dmitry Voronkov"
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Files\SoundsLib
+
+D:\MT5-Dev\Files\SoundsLib
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Files\SoundsLib" "D:\MT5-Dev\Files\SoundsLib"
+
+
+
+

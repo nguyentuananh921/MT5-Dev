@@ -1,9 +1,9 @@
 ﻿// Utilities/timeframe.mqh
 #ifndef _TIMEFRAME_MQH_
 #define _TIMEFRAME_MQH_
-#include <Anhnt/Configuration/EnumConfiguration.mqh>
+#include <Vendors/Anhnt/Configuration/EnumConfiguration.mqh>
 
-extern ENUM_TIMEFRAMES g_last_chart_tf;
+//extern ENUM_TIMEFRAMES g_last_chart_tf;
 
 string GetTimeframeShortName(const ENUM_TIMEFRAMES timeframe)
   {
@@ -34,19 +34,19 @@ string GetTimeframeShortName(const ENUM_TIMEFRAMES timeframe)
       }
   }
   
-  bool IsChartTimeframeChanged()
-   {
-      ENUM_TIMEFRAMES current_tf = (ENUM_TIMEFRAMES)_Period;
+//   bool IsChartTimeframeChanged()
+//    {
+//       ENUM_TIMEFRAMES current_tf = (ENUM_TIMEFRAMES)_Period;
    
-      if(current_tf != g_last_chart_tf)
-      {
-         g_last_chart_tf = current_tf;
-         Print("TF check from IsChartTimeframeChanged | last=", GetTimeframeShortName(g_last_chart_tf),
-      " current=", GetTimeframeShortName(_Period));
-         return true;
-      }
-      return false;
-   }   
+//       if(current_tf != g_last_chart_tf)
+//       {
+//          g_last_chart_tf = current_tf;
+//          Print("TF check from IsChartTimeframeChanged | last=", GetTimeframeShortName(g_last_chart_tf),
+//       " current=", GetTimeframeShortName(_Period));
+//          return true;
+//       }
+//       return false;
+//    }   
    
 int GetTFIndex(const ENUM_TIMEFRAMES tf)
 {
