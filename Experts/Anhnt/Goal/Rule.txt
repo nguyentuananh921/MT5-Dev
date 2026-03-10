@@ -7,4 +7,43 @@
  - To avoid loop during work, dont try to guess without checking the code
 2.During Discusion we use Vietnamese. But No Need to comment in code in Vietnamese. 
 Just Comment in English after discussion I will remove Chat GPT above.
- 
+
+
+1. Dịch giúp tớ các comment trong đoạn này từ tiếng Nga sang tiếng Anh tuyệt đối giữ nguyên tên biến
+2. Tách các class nếu có ra thành các file riêng.thêm vào đầu mỗi file đoạn này
+
+//+------------------------------------------------------------------+
+//|                                                 ControlEnums.mqh |
+//+------------------------------------------------------------------+
+//|                   Tables in the MVC Paradigm in MQL5             |
+//|                Customizable and sortable table columns	         |
+//|                           https://www.mql5.com/en/articles/19979 |
+//+------------------------------------------------------------------+
+
+Nhớ đổi tên file là tên class bỏ chữ C ở đầu đi, đổi chữ Program kia thành tên file.
+3. Thêm Include Guard vào giúp tớ.
+4. Đừng thảo luận gì gửi tớ bản full mình sẽ trao đổi sau.
+
+Mục tiêu hiện tại là chúng ta bắt chước và học theo
+https://www.mql5.com/en/articles/19979
+Refactor lại.
+Code gốc họ có 4 file.
+1. Tables.mqh	 Class Library	 Classes for creating a table model
+2. Base.mqh	 Class Library	 Classes for creating a base object of controls
+3. Controls.mqh	 Class Library	 Control classes
+4. iTestTable.mq5	 Test indicator	 Indicator for testing manipulations with the TableView control
+
+Các bước đã làm:
+Step 1: Chuyển file số 4 thành EA Và đã chạy được rồi. 
+Step 2: 
+- Dịch phần comment các file 1,2,3 từ tiêng Nga sang tiếng Anh.
+- Tách các file 1,2,3 thành các class riêng rẽ các class thuộc file nào thì trước mắt chuyển vào thư mục đó. 
+  Cụ thể các file tách từ Table.mqh sẽ đưa về thư mục Table.
+  Trước mắt chúng ta có 3 thư mục Table, Base, Controls.
+-
+Mục tiêu của step 2 này là phải Chạy được như step 1.
+- Để đạt được mục tiêu này trước mắt rà soát lại phần Include.
+
+Giờ các file 1,2,3 chúng ta tách ra thành các Class riêng rẽ class thuộc file nào thì chuyển vào thư mục đó.
+Giờ chúng ta làm thế nào để các class compile được và EA chạy được.
+Có lẽ chúng ta rà soát lại phần include thôi không tối ưu gì cả.
