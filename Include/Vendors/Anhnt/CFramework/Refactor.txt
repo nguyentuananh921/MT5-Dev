@@ -1,0 +1,68 @@
+bool movable;
+ENUM_INPUT_YES_NO autosize;
+ENUM_AUTO_SIZE_MODE autosizemode;
+
+
+Include\Vendors\Anhnt\CFramework\GuiComponent\ScrollBar\
+
+#include <Vendors/Anhnt/CFramework/GuiComponent/ScrollBar/ScrollBarVertical.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ScrollBar/ScrollBarHorizontal.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ScrollBar/ScrollBarThumb.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ScrollBar/ScrollBar.mqh>
+
+#include <Vendors/Anhnt/CFramework/GuiComponent/ArrowButton/ArrowUpButton.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ArrowButton/ArrowDownButton.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ArrowButton/ArrowLeftButton.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ArrowButton/ArrowRightButton.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ArrowButton/ArrowUpDownBox.mqh>
+#include <Vendors/Anhnt/CFramework/GuiComponent/ArrowButton/ArrowLeftRightBox.mqh>
+
+
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/WForms/WinFormBase.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/WForms/GlareObj.mqh>
+
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/WForms/Common Controls/Button.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/WForms/Containers/Container.mqh>
+
+
+#include <Vendors/Anhnt/CFramework/Core/BaseObj/BaseObj.mqh>
+#include <Vendors/Anhnt/CFramework/Core/BaseObj/BaseObjExt.mqh>
+#include <Vendors/Anhnt/CFramework/Core/BaseObj/EventBaseObj.mqh>
+#include <Vendors/Anhnt/CFramework/Core/BaseObj/BaseEvent.mqh>
+
+
+
+#include <Vendors/Anhnt/CFramework/Core/BaseGraph/GBaseObj.mqh>
+#include <Vendors/Anhnt/CFramework/Core/BaseGraph/GraphElmControl.mqh>
+#include <Vendors/Anhnt/CFramework/Core/BaseGraph/GCnvElement.mqh>
+#include <Vendors/Anhnt/CFramework/Core/BaseGraph/ShadowObj.mqh>
+
+#include <Vendors/Anhnt/CFramework/Old/Services/DELib.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Services/MouseState.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Services/Select.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Services/Properties.mqh>
+
+
+
+
+#include <Vendors/Anhnt/CFramework/Old/Graph/Form.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Graph/Extend/CGStdGraphObjExtToolkit.mqh>
+
+
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/Animations/Animations.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Trade/TradeObj.mqh.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Chart/ChartWnd.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/Form.mqh>
+
+#include <Vendors/Anhnt/CFramework/Old/Objects/Graph/Extend/CGStdGraphObjExtToolkit.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Orders>Order.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Events/Event.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Accounts/Account.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Symbols/Symbol.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/PendRequest/PendRequest.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Indicators/Buffer.mqh>
+
+
+
+#include <Vendors/Anhnt/CFramework/Old/Objects/Series/Patterns/Pattern.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Objects/Series/SeriesDE.mqh>
