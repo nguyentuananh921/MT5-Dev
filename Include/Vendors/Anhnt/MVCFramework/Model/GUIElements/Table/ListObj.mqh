@@ -20,10 +20,16 @@
 //+------------------------------------------------------------------+
 //|Include Custome library                                           |
 //+------------------------------------------------------------------+
+/*
 #include "TableDefines.mqh"
 #include "TableEnums.mqh"
+*/
+#include <Vendors/Anhnt/CFramework/Defines/Defines.mqh>  // MARKER_START_DATA, CELL_WIDTH_IN_CHARS
+#include <Vendors/Anhnt/CFramework/Defines/Enums.mqh>    // ENUM_OBJECT_TYPE, ENUM_DATATYPE
+
+
 #include "TableCell.mqh"
-//#include "TableRow.mqh"
+#include "TableRow.mqh"
 #include "TableModel.mqh"
 #include "ColumnCaption.mqh"
 #include "TableHeader.mqh"
@@ -41,7 +47,7 @@ class CTableByParam;
 class CListObj : public CList
   {
 protected:
-   ENUM_OBJECT_TYPE m_element_type;   // Type of object to be created in CreateElement()
+   ENUM_TABLE_OBJECT_TYPE m_element_type;   // Type of object to be created in CreateElement()
 
 public:
 

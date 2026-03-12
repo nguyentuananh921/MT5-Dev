@@ -10,16 +10,16 @@
 #define __TABLE_DEFINES_MQH__
 
 #include "TableEnums.mqh"
-//+------------------------------------------------------------------+
-//| Macros                                                           |
-//+------------------------------------------------------------------+
-#define  __TABLES__                 // Identifier of this file
-#define  MARKER_START_DATA    -1    // Marker indicating the beginning of data in the file
-#define  MAX_STRING_LENGTH    128   // Maximum string length in a table cell
-#define  CELL_WIDTH_IN_CHARS  19    // Table cell width in characters
-#define  ASC_IDX_CORRECTION   10000 // Offset of column index for ascending sort
-#define  DESC_IDX_CORRECTION  20000 // Offset of column index for descending sort
-//+------------------------------------------------------------------+
+// //+------------------------------------------------------------------+
+// //| Macros                                                           |
+// //+------------------------------------------------------------------+
+// #define  __TABLES__                 // Identifier of this file
+// #define  MARKER_START_DATA    -1    // Marker indicating the beginning of data in the file
+// #define  MAX_STRING_LENGTH    128   // Maximum string length in a table cell
+// #define  CELL_WIDTH_IN_CHARS  19    // Table cell width in characters
+// #define  ASC_IDX_CORRECTION   10000 // Offset of column index for ascending sort
+// #define  DESC_IDX_CORRECTION  20000 // Offset of column index for descending sort
+// //+------------------------------------------------------------------+
 //| Returns object type description as string                        |
 //+------------------------------------------------------------------+
 string TypeDescription(const ENUM_OBJECT_TYPE type)

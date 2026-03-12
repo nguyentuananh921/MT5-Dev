@@ -24,8 +24,7 @@ class CBaseObj : public CObject
   {
 protected:
    int               m_id;         // Identifier
-   ushort            m_name[];     // Name
-   
+   ushort            m_name[];     // Name   
 public:
 
 //--- Set (1) name, (2) identifier
@@ -98,26 +97,24 @@ void CBaseObj::Print(void)
 //+------------------------------------------------------------------+
 bool CBaseObj::Save(const int file_handle)
   {
-   if(file_handle==INVALID_HANDLE)
-      return false;
+      if(file_handle==INVALID_HANDLE)
+         return false;
+   //--- Save data start marker
+      if(::FileWriteLong(file_handle,-1)!=sizeof(long))
+         return false;
+   //--- Save object type
+      if(::FileWriteInteger(file_handle,this.Type(),INT_VALUE)!=INT_VALUE)
+         return false;
 
-//--- Save data start marker
-   if(::FileWriteLong(file_handle,-1)!=sizeof(long))
-      return false;
+   //--- Save identifier
+      if(::FileWriteInteger(file_handle,this.m_id,INT_VALUE)!=INT_VALUE)
+         return false;
 
-//--- Save object type
-   if(::FileWriteInteger(file_handle,this.Type(),INT_VALUE)!=INT_VALUE)
-      return false;
+   //--- Save name
+      if(::FileWriteArray(file_handle,this.m_name)!=sizeof(this.m_name))
+         return false;
 
-//--- Save identifier
-   if(::FileWriteInteger(file_handle,this.m_id,INT_VALUE)!=INT_VALUE)
-      return false;
-
-//--- Save name
-   if(::FileWriteArray(file_handle,this.m_name)!=sizeof(this.m_name))
-      return false;
-
-   return true;
+      return true;
   }
 
 //+------------------------------------------------------------------+
@@ -125,25 +122,24 @@ bool CBaseObj::Save(const int file_handle)
 //+------------------------------------------------------------------+
 bool CBaseObj::Load(const int file_handle)
   {
-   if(file_handle==INVALID_HANDLE)
-      return false;
+      if(file_handle==INVALID_HANDLE)
+         return false;
 
-//--- Check start marker
-   if(::FileReadLong(file_handle)!=-1)
-      return false;
+   //--- Check start marker
+      if(::FileReadLong(file_handle)!=-1)
+         return false;
 
-//--- Check type
-   if(::FileReadInteger(file_handle,INT_VALUE)!=this.Type())
-      return false;
+   //--- Check type
+      if(::FileReadInteger(file_handle,INT_VALUE)!=this.Type())
+         return false;
 
-//--- Load identifier
-   this.m_id=::FileReadInteger(file_handle,INT_VALUE);
+   //--- Load identifier
+      this.m_id=::FileReadInteger(file_handle,INT_VALUE);
 
-//--- Load name
-   if(::FileReadArray(file_handle,this.m_name)!=sizeof(this.m_name))
-      return false;
-
-   return true;
+   //--- Load name
+      if(::FileReadArray(file_handle,this.m_name)!=sizeof(this.m_name))
+         return false;
+      return true;
   }
 string ElementDescription(const ENUM_ELEMENT_TYPE type)
 {

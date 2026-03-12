@@ -1,7 +1,3 @@
-bool movable;
-ENUM_INPUT_YES_NO autosize;
-ENUM_AUTO_SIZE_MODE autosizemode;
-
 
 Include\Vendors\Anhnt\CFramework\GuiComponent\ScrollBar\
 
@@ -66,3 +62,21 @@ Include\Vendors\Anhnt\CFramework\GuiComponent\ScrollBar\
 
 #include <Vendors/Anhnt/CFramework/Old/Objects/Series/Patterns/Pattern.mqh>
 #include <Vendors/Anhnt/CFramework/Old/Objects/Series/SeriesDE.mqh>
+
+
+#include <Vendors/Anhnt/CFramework/Core/BaseObj/BaseEvent.mqh>
+
+#include <Vendors/Anhnt/CFramework/Defines/Resources.mqh>
+#include <Vendors/Anhnt/CFramework/Defines/Defines.mqh>
+#include <Vendors/Anhnt/CFramework/Defines/Enums.mqh>
+
+Resources
+#include <Vendors/Anhnt/CFramework/Old/DataSND.mqh>
+#include <Vendors/Anhnt/CFramework/Old/DataIMG.mqh>
+#include <Vendors/Anhnt/CFramework/Old/Data.mqh>
+
+
+
+#include <Vendors/Anhnt/CFramework/Old/DataSND.mqh>
+
+Defines

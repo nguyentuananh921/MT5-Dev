@@ -30,3 +30,6 @@ mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D
 C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Libraries\Anhnt
 C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Include\Vendors\Anhnt\Library
 
+
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D3B960747DA082FE2D66A222C323B5EA\MQL5\Include\Vendors\joaopedrodev" "D:\MT5-Dev\Include\Vendors\jjoaopedrodev"
+
