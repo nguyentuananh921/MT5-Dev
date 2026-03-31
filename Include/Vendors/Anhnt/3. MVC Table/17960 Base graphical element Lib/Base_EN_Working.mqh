@@ -1172,37 +1172,37 @@ void CCanvasBase::BringToTop(const bool chart_redraw)
 // | element to default state |
 //+------------------------------------------------------------------+
 bool CCanvasBase::ColorsToDefault(void)
-  {
+{
    bool res=true;
    res &=this.BackColorToDefault();
    res &=this.ForeColorToDefault();
    res &=this.BorderColorToDefault();
    return res;
-  }
+}
 //+------------------------------------------------------------------+
 // | CCanvasBase::Sets the current colors |
 // | element into hover state |
 //+------------------------------------------------------------------+
 bool CCanvasBase::ColorsToFocused(void)
-  {
+{
    bool res=true;
    res &=this.BackColorToFocused();
    res &=this.ForeColorToFocused();
    res &=this.BorderColorToFocused();
    return res;
-  }
+}
 //+------------------------------------------------------------------+
 // | CCanvasBase::Sets the current colors |
 // | element into state when the cursor is pressed |
 //+------------------------------------------------------------------+
 bool CCanvasBase::ColorsToPressed(void)
-  {
+{
    bool res=true;
    res &=this.BackColorToPressed();
    res &=this.ForeColorToPressed();
    res &=this.BorderColorToPressed();
    return res;
-  }
+}
 //+------------------------------------------------------------------+
 // | CCanvasBase::Sets the current colors |
 // | element to a locked state |
