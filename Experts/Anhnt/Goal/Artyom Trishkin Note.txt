@@ -1,0 +1,17 @@
+Tác giả Artyom Trishkin 
+https://www.mql5.com/en/users/artmedia70
+1	Applying the MVC concept https://www.mql5.com/en/articles/17653
+2	Base graphical element https://www.mql5.com/en/articles/17960
+3	Simple controls https://www.mql5.com/en/articles/18221
+4	Containers https://www.mql5.com/en/articles/18658
+5	Resizable elements https://www.mql5.com/en/articles/18941
+6	Integrating the Model Component into the View Component https://www.mql5.com/en/articles/19288
+7	Customizable and sortable table columns https://www.mql5.com/en/articles/19979
+8	Symbol Correlation Table https://www.mql5.com/en/articles/20596
+
+Bài nào thì cuối bài cũng có code đi kèm.
+Tuy nhiên
+1. Các code này đều được comment bằng tiếng Nga (tớ ko đọc được comment, tớ không biết tiếng Nga ấy).
+2. Các class khác nhau được viết chung trong 1 file.
+Và sau khi compile thì kết quả không như mô tả ở cuối bài.
+GIờ chúng ta làm thế nào để tìm ra chỗ sai cậu nhỉ

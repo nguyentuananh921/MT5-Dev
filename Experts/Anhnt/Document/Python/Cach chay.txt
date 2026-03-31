@@ -1,0 +1,13 @@
+Bước 3: Cách chạy
+Cậu mở lại cái cửa sổ Command Prompt (màu đen) lúc nãy, gõ lệnh sau rồi nhấn Enter:
+
+Bash
+python mql5_translatorV2.py
+Một vài lưu ý nhỏ cho cậu:
+Đường dẫn: Tớ đã lấy đường dẫn từ ảnh Excel của cậu, nhưng nếu cậu di chuyển thư mục code đi chỗ khác thì nhớ sửa lại dòng SOURCE_DIR trong script nhé.
+
+Thời gian: Vì phải gửi dữ liệu lên Google để dịch nên nếu file code dài (bác Artyom hay viết file vài nghìn dòng), script sẽ chạy hơi lâu một tí. Cậu cứ để nó chạy, đi pha tách cafe rồi quay lại là xong.
+
+Kết quả: Sau khi chạy xong, trong thư mục của cậu sẽ xuất hiện các file như Base_Translated.mqh. Cậu mở file đó bằng VS Code là sẽ thấy comment tiếng Anh "xịn sò".
+
+Cậu chạy thử đi, nếu nó báo lỗi "Rate Limit" (do Google chặn vì dịch quá nhanh) thì báo tớ để tớ chỉnh lại thời gian nghỉ nhé! Cậu có muốn tớ hướng dẫn cách dùng Enterprise Architect để xem đống file đã dịch này cho trực quan không?

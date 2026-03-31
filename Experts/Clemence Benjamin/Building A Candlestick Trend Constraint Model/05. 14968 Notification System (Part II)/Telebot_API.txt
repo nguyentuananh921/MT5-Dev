@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "result": [
+    {
+      "update_id": 464310132,
+      "message": {
+        "message_id": 12,
+        "from": {
+          "id": 7049213628,
+          "is_bot": false,
+          "first_name": "Clemence",
+          "last_name": "Benjamin",
+          "username": "benjc_trade_advisor",
+          "language_code": "en"
+        },
+        "chat": {
+          "id": 7049213628,
+          "first_name": "Clemence",
+          "last_name": "Benjamin",
+          "username": "benjc_trade_advisor",
+          "type": "private"
+        },
+        "date": 1719044625,
+        "text": "hey"
+      }
