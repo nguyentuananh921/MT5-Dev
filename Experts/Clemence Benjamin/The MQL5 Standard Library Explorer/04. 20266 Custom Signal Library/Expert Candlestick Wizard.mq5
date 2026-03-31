@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                           Expert Candlestick Wizard.mq5 |
+//|                                    Expert Candlestick Wizard.mq5 |
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -11,7 +11,7 @@
 //+------------------------------------------------------------------+
 #include <Expert\Expert.mqh>
 //--- available signals
-#include <Expert\Signal\SignalCandlePattern.mqh>
+#include "SignalCandlePattern.mqh"
 //--- available trailing
 #include <Expert\Trailing\TrailingParabolicSAR.mqh>
 //--- available money management
