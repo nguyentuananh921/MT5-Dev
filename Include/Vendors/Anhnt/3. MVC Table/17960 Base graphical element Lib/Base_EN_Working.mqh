@@ -444,88 +444,88 @@ bool CColorElement::Save(const int file_handle)
 // | CColorElement::Loading from file |
 //+------------------------------------------------------------------+
 bool CColorElement::Load(const int file_handle)
-  {
-// --- Checking the handle
-   if(file_handle==INVALID_HANDLE)
-      return false;
-// --- Load and check the data start marker - 0xFFFFFFFFFFFFFFFF
-   if(::FileReadLong(file_handle)!=-1)
-      return false;
-// --- Loading the object type
-   if(::FileReadInteger(file_handle,INT_VALUE)!=this.Type())
-      return false;
-   
-// --- Loading ID
-   this.m_id=::FileReadInteger(file_handle,INT_VALUE);
-// --- Load the name of the element's colors
-   if(::FileReadArray(file_handle,this.m_name)!=sizeof(this.m_name))
-      return false;
-// --- Load the current color
-   if(!this.m_current.Load(file_handle))
-      return false;
-// --- Loading the color of the normal state
-   if(!this.m_default.Load(file_handle))
-      return false;
-// --- Load color on hover
-   if(!this.m_focused.Load(file_handle))
-      return false;
-// --- Load color when clicked
-   if(!this.m_pressed.Load(file_handle))
-      return false;
-// --- Load the color of the blocked element
-   if(!this.m_blocked.Load(file_handle))
-      return false;
-   
-// --- Everything is successful
-   return true;
-  }
+{
+   // --- Checking the handle
+      if(file_handle==INVALID_HANDLE)
+         return false;
+   // --- Load and check the data start marker - 0xFFFFFFFFFFFFFFFF
+      if(::FileReadLong(file_handle)!=-1)
+         return false;
+   // --- Loading the object type
+      if(::FileReadInteger(file_handle,INT_VALUE)!=this.Type())
+         return false;
+      
+   // --- Loading ID
+      this.m_id=::FileReadInteger(file_handle,INT_VALUE);
+   // --- Load the name of the element's colors
+      if(::FileReadArray(file_handle,this.m_name)!=sizeof(this.m_name))
+         return false;
+   // --- Load the current color
+      if(!this.m_current.Load(file_handle))
+         return false;
+   // --- Loading the color of the normal state
+      if(!this.m_default.Load(file_handle))
+         return false;
+   // --- Load color on hover
+      if(!this.m_focused.Load(file_handle))
+         return false;
+   // --- Load color when clicked
+      if(!this.m_pressed.Load(file_handle))
+         return false;
+   // --- Load the color of the blocked element
+      if(!this.m_blocked.Load(file_handle))
+         return false;
+      
+   // --- Everything is successful
+      return true;
+}
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 // | Rectangular Area Class |
 //+------------------------------------------------------------------+
 class CBound : public CBaseObj
-  {
-protected:
-   CRect             m_bound;                                  // Rectangular area structure
+{
+   protected:
+      CRect             m_bound;                                  // Rectangular area structure
 
-public:
-// --- Changes the (1) width, (2) height, (3) size of the bounding box
-   void              ResizeW(const int size)                   { this.m_bound.Width(size);                        }
-   void              ResizeH(const int size)                   { this.m_bound.Height(size);                       }
-   void              Resize(const int w,const int h)           { this.m_bound.Width(w); this.m_bound.Height(h);   }
-   
-// --- Sets the (1) X, (2) Y, (3) both coordinates of the bounding box
-   void              SetX(const int x)                         { this.m_bound.left=x;                             }
-   void              SetY(const int y)                         { this.m_bound.top=y;                              }
-   void              SetXY(const int x,const int y)            { this.m_bound.LeftTop(x,y);                       }
-   
-// --- (1) Sets, (2) offsets the bounding box by the specified coordinates/offset size
-   void              Move(const int x,const int y)             { this.m_bound.Move(x,y);                          }
-   void              Shift(const int dx,const int dy)          { this.m_bound.Shift(dx,dy);                       }
-   
-// --- Returns the coordinates, dimensions and boundaries of an object
-   int               X(void)                             const { return this.m_bound.left;                        }
-   int               Y(void)                             const { return this.m_bound.top;                         }
-   int               Width(void)                         const { return this.m_bound.Width();                     }
-   int               Height(void)                        const { return this.m_bound.Height();                    }
-   int               Right(void)                         const { return this.m_bound.right-1;                     }
-   int               Bottom(void)                        const { return this.m_bound.bottom-1;                    }
-   
-// --- (1) Returns, (2) logs a description of the object
-   virtual string    Description(void);
-   void              Print(void);
-   
-// --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
-   virtual int       Compare(const CObject *node,const int mode=0) const;
-   virtual bool      Save(const int file_handle);
-   virtual bool      Load(const int file_handle);
-   virtual int       Type(void)                          const { return(ELEMENT_TYPE_RECTANGLE_AREA);             }
-   
-// --- Constructors/destructor
-                     CBound(void) { ::ZeroMemory(this.m_bound); }
-                     CBound(const int x,const int y,const int w,const int h) { this.SetXY(x,y); this.Resize(w,h); }
-                    ~CBound(void) { ::ZeroMemory(this.m_bound); }
-  };
+   public:
+   // --- Changes the (1) width, (2) height, (3) size of the bounding box
+      void              ResizeW(const int size)                   { this.m_bound.Width(size);                        }
+      void              ResizeH(const int size)                   { this.m_bound.Height(size);                       }
+      void              Resize(const int w,const int h)           { this.m_bound.Width(w); this.m_bound.Height(h);   }
+      
+   // --- Sets the (1) X, (2) Y, (3) both coordinates of the bounding box
+      void              SetX(const int x)                         { this.m_bound.left=x;                             }
+      void              SetY(const int y)                         { this.m_bound.top=y;                              }
+      void              SetXY(const int x,const int y)            { this.m_bound.LeftTop(x,y);                       }
+      
+   // --- (1) Sets, (2) offsets the bounding box by the specified coordinates/offset size
+      void              Move(const int x,const int y)             { this.m_bound.Move(x,y);                          }
+      void              Shift(const int dx,const int dy)          { this.m_bound.Shift(dx,dy);                       }
+      
+   // --- Returns the coordinates, dimensions and boundaries of an object
+      int               X(void)                             const { return this.m_bound.left;                        }
+      int               Y(void)                             const { return this.m_bound.top;                         }
+      int               Width(void)                         const { return this.m_bound.Width();                     }
+      int               Height(void)                        const { return this.m_bound.Height();                    }
+      int               Right(void)                         const { return this.m_bound.right-1;                     }
+      int               Bottom(void)                        const { return this.m_bound.bottom-1;                    }
+      
+   // --- (1) Returns, (2) logs a description of the object
+      virtual string    Description(void);
+      void              Print(void);
+      
+   // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+      virtual int       Compare(const CObject *node,const int mode=0) const;
+      virtual bool      Save(const int file_handle);
+      virtual bool      Load(const int file_handle);
+      virtual int       Type(void)                          const { return(ELEMENT_TYPE_RECTANGLE_AREA);             }
+      
+   // --- Constructors/destructor
+                        CBound(void) { ::ZeroMemory(this.m_bound); }
+                        CBound(const int x,const int y,const int w,const int h) { this.SetXY(x,y); this.Resize(w,h); }
+                     ~CBound(void) { ::ZeroMemory(this.m_bound); }
+};
 //+------------------------------------------------------------------+
 // | CBound::Returns the description of an object |
 //+------------------------------------------------------------------+
@@ -548,30 +548,30 @@ void CBound::Print(void)
 // | CBound::Saving to file |
 //+------------------------------------------------------------------+
 bool CBound::Save(const int file_handle)
-  {
-// --- Checking the handle
-   if(file_handle==INVALID_HANDLE)
-      return false;
-// --- Save the data start marker - 0xFFFFFFFFFFFFFFFF
-   if(::FileWriteLong(file_handle,-1)!=sizeof(long))
-      return false;
-// --- Save the object type
-   if(::FileWriteInteger(file_handle,this.Type(),INT_VALUE)!=INT_VALUE)
-      return false;
-   
-// --- Save the ID
-   if(::FileWriteInteger(file_handle,this.m_id,INT_VALUE)!=INT_VALUE)
-      return false;
-// --- Save the name
-   if(::FileWriteArray(file_handle,this.m_name)!=sizeof(this.m_name))
-      return false;
-   // --- Preserve the structure of the area
-   if(::FileWriteStruct(file_handle,this.m_bound)!=sizeof(this.m_bound))
-      return(false);
-   
-// --- Everything is successful
-   return true;
-  }
+{
+   // --- Checking the handle
+      if(file_handle==INVALID_HANDLE)
+         return false;
+   // --- Save the data start marker - 0xFFFFFFFFFFFFFFFF
+      if(::FileWriteLong(file_handle,-1)!=sizeof(long))
+         return false;
+   // --- Save the object type
+      if(::FileWriteInteger(file_handle,this.Type(),INT_VALUE)!=INT_VALUE)
+         return false;
+      
+   // --- Save the ID
+      if(::FileWriteInteger(file_handle,this.m_id,INT_VALUE)!=INT_VALUE)
+         return false;
+   // --- Save the name
+      if(::FileWriteArray(file_handle,this.m_name)!=sizeof(this.m_name))
+         return false;
+      // --- Preserve the structure of the area
+      if(::FileWriteStruct(file_handle,this.m_bound)!=sizeof(this.m_bound))
+         return(false);
+      
+   // --- Everything is successful
+      return true;
+}
 //+------------------------------------------------------------------+
 // | CBound::Loading from file |
 //+------------------------------------------------------------------+
@@ -1248,8 +1248,7 @@ void CCanvasBase::Unblock(const bool chart_redraw)
 // | with transparency set to m_alpha |
 //+------------------------------------------------------------------+
 void CCanvasBase::Fill(const color clr,const bool chart_redraw)
-  {  
-
+  {
    this.m_background.Erase(::ColorToARGB(clr,this.m_alpha));
    this.m_background.Update(chart_redraw);
   }
@@ -1258,8 +1257,10 @@ void CCanvasBase::Fill(const color clr,const bool chart_redraw)
 //+------------------------------------------------------------------+
 void CCanvasBase::Clear(const bool chart_redraw)
   {
-   this.m_background.Erase(clrNULL);
-   this.m_foreground.Erase(clrNULL);
+   // this.m_background.Erase(clrNULL);
+   // this.m_foreground.Erase(clrNULL); 
+   this.m_background.Erase(0x00000000);  // Modify clrNULL → 0x00000000
+   this.m_foreground.Erase(0x00000000);  // Modify clrNULL → 0x00000000  
    this.Update(chart_redraw);
   }
 //+------------------------------------------------------------------+

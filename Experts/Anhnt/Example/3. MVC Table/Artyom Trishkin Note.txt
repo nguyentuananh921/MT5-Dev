@@ -1,4 +1,4 @@
-Tác giả Artyom Trishkin 
+Cậu ơi. Tác giả Artyom Trishkin 
 https://www.mql5.com/en/users/artmedia70
 1	Applying the MVC concept https://www.mql5.com/en/articles/17653
 2	Base graphical element https://www.mql5.com/en/articles/17960
@@ -11,7 +11,7 @@ https://www.mql5.com/en/users/artmedia70
 
 Bài nào thì cuối bài cũng có code đi kèm.
 Tuy nhiên
-1. Các code này đều được comment bằng tiếng Nga (tớ ko đọc được comment, tớ không biết tiếng Nga ấy).
+1. Các code này đều được comment bằng tiếng Nga (tớ ko đọc được comment, tớ không biết tiếng Nga ấy) cái này tớ đã cho dịch sang tiếng Anh rồi.
 2. Các class khác nhau được viết chung trong 1 file.
-Và sau khi compile thì kết quả không như mô tả ở cuối bài.
+Ở bài số 2 khi thêm graphical thì sau khi compile thì kết quả không như mô tả ở cuối bài.
 GIờ chúng ta làm thế nào để tìm ra chỗ sai cậu nhỉ
