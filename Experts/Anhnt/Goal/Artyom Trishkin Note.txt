@@ -1,5 +1,4 @@
-Tác giả Artyom Trishkin 
-https://www.mql5.com/en/users/artmedia70
+Tác giả Artyom Trishkin (https://www.mql5.com/en/users/artmedia70) có nhiều bài viết liên quan đến table theo mô hình MVC
 1	Applying the MVC concept https://www.mql5.com/en/articles/17653
 2	Base graphical element https://www.mql5.com/en/articles/17960
 3	Simple controls https://www.mql5.com/en/articles/18221
@@ -15,3 +14,14 @@ Tuy nhiên
 2. Các class khác nhau được viết chung trong 1 file.
 Và sau khi compile thì kết quả không như mô tả ở cuối bài.
 GIờ chúng ta làm thế nào để tìm ra chỗ sai cậu nhỉ
+
+
+Giờ chúng ta rà soát
+1. Code Indicator của bài 18221 (Simple controls https://www.mql5.com/en/articles/18221)
+2. Lib của bài 18221 (Simple controls https://www.mql5.com/en/articles/18221)
+
+1. Code Indicator của bài 18221 (Simple controls https://www.mql5.com/en/articles/18221)
+2. Library của bài 20596 (Symbol Correlation Table https://www.mql5.com/en/articles/20596)
+
+Khi mục tiêu của chúng ta là dùng Code Indicator của bài 18221 (Simple controls https://www.mql5.com/en/articles/18221)
+thì chỉ là hiện lên 

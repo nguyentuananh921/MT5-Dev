@@ -15,3 +15,10 @@ Tuy nhiên
 2. Các class khác nhau được viết chung trong 1 file.
 Ở bài số 2 khi thêm graphical thì sau khi compile thì kết quả không như mô tả ở cuối bài.
 GIờ chúng ta làm thế nào để tìm ra chỗ sai cậu nhỉ
+
+
+1. Indicator code 18221,
+2. Library code 18221
+
+3. Indicator code 18221 Modify to Match Library code 20596
+4. Library code 20596

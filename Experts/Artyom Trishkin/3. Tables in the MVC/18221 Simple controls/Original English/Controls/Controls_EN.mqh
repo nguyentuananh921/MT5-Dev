@@ -436,266 +436,272 @@ bool CImagePainter::Load(const int file_handle)
 // | Text Label Class |
 //+------------------------------------------------------------------+
 class CLabel : public CCanvasBase
-  {
-protected:
-   CImagePainter     m_painter;                                // Drawing class
-   ushort            m_text[];                                 // Text
-   ushort            m_text_prev[];                            // Past text
-   int               m_text_x;                                 // X coordinate of the text (offset relative to the left edge of the object)
-   int               m_text_y;                                 // Y coordinate of the text (offset relative to the top border of the object)
-   
-// --- (1) Sets, (2) returns past text
-   void              SetTextPrev(const string text)            { ::StringToShortArray(text,this.m_text_prev);  }
-   string            TextPrev(void)                      const { return ::ShortArrayToString(this.m_text_prev);}
+{
+   protected:
+      CImagePainter     m_painter;                                // Drawing class
+      ushort            m_text[];                                 // Text
+      ushort            m_text_prev[];                            // Past text
+      int               m_text_x;                                 // X coordinate of the text (offset relative to the left edge of the object)
+      int               m_text_y;                                 // Y coordinate of the text (offset relative to the top border of the object)
       
-// --- Erases text
-   void              ClearText(void);
+   // --- (1) Sets, (2) returns past text
+      void              SetTextPrev(const string text)            { ::StringToShortArray(text,this.m_text_prev);  }
+      string            TextPrev(void)                      const { return ::ShortArrayToString(this.m_text_prev);}
+         
+   // --- Erases text
+      void              ClearText(void);
 
-public:
-// --- Returns a pointer to the drawing class
-   CImagePainter    *Painter(void)                             { return &this.m_painter;           }
-   
-// --- (1) Sets, (2) returns text
-   void              SetText(const string text)                { ::StringToShortArray(text,this.m_text);       }
-   string            Text(void)                          const { return ::ShortArrayToString(this.m_text);     }
-   
-// --- Returns the (1) X, (2) Y coordinate of the text
-   int               TextX(void)                         const { return this.m_text_x;                         }
-   int               TextY(void)                         const { return this.m_text_y;                         }
+   public:
+   // --- Returns a pointer to the drawing class
+      CImagePainter    *Painter(void)                             { return &this.m_painter;           }
+      
+   // --- (1) Sets, (2) returns text
+      void              SetText(const string text)                { ::StringToShortArray(text,this.m_text);       }
+      string            Text(void)                          const { return ::ShortArrayToString(this.m_text);     }
+      
+   // --- Returns the (1) X, (2) Y coordinate of the text
+      int               TextX(void)                         const { return this.m_text_x;                         }
+      int               TextY(void)                         const { return this.m_text_y;                         }
 
-// --- Sets the (1) X, (2) Y coordinate of the text
-   void              SetTextShiftH(const int x)                { this.m_text_x=x;                              }
-   void              SetTextShiftV(const int y)                { this.m_text_y=y;                              }
-   
-// --- (1) Sets coordinates, (2) resizes image area
-   void              SetImageXY(const int x,const int y)       { this.m_painter.SetXY(x,y);                    }
-   void              SetImageSize(const int w,const int h)     { this.m_painter.SetSize(w,h);                  }
-// --- Sets the coordinates and dimensions of the image area
-   void              SetImageBound(const int x,const int y,const int w,const int h)
-                       {
-                        this.SetImageXY(x,y);
-                        this.SetImageSize(w,h);
-                       }
-// --- Returns the coordinates of the (1) X, (2) Y, (3) width, (4) height, (5) right, (6) bottom border of the image area
-   int               ImageX(void)                        const { return this.m_painter.X();                    }
-   int               ImageY(void)                        const { return this.m_painter.Y();                    }
-   int               ImageWidth(void)                    const { return this.m_painter.Width();                }
-   int               ImageHeight(void)                   const { return this.m_painter.Height();               }
-   int               ImageRight(void)                    const { return this.m_painter.Right();                }
-   int               ImageBottom(void)                   const { return this.m_painter.Bottom();               }
+   // --- Sets the (1) X, (2) Y coordinate of the text
+      void              SetTextShiftH(const int x)                { this.m_text_x=x;                              }
+      void              SetTextShiftV(const int y)                { this.m_text_y=y;                              }
+      
+   // --- (1) Sets coordinates, (2) resizes image area
+      void              SetImageXY(const int x,const int y)       { this.m_painter.SetXY(x,y);                    }
+      void              SetImageSize(const int w,const int h)     { this.m_painter.SetSize(w,h);                  }
+   // --- Sets the coordinates and dimensions of the image area
+      void              SetImageBound(const int x,const int y,const int w,const int h)
+                        {
+                           this.SetImageXY(x,y);
+                           this.SetImageSize(w,h);
+                        }
+   // --- Returns the coordinates of the (1) X, (2) Y, (3) width, (4) height, (5) right, (6) bottom border of the image area
+      int               ImageX(void)                        const { return this.m_painter.X();                    }
+      int               ImageY(void)                        const { return this.m_painter.Y();                    }
+      int               ImageWidth(void)                    const { return this.m_painter.Width();                }
+      int               ImageHeight(void)                   const { return this.m_painter.Height();               }
+      int               ImageRight(void)                    const { return this.m_painter.Right();                }
+      int               ImageBottom(void)                   const { return this.m_painter.Bottom();               }
 
-// --- Outputs text
-   void              DrawText(const int dx, const int dy, const string text, const bool chart_redraw);
-   
-// ---Draws the appearance
-   virtual void      Draw(const bool chart_redraw);
+   // --- Outputs text
+      void              DrawText(const int dx, const int dy, const string text, const bool chart_redraw);
+      
+   // ---Draws the appearance
+      virtual void      Draw(const bool chart_redraw);
 
-// --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
-   virtual int       Compare(const CObject *node,const int mode=0) const;
-   virtual bool      Save(const int file_handle);
-   virtual bool      Load(const int file_handle);
-   virtual int       Type(void)                          const { return(ELEMENT_TYPE_LABEL);                   }
-   
-// --- Constructors/destructor
-                     CLabel(void);
-                     CLabel(const string object_name, const string text, const int x, const int y, const int w, const int h);
-                     CLabel(const string object_name, const string text, const int wnd, const int x, const int y, const int w, const int h);
-                     CLabel(const string object_name, const long chart_id, const int wnd, const string text, const int x, const int y, const int w, const int h);
-                    ~CLabel(void) {}
-  };
-//+------------------------------------------------------------------+
-// | CLabel::Default constructor. Builds a label in the main window |
-// | current chart in coordinates 0,0 with default sizes |
-//+------------------------------------------------------------------+
-CLabel::CLabel(void) : CCanvasBase("Label",::ChartID(),0,0,0,DEF_LABEL_W,DEF_LABEL_H), m_text_x(0), m_text_y(0)
-  {
-// --- Assign the foreground canvas to the drawing object and
-// --- reset the coordinates and dimensions, which makes it inactive
-   this.m_painter.CanvasAssign(this.GetForeground());
-   this.m_painter.SetXY(0,0);
-   this.m_painter.SetSize(0,0);
-// --- Set the current and previous text
-   this.SetText("Label");
-   this.SetTextPrev("");
-// --- Background is transparent, foreground is not
-   this.SetAlphaBG(0);
-   this.SetAlphaFG(255);
-  }
-//+------------------------------------------------------------------+
-// | CLabel::The constructor is parametric. Builds a label in the main window |
-// | current chart with the specified text, coordinates and sizes |
-//+------------------------------------------------------------------+
-CLabel::CLabel(const string object_name, const string text,const int x,const int y,const int w,const int h) :
-   CCanvasBase(object_name,::ChartID(),0,x,y,w,h), m_text_x(0), m_text_y(0)
-  {
-// --- Assign the foreground canvas to the drawing object and
-// --- reset the coordinates and dimensions, which makes it inactive
-   this.m_painter.CanvasAssign(this.GetForeground());
-   this.m_painter.SetXY(0,0);
-   this.m_painter.SetSize(0,0);
-// --- Set the current and previous text
-   this.SetText(text);
-   this.SetTextPrev("");
-// --- Background is transparent, foreground is not
-   this.SetAlphaBG(0);
-   this.SetAlphaFG(255);
-  }
-//+-------------------------------------------------------------------+
-// | CLabel::The constructor is parametric. Builds a label in the specified window|
-// | current chart with the specified text, coordinates and sizes |
-//+-------------------------------------------------------------------+
-CLabel::CLabel(const string object_name, const string text,const int wnd,const int x,const int y,const int w,const int h) :
-   CCanvasBase(object_name,::ChartID(),wnd,x,y,w,h), m_text_x(0), m_text_y(0)
-  {
-// --- Assign the foreground canvas to the drawing object and
-// --- reset the coordinates and dimensions, which makes it inactive
-   this.m_painter.CanvasAssign(this.GetForeground());
-   this.m_painter.SetXY(0,0);
-   this.m_painter.SetSize(0,0);
-// --- Set the current and previous text
-   this.SetText(text);
-   this.SetTextPrev("");
-// --- Background is transparent, foreground is not
-   this.SetAlphaBG(0);
-   this.SetAlphaFG(255);
-  }
-//+-------------------------------------------------------------------+
-// | CLabel::The constructor is parametric. Builds a label in the specified window|
-// | specified graphics with specified text, coordinates and dimensions |
-//+-------------------------------------------------------------------+
-CLabel::CLabel(const string object_name,const long chart_id,const int wnd,const string text,const int x,const int y,const int w,const int h) :
-   CCanvasBase(object_name,chart_id,wnd,x,y,w,h), m_text_x(0), m_text_y(0)
-  {
-// --- Assign the foreground canvas to the drawing object and
-// --- reset the coordinates and dimensions, which makes it inactive
-   this.m_painter.CanvasAssign(this.GetForeground());
-   this.m_painter.SetXY(0,0);
-   this.m_painter.SetSize(0,0);
-// --- Set the current and previous text
-   this.SetText(text);
-   this.SetTextPrev("");
-// --- Background is transparent, foreground is not
-   this.SetAlphaBG(0);
-   this.SetAlphaFG(255);
-  }
-//+------------------------------------------------------------------+
-// | CLabel::Comparing two objects |
-//+------------------------------------------------------------------+
-int CLabel::Compare(const CObject *node,const int mode=0) const
-  {
-   const CLabel *obj=node;
-   switch(mode)
-     {
-      case ELEMENT_SORT_BY_NAME  :  return(this.Name()     >obj.Name()      ? 1 : this.Name()     <obj.Name()      ? -1 : 0);
-      case ELEMENT_SORT_BY_TEXT  :  return(this.Text()     >obj.Text()      ? 1 : this.Text()     <obj.Text()      ? -1 : 0);
-      case ELEMENT_SORT_BY_COLOR :  return(this.ForeColor()>obj.ForeColor() ? 1 : this.ForeColor()<obj.ForeColor() ? -1 : 0);
-      case ELEMENT_SORT_BY_ALPHA :  return(this.AlphaFG()  >obj.AlphaFG()   ? 1 : this.AlphaFG()  <obj.AlphaFG()   ? -1 : 0);
-      default                    :  return(this.ID()       >obj.ID()        ? 1 : this.ID()       <obj.ID()        ? -1 : 0);
-     }
-  }
-//+------------------------------------------------------------------+
-// | CLabel::Erases text |
-//+------------------------------------------------------------------+
-void CLabel::ClearText(void)
-  {
-   int w=0, h=0;
-   string text=this.TextPrev();
-// --- Getting the dimensions of the previous text
-   if(text!="")
-      this.m_foreground.TextSize(text,w,h);
-// --- If the dimensions are obtained, draw a transparent rectangle in place of the text, erasing the text
-   if(w>0 && h>0)
-      this.m_foreground.FillRectangle(this.AdjX(this.m_text_x),this.AdjY(this.m_text_y),this.AdjX(this.m_text_x+w),this.AdjY(this.m_text_y+h),clrNULL);
-// --- Otherwise, we completely clear the entire foreground
-   else
-      this.m_foreground.Erase(clrNULL);
-  }
-//+------------------------------------------------------------------+
-// | CLabel::Outputs text |
-//+------------------------------------------------------------------+
-void CLabel::DrawText(const int dx,const int dy,const string text,const bool chart_redraw)
-  {
-// --- Clear the previous text and install a new one
-   this.ClearText();
-   this.SetText(text);
-// --- Output the set text
-   this.m_foreground.TextOut(this.AdjX(dx),this.AdjY(dy),this.Text(),::ColorToARGB(this.ForeColor(),this.AlphaFG()));
-   
-// --- If the text extends beyond the right border of the object
-   if(this.Width()-dx<this.m_foreground.TextWidth(text))
-     {
-      // --- Getting the dimensions of the text "ellipsis"
-      int w=0,h=0;
-      this.m_foreground.TextSize("... ",w,h);
+   // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+      virtual int       Compare(const CObject *node,const int mode=0) const;
+      virtual bool      Save(const int file_handle);
+      virtual bool      Load(const int file_handle);
+      virtual int       Type(void)                          const { return(ELEMENT_TYPE_LABEL);                   }
+      
+   // --- Constructors/destructor
+                        CLabel(void);
+                        CLabel(const string object_name, const string text, const int x, const int y, const int w, const int h);
+                        CLabel(const string object_name, const string text, const int wnd, const int x, const int y, const int w, const int h);
+                        CLabel(const string object_name, const long chart_id, const int wnd, const string text, const int x, const int y, const int w, const int h);
+                     ~CLabel(void) {}
+};
+#ifndef CLABEL_IMPLEMENTATION
+#define CLABEL_IMPLEMENTATION
+   //+------------------------------------------------------------------+
+   // | CLabel::Default constructor. Builds a label in the main window |
+   // | current chart in coordinates 0,0 with default sizes |
+   //+------------------------------------------------------------------+
+   CLabel::CLabel(void) : CCanvasBase("Label",::ChartID(),0,0,0,DEF_LABEL_W,DEF_LABEL_H), m_text_x(0), m_text_y(0)
+   {
+      // --- Assign the foreground canvas to the drawing object and
+      // --- reset the coordinates and dimensions, which makes it inactive
+         this.m_painter.CanvasAssign(this.GetForeground());
+         this.m_painter.SetXY(0,0);
+         this.m_painter.SetSize(0,0);
+      // --- Set the current and previous text
+         this.SetText("Label");
+         this.SetTextPrev("");
+      // --- Background is transparent, foreground is not
+         this.SetAlphaBG(0);
+         this.SetAlphaFG(255);
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::The constructor is parametric. Builds a label in the main window |
+   // | current chart with the specified text, coordinates and sizes |
+   //+------------------------------------------------------------------+
+   CLabel::CLabel(const string object_name, const string text,const int x,const int y,const int w,const int h) :
+      CCanvasBase(object_name,::ChartID(),0,x,y,w,h), m_text_x(0), m_text_y(0)
+   {
+      // --- Assign the foreground canvas to the drawing object and
+      // --- reset the coordinates and dimensions, which makes it inactive
+         this.m_painter.CanvasAssign(this.GetForeground());
+         this.m_painter.SetXY(0,0);
+         this.m_painter.SetSize(0,0);
+      // --- Set the current and previous text
+         this.SetText(text);
+         this.SetTextPrev("");
+      // --- Background is transparent, foreground is not
+         this.SetAlphaBG(0);
+         this.SetAlphaFG(255);
+   }
+   //+-------------------------------------------------------------------+
+   // | CLabel::The constructor is parametric. Builds a label in the specified window|
+   // | current chart with the specified text, coordinates and sizes |
+   //+-------------------------------------------------------------------+
+   CLabel::CLabel(const string object_name, const string text,const int wnd,const int x,const int y,const int w,const int h) :
+      CCanvasBase(object_name,::ChartID(),wnd,x,y,w,h), m_text_x(0), m_text_y(0)
+   {
+      // --- Assign the foreground canvas to the drawing object and
+      // --- reset the coordinates and dimensions, which makes it inactive
+         this.m_painter.CanvasAssign(this.GetForeground());
+         this.m_painter.SetXY(0,0);
+         this.m_painter.SetSize(0,0);
+      // --- Set the current and previous text
+         this.SetText(text);
+         this.SetTextPrev("");
+      // --- Background is transparent, foreground is not
+         this.SetAlphaBG(0);
+         this.SetAlphaFG(255);
+   }
+   //+-------------------------------------------------------------------+
+   // | CLabel::The constructor is parametric. Builds a label in the specified window|
+   // | specified graphics with specified text, coordinates and dimensions |
+   //+-------------------------------------------------------------------+
+   CLabel::CLabel(const string object_name,const long chart_id,const int wnd,const string text,const int x,const int y,const int w,const int h) :
+      CCanvasBase(object_name,chart_id,wnd,x,y,w,h), m_text_x(0), m_text_y(0)
+   {
+      // --- Assign the foreground canvas to the drawing object and
+      // --- reset the coordinates and dimensions, which makes it inactive
+         this.m_painter.CanvasAssign(this.GetForeground());
+         this.m_painter.SetXY(0,0);
+         this.m_painter.SetSize(0,0);
+      // --- Set the current and previous text
+         this.SetText(text);
+         this.SetTextPrev("");
+      // --- Background is transparent, foreground is not
+         this.SetAlphaBG(0);
+         this.SetAlphaFG(255);
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::Comparing two objects |
+   //+------------------------------------------------------------------+
+   int CLabel::Compare(const CObject *node,const int mode=0) const
+   {
+      const CLabel *obj=node;
+      switch(mode)
+      {
+         case ELEMENT_SORT_BY_NAME  :  return(this.Name()     >obj.Name()      ? 1 : this.Name()     <obj.Name()      ? -1 : 0);
+         case ELEMENT_SORT_BY_TEXT  :  return(this.Text()     >obj.Text()      ? 1 : this.Text()     <obj.Text()      ? -1 : 0);
+         case ELEMENT_SORT_BY_COLOR :  return(this.ForeColor()>obj.ForeColor() ? 1 : this.ForeColor()<obj.ForeColor() ? -1 : 0);
+         case ELEMENT_SORT_BY_ALPHA :  return(this.AlphaFG()  >obj.AlphaFG()   ? 1 : this.AlphaFG()  <obj.AlphaFG()   ? -1 : 0);
+         default                    :  return(this.ID()       >obj.ID()        ? 1 : this.ID()       <obj.ID()        ? -1 : 0);
+      }
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::Erases text |
+   //+------------------------------------------------------------------+
+   void CLabel::ClearText(void)
+   {
+      int w=0, h=0;
+      string text=this.TextPrev();
+   // --- Getting the dimensions of the previous text
+      if(text!="")
+         this.m_foreground.TextSize(text,w,h);
+   // --- If the dimensions are obtained, draw a transparent rectangle in place of the text, erasing the text
       if(w>0 && h>0)
-        {
-         // --- Erase the text at the right border of the object according to the text size "ellipsis" and replace the end of the label text with an ellipsis
-         this.m_foreground.FillRectangle(this.AdjX(this.Width()-w),this.AdjY(this.m_text_y),this.AdjX(this.Width()),this.AdjY(this.m_text_y+h),clrNULL);
-         this.m_foreground.TextOut(this.AdjX(this.Width()-w),this.AdjY(dy),"...",::ColorToARGB(this.ForeColor(),this.AlphaFG()));
-        }
-     }
-// --- Update the foreground canvas and remember the new text coordinates
-   this.m_foreground.Update(chart_redraw);
-   this.m_text_x=dx;
-   this.m_text_y=dy;
-// --- Remember the drawn text as the previous one
-   this.SetTextPrev(text);
-  }
-//+------------------------------------------------------------------+
-// | CLabel::Draws appearance |
-//+------------------------------------------------------------------+
-void CLabel::Draw(const bool chart_redraw)
-  {
-   this.DrawText(this.m_text_x,this.m_text_y,this.Text(),chart_redraw);
-  }
-//+------------------------------------------------------------------+
-// | CLabel::Save to file |
-//+------------------------------------------------------------------+
-bool CLabel::Save(const int file_handle)
-  {
-// --- Save the data of the parent object
-   if(!CCanvasBase::Save(file_handle))
-      return false;
-  
-// --- Save the text
-   if(::FileWriteArray(file_handle,this.m_text)!=sizeof(this.m_text))
-      return false;
-// --- Save the previous text
-   if(::FileWriteArray(file_handle,this.m_text_prev)!=sizeof(this.m_text_prev))
-      return false;
-// --- Save the X coordinate of the text
-   if(::FileWriteInteger(file_handle,this.m_text_x,INT_VALUE)!=INT_VALUE)
-      return false;
-// --- Save the Y coordinate of the text
-   if(::FileWriteInteger(file_handle,this.m_text_y,INT_VALUE)!=INT_VALUE)
-      return false;
-   
-// --- Everything is successful
-   return true;
-  }
-//+------------------------------------------------------------------+
-// | CLabel::Loading from file |
-//+------------------------------------------------------------------+
-bool CLabel::Load(const int file_handle)
-  {
-// --- Loading the data of the parent object
-   if(!CCanvasBase::Load(file_handle))
-      return false;
+         this.m_foreground.FillRectangle(this.AdjX(this.m_text_x),this.AdjY(this.m_text_y),this.AdjX(this.m_text_x+w),this.AdjY(this.m_text_y+h),clrNULL);
+   // --- Otherwise, we completely clear the entire foreground
+      else
+         this.m_foreground.Erase(clrNULL);
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::Outputs text |
+   //+------------------------------------------------------------------+
+   void CLabel::DrawText(const int dx,const int dy,const string text,const bool chart_redraw)
+   {
+      // --- Clear the previous text and install a new one
+         this.ClearText();
+         this.SetText(text);
+      // --- Output the set text
+         this.m_foreground.TextOut(this.AdjX(dx),this.AdjY(dy),this.Text(),::ColorToARGB(this.ForeColor(),this.AlphaFG()));
+         
+      // --- If the text extends beyond the right border of the object
+         if(this.Width()-dx<this.m_foreground.TextWidth(text))
+         {
+            // --- Getting the dimensions of the text "ellipsis"
+            int w=0,h=0;
+            this.m_foreground.TextSize("... ",w,h);
+            if(w>0 && h>0)
+            {
+               // --- Erase the text at the right border of the object according to the text size "ellipsis" and replace the end of the label text with an ellipsis
+               this.m_foreground.FillRectangle(this.AdjX(this.Width()-w),this.AdjY(this.m_text_y),this.AdjX(this.Width()),this.AdjY(this.m_text_y+h),clrNULL);
+               this.m_foreground.TextOut(this.AdjX(this.Width()-w),this.AdjY(dy),"...",::ColorToARGB(this.ForeColor(),this.AlphaFG()));
+            }
+         }
+      // --- Update the foreground canvas and remember the new text coordinates
+         this.m_foreground.Update(chart_redraw);
+         this.m_text_x=dx;
+         this.m_text_y=dy;
+      // --- Remember the drawn text as the previous one
+         this.SetTextPrev(text);
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::Draws appearance |
+   //+------------------------------------------------------------------+
+   void CLabel::Draw(const bool chart_redraw)
+   {
+      this.DrawText(this.m_text_x,this.m_text_y,this.Text(),chart_redraw);
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::Save to file |
+   //+------------------------------------------------------------------+
+   bool CLabel::Save(const int file_handle)
+   {
+      // --- Save the data of the parent object
+         if(!CCanvasBase::Save(file_handle))
+            return false;
       
-// --- Loading text
-   if(::FileReadArray(file_handle,this.m_text)!=sizeof(this.m_text))
-      return false;
-// --- Loading the previous text
-   if(::FileReadArray(file_handle,this.m_text_prev)!=sizeof(this.m_text_prev))
-      return false;
-// --- Load the X coordinate of the text
-   this.m_text_x=::FileReadInteger(file_handle,INT_VALUE);
-// --- Load the Y coordinate of the text
-   this.m_text_y=::FileReadInteger(file_handle,INT_VALUE);
-   
-// --- Everything is successful
-   return true;
-  }
+      // --- Save the text
+         if(::FileWriteArray(file_handle,this.m_text)!=sizeof(this.m_text))
+            return false;
+      // --- Save the previous text
+         if(::FileWriteArray(file_handle,this.m_text_prev)!=sizeof(this.m_text_prev))
+            return false;
+      // --- Save the X coordinate of the text
+         if(::FileWriteInteger(file_handle,this.m_text_x,INT_VALUE)!=INT_VALUE)
+            return false;
+      // --- Save the Y coordinate of the text
+         if(::FileWriteInteger(file_handle,this.m_text_y,INT_VALUE)!=INT_VALUE)
+            return false;
+         
+      // --- Everything is successful
+         return true;
+   }
+   //+------------------------------------------------------------------+
+   // | CLabel::Loading from file |
+   //+------------------------------------------------------------------+
+   bool CLabel::Load(const int file_handle)
+   {
+      // --- Loading the data of the parent object
+         if(!CCanvasBase::Load(file_handle))
+            return false;
+            
+      // --- Loading text
+         if(::FileReadArray(file_handle,this.m_text)!=sizeof(this.m_text))
+            return false;
+      // --- Loading the previous text
+         if(::FileReadArray(file_handle,this.m_text_prev)!=sizeof(this.m_text_prev))
+            return false;
+      // --- Load the X coordinate of the text
+         this.m_text_x=::FileReadInteger(file_handle,INT_VALUE);
+      // --- Load the Y coordinate of the text
+         this.m_text_y=::FileReadInteger(file_handle,INT_VALUE);
+         
+      // --- Everything is successful
+         return true;
+   }
+
+#endif // CLABEL_IMPLEMENTATION
+
+
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 // | Simple button class |
@@ -1017,7 +1023,7 @@ void CButtonArrowUp::Draw(const bool chart_redraw)
 // | Down arrow button class |
 //+------------------------------------------------------------------+
 class CButtonArrowDown : public CButton
-  {
+{
 public:
 // ---Draws the appearance
    virtual void      Draw(const bool chart_redraw);
@@ -1034,7 +1040,7 @@ public:
                      CButtonArrowDown(const string object_name, const int wnd, const int x, const int y, const int w, const int h);
                      CButtonArrowDown(const string object_name, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
                     ~CButtonArrowDown (void) {}
-  };
+};
 //+------------------------------------------------------------------+
 // | CButtonArrowDown::Default constructor.                      |
 // | Builds a button in the main window of the current chart |
