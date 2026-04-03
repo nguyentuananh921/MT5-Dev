@@ -14,48 +14,48 @@
 #include "..\Tables_En.mqh"
 
 // --- Forward declaration of control classes
-class    CBoundedObj;                     // Base class that stores the dimensions of an object
-class    CCanvasBase;                     // Basic graphic element canvas class
-class    CCounter;                        // Delay counter class
-class    CAutoRepeat;                     // Auto-repeat event class
-class    CImagePainter;                   // Picture drawing class
-class    CVisualHint;                     // Tooltip class
-class    CLabel;                          // Text Label Class
-class    CButton;                         // Simple button class
-class    CButtonTriggered;                // Two-way button class
-class    CButtonArrowUp;                  // Up Arrow Button Class
-class    CButtonArrowDown;                // Down Arrow Button Class
-class    CButtonArrowLeft;                // Left arrow button class
-class    CButtonArrowRight;               // Right arrow button class
-class    CCheckBox;                       // CheckBox Control Class
-class    CRadioButton;                    // RadioButton Control Class
-class    CScrollBarThumbH;                // Horizontal Scroll Slider Class
-class    CScrollBarThumbV;                // Vertical Scroll Slider Class
-class    CScrollBarH;                     // Horizontal Scrollbar Class
-class    CScrollBarV;                     // Vertical scrollbar class
-class    CTableCellView;                  // Table cell visual representation class
-class    CTableRowView;                   // Table row visual representation class
-class    CCaptionView;                    // Base title renderer class
-class    CColumnCaptionView;              // Table column header visual representation class
-class    CRowCaptionView;                 // Class for visual representation of table row header
-class    CTableHeaderView;                // Table header visual class
-class    CTableRowsHeaderView;            // Class for visual representation of table row headers
-class    CTableView;                      // Table visual class
-class    CTableControl;                   // Table management class
-class    CPanel;                          // Panel Control Class
-class    CGroupBox;                       // GroupBox Control Class
-class    CContainer;                      // Container Control Class
+   class    CBoundedObj;                     // Base class that stores the dimensions of an object
+   class    CCanvasBase;                     // Basic graphic element canvas class
+   class    CCounter;                        // Delay counter class
+   class    CAutoRepeat;                     // Auto-repeat event class
+   class    CImagePainter;                   // Picture drawing class
+   class    CVisualHint;                     // Tooltip class
+   class    CLabel;                          // Text Label Class
+   class    CButton;                         // Simple button class
+   class    CButtonTriggered;                // Two-way button class
+   class    CButtonArrowUp;                  // Up Arrow Button Class
+   class    CButtonArrowDown;                // Down Arrow Button Class
+   class    CButtonArrowLeft;                // Left arrow button class
+   class    CButtonArrowRight;               // Right arrow button class
+   class    CCheckBox;                       // CheckBox Control Class
+   class    CRadioButton;                    // RadioButton Control Class
+   class    CScrollBarThumbH;                // Horizontal Scroll Slider Class
+   class    CScrollBarThumbV;                // Vertical Scroll Slider Class
+   class    CScrollBarH;                     // Horizontal Scrollbar Class
+   class    CScrollBarV;                     // Vertical scrollbar class
+   class    CTableCellView;                  // Table cell visual representation class
+   class    CTableRowView;                   // Table row visual representation class
+   class    CCaptionView;                    // Base title renderer class
+   class    CColumnCaptionView;              // Table column header visual representation class
+   class    CRowCaptionView;                 // Class for visual representation of table row header
+   class    CTableHeaderView;                // Table header visual class
+   class    CTableRowsHeaderView;            // Class for visual representation of table row headers
+   class    CTableView;                      // Table visual class
+   class    CTableControl;                   // Table management class
+   class    CPanel;                          // Panel Control Class
+   class    CGroupBox;                       // GroupBox Control Class
+   class    CContainer;                      // Container Control Class
 
 //+------------------------------------------------------------------+
 // | Macro substitutions |
 //+------------------------------------------------------------------+
-#define  clrNULL              0x00FFFFFF  // Transparent color for CCanvas
-#ifndef  __TABLES__
-#define  MARKER_START_DATA    -1          // Marker for the start of data in the file
-#endif 
-#define  DEF_FONTNAME         "Calibri"   // Default font
-#define  DEF_FONTSIZE         10          // Default font size
-#define  DEF_EDGE_THICKNESS   3           // Border/corner zone thickness
+   #define  clrNULL              0x00FFFFFF  // Transparent color for CCanvas
+   #ifndef  __TABLES__
+   #define  MARKER_START_DATA    -1          // Marker for the start of data in the file
+   #endif 
+   #define  DEF_FONTNAME         "Calibri"   // Default font
+   #define  DEF_FONTSIZE         10          // Default font size
+   #define  DEF_EDGE_THICKNESS   3           // Border/corner zone thickness
 
 //+------------------------------------------------------------------+
 // | Transfers |
@@ -289,8 +289,11 @@ class CCommonManager
       ENUM_CURSOR_REGION ResizeRegion(void)                    const { return this.m_resize_region;}
 
 };
-// ---Initializing a static class instance variable
-CCommonManager* CCommonManager::m_instance=NULL;
+#ifndef CCOMMONMANAGER_IMPLEMENTATION
+#define CCOMMONMANAGER_IMPLEMENTATION
+   // ---Initializing a static class instance variable
+   CCommonManager* CCommonManager::m_instance=NULL;
+#endif // CCOMMONMANAGER_IMPLEMENTATION
 //+------------------------------------------------------------------+
 // | Basic class of graphic elements |
 //+------------------------------------------------------------------+

@@ -255,23 +255,23 @@ void DrawSingleBubble()
    ExtCanvas.TextOut(text_x_final, text_y_final, text, text_color, text_align_final);
 
    // 2. Draw "X" Button
-   int btn_x2_final = btn_x1_final + btn_size;
-   int btn_y2_final = btn_y1_final + btn_size;
-   ExtCanvas.FillRectangle(btn_x1_final, btn_y1_final, btn_x2_final, btn_y2_final, ColorToARGB(clrRed));
-   ExtCanvas.TextOut(btn_x1_final + btn_size/2, btn_y1_final + btn_size/2, "X", text_color, TA_CENTER|TA_VCENTER);
+    int btn_x2_final = btn_x1_final + btn_size;
+    int btn_y2_final = btn_y1_final + btn_size;
+    ExtCanvas.FillRectangle(btn_x1_final, btn_y1_final, btn_x2_final, btn_y2_final, ColorToARGB(clrRed));
+    ExtCanvas.TextOut(btn_x1_final + btn_size/2, btn_y1_final + btn_size/2, "X", text_color, TA_CENTER|TA_VCENTER);
 
    // 3. Draw Connector Line (Triangle doesn't need it)
    if(InpShape != SHAPE_TRIANGLE)
       ExtCanvas.Line(x, y, bubble_x, bubble_y + height/2, ColorToARGB(base_color));
 
    // 4. Register Hitbox
-   int new_idx = ArraySize(ExtHitboxes);
-   ArrayResize(ExtHitboxes, new_idx + 1);
-   ExtHitboxes[new_idx].ticket = ticket;
-   ExtHitboxes[new_idx].x1 = btn_x1_final;
-   ExtHitboxes[new_idx].y1 = btn_y1_final;
-   ExtHitboxes[new_idx].x2 = btn_x2_final;
-   ExtHitboxes[new_idx].y2 = btn_y2_final;
+    int new_idx = ArraySize(ExtHitboxes);
+    ArrayResize(ExtHitboxes, new_idx + 1);
+    ExtHitboxes[new_idx].ticket = ticket;
+    ExtHitboxes[new_idx].x1 = btn_x1_final;
+    ExtHitboxes[new_idx].y1 = btn_y1_final;
+    ExtHitboxes[new_idx].x2 = btn_x2_final;
+    ExtHitboxes[new_idx].y2 = btn_y2_final;
   }
 
 //+------------------------------------------------------------------+

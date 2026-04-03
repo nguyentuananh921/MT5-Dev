@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                 ExpertStdDevChannel.mq5          |
 //|                        Copyright 2025, Clemence Benjamin         |
-//|                                             https://www.mql5.com |
+//|                           https://www.mql5.com/en/articles/20041 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Clemence Benjamin"
 #property link      "https://www.mql5.com/go?link=https://www.mql5.com/en/users/billionaire2024/seller"
@@ -17,8 +17,11 @@ input int      PeriodBars   = 50;         // Bars for channel calculation
 input double   LotSize      = 0.1;        // Trade size
 input int      Magic        = 12345;      // EA identifier
 input double   SLBuffer     = 20.0;       // Points buffer for SL (increased for min distance)
-input bool     EnableSells  = true;       // Enable sell trades (set to false for buys only)
-input bool     EnableBuys   = true;       // Enable buy trades
+// input bool     EnableSells  = true;       // Enable sell trades (set to false for buys only)
+// input bool     EnableBuys   = true;       // Enable buy trades
+input bool     EnableSells  = false;       // Enable sell trades (set to false for buys only)
+input bool     EnableBuys   = false;       // Enable buy trades
+
 input bool     DrawGraphical= true;       // Draw channel object for visualization (disable for faster backtest)
 input bool     UseMeanReversion = true;   // True: Mean reversion (bounce buys/sells); False: Breakout (break buys/sells)
 
