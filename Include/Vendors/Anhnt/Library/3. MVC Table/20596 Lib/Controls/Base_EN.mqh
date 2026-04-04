@@ -446,7 +446,7 @@ class CColor : public CBaseObj
                         CColor(void) : m_color(clrNULL)                          { this.SetName("");  }
                         CColor(const color clr) : m_color(clr)                   { this.SetName("");  }
                         CColor(const color clr,const string name) : m_color(clr) { this.SetName(name);}
-                     ~CColor(void) {}
+                       ~CColor(void) {}
 };
 #ifndef CCOLOR_IMPLEMENTATION
 #define CCOLOR_IMPLEMENTATION
@@ -490,8 +490,6 @@ class CColor : public CBaseObj
       return true;
    }
 #endif // DECLARATION_IMPLEMENTATION
-
-
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 // | Graphics element color class |
@@ -1121,7 +1119,7 @@ class CBoundedObj : public CBaseObj
                         
                         CBoundedObj (void) : m_canvas_owner(true) {}
                         CBoundedObj (const string user_name,const int id,const int x,const int y,const int w,const int h);
-                     ~CBoundedObj (void){}
+                        ~CBoundedObj (void){}
 };
 //+------------------------------------------------------------------+
 #ifndef CBOUNDEDOBJ_IMPLEMENTATION

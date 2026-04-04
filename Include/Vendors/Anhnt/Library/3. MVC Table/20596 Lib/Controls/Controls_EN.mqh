@@ -3087,11 +3087,11 @@ class CRadioButton : public CCheckBox
       {
       // --- If the button is already marked, we leave
          if(this.m_state)
+         
             return;
       // --- Set the button state opposite to the one already set
          ENUM_ELEMENT_STATE state=(this.State()==ELEMENT_STATE_DEF ? ELEMENT_STATE_ACT : ELEMENT_STATE_DEF);
-         this.SetState(state);
-         
+         this.SetState(state);         
       // --- Call the handler of the parent object indicating the identifier in lparam and the state in dparam
          CCanvasBase::OnPressEvent(id,this.m_id,this.m_state,sparam);
       }
