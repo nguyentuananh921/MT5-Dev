@@ -3,30 +3,32 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//|First See in              https://www.mql5.com/en/articles/17653  |
+//|Current                    https://www.mql5.com/ru/articles/20596 |
+//|
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+// | Linked List Object Class |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-#include "..\Defines\TableDefines.mqh"
-#include "..\Defines\TableEnums.mqh"
+
 #ifndef __LISTOBJ_MQH__
 #define __LISTOBJ_MQH__
-       //+------------------------------------------------------------------+
-   // | Linked List Object Class |
    //+------------------------------------------------------------------+
+   // | Included Libraries |
+   //+------------------------------------------------------------------+
+   #include <Arrays\List.mqh>
+   #include "..\Defines\TableDefines.mqh"
+   #include "..\Defines\TableEnums.mqh" 
    class CListObj : public CList
    {
-   protected:
-      ENUM_OBJECT_TYPE  m_element_type;   // The type of the object being created in CreateElement()
-   public:
-   // --- Virtual method (1) loading a list from a file, (2) creating a list element, (3) comparing
-      virtual bool      Load(const int file_handle);
-      virtual CObject  *CreateElement(void);
+      protected:
+         ENUM_OBJECT_TYPE  m_element_type;   // The type of the object being created in CreateElement()
+      public:
+      // --- Virtual method (1) loading a list from a file, (2) creating a list element, (3) comparing
+         virtual bool      Load(const int file_handle);
+         virtual CObject  *CreateElement(void);
    };
    //+------------------------------------------------------------------+
    // | Loading a list from a file |

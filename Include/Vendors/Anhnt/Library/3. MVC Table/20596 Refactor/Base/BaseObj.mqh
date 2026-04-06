@@ -3,21 +3,25 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//|First See in              https://www.mql5.com/en/articles/17960  |
+//|Current                    https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Basic class of graphic elements |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __BASEOBJ_MQH__
 #define __BASEOBJ_MQH__
-       //+------------------------------------------------------------------+
-   //| Basic class of graphic elements |
    //+------------------------------------------------------------------+
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+   //#include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "CommonManager.mqh"
+   #include "..\Services\FunctionLib.mqh"   
    class CBaseObj : public CObject
    {
       protected:

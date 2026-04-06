@@ -1,3 +1,16 @@
+Cậu ơi tớ đang Refactor cái bài này.
+Symbol Correlation Table https://www.mql5.com/en/articles/20596
+Trước đây họ viết rất nhiều class trong một file table. Tớ muốn tách ra mỗi class một file riêng
 
 
-8	Symbol Correlation Table https://www.mql5.com/en/articles/20596
+//| First See in             https://www.mql5.com/en/articles/18221  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
+
+//+------------------------------------------------------------------+
+//| Included Standard Libraries                                      |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Included Custome Libraries                                       |
+//+------------------------------------------------------------------+
+	

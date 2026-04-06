@@ -13,7 +13,7 @@
 
 #ifndef MOVE_TO_CONTROLSDEFINES_MQH
 #define MOVE_TO_CONTROLSDEFINES_MQH
-      // //+------------------------------------------------------------------+
+   // //+------------------------------------------------------------------+
    // // | Macro substitutions |
    // //+------------------------------------------------------------------+
    //    #define  DEF_LABEL_W                50          // Default text label width

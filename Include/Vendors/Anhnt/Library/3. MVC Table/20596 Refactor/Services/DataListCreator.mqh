@@ -9,14 +9,14 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Class for creating lists of data                                 |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
 #ifndef __DATALIST_CREATOR_MQH__
 #define __DATALIST_CREATOR_MQH__
    //+------------------------------------------------------------------+
-   // | Class for creating lists of data |
+   // | Included Libraries |
    //+------------------------------------------------------------------+
+   #include <Arrays\List.mqh>   
    class DataListCreator
    {
    public:

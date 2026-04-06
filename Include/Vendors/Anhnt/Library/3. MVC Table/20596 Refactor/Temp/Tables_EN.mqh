@@ -17,15 +17,17 @@
 #include "../Services/DELib.mqh"
 #include "../Tables/TableCell.mqh"
 
-
-// --- Forward declaration of classes
-class CTableCell;                   // Table cell class
-class CTableRow;                    // Table row class
-class CTableModel;                  // Table model class
-class CColumnCaption;               // Table Column Header Class
-class CTableHeader;                 // Table header class
-class CTable;                       // Table class
-class CTableByParam;                // Table class based on an array of parameters
+#ifndef MOVE_TO_DELIB_MQH
+#define MOVE_TO_DELIB_MQH
+   // // --- Forward declaration of classes
+   // class CTableCell;                   // Table cell class
+   // class CTableRow;                    // Table row class
+   // class CTableModel;                  // Table model class
+   // class CColumnCaption;               // Table Column Header Class
+   // class CTableHeader;                 // Table header class
+   // class CTable;                       // Table class
+   // class CTableByParam;                // Table class based on an array of parameters
+#endif // MOVE_TO_DELIB_MQH
 
 #ifndef MOVE_TO_TABLEDEFINES_MQH
 #define MOVE_TO_TABLEDEFINES_MQH

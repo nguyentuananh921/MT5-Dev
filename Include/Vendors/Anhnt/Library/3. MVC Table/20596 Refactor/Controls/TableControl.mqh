@@ -9,16 +9,23 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Table management class |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __TABLECONTROL_MQH__
 #define __TABLECONTROL_MQH__
-    //+------------------------------------------------------------------+
-// | Table management class |
-//+------------------------------------------------------------------+
-class CTableControl : public CPanel
+   //+------------------------------------------------------------------+
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+   //#include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "Panel.mqh"
+   class CTable;
+   class CTableView;
+   class CTableRowView;
+   class CTableCell; 
+  class CTableControl : public CPanel
   {
    private:
    // --- Returns the maximum value of an integer array
@@ -94,22 +101,22 @@ class CTableControl : public CPanel
                         CTableControl(const string object_name, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
                      ~CTableControl(void) {}
   };
-#ifndef CTABLECONTROL_IMPLEMENTATION
-#define CTABLECONTROL_IMPLEMENTATION
-     //+------------------------------------------------------------------+
+ #ifndef CTABLECONTROL_IMPLEMENTATION
+ #define CTABLECONTROL_IMPLEMENTATION
+   //+------------------------------------------------------------------+
    // | Constructor |
    //+------------------------------------------------------------------+
    CTableControl::CTableControl(const string object_name,const long chart_id,const int wnd,const int x,const int y,const int w,const int h) :
       CPanel(object_name,"",chart_id,wnd,x,y,w,h)
-   {
+    {
       this.m_list_table_model.Clear();
       this.SetName("Table Control");
-   }
+    }
    //+------------------------------------------------------------------+
    // | Returns the maximum value of an integer array |
    //+------------------------------------------------------------------+
    bool CTableControl::ArrayMaximumValue(int &array[],int &value)
-   {
+    {
       ::ResetLastError();
       int index=::ArrayMaximum(array);
       if(index<0)
@@ -119,12 +126,12 @@ class CTableControl : public CPanel
       }
       value=array[index];
       return true;
-   }
+    }
    //+------------------------------------------------------------------+
    // | Returns the maximum width of the text in the row header array |
    //+------------------------------------------------------------------+
    int CTableControl::GetMaximumRowCaptionTextSize(string &row_captions[])
-   {
+    {
       int total=(int)row_captions.Size();
       if(total==0)
          return 0;
@@ -140,21 +147,21 @@ class CTableControl : public CPanel
       }
       int value=0;
       return(this.ArrayMaximumValue(array,value) ? value : 0);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Adds a table model object (CTable) to the list |
    //+------------------------------------------------------------------+
    bool CTableControl::TableModelAdd(CTable *table_model,const int table_id,const string source)
-   {
-   // --- Checking the table model object
+    {
+     // --- Checking the table model object
       if(table_model==NULL)
       {
          ::PrintFormat("%s::%s: Error. Failed to create Table Model object",source,__FUNCTION__);
          return false;
       }
-   // --- We set an identifier in the table model - either by the size of the list or a given one
+     // --- We set an identifier in the table model - either by the size of the list or a given one
       table_model.SetID(table_id<0 ? this.m_list_table_model.Total() : table_id);
-   // --- If a table model with a set identifier is in the list, we report this, delete the object and return false
+     // --- If a table model with a set identifier is in the list, we report this, delete the object and return false
       this.m_list_table_model.Sort(0);
       if(this.m_list_table_model.Search(table_model)!=NULL)
       {
@@ -162,46 +169,46 @@ class CTableControl : public CPanel
          delete table_model;
          return false;
       }
-   // --- If the table model is not added to the list, we report this, delete the object and return false
+     // --- If the table model is not added to the list, we report this, delete the object and return false
       if(this.m_list_table_model.Add(table_model)<0)
       {
          ::PrintFormat("%s::%s: Error. Failed to add Table Model object to list",source,__FUNCTION__);
          delete table_model;
          return false;
       }
-   // --- Everything is successful
+     // --- Everything is successful
       return true;
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Creates a new object and adds it to the list |
-   // | visual table view (CTableView) |
+   //| Creates a new object and adds it to the list |
+   //| visual table view (CTableView) |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableViewAdd(CTable *table_model,string &row_names[],const string source)
-   {
-   // --- Checking the table model object
+    {
+     // --- Checking the table model object
       if(table_model==NULL)
       {
          ::PrintFormat("%s::%s: Error. An invalid Table Model object was passed",source,__FUNCTION__);
          return NULL;
       }
-   // --- Get the maximum width of the row header text
+     // --- Get the maximum width of the row header text
       int w=this.GetMaximumRowCaptionTextSize(row_names);
       if(w>0 && w<DEF_TABLE_ROWS_HEADER_W)
          w=DEF_TABLE_ROWS_HEADER_W;
          
-   // --- Create a new element - a visual representation of the table, attached to the panel
+     // --- Create a new element - a visual representation of the table, attached to the panel
       CTableView *table_view=this.InsertNewElement(ELEMENT_TYPE_TABLE_VIEW,(string)w,"TableView"+(string)table_model.ID(),1,1,this.Width()-2,this.Height()-2);
       if(table_view==NULL)
       {
          ::PrintFormat("%s::%s: Error. Failed to create Table View object",source,__FUNCTION__);
          return NULL;
       }
-   // --- Assign the table object (Model) and its identifier to the graphic element “Table” (View)
+     // --- Assign the table object (Model) and its identifier to the graphic element “Table” (View)
       table_view.TableObjectAssign(table_model);
       table_view.CreateRowsHeader(row_names);
       table_view.SetID(table_model.ID());
       return table_view;
-   }
+    }
    //+-------------------------------------------------------------------+
    // | Creates a table specifying a table array and a header array. |
    // | Determines the number and names of columns according to column_names|
@@ -210,47 +217,47 @@ class CTableControl : public CPanel
    //+-------------------------------------------------------------------+
    template<typename T>
    CTableView *CTableControl::TableCreate(T &row_data[][],const string &column_names[],const int table_id=WRONG_VALUE)
-   {
-   // --- Create a table object using the specified parameters
+    {
+     // --- Create a table object using the specified parameters
       CTable *table_model=new CTable(row_data,column_names);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return a table with an empty array of row headers
+     // --- Create and return a table with an empty array of row headers
       string array[]={};
       return this.TableViewAdd(table_model,array,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Creates a table defining the number of columns and rows.       |
    // | The columns will have Excel names "A", "B", "C", etc.      |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableCreate(const uint num_rows,const uint num_columns,const int table_id=WRONG_VALUE)
-   {
+    {
       CTable *table_model=new CTable(num_rows,num_columns);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return a table with an empty array of row headers
+     // --- Create and return a table with an empty array of row headers
       string array[]={};
       return this.TableViewAdd(table_model,array,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Creates a table with columns initialized according to column_names |
    // | The number of rows is determined by the row_data parameter, with type matrix |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableCreate(const matrix &row_data,const string &column_names[],const int table_id=WRONG_VALUE)
-   {
+    {
       CTable *table_model=new CTable(row_data,column_names);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return a table with an empty array of row headers
+     // --- Create and return a table with an empty array of row headers
       string array[]={};
       return this.TableViewAdd(table_model,array,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Creates a table specifying a table array based on |
    // | row_data list containing objects with structure field data.  |
@@ -258,16 +265,16 @@ class CTableControl : public CPanel
    // | column names in the column_names array |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableCreate(CList &row_data,const string &column_names[],const int table_id=WRONG_VALUE)
-   {
+    {
       CTableByParam *table_model=new CTableByParam(row_data,column_names);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return a table with an empty array of row headers
+     // --- Create and return a table with an empty array of row headers
       string array[]={};
       return this.TableViewAdd(table_model,array,__FUNCTION__);
-   }
+    }
    //+-------------------------------------------------------------------+
    // | Creates a table specifying a table array and a header array. |
    // | Determines the number and names of columns according to column_names|
@@ -276,44 +283,44 @@ class CTableControl : public CPanel
    //+-------------------------------------------------------------------+
    template<typename T>
    CTableView *CTableControl::TableCreate(T &row_data[][],const string &column_names[],string &row_names[],const int table_id=WRONG_VALUE)
-   {
-   // --- Create a table object using the specified parameters
+    {
+     // --- Create a table object using the specified parameters
       CTable *table_model=new CTable(row_data,column_names);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
 
-   // --- Create and return the table
+     // --- Create and return the table
       return this.TableViewAdd(table_model,row_names,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Creates a table defining the number of columns and rows.       |
    // | The columns will have Excel names "A", "B", "C", etc.      |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableCreate(const uint num_rows,const uint num_columns,string &row_names[],const int table_id=WRONG_VALUE)
-   {
+    {
       CTable *table_model=new CTable(num_rows,num_columns);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return the table
+     // --- Create and return the table
       return this.TableViewAdd(table_model,row_names,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Creates a table with columns initialized according to column_names |
    // | The number of rows is determined by the row_data parameter, with type matrix |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableCreate(const matrix &row_data,const string &column_names[],string &row_names[],const int table_id=WRONG_VALUE)
-   {
+    {
       CTable *table_model=new CTable(row_data,column_names);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return the table
+     // --- Create and return the table
       return this.TableViewAdd(table_model,row_names,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Creates a table specifying a table array based on |
    // | row_data list containing objects with structure field data.  |
@@ -321,37 +328,37 @@ class CTableControl : public CPanel
    // | column names in the column_names array |
    //+------------------------------------------------------------------+
    CTableView *CTableControl::TableCreate(CList &row_data,const string &column_names[],string &row_names[],const int table_id=WRONG_VALUE)
-   {
+    {
       CTableByParam *table_model=new CTableByParam(row_data,column_names);
-   // --- If there are errors when creating or adding a table to the list, return NULL
+     // --- If there are errors when creating or adding a table to the list, return NULL
       if(!this.TableModelAdd(table_model,table_id,__FUNCTION__))
          return NULL;
       
-   // --- Create and return the table
+     // --- Create and return the table
       return this.TableViewAdd(table_model,row_names,__FUNCTION__);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the value to the specified cell (Model + View) |
    //+------------------------------------------------------------------+
    template<typename T>
    void CTableControl::CellSetValue(const uint table,const uint row,const uint col,const T value,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
          return;
       
-   // --- From the table model we get the cell model
+     // --- From the table model we get the cell model
       CTableCell *cell_model=table_model.GetCell(row,col);
       if(cell_model==NULL)
          return;
          
-   // --- Get the visual representation object of the cell
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
          
-   // --- Compare the value set in the cell with the value passed
+     // --- Compare the value set in the cell with the value passed
       bool equal=false;
       ENUM_DATATYPE datatype=cell_model.Datatype();
       switch(datatype)
@@ -363,169 +370,169 @@ class CTableControl : public CPanel
          //---TYPE_STRING
          default           :  equal=(::StringCompare(cell_model.ValueS(),(string)value)==0);                break;
       }
-   // --- If the values ​​are equal, we leave
+     // --- If the values ​​are equal, we leave
       if(equal)
          return;
          
-   // --- We set a new value in the cell model;
-   // --- enter the value from the cell model into the visual representation object of the cell
-   // --- Redraw the cell with the graph update flag
+     // --- We set a new value in the cell model;
+     // --- enter the value from the cell model into the visual representation object of the cell
+     // --- Redraw the cell with the graph update flag
       table_model.CellSetValue(row,col,value);
       cell_view.SetText(cell_model.Value());
       cell_view.Draw(chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the precision to the specified cell (Model + View) |
    //+------------------------------------------------------------------+
    void CTableControl::CellSetDigits(const uint table,const uint row,const uint col,const int digits,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
          return;
       
-   // --- From the table model we get the cell model
+     // --- From the table model we get the cell model
       CTableCell *cell_model=table_model.GetCell(row,col);
       if(cell_model==NULL || cell_model.Digits()==digits)
          return;
          
-   // --- Get the visual representation object of the cell
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
       
-   // --- We set a new precision value in the cell model;
-   // --- enter the value from the cell model into the visual representation object of the cell
-   // --- Redraw the cell with the graph update flag
+     // --- We set a new precision value in the cell model;
+     // --- enter the value from the cell model into the visual representation object of the cell
+     // --- Redraw the cell with the graph update flag
       table_model.CellSetDigits(row,col,digits);
       cell_view.SetText(cell_model.Value());
       cell_view.Draw(chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Sets time display flags |
-   // | to the specified cell (Model + View) |
+   //| Sets time display flags                                          |
+   //| to the specified cell (Model + View)                             |
    //+------------------------------------------------------------------+
    void CTableControl::CellSetTimeFlags(const uint table,const uint row,const uint col,const uint flags,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
          return;
       
-   // --- From the table model we get the cell model
+     // --- From the table model we get the cell model
       CTableCell *cell_model=table_model.GetCell(row,col);
       if(cell_model==NULL || cell_model.DatetimeFlags()==flags)
          return;
          
-   // --- Get the visual representation object of the cell
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
       
-   // --- We set a new value for the time display flags in the cell model;
-   // --- enter the value from the cell model into the visual representation object of the cell
-   // --- Redraw the cell with the graph update flag
+     // --- We set a new value for the time display flags in the cell model;
+     // --- enter the value from the cell model into the visual representation object of the cell
+     // --- Redraw the cell with the graph update flag
       table_model.CellSetTimeFlags(row,col,flags);
       cell_view.SetText(cell_model.Value());
       cell_view.Draw(chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the color name display flag |
    // | to the specified cell (Model + View) |
    //+------------------------------------------------------------------+
    void CTableControl::CellSetColorNamesFlag(const uint table,const uint row,const uint col,const bool flag,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
          return;
       
-   // --- From the table model we get the cell model
+     // --- From the table model we get the cell model
       CTableCell *cell_model=table_model.GetCell(row,col);
       if(cell_model==NULL || cell_model.ColorNameFlag()==flag)
          return;
          
-   // --- Get the visual representation object of the cell
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
       
-   // --- Set a new value for the flag for displaying color names in the cell model;
-   // --- enter the value from the cell model into the visual representation object of the cell
-   // --- Redraw the cell with the graph update flag
+     // --- Set a new value for the flag for displaying color names in the cell model;
+     // --- enter the value from the cell model into the visual representation object of the cell
+     // --- Redraw the cell with the graph update flag
       table_model.CellSetColorNamesFlag(row,col,flag);
       cell_view.SetText(cell_model.Value());
       cell_view.Draw(chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Sets the foreground color to the specified cell (View) |
+   //| Sets the foreground color to the specified cell (View)           |
    //+------------------------------------------------------------------+
    void CTableControl::CellSetForeColor(const uint table,const uint row,const uint col,const color clr,const bool chart_redraw)
-   {
-   // --- Get the visual representation object of the cell
+    {
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
       
-   // --- Set the cell text color to the cell visual representation object
-   // --- Redraw the cell with the graph update flag
+     // --- Set the cell text color to the cell visual representation object
+     // --- Redraw the cell with the graph update flag
       cell_view.SetForeColor(clr);
       cell_view.Draw(chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Sets the background color to the specified cell (View) |
+   // | Sets the background color to the specified cell (View)          |
    //+------------------------------------------------------------------+
    void CTableControl::CellSetBackColor(const uint table,const uint row,const uint col,const color clr,const bool chart_redraw)
-   {
-   // --- Get the visual representation object of the cell
+    {
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
       
-   // --- Set the cell background color to the cell visual representation object
-   // --- Redraw the cell with the graph update flag
+     // --- Set the cell background color to the cell visual representation object
+     // --- Redraw the cell with the graph update flag
       cell_view.SetBackColor(clr);
       cell_view.Draw(chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Sets the text anchor point to the specified cell (View) |
+   // | Sets the text anchor point to the specified cell (View)         |
    //+------------------------------------------------------------------+
    void CTableControl::CellSetTextAnchor(const uint table,const uint row,const uint col,const ENUM_ANCHOR_POINT anchor,const bool cell_redraw,const bool chart_redraw)
-   {
-   // --- Get the visual representation object of the cell
+    {
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return;
       
-   // --- Set the text anchor point to the visual representation object of the cell
-   // --- Redraw the cell with the graph update flag
+     // --- Set the text anchor point to the visual representation object of the cell
+     // --- Redraw the cell with the graph update flag
       cell_view.SetTextAnchor(anchor,cell_redraw,chart_redraw);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Returns the text anchor point in the specified cell (View) |
+   //| Returns the text anchor point in the specified cell (View)       |
    //+------------------------------------------------------------------+
    ENUM_ANCHOR_POINT CTableControl::CellTextAnchor(const uint table,const uint row,const uint col)
-   {
-   // --- Get the visual representation object of the cell
+    {
+     // --- Get the visual representation object of the cell
       CTableCellView *cell_view=this.GetCellView(table,row,col);
       if(cell_view==NULL)
          return ANCHOR_LEFT_UPPER;
       
-   // --- Return the text anchor point
+     // --- Return the text anchor point
       return((ENUM_ANCHOR_POINT)cell_view.TextAnchor());
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Updates the specified column of the specified table |
+   //| Updates the specified column of the specified table              |
    //+------------------------------------------------------------------+
    bool CTableControl::ColumnUpdate(const string source,CTable *table_model,const uint table,const uint col,const bool cells_redraw)
-   {
-   // --- Checking the table model
+    {
+     // --- Checking the table model
       if(::CheckPointer(table_model)==POINTER_INVALID)
       {
          ::PrintFormat("%s::%s: Error. Invalid table model pointer passed",source,__FUNCTION__);
          return false;
       }
-   // --- Getting a visual representation of the table
+     // --- Getting a visual representation of the table
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
@@ -533,7 +540,7 @@ class CTableControl : public CPanel
          return false;
       }
       
-   // --- In a loop through the rows of the visual representation of the table
+     // --- In a loop through the rows of the visual representation of the table
       int total=table_view.RowsTotal();
       for(int i=0;i<total;i++)
       {
@@ -559,98 +566,98 @@ class CTableControl : public CPanel
             cell_view.Draw(false);
       }
       return true;
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Sets the precision in the specified column (Model + View) |
+   //| Sets the precision in the specified column (Model + View)        |
    //+------------------------------------------------------------------+
    void CTableControl::ColumnSetDigits(const uint table,const uint col,const int digits,const bool cells_redraw,const bool chart_redraw)
    {
-   // --- Getting the table model
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
       {
          ::PrintFormat("%s: Error. Failed to get CTable object",__FUNCTION__);
          return;
       }
-   // --- Set Digits for the specified column in the table model
+     // --- Set Digits for the specified column in the table model
       table_model.ColumnSetDigits(col,digits);
 
-   // --- Update the column data display and, if specified, redraw the graph
+     // --- Update the column data display and, if specified, redraw the graph
       if(this.ColumnUpdate(__FUNCTION__,table_model,table,col,cells_redraw) && chart_redraw)
          ::ChartRedraw(this.m_chart_id);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Устанавливает флаги отображения времени                          |
+   // | Устанавливает флаги отображения времени                         |
    // | in the specified column (Model + View) |
    //+------------------------------------------------------------------+
    void CTableControl::ColumnSetTimeFlags(const uint table,const uint col,const uint flags,const bool cells_redraw,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
       {
          ::PrintFormat("%s: Error. Failed to get CTable object",__FUNCTION__);
          return;
       }
-   // --- Set the time display flags for the specified column in the table model
+     // --- Set the time display flags for the specified column in the table model
       table_model.ColumnSetTimeFlags(col,flags);
 
-   // --- Update the column data display and, if specified, redraw the graph
+     // --- Update the column data display and, if specified, redraw the graph
       if(this.ColumnUpdate(__FUNCTION__,table_model,table,col,cells_redraw) && chart_redraw)
          ::ChartRedraw(this.m_chart_id);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the color name display flag |
    // | in the specified column (Model + View) |
    //+------------------------------------------------------------------+
    void CTableControl::ColumnSetColorNamesFlag(const uint table,const uint col,const bool flag,const bool cells_redraw,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
       {
          ::PrintFormat("%s: Error. Failed to get CTable object",__FUNCTION__);
          return;
       }
-   // --- Set the time display flags for the specified column in the table model
+     // --- Set the time display flags for the specified column in the table model
       table_model.ColumnSetColorNamesFlag(col,flag);
 
-   // --- Update the column data display and, if specified, redraw the graph
+     // --- Update the column data display and, if specified, redraw the graph
       if(this.ColumnUpdate(__FUNCTION__,table_model,table,col,cells_redraw) && chart_redraw)
          ::ChartRedraw(this.m_chart_id);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the data type in the specified column ( (Model + View)) |
    //+------------------------------------------------------------------+
    void CTableControl::ColumnSetDatatype(const uint table,const uint col,const ENUM_DATATYPE type,const bool cells_redraw,const bool chart_redraw)
-   {
-   // --- Getting the table model
+    {
+     // --- Getting the table model
       CTable *table_model=this.GetTableModel(table);
       if(table_model==NULL)
       {
          ::PrintFormat("%s: Error. Failed to get CTable object",__FUNCTION__); 
          return;
       }
-   // --- Set the data type for the specified column in the table model
+     // --- Set the data type for the specified column in the table model
       table_model.ColumnSetDatatype(col,type);
 
-   // --- Update the column data display and, if specified, redraw the graph
+     // --- Update the column data display and, if specified, redraw the graph
       if(this.ColumnUpdate(__FUNCTION__,table_model,table,col,cells_redraw) && chart_redraw)
          ::ChartRedraw(this.m_chart_id);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Sets the text anchor point in the specified column (View) |
+   //| Sets the text anchor point in the specified column (View) |
    //+------------------------------------------------------------------+
    void CTableControl::ColumnSetTextAnchor(const uint table,const uint col,const ENUM_ANCHOR_POINT anchor,const bool cells_redraw,const bool chart_redraw)
-   {
-   // --- Getting a visual representation of the table
+    {
+     // --- Getting a visual representation of the table
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
          ::PrintFormat("%s: Error. Failed to get CTableView object",__FUNCTION__);
          return;
       }
-   // --- In a loop through all rows of the table
+     // --- In a loop through all rows of the table
       int total=table_view.RowsTotal();
       for(int i=0;i<total;i++)
       {
@@ -660,23 +667,23 @@ class CTableControl : public CPanel
          if(cell_view!=NULL && cell_view.TextAnchor()!=anchor)
             cell_view.SetTextAnchor(anchor,cells_redraw,false);
       }
-   // --- If indicated, update the schedule
+     // --- If indicated, update the schedule
       if(chart_redraw)
          ::ChartRedraw(this.m_chart_id);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Returns the string value of the specified cell (Model) |
    //+------------------------------------------------------------------+
    string CTableControl::CellValueAt(const uint table,const uint row,const uint col)
-   {
+    {
       CTable *table_model=this.GetTableModel(table);
       return(table_model!=NULL ? table_model.CellValueAt(row,col) : ::StringFormat("%s: Error. Failed to get table model",__FUNCTION__));
-   }
+    }
    //+------------------------------------------------------------------+
    // | Returns the specified table row (View) |
    //+------------------------------------------------------------------+
    CTableRowView *CTableControl::GetRowView(const uint table,const uint index)
-   {
+    {
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
@@ -684,12 +691,12 @@ class CTableControl : public CPanel
          return NULL;
       }
       return table_view.GetRowView(index);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Returns the specified table cell (View) |
+   //| Returns the specified table cell (View) |
    //+------------------------------------------------------------------+
    CTableCellView *CTableControl::GetCellView(const uint table,const uint row,const uint col)
-   {
+    {
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
@@ -697,12 +704,12 @@ class CTableControl : public CPanel
          return NULL;
       }
       return table_view.GetCellView(row,col);
-   }
+    }
    //+------------------------------------------------------------------+
-   // | Returns the number of rows in the specified table |
+   //| Returns the number of rows in the specified table |
    //+------------------------------------------------------------------+
    uint CTableControl::RowsTotal(const uint table)
-   {
+    {
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
@@ -710,20 +717,20 @@ class CTableControl : public CPanel
          return NULL;
       }
       return table_view.RowsTotal();
-   }
+    }
    //+------------------------------------------------------------------+
    // | Returns the number of cells per row in the specified table |
    //+------------------------------------------------------------------+
    uint CTableControl::CellsInRow(const uint table,const uint row)
-   {
+    {
       CTableRowView *row_view=this.GetRowView(table,row);
       return(row_view!=NULL ? row_view.CellsTotal() : 0);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the highlighting mode for the rows of the specified table |
    //+------------------------------------------------------------------+
    void CTableControl::SetRowsHighlightMode(const uint table,const ENUM_ROWS_HIGHLIGHT_MODE highlight_mode)
-   {
+    {
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
@@ -731,12 +738,12 @@ class CTableControl : public CPanel
          return;
       }
       table_view.SetRowsHighlightMode(highlight_mode);
-   }
+    }
    //+------------------------------------------------------------------+
    // | Sets the ability to sort the specified table |
    //+------------------------------------------------------------------+
    void CTableControl::SetSortable(const uint table,const bool flag)
-   {
+    {
       CTableView *table_view=this.GetTableView(table);
       if(table_view==NULL)
       {
@@ -744,9 +751,9 @@ class CTableControl : public CPanel
          return;
       }
       table_view.SetSortable(flag);
-   }
+    }
    //+------------------------------------------------------------------+
-#endif // CTABLECONTROL_IMPLEMENTATION
+ #endif // CTABLECONTROL_IMPLEMENTATION
 #endif // __TABLECONTROL_MQH__
 
 

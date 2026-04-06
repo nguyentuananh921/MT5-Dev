@@ -3,20 +3,26 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17960  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Graphics element color class |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
+
 #ifndef __COLORELEMENT_MQH__
 #define __COLORELEMENT_MQH__
-       //+------------------------------------------------------------------+
-   // | Graphics element color class |
    //+------------------------------------------------------------------+
+   //| Included Libraries                                               |
+   //+------------------------------------------------------------------+
+   #include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "Color.mqh"
+   #include "..\Defines\BaseEnums.mqh"   
    class CColorElement : public CBaseObj
    {
       protected:

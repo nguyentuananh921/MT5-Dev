@@ -9,16 +9,7 @@ https://www.mql5.com/en/users/artmedia70
 7	Customizable and sortable table columns https://www.mql5.com/en/articles/19979
 8	Symbol Correlation Table https://www.mql5.com/en/articles/20596
 
-Bài nào thì cuối bài cũng có code đi kèm.
-Tuy nhiên
-1. Các code này đều được comment bằng tiếng Nga (tớ ko đọc được comment, tớ không biết tiếng Nga ấy) cái này tớ đã cho dịch sang tiếng Anh rồi.
-2. Các class khác nhau được viết chung trong 1 file.
-Ở bài số 2 khi thêm graphical thì sau khi compile thì kết quả không như mô tả ở cuối bài.
-GIờ chúng ta làm thế nào để tìm ra chỗ sai cậu nhỉ
+Bài nào thì cuối bài cũng có code đi kèm. Ở bài số 8 thì Các class khác nhau được viết chung trong 1 file. Giờ tớ tìm cách tách cái file đấy ra để mỗi class là một file riêng biệt. 
 
-
-1. Indicator code 18221,
-2. Library code 18221
-
-3. Indicator code 18221 Modify to Match Library code 20596
-4. Library code 20596
+Và tớ gặp lỗi khi tách file control.mqh compile. 
+Tớ có rà soát lại file control.mqh thì thứ tự từ trên xuống là 

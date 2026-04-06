@@ -3,24 +3,29 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17960  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2025, MetaQuotes Ltd."
-#property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
 //| Base graphic element canvas class |
 //+------------------------------------------------------------------+
-
-//+------------------------------------------------------------------+
-// | Included Libraries |
-//+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
+#property copyright "Copyright 2025, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
 #ifndef __CANVASBASE_MQH__
 #define __CANVASBASE_MQH__
-    class CCanvasBase : public CBoundedObj
-    {
+    //+------------------------------------------------------------------+
+    //| Included Libraries                                               |
+    //+------------------------------------------------------------------+
+    //#include <Arrays\List.mqh>
+    #include <Canvas\Canvas.mqh>              // Class SB CCanvas
+    //+------------------------------------------------------------------+
+    //| Included Custome Libraries                                       |
+    //+------------------------------------------------------------------+
+    #include "ColorElement.mqh"
+    #include "BoundedObj.mqh"
+    #include "AutoRepeat.mqh"
+class CCanvasBase : public CBoundedObj
+  {
     private: 
         bool              m_chart_mouse_wheel_flag;                 // Flag for sending messages about mouse wheel scrolling
         bool              m_chart_mouse_move_flag;                  // Flag for sending messages about mouse cursor movements
@@ -502,19 +507,19 @@
                             m_state(0), m_wnd_y(0), m_cursor_delta_x(0), m_cursor_delta_y(0) { this.CreateCanvasObjects(); this.Init(); }
                             CCanvasBase(const string object_name,const long chart_id,const int wnd,const int x,const int y,const int w,const int h);
                         ~CCanvasBase(void);
-    };
-    #ifndef CCANVASBASE_IMPLEMENTATION
-    #define CCANVASBASE_IMPLEMENTATION
-    //+------------------------------------------------------------------+
-    //| CCanvasBase::Constructor |
-    //+------------------------------------------------------------------+
-    CCanvasBase::CCanvasBase(const string object_name,const long chart_id,const int wnd,const int x,const int y,const int w,const int h) :
+   };
+ #ifndef CCANVASBASE_IMPLEMENTATION
+ #define CCANVASBASE_IMPLEMENTATION
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Constructor |
+  //+------------------------------------------------------------------+
+  CCanvasBase::CCanvasBase(const string object_name,const long chart_id,const int wnd,const int x,const int y,const int w,const int h) :
         m_program_name(::MQLInfoString(MQL_PROGRAM_NAME)), m_wnd(wnd<0 ? 0 : wnd), m_alpha_bg(0), m_alpha_fg(255),
         m_hidden(false), m_blocked(false), m_focused(false), m_movable(false), m_resizable(false), m_main(false), 
         m_autorepeat_flag(false), m_trim_flag(true), m_cropped(false), m_scroll_flag(false),
         m_border_width_lt(0), m_border_width_rt(0), m_border_width_up(0), m_border_width_dn(0), m_z_order(0),
         m_state(0), m_cursor_delta_x(0), m_cursor_delta_y(0)
-    {
+   {
     // --- Get the adjusted graph ID and distance in pixels along the vertical Y axis
     // --- between the top frame of the indicator subwindow and the top frame of the main chart window
         this.m_chart_id=this.CorrectChartID(chart_id);
@@ -540,12 +545,12 @@
             // --- Remember permissions for the mouse and graphics tools
             this.Init();
         }
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Destructor |
-    //+------------------------------------------------------------------+
-    CCanvasBase::~CCanvasBase(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Destructor |
+  //+------------------------------------------------------------------+
+  CCanvasBase::~CCanvasBase(void)
+   {
     // --- Destroy the object
         this.Destroy();
     // --- Restoring permissions for the mouse and graphics tools
@@ -555,12 +560,12 @@
         ::ChartSetInteger(this.m_chart_id, CHART_MOUSE_SCROLL, this.m_chart_mouse_scroll_flag);
         ::ChartSetInteger(this.m_chart_id, CHART_CONTEXT_MENU, this.m_chart_context_menu_flag);
         ::ChartSetInteger(this.m_chart_id, CHART_CROSSHAIR_TOOL, this.m_chart_crosshair_tool_flag);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Comparing two objects |
-    //+------------------------------------------------------------------+
-    int CCanvasBase::Compare(const CObject *node,const int mode=0) const
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Comparing two objects |
+  //+------------------------------------------------------------------+
+  int CCanvasBase::Compare(const CObject *node,const int mode=0) const
+   {
         if(node==NULL)
             return -1;
         const CCanvasBase *obj=node;
@@ -574,12 +579,12 @@
             case BASE_SORT_BY_ZORDER:  return(this.ObjectZOrder() >obj.ObjectZOrder()  ? 1 : this.ObjectZOrder()  <obj.ObjectZOrder()  ? -1 : 0);
             default                 :  return(this.ID()           >obj.ID()            ? 1 : this.ID()            <obj.ID()            ? -1 : 0);
         }
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Creates background and foreground canvases |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::CreateCanvasObjects(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Creates background and foreground canvases |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::CreateCanvasObjects(void)
+   {
     // --- If both canvases have already been created, or the class does not manage canvases, return true
         if((this.m_background!=NULL && this.m_foreground!=NULL) || !this.m_canvas_owner)
             return true;
@@ -599,12 +604,12 @@
         }
     // --- Everything is successful
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Creates background and foreground graphic objects |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Create(const long chart_id,const int wnd,const string object_name,const int x,const int y,const int w,const int h)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Creates background and foreground graphic objects |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Create(const long chart_id,const int wnd,const string object_name,const int x,const int y,const int w,const int h)
+   {
     // --- Getting the adjusted chart identifier
         long id=this.CorrectChartID(chart_id);
     // --- Correct the passed name for the object
@@ -636,13 +641,13 @@
         this.m_bound.SetXY(x,y);
         this.m_bound.Resize(w,h);
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Set pointer |
-    // | to the parent container object |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::SetContainerObj(CCanvasBase *obj)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Set pointer |
+  // | to the parent container object |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::SetContainerObj(CCanvasBase *obj)
+   {
         // --- Set the passed pointer to the object
             this.m_container=obj;
         // --- If the pointer is empty, we leave
@@ -656,22 +661,22 @@
             }
         // --- Crop the object along the boundaries of the container assigned to it
             this.ObjectTrim();
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Returns the flag that the object is |
-    // | located outside of its container |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::IsOutOfContainer(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Returns the flag that the object is |
+  // | located outside of its container |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::IsOutOfContainer(void)
+   {
     // --- Return the result of checking that the object completely extends beyond the container
         return(this.Right() <= this.ContainerLimitLeft() || this.X() >= this.ContainerLimitRight() ||
                 this.Bottom()<= this.ContainerLimitTop()  || this.Y() >= this.ContainerLimitBottom());
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Crops a graphic object along the contour of the container |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectTrim()
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Crops a graphic object along the contour of the container |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectTrim()
+   {
         // --- Check the element's cropping permission flag and,
         // --- if the element should not be trimmed along the container boundaries - return false
             if(!this.m_trim_flag)
@@ -807,23 +812,23 @@
         }
 
         return false;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Returns the flag that the cursor is inside the object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Contains(const int x,const int y)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Returns the flag that the cursor is inside the object |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Contains(const int x,const int y)
+   {
         int left=::fmax(this.X(),this.ObjectX());
         int right=::fmin(this.Right(),this.ObjectRight());
         int top=::fmax(this.Y(),this.ObjectY());
         int bottom=::fmin(this.Bottom(),this.ObjectBottom());
         return(x>=left && x<=right && y>=top && y<=bottom);
-    }
-    //+--------------------------------------------------------------------+
-    // |CCanvasBase::Returns the location of the cursor on the boundaries of the object|
-    //+--------------------------------------------------------------------+
-    ENUM_CURSOR_REGION CCanvasBase::CheckResizeZone(const int x,const int y)
-    {
+   }
+  //+--------------------------------------------------------------------+
+  // |CCanvasBase::Returns the location of the cursor on the boundaries of the object|
+  //+--------------------------------------------------------------------+
+  ENUM_CURSOR_REGION CCanvasBase::CheckResizeZone(const int x,const int y)
+   {
     // --- Coordinates of element borders
         int top=this.Y();
         int bottom=this.Bottom();
@@ -870,12 +875,12 @@
 
     // --- The cursor is not on the edges of the element
         return CURSOR_REGION_NONE;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the z-order of a graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectSetZOrder(const int value)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets the z-order of a graphic object |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectSetZOrder(const int value)
+   {
     // --- If an already set value is passed, return true
         if(this.ObjectZOrder()==value)
             return true;
@@ -885,12 +890,12 @@
     // --- Write the new z-order value to a variable and return true
         this.m_z_order=value;
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the X coordinate of a graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectSetX(const int x)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets the X coordinate of a graphic object |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectSetX(const int x)
+   {
     // --- If an existing coordinate is passed, return true
         if(this.ObjectX()==x)
             return true;
@@ -900,12 +905,12 @@
     // --- Write the new coordinate to a variable and return true
         this.m_obj_x=x;
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the Y coordinate of a graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectSetY(const int y)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Sets the Y coordinate of a graphic object           |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectSetY(const int y)
+   {
     // --- If an existing coordinate is passed, return true
         if(this.ObjectY()==y)
             return true;
@@ -915,55 +920,55 @@
     // --- Write the new coordinate to a variable and return true
         this.m_obj_y=y;
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Changes the width of a graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectResizeW(const int size)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Changes the width of a graphic object              |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectResizeW(const int size)
+  {
     // --- If the existing width is passed, return true
         if(this.ObjectWidth()==size)
             return true;
     // --- If a size greater than 0 is passed, we return the result of changing the width of the background and foreground, otherwise - false
         return(size>0 ? (this.m_background.Resize(size,this.ObjectHeight()) && this.m_foreground.Resize(size,this.ObjectHeight())) : false);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Changes the height of a graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectResizeH(const int size)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Changes the height of a graphic object             |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectResizeH(const int size)
+   {
     // --- If an existing height is passed, return true
         if(this.ObjectHeight()==size)
             return true;
     // --- If a size greater than 0 is passed, we return the result of changing the height of the background and foreground, otherwise - false
         return(size>0 ? (this.m_background.Resize(this.ObjectWidth(),size) && this.m_foreground.Resize(this.ObjectWidth(),size)) : false);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Resizes a graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectResize(const int w,const int h)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Resizes a graphic object |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectResize(const int w,const int h)
+   {
         if(!this.ObjectResizeW(w))
             return false;
         return this.ObjectResizeH(h);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Installs simultaneously |
-    // | coordinates and dimensions of the graphic object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ObjectSetXYWidthResize(const int x,const int y,const int w,const int h)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Installs simultaneously |
+  // | coordinates and dimensions of the graphic object                |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ObjectSetXYWidthResize(const int x,const int y,const int w,const int h)
+   {
     // --- If new coordinates are set, return the result of resizing
         if(this.ObjectSetXY(x,y))
             return this.ObjectResize(w,h);
     // --- Failed to set new coordinates - return false
         return false;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Changes the width of an object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ResizeW(const int w)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Changes the width of an object                     |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ResizeW(const int w)
+   {
         if(!this.ObjectResizeW(w))
             return false;
         this.BoundResizeW(w);
@@ -973,12 +978,12 @@
             this.Draw(false);
         }
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Changes the height of an object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ResizeH(const int h)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Changes the height of an object                    |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ResizeH(const int h)
+   {
         if(!this.ObjectResizeH(h))
             return false;
         this.BoundResizeH(h);
@@ -988,12 +993,12 @@
             this.Draw(false);
         }
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Resizes an object |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Resize(const int w,const int h)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Resizes an object                                  |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Resize(const int w,const int h)
+   {
         if(!this.ObjectResize(w,h))
             return false;
         this.BoundResize(w,h);
@@ -1003,11 +1008,11 @@
             this.Draw(false);
         }
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets an object to new X and Y coordinates |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Move(const int x,const int y)
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets an object to new X and Y coordinates |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Move(const int x,const int y)
     {
         if(!this.ObjectMove(x,y))
             return false;
@@ -1015,50 +1020,50 @@
         this.ObjectTrim();
         return true;
     }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets an object to a new X coordinate |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::MoveX(const int x)
-    {
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets an object to a new X coordinate |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::MoveX(const int x)
+   {
         return this.Move(x,this.AdjY(this.ObjectY()));
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets an object to a new Y coordinate |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::MoveY(const int y)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets an object to a new Y coordinate |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::MoveY(const int y)
+   {
         return this.Move(this.AdjX(this.ObjectX()),y);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Shifts an object along the X and Y axes by the specified offset |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Shift(const int dx,const int dy)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Shifts an object along the X and Y axes by the specified offset |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Shift(const int dx,const int dy)
+   {
         if(!this.ObjectShift(dx,dy))
             return false;
         this.BoundShift(dx,dy);
         this.ObjectTrim();
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Shifts the object along the X axis by the specified offset |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ShiftX(const int dx)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Shifts the object along the X axis by the specified offset |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ShiftX(const int dx)
+   {
         return this.Shift(dx,0);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Shifts the object along the Y axis by the specified offset |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ShiftY(const int dy)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Shifts the object along the Y axis by the specified offset |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ShiftY(const int dy)
+   {
         return this.Shift(0,dy);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets both the coordinates and dimensions of an element |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::MoveXYWidthResize(const int x,const int y,const int w,const int h)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Sets both the coordinates and dimensions of an element |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::MoveXYWidthResize(const int x,const int y,const int w,const int h)
+   {
         if(!this.ObjectSetXYWidthResize(x,y,w,h))
             return false;
         this.BoundMove(x,y);
@@ -1069,12 +1074,12 @@
             this.Draw(false);
         }
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Hides the object on all chart periods |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Hide(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Hides the object on all chart periods               |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Hide(const bool chart_redraw)
+   {
     // --- If the object is already hidden, we leave
         if(this.m_hidden)
             return;
@@ -1086,39 +1091,39 @@
     // --- If indicated, redraw the graph
         if(chart_redraw)
             ::ChartRedraw(this.m_chart_id);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Displays an object on all chart periods |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Show(const bool chart_redraw)
-    {
-    // --- If the object is already visible, we leave
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Displays an object on all chart periods            |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Show(const bool chart_redraw)
+   {
+     // --- If the object is already visible, we leave
         if(!this.m_hidden)
             return;
-    // --- If the visibility change for background and foreground is successfully set
-    // --- to the graphics command queue - reset the hidden object flag
+     // --- If the visibility change for background and foreground is successfully set
+     // --- to the graphics command queue - reset the hidden object flag
         if(::ObjectSetInteger(this.m_chart_id,this.NameBG(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS) &&
             ::ObjectSetInteger(this.m_chart_id,this.NameFG(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS)
             ) this.m_hidden=false;
-    // --- If indicated, redraw the graph
+     // --- If indicated, redraw the graph
         if(chart_redraw)
             ::ChartRedraw(this.m_chart_id);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Brings the object to the front |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::BringToTop(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Brings the object to the front                      |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::BringToTop(const bool chart_redraw)
+   {
         if(this.m_cropped)
             return;
         this.Hide(false);
         this.Show(chart_redraw);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Blocks element |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Block(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Blocks element                                      |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Block(const bool chart_redraw)
+   {
     // --- If the element is already blocked, we leave
         if(this.m_blocked)
             return;
@@ -1127,12 +1132,12 @@
         this.ColorsToBlocked();
         this.m_blocked=true;
         this.Draw(chart_redraw);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Unlocks element |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Unblock(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Unlocks element                                     |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Unblock(const bool chart_redraw)
+   {
     // --- If the element is already unlocked, we leave
         if(!this.m_blocked)
             return;
@@ -1141,118 +1146,118 @@
         this.ColorsToDefault();
         this.Draw(chart_redraw);
         this.m_blocked=false;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the current colors |
-    // | element to default state |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ColorsToDefault(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets the current colors                            |
+  // | element to default state                                        |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ColorsToDefault(void)
+   {
         bool res=true;
         res &=this.BackColorToDefault();
         res &=this.ForeColorToDefault();
         res &=this.BorderColorToDefault();
         return res;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the current colors |
-    // | element into hover state |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ColorsToFocused(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Sets the current colors                             |
+  //| element into hover state                                         |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ColorsToFocused(void)
+   {
         bool res=true;
         res &=this.BackColorToFocused();
         res &=this.ForeColorToFocused();
         res &=this.BorderColorToFocused();
         return res;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the current colors |
-    // | element into state when the cursor is pressed |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ColorsToPressed(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets the current colors                            |
+  // | element into state when the cursor is pressed                   |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ColorsToPressed(void)
+   {
         bool res=true;
         res &=this.BackColorToPressed();
         res &=this.ForeColorToPressed();
         res &=this.BorderColorToPressed();
         return res;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Sets the current colors |
-    // | element to a locked state |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::ColorsToBlocked(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Sets the current colors                            |
+  // | element to a locked state                                       |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::ColorsToBlocked(void)
+   {
         bool res=true;
         res &=this.BackColorToBlocked();
         res &=this.ForeColorToBlocked();
         res &=this.BorderColorToBlocked();
         return res;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Fills an object with the specified color |
-    // | with transparency set to m_alpha |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Fill(const color clr,const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Fills an object with the specified color           |
+  // | with transparency set to m_alpha                                |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Fill(const color clr,const bool chart_redraw)
+   {
         this.m_background.Erase(::ColorToARGB(clr,this.m_alpha_bg));
         this.m_background.Update(chart_redraw);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Fills an object with a transparent color |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Clear(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Fills an object with a transparent color           |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Clear(const bool chart_redraw)
+   {
         this.m_background.Erase(0x00000000); // this.m_background.Erase(clrNULL); Modify clrNULL → 0x00000000
         this.m_foreground.Erase(0x00000000); // this.m_foreground.Erase(clrNULL); Modify clrNULL → 0x00000000
         this.Update(chart_redraw);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Updates an object to reflect changes |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Update(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Updates an object to reflect changes               |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Update(const bool chart_redraw)
+   {
         this.m_background.Update(false);
         this.m_foreground.Update(chart_redraw);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Draws appearance |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Draw(const bool chart_redraw)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Draws appearance                                   |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Draw(const bool chart_redraw)
+   {
         return;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Destroys an object |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Destroy(void)
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Destroys an object                                  |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Destroy(void)
+   {
+    if(this.m_canvas_owner)
     {
-        if(this.m_canvas_owner)
-        {
-            this.m_background.Destroy();
-            this.m_foreground.Destroy();
-            delete this.m_background;
-            delete this.m_foreground;
-            this.m_background=NULL;
-            this.m_foreground=NULL;
-        }
+        this.m_background.Destroy();
+        this.m_foreground.Destroy();
+        delete this.m_background;
+        delete this.m_foreground;
+        this.m_background=NULL;
+        this.m_foreground=NULL;
     }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Returns object description |
-    //+------------------------------------------------------------------+
-    string CCanvasBase::Description(void)
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Returns object description                         |
+  //+------------------------------------------------------------------+
+  string CCanvasBase::Description(void)
     {
         string nm=this.Name();
         string name=(nm!="" ? ::StringFormat(" \"%s\"",nm) : nm);
         string area=::StringFormat("x %d, y %d, w %d, h %d",this.X(),this.Y(),this.Width(),this.Height());
         return ::StringFormat("%s%s (%s, %s): ID %d, %s",ElementDescription((ENUM_ELEMENT_TYPE)this.Type()),name,this.NameBG(),this.NameFG(),this.ID(),area);
     }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Saving to file |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Save(const int file_handle)
-    {
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Saving to file                                      |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Save(const int file_handle)
+   {
     // --- Method temporarily disabled
         return false;
         
@@ -1265,12 +1270,12 @@
     */
     // --- Everything is successful
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Loading from file |
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::Load(const int file_handle)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Loading from file |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::Load(const int file_handle)
+   {
     // --- Method temporarily disabled
         return false;
         
@@ -1283,13 +1288,13 @@
     */
     // --- Everything is successful
         return true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Setting restrictions for a chart |
-    // | (wheel scrolling, context menu and crosshair) |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::SetFlags(const bool flag)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Setting restrictions for a chart |
+  //| (wheel scrolling, context menu and crosshair) |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::SetFlags(const bool flag)
+   {
     // --- If you need to set flags, and they have already been set earlier, leave
         if(flag && this.m_flags_state)
             return;
@@ -1305,12 +1310,12 @@
         this.m_flags_state=flag;
     // --- We update the graph to immediately apply the set flags
         ::ChartRedraw(this.m_chart_id);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Class Initialization |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::Init(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Class Initialization                               |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::Init(void)
+   {
     // --- Remember permissions for the mouse and graphics tools
         this.m_chart_mouse_wheel_flag   = ::ChartGetInteger(this.m_chart_id, CHART_EVENT_MOUSE_WHEEL);
         this.m_chart_mouse_move_flag    = ::ChartGetInteger(this.m_chart_id, CHART_EVENT_MOUSE_MOVE);
@@ -1330,12 +1335,12 @@
         
     // --- Canvas ownership flag
         this.m_canvas_owner=true;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Initializing default object colors |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::InitColors(void)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Initializing default object colors |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::InitColors(void)
+   {
     // --- Initialize the background colors for normal and activated states and make it the current background color
         this.InitBackColors(clrWhiteSmoke);
         this.InitBackColorsAct(clrWhiteSmoke);
@@ -1354,13 +1359,13 @@
     // --- Initialize the border color and foreground color for the locked element
         this.InitBorderColorBlocked(clrLightGray);
         this.InitForeColorBlocked(clrSilver);
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Checks the set color against the specified one|
-    //+------------------------------------------------------------------+
-    bool CCanvasBase::CheckColor(const ENUM_COLOR_STATE state) const
-    {
-        bool res=true;
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Checks the set color against the specified one      |
+  //+------------------------------------------------------------------+
+  bool CCanvasBase::CheckColor(const ENUM_COLOR_STATE state) const
+   {
+    bool res=true;
     // ---Depending on the event being checked
         switch(state)
         {
@@ -1396,12 +1401,12 @@
             break;
         }
         return res;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Changing the color of object elements by event |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::ColorChange(const ENUM_COLOR_STATE state)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Changing the color of object elements by event      |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::ColorChange(const ENUM_COLOR_STATE state)
+   {
     // --- Depending on the event, set the event colors as the main ones
         switch(state)
         {
@@ -1411,12 +1416,12 @@
             case COLOR_STATE_BLOCKED   :  this.ColorsToBlocked(); break;
             default                    :  break;
         }
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Event Handler |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::OnChartEvent(const int id,const long& lparam,const double& dparam,const string& sparam)
-    {
+  }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Event Handler                                       |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::OnChartEvent(const int id,const long& lparam,const double& dparam,const string& sparam)
+   {
     // --- If at the time of launching the terminal with the indicator the height of the subwindow has not yet been determined,
     // --- adjust the distance between the top frame of the indicator subwindow and the top frame of the main window
         if(this.m_wnd>0 && this.m_wnd_y==0)
@@ -1636,12 +1641,12 @@
                 this.ObjectChangeHandler(chart_event, lparam, dparam, sparam);
             }
         }
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Focus loss handler |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::OnReleaseEvent(const int id,const long lparam,const double dparam,const string sparam)
-    {
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Focus loss handler |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::OnReleaseEvent(const int id,const long lparam,const double dparam,const string sparam)
+   {
     // --- The element is not in focus when moving the cursor away
         this.m_focused=false;
     // --- restore the original colors and redraw the object
@@ -1653,12 +1658,12 @@
     // --- Initialize the cursor indent from the upper left corner of the element along the X and Y axes
         this.m_cursor_delta_x=0;
         this.m_cursor_delta_y=0;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Hover Handler |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::OnFocusEvent(const int id,const long lparam,const double dparam,const string sparam)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Hover Handler                                       |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::OnFocusEvent(const int id,const long lparam,const double dparam,const string sparam)
+   {
     // ---Element in focus
         this.m_focused=true;
     // --- If the object colors are not for Focused mode
@@ -1671,12 +1676,12 @@
     // --- Initialize the cursor indent from the upper left corner of the element along the X and Y axes
         this.m_cursor_delta_x=0;
         this.m_cursor_delta_y=0;
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Object click handler |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::OnPressEvent(const int id,const long lparam,const double dparam,const string sparam)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Object click handler                                |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::OnPressEvent(const int id,const long lparam,const double dparam,const string sparam)
+   {
     // --- Element in focus when clicked on it
         this.m_focused=true;
     // --- If the object colors are not for Pressed mode
@@ -1691,12 +1696,12 @@
         this.m_cursor_delta_y=0;
     // --- send a custom event to the chart with the passed values ​​in lparam, dparam, and the object name in sparam
         ::EventChartCustom(this.m_chart_id, (ushort)CHARTEVENT_OBJECT_CLICK, lparam, dparam, this.NameFG());
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Cursor move handler |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::OnMoveEvent(const int id,const long lparam,const double dparam,const string sparam)
-    {
+   }
+  //+------------------------------------------------------------------+
+  //| CCanvasBase::Cursor move handler                                 |
+  //+------------------------------------------------------------------+
+  void CCanvasBase::OnMoveEvent(const int id,const long lparam,const double dparam,const string sparam)
+   {
     // --- Element in focus when clicked on it
         this.m_focused=true;
     // --- If the object colors are not for Pressed mode
@@ -1711,18 +1716,18 @@
             this.m_cursor_delta_x=(int)lparam-this.X();
         if(this.m_cursor_delta_y==0)
             this.m_cursor_delta_y=(int)::round(dparam-this.Y());
-    }
-    //+------------------------------------------------------------------+
-    // | CCanvasBase::Event handler for creating a graphic object |
-    //+------------------------------------------------------------------+
-    void CCanvasBase::OnCreateEvent(const int id,const long lparam,const double dparam,const string sparam)
+   }
+  //+------------------------------------------------------------------+
+  // | CCanvasBase::Event handler for creating a graphic object        |
+  //+------------------------------------------------------------------+
+   void CCanvasBase::OnCreateEvent(const int id,const long lparam,const double dparam,const string sparam)
     {
-    // --- if the created object belongs to this program - leave
+     // --- if the created object belongs to this program - leave
         if(this.IsBelongsToThis(sparam))
             return;
-    // --- move the object to the foreground
+     // --- move the object to the foreground
         this.BringToTop(true);
     }
     //+------------------------------------------------------------------+
-    #endif // CCANVASBASE_IMPLEMENTATION
+ #endif // CCANVASBASE_IMPLEMENTATION
 #endif // __CANVASBASE_MQH__

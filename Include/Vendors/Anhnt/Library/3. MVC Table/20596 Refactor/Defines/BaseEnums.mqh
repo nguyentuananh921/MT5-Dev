@@ -9,15 +9,10 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Enums                                                            |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __BASEENUMS_MQH__
-#define __BASEENUMS_MQH__
-       //+------------------------------------------------------------------+
-   //| Enums                                                            |
-   //+------------------------------------------------------------------+
+#define __BASEENUMS_MQH__       
    enum ENUM_ELEMENT_TYPE                    // Enumeration of types of graphic elements
    {
       ELEMENT_TYPE_BASE = 0x10000,           // Basic object of graphic elements

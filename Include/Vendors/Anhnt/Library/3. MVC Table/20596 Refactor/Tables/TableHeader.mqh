@@ -3,97 +3,104 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17653  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Table header class                                               |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __TABLEHEADER_MQH__
-#define __TABLEHEADER_MQH__
-      //+------------------------------------------------------------------+
-   // | Table header class |
+#define __TABLEHEADER_MQH__ 
    //+------------------------------------------------------------------+
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+   #include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+
+   #include "..\Defines\TableDefines.mqh"
+   #include "..\Defines\TableEnums.mqh"
+   #include "..\Services\FunctionLib.mqh"
+   #include "ColumnCaption.mqh"  
    class CTableHeader : public CObject
    {
-   protected:
-      CColumnCaption    m_caption_tmp;                         // Column header object to search in list
-      CListObj          m_list_captions;                       // List of column headers
-      
-   // --- Adds the specified header to the end of the list
-      bool              AddNewColumnCaption(CColumnCaption *caption);
-   // --- Creates a table header from a string array
-      void              CreateHeader(string &array[]);
-   // --- Sets the column position of all column headers
-      void              ColumnPositionUpdate(void);
-      
-   public:
-   // --- Creates a new title and adds it to the end of the list
-      CColumnCaption   *CreateNewColumnCaption(const string caption);
-      
-   // --- Returns (1) the header by index, (2) the number of column headers
-      CColumnCaption   *GetColumnCaption(const uint index)        { return this.m_list_captions.GetNodeAtIndex(index);  }
-      uint              ColumnsTotal(void)                  const { return this.m_list_captions.Total();                }
-      
-   // --- Sets the value of the specified column header
-      void              ColumnCaptionSetValue(const uint index,const string value);
-      
-   // --- (1) Sets, (2) returns the data type for the specified column header
-      void              ColumnCaptionSetDatatype(const uint index,const ENUM_DATATYPE type);
-      ENUM_DATATYPE     ColumnCaptionDatatype(const uint index);
-      
-   // --- (1) Removes (2) moves the column header
-      bool              ColumnCaptionDelete(const uint index);
-      bool              ColumnCaptionMoveTo(const uint caption_index, const uint index_to);
-      
-   // --- Clears column header data
-      void              ClearData(void);
+      protected:
+         CColumnCaption    m_caption_tmp;                         // Column header object to search in list
+         CListObj          m_list_captions;                       // List of column headers
+         
+      // --- Adds the specified header to the end of the list
+         bool              AddNewColumnCaption(CColumnCaption *caption);
+      // --- Creates a table header from a string array
+         void              CreateHeader(string &array[]);
+      // --- Sets the column position of all column headers
+         void              ColumnPositionUpdate(void);
+         
+      public:
+      // --- Creates a new title and adds it to the end of the list
+         CColumnCaption   *CreateNewColumnCaption(const string caption);
+         
+      // --- Returns (1) the header by index, (2) the number of column headers
+         CColumnCaption   *GetColumnCaption(const uint index)        { return this.m_list_captions.GetNodeAtIndex(index);  }
+         uint              ColumnsTotal(void)                  const { return this.m_list_captions.Total();                }
+         
+      // --- Sets the value of the specified column header
+         void              ColumnCaptionSetValue(const uint index,const string value);
+         
+      // --- (1) Sets, (2) returns the data type for the specified column header
+         void              ColumnCaptionSetDatatype(const uint index,const ENUM_DATATYPE type);
+         ENUM_DATATYPE     ColumnCaptionDatatype(const uint index);
+         
+      // --- (1) Removes (2) moves the column header
+         bool              ColumnCaptionDelete(const uint index);
+         bool              ColumnCaptionMoveTo(const uint caption_index, const uint index_to);
+         
+      // --- Clears column header data
+         void              ClearData(void);
 
-   // --- Clears the list of column headers
-      void              Destroy(void)                             { this.m_list_captions.Clear();                       }
+      // --- Clears the list of column headers
+         void              Destroy(void)                             { this.m_list_captions.Clear();                       }
 
-   // --- (1) Returns, (2) logs a description of the object
-      virtual string    Description(void);
-      void              Print(const bool detail, const bool as_table=false, const int column_width=CELL_WIDTH_IN_CHARS);
+      // --- (1) Returns, (2) logs a description of the object
+         virtual string    Description(void);
+         void              Print(const bool detail, const bool as_table=false, const int column_width=CELL_WIDTH_IN_CHARS);
 
-   // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
-      virtual int       Compare(const CObject *node,const int mode=0)   const { return -1;            }
-      virtual bool      Save(const int file_handle);
-      virtual bool      Load(const int file_handle);
-      virtual int       Type(void)                          const { return(OBJECT_TYPE_TABLE_HEADER); }
-      
-   // --- Constructors/destructor
-                        CTableHeader(void) {}
-                        CTableHeader(string &array[]) { this.CreateHeader(array);   }
-                     ~CTableHeader(void){}
+      // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+         virtual int       Compare(const CObject *node,const int mode=0)   const { return -1;            }
+         virtual bool      Save(const int file_handle);
+         virtual bool      Load(const int file_handle);
+         virtual int       Type(void)                          const { return(OBJECT_TYPE_TABLE_HEADER); }
+         
+      // --- Constructors/destructor
+                           CTableHeader(void) {}
+                           CTableHeader(string &array[]) { this.CreateHeader(array);   }
+                        ~CTableHeader(void){}
    };
    //+------------------------------------------------------------------+
-   // | Creates a new title and adds it to the end of the list |
+   //| Creates a new title and adds it to the end of the list           |
    //+------------------------------------------------------------------+
    CColumnCaption *CTableHeader::CreateNewColumnCaption(const string caption)
    {
-   // --- Create a new header object
-      CColumnCaption *caption_obj=new CColumnCaption(this.ColumnsTotal(),caption);
-      if(caption_obj==NULL)
-      {
-         ::PrintFormat("%s: Error. Failed to create new column caption at position %u",__FUNCTION__, this.ColumnsTotal());
-         return NULL;
-      }
-   // --- Add the created title to the end of the list
-      if(!this.AddNewColumnCaption(caption_obj))
-      {
-         delete caption_obj;
-         return NULL;
-      }
-   // --- Return a pointer to the object
-      return caption_obj;
+      // --- Create a new header object
+         CColumnCaption *caption_obj=new CColumnCaption(this.ColumnsTotal(),caption);
+         if(caption_obj==NULL)
+         {
+            ::PrintFormat("%s: Error. Failed to create new column caption at position %u",__FUNCTION__, this.ColumnsTotal());
+            return NULL;
+         }
+      // --- Add the created title to the end of the list
+         if(!this.AddNewColumnCaption(caption_obj))
+         {
+            delete caption_obj;
+            return NULL;
+         }
+      // --- Return a pointer to the object
+         return caption_obj;
    }
    //+------------------------------------------------------------------+
-   // | Adds a title to the end of the list |
+   //| Adds a title to the end of the list                              |
    //+------------------------------------------------------------------+
    bool CTableHeader::AddNewColumnCaption(CColumnCaption *caption)
    {
@@ -114,7 +121,7 @@
          return true;
    }
    //+------------------------------------------------------------------+
-   // | Creates a table header from a string array |
+   //| Creates a table header from a string array                       |
    //+------------------------------------------------------------------+
    void CTableHeader::CreateHeader(string &array[])
    {
@@ -126,36 +133,36 @@
             this.CreateNewColumnCaption(array[i]);
    }
    //+------------------------------------------------------------------+
-   // | Sets the value to the specified column header |
+   //| Sets the value to the specified column header                    |
    //+------------------------------------------------------------------+
    void CTableHeader::ColumnCaptionSetValue(const uint index,const string value)
    {
-    // --- We get the desired header from the list and write a new value into it
+      // --- We get the desired header from the list and write a new value into it
       CColumnCaption *caption=this.GetColumnCaption(index);
       if(caption!=NULL)
          caption.SetValue(value);
    }
    //+------------------------------------------------------------------+
-   // | Sets the data type for the specified column header |
+   //| Sets the data type for the specified column header               |
    //+------------------------------------------------------------------+
    void CTableHeader::ColumnCaptionSetDatatype(const uint index,const ENUM_DATATYPE type)
    {
-     // --- We get the desired header from the list and write a new value into it
+      // --- We get the desired header from the list and write a new value into it
       CColumnCaption *caption=this.GetColumnCaption(index);
       if(caption!=NULL)
          caption.SetDatatype(type);
    }
    //+------------------------------------------------------------------+
-   // | Returns the data type of the specified column header |
+   //| Returns the data type of the specified column header             |
    //+------------------------------------------------------------------+
    ENUM_DATATYPE CTableHeader::ColumnCaptionDatatype(const uint index)
    {
-    // --- We get the desired header from the list and return the column data type from it
+      // --- We get the desired header from the list and return the column data type from it
       CColumnCaption *caption=this.GetColumnCaption(index);
       return(caption!=NULL ? caption.Datatype() : (ENUM_DATATYPE)WRONG_VALUE);
    }
    //+------------------------------------------------------------------+
-   // | Removes the header of the specified column |
+   //| Removes the header of the specified column                       |
    //+------------------------------------------------------------------+
    bool CTableHeader::ColumnCaptionDelete(const uint index)
    {
@@ -167,7 +174,7 @@
          return true;
    }
    //+------------------------------------------------------------------+
-   // | Moves the column header to the specified position |
+   //| Moves the column header to the specified position                |
    //+------------------------------------------------------------------+
    bool CTableHeader::ColumnCaptionMoveTo(const uint caption_index,const uint index_to)
    {
@@ -181,11 +188,11 @@
          return true;
    }
    //+------------------------------------------------------------------+
-   // | Sets column positions for all headers |
+   //| Sets column positions for all headers                            |
    //+------------------------------------------------------------------+
    void CTableHeader::ColumnPositionUpdate(void)
    {
-     // --- Loop through all titles in the list
+      // --- Loop through all titles in the list
       for(int i=0;i<this.m_list_captions.Total();i++)
       {
          // --- get the next header and set the column index to it
@@ -195,11 +202,11 @@
       }
    }
    //+------------------------------------------------------------------+
-   // | Clears column header data in a list |
+   //| Clears column header data in a list                              |
    //+------------------------------------------------------------------+
    void CTableHeader::ClearData(void)
    {
-     // --- Loop through all titles in the list
+      // --- Loop through all titles in the list
       for(uint i=0;i<this.ColumnsTotal();i++)
       {
          // --- get the next header and set it to an empty value
@@ -209,7 +216,7 @@
       }
    }
    //+------------------------------------------------------------------+
-   // | Returns the description of the object |
+   //| Returns the description of the object                            |
    //+------------------------------------------------------------------+
    string CTableHeader::Description(void)
    {
@@ -217,7 +224,7 @@
                            TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.ColumnsTotal()));
    }
    //+------------------------------------------------------------------+
-   // | Logs a description of an object |
+   //| Logs a description of an object                                  |
    //+------------------------------------------------------------------+
    void CTableHeader::Print(const bool detail, const bool as_table=false, const int column_width=CELL_WIDTH_IN_CHARS)
    {
@@ -261,7 +268,7 @@
          }
    }
    //+------------------------------------------------------------------+
-   // | Saving to file |
+   //| Saving to file                                                   |
    //+------------------------------------------------------------------+
    bool CTableHeader::Save(const int file_handle)
    {
@@ -283,7 +290,7 @@
          return true;
    }
    //+------------------------------------------------------------------+
-   // | Loading from file |
+   //| Loading from file                                                |
    //+------------------------------------------------------------------+
    bool CTableHeader::Load(const int file_handle)
    {

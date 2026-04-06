@@ -9,7 +9,7 @@
 //+------------------------------------------------------------------+
 // | Included Libraries |
 //+------------------------------------------------------------------+
-#include "Base.mqh"
+#include "Base_en.mqh"
 
 //+------------------------------------------------------------------+
 // | Macro substitutions |
@@ -110,23 +110,23 @@ public:
 // | Loading a list from a file |
 //+------------------------------------------------------------------+
 bool CListElm::Load(const int file_handle)
-  {
-// --- Variables
+ {
+  // --- Variables
    CObject *node;
    bool     result=true;
-// --- Checking the handle
+  // --- Checking the handle
    if(file_handle==INVALID_HANDLE)
       return(false);
-// --- Loading and checking the list start marker - 0xFFFFFFFFFFFFFFFF
+  // --- Loading and checking the list start marker - 0xFFFFFFFFFFFFFFFF
    if(::FileReadLong(file_handle)!=MARKER_START_DATA)
       return(false);
-// --- Loading and checking list type
+  // --- Loading and checking list type
    if(::FileReadInteger(file_handle,INT_VALUE)!=this.Type())
       return(false);
-// --- Read list size (number of objects)
+  // --- Read list size (number of objects)
    uint num=::FileReadInteger(file_handle,INT_VALUE);
    
-// --- We sequentially re-create the list elements by calling the Load() method of node objects
+  // --- We sequentially re-create the list elements by calling the Load() method of node objects
    this.Clear();
    for(uint i=0; i<num; i++)
      {
@@ -145,9 +145,9 @@ bool CListElm::Load(const int file_handle)
          return false;
       result &=node.Load(file_handle);
      }
-// --- Result
+  // --- Result
    return result;
-  }
+ }
 //+------------------------------------------------------------------+
 // | List item creation method |
 //+------------------------------------------------------------------+

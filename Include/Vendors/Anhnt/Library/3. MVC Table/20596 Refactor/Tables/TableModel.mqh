@@ -3,24 +3,27 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17653  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Table model class                                                |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
-#include "TableRow.mqh"
 #ifndef __TABLEMODEL_MQH__
 #define __TABLEMODEL_MQH__
-     //+------------------------------------------------------------------+
-   // | Table model class |
    //+------------------------------------------------------------------+
-   class CTableModel : public CObject
-   {
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+   //#include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "TableRow.mqh"
+   #include "MqlParamObj.mqh"  
+ class CTableModel : public CObject
+  {
    protected:
       CTableRow         m_row_tmp;                             // String object to search in list
       CListObj          m_list_rows;                           // List of table rows
@@ -131,13 +134,13 @@
                         CTableModel(CList &row_data)                             { this.CreateTableModel(row_data);              }
                         CTableModel(void){}
                      ~CTableModel(void){}
-   };
-   //+------------------------------------------------------------------+
-   // | Creates a table model from a two-dimensional array |
-   //+------------------------------------------------------------------+
-   template<typename T>
-   void CTableModel::CreateTableModel(T &array[][])
-   {
+  };
+//+------------------------------------------------------------------+
+//| Creates a table model from a two-dimensional array               |
+//+------------------------------------------------------------------+
+template<typename T>
+void CTableModel::CreateTableModel(T &array[][])
+ {
    // --- Get the number of rows and columns of the table from the array properties
       int rows_total=::ArrayRange(array,0);
       int cols_total=::ArrayRange(array,1);
@@ -155,12 +158,12 @@
                row.CellAddNew(array[r][c]);
          }
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Creates a table model from the specified number of rows and columns |
-   //+------------------------------------------------------------------+
-   void CTableModel::CreateTableModel(const uint num_rows,const uint num_columns)
-   {
+ }
+//+----------------------------------------------------------------------+
+//| Creates a table model from the specified number of rows and columns  |
+//+----------------------------------------------------------------------+
+void CTableModel::CreateTableModel(const uint num_rows,const uint num_columns)
+ {
    // --- In a loop by number of lines
       for(uint r=0; r<num_rows; r++)
       {
@@ -179,12 +182,12 @@
             }
          }
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Creates a table model from the specified matrix |
-   //+------------------------------------------------------------------+
-   void CTableModel::CreateTableModel(const matrix &row_data)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Creates a table model from the specified matrix                  |
+//+------------------------------------------------------------------+
+void CTableModel::CreateTableModel(const matrix &row_data)
+ {
    // --- Number of rows and columns
       ulong num_rows=row_data.Rows();
       ulong num_columns=row_data.Cols();
@@ -202,12 +205,12 @@
                row.CellAddNew(row_data[r][c]);
          }
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Creates a table model from a list of parameters |
-   //+------------------------------------------------------------------+
-   void CTableModel::CreateTableModel(CList &list_param)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Creates a table model from a list of parameters                  |
+//+------------------------------------------------------------------+
+void CTableModel::CreateTableModel(CList &list_param)
+ {
    // --- If an empty list is transmitted, we report this and leave
       if(list_param.Total()==0)
       {
@@ -280,12 +283,12 @@
             }
          }
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Creates a new empty string and adds it to the end of the list |
-   //+------------------------------------------------------------------+
-   CTableRow *CTableModel::CreateNewEmptyRow(void)
-   {
+ }
+//+------------------------------------------------------------------+
+//|Creates a new empty string and adds it to the end of the list     |
+//+------------------------------------------------------------------+
+CTableRow *CTableModel::CreateNewEmptyRow(void)
+ {
    // --- Create a new string object
       CTableRow *row=new CTableRow(this.m_list_rows.Total());
       if(row==NULL)
@@ -302,12 +305,12 @@
       
    // --- Success - return a pointer to the created object
       return row;
-   }
-   //+------------------------------------------------------------------+
-   // | Adds a string to the end of the list |
-   //+------------------------------------------------------------------+
-   bool CTableModel::AddNewRow(CTableRow *row)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Adds a string to the end of the list                             |
+//+------------------------------------------------------------------+
+bool CTableModel::AddNewRow(CTableRow *row)
+ {
    // --- If an empty object is passed, we report this and return false
       if(row==NULL)
       {
@@ -324,12 +327,12 @@
 
    // --- Successfully
       return true;
-   }
-   //+------------------------------------------------------------------+
-   // | Creates a new line and adds it to the end of the list |
-   //+------------------------------------------------------------------+
-   CTableRow *CTableModel::RowAddNew(void)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Creates a new line and adds it to the end of the list            |
+//+------------------------------------------------------------------+
+CTableRow *CTableModel::RowAddNew(void)
+ {
    // --- Create a new empty string and add it to the end of the list of strings
       CTableRow *row=this.CreateNewEmptyRow();
       if(row==NULL)
@@ -342,12 +345,17 @@
       
    // --- Success - return a pointer to the created object
       return row;
-   }
-   //+------------------------------------------------------------------+
-   // | Creates and adds a new row at the specified list position |
-   //+------------------------------------------------------------------+
-   CTableRow *CTableModel::RowInsertNewTo(const uint index_to)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Creates and adds a new row at the specified list position        |
+//+------------------------------------------------------------------+
+// Sometimes you need to insert a new row not at the end of the list of rows, 
+// but between the existing ones. 
+// This method first creates a new row at the end of the list, fills it with cells, 
+// clears them, and then moves the row to the desired position.
+//+------------------------------------------------------------------+
+CTableRow *CTableModel::RowInsertNewTo(const uint index_to)
+ {
    // --- Create a new empty string and add it to the end of the list of strings
       CTableRow *row=this.CreateNewEmptyRow();
       if(row==NULL)
@@ -363,13 +371,13 @@
       
    // --- Success - return a pointer to the created object
       return row;
-   }
-   //+------------------------------------------------------------------+
-   // | Sets the value to the specified cell |
-   //+------------------------------------------------------------------+
-   template<typename T>
-   void CTableModel::CellSetValue(const uint row,const uint col,const T value)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets the value to the specified cell                            |
+//+------------------------------------------------------------------+
+template<typename T>
+void CTableModel::CellSetValue(const uint row,const uint col,const T value)
+ {
    // --- Get a cell by row and column indexes
       CTableCell *cell=this.GetCell(row,col);
       if(cell==NULL)
@@ -387,111 +395,111 @@
          case TYPE_STRING  :  cell.SetValue((string)value);    break;
          default           :  break;
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Sets the accuracy of displaying data in the specified cell |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellSetDigits(const uint row,const uint col,const int digits)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets the accuracy of displaying data in the specified cell       |
+//+------------------------------------------------------------------+
+void CTableModel::CellSetDigits(const uint row,const uint col,const int digits)
+ {
    // --- Get the cell by row and column indices and
    // --- call its corresponding method to set the value
       CTableCell *cell=this.GetCell(row,col);
       if(cell!=NULL)
          cell.SetDigits(digits);
-   }
-   //+------------------------------------------------------------------+
-   // | Sets time display flags to the specified cell |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellSetTimeFlags(const uint row,const uint col,const uint flags)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets time display flags to the specified cell                    |
+//+------------------------------------------------------------------+
+void CTableModel::CellSetTimeFlags(const uint row,const uint col,const uint flags)
+ {
    // --- Get the cell by row and column indices and
    // --- call its corresponding method to set the value
       CTableCell *cell=this.GetCell(row,col);
       if(cell!=NULL)
          cell.SetDatetimeFlags(flags);
-   }
-   //+------------------------------------------------------------------+
-   // | Sets the flag to display color names in the specified cell |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellSetColorNamesFlag(const uint row,const uint col,const bool flag)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets the flag to display color names in the specified cell       |
+//+------------------------------------------------------------------+
+void CTableModel::CellSetColorNamesFlag(const uint row,const uint col,const bool flag)
+ {
    // --- Get the cell by row and column indices and
    // --- call its corresponding method to set the value
       CTableCell *cell=this.GetCell(row,col);
       if(cell!=NULL)
          cell.SetColorNameFlag(flag);
-   }
-   //+------------------------------------------------------------------+
-   // | Assigns an object to a cell |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellAssignObject(const uint row,const uint col,CObject *object)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Assigns an object to a cell                                      |
+//+------------------------------------------------------------------+
+void CTableModel::CellAssignObject(const uint row,const uint col,CObject *object)
+ {
    // --- Get the cell by row and column indices and
    // --- call its corresponding method to set the value
       CTableCell *cell=this.GetCell(row,col);
       if(cell!=NULL)
          cell.AssignObject(object);
-   }
-   //+------------------------------------------------------------------+
-   // | Unassigns an object in a cell |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellUnassignObject(const uint row,const uint col)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Unassigns an object in a cell                                    |
+//+------------------------------------------------------------------+
+void CTableModel::CellUnassignObject(const uint row,const uint col)
+ {
    // --- Get the cell by row and column indices and
    // --- call its corresponding method to set the value
       CTableCell *cell=this.GetCell(row,col);
       if(cell!=NULL)
          cell.UnassignObject();
-   }
-   //+------------------------------------------------------------------+
-   // | Deletes a cell |
-   //+------------------------------------------------------------------+
-   bool CTableModel::CellDelete(const uint row,const uint col)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Deletes a cell                                                   |
+//+------------------------------------------------------------------+
+bool CTableModel::CellDelete(const uint row,const uint col)
+ {
    // --- Get a row by index and return the result of deleting a cell from the list
       CTableRow *row_obj=this.GetRow(row);
       return(row_obj!=NULL ? row_obj.CellDelete(col) : false);
-   }
-   //+------------------------------------------------------------------+
-   // | Moves a cell |
-   //+------------------------------------------------------------------+
-   bool CTableModel::CellMoveTo(const uint row,const uint cell_index,const uint index_to)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Moves a cell                                                     |
+//+------------------------------------------------------------------+
+bool CTableModel::CellMoveTo(const uint row,const uint cell_index,const uint index_to)
+ {
    // --- Get the row by index and return the result of moving the cell to a new position
       CTableRow *row_obj=this.GetRow(row);
       return(row_obj!=NULL ? row_obj.CellMoveTo(cell_index,index_to) : false);
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the object assigned to the cell |
-   //+------------------------------------------------------------------+
-   CObject *CTableModel::CellGetObject(const uint row,const uint col)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Returns the object assigned to the cell                          |
+//+------------------------------------------------------------------+
+CObject *CTableModel::CellGetObject(const uint row,const uint col)
+ {
    // --- Get the row by index and return the object assigned to the cell with index col
       CTableRow *row_obj=this.GetRow(row);
       return(row_obj!=NULL ? row_obj.CellGetObject(col) : NULL);
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the type of the object assigned to the cell |
-   //+------------------------------------------------------------------+
-   ENUM_OBJECT_TYPE CTableModel::CellGetObjType(const uint row,const uint col)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Returns the type of the object assigned to the cell              |
+//+------------------------------------------------------------------+
+ENUM_OBJECT_TYPE CTableModel::CellGetObjType(const uint row,const uint col)
+ {
    // --- Get the row by index and return the type of the object assigned to the cell with index col
       CTableRow *row_obj=this.GetRow(row);
       return(row_obj!=NULL ? row_obj.CellGetObjType(col) : (ENUM_OBJECT_TYPE)WRONG_VALUE);
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the number of cells in the specified row |
-   //+------------------------------------------------------------------+
-   uint CTableModel::CellsInRow(const uint index)
-   {
-      CTableRow *row=this.GetRow(index);
-      return(row!=NULL ? row.CellsTotal() : 0);
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the number of cells in the table |
-   //+------------------------------------------------------------------+
-   uint CTableModel::CellsTotal(void)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Returns the number of cells in the specified row                 |
+//+------------------------------------------------------------------+
+uint CTableModel::CellsInRow(const uint index)
+ {
+   CTableRow *row=this.GetRow(index);
+   return(row!=NULL ? row.CellsTotal() : 0);
+ }
+//+------------------------------------------------------------------+
+//| Returns the number of cells in the table                         |
+//+------------------------------------------------------------------+
+uint CTableModel::CellsTotal(void)
+ {
    // --- counting cells in a row-by-row loop (slow if there are a large number of rows)
       uint res=0, total=this.RowsTotal();
       for(int i=0; i<(int)total; i++)
@@ -500,51 +508,51 @@
          res+=(row!=NULL ? row.CellsTotal() : 0);
       }
       return res;
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the specified table cell |
-   //+------------------------------------------------------------------+
-   CTableCell *CTableModel::GetCell(const uint row,const uint col)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Returns the specified table cell                                 |
+//+------------------------------------------------------------------+
+CTableCell *CTableModel::GetCell(const uint row,const uint col)
+ {
    // --- Get a row by index row and return the cell of the row by index col
       CTableRow *row_obj=this.GetRow(row);
       return(row_obj!=NULL ? row_obj.GetCell(col) : NULL);
-   }
-   //+------------------------------------------------------------------+
-   // | Returns cell description |
-   //+------------------------------------------------------------------+
-   string CTableModel::CellDescription(const uint row,const uint col)
-   {
-      CTableCell *cell=this.GetCell(row,col);
-      return(cell!=NULL ? cell.Description() : "");
-   }
-   //+------------------------------------------------------------------+
-   // | Logs a cell description |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellPrint(const uint row,const uint col)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Returns cell description                                         |
+//+------------------------------------------------------------------+
+string CTableModel::CellDescription(const uint row,const uint col)
+ {
+   CTableCell *cell=this.GetCell(row,col);
+   return(cell!=NULL ? cell.Description() : "");
+ }
+//+------------------------------------------------------------------+
+//| Logs a cell description                                          |
+//+------------------------------------------------------------------+
+void CTableModel::CellPrint(const uint row,const uint col)
+ {
    // --- Get a cell by row and column index and return its description
       CTableCell *cell=this.GetCell(row,col);
       if(cell!=NULL)
          cell.Print();
-   }
-   //+------------------------------------------------------------------+
-   // | Deletes a line |
-   //+------------------------------------------------------------------+
-   bool CTableModel::RowDelete(const uint index)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Deletes a line                                                   |
+//+------------------------------------------------------------------+
+bool CTableModel::RowDelete(const uint index)
+ {
    // --- Remove a line from the list by index
       if(!this.m_list_rows.Delete(index))
          return false;
    // --- After deleting a row, you need to update all indexes of all table cells
       this.CellsPositionUpdate();
       return true;
-   }
-   //+------------------------------------------------------------------+
-   // | Moves a line to the specified position |
-   //+------------------------------------------------------------------+
-   bool CTableModel::RowMoveTo(const uint row_index,const uint index_to)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Moves a line to the specified position                           |
+//+------------------------------------------------------------------+
+bool CTableModel::RowMoveTo(const uint row_index,const uint index_to)
+ {
    // --- Get the row by index, making it current
       CTableRow *row=this.GetRow(row_index);
    // --- Move the current line to the specified position in the list
@@ -553,12 +561,12 @@
    // --- After moving a row, you need to update all indexes of all table cells
       this.CellsPositionUpdate();
       return true;
-   }
-   //+------------------------------------------------------------------+
-   // | Sets row and column positions for all cells |
-   //+------------------------------------------------------------------+
-   void CTableModel::CellsPositionUpdate(void)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets row and column positions for all cells                      |
+//+------------------------------------------------------------------+
+void CTableModel::CellsPositionUpdate(void)
+ {
    // --- Looping through a list of strings
       for(int i=0;i<this.m_list_rows.Total();i++)
       {
@@ -570,50 +578,50 @@
          row.SetIndex(this.m_list_rows.IndexOf(row));
          // --- Update the position indexes of the row cells
          row.CellsPositionUpdate();
-      }
    }
-   //+------------------------------------------------------------------+
-   // | Clears a row (only data in cells) |
-   //+------------------------------------------------------------------+
-   void CTableModel::RowClearData(const uint index)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Clears a row (only data in cells)                                |
+//+------------------------------------------------------------------+
+void CTableModel::RowClearData(const uint index)
+ {
    // --- Get a string from the list and clear the data of the string cells using the ClearData() method
       CTableRow *row=this.GetRow(index);
       if(row!=NULL)
          row.ClearData();
-   }
-   //+------------------------------------------------------------------+
-   // | Clears the table (data of all cells) |
-   //+------------------------------------------------------------------+
-   void CTableModel::ClearData(void)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Clears the table (data of all cells)                             |
+//+------------------------------------------------------------------+
+void CTableModel::ClearData(void)
+ {
    // --- In a loop through all rows of the table, we clear the data of each row
       for(uint i=0;i<this.RowsTotal();i++)
          this.RowClearData(i);
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the description of a string |
-   //+------------------------------------------------------------------+
-   string CTableModel::RowDescription(const uint index)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Returns the description of a string                              |
+//+------------------------------------------------------------------+
+string CTableModel::RowDescription(const uint index)
+ {
    // --- Get a string by index and return its description
       CTableRow *row=this.GetRow(index);
       return(row!=NULL ? row.Description() : "");
-   }
-   //+------------------------------------------------------------------+
-   // | Logs a description of a string |
-   //+------------------------------------------------------------------+
-   void CTableModel::RowPrint(const uint index,const bool detail)
-   {
-      CTableRow *row=this.GetRow(index);
-      if(row!=NULL)
-         row.Print(detail);
-   }
-   //+------------------------------------------------------------------+
-   // | Adds a column |
-   //+------------------------------------------------------------------+
-   bool CTableModel::ColumnAddNew(const int index=-1)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Logs a description of a string                                   |
+//+------------------------------------------------------------------+
+void CTableModel::RowPrint(const uint index,const bool detail)
+ {
+   CTableRow *row=this.GetRow(index);
+   if(row!=NULL)
+      row.Print(detail);
+ }
+//+------------------------------------------------------------------+
+//| Adds a column                                                    |
+//+------------------------------------------------------------------+
+bool CTableModel::ColumnAddNew(const int index=-1)
+ {
    // --- Declare variables
       CTableCell *cell=NULL;
       bool res=true;
@@ -638,12 +646,12 @@
          res &=this.ColumnMoveTo(this.CellsInRow(0)-1,index);
    // --- Return the result
       return res;
-   }
-   //+------------------------------------------------------------------+
-   // | Removes a column |
-   //+------------------------------------------------------------------+
-   bool CTableModel::ColumnDelete(const uint index)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Removes a column                                                 |
+//+------------------------------------------------------------------+
+bool CTableModel::ColumnDelete(const uint index)
+ {
       bool res=true;
       for(uint i=0;i<this.RowsTotal();i++)
       {
@@ -652,26 +660,26 @@
             res &=row.CellDelete(index);
       }
       return res;
-   }
-   //+------------------------------------------------------------------+
-   // | Moves column |
-   //+------------------------------------------------------------------+
-   bool CTableModel::ColumnMoveTo(const uint col_index,const uint index_to)
+ }
+//+------------------------------------------------------------------+
+//| Moves column                                                     |
+//+------------------------------------------------------------------+
+bool CTableModel::ColumnMoveTo(const uint col_index,const uint index_to)
+ {
+   bool res=true;
+   for(uint i=0;i<this.RowsTotal();i++)
    {
-      bool res=true;
-      for(uint i=0;i<this.RowsTotal();i++)
-      {
-         CTableRow *row=this.GetRow(i);
-         if(row!=NULL)
-            res &=row.CellMoveTo(col_index,index_to);
-      }
-      return res;
+      CTableRow *row=this.GetRow(i);
+      if(row!=NULL)
+         res &=row.CellMoveTo(col_index,index_to);
    }
-   //+------------------------------------------------------------------+
-   // | Clears column data |
-   //+------------------------------------------------------------------+
-   void CTableModel::ColumnClearData(const uint index)
-   {
+   return res;
+ }
+//+------------------------------------------------------------------+
+//| Clears column data                                               |
+//+------------------------------------------------------------------+
+void CTableModel::ColumnClearData(const uint index)
+ {
    // --- In a loop through all rows of the table
       for(uint i=0;i<this.RowsTotal();i++)
       {
@@ -680,12 +688,12 @@
          if(cell!=NULL)
             cell.ClearData();
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Sets the column data type |
-   //+------------------------------------------------------------------+
-   void CTableModel::ColumnSetDatatype(const uint index,const ENUM_DATATYPE type)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets the column data type                                        |
+//+------------------------------------------------------------------+
+void CTableModel::ColumnSetDatatype(const uint index,const ENUM_DATATYPE type)
+ {
    // --- In a loop through all rows of the table
       for(uint i=0;i<this.RowsTotal();i++)
       {
@@ -694,12 +702,12 @@
          if(cell!=NULL)
             cell.SetDatatype(type);
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Sets the precision of the column data |
-   //+------------------------------------------------------------------+
-   void CTableModel::ColumnSetDigits(const uint index,const int digits)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets the precision of the column data                            |
+//+------------------------------------------------------------------+
+void CTableModel::ColumnSetDigits(const uint index,const int digits)
+ {
    // --- In a loop through all rows of the table
       for(uint i=0;i<this.RowsTotal();i++)
       {
@@ -707,13 +715,13 @@
          CTableCell *cell=this.GetCell(i, index);
          if(cell!=NULL)
             cell.SetDigits(digits);
-      }
    }
-   //+------------------------------------------------------------------+
-   // | Sets column time display flags |
-   //+------------------------------------------------------------------+
-   void CTableModel::ColumnSetTimeFlags(const uint index,const uint flags)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets column time display flags                                   |
+//+------------------------------------------------------------------+
+void CTableModel::ColumnSetTimeFlags(const uint index,const uint flags)
+ {
    // --- In a loop through all rows of the table
       for(uint i=0;i<this.RowsTotal();i++)
       {
@@ -721,13 +729,13 @@
          CTableCell *cell=this.GetCell(i, index);
          if(cell!=NULL)
             cell.SetDatetimeFlags(flags);
-      }
    }
-   //+------------------------------------------------------------------+
-   // | Sets the display flagb of column color names |
-   //+------------------------------------------------------------------+
-   void CTableModel::ColumnSetColorNamesFlag(const uint index,const bool flag)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sets the display flagb of column color names                     |
+//+------------------------------------------------------------------+
+void CTableModel::ColumnSetColorNamesFlag(const uint index,const bool flag)
+ {
    // --- In a loop through all rows of the table
       for(uint i=0;i<this.RowsTotal();i++)
       {
@@ -735,32 +743,32 @@
          CTableCell *cell=this.GetCell(i, index);
          if(cell!=NULL)
             cell.SetColorNameFlag(flag);
-      }
    }
-   //+------------------------------------------------------------------+
-   // | Sorts the table by the specified column and direction |
-   //+------------------------------------------------------------------+
-   void CTableModel::SortByColumn(const uint column,const bool descending)
-   {
-      if(this.m_list_rows.Total()==0)
-         return;
-      int mode=(int)column+(descending ? DESC_IDX_CORRECTION : ASC_IDX_CORRECTION);
-      this.m_list_rows.Sort(mode);
-      this.CellsPositionUpdate();   
-   }
-   //+------------------------------------------------------------------+
-   // | Returns the description of the object |
-   //+------------------------------------------------------------------+
-   string CTableModel::Description(void)
-   {
-      return(::StringFormat("%s: Rows %u, Cells in row %u, Cells Total %u",
-                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.RowsTotal(),this.CellsInRow(0),this.CellsTotal()));
-   }
-   //+------------------------------------------------------------------+
-   // | Logs a description of an object |
-   //+------------------------------------------------------------------+
-   void CTableModel::Print(const bool detail)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Sorts the table by the specified column and direction            |
+//+------------------------------------------------------------------+
+void CTableModel::SortByColumn(const uint column,const bool descending)
+ {
+   if(this.m_list_rows.Total()==0)
+      return;
+   int mode=(int)column+(descending ? DESC_IDX_CORRECTION : ASC_IDX_CORRECTION);
+   this.m_list_rows.Sort(mode);
+   this.CellsPositionUpdate();   
+ }
+//+------------------------------------------------------------------+
+//| Returns the description of the object                            |
+//+------------------------------------------------------------------+
+string CTableModel::Description(void)
+ {
+   return(::StringFormat("%s: Rows %u, Cells in row %u, Cells Total %u",
+                        TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.RowsTotal(),this.CellsInRow(0),this.CellsTotal()));
+ }
+//+------------------------------------------------------------------+
+//| Logs a description of an object                                  |
+//+------------------------------------------------------------------+
+void CTableModel::Print(const bool detail)
+ {
    // --- Output the header to the log
       ::Print(this.Description()+(detail ? ":" : ""));
    // ---If detailed description,
@@ -775,12 +783,12 @@
                row.Print(true,false);
          }
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Logs a description of an object in tabular form |
-   //+------------------------------------------------------------------+
-   void CTableModel::PrintTable(const int cell_width=CELL_WIDTH_IN_CHARS)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Logs a description of an object in tabular form                  |
+//+------------------------------------------------------------------+
+void CTableModel::PrintTable(const int cell_width=CELL_WIDTH_IN_CHARS)
+ {
    // --- Get a pointer to the first row (index 0)
       CTableRow *row=this.GetRow(0);
       if(row==NULL)
@@ -806,20 +814,20 @@
          if(row!=NULL)
             row.Print(true,true,cell_width);
       }
-   }
-   //+------------------------------------------------------------------+
-   // | Destroys the model |
-   //+------------------------------------------------------------------+
-   void CTableModel::Destroy(void)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Destroys the model                                               |
+//+------------------------------------------------------------------+
+void CTableModel::Destroy(void)
+ {
    // --- Clear the list of strings
       this.m_list_rows.Clear();
-   }
-   //+------------------------------------------------------------------+
-   // | Saving to file |
-   //+------------------------------------------------------------------+
-   bool CTableModel::Save(const int file_handle)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Saving to file                                                   |
+//+------------------------------------------------------------------+
+bool CTableModel::Save(const int file_handle)
+ {
    // --- Checking the handle
       if(file_handle==INVALID_HANDLE)
          return(false);
@@ -836,12 +844,12 @@
       
    // --- Successfully
       return true;
-   }
-   //+------------------------------------------------------------------+
-   // | Loading from file |
-   //+------------------------------------------------------------------+
-   bool CTableModel::Load(const int file_handle)
-   {
+ }
+//+------------------------------------------------------------------+
+//| Loading from file                                                |
+//+------------------------------------------------------------------+
+bool CTableModel::Load(const int file_handle)
+ {
    // --- Checking the handle
       if(file_handle==INVALID_HANDLE)
          return(false);
@@ -858,6 +866,6 @@
       
    // --- Successfully
       return true;
-   }
-   //+------------------------------------------------------------------+
+ }
+//+------------------------------------------------------------------+
 #endif // __TABLEMODEL_MQH__

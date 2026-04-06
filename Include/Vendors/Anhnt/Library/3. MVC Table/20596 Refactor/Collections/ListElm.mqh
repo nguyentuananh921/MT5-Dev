@@ -9,17 +9,21 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Linked List of Graphics Class                                    |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __LISTELM_MQH__
 #define __LISTELM_MQH__
-    //+------------------------------------------------------------------+
-// | Linked List of Graphics Class |
-//+------------------------------------------------------------------+
-class CListElm : public CList
-{
+   //+------------------------------------------------------------------+
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+   #include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "..\Defines\ControlsDefines.mqh"
+   #include "..\Defines\ControlsEnums.mqh"
+ class CListElm : public CList
+  {
    protected:
       ENUM_ELEMENT_TYPE m_element_type;   // The type of the object being created in CreateElement()
    public:
@@ -29,13 +33,13 @@ class CListElm : public CList
    // --- Virtual method (1) loading a list from a file, (2) creating a list element
       virtual bool      Load(const int file_handle);
       virtual CObject  *CreateElement(void);
-};
+  };
  #ifndef CLISTELM_IMPLEMENTATION
  #define CLISTELM_IMPLEMENTATION
    //+------------------------------------------------------------------+
-   // | Loading a list from a file |
+   //| Loading a list from a file |
    //+------------------------------------------------------------------+
-   bool CListElm::Load(const int file_handle)
+  bool CListElm::Load(const int file_handle)
    {
       // --- Variables
          CObject *node;

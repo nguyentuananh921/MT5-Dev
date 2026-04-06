@@ -11,7 +11,7 @@
 //+------------------------------------------------------------------+
 #include <Canvas\Canvas.mqh>              // Class SB CCanvas
 #include <Arrays\List.mqh>                // Class SB CList
-#include "..\Tables.mqh"
+#include "..\Tables_en.mqh"
 
 // --- Forward declaration of control classes
 class    CBoundedObj;                     // Base class that stores the dimensions of an object

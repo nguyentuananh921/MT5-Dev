@@ -9,17 +9,21 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+// | Table Column Header Class |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-#include "..\Defines\TableDefines.mqh"
-#include "..\Defines\TableEnums.mqh"
-
 #ifndef __CCOLUMNCAPTION_MQH__
 #define __CCOLUMNCAPTION_MQH__
-     //+------------------------------------------------------------------+
-   // | Table Column Header Class |
    //+------------------------------------------------------------------+
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+   #include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "..\Defines\TableDefines.mqh"
+   #include "..\Defines\TableEnums.mqh"
+   #include "..\Collections\ListObj.mqh"
+   #include "..\Services\FunctionLib.mqh"   
    class CColumnCaption : public CObject
    {
       protected:

@@ -9,17 +9,19 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
-//+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
+// | Structure parameter object class |
+//+------------------------------------------------------------------+	
 #ifndef __MQLPARAMOBJ_MQH__
 #define __MQLPARAMOBJ_MQH__
    //+------------------------------------------------------------------+
-   // | Structure parameter object class |
+   //| Included Standard Libraries                                      |
    //+------------------------------------------------------------------+
-   class CMqlParamObj : public CObject
-   {
+   //#include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+   
+class CMqlParamObj : public CObject
+ {
    protected:
    public:
       MqlParam          m_param;
@@ -57,8 +59,8 @@
                         CMqlParamObj(void){}
                         CMqlParamObj(const MqlParam &param) { this.Set(param);  }
                         ~CMqlParamObj(void){}
-   };
-   //+------------------------------------------------------------------+
+ };
+//+------------------------------------------------------------------+
 #endif // __MQLPARAMOBJ_MQH__
 
 

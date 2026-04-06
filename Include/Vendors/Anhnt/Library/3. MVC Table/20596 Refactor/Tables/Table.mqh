@@ -1,30 +1,31 @@
 //+------------------------------------------------------------------+
-//|                                                      Table.mqh   |
+//|                                               TableByParam.mqh   |
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17653  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Table class                                                      |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-#include "..\Collections\ListObj.mqh"
-class CTableModel;
-class CTableHeader;
-class CColumnCaption;
-class CTableCell;
-class CTableRow;
-
 #ifndef __TABLE_MQH__
 #define __TABLE_MQH__
    //+------------------------------------------------------------------+
-   //| Table class                                                      |
+   //| Included Standard Libraries                                      |
    //+------------------------------------------------------------------+
-   class CTable : public CObject 
+   #include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+	
+   #include "..\Collections\ListObj.mqh"
+   #include "TableCell.mqh"
+   #include "MqlParamObj.mqh"
+   #include "TableModel.mqh"
+   #include "TableHeader.mqh"
+ class CTable : public CObject 
    {
       private:
       // --- Populates an Excel-style array of column headers
@@ -176,8 +177,8 @@ class CTableRow;
    // | The number of rows is determined by the size of the data array row_data, |
    // | which is also used to fill out the table |
    //+-------------------------------------------------------------------+
-   template<typename T>
-   CTable::CTable(T &row_data[][],const string &column_names[]) : m_id(-1)
+  template<typename T>
+  CTable::CTable(T &row_data[][],const string &column_names[]) : m_id(-1)
    {
       this.m_table_model=new CTableModel(row_data);
       if(column_names.Size()>0)
@@ -190,10 +191,10 @@ class CTableRow;
       this.m_table_header=new CTableHeader(this.m_array_names);
    }
    //+------------------------------------------------------------------+
-   // | Table constructor with determination of the number of columns and rows.   |
-   // | The columns will have Excel names "A", "B", "C", etc.      |
+   //| Table constructor with determination of the number of columns and rows.   |
+   //| The columns will have Excel names "A", "B", "C", etc.      |
    //+------------------------------------------------------------------+
-   CTable::CTable(const uint num_rows,const uint num_columns) : m_table_header(NULL), m_id(-1)
+  CTable::CTable(const uint num_rows,const uint num_columns) : m_table_header(NULL), m_id(-1)
    {
       this.m_table_model=new CTableModel(num_rows,num_columns);
       if(this.FillArrayExcelNames(num_columns))

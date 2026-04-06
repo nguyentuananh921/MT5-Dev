@@ -3,25 +3,27 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17653  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Table cell class                                                 |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-#include "..\Defines\TableDefines.mqh"
-#include "..\Defines\TableEnums.mqh"
-#include "..\Services\DELib.mqh"
-
-
 #ifndef __TABLECELL_MQH__
 #define __TABLECELL_MQH__  
-   //+------------------------------------------------------------------+
-   // | Table cell class |
-   //+------------------------------------------------------------------+
+    //+------------------------------------------------------------------+
+    //| Included Standard Libraries                                      |
+    //+------------------------------------------------------------------+
+    //#include <Arrays\List.mqh>
+
+    //+------------------------------------------------------------------+
+    //| Included Custome Libraries                                       |
+    //+------------------------------------------------------------------+
+    #include "..\Defines\TableDefines.mqh"
+    #include "..\Defines\TableEnums.mqh"
+    #include "..\Services\FunctionLib.mqh"   
    class CTableCell : public CObject
    {
     protected:

@@ -9,15 +9,14 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
-//+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
-//+------------------------------------------------------------------+
 //| Table Enums                                                      |
 //+------------------------------------------------------------------+
 #ifndef __TABLE_ENUMS_MQH__
 #define __TABLE_ENUMS_MQH__
+    //+------------------------------------------------------------------+
+    // | Included Libraries |
+    //+------------------------------------------------------------------+
+    #include <Arrays\List.mqh>
     enum ENUM_OBJECT_TYPE               // Enumerating Object Types
     {
         OBJECT_TYPE_TABLE_CELL=10000,    // Table cell

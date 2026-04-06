@@ -1,26 +1,30 @@
 //+------------------------------------------------------------------+
 //|                                                 BoundedObj.mqh   |
 //|                                  Copyright 2025, MetaQuotes Ltd. |
-//|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//|First See in              https://www.mql5.com/en/articles/17960  |
+//|Current                    https://www.mql5.com/ru/articles/20596 |
+//+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
 //| Base class storing object dimensions |
 //+------------------------------------------------------------------+
-
-//+------------------------------------------------------------------+
-// | Included Libraries |
-//+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __BOUNDEDOBJ_MQH__
 #define __BOUNDEDOBJ_MQH__
-    class CBoundedObj : public CBaseObj
-{
+   //#include <Arrays\List.mqh>
+   //+------------------------------------------------------------------+
+   //| Included Standard Libraries                                      |
+   //+------------------------------------------------------------------+
+
+   //+------------------------------------------------------------------+
+   //| Included Custome Libraries                                       |
+   //+------------------------------------------------------------------+
+   #include "BaseObj.mqh"
+   #include "Bound.mqh"
+ class CBoundedObj : public CBaseObj
+  {
    protected:
       CBound            m_bound;                                  // Object boundaries
       bool              m_canvas_owner;                           // Canvas ownership flag
@@ -56,7 +60,7 @@
                         CBoundedObj (void) : m_canvas_owner(true) {}
                         CBoundedObj (const string user_name,const int id,const int x,const int y,const int w,const int h);
                         ~CBoundedObj (void){}
-};
+ };
 //+------------------------------------------------------------------+
 #ifndef CBOUNDEDOBJ_IMPLEMENTATION
 #define CBOUNDEDOBJ_IMPLEMENTATION
@@ -64,40 +68,40 @@
    //+------------------------------------------------------------------+
    CBoundedObj::CBoundedObj(const string user_name,const int id,const int x,const int y,const int w,const int h) : m_canvas_owner(true)
    {
-   // --- Get the adjusted graph ID and distance in pixels along the vertical Y axis
-      this.m_bound.SetName(user_name);
-      this.m_bound.SetID(id);
-      this.m_bound.SetXY(x,y);
-      this.m_bound.Resize(w,h);
+      // --- Get the adjusted graph ID and distance in pixels along the vertical Y axis
+         this.m_bound.SetName(user_name);
+         this.m_bound.SetID(id);
+         this.m_bound.SetXY(x,y);
+         this.m_bound.Resize(w,h);
    }
    //+------------------------------------------------------------------+
-   // | CBoundedObj::Saving to file |
+   //| CBoundedObj::Saving to file                                      |
    //+------------------------------------------------------------------+
    bool CBoundedObj::Save(const int file_handle)
    {
-   // --- Save the data of the parent object
-      if(!CBaseObj::Save(file_handle))
-         return false;
-   
-   // ---Keeping the canvas ownership flag
-      if(::FileWriteInteger(file_handle,this.m_canvas_owner,INT_VALUE)!=INT_VALUE)
-         return false;
-   // --- Save dimensions
-      return this.m_bound.Save(file_handle);
+      // --- Save the data of the parent object
+         if(!CBaseObj::Save(file_handle))
+            return false;
+      
+      // ---Keeping the canvas ownership flag
+         if(::FileWriteInteger(file_handle,this.m_canvas_owner,INT_VALUE)!=INT_VALUE)
+            return false;
+      // --- Save dimensions
+         return this.m_bound.Save(file_handle);
    }
    //+------------------------------------------------------------------+
-   // | CBoundedObj::Loading from file |
+   //| CBoundedObj::Loading from file                                   |
    //+------------------------------------------------------------------+
    bool CBoundedObj::Load(const int file_handle)
    {
-   // --- Loading the data of the parent object
-      if(!CBaseObj::Load(file_handle))
-         return false;
-      
-   // --- Loading the canvas ownership flag
-      this.m_canvas_owner=::FileReadInteger(file_handle,INT_VALUE);
-   // --- Loading dimensions
-      return this.m_bound.Load(file_handle);
+      // --- Loading the data of the parent object
+         if(!CBaseObj::Load(file_handle))
+            return false;
+         
+      // --- Loading the canvas ownership flag
+         this.m_canvas_owner=::FileReadInteger(file_handle,INT_VALUE);
+      // --- Loading dimensions
+         return this.m_bound.Load(file_handle);
    }
    //+------------------------------------------------------------------+
 #endif // CBOUNDEDOBJ_IMPLEMENTATION

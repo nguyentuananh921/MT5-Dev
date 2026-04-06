@@ -3,21 +3,25 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//|First See in              https://www.mql5.com/en/articles/17960  |
+//|Current                    https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+// | Color class                                                     |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __COLOR_MQH__
 #define __COLOR_MQH__
-       //+------------------------------------------------------------------+
-   // | Color class |
-   //+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| Included Standard Libraries                                      |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Included Custome Libraries                                       |
+//+------------------------------------------------------------------+
+//#include <Arrays\List.mqh>
+#include "BaseObj.mqh"   
    class CColor : public CBaseObj
    {
       protected:
@@ -47,12 +51,12 @@
                            CColor(void) : m_color(clrNULL)                          { this.SetName("");  }
                            CColor(const color clr) : m_color(clr)                   { this.SetName("");  }
                            CColor(const color clr,const string name) : m_color(clr) { this.SetName(name);}
-                        ~CColor(void) {}
+                         ~CColor(void) {}
    };
    #ifndef CCOLOR_IMPLEMENTATION
    #define CCOLOR_IMPLEMENTATION
       //+------------------------------------------------------------------+
-      // | CColor::Returns the description of an object |
+      //| CColor::Returns the description of an object                     |
       //+------------------------------------------------------------------+
       string CColor::Description(void)
       {

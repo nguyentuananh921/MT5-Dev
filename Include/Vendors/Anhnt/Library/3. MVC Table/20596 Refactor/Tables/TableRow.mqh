@@ -3,23 +3,27 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in             https://www.mql5.com/en/articles/17653  |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Table row class |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-#include "..\Collections\ListObj.mqh"
-#include "TableCell.mqh"
-
 #ifndef __TABLEROW_MQH__
-#define __TABLEROW_MQH__
-   //+------------------------------------------------------------------+
-   // | Table row class |
-   //+------------------------------------------------------------------+
+#define __TABLEROW_MQH__ 
+    //+------------------------------------------------------------------+
+    //| Included Standard Libraries                                      |
+    //+------------------------------------------------------------------+
+    //#include <Arrays\List.mqh>
+    //+------------------------------------------------------------------+
+    //| Included Custome Libraries                                       |
+    //+------------------------------------------------------------------+
+
+    #include "..\Collections\ListObj.mqh"
+    #include "TableCell.mqh"
+    #include "..\Services\FunctionLib.mqh"  
    class CTableRow : public CObject
    {
     protected:

@@ -9,15 +9,20 @@
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
-// | Included Libraries |
+//| Enums for GUI Controls                                           |
 //+------------------------------------------------------------------+
-#include <Arrays\List.mqh>
-
 #ifndef __CONTROLSENUMS_MQH__
 #define __CONTROLSENUMS_MQH__
-    //+------------------------------------------------------------------+
-//| Enums |
-//+------------------------------------------------------------------+
+  //+------------------------------------------------------------------+
+  //| Included Standard Libraries                                      |
+  //+------------------------------------------------------------------+
+  //#include <Arrays\List.mqh>
+
+  //+------------------------------------------------------------------+
+  //| Included Custome Libraries                                       |
+  //+------------------------------------------------------------------+
+  #include "..\Defines\BaseDefines.mqh"
+  #include "..\Defines\BaseEnums.mqh"
 enum ENUM_ELEMENT_SORT_BY                       // Comparable Properties
   {
    ELEMENT_SORT_BY_ID   =  BASE_SORT_BY_ID,     // Comparison by element ID
