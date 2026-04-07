@@ -114,8 +114,7 @@
    void CRadioButton::OnPressEvent(const int id,const long lparam,const double dparam,const string sparam)
     {
       // --- If the button is already marked, we leave
-         if(this.m_state)
-         
+         if(this.m_state)         
             return;
       // --- Set the button state opposite to the one already set
          ENUM_ELEMENT_STATE state=(this.State()==ELEMENT_STATE_DEF ? ELEMENT_STATE_ACT : ELEMENT_STATE_DEF);

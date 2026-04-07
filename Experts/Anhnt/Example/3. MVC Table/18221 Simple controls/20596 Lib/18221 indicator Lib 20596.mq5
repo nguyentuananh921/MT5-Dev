@@ -15,7 +15,9 @@
 //+------------------------------------------------------------------+
 #include <Arrays\ArrayObj.mqh>
 //#include "Controls\Controls_En.mqh"
-#include <Vendors\Anhnt\3. MVC Table\20596 Lib\Controls\Controls_EN.mqh>
+//#include <Vendors\Anhnt\3. MVC Table\20596 Lib\Controls\Controls_EN.mqh>
+#include <Vendors\Anhnt\Library\3. MVC Table\18221 Lib\Controls_EN.mqh>
+
   
 CArrayObj         list;             // List for storing test objects
 CCanvasBase      *base =NULL;       // Pointer to the underlying graphic element
