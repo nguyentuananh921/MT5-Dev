@@ -17,7 +17,11 @@
 // | Included Libraries |
 //+------------------------------------------------------------------+
 //#include "Controls\Controls.mqh"    // Controls Library
-#include <Vendors\Anhnt\3. MVC Table\20596 Lib\Controls\Controls_EN.mqh>
+//#include <Vendors\Anhnt\3. MVC Table\20596 Lib\Controls\Controls_EN.mqh>
+#include <Vendors\Anhnt\Library\3. MVC Table\20596 Refactor\Controls\TableControl.mqh>
+#include <Vendors\Anhnt\Library\3. MVC Table\20596 Refactor\Controls\TableView.mqh>
+#include <Vendors\Anhnt\Library\3. MVC Table\20596 Refactor\Services\DELib.mqh>
+
 
 //--- input parameters
 input(name="Bars Total (at least 10)") uint              InpBarsTotal   =  1000;                                                 // Number of data bars to calculate correlation (at least 10)

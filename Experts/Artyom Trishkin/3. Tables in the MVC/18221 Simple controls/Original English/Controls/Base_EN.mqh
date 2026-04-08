@@ -204,7 +204,6 @@ class CBaseObj : public CObject
    }
 #endif // CBASEOBJ_IMPLEMENTATION
 
-
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 // | Color class |
@@ -1061,7 +1060,7 @@ class CCanvasBase : public CBaseObj
       ::ChartSetInteger(this.m_chart_id, CHART_CROSSHAIR_TOOL, this.m_chart_crosshair_tool_flag);
    }
    //+------------------------------------------------------------------+
-   // | CCanvasBase::Creates background and foreground graphic objects |
+   //| CCanvasBase::Creates background and foreground graphic objects   |
    //+------------------------------------------------------------------+
    bool CCanvasBase::Create(const long chart_id,const int wnd,const string object_name,const int x,const int y,const int w,const int h)
    {
