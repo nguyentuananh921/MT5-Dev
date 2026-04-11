@@ -3,8 +3,11 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
-//|                           https://www.mql5.com/ru/articles/20596 |
+//| First See in: Simple controls                                    |
+//|                           https://www.mql5.com/en/articles/18221 |
+//| Update in: Containers                                            |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
@@ -38,11 +41,11 @@
          virtual int       Type(void)                          const { return(ELEMENT_TYPE_BUTTON);      }
          
       // --- Initialize (1) class object, (2) default object colors
-         void              Init(const string text);
-         virtual void      InitColors(void){}
+         void              Init(const string text);        //Update in https://www.mql5.com/en/articles/18658
+         virtual void      InitColors(void){}              //Update in https://www.mql5.com/en/articles/18658
          
       // --- Timer event handler
-         virtual void      TimerEventHandler(void);
+         virtual void      TimerEventHandler(void);        //Update in https://www.mql5.com/en/articles/18658
          
       // --- Constructors/destructor
                            CButton(void);
@@ -81,8 +84,8 @@
       this.SetAlpha(255);
    // --- Offset text from left edge of button by default
       this.m_text_x=2;
-   // --- Auto-repeat is disabled
-      this.m_autorepeat_flag=false;
+   // --- Auto-repeat is disabled        
+      this.m_autorepeat_flag=false; //Update in https://www.mql5.com/en/articles/18658
    }
    //+------------------------------------------------------------------+
    // | CButton::Comparing two objects |

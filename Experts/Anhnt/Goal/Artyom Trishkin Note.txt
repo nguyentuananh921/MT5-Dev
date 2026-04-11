@@ -11,3 +11,13 @@ https://www.mql5.com/en/users/artmedia70
 
 Bài nào thì cuối bài cũng có code đi kèm. Ở bài số 8 thì Các class khác nhau được viết chung trong 1 file. Giờ tớ tìm cách tách cái file đấy ra để mỗi class là một file riêng biệt. 
 
+
+Cậu ơi, tớ có 2 EA cùng dùng Library của bài này.
+Symbol Correlation Table https://www.mql5.com/en/articles/20596
+Chỉ có điều 
+1 - một cái là nguyên bản chỉ có 3 file và mỗi file chứa rất nhiều class
+2 - một cái là tớ tách các class ra mỗi class một file.
+Kết quả là cái số 2 hiển thị rất tuyệt vời Còn cái số 1 hiển thị bị méo mó.
+
+https://www.mql5.com/en/articles/14339
+https://www.mql5.com/ru/articles/20596

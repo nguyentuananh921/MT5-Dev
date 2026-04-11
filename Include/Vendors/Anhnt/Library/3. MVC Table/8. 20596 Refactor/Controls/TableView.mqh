@@ -3,7 +3,9 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
+//| First See in:                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //|                           https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -22,13 +24,13 @@
    //+------------------------------------------------------------------+
 
    #include "Panel.mqh"
+   #include "Container.mqh"
    class CTable; 
    class CTableRowView;
    class CTableModel;                // Pointer to the table model (obtained from CTable)
    class CTableHeader; 
    class CTableHeaderView;
-   class CTableRowsHeaderView;
-   class CContainer;
+   class CTableRowsHeaderView;  
    class CColumnCaptionView;
    class CTableCellView;      
  class CTableView : public CPanel
@@ -579,6 +581,17 @@
       return true;
     }
    //+------------------------------------------------------------------+
+   bool CTableView::Save(const int file_handle)
+    {
+      // --- 1. Call parent (CPanel) to save common graphical data
+      if(!CPanel::Save(file_handle))
+         return false;
+
+      // --- 2. Save table-specific data (Example: row/col count)
+      // if(!this.m_table.Save(file_handle)) return false;
+
+      return true;
+    }
   #endif // CTABLEVIEW_IMPLEMENTATION
 #endif // __TABLEVIEW_MQH__
 

@@ -3,7 +3,9 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in:                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -21,7 +23,7 @@
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
    #include "CaptionView.mqh"
-   class CColumnCaption;
+   #include "..\Tables\ColumnCaption.mqh"   
  class CColumnCaptionView : public CCaptionView
   {
    protected:

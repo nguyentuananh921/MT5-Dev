@@ -3,7 +3,14 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/17960  |
+//| First See in: Base graphical element                             |
+//|                           https://www.mql5.com/en/articles/17960 |
+//| Update in: Simple controls                                       |
+//|                           https://www.mql5.com/en/articles/18221 |
+//| Update in: Containers                                            |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
@@ -39,18 +46,25 @@ class CCanvasBase : public CBoundedObj
         void              SetFlags(const bool flag);
         
     protected:
-        CCanvas          *m_background;                             // Canvas for drawing background
-        CCanvas          *m_foreground;                             // Canvas for drawing the foreground
-        CCanvasBase      *m_container;                              // Parent container object
-        CColorElement     m_color_background;                       // Background color control object
-        CColorElement     m_color_foreground;                       // Foreground color control object
-        CColorElement     m_color_border;                           // Border color control object
+        //| Update in                                                        |
+        //|       Simple controls                                            |
+        //|                           https://www.mql5.com/en/articles/18221 |
+            CCanvas          *m_background;                             // Canvas for drawing background
+            CCanvas          *m_foreground;                             // Canvas for drawing the foreground
+        //CBound            m_bound;                                  // Object boundaries
+   
+            CCanvasBase      *m_container;                              // Parent container object
+            CColorElement     m_color_background;                       // Background color control object
+            CColorElement     m_color_foreground;                       // Foreground color control object
+            CColorElement     m_color_border;                           // Border color control object
         
         CColorElement     m_color_background_act;                   // Object to control the background color of the activated element
         CColorElement     m_color_foreground_act;                   // The activated element's foreground color control object
         CColorElement     m_color_border_act;                       // Object for controlling the border color of an activated element
-        
-        CAutoRepeat       m_autorepeat;                             // Event auto-repeat control object
+        //| Update in                                                        |
+        //|       Integrating the Model Component into the View Component    |
+        //|                           https://www.mql5.com/en/articles/19288 | 
+            CAutoRepeat       m_autorepeat;                             // Event auto-repeat control object
         
         ENUM_ELEMENT_STATE m_state;                                 // Element state (e.g. buttons (on/off))
         long              m_chart_id;                               // Graph ID
@@ -58,31 +72,40 @@ class CCanvasBase : public CBoundedObj
         int               m_wnd_y;                                  // Offset of the Y coordinate of the cursor in the subwindow
         int               m_obj_x;                                  // X coordinate of the graphic object
         int               m_obj_y;                                  // Y coordinate of the graphic object
-        uchar             m_alpha_bg;                               // Background transparency
-        uchar             m_alpha_fg;                               // Foreground transparency
-        uint              m_border_width_lt;                        // Left frame width
-        uint              m_border_width_rt;                        // Right frame width
-        uint              m_border_width_up;                        // Frame width at top
-        uint              m_border_width_dn;                        // Bottom frame width
+        //| Update in                                                        |
+        //|       Simple controls                                            |
+        //|                           https://www.mql5.com/en/articles/18221 |
+            uchar             m_alpha_bg;                               // Background transparency
+            uchar             m_alpha_fg;                               // Foreground transparency
+        //| Update in Containers                                             |
+        //|                           https://www.mql5.com/en/articles/18658 |
+            uint              m_border_width_lt;                        // Left frame width
+            uint              m_border_width_rt;                        // Right frame width
+            uint              m_border_width_up;                        // Frame width at top
+            uint              m_border_width_dn;                        // Bottom frame width
         string            m_program_name;                           // Program name
         bool              m_hidden;                                 // Hidden Object Flag
         bool              m_blocked;                                // Blocked element flag
-        bool              m_movable;                                // Movable element flag
+        //| Update in Containers                                             |
+        //|                           https://www.mql5.com/en/articles/18658 |
+            bool              m_movable;                                // Movable element flag
         bool              m_resizable;                              // Resize enable flag
         bool              m_focused;                                // Flag of the element in focus
-        bool              m_main;                                   // Main object flag
-        bool              m_autorepeat_flag;                        // Auto-repeat event sending flag
-        bool              m_scroll_flag;                            // Flag for scrolling content using scrollbars
-        bool              m_trim_flag;                              // Flag for cropping an element along the container boundaries
-        bool              m_cropped;                                // Flag that the object is hidden outside the container's boundaries
-        int               m_cursor_delta_x;                         // Distance from the cursor to the left edge of the element
-        int               m_cursor_delta_y;                         // Distance from the cursor to the top edge of the element
-        int               m_z_order;                                // Z-order of a graphic object
+        //| Update in Containers                                             |
+        //|                           https://www.mql5.com/en/articles/18658 |
+            bool              m_main;                                   // Main object flag
+            bool              m_autorepeat_flag;                        // Auto-repeat event sending flag
+            bool              m_scroll_flag;                            // Flag for scrolling content using scrollbars
+            bool              m_trim_flag;                              // Flag for cropping an element along the container boundaries
+            bool              m_cropped;                                // Flag that the object is hidden outside the container's boundaries
+            int               m_cursor_delta_x;                         // Distance from the cursor to the left edge of the element
+            int               m_cursor_delta_y;                         // Distance from the cursor to the top edge of the element
+            int               m_z_order;                                // Z-order of a graphic object
         
-    // --- (1) Sets the name, returns (2) the name, (3) the flag of the active element
-        void              SetActiveElementName(const string name)   { CCommonManager::GetInstance().SetElementName(name);                               }
-        string            ActiveElementName(void)             const { return CCommonManager::GetInstance().ElementName();                               }
-        bool              IsCurrentActiveElement(void)        const { return this.ActiveElementName()==this.NameFG();                                   }
+          // --- (1) Sets the name, returns (2) the name, (3) the flag of the active element
+            void              SetActiveElementName(const string name)   { CCommonManager::GetInstance().SetElementName(name);                               }
+            string            ActiveElementName(void)             const { return CCommonManager::GetInstance().ElementName();                               }
+            bool              IsCurrentActiveElement(void)        const { return this.ActiveElementName()==this.NameFG();                                   }
         
     // --- (1) Sets, (2) returns the resizing mode flag
         void              SetResizeMode(const bool flag)            { CCommonManager::GetInstance().SetResizeMode(flag);                                }
@@ -109,8 +132,10 @@ class CCanvasBase : public CBoundedObj
         int               ContainerLimitTop(void)             const { return(this.m_container==NULL ? this.ObjectY()     : this.m_container.LimitTop());   }
         int               ContainerLimitBottom(void)          const { return(this.m_container==NULL ? this.ObjectBottom(): this.m_container.LimitBottom());}
         string            ContainerDescription(void)          const { return(this.m_container==NULL ? "Not specified"    : this.m_container.Description());}
-        
-    // --- Return coordinates, boundaries and dimensions of a graphic object
+    //| Update in                                                        |
+    //|       Integrating the Model Component into the View Component    |
+    //|                           https://www.mql5.com/en/articles/19288 |     
+      // --- Return coordinates, boundaries and dimensions of a graphic object
         int               ObjectX(void)                       const { return this.m_obj_x;                                                              }
         int               ObjectY(void)                       const { return this.m_obj_y;                                                              }
         int               ObjectWidth(void)                   const { return this.m_background.Width();                                                 }
@@ -120,6 +145,9 @@ class CCanvasBase : public CBoundedObj
         
     // --- Changes the (1) width, (2) height, (3) size of a graphic object
     protected:
+    //| Update in                                                        |
+    //|       Integrating the Model Component into the View Component    |
+    //|                           https://www.mql5.com/en/articles/19288 | 
         virtual bool      ObjectResizeW(const int size);
         virtual bool      ObjectResizeH(const int size);
         bool              ObjectResize(const int w,const int h);
@@ -127,7 +155,7 @@ class CCanvasBase : public CBoundedObj
     // --- Sets the (1) X, (2) Y, (3) both coordinates of the graphic object
         virtual bool      ObjectSetX(const int x);
         virtual bool      ObjectSetY(const int y);
-        bool              ObjectSetXY(const int x,const int y)      { return(this.ObjectSetX(x) && this.ObjectSetY(y));                                 }
+    bool              ObjectSetXY(const int x,const int y)      { return(this.ObjectSetX(x) && this.ObjectSetY(y));                                 }
         
     // --- Sets simultaneously the coordinates and dimensions of a graphic object
         virtual bool      ObjectSetXYWidthResize(const int x,const int y,const int w,const int h);
@@ -159,9 +187,11 @@ class CCanvasBase : public CBoundedObj
         virtual void      OnReleaseEvent(const int id, const long lparam, const double dparam, const string sparam);
         virtual void      OnCreateEvent(const int id, const long lparam, const double dparam, const string sparam);
         virtual void      OnWheelEvent(const int id, const long lparam, const double dparam, const string sparam)         { return;         }  // the handler is disabled here
+    //| Update in: Resizable elements                                    |
+    //|                           https://www.mql5.com/en/articles/18941 |
         virtual void      OnResizeZoneEvent(const int id, const long lparam, const double dparam, const string sparam)    { return;         }  // the handler is disabled here
         
-    // --- Handlers for resizing an element by sides and corners
+      // --- Handlers for resizing an element by sides and corners
         virtual bool      OnResizeZoneLeft(const int x, const int y)                                                      { return false;   }  // the handler is disabled here
         virtual bool      OnResizeZoneRight(const int x, const int y)                                                     { return false;   }  // the handler is disabled here
         virtual bool      OnResizeZoneTop(const int x, const int y)                                                       { return false;   }  // the handler is disabled here
@@ -178,8 +208,12 @@ class CCanvasBase : public CBoundedObj
         virtual void      ObjectChangeHandler(const int id, const long lparam, const double dparam, const string sparam)  { return;         }  // the handler is disabled here
         
     public:
-    // --- Returns a pointer to (1) the container, (2) an object of the auto-repeat event class
-        CCanvasBase      *GetContainer(void)                  const { return this.m_container;                                                          } 
+    //| Update in Containers                                             |
+    //|                           https://www.mql5.com/en/articles/18658 |
+        // --- Returns a pointer to (1) the container, (2) an object of the auto-repeat event class
+            CCanvasBase      *GetContainer(void)                  const { return this.m_container;                                                          } 
+    //| Update in Containers                                             |
+    //|                           https://www.mql5.com/en/articles/18658 |
         CAutoRepeat      *GetAutorepeatObj(void)                    { return &this.m_autorepeat;                                                        }
 
     // --- Returns a pointer to the (1) background, (2) foreground canvas
@@ -375,12 +409,18 @@ class CCanvasBase : public CBoundedObj
         bool              IsHidden(void)                      const { return this.m_hidden;                                                             }
         bool              IsBlocked(void)                     const { return this.m_blocked;                                                            }
         bool              IsMovable(void)                     const { return this.m_movable;                                                            }
+      //| Update in: Resizable elements                                    |
+      //|                           https://www.mql5.com/en/articles/18941 |
         bool              IsResizable(void)                   const { return this.m_resizable;                                                          }
+      //--------------------------------------------------------------------    
         bool              IsMain(void)                        const { return this.m_main;                                                               }
         bool              IsFocused(void)                     const { return this.m_focused;                                                            }
+      //| Update in: Resizable elements                                    |
+      //|                           https://www.mql5.com/en/articles/18941 |
         bool              IsAutorepeat(void)                  const { return this.m_autorepeat_flag;                                                    }
         bool              IsScrollable(void)                  const { return this.m_scroll_flag;                                                        }
         bool              IsTrimmed(void)                     const { return this.m_trim_flag;                                                          }
+      //--------------------------------------------------------------------  
         bool              IsCropped(void)                     const { return this.m_cropped;                                                            }
         string            NameBG(void)                        const { return this.m_background.ChartObjectName();                                       }
         string            NameFG(void)                        const { return this.m_foreground.ChartObjectName();                                       }
@@ -436,10 +476,14 @@ class CCanvasBase : public CBoundedObj
     // --- (4) auto-repeat events, (5) scrolling inside the container, (6) trimming along the container borders
         void              SetMovable(const bool flag)               { this.m_movable=flag;                                                              }
         void              SetAsMain(void)                           { this.m_main=true;                                                                 }
+      //| Update in: Resizable elements                                    |
+      //|                           https://www.mql5.com/en/articles/18941 |
         virtual void      SetResizable(const bool flag)             { this.m_resizable=flag;                                                            }
         void              SetAutorepeat(const bool flag)            { this.m_autorepeat_flag=flag;                                                      }
         void              SetScrollable(const bool flag)            { this.m_scroll_flag=flag;                                                          }
-        virtual void      SetTrimmered(const bool flag)             { this.m_trim_flag=flag;                                                            }
+        virtual void      SetTrimmered(const bool flag)             { this.m_trim_flag=flag;
+      //--------------------------------------------------------------------
+                                                            }
         void              SetCropped(const bool flag)               { this.m_cropped=flag;                                                              }
         
     // --- Returns a flag that an object is located outside of its container

@@ -3,7 +3,10 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Containers                                         |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 
 //+------------------------------------------------------------------+
@@ -31,56 +34,59 @@
   {
    protected:
       CImagePainter     m_painter;                                // Drawing class
-      CListElm          m_list_hints;                             // List of hints
+      //| Update in: Resizable elements                                    |
+      //|                           https://www.mql5.com/en/articles/18941 |
+         CListElm          m_list_hints;                             // List of hints
       int               m_group;                                  // Group of elements
       bool              m_visible_in_container;                   // Container visibility flag
+   //| Update in: Resizable elements                                    |
+   //|                           https://www.mql5.com/en/articles/18941 |
+      // --- Adds the specified tooltip object to the list
+         bool              AddHintToList(CVisualHint *obj);
+      // --- Creates and adds a new tooltip object to the list
+         CVisualHint      *CreateAndAddNewHint(const ENUM_HINT_TYPE type, const string user_name, const int w, const int h);
+      // --- Adds an existing tooltip object to the list
+         CVisualHint      *AddHint(CVisualHint *obj, const int dx, const int dy);
+      // --- (1) Adds to the list, (2) removes arrow tooltip objects from the list
+         virtual bool      AddHintsArrowed(void);
+         bool              DeleteHintsArrowed(void);
+      // --- Displays resizing cursor
+         virtual bool      ShowCursorHint(const ENUM_CURSOR_REGION edge,int x,int y);
+         
+      // --- Handler for dragging edges and corners of an element
+         virtual void      ResizeActionDragHandler(const int x, const int y);
+         
+      // --- Handlers for resizing an element by sides and corners
+         virtual bool      ResizeZoneLeftHandler(const int x, const int y);
+         virtual bool      ResizeZoneRightHandler(const int x, const int y);
+         virtual bool      ResizeZoneTopHandler(const int x, const int y);
+         virtual bool      ResizeZoneBottomHandler(const int x, const int y);
+         virtual bool      ResizeZoneLeftTopHandler(const int x, const int y);
+         virtual bool      ResizeZoneRightTopHandler(const int x, const int y);
+         virtual bool      ResizeZoneLeftBottomHandler(const int x, const int y);
+         virtual bool      ResizeZoneRightBottomHandler(const int x, const int y);
+         
+      // --- Returns a pointer to a hint by (1) index, (2) identifier, (3) name
+         CVisualHint      *GetHintAt(const int index);
+         CVisualHint      *GetHint(const int id);
+         CVisualHint      *GetHint(const string name);
 
-   // --- Adds the specified tooltip object to the list
-      bool              AddHintToList(CVisualHint *obj);
-   // --- Creates and adds a new tooltip object to the list
-      CVisualHint      *CreateAndAddNewHint(const ENUM_HINT_TYPE type, const string user_name, const int w, const int h);
-   // --- Adds an existing tooltip object to the list
-      CVisualHint      *AddHint(CVisualHint *obj, const int dx, const int dy);
-   // --- (1) Adds to the list, (2) removes arrow tooltip objects from the list
-      virtual bool      AddHintsArrowed(void);
-      bool              DeleteHintsArrowed(void);
-   // --- Displays resizing cursor
-      virtual bool      ShowCursorHint(const ENUM_CURSOR_REGION edge,int x,int y);
-      
-   // --- Handler for dragging edges and corners of an element
-      virtual void      ResizeActionDragHandler(const int x, const int y);
-      
-   // --- Handlers for resizing an element by sides and corners
-      virtual bool      ResizeZoneLeftHandler(const int x, const int y);
-      virtual bool      ResizeZoneRightHandler(const int x, const int y);
-      virtual bool      ResizeZoneTopHandler(const int x, const int y);
-      virtual bool      ResizeZoneBottomHandler(const int x, const int y);
-      virtual bool      ResizeZoneLeftTopHandler(const int x, const int y);
-      virtual bool      ResizeZoneRightTopHandler(const int x, const int y);
-      virtual bool      ResizeZoneLeftBottomHandler(const int x, const int y);
-      virtual bool      ResizeZoneRightBottomHandler(const int x, const int y);
-      
-   // --- Returns a pointer to a hint by (1) index, (2) identifier, (3) name
-      CVisualHint      *GetHintAt(const int index);
-      CVisualHint      *GetHint(const int id);
-      CVisualHint      *GetHint(const string name);
+      // --- Creates a new tooltip
+         CVisualHint      *CreateNewHint(const ENUM_HINT_TYPE type, const string object_name, const string user_name, const int id, const int x, const int y, const int w, const int h);
+      // --- (1) Displays the specified tooltip with arrows, (2) hides all tooltips
+         void              ShowHintArrowed(const ENUM_HINT_TYPE type,const int x,const int y);
+         void              HideHintsAll(const bool chart_redraw);
 
-   // --- Creates a new tooltip
-      CVisualHint      *CreateNewHint(const ENUM_HINT_TYPE type, const string object_name, const string user_name, const int id, const int x, const int y, const int w, const int h);
-   // --- (1) Displays the specified tooltip with arrows, (2) hides all tooltips
-      void              ShowHintArrowed(const ENUM_HINT_TYPE type,const int x,const int y);
-      void              HideHintsAll(const bool chart_redraw);
+      public:
+      // --- Returns itself
+         CElementBase     *GetObject(void)                           { return &this;                     }
+      // --- Returns a pointer to (1) the drawing class, (2) the list of tooltips
+         CImagePainter    *Painter(void)                             { return &this.m_painter;           }
+         CListElm         *GetListHints(void)                        { return &this.m_list_hints;        }
 
-   public:
-   // --- Returns itself
-      CElementBase     *GetObject(void)                           { return &this;                     }
-   // --- Returns a pointer to (1) the drawing class, (2) the list of tooltips
-      CImagePainter    *Painter(void)                             { return &this.m_painter;           }
-      CListElm         *GetListHints(void)                        { return &this.m_list_hints;        }
-
-   // --- Creates and adds (1) a new, (2) a previously created tooltip object (tooltip only) to the list
-      CVisualHint      *InsertNewTooltip(const ENUM_HINT_TYPE type, const string user_name, const int w, const int h);
-      CVisualHint      *InsertTooltip(CVisualHint *obj, const int dx, const int dy);
+      // --- Creates and adds (1) a new, (2) a previously created tooltip object (tooltip only) to the list
+         CVisualHint      *InsertNewTooltip(const ENUM_HINT_TYPE type, const string user_name, const int w, const int h);
+         CVisualHint      *InsertTooltip(CVisualHint *obj, const int dx, const int dy);
 
    // --- (1) Sets coordinates, (2) resizes image area
       void              SetImageXY(const int x,const int y)       { this.m_painter.SetXY(x,y);        }
@@ -102,19 +108,21 @@
    // --- (1) Sets, (2) returns a group of elements
       virtual void      SetGroup(const int group)                 { this.m_group=group;               }
       int               Group(void)                         const { return this.m_group;              }
-      
-   // --- Sets the resizing flag
-      virtual void      SetResizable(const bool flag);
-      
-   // --- (1) Sets, (2) returns the visibility flag in the container
-      virtual void      SetVisibleInContainer(const bool flag)    { this.m_visible_in_container=flag; }
-      bool              IsVisibleInContainer(void)          const { return this.m_visible_in_container;}
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |   
+      // --- Sets the resizing flag
+         virtual void      SetResizable(const bool flag);
+         
+      // --- (1) Sets, (2) returns the visibility flag in the container
+         virtual void      SetVisibleInContainer(const bool flag)    { this.m_visible_in_container=flag; }
+         bool              IsVisibleInContainer(void)          const { return this.m_visible_in_container;}
 
    // --- Returns a description of the object
       virtual string    Description(void);
-      
-   // --- Resize handler
-      virtual void      OnResizeZoneEvent(const int id, const long lparam, const double dparam, const string sparam);
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |   
+      // --- Resize handler
+         virtual void      OnResizeZoneEvent(const int id, const long lparam, const double dparam, const string sparam);
       
    // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
       virtual int       Compare(const CObject *node,const int mode=0) const;
@@ -142,7 +150,9 @@
          this.m_painter.CanvasAssign(this.GetForeground());
          this.m_painter.SetXY(0,0);
          this.m_painter.SetSize(0,0);
-         this.m_visible_in_container=true;
+         //| Update in                             Resizable elements         |
+         //|                           https://www.mql5.com/en/articles/18941 |
+          this.m_visible_in_container=true;
     }
    //+------------------------------------------------------------------+
    //| CElementBase::Comparing two objects |
@@ -327,19 +337,22 @@
       // --- Save the data of the parent object
          if(!CCanvasBase::Save(file_handle))
             return false;
-      
-      // --- Save the list of hints
-         if(!this.m_list_hints.Save(file_handle))
-            return false;
+      //| Update in                             Resizable elements         |
+      //|                           https://www.mql5.com/en/articles/18941 |
+         // --- Save the list of hints
+            if(!this.m_list_hints.Save(file_handle))
+               return false;
       // --- Save the image object
          if(!this.m_painter.Save(file_handle))
             return false;
       // --- Save the group
          if(::FileWriteInteger(file_handle,this.m_group,INT_VALUE)!=INT_VALUE)
             return false;
-      // --- Store the visibility flag in the container
-         if(::FileWriteInteger(file_handle,this.m_visible_in_container,INT_VALUE)!=INT_VALUE)
-            return false;
+      //| Update in                             Resizable elements         |
+      //|                           https://www.mql5.com/en/articles/18941 |
+         // --- Store the visibility flag in the container
+            if(::FileWriteInteger(file_handle,this.m_visible_in_container,INT_VALUE)!=INT_VALUE)
+               return false;
          
       // --- Everything is successful
          return true;
@@ -352,17 +365,20 @@
          // --- Loading the data of the parent object
             if(!CCanvasBase::Load(file_handle))
                return false;
-               
-         // --- Loading a list of tips
-            if(!this.m_list_hints.Load(file_handle))
-               return false;      
+         //| Update in                             Resizable elements         |
+         //|                           https://www.mql5.com/en/articles/18941 |      
+            // --- Loading a list of tips
+               if(!this.m_list_hints.Load(file_handle))
+                  return false;      
          // --- Loading the image object
             if(!this.m_painter.Load(file_handle))
                return false;
          // --- Loading the group
             this.m_group=::FileReadInteger(file_handle,INT_VALUE);
-         // --- Load the visibility flag in the container
-            this.m_visible_in_container=::FileReadInteger(file_handle,INT_VALUE);
+         //| Update in                             Resizable elements         |
+         //|                           https://www.mql5.com/en/articles/18941 |
+            // --- Load the visibility flag in the container
+               this.m_visible_in_container=::FileReadInteger(file_handle,INT_VALUE);
             
          // --- Everything is successful
             return true;

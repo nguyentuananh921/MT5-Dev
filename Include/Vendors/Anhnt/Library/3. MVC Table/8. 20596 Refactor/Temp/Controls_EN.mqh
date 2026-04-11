@@ -5093,10 +5093,9 @@
    //    //+------------------------------------------------------------------+
    // #endif // CSCROLLBARV_IMPLEMENTATION
 #endif // MOVE_TO_SCROLLBARV_MQH
-
-#ifndef MOVE_TO_SCROLLBARV_MQH
-#define MOVE_TO_SCROLLBARV_MQH
-     // //+------------------------------------------------------------------+
+#ifndef MOVE_TO_CONTAINER_MQH
+#define MOVE_TO_CONTAINER_MQH
+// //+------------------------------------------------------------------+
    // // | Class Container |
    // //+------------------------------------------------------------------+
    // class CContainer : public CPanel
@@ -6026,7 +6025,7 @@
    //       }
    //    //+------------------------------------------------------------------+
    // #endif // CCONTAINER_IMPLEMENTATION
-#endif // MOVE_TO_SCROLLBARV_MQH
+#endif // MOVE_TO_CONTAINER_MQH
 
 #ifndef MOVE_TO_TABLECELLVIEW_MQH
 #define MOVE_TO_TABLECELLVIEW_MQH

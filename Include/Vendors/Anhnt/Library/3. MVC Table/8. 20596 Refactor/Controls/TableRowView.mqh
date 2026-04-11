@@ -3,7 +3,9 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
+//| First See in:                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //|                           https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -22,7 +24,15 @@
   //+------------------------------------------------------------------+
   
   #include "Panel.mqh"
-  class CTableRow;       
+  #include "TableCellView.mqh" 
+  #include "..\Collections\ListElm.mqh"  
+  
+  #include "RowCaptionView.mqh"
+  #include "ColumnCaptionView.mqh"
+  #include "TableView.mqh"
+   
+  class CTableRow; 
+        
   class CTableRowView : public CPanel
    {
       protected:
@@ -98,7 +108,7 @@
       // --- Constructors/destructor
                            CTableRowView(void);
                            CTableRowView(const string object_name, const string text, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
-                        ~CTableRowView (void){ this.m_list_cells.Clear(); }
+                           ~CTableRowView (void){ this.m_list_cells.Clear(); }
    };
   #ifndef CTABLEROWVIEW_IMPLEMENTATION
   #define CTABLEROWVIEW_IMPLEMENTATION
@@ -426,65 +436,7 @@
         }
       // --- Everything is successful
         return true;
-     }
-    //+------------------------------------------------------------------+
-    // | CTableRowView::Returns a visual view of the table |
-    //+------------------------------------------------------------------+
-    CTableView *CTableRowView::GetTableView(void)
-     {
-        CTableView *obj=NULL;
-      // --- We get a panel with table rows
-        CElementBase *base0=this.GetContainer();
-        if(base0==NULL)
-            return NULL;
-        
-      // --- Getting the table row panel container
-        CElementBase *base1=base0.GetContainer();
-        if(base1==NULL)
-            return NULL;
-        
-      // --- Get the table visual representation object
-        CElementBase *base2=base1.GetContainer();
-        if(base2!=NULL && base2.Type()==ELEMENT_TYPE_TABLE_VIEW)
-        {
-            obj=base2;
-            return obj;
-        }
-        return NULL;
-     }
-    //+------------------------------------------------------------------+
-    // | CTableRowView::Returns the visual view |
-    // | column headers |
-    //+------------------------------------------------------------------+
-    CTableHeaderView *CTableRowView::GetHeaderView(void)
-     {
-        CTableView *table=this.GetTableView();
-        return(table!=NULL ? table.GetHeader() : NULL);
-     }
-    //+------------------------------------------------------------------+
-    // |CTableRowView::Returns a visual representation of the row headers|
-    //+------------------------------------------------------------------+
-    CTableRowsHeaderView *CTableRowView::GetRowsHeaderView(void)
-     {
-        CTableView *table=this.GetTableView();
-        return(table!=NULL ? table.GetRowsHeader() : NULL);
-     }
-    //+------------------------------------------------------------------+
-    // | CTableRowView::Returns the column title |
-    //+------------------------------------------------------------------+
-    CColumnCaptionView *CTableRowView::GetColumnCaption(const uint index)
-     {
-        CTableHeaderView *header=this.GetHeaderView();
-        return(header!=NULL ? header.GetColumnCaption(index) : NULL);
-     }
-    //+------------------------------------------------------------------+
-    // | CTableRowView::Returns the row title |
-    //+------------------------------------------------------------------+
-    CRowCaptionView *CTableRowView::GetRowCaption(const uint index)
-     {
-        CTableRowsHeaderView *header=this.GetRowsHeaderView();
-        return(header!=NULL ? header.GetRowCaption(index) : NULL);
-     }
+     }     
     //+------------------------------------------------------------------+
     // |CTableRowView::Sets the specified column header as selected|
     //+------------------------------------------------------------------+
@@ -709,6 +661,68 @@
         return true;
      }
     //+------------------------------------------------------------------+
+  #ifndef MOVE_TO_DELIB_MQH
+  #define MOVE_TO_DELIB_MQH
+  //  //+------------------------------------------------------------------+
+  //   // | CTableRowView::Returns the row title |
+  //   //+------------------------------------------------------------------+
+  //   CRowCaptionView *CTableRowView::GetRowCaption(const uint index)
+  //    {
+  //       CTableRowsHeaderView *header=this.GetRowsHeaderView();
+  //       return(header!=NULL ? header.GetRowCaption(index) : NULL);
+  //    }     
+  //   //+------------------------------------------------------------------+
+  //   // | CTableRowView::Returns the column title |
+  //   //+------------------------------------------------------------------+
+  //   CColumnCaptionView *CTableRowView::GetColumnCaption(const uint index)
+  //    {
+  //       CTableHeaderView *header=this.GetHeaderView();
+  //       return(header!=NULL ? header.GetColumnCaption(index) : NULL);
+  //    }  
+  //   //+------------------------------------------------------------------+
+  //   // |CTableRowView::Returns a visual representation of the row headers|
+  //   //+------------------------------------------------------------------+
+  //   CTableRowsHeaderView *CTableRowView::GetRowsHeaderView(void)
+  //    {
+  //       CTableView *table=this.GetTableView();
+  //       return(table!=NULL ? table.GetRowsHeader() : NULL);
+  //    }
+  //   //+------------------------------------------------------------------+
+  //   // | CTableRowView::Returns the visual view |
+  //   // | column headers |
+  //   //+------------------------------------------------------------------+
+  //   CTableHeaderView *CTableRowView::GetHeaderView(void)
+  //    {
+  //       CTableView *table=this.GetTableView();
+  //       return(table!=NULL ? table.GetHeader() : NULL);
+  //    }
+  //   //+------------------------------------------------------------------+
+  //   // | CTableRowView::Returns a visual view of the table |
+  //   //+------------------------------------------------------------------+
+  //   CTableView *CTableRowView::GetTableView(void)
+  //    {
+  //       CTableView *obj=NULL;
+  //     // --- We get a panel with table rows
+  //       CElementBase *base0=this.GetContainer();
+  //       if(base0==NULL)
+  //           return NULL;
+        
+  //     // --- Getting the table row panel container
+  //       CElementBase *base1=base0.GetContainer();
+  //       if(base1==NULL)
+  //           return NULL;
+        
+  //     // --- Get the table visual representation object
+  //       CElementBase *base2=base1.GetContainer();
+  //       if(base2!=NULL && base2.Type()==ELEMENT_TYPE_TABLE_VIEW)
+  //       {
+  //           obj=base2;
+  //           return obj;
+  //       }
+  //       return NULL;
+  //    }
+  #endif // MOVE_TO_DELIB_MQH
+
   #endif // CTABLEROWVIEW_IMPLEMENTATION
 #endif // __TABLEROWVIEW_MQH__
 

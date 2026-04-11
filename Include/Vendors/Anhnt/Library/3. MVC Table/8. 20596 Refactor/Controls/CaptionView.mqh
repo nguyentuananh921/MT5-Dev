@@ -164,7 +164,7 @@
       //--- Using a clear format for X, Y, Width, and Height
       return ::StringFormat("%s, Area: [X %d, Y %d, W %d, H %d]",
                             baseDesc,
-                            this.X(), this.Y(), this.Width(), this.Height())      
+                            this.X(), this.Y(), this.Width(), this.Height());      
       // string nm=this.Name();
       // string name=(nm!="" ? ::StringFormat(" \"%s\"",nm) : nm);
       // return ::StringFormat("%s%s ID %d, X %d, Y %d, W %d, H %d",ElementDescription((ENUM_ELEMENT_TYPE)this.Type()),name,this.ID(),this.X(),this.Y(),this.Width(),this.Height());

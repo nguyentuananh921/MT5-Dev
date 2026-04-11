@@ -3,7 +3,13 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Containers                                         |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
+//| Update in   :                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -20,7 +26,14 @@
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+	
-   #include "Panel.mqh"
+   #include "..\Defines\ControlsEnums.mqh"
+   #include "ButtonArrowDown.mqh"
+   #include "ButtonArrowLeft.mqh"
+   #include "ButtonArrowRight.mqh"
+   #include "ButtonArrowUp.mqh" 
+   #include "ScrollBarThumbH.mqh"  
+   #include "Panel.mqh"  
+   
  class CScrollBarH : public CPanel
   {
    protected:
@@ -114,8 +127,8 @@
      // ---Creating scroll buttons
       int w=this.Height();
       int h=this.Height();
-      this.m_butt_left = this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_LEFT, "","ButtL",0,0,w,h);
-      this.m_butt_right= this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_RIGHT,"","ButtR",this.Width()-w,0,w,h);
+      this.m_butt_left = (CButtonArrowLeft*) this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_LEFT, "","ButtL",0,0,w,h);
+      this.m_butt_right= (CButtonArrowRight*) this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_RIGHT,"","ButtR",this.Width()-w,0,w,h);
       if(this.m_butt_left==NULL || this.m_butt_right==NULL)
       {
          ::PrintFormat("%s: Init failed",__FUNCTION__);
@@ -137,8 +150,8 @@
       
      // --- Create a slider
       int tsz=this.Width()-w*2;
-      this.m_thumb=this.InsertNewElement(ELEMENT_TYPE_SCROLLBAR_THUMB_H,"","ThumbH",w,1,tsz-w*4,h-2);
-      if(this.m_thumb==NULL)
+      this.m_thumb=(CScrollBarThumbH*)this.InsertNewElement(ELEMENT_TYPE_SCROLLBAR_THUMB_H,"","ThumbH",w,1,tsz-w*4,h-2);
+      if (this.m_thumb==NULL)      
       {
          ::PrintFormat("%s: Init failed",__FUNCTION__);
          return;

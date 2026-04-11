@@ -3,7 +3,8 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Containers                                         |
+//|                           https://www.mql5.com/en/articles/18658 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 
 //+------------------------------------------------------------------+
@@ -41,7 +42,7 @@
    // --- Constructors/destructor
                         CGroupBox(void);
                         CGroupBox(const string object_name, const string text, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
-                     ~CGroupBox(void) {}
+                        ~CGroupBox(void) {}
   };
   #ifndef CGROUPBOX_IMPLEMENTATION
   #define CGROUPBOX_IMPLEMENTATION
@@ -90,31 +91,36 @@
             elm.SetGroup(group);
       }
     }
-   //+------------------------------------------------------------------+
-   // | CGroupBox::Creates and adds a new element to the list |
-   //+------------------------------------------------------------------+
-   CElementBase *CGroupBox::InsertNewElement(const ENUM_ELEMENT_TYPE type,const string text,const string user_name,const int dx,const int dy,const int w,const int h)
-    {
-     // --- Create and add a new element to the list of elements
-      CElementBase *element=CPanel::InsertNewElement(type,text,user_name,dx,dy,w,h);
-      if(element==NULL)
-         return NULL;
-     // --- Set the created element to a group equal to the group of this object
-      element.SetGroup(this.Group());
-      return element;
-    }
-   //+------------------------------------------------------------------+
-   // | CGroupBox::Adds the specified element to the list |
-   //+------------------------------------------------------------------+
-   CElementBase *CGroupBox::InsertElement(CElementBase *element,const int dx,const int dy)
-    {
-     // --- Add a new element to the list of elements
-      if(CPanel::InsertElement(element,dx,dy)==NULL)
-         return NULL;
-     // --- Set the added element to a group equal to the group of this object
-      element.SetGroup(this.Group());
-      return element;
-    }
+   
+  #ifndef MOVE_TO_DELIB_MQH
+  #define MOVE_TO_DELIB_MQH
+   //    //+------------------------------------------------------------------+
+   //    //| CGroupBox::Creates and adds a new element to the list            |
+   //    //+------------------------------------------------------------------+
+   //    CElementBase *CGroupBox::InsertNewElement(const ENUM_ELEMENT_TYPE type,const string text,const string user_name,const int dx,const int dy,const int w,const int h)
+   //     {
+   //      // --- Create and add a new element to the list of elements
+   //       CElementBase *element=CPanel::InsertNewElement(type,text,user_name,dx,dy,w,h);
+   //       if(element==NULL)
+   //          return NULL;
+   //      // --- Set the created element to a group equal to the group of this object
+   //       element.SetGroup(this.Group());
+   //       return element;
+   //     }
+   //    //+------------------------------------------------------------------+
+   //    // | CGroupBox::Adds the specified element to the list |
+   //    //+------------------------------------------------------------------+
+   //    CElementBase *CGroupBox::InsertElement(CElementBase *element,const int dx,const int dy)
+   //     {
+   //      // --- Add a new element to the list of elements
+   //       if(CPanel::InsertElement(element,dx,dy)==NULL)
+   //          return NULL;
+   //      // --- Set the added element to a group equal to the group of this object
+   //       element.SetGroup(this.Group());
+   //       return element;
+   //     }
+  #endif // MOVE_TO_DELIB_MQH
+
    //+------------------------------------------------------------------+
   #endif // CGROUPBOX_IMPLEMENTATION
 #endif // __GROUPBOX_MQH__

@@ -3,7 +3,12 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Simple controls                                    |
+//|                           https://www.mql5.com/en/articles/18221 |
+//| Update in: Containers                                            |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -70,14 +75,15 @@ class CImagePainter : public CBaseObj
       bool              ArrowDown(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              ArrowLeft(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              ArrowRight(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
-   
-   // --- Draws (1) horizontal 17x7, (2) vertical 7x17 double arrow
-      bool              ArrowHorz(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true); 
-      bool              ArrowVert(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true); 
-   
-   // --- Draws a diagonal (1) top-left --- down-right, (2) bottom-left --- up-right 17x17 double arrow
-      bool              ArrowNWSE(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
-      bool              ArrowNESW(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |
+      // --- Draws (1) horizontal 17x7, (2) vertical 7x17 double arrow     
+         bool              ArrowHorz(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true); 
+         bool              ArrowVert(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true); 
+      
+      // --- Draws a diagonal (1) top-left --- down-right, (2) bottom-left --- up-right 17x17 double arrow
+         bool              ArrowNWSE(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
+         bool              ArrowNESW(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
    
    // --- Draws an 18x18 offset arrow along (1) horizontal, (2) vertical
       bool              ArrowShiftHorz(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
@@ -90,8 +96,9 @@ class CImagePainter : public CBaseObj
    // --- Draws a (1) checked, (2) unchecked RadioButton
       bool              CheckedRadioButton(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              UncheckedRadioButton(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
-
-   // --- Draws a frame for a group of elements
+   //| Update in: Containers                                            |
+   //|                           https://www.mql5.com/en/articles/18658 |
+     // --- Draws a frame for a group of elements
       bool              FrameGroupElements(const int x,const int y,const int w,const int h,const string text,
                                        const color clr_text,const color clr_dark,const color clr_light,
                                        const uchar alpha,const bool update=true);
@@ -138,6 +145,8 @@ class CImagePainter : public CBaseObj
       switch(mode)
       {
          case ELEMENT_SORT_BY_NAME     :  return(this.Name()   >obj.Name()    ? 1 : this.Name()    <obj.Name()    ? -1 : 0);
+        //| Update in: Containers                                            |
+        //|                           https://www.mql5.com/en/articles/18658 |
          case ELEMENT_SORT_BY_ALPHA_FG :
          case ELEMENT_SORT_BY_ALPHA_BG :  return(this.Alpha()  >obj.Alpha()   ? 1 : this.Alpha()   <obj.Alpha()   ? -1 : 0);
          case ELEMENT_SORT_BY_X        :  return(this.X()      >obj.X()       ? 1 : this.X()       <obj.X()       ? -1 : 0);

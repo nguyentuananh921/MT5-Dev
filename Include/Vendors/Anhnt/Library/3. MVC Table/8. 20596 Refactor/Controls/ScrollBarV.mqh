@@ -3,7 +3,13 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Containers                                         |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
+//| Update in   :                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -21,7 +27,14 @@
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
-   #include "Panel.mqh"      
+   #include "..\Defines\ControlsEnums.mqh"
+   #include "ButtonArrowDown.mqh"
+   #include "ButtonArrowLeft.mqh"
+   #include "ButtonArrowRight.mqh"
+   #include "ButtonArrowUp.mqh"
+   #include "ScrollBarThumbV.mqh"
+   #include "Panel.mqh"  
+        
   class CScrollBarV : public CPanel
    {
       protected:
@@ -74,7 +87,7 @@
       // --- Constructors/destructor
                            CScrollBarV(void);
                            CScrollBarV(const string object_name, const string text, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
-                        ~CScrollBarV(void) {}
+                           ~CScrollBarV(void) {}
    };
   #ifndef CSCROLLBARV_IMPLEMENTATION
   #define CSCROLLBARV_IMPLEMENTATION
@@ -110,13 +123,12 @@
       this.SetAlphaBG(255);
      // --- Frame width and text
       this.SetBorderWidth(0);
-      this.SetText("");
-      
+      this.SetText("");      
      // ---Creating scroll buttons
       int w=this.Width();
       int h=this.Width();
-      this.m_butt_up = this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_UP, "","ButtU",0,0,w,h);
-      this.m_butt_down= this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_DOWN,"","ButtD",0,this.Height()-w,w,h);
+      this.m_butt_up = (CButtonArrowUp*) this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_UP, "","ButtU",0,0,w,h);
+      this.m_butt_down= (CButtonArrowDown*) this.InsertNewElement(ELEMENT_TYPE_BUTTON_ARROW_DOWN,"","ButtD",0,this.Height()-w,w,h);
       if(this.m_butt_up==NULL || this.m_butt_down==NULL)
       {
          ::PrintFormat("%s: Init failed",__FUNCTION__);
@@ -137,7 +149,7 @@
       
      // --- Create a slider
       int tsz=this.Height()-w*2;
-      this.m_thumb=this.InsertNewElement(ELEMENT_TYPE_SCROLLBAR_THUMB_V,"","ThumbV",1,w,w-2,tsz/2);
+      this.m_thumb=(CScrollBarThumbV*) this.InsertNewElement(ELEMENT_TYPE_SCROLLBAR_THUMB_V,"","ThumbV",1,w,w-2,tsz/2);
       if(this.m_thumb==NULL)
       {
          ::PrintFormat("%s: Init failed",__FUNCTION__);

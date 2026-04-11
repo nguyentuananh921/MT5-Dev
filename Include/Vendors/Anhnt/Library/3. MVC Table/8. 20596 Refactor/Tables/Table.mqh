@@ -553,8 +553,15 @@
    //+------------------------------------------------------------------+
    string CTable::Description(void)
    {
-      return(::StringFormat("%s: Rows total: %u, Columns total: %u",
-                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.RowsTotal(),this.ColumnsTotal()));
+      // --- Get the formatted object type from the static helper
+      string typeStr = CBaseObj::FormatObjectType((ENUM_OBJECT_TYPE)this.Type());
+   
+      // --- Return the row description including index and count of cells
+      return ::StringFormat("%s: Rows total: %u, Columns total: %u", 
+                            typeStr, this.RowsTotal(),this.ColumnsTotal());
+                            
+      /*return(::StringFormat("%s: Rows total: %u, Columns total: %u",
+                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.RowsTotal(),this.ColumnsTotal()));*/
    }
    //+------------------------------------------------------------------+
    // | Logs a description of an object |

@@ -22,8 +22,10 @@
    //+------------------------------------------------------------------+
    #include "..\Defines\TableDefines.mqh"
    #include "..\Defines\TableEnums.mqh"
+   #include "..\Defines\ControlsEnums.mqh"
    #include "..\Collections\ListObj.mqh"
-   #include "..\Services\FunctionLib.mqh"   
+   #include "..\Base\BaseObj.mqh"
+   
    class CColumnCaption : public CObject
    {
       protected:
@@ -138,8 +140,18 @@
    //+------------------------------------------------------------------+
    string CColumnCaption::Description(void)
    {
-      return(::StringFormat("%s: Column %u, Value: \"%s\"",
-                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.Column(),this.Value()));
+      // return(::StringFormat("%s: Column %u, Value: \"%s\"",
+      //                      TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.Column(),this.Value()));
+
+      // --- Get the formatted object type using the helper from the base class
+      //string typeStr = this.FormatObjectType((ENUM_OBJECT_TYPE)this.Type());
+      // Use the static helper directly via the class name
+      string typeStr = CBaseObj::FormatObjectType((ENUM_OBJECT_TYPE)this.Type());  
+      
+      // --- Return the formatted string for the column caption
+      return ::StringFormat("%s: Column %u, Value: \"%s\"",
+                           typeStr, this.Column(), this.Value());
+      
    }
    //+------------------------------------------------------------------+
    // | Logs a description of an object |

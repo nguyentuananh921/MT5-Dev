@@ -3,7 +3,13 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Containers                                         |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
+//| Update in   :                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -20,21 +26,29 @@
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
-   #include "Panel.mqh"
+   #include "ButtonArrowDown.mqh"
+   #include "ButtonArrowLeft.mqh"
+   #include "ButtonArrowRight.mqh"
+   #include "ButtonArrowUp.mqh"     
+   #include "ScrollBarThumbV.mqh"
+   #include "ScrollBarThumbH.mqh"  
+   #include "ScrollBarH.mqh"
+   #include "ScrollBarV.mqh"
+   #include "Panel.mqh" 
    // Forward declarations for Pointer variables và method params
-   class CScrollBarH;
-   class CScrollBarV;
-   class CScrollBarThumbH;
-   class CScrollBarThumbV;
+   class CTableHeaderView;
+   class CTableView;
  class CContainer : public CPanel
    {
    private:
-      bool              m_visible_scrollbar_h;                    // Horizontal scrollbar visibility flag
-      bool              m_visible_scrollbar_v;                    // Vertical scrollbar visibility flag
-      int               m_init_border_size_top;                   // Initial frame size at top
-      int               m_init_border_size_bottom;                // Initial frame size below
-      int               m_init_border_size_left;                  // Initial frame size on the left
-      int               m_init_border_size_right;                 // Initial frame size on the right
+      bool                m_visible_scrollbar_h;                    // Horizontal scrollbar visibility flag
+      bool                m_visible_scrollbar_v;                    // Vertical scrollbar visibility flag
+      //| Update in: Resizable elements                                    |
+      //|                           https://www.mql5.com/en/articles/18941 |
+        int               m_init_border_size_top;                   // Initial frame size at top
+        int               m_init_border_size_bottom;                // Initial frame size below
+        int               m_init_border_size_left;                  // Initial frame size on the left
+        int               m_init_border_size_right;                 // Initial frame size on the right
       
    // --- Returns the type of the element that sent the event
       ENUM_ELEMENT_TYPE GetEventElementType(const string name);
@@ -42,12 +56,16 @@
    protected:
       CScrollBarH      *m_scrollbar_h;                            // Pointer to horizontal scroll bar
       CScrollBarV      *m_scrollbar_v;                            // Pointer to vertical scroll bar
-
-   // --- Handler for dragging edges and corners of an element
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |
+     // --- Handler for dragging edges and corners of an element
       virtual void      ResizeActionDragHandler(const int x, const int y);
       
    public:
-   // --- Checks the dimensions of an element to display scrollbars
+   //| Update in   :                                                    |
+   //|   Integrating the Model Component into the View Component        |
+   //|                           https://www.mql5.com/en/articles/19288 |
+     // --- Checks the dimensions of an element to display scrollbars
       void              CheckElementSizes(CElementBase *element);
    protected:
    // --- Calculates and returns the size of (1) the slider, (2) full, (3) the working size of the horizontal scrollbar track
@@ -94,15 +112,17 @@
    // --- Returns the visibility flag of (1) horizontal, (2) vertical scrollbar
       bool              ScrollBarHorzIsVisible(void)        const { return this.m_visible_scrollbar_h;                                             }
       bool              ScrollBarVertIsVisible(void)        const { return this.m_visible_scrollbar_v;                                             }
-
-   // --- Returns the attached element (the contents of the container)
-      CElementBase     *GetAttachedElement(void)                  { return this.GetAttachedElementAt(2);                                           }
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |
+     // --- Returns the attached element (the contents of the container)
+        CElementBase     *GetAttachedElement(void)                  { return this.GetAttachedElementAt(2);                                           }
 
    // --- Creates and adds (1) a new, (2) a previously created element to the list
       virtual CElementBase *InsertNewElement(const ENUM_ELEMENT_TYPE type,const string text,const string user_name,const int dx,const int dy,const int w,const int h);
       virtual CElementBase *InsertElement(CElementBase *element,const int dx,const int dy);
-      
-   // --- (1) Displays the object on all chart periods, (2) places the object in the foreground
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |
+     // --- (1) Displays the object on all chart periods, (2) places the object in the foreground
       virtual void      Show(const bool chart_redraw);
       virtual void      BringToTop(const bool chart_redraw);
       
@@ -123,20 +143,20 @@
    // --- Constructors/destructor
                         CContainer(void);
                         CContainer(const string object_name, const string text, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
-                     ~CContainer (void) {}
+                        ~CContainer (void) {}
    };
-  #ifndef CCONTAINER_IMPLEMENTATION
-  #define CCONTAINER_IMPLEMENTATION
+   #ifndef CCONTAINER_IMPLEMENTATION
+   #define CCONTAINER_IMPLEMENTATION
    //+------------------------------------------------------------------+
    // | CContainer::Default constructor.                            |
    // | Plots an element in the main window of the current chart |
    // | at coordinates 0,0 with default dimensions |
    //+------------------------------------------------------------------+
    CContainer::CContainer(void) : CPanel("Container","",::ChartID(),0,0,0,DEF_PANEL_W,DEF_PANEL_H), m_visible_scrollbar_h(false), m_visible_scrollbar_v(false)
-   {
-   // ---Initialization
-   this.Init();
-   }
+    {
+     // ---Initialization
+     this.Init();
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Parametric constructor.                         |
    // | Plots an element in the specified window of the specified chart |
@@ -144,180 +164,182 @@
    //+------------------------------------------------------------------+
    CContainer::CContainer(const string object_name,const string text,const long chart_id,const int wnd,const int x,const int y,const int w,const int h) :
    CPanel(object_name,text,chart_id,wnd,x,y,w,h), m_visible_scrollbar_h(false), m_visible_scrollbar_v(false)
-   {
-   // ---Initialization
-   this.Init();
-   }
+    {
+     // ---Initialization
+     this.Init();
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Initialization |
    //+------------------------------------------------------------------+
    void CContainer::Init(void)
-   {
-   // --- Initializing the parent object
-   CPanel::Init();
-   // --- Frame width
-   this.SetBorderWidth(0);
-   // --- Remember the set width of the frame on each side
-   this.m_init_border_size_top   = (int)this.BorderWidthTop();
-   this.m_init_border_size_bottom= (int)this.BorderWidthBottom();
-   this.m_init_border_size_left  = (int)this.BorderWidthLeft();
-   this.m_init_border_size_right = (int)this.BorderWidthRight();
+    {
+     // --- Initializing the parent object
+     CPanel::Init();
+     // --- Frame width
+     this.SetBorderWidth(0);
+     //| Update in                             Resizable elements         |
+     //|                           https://www.mql5.com/en/articles/18941 |
+      // --- Remember the set width of the frame on each side
+      this.m_init_border_size_top   = (int)this.BorderWidthTop();
+      this.m_init_border_size_bottom= (int)this.BorderWidthBottom();
+      this.m_init_border_size_left  = (int)this.BorderWidthLeft();
+      this.m_init_border_size_right = (int)this.BorderWidthRight();
 
-   // --- Create a horizontal scrollbar
-   this.m_scrollbar_h=dynamic_cast<CScrollBarH *>(CPanel::InsertNewElement(ELEMENT_TYPE_SCROLLBAR_H,"","ScrollBarH",0,this.Height()-DEF_SCROLLBAR_TH-1,this.Width()-1,DEF_SCROLLBAR_TH));
-   if(m_scrollbar_h!=NULL)
-   {
-      // --- Hide the element and set a ban on independent redrawing of the graph
-      this.m_scrollbar_h.Hide(false);
-      this.m_scrollbar_h.SetChartRedrawFlag(false);
-   }
-   // --- Create a vertical scrollbar
-   this.m_scrollbar_v=dynamic_cast<CScrollBarV *>(CPanel::InsertNewElement(ELEMENT_TYPE_SCROLLBAR_V,"","ScrollBarV",this.Width()-DEF_SCROLLBAR_TH-1,0,DEF_SCROLLBAR_TH,this.Height()-1));
-   if(m_scrollbar_v!=NULL)
-   {
-      // --- Hide the element and set a ban on independent redrawing of the graph
-      this.m_scrollbar_v.Hide(false);
-      this.m_scrollbar_v.SetChartRedrawFlag(false);
-   }
-   // --- Allow content scrolling
-   this.m_scroll_flag=true;
-   }
+     // --- Create a horizontal scrollbar
+     this.m_scrollbar_h=dynamic_cast<CScrollBarH *>(CPanel::InsertNewElement(ELEMENT_TYPE_SCROLLBAR_H,"","ScrollBarH",0,this.Height()-DEF_SCROLLBAR_TH-1,this.Width()-1,DEF_SCROLLBAR_TH));
+     if(m_scrollbar_h!=NULL)
+      {
+         // --- Hide the element and set a ban on independent redrawing of the graph
+         this.m_scrollbar_h.Hide(false);
+         this.m_scrollbar_h.SetChartRedrawFlag(false);
+      }
+     // --- Create a vertical scrollbar
+     this.m_scrollbar_v=dynamic_cast<CScrollBarV *>(CPanel::InsertNewElement(ELEMENT_TYPE_SCROLLBAR_V,"","ScrollBarV",this.Width()-DEF_SCROLLBAR_TH-1,0,DEF_SCROLLBAR_TH,this.Height()-1));
+     if(m_scrollbar_v!=NULL)
+      {
+         // --- Hide the element and set a ban on independent redrawing of the graph
+         this.m_scrollbar_v.Hide(false);
+         this.m_scrollbar_v.SetChartRedrawFlag(false);
+      }
+      // --- Allow content scrolling
+      this.m_scroll_flag=true;
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Displays an object on all chart periods |
    //+------------------------------------------------------------------+
    void CContainer::Show(const bool chart_redraw)
-   {
-   // --- If the object is already visible, or should not be displayed in the container, leave
-   if(!this.m_hidden || !this.m_visible_in_container)
-      return;
-      
-   // --- Display the panel
-   CCanvasBase::Show(false);
-   // --- Display attached objects
-   for(int i=0;i<this.m_list_elm.Total();i++)
-   {
-      CElementBase *elm=this.GetAttachedElementAt(i);
-      if(elm!=NULL)
-      {
-         if(elm.Type()==ELEMENT_TYPE_SCROLLBAR_H && !this.m_visible_scrollbar_h)
-            continue;
-         if(elm.Type()==ELEMENT_TYPE_SCROLLBAR_V && !this.m_visible_scrollbar_v)
-            continue;
-         elm.Show(false);
-      }
-   }
-   // --- If indicated, redraw the graph
-   if(chart_redraw)
-      ::ChartRedraw(this.m_chart_id);
-   }
-   //+------------------------------------------------------------------+
-   // | CContainer::Puts the object in front |
-   //+------------------------------------------------------------------+
-   void CContainer::BringToTop(const bool chart_redraw)
-   {
-   // --- Move the panel to the front
-      CCanvasBase::BringToTop(false);
-   // --- Place attached objects in the foreground
+    {
+      // --- If the object is already visible, or should not be displayed in the container, leave
+      if(!this.m_hidden || !this.m_visible_in_container)
+         return;
+         
+      // --- Display the panel
+      CCanvasBase::Show(false);
+      // --- Display attached objects
       for(int i=0;i<this.m_list_elm.Total();i++)
       {
          CElementBase *elm=this.GetAttachedElementAt(i);
          if(elm!=NULL)
          {
             if(elm.Type()==ELEMENT_TYPE_SCROLLBAR_H && !this.m_visible_scrollbar_h)
-            {
-               elm.Hide(false);
                continue;
-            }
             if(elm.Type()==ELEMENT_TYPE_SCROLLBAR_V && !this.m_visible_scrollbar_v)
-            {
-               elm.Hide(false);
                continue;
-            }
-            elm.BringToTop(false);
+            elm.Show(false);
          }
       }
-   // --- If indicated, redraw the graph
+      // --- If indicated, redraw the graph
       if(chart_redraw)
          ::ChartRedraw(this.m_chart_id);
-   }
+    }
+   //+------------------------------------------------------------------+
+   // | CContainer::Puts the object in front |
+   //+------------------------------------------------------------------+
+   void CContainer::BringToTop(const bool chart_redraw)
+    {
+      // --- Move the panel to the front
+         CCanvasBase::BringToTop(false);
+      // --- Place attached objects in the foreground
+         for(int i=0;i<this.m_list_elm.Total();i++)
+         {
+            CElementBase *elm=this.GetAttachedElementAt(i);
+            if(elm!=NULL)
+            {
+               if(elm.Type()==ELEMENT_TYPE_SCROLLBAR_H && !this.m_visible_scrollbar_h)
+               {
+                  elm.Hide(false);
+                  continue;
+               }
+               if(elm.Type()==ELEMENT_TYPE_SCROLLBAR_V && !this.m_visible_scrollbar_v)
+               {
+                  elm.Hide(false);
+                  continue;
+               }
+               elm.BringToTop(false);
+            }
+         }
+      // --- If indicated, redraw the graph
+         if(chart_redraw)
+            ::ChartRedraw(this.m_chart_id);
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Draws appearance |
    //+------------------------------------------------------------------+
    void CContainer::Draw(const bool chart_redraw)
-   {
-   // --- Drawing the appearance
-      CPanel::Draw(false);
+    {
+      // --- Drawing the appearance
+         CPanel::Draw(false);
 
-   // --- If scrolling is enabled
-      if(this.m_scroll_flag)
-      {
-         // --- If both scrollbars are visible
-         if(this.m_visible_scrollbar_h && this.m_visible_scrollbar_v)
+      // --- If scrolling is enabled
+         if(this.m_scroll_flag)
          {
-            // --- Get a pointer to the horizontal scrollbar and take its background color
-            CScrollBarH *scroll_bar=this.GetScrollBarH();
-            color clr=(scroll_bar!=NULL ? scroll_bar.BackColor() : clrWhiteSmoke);
-            
-            // --- Set the coordinates at which the filled rectangle will be drawn
-            int x1=this.Width()-DEF_SCROLLBAR_TH-1;
-            int y1=this.Height()-DEF_SCROLLBAR_TH-1;
-            int x2=this.Width()-3;
-            int y2=this.Height()-3;
-            
-            // --- Draw a rectangle with the background color of the scrollbar in the lower right corner
-            this.m_foreground.FillRectangle(x1,y1,x2,y2,::ColorToARGB(clr));
-            this.m_foreground.Update(false);
+            // --- If both scrollbars are visible
+            if(this.m_visible_scrollbar_h && this.m_visible_scrollbar_v)
+            {
+               // --- Get a pointer to the horizontal scrollbar and take its background color
+               CScrollBarH *scroll_bar=this.GetScrollBarH();
+               color clr=(scroll_bar!=NULL ? scroll_bar.BackColor() : clrWhiteSmoke);
+               
+               // --- Set the coordinates at which the filled rectangle will be drawn
+               int x1=this.Width()-DEF_SCROLLBAR_TH-1;
+               int y1=this.Height()-DEF_SCROLLBAR_TH-1;
+               int x2=this.Width()-3;
+               int y2=this.Height()-3;
+               
+               // --- Draw a rectangle with the background color of the scrollbar in the lower right corner
+               this.m_foreground.FillRectangle(x1,y1,x2,y2,::ColorToARGB(clr));
+               this.m_foreground.Update(false);
+            }
          }
-      }
 
-   // --- If indicated, update the schedule
-      if(chart_redraw)
-         ::ChartRedraw(this.m_chart_id);
-   }
+      // --- If indicated, update the schedule
+         if(chart_redraw)
+            ::ChartRedraw(this.m_chart_id);
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Creates and adds a new element to the list |
    //+------------------------------------------------------------------+
    CElementBase *CContainer::InsertNewElement(const ENUM_ELEMENT_TYPE type,const string text,const string user_name,const int dx,const int dy,const int w,const int h)
-   {
-   // --- We check that there are no more than three objects in the list - two scroll bars and the one being added
-      if(this.m_list_elm.Total()>2)
-      {
-         ::PrintFormat("%s: Error. You can only add one element to a container\nTo add multiple elements, use the panel",__FUNCTION__);
-         return NULL;
-      }
-   // --- Create and add a new element using the parent class method
-   // --- The element is placed at coordinates 0,0 regardless of those specified in the parameters
-      CElementBase *elm=CPanel::InsertNewElement(type,text,user_name,dx,dy,w,h);
-   // --- Checking the dimensions of the element to display scroll bars
-      this.CheckElementSizes(elm);
-   // --- Return a pointer to the element
-      return elm;
-   }
+    {
+      // --- We check that there are no more than three objects in the list - two scroll bars and the one being added
+         if(this.m_list_elm.Total()>2)
+         {
+            ::PrintFormat("%s: Error. You can only add one element to a container\nTo add multiple elements, use the panel",__FUNCTION__);
+            return NULL;
+         }
+      // --- Create and add a new element using the parent class method
+      // --- The element is placed at coordinates 0,0 regardless of those specified in the parameters
+         CElementBase *elm=CPanel::InsertNewElement(type,text,user_name,dx,dy,w,h);
+      // --- Checking the dimensions of the element to display scroll bars
+         this.CheckElementSizes(elm);
+      // --- Return a pointer to the element
+         return elm;
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Adds the specified element to the list |
    //+------------------------------------------------------------------+
    CElementBase *CContainer::InsertElement(CElementBase *element,const int dx,const int dy)
-   {
-   // --- We check that there are no more than three objects in the list - two scroll bars and the one being added
-      if(this.m_list_elm.Total()>2)
-      {
-         ::PrintFormat("%s: Error. You can only add one element to a container\nTo add multiple elements, use the panel",__FUNCTION__);
-         return NULL;
-      }
-   // --- Add the specified element using the parent class method
-   // --- The element is placed at coordinates 0,0 regardless of those specified in the parameters
-      CElementBase *elm=CPanel::InsertElement(element,0,0);
-   // --- Checking the dimensions of the element to display scroll bars
-      this.CheckElementSizes(elm);
-   // --- Return a pointer to the element
-      return elm;
-   }
+    {
+      // --- We check that there are no more than three objects in the list - two scroll bars and the one being added
+         if(this.m_list_elm.Total()>2)
+         {
+            ::PrintFormat("%s: Error. You can only add one element to a container\nTo add multiple elements, use the panel",__FUNCTION__);
+            return NULL;
+         }
+      // --- Add the specified element using the parent class method
+      // --- The element is placed at coordinates 0,0 regardless of those specified in the parameters
+         CElementBase *elm=CPanel::InsertElement(element,0,0);
+      // --- Checking the dimensions of the element to display scroll bars
+         this.CheckElementSizes(elm);
+      // --- Return a pointer to the element
+         return elm;
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Checks element dimensions |
    // | to display scroll bars |
    //+------------------------------------------------------------------+
    void CContainer::CheckElementSizes(CElementBase *element)
-   {
+    {
       // --- If an empty element is passed, or scrolling is prohibited, or scrollbars are not created, we leave
       
       if(element==NULL || !this.m_scroll_flag || this.m_scrollbar_h==NULL || this.m_scrollbar_v==NULL)
@@ -430,89 +452,89 @@
       {
          element.ObjectTrim();
       }
-   }
+    }
    //+-------------------------------------------------------------------+
    // |CContainer::Calculates the size of the horizontal scrollbar slider|
    //+-------------------------------------------------------------------+
    int CContainer::ThumbSizeHorz(void)
-   {
-   CElementBase *elm=this.GetAttachedElement();
-   if(elm==NULL || elm.Width()==0 || this.TrackLengthHorz()==0)
-      return 0;
-   return int(::round(::fmax(((double)this.ContentVisibleHorz() / (double)elm.Width()) * (double)this.TrackLengthHorz(), DEF_THUMB_MIN_SIZE)));
-   }
+    {
+      CElementBase *elm=this.GetAttachedElement();
+      if(elm==NULL || elm.Width()==0 || this.TrackLengthHorz()==0)
+         return 0;
+      return int(::round(::fmax(((double)this.ContentVisibleHorz() / (double)elm.Width()) * (double)this.TrackLengthHorz(), DEF_THUMB_MIN_SIZE)));
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Calculates the size of the vertical scrollbar slider|
    //+------------------------------------------------------------------+
    int CContainer::ThumbSizeVert(void)
-   {
-   CElementBase *elm=this.GetAttachedElement();
-   if(elm==NULL || elm.Height()==0 || this.TrackLengthVert()==0)
-      return 0;
-   return int(::round(::fmax(((double)this.ContentVisibleVert() / (double)elm.Height()) * (double)this.TrackLengthVert(), DEF_THUMB_MIN_SIZE)));
-   }
+    {
+      CElementBase *elm=this.GetAttachedElement();
+      if(elm==NULL || elm.Height()==0 || this.TrackLengthVert()==0)
+         return 0;
+      return int(::round(::fmax(((double)this.ContentVisibleVert() / (double)elm.Height()) * (double)this.TrackLengthVert(), DEF_THUMB_MIN_SIZE)));
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Full content horizontal size |
    //+------------------------------------------------------------------+
    int CContainer::ContentSizeHorz(void)
-   {
-   CElementBase *elm=this.GetAttachedElement();
-   return(elm!=NULL ? elm.Width() : 0);
-   }
+    {
+      CElementBase *elm=this.GetAttachedElement();
+      return(elm!=NULL ? elm.Width() : 0);
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Full content vertical size |
    //+------------------------------------------------------------------+
    int CContainer::ContentSizeVert(void)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       return(elm!=NULL ? elm.Height() : 0);
-   }
+    }
    //+--------------------------------------------------------------------+
    // |CContainer::Returns the horizontal position of the container's contents|
    //+--------------------------------------------------------------------+
    int CContainer::ContentPositionHorz(void)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       return(elm!=NULL ? elm.X()-this.X() : 0);
-   }
+    }
    //+------------------------------------------------------------------+
    // |CContainer::Returns the vertical position of the container's contents|
    //+------------------------------------------------------------------+
    int CContainer::ContentPositionVert(void)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       return(elm!=NULL ? elm.Y()-this.Y() : 0);
-   }
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Calculates and returns offset value |
    // | container contents horizontally by slider position |
    //+------------------------------------------------------------------+
    int CContainer::CalculateContentOffsetHorz(const uint thumb_position)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       int effective_track_length=this.TrackEffectiveLengthHorz();
       if(elm==NULL || effective_track_length==0)
          return 0;
       return (int)::round(((double)thumb_position / (double)effective_track_length) * ((double)elm.Width() - (double)this.ContentVisibleHorz()));
-   }
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Calculates and returns offset value |
    // | container contents vertically by slider position |
    //+------------------------------------------------------------------+
    int CContainer::CalculateContentOffsetVert(const uint thumb_position)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       int effective_track_length=this.TrackEffectiveLengthVert();
       if(elm==NULL || effective_track_length==0)
          return 0;
       return (int)::round(((double)thumb_position / (double)effective_track_length) * ((double)elm.Height() - (double)this.ContentVisibleVert()));
-   }
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Calculates and returns the slider offset value |
    // | horizontally depending on the position of the content |
    //+------------------------------------------------------------------+
    int CContainer::CalculateThumbOffsetHorz(const uint content_position)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       if(elm==NULL)
          return 0;
@@ -520,13 +542,13 @@
       if(value==0)
          return 0;
       return (int)::round(((double)content_position / (double)value) * ((double)this.TrackEffectiveLengthHorz() - (double)this.ThumbSizeHorz()));
-   }
+    }
    //+------------------------------------------------------------------+
    // | CContainer::Calculates and returns the slider offset value |
    // | vertically depending on the position of the content |
    //+------------------------------------------------------------------+
    int CContainer::CalculateThumbOffsetVert(const uint content_position)
-   {
+    {
       CElementBase *elm=this.GetAttachedElement();
       if(elm==NULL)
          return 0;
@@ -534,75 +556,86 @@
       if(value==0)
          return 0;
       return (int)::round(((double)content_position / (double)value) * ((double)this.TrackEffectiveLengthVert() - (double)this.ThumbSizeVert()));
-   }
-   //+-------------------------------------------------------------------+
-   // |CContainer::Shifts content horizontally by the specified amount|
-   //+-------------------------------------------------------------------+
-   bool CContainer::ContentShiftHorz(const int value)
-   {
-   // --- Get a pointer to the contents of the container
-      CElementBase *elm=this.GetAttachedElement();
-      if(elm==NULL)
-         return false;
-      
-   // --- Calculate the offset value based on the position of the slider
-      int content_offset=this.CalculateContentOffsetHorz(value);
-      
-   // --- For the CTableView element we get the table title
-      bool res=true;
-      CElementBase     *elm_container=elm.GetContainer();
-      CTableHeaderView *table_header=NULL;
-      if(elm_container!=NULL && ::StringFind(elm.Name(),"Table")==0)
-      {
-         CElementBase *obj=elm_container.GetContainer();
-         if(obj!=NULL && obj.Type()==ELEMENT_TYPE_TABLE_VIEW)
-         {
-            CTableView *table_view=obj;
-            table_header=table_view.GetHeader();
-            // --- Move the title
-            if(table_header!=NULL)
-               res &=table_header.MoveX(this.X()-content_offset);
-         }
-      }
+    }
 
-   // --- Return the result of shifting the content by the calculated amount
-      res &=elm.MoveX(this.X()-content_offset);
-      return res;
-   }
-   //+------------------------------------------------------------------+
-   //| CContainer::Shifts the content vertically by the specified value|
-   //+------------------------------------------------------------------+
-   bool CContainer::ContentShiftVert(const int value)
-   {
-   // --- Get a pointer to the contents of the container
-      CElementBase *elm=this.GetAttachedElement();
-      if(elm==NULL)
-         return false;
-      
-   // --- Calculate the offset value based on the position of the slider
-      int content_offset=this.CalculateContentOffsetVert(value);
-      
-   // --- For the CTableView element we get the vertical table header
-      bool res=true;
-      CElementBase         *elm_container=elm.GetContainer();
-      CTableRowsHeaderView *table_header=NULL;
-      if(elm_container!=NULL && ::StringFind(elm.Name(),"Table")==0)
-      {
-         CElementBase *obj=elm_container.GetContainer();
-         if(obj!=NULL && obj.Type()==ELEMENT_TYPE_TABLE_VIEW)
-         {
-            CTableView *table_view=obj;
-            table_header=table_view.GetRowsHeader();
-            // --- Move the title
-            if(table_header!=NULL)
-               res &=table_header.MoveY(this.Y()-content_offset);
-         }
-      }
+ #ifndef MOVE_TO_DELIB_MQH
+ #define MOVE_TO_DELIB_MQH
+   //+-------------------------------------------------------------------+
+   //|CContainer::Shifts content horizontally by the specified amount    |
+   //+-------------------------------------------------------------------+
+   // bool CContainer::ContentShiftHorz(const int value)
+   // {
+   //    // --- Get a pointer to the contents of the container
+   //       CElementBase *elm=this.GetAttachedElement();
+   //       if(elm==NULL)
+   //          return false;
+         
+   //    // --- Calculate the offset value based on the position of the slider
+   //       int content_offset=this.CalculateContentOffsetHorz(value);
+         
+   //    // --- For the CTableView element we get the table title
+   //       bool res=true;
+   //       CElementBase     *elm_container=elm.GetContainer();
+   //       CTableHeaderView *table_header=NULL;
+   //       if(elm_container!=NULL && ::StringFind(elm.Name(),"Table")==0)
+   //       {
+   //          CElementBase *obj=elm_container.GetContainer();
+   //          if(obj!=NULL && obj.Type()==ELEMENT_TYPE_TABLE_VIEW)
+   //          {
+   //             CTableView *table_view = (CTableView*)obj;
+   //             if(CheckPointer(table_view) != POINTER_INVALID)
+   //             {
+   //                table_header = table_view.GetHeader();
+   //                if(CheckPointer(table_header) != POINTER_INVALID)
+   //                      res &= table_header.MoveX(this.X() - content_offset);
+   //             }
 
-   // --- Return the result of shifting the content by the calculated amount
-      res &=elm.MoveY(this.Y()-content_offset);
-      return res;
-   }
+   //             // table_header=table_view.GetHeader();
+   //             // // --- Move the title
+   //             // if(table_header!=NULL)
+   //             //    res &=table_header.MoveX(this.X()-content_offset);
+   //          }
+   //       }
+
+   //    // --- Return the result of shifting the content by the calculated amount
+   //       res &=elm.MoveX(this.X()-content_offset);
+   //       return res;
+   // }
+   //    //+------------------------------------------------------------------+
+   //    //| CContainer::Shifts the content vertically by the specified value|
+   //    //+------------------------------------------------------------------+
+   // bool CContainer::ContentShiftVert(const int value)
+   // {
+   //    // --- Get a pointer to the contents of the container
+   //       CElementBase *elm=this.GetAttachedElement();
+   //       if(elm==NULL)
+   //          return false;
+         
+   //    // --- Calculate the offset value based on the position of the slider
+   //       int content_offset=this.CalculateContentOffsetVert(value);
+         
+   //    // --- For the CTableView element we get the vertical table header
+   //       bool res=true;
+   //       CElementBase         *elm_container=elm.GetContainer();
+   //       CTableRowsHeaderView *table_header=NULL;
+   //       if(elm_container!=NULL && ::StringFind(elm.Name(),"Table")==0)
+   //       {
+   //          CElementBase *obj=elm_container.GetContainer();
+   //          if(obj!=NULL && obj.Type()==ELEMENT_TYPE_TABLE_VIEW)
+   //          {
+   //             CTableView *table_view=obj;
+   //             table_header=table_view.GetRowsHeader();
+   //             // --- Move the title
+   //             if(table_header!=NULL)
+   //                res &=table_header.MoveY(this.Y()-content_offset);
+   //          }
+   //       }
+
+   //    // --- Return the result of shifting the content by the calculated amount
+   //       res &=elm.MoveY(this.Y()-content_offset);
+   //       return res;
+   // }
+ #endif // MOVE_TO_DELIB_MQH
    //+------------------------------------------------------------------+
    //| Returns the type of the element that sent the event |
    //+------------------------------------------------------------------+

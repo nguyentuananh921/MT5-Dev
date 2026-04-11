@@ -3,7 +3,13 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|First See in              https://www.mql5.com/en/articles/17960  |
+//| First See in: Base graphical element                             |
+//|                           https://www.mql5.com/en/articles/17960 |
+//| Update in: Simple controls                                       |
+//|                           https://www.mql5.com/en/articles/18221 |
+//| Update in                                                        |
+//|       Integrating the Model Component into the View Component    |
+//|                           https://www.mql5.com/en/articles/19288 | 
 //|Current                    https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -25,7 +31,10 @@
  class CBound : public CBaseObj
  {
    protected:
-      CBaseObj         *m_assigned_obj;                           // Object assigned to area
+      //| Update in                                                        |
+      //|       Integrating the Model Component into the View Component    |
+      //|                           https://www.mql5.com/en/articles/19288 | 
+       CBaseObj         *m_assigned_obj;                           // Object assigned to area
       CRect             m_bound;                                  // Rectangular area structure
 
    public:
@@ -50,23 +59,27 @@
       int               Height(void)                        const { return this.m_bound.Height();                                }
       int               Right(void)                         const { return this.m_bound.right-(this.m_bound.Width()  >0 ? 1 : 0);}
       int               Bottom(void)                        const { return this.m_bound.bottom-(this.m_bound.Height()>0 ? 1 : 0);}
-
-   // --- Returns the flag that the cursor is inside the area
+   //| Update in                                                        |
+   //|       Simple controls                                            |
+   //|                           https://www.mql5.com/en/articles/18221 |
+     // --- Returns the flag that the cursor is inside the area
       bool              Contains(const int x,const int y)   const { return this.m_bound.Contains(x,y);                           }
+   //| Update in                                                        |
+   //|       Integrating the Model Component into the View Component    |
+   //|                           https://www.mql5.com/en/articles/19288 |    
+      // --- (1) Assigns, (2) unassigns, (3) returns a pointer to the assigned element
+         void              AssignObject(CBaseObj *obj)               { this.m_assigned_obj=obj;                                     }
+         void              UnassignObject(void)                      { this.m_assigned_obj=NULL;                                    }           
+         CBaseObj         *GetAssignedObj(void)                      { return this.m_assigned_obj;                                  }
       
-   // --- (1) Assigns, (2) unassigns, (3) returns a pointer to the assigned element
-      void              AssignObject(CBaseObj *obj)               { this.m_assigned_obj=obj;                                     }
-      void              UnassignObject(void)                      { this.m_assigned_obj=NULL;                                    }           
-      CBaseObj         *GetAssignedObj(void)                      { return this.m_assigned_obj;                                  }
+      // --- Returns a description of the object
+         virtual string    Description(void);
       
-   // --- Returns a description of the object
-      virtual string    Description(void);
-      
-   // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
-      virtual int       Compare(const CObject *node,const int mode=0) const;
-      virtual bool      Save(const int file_handle);
-      virtual bool      Load(const int file_handle);
-      virtual int       Type(void)                          const { return(ELEMENT_TYPE_RECTANGLE_AREA);                         }
+      // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+         virtual int       Compare(const CObject *node,const int mode=0) const;
+         virtual bool      Save(const int file_handle);
+         virtual bool      Load(const int file_handle);
+         virtual int       Type(void)                          const { return(ELEMENT_TYPE_RECTANGLE_AREA);                         }
       
    // --- Constructors/destructor
                         CBound(void) { ::ZeroMemory(this.m_bound); }

@@ -21,7 +21,11 @@
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
-   #include "Panel.mqh"       
+   #include "Panel.mqh" 
+   #include "RowCaptionView.mqh"
+   #include "TableView.mqh"
+
+      
   class CTableRowsHeaderView : public CPanel
     {
       protected:

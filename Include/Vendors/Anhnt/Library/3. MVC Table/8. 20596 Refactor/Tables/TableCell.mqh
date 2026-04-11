@@ -23,7 +23,8 @@
     //+------------------------------------------------------------------+
     #include "..\Defines\TableDefines.mqh"
     #include "..\Defines\TableEnums.mqh"
-    #include "..\Services\FunctionLib.mqh"   
+    #include "..\Base\BaseObj.mqh"
+   
    class CTableCell : public CObject
    {
     protected:
@@ -339,9 +340,17 @@
    //+------------------------------------------------------------------+
    string CTableCell::Description(void)
    {
-      return(::StringFormat("%s: Row %u, Col %u, %s <%s>Value: %s",
+      // --- Get the formatted object type using the static helper from CBaseObj
+      string typeStr = CBaseObj::FormatObjectType((ENUM_OBJECT_TYPE)this.Type());
+      
+      // --- Return the comprehensive description of the table cell
+      return ::StringFormat("%s: Row %u, Col %u, %s <%s>Value: %s",
+                            typeStr, this.Row(), this.Col(),
+                            (this.m_editable ? "Editable" : "Uneditable"),
+                            this.DatatypeDescription(), this.Value());
+      /*return(::StringFormat("%s: Row %u, Col %u, %s <%s>Value: %s",
                            TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.Row(),this.Col(),
-                           (this.m_editable ? "Editable" : "Uneditable"),this.DatatypeDescription(),this.Value()));
+                           (this.m_editable ? "Editable" : "Uneditable"),this.DatatypeDescription(),this.Value()));*/
    }
    //+------------------------------------------------------------------+
    // | Logs a description of an object |

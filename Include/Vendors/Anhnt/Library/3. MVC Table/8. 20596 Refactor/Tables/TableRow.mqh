@@ -23,7 +23,7 @@
 
     #include "..\Collections\ListObj.mqh"
     #include "TableCell.mqh"
-    #include "..\Services\FunctionLib.mqh"  
+    #include "..\Base\BaseObj.mqh"      
    class CTableRow : public CObject
    {
     protected:
@@ -412,8 +412,14 @@
    //+------------------------------------------------------------------+
    string CTableRow::Description(void)
    {
-      return(::StringFormat("%s: Position %u, Cells total: %u",
-                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.Index(),this.CellsTotal()));
+      // --- Get the formatted object type from the static helper
+      string typeStr = CBaseObj::FormatObjectType((ENUM_OBJECT_TYPE)this.Type());
+   
+      // --- Return the row description including index and count of cells
+      return ::StringFormat("%s: Position %u, Cells total: %u", 
+                            typeStr, this.Index(),this.CellsTotal());
+      /*return(::StringFormat("%s: Position %u, Cells total: %u",
+                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.Index(),this.CellsTotal()));*/
    }
    //+------------------------------------------------------------------+
    // | Logs a description of an object |

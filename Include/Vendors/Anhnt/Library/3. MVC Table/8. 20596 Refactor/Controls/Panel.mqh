@@ -3,7 +3,13 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
+//| First See in: Containers                                         |
+//|                           https://www.mql5.com/en/articles/18658 |
+//| Update in: Resizable elements                                    |
+//|                           https://www.mql5.com/en/articles/18941 |
+//| Update in   :                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //|                           https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -20,8 +26,12 @@
 //+------------------------------------------------------------------+
 //| Included Custome Libraries                                       |
 //+------------------------------------------------------------------+
+#include "Label.mqh"
+#include "ElementBase.mqh"
+#include "..\Base\Bound.mqh"
+#include "..\Collections\ListElm.mqh"
+class CContainer;
 
-#include "Label.mqh"   
  class CPanel : public CLabel
   {
    private:
@@ -65,11 +75,12 @@
    // --- (1) Assigns an object to the specified area, (2) unassigns an object from the specified area
       bool              AssignObjectToBound(const int bound, CBaseObj *object);
       bool              UnassignObjectFromBound(const int bound);
-
-   // --- Changes the size of an object
-      virtual bool      ResizeW(const int w);
-      virtual bool      ResizeH(const int h);
-      virtual bool      Resize(const int w,const int h);
+   //| Update in: Resizable elements                                    |
+   //|                           https://www.mql5.com/en/articles/18941 |
+      // --- Changes the size of an object
+         virtual bool      ResizeW(const int w);
+         virtual bool      ResizeH(const int h);
+         virtual bool      Resize(const int w,const int h);
    // ---Draws the appearance
       virtual void      Draw(const bool chart_redraw);
       
@@ -87,8 +98,10 @@
       virtual bool      Move(const int x,const int y);
    // --- Offsets the object along the XY axes by the specified offset
       virtual bool      Shift(const int dx,const int dy);
-   // --- Sets both the coordinates and dimensions of an element
-      virtual bool      MoveXYWidthResize(const int x,const int y,const int w,const int h);
+   //| Update in                             Resizable elements         |
+   //|                           https://www.mql5.com/en/articles/18941 |
+      // --- Sets both the coordinates and dimensions of an element
+         virtual bool      MoveXYWidthResize(const int x,const int y,const int w,const int h);
       
    // --- (1) Hides (2) displays the object on all chart periods,
    // --- (3) brings the object to the front, (4) locks, (5) unlocks the element,
@@ -186,106 +199,6 @@
       return CLabel::Compare(node,mode);
     }
    //+------------------------------------------------------------------+
-   //| CPanel::Changes the width of an object |
-   //+------------------------------------------------------------------+
-   bool CPanel::ResizeW(const int w)
-    {
-      if(!this.ObjectResizeW(w))
-         return false;
-      this.BoundResizeW(w);
-      this.SetImageSize(w,this.Height());
-      if(!this.ObjectTrim())
-      {
-         this.Update(false);
-         this.Draw(false);
-      }
-     // --- We get a pointer to the base element and, if it exists, its type - container,
-     // --- check the ratio of the dimensions of the current element relative to the dimensions of the container
-     // --- to display scrollbars in the container if necessary
-      if(this.GetContainer()!=NULL && this.GetContainer().Type()==ELEMENT_TYPE_CONTAINER)
-      {
-         CContainer *base=this.GetContainer();
-         base.CheckElementSizes(&this);
-      }
-         
-     // --- In a loop through attached elements, we cut off each element along the boundaries of the container
-      int total=this.m_list_elm.Total();
-      for(int i=0;i<total;i++)
-      {
-         CElementBase *elm=this.GetAttachedElementAt(i);
-         if(elm!=NULL)
-            elm.ObjectTrim();
-      }
-     // --- Everything is successful
-      return true;
-    }
-   //+------------------------------------------------------------------+
-   // | CPanel::Changes the height of an object |
-   //+------------------------------------------------------------------+
-   bool CPanel::ResizeH(const int h)
-    {
-      if(!this.ObjectResizeH(h))
-         return false;
-      this.BoundResizeH(h);
-      this.SetImageSize(this.Width(),h);
-      if(!this.ObjectTrim())
-      {
-         this.Update(false);
-         this.Draw(false);
-      }
-     // --- We get a pointer to the base element and, if it exists, its type - container,
-     // --- check the ratio of the dimensions of the current element relative to the dimensions of the container
-     // --- to display scrollbars in the container if necessary
-      if(this.GetContainer()!=NULL && this.GetContainer().Type()==ELEMENT_TYPE_CONTAINER)
-      {
-         CContainer *base=this.GetContainer();
-         base.CheckElementSizes(&this);
-      }
-         
-     // --- In a loop through attached elements, we cut off each element along the boundaries of the container
-      int total=this.m_list_elm.Total();
-      for(int i=0;i<total;i++)
-      {
-         CElementBase *elm=this.GetAttachedElementAt(i);
-         if(elm!=NULL)
-            elm.ObjectTrim();
-      }
-     // --- Everything is successful
-      return true;
-    }
-   //+------------------------------------------------------------------+
-   // | CPanel::Resizes an object |
-   //+------------------------------------------------------------------+
-   bool CPanel::Resize(const int w,const int h)
-    {
-      if(!this.ObjectResize(w,h))
-         return false;
-      this.BoundResize(w,h);
-      this.SetImageSize(w,h);
-      if(!this.ObjectTrim())
-      {
-         this.Update(false);
-         this.Draw(false);
-      }
-     // --- We get a pointer to the base element and, if it exists, its type - container,
-     // --- check the ratio of the dimensions of the current element relative to the dimensions of the container
-     // --- to display scrollbars in the container if necessary
-      CContainer *base=this.GetContainer();
-      if(base!=NULL && base.Type()==ELEMENT_TYPE_CONTAINER)
-         base.CheckElementSizes(&this);
-         
-     // --- In a loop through attached elements, we cut off each element along the boundaries of the container
-      int total=this.m_list_elm.Total();
-      for(int i=0;i<total;i++)
-      {
-         CElementBase *elm=this.GetAttachedElementAt(i);
-         if(elm!=NULL)
-            elm.ObjectTrim();
-      }
-     // --- Everything is successful
-      return true;
-    }
-   //+------------------------------------------------------------------+
    // | CPanel::Draws appearance |
    //+------------------------------------------------------------------+
    void CPanel::Draw(const bool chart_redraw)
@@ -344,97 +257,6 @@
      // --- An element with the same identifier is already in the list - return false
       return false;
     }
-   #ifndef MOVE_TO_DELIB_MQH
-   #define MOVE_TO_DELIB_MQH
-   // //+------------------------------------------------------------------+
-   // // | CPanel::Creates and adds a new element to the list |
-   // //+------------------------------------------------------------------+
-   // CElementBase *CPanel::InsertNewElement(const ENUM_ELEMENT_TYPE type,const string text,const string user_name,const int dx,const int dy,const int w,const int h)
-   //  {
-   //   // --- Create a name for the graphic object
-   //    int elm_total=this.m_list_elm.Total();
-   //    string obj_name=this.NameFG()+"_"+ElementShortName(type)+(string)elm_total;
-   //   // --- Calculate coordinates
-   //    int x=this.X()+dx;
-   //    int y=this.Y()+dy;
-   //   // --- Depending on the type of object, we create a new object
-   //    CElementBase *element=NULL;
-   //    switch(type)
-   //    {
-   //       case ELEMENT_TYPE_LABEL                      :  element = new CLabel(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);             break;   // Text label
-   //       case ELEMENT_TYPE_BUTTON                     :  element = new CButton(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);            break;   // Simple button
-   //       case ELEMENT_TYPE_BUTTON_TRIGGERED           :  element = new CButtonTriggered(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Two-position button
-   //       case ELEMENT_TYPE_BUTTON_ARROW_UP            :  element = new CButtonArrowUp(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);     break;   // Up arrow button
-   //       case ELEMENT_TYPE_BUTTON_ARROW_DOWN          :  element = new CButtonArrowDown(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Down arrow button
-   //       case ELEMENT_TYPE_BUTTON_ARROW_LEFT          :  element = new CButtonArrowLeft(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Left Arrow Button
-   //       case ELEMENT_TYPE_BUTTON_ARROW_RIGHT         :  element = new CButtonArrowRight(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);  break;   // Right arrow button
-   //       case ELEMENT_TYPE_CHECKBOX                   :  element = new CCheckBox(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);          break;   // CheckBox control
-   //       case ELEMENT_TYPE_RADIOBUTTON                :  element = new CRadioButton(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);       break;   // RadioButton control
-   //       case ELEMENT_TYPE_SCROLLBAR_THUMB_H          :  element = new CScrollBarThumbH(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Scrollbar horizontal ScrollBar
-   //       case ELEMENT_TYPE_SCROLLBAR_THUMB_V          :  element = new CScrollBarThumbV(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Vertical ScrollBar
-   //       case ELEMENT_TYPE_SCROLLBAR_H                :  element = new CScrollBarH(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);        break;   // Horizontal ScrollBar control
-   //       case ELEMENT_TYPE_SCROLLBAR_V                :  element = new CScrollBarV(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);        break;   // Vertical ScrollBar control
-   //       case ELEMENT_TYPE_TABLE_ROW_VIEW             :  element = new CTableRowView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);      break;   // Table row visual object
-   //       case ELEMENT_TYPE_TABLE_CAPTION_VIEW         :  element = new CCaptionView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);       break;   // Basic header object (View)
-   //       case ELEMENT_TYPE_TABLE_COLUMN_CAPTION_VIEW  :  element = new CColumnCaptionView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h); break;   // Table column header visual representation object
-   //       case ELEMENT_TYPE_TABLE_ROW_CAPTION_VIEW     :  element = new CRowCaptionView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);    break;   // Table row header visual representation object
-   //       case ELEMENT_TYPE_TABLE_HEADER_VIEW          :  element = new CTableHeaderView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Table header visual object
-   //       case ELEMENT_TYPE_TABLE_ROWS_HEADER_VIEW     :  element = new CTableRowsHeaderView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);break;  // Object for visual representation of table row headers
-   //       case ELEMENT_TYPE_TABLE_VIEW                 :  element = new CTableView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);         break;   // Table visual object
-   //       case ELEMENT_TYPE_PANEL                      :  element = new CPanel(obj_name,"",this.m_chart_id,this.m_wnd,x,y,w,h);               break;   // Panel control
-   //       case ELEMENT_TYPE_GROUPBOX                   :  element = new CGroupBox(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);          break;   // GroupBox control
-   //       case ELEMENT_TYPE_CONTAINER                  :  element = new CContainer(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);         break;   // Container control
-   //       default                                      :  element = NULL;
-   //    }
-
-   //   // --- If a new element is not created, we report this and return NULL
-   //    if(element==NULL)
-   //    {
-   //       ::PrintFormat("%s: Error. Failed to create graphic element %s",__FUNCTION__,ElementDescription(type));
-   //       return NULL;
-   //    }
-   //   // --- Set the identifier, name, container and z-order of the element
-   //    element.SetID(elm_total);
-   //    element.SetName(user_name);
-   //    element.SetContainerObj(&this);
-   //    element.ObjectSetZOrder(this.ObjectZOrder()+1);
-      
-   //   // --- If the created element is not added to the list, we report this, delete the created element and return NULL
-   //    if(!this.AddNewElement(element))
-   //    {
-   //       ::PrintFormat("%s: Error. Failed to add %s element with ID %d to list",__FUNCTION__,ElementDescription(type),element.ID());
-   //       delete element;
-   //       return NULL;
-   //    }
-   //   // --- We get the parent element to which the children are attached
-   //    CElementBase *elm=this.GetContainer();
-   //   // --- If the parent element is of type "Container", then it has scrollbars
-   //    if(elm!=NULL && elm.Type()==ELEMENT_TYPE_CONTAINER)
-   //    {
-   //       // --- Convert CElementBase to CContainer
-   //       CContainer *container_obj=elm;
-   //       // --- If the horizontal scroll bar is visible,
-   //       if(container_obj.ScrollBarHorzIsVisible())
-   //       {
-   //          // --- get a pointer to the horizontal scrollbar and move it to the front
-   //          CScrollBarH *sbh=container_obj.GetScrollBarH();
-   //          if(sbh!=NULL)
-   //             sbh.BringToTop(false);
-   //       }
-   //       // --- If the vertical scroll bar is visible,
-   //       if(container_obj.ScrollBarVertIsVisible())
-   //       {
-   //          // --- get the pointer to the vertical scrollbar and move it to the front
-   //          CScrollBarV *sbv=container_obj.GetScrollBarV();
-   //          if(sbv!=NULL)
-   //             sbv.BringToTop(false);
-   //       }
-   //    }
-   //   // --- Return a pointer to the created and attached element
-   //    return element;
-   //  }   
-   #endif // MOVE_TO_DELIB_MQH
-
    //+------------------------------------------------------------------+
    // | CPanel::Adds the specified element to the list |
    //+------------------------------------------------------------------+
@@ -604,7 +426,7 @@
       this.PrintAttached();
     }
    //+------------------------------------------------------------------+
-   // | CPanel::Prints a list of attached objects |
+   //| CPanel::Prints a list of attached objects |
    //+------------------------------------------------------------------+
    void CPanel::PrintAttached(const uint tab=3)
     {
@@ -915,6 +737,212 @@
             elm.TimerEventHandler();
       }
     }
+   #ifndef MOVE_TO_DELIB_MQH
+   #define MOVE_TO_DELIB_MQH
+      // //+------------------------------------------------------------------+
+      // // | CPanel::Creates and adds a new element to the list |
+      // //+------------------------------------------------------------------+
+      // CElementBase *CPanel::InsertNewElement(const ENUM_ELEMENT_TYPE type,const string text,const string user_name,const int dx,const int dy,const int w,const int h)
+      //  {
+      //   // --- Create a name for the graphic object
+      //    int elm_total=this.m_list_elm.Total();
+      //    string obj_name=this.NameFG()+"_"+ElementShortName(type)+(string)elm_total;
+      //   // --- Calculate coordinates
+      //    int x=this.X()+dx;
+      //    int y=this.Y()+dy;
+      //   // --- Depending on the type of object, we create a new object
+      //    CElementBase *element=NULL;
+      //    switch(type)
+      //    {
+      //       case ELEMENT_TYPE_LABEL                      :  element = new CLabel(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);             break;   // Text label
+      //       case ELEMENT_TYPE_BUTTON                     :  element = new CButton(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);            break;   // Simple button
+      //       case ELEMENT_TYPE_BUTTON_TRIGGERED           :  element = new CButtonTriggered(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Two-position button
+      //       case ELEMENT_TYPE_BUTTON_ARROW_UP            :  element = new CButtonArrowUp(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);     break;   // Up arrow button
+      //       case ELEMENT_TYPE_BUTTON_ARROW_DOWN          :  element = new CButtonArrowDown(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Down arrow button
+      //       case ELEMENT_TYPE_BUTTON_ARROW_LEFT          :  element = new CButtonArrowLeft(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Left Arrow Button
+      //       case ELEMENT_TYPE_BUTTON_ARROW_RIGHT         :  element = new CButtonArrowRight(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);  break;   // Right arrow button
+      //       case ELEMENT_TYPE_CHECKBOX                   :  element = new CCheckBox(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);          break;   // CheckBox control
+      //       case ELEMENT_TYPE_RADIOBUTTON                :  element = new CRadioButton(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);       break;   // RadioButton control
+      //       case ELEMENT_TYPE_SCROLLBAR_THUMB_H          :  element = new CScrollBarThumbH(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Scrollbar horizontal ScrollBar
+      //       case ELEMENT_TYPE_SCROLLBAR_THUMB_V          :  element = new CScrollBarThumbV(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Vertical ScrollBar
+      //       case ELEMENT_TYPE_SCROLLBAR_H                :  element = new CScrollBarH(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);        break;   // Horizontal ScrollBar control
+      //       case ELEMENT_TYPE_SCROLLBAR_V                :  element = new CScrollBarV(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);        break;   // Vertical ScrollBar control
+      //       case ELEMENT_TYPE_TABLE_ROW_VIEW             :  element = new CTableRowView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);      break;   // Table row visual object
+      //       case ELEMENT_TYPE_TABLE_CAPTION_VIEW         :  element = new CCaptionView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);       break;   // Basic header object (View)
+      //       case ELEMENT_TYPE_TABLE_COLUMN_CAPTION_VIEW  :  element = new CColumnCaptionView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h); break;   // Table column header visual representation object
+      //       case ELEMENT_TYPE_TABLE_ROW_CAPTION_VIEW     :  element = new CRowCaptionView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);    break;   // Table row header visual representation object
+      //       case ELEMENT_TYPE_TABLE_HEADER_VIEW          :  element = new CTableHeaderView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);   break;   // Table header visual object
+      //       case ELEMENT_TYPE_TABLE_ROWS_HEADER_VIEW     :  element = new CTableRowsHeaderView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);break;  // Object for visual representation of table row headers
+      //       case ELEMENT_TYPE_TABLE_VIEW                 :  element = new CTableView(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);         break;   // Table visual object
+      //       case ELEMENT_TYPE_PANEL                      :  element = new CPanel(obj_name,"",this.m_chart_id,this.m_wnd,x,y,w,h);               break;   // Panel control
+      //       case ELEMENT_TYPE_GROUPBOX                   :  element = new CGroupBox(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);          break;   // GroupBox control
+      //       case ELEMENT_TYPE_CONTAINER                  :  element = new CContainer(obj_name,text,this.m_chart_id,this.m_wnd,x,y,w,h);         break;   // Container control
+      //       default                                      :  element = NULL;
+      //    }
+
+      //   // --- If a new element is not created, we report this and return NULL
+      //    if(element==NULL)
+      //    {
+      //       ::PrintFormat("%s: Error. Failed to create graphic element %s",__FUNCTION__,ElementDescription(type));
+      //       return NULL;
+      //    }
+      //   // --- Set the identifier, name, container and z-order of the element
+      //    element.SetID(elm_total);
+      //    element.SetName(user_name);
+      //    element.SetContainerObj(&this);
+      //    element.ObjectSetZOrder(this.ObjectZOrder()+1);
+         
+      //   // --- If the created element is not added to the list, we report this, delete the created element and return NULL
+      //    if(!this.AddNewElement(element))
+      //    {
+      //       ::PrintFormat("%s: Error. Failed to add %s element with ID %d to list",__FUNCTION__,ElementDescription(type),element.ID());
+      //       delete element;
+      //       return NULL;
+      //    }
+      //   // --- We get the parent element to which the children are attached
+      //    CElementBase *elm=this.GetContainer();
+      //   // --- If the parent element is of type "Container", then it has scrollbars
+      //    if(elm!=NULL && elm.Type()==ELEMENT_TYPE_CONTAINER)
+      //    {
+      //       // --- Convert CElementBase to CContainer
+      //       CContainer *container_obj=elm;
+      //       // --- If the horizontal scroll bar is visible,
+      //       if(container_obj.ScrollBarHorzIsVisible())
+      //       {
+      //          // --- get a pointer to the horizontal scrollbar and move it to the front
+      //          CScrollBarH *sbh=container_obj.GetScrollBarH();
+      //          if(sbh!=NULL)
+      //             sbh.BringToTop(false);
+      //       }
+      //       // --- If the vertical scroll bar is visible,
+      //       if(container_obj.ScrollBarVertIsVisible())
+      //       {
+      //          // --- get the pointer to the vertical scrollbar and move it to the front
+      //          CScrollBarV *sbv=container_obj.GetScrollBarV();
+      //          if(sbv!=NULL)
+      //             sbv.BringToTop(false);
+      //       }
+      //    }
+      //   // --- Return a pointer to the created and attached element
+      //    return element;
+      //  }       
+      //    //+------------------------------------------------------------------+
+      // //| CPanel::Changes the width of an object |
+      // //+------------------------------------------------------------------+
+      // bool CPanel::ResizeW(const int w)
+      //  {
+      //    if(!this.ObjectResizeW(w))
+      //       return false;
+      //    this.BoundResizeW(w);
+      //    this.SetImageSize(w,this.Height());
+      //    if(!this.ObjectTrim())
+      //    {
+      //       this.Update(false);
+      //       this.Draw(false);
+      //    }
+      //   // --- We get a pointer to the base element and, if it exists, its type - container,
+      //   // --- check the ratio of the dimensions of the current element relative to the dimensions of the container
+      //   // --- to display scrollbars in the container if necessary
+      //   CCanvasBase *container_ptr = this.GetContainer();
+      //   if(CheckPointer(container_ptr) != POINTER_INVALID)
+      //    {
+      //       // Check if the type matches before calling
+      //       if(container_ptr.Type() == ELEMENT_TYPE_CONTAINER)
+      //       {
+      //          // Use dynamic pointer casting
+      //          CContainer *base = (CContainer*)container_ptr);
+               
+      //          if(CheckPointer(base) != POINTER_INVALID)
+      //          {
+      //             base.CheckElementSizes(GetPointer(this));
+      //          }
+      //       }
+      //    }
+      //    /*
+      //    if(this.GetContainer()!=NULL && this.GetContainer().Type()==ELEMENT_TYPE_CONTAINER)
+      //    {         
+      //       CContainer *base=this.GetContainer();
+      //       base.CheckElementSizes(&this);
+      //    }*/
+            
+      //   // --- In a loop through attached elements, we cut off each element along the boundaries of the container
+      //    int total=this.m_list_elm.Total();
+      //    for(int i=0;i<total;i++)
+      //    {
+      //       CElementBase *elm=this.GetAttachedElementAt(i);
+      //       if(elm!=NULL)
+      //          elm.ObjectTrim();
+      //    }
+      //   // --- Everything is successful
+      //    return true;
+      //  }
+      // //+------------------------------------------------------------------+
+      // // | CPanel::Changes the height of an object |
+      // //+------------------------------------------------------------------+
+      // bool CPanel::ResizeH(const int h)
+      //  {
+      //    if(!this.ObjectResizeH(h))
+      //       return false;
+      //    this.BoundResizeH(h);
+      //    this.SetImageSize(this.Width(),h);
+      //    if(!this.ObjectTrim())
+      //    {
+      //       this.Update(false);
+      //       this.Draw(false);
+      //    }
+      //   // --- We get a pointer to the base element and, if it exists, its type - container,
+      //   // --- check the ratio of the dimensions of the current element relative to the dimensions of the container
+      //   // --- to display scrollbars in the container if necessary
+      //    if(this.GetContainer()!=NULL && this.GetContainer().Type()==ELEMENT_TYPE_CONTAINER)
+      //    {
+      //       CContainer *base=this.GetContainer();
+      //       base.CheckElementSizes(&this);
+      //    }
+            
+      //   // --- In a loop through attached elements, we cut off each element along the boundaries of the container
+      //    int total=this.m_list_elm.Total();
+      //    for(int i=0;i<total;i++)
+      //    {
+      //       CElementBase *elm=this.GetAttachedElementAt(i);
+      //       if(elm!=NULL)
+      //          elm.ObjectTrim();
+      //    }
+      //   // --- Everything is successful
+      //    return true;
+      //  }
+      // //+------------------------------------------------------------------+
+      // // | CPanel::Resizes an object |
+      // //+------------------------------------------------------------------+
+      // bool CPanel::Resize(const int w,const int h)
+      //  {
+      //    if(!this.ObjectResize(w,h))
+      //       return false;
+      //    this.BoundResize(w,h);
+      //    this.SetImageSize(w,h);
+      //    if(!this.ObjectTrim())
+      //    {
+      //       this.Update(false);
+      //       this.Draw(false);
+      //    }
+      //   // --- We get a pointer to the base element and, if it exists, its type - container,
+      //   // --- check the ratio of the dimensions of the current element relative to the dimensions of the container
+      //   // --- to display scrollbars in the container if necessary
+      //    CContainer *base=this.GetContainer();
+      //    if(base!=NULL && base.Type()==ELEMENT_TYPE_CONTAINER)
+      //       base.CheckElementSizes(&this);
+            
+      //   // --- In a loop through attached elements, we cut off each element along the boundaries of the container
+      //    int total=this.m_list_elm.Total();
+      //    for(int i=0;i<total;i++)
+      //    {
+      //       CElementBase *elm=this.GetAttachedElementAt(i);
+      //       if(elm!=NULL)
+      //          elm.ObjectTrim();
+      //    }
+      //   // --- Everything is successful
+      //    return true;
+      //  }
+   #endif // MOVE_TO_DELIB_MQH   
    //+------------------------------------------------------------------+
  #endif // CPANEL_IMPLEMENTATION
 #endif // __PANEL_MQH__

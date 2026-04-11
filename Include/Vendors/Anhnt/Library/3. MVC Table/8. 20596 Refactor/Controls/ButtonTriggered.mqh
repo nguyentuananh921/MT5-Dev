@@ -3,7 +3,10 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/18221  |
+//| First See in: Simple controls                                    |
+//|                           https://www.mql5.com/en/articles/18221 |
+//| Update in: Containers                                            |
+//|                           https://www.mql5.com/en/articles/18658 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."

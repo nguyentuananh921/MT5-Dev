@@ -17,6 +17,7 @@
    // | Included Libraries |
    //+------------------------------------------------------------------+
    #include "..\Tables\MqlParamObj.mqh"
+   #include "..\Collections\ListObj.mqh"
   
    class DataListCreator
    {

@@ -45,7 +45,7 @@
    // --- Constructors/destructor
                         CRowCaptionView(void);
                         CRowCaptionView(const string object_name, const string text, const long chart_id, const int wnd, const int x, const int y, const int w, const int h); 
-                     ~CRowCaptionView (void){}
+                        ~CRowCaptionView (void){}
   };
   #ifndef CROWCAPTIONVIEW_IMPLEMENTATION
   #define CROWCAPTIONVIEW_IMPLEMENTATION

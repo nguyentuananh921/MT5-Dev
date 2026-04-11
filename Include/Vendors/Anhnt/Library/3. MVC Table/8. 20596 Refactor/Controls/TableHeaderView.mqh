@@ -3,7 +3,9 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
+//| First See in:                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //|                           https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -20,9 +22,12 @@
    //#include <Arrays\List.mqh>
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
-   //+------------------------------------------------------------------+
+   //+------------------------------------------------------------------+   
+   #include "..\Tables\TableHeader.mqh" 
    #include "Panel.mqh"
-   class CTableHeader;     
+   #include "ColumnCaptionView.mqh" 
+   #include "TableView.mqh"   
+   
   class CTableHeaderView : public CPanel
    {
     protected:
@@ -278,12 +283,27 @@
       CPanel *obj=this.GetContainer();
       if(obj==NULL)
          return false;
-      CTableView *table_view=obj.GetContainer();
-      if(table_view==NULL)
+      // --- From the panel, get its container (should be CTableView)
+      CElementBase *base = obj.GetContainer();
+      if(base == NULL)
+         return false;
+      // --- Check type before casting
+      if(base.Type() != ELEMENT_TYPE_TABLE_VIEW)
+         return false;
+      CTableView *table_view = (CTableView*)base;  // explicit cast với type-check
+      if(table_view == NULL)
+         return false;
+      // --- From the table object we get a pointer to the panel with table rows
+      CPanel *table_area = table_view.GetTableArea();
+      if(table_area == NULL)
          return false;
 
-     // --- From the table object we get a pointer to the panel with table rows
-      CPanel *table_area=table_view.GetTableArea();
+      //    CTableView *table_view=obj.GetContainer();
+      //    if(table_view==NULL)
+      //       return false;
+
+      //   // --- From the table object we get a pointer to the panel with table rows
+      //    CPanel *table_area=table_view.GetTableArea();
       if(table_area==NULL)
          return false;
       

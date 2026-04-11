@@ -3,7 +3,9 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
+//| First See in:                                                    |
+//|   Integrating the Model Component into the View Component        |
+//|                           https://www.mql5.com/en/articles/19288 |
 //|                           https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -23,10 +25,10 @@
    //+------------------------------------------------------------------+
    #include "..\Defines\ControlsDefines.mqh"
    #include "..\Defines\ControlsEnums.mqh"
-
    #include "..\Base\BoundedObj.mqh"
-   // Forward declarations for Pointer variables và method params
-   class CTableCell;      
+   #include "..\Tables\TableCell.mqh"
+
+   // Forward declarations for Pointer variables và method params        
    class CTableRowView; 
    class CImagePainter;
    class CContainer;        
@@ -45,11 +47,12 @@
          ushort            m_text[];                                 // Text
          color             m_fore_color;                             // Foreground color
          color             m_back_color;                             // Background color
-         
-      // --- Returns the offsets of the initial drawing coordinates on the canvas relative to the canvas and the coordinates of the base element
-         int               CanvasOffsetX(void)     const { return(this.m_element_base.ObjectX()-this.m_element_base.X());  }
-         int               CanvasOffsetY(void)     const { return(this.m_element_base.ObjectY()-this.m_element_base.Y());  }
-         
+      //Update Declareation when Moving Implementation to DEBlib            
+         // --- Returns the offsets of the initial drawing coordinates on the canvas relative to the canvas and the coordinates of the base element
+            // int               CanvasOffsetX(void)     const { return(this.m_element_base.ObjectX()-this.m_element_base.X());  }
+            // int               CanvasOffsetY(void)     const { return(this.m_element_base.ObjectY()-this.m_element_base.Y());  }
+            int               CanvasOffsetX(void)     const; 
+            int               CanvasOffsetY(void)     const;
       // --- Returns the adjusted coordinate of a point on the canvas, taking into account the offset of the canvas relative to the base element
          int               AdjX(const int x)                            const { return(x-this.CanvasOffsetX());            }
          int               AdjY(const int y)                            const { return(y-this.CanvasOffsetY());            }
@@ -65,12 +68,16 @@
          CCanvas          *GetBackground(void)                                { return this.m_background;                  }
          CCanvas          *GetForeground(void)                                { return this.m_foreground;                  }
 
-      // --- Getting the bounds of the parent container object
-         int               ContainerLimitLeft(void)   const { return(this.m_element_base==NULL ? this.X()      :  this.m_element_base.LimitLeft());   }
-         int               ContainerLimitRight(void)  const { return(this.m_element_base==NULL ? this.Right()  :  this.m_element_base.LimitRight());  }
-         int               ContainerLimitTop(void)    const { return(this.m_element_base==NULL ? this.Y()      :  this.m_element_base.LimitTop());    }
-         int               ContainerLimitBottom(void) const { return(this.m_element_base==NULL ? this.Bottom() :  this.m_element_base.LimitBottom()); }
-
+      //Update Declareation when Moving Implementation to DEBlib
+         // --- Getting the bounds of the parent container object
+            // int               ContainerLimitLeft(void)   const { return(this.m_element_base==NULL ? this.X()      :  this.m_element_base.LimitLeft());   }
+            // int               ContainerLimitRight(void)  const { return(this.m_element_base==NULL ? this.Right()  :  this.m_element_base.LimitRight());  }
+            // int               ContainerLimitTop(void)    const { return(this.m_element_base==NULL ? this.Y()      :  this.m_element_base.LimitTop());    }
+            // int               ContainerLimitBottom(void) const { return(this.m_element_base==NULL ? this.Bottom() :  this.m_element_base.LimitBottom()); }
+         int               ContainerLimitLeft(void)   const;
+         int               ContainerLimitRight(void)  const;
+         int               ContainerLimitTop(void)    const;
+         int               ContainerLimitBottom(void) const;
       // --- Returns a flag that an object is located outside of its container
          virtual bool      IsOutOfContainer(void);
 
@@ -140,7 +147,7 @@
       // --- Constructors/destructor
                            CTableCellView(void);
                            CTableCellView(const int id, const string user_name, const string text, const int x, const int y, const int w, const int h);
-                        ~CTableCellView (void){}
+                           ~CTableCellView (void){}
   };
   #ifndef CTABLECELLVIEW_IMPLEMENTATION
   #define CTABLECELLVIEW_IMPLEMENTATION
@@ -203,50 +210,8 @@
          //                      ElementDescription((ENUM_ELEMENT_TYPE)this.Type()),name,
          //                      this.ID(),this.X(),this.Y(),this.Width(),this.Height(),this.Text());
     }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Assigns row, background and foreground canvases |
-   //+------------------------------------------------------------------+
-   void CTableCellView::RowAssign(CTableRowView *base_element)
-    {
-         if(base_element==NULL)
-         {
-            ::PrintFormat("%s: Error. Empty element passed",__FUNCTION__);
-            return;
-         }
-         this.m_element_base=base_element;
-         this.m_background=this.m_element_base.GetBackground();
-         this.m_foreground=this.m_element_base.GetForeground();
-         this.m_painter=this.m_element_base.Painter();
-         this.m_fore_color=this.m_element_base.ForeColor();
-         this.m_back_color=this.m_element_base.BackColor();
-    }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Assigns a cell model |
-   //+------------------------------------------------------------------+
-   bool CTableCellView::TableCellModelAssign(CTableCell *cell_model,int dx,int dy,int w,int h)
-    {
-      // --- If an invalid cell model object is passed, we report this and return false
-         if(cell_model==NULL)
-         {
-            ::PrintFormat("%s: Error. Empty object passed",__FUNCTION__);
-            return false;
-         }
-      // --- If the base element (table row) is not assigned, we report this and return false
-         if(this.m_element_base==NULL)
-         {
-            ::PrintFormat("%s: Error. Base element not assigned. Please use RowAssign() method first",__FUNCTION__);
-            return false;
-         }
-      // --- Save the cell model
-         this.m_table_cell_model=cell_model;
-      // --- Set the coordinates and dimensions of the visual representation of the cell
-         this.BoundSetXY(dx,dy);
-         this.BoundResize(w,h);
-      // --- Set the dimensions of the drawing area of ​​the visual representation of the cell
-         this.m_painter.SetBound(dx,dy,w,h);
-      // --- Everything is successful
-         return true;
-    }
+   
+   
    //+------------------------------------------------------------------+
    // | CTableCellView::Returns the X and Y coordinates of the text |
    // | depending on the anchor point |
@@ -349,22 +314,7 @@
          this.SetTextShiftY(shift_y);
          this.SetTextAnchor(anchor,cell_redraw,chart_redraw);
     }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Fills an object with color |
-   //+------------------------------------------------------------------+
-   void CTableCellView::Clear(const bool chart_redraw)
-    {
-      // --- Set the correct coordinates of the cell corners
-         int x1=this.AdjX(this.m_bound.X());
-         int y1=this.AdjY(this.m_bound.Y());
-         int x2=this.AdjX(this.m_bound.Right());
-         int y2=this.AdjY(this.m_bound.Bottom());
-      // --- Erase the background and foreground inside the rectangular area of ​​the cell location
-         if(this.m_background!=NULL)
-            this.m_background.FillRectangle(x1,y1,x2,y2-1,::ColorToARGB(this.m_element_base.BackColor(),this.m_element_base.AlphaBG()));
-         if(this.m_foreground!=NULL)
-            this.m_foreground.FillRectangle(x1,y1,x2,y2-1,clrNULL);
-    }
+   
    //+------------------------------------------------------------------+
    // | CTableCellView::Updates an object to reflect changes |
    //+------------------------------------------------------------------+
@@ -374,124 +324,10 @@
             this.m_background.Update(false);
          if(this.m_foreground!=NULL)
             this.m_foreground.Update(chart_redraw);
-    }
+    }    
+   
    //+------------------------------------------------------------------+
-   // | CTableCellView::Returns a pointer |
-   // | to the table row panel container |
-   //+------------------------------------------------------------------+
-   CContainer *CTableCellView::GetRowsPanelContainer(void)
-    {
-      // --- Checking the string
-         if(this.m_element_base==NULL)
-            return NULL;
-      // --- We get a panel for placing lines
-         CPanel *rows_area=this.m_element_base.GetContainer();
-         if(rows_area==NULL)
-            return NULL;
-      // --- Return the panel container with rows
-         return rows_area.GetContainer();
-    }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Returns the flag that the object |
-   // | located outside of its container |
-   //+------------------------------------------------------------------+
-   bool CTableCellView::IsOutOfContainer(void)
-    {
-      // --- Checking the string
-         if(this.m_element_base==NULL)
-            return false;
-
-      // --- We get a panel container with rows
-         CContainer *container=this.GetRowsPanelContainer();
-         if(container==NULL)
-            return false;
-      
-      // --- We get the cell boundaries on all sides
-         int cell_l=this.m_element_base.X()+this.X();
-         int cell_r=this.m_element_base.X()+this.Right();
-         int cell_t=this.m_element_base.Y()+this.Y();
-         int cell_b=this.m_element_base.Y()+this.Bottom();
-         
-      // --- Return the result of checking that the object completely extends beyond the container
-         return(cell_r <= container.X() || cell_l >= container.Right() || cell_b <= container.Y() || cell_t >= container.Bottom());
-    }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Draws appearance |
-   //+------------------------------------------------------------------+
-   void CTableCellView::Draw(const bool chart_redraw)
-    {
-      // --- If the cell is outside the table row container - leave
-         if(this.IsOutOfContainer())
-            return;
-            
-      // --- Get text coordinates and offset direction depending on the anchor point
-         int text_x=0, text_y=0;
-         int dir_horz=0, dir_vert=0;
-         if(!this.GetTextCoordsByAnchor(text_x,text_y,dir_horz,dir_vert))
-            return;
-      // --- Correcting text coordinates
-         int x=this.AdjX(this.X()+text_x);
-         int y=this.AdjY(this.Y()+text_y);
-         
-      // --- Set the coordinates of the dividing line
-         int x1=this.AdjX(this.X());
-         int y1=this.AdjY(this.Y());
-         int x2=this.AdjX(this.X());
-         int y2=this.AdjY(this.Bottom());
-
-      // --- Displaying text on the foreground canvas taking into account the displacement direction without updating the graph
-         this.DrawText(x+this.m_text_x*dir_horz,y+this.m_text_y*dir_vert,this.Text(),false);
-         
-      // --- Set the coordinates of the rectangular fill
-         x1=this.AdjX(this.X());
-         y1=this.AdjY(this.Y());
-         x2=this.AdjX(this.Right());
-         y2=this.AdjY(this.Bottom()-1);
-         this.m_background.FillRectangle(x1,y1,x2,y2,::ColorToARGB(this.BackColor(),this.m_element_base.AlphaBG()));
-
-      // --- If this is not the cell on the far right, draw a vertical dividing stripe near the cell on the right
-         if(this.m_element_base!=NULL && this.Index()<this.m_element_base.CellsTotal()-1)
-         {
-            int line_x=this.AdjX(this.Right());
-            this.m_background.Line(line_x,y1,line_x,y2,::ColorToARGB(this.m_element_base.BorderColor(),this.m_element_base.AlphaBG()));
-         }
-      // --- Update the background canvas with the specified graph redraw flag
-         this.m_background.Update(chart_redraw);
-    }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Displays text |
-   //+------------------------------------------------------------------+
-   void CTableCellView::DrawText(const int dx,const int dy,const string text,const bool chart_redraw)
-    {
-      // --- Checking the base element
-         if(this.m_element_base==NULL)
-            return;
-            
-      // --- Clear the cell and set the text
-         this.Clear(false);
-         this.SetText(text);
-         
-      // --- Display the set text on the foreground canvas
-         this.m_foreground.TextOut(dx,dy,this.Text(),::ColorToARGB(this.ForeColor(),this.m_element_base.AlphaFG()));
-         
-      // --- If the text extends beyond the right border of the cell area
-         if(this.Right()-dx<this.m_foreground.TextWidth(text))
-         {
-            // --- Getting the dimensions of the text "ellipsis"
-            int w=0,h=0;
-            this.m_foreground.TextSize("... ",w,h);
-            if(w>0 && h>0)
-            {
-               // --- Erase the text at the right border of the object according to the text size "ellipsis" and replace the end of the label text with an ellipsis
-               this.m_foreground.FillRectangle(this.AdjX(this.Right())-w,this.AdjY(this.Y()),this.AdjX(this.Right()),this.AdjY(this.Y())+h,clrNULL);
-               this.m_foreground.TextOut(this.AdjX(this.Right())-w,this.AdjY(dy),"...",::ColorToARGB(this.ForeColor(),this.m_element_base.AlphaFG()));
-            }
-         }
-      // --- Update the foreground canvas with the specified graph redraw flag
-         this.m_foreground.Update(chart_redraw);
-    }
-   //+------------------------------------------------------------------+
-   // | CTableCellView::Prints the assigned row model in the log|
+   //| CTableCellView::Prints the assigned row model in the log|
    //+------------------------------------------------------------------+
    void CTableCellView::TableCellModelPrint(void)
     {
@@ -551,6 +387,189 @@
             return true;
     }
    //+------------------------------------------------------------------+
+   #ifndef MOVE_TO_DELIB_MQH
+   #define MOVE_TO_DELIB_MQH
+      // //+------------------------------------------------------------------+
+      // // | CTableCellView::Assigns a cell model |
+      // //+------------------------------------------------------------------+
+      // bool CTableCellView::TableCellModelAssign(CTableCell *cell_model,int dx,int dy,int w,int h)
+      //  {
+      //    // --- If an invalid cell model object is passed, we report this and return false
+      //       if(cell_model==NULL)
+      //       {
+      //          ::PrintFormat("%s: Error. Empty object passed",__FUNCTION__);
+      //          return false;
+      //       }
+      //    // --- If the base element (table row) is not assigned, we report this and return false
+      //       if(this.m_element_base==NULL)
+      //       {
+      //          ::PrintFormat("%s: Error. Base element not assigned. Please use RowAssign() method first",__FUNCTION__);
+      //          return false;
+      //       }
+      //    // --- Save the cell model
+      //       this.m_table_cell_model=cell_model;
+      //    // --- Set the coordinates and dimensions of the visual representation of the cell
+      //       this.BoundSetXY(dx,dy);
+      //       this.BoundResize(w,h);
+      //    // --- Set the dimensions of the drawing area of ​​the visual representation of the cell
+      //       this.m_painter.SetBound(dx,dy,w,h);
+      //    // --- Everything is successful
+      //       return true;
+      //  }
+
+      // //+------------------------------------------------------------------+
+      //    // | CTableCellView::Draws appearance |
+      //    //+------------------------------------------------------------------+
+      //    void CTableCellView::Draw(const bool chart_redraw)
+      //    {
+      //       // --- If the cell is outside the table row container - leave
+      //          if(this.IsOutOfContainer())
+      //             return;
+                  
+      //       // --- Get text coordinates and offset direction depending on the anchor point
+      //          int text_x=0, text_y=0;
+      //          int dir_horz=0, dir_vert=0;
+      //          if(!this.GetTextCoordsByAnchor(text_x,text_y,dir_horz,dir_vert))
+      //             return;
+      //       // --- Correcting text coordinates
+      //          int x=this.AdjX(this.X()+text_x);
+      //          int y=this.AdjY(this.Y()+text_y);
+               
+      //       // --- Set the coordinates of the dividing line
+      //          int x1=this.AdjX(this.X());
+      //          int y1=this.AdjY(this.Y());
+      //          int x2=this.AdjX(this.X());
+      //          int y2=this.AdjY(this.Bottom());
+
+      //       // --- Displaying text on the foreground canvas taking into account the displacement direction without updating the graph
+      //          this.DrawText(x+this.m_text_x*dir_horz,y+this.m_text_y*dir_vert,this.Text(),false);
+               
+      //       // --- Set the coordinates of the rectangular fill
+      //          x1=this.AdjX(this.X());
+      //          y1=this.AdjY(this.Y());
+      //          x2=this.AdjX(this.Right());
+      //          y2=this.AdjY(this.Bottom()-1);
+      //          this.m_background.FillRectangle(x1,y1,x2,y2,::ColorToARGB(this.BackColor(),this.m_element_base.AlphaBG()));
+
+      //       // --- If this is not the cell on the far right, draw a vertical dividing stripe near the cell on the right
+      //          if(this.m_element_base!=NULL && this.Index()<this.m_element_base.CellsTotal()-1)
+      //          {
+      //             int line_x=this.AdjX(this.Right());
+      //             this.m_background.Line(line_x,y1,line_x,y2,::ColorToARGB(this.m_element_base.BorderColor(),this.m_element_base.AlphaBG()));
+      //          }
+      //       // --- Update the background canvas with the specified graph redraw flag
+      //          this.m_background.Update(chart_redraw);
+      //    }
+      //    //+------------------------------------------------------------------+
+      //    // | CTableCellView::Displays text |
+      //    //+------------------------------------------------------------------+
+      //    void CTableCellView::DrawText(const int dx,const int dy,const string text,const bool chart_redraw)
+      //    {
+      //       // --- Checking the base element
+      //          if(this.m_element_base==NULL)
+      //             return;
+                  
+      //       // --- Clear the cell and set the text
+      //          this.Clear(false);
+      //          this.SetText(text);
+               
+      //       // --- Display the set text on the foreground canvas
+      //          this.m_foreground.TextOut(dx,dy,this.Text(),::ColorToARGB(this.ForeColor(),this.m_element_base.AlphaFG()));
+               
+      //       // --- If the text extends beyond the right border of the cell area
+      //          if(this.Right()-dx<this.m_foreground.TextWidth(text))
+      //          {
+      //             // --- Getting the dimensions of the text "ellipsis"
+      //             int w=0,h=0;
+      //             this.m_foreground.TextSize("... ",w,h);
+      //             if(w>0 && h>0)
+      //             {
+      //                // --- Erase the text at the right border of the object according to the text size "ellipsis" and replace the end of the label text with an ellipsis
+      //                this.m_foreground.FillRectangle(this.AdjX(this.Right())-w,this.AdjY(this.Y()),this.AdjX(this.Right()),this.AdjY(this.Y())+h,clrNULL);
+      //                this.m_foreground.TextOut(this.AdjX(this.Right())-w,this.AdjY(dy),"...",::ColorToARGB(this.ForeColor(),this.m_element_base.AlphaFG()));
+      //             }
+      //          }
+      //       // --- Update the foreground canvas with the specified graph redraw flag
+      //          this.m_foreground.Update(chart_redraw);
+      //    }
+
+      // //+------------------------------------------------------------------+
+      //    // | CTableCellView::Fills an object with color |
+      //    //+------------------------------------------------------------------+
+      //    void CTableCellView::Clear(const bool chart_redraw)
+      //    {
+      //       // --- Set the correct coordinates of the cell corners
+      //          int x1=this.AdjX(this.m_bound.X());
+      //          int y1=this.AdjY(this.m_bound.Y());
+      //          int x2=this.AdjX(this.m_bound.Right());
+      //          int y2=this.AdjY(this.m_bound.Bottom());
+      //       // --- Erase the background and foreground inside the rectangular area of ​​the cell location
+      //          if(this.m_background!=NULL)
+      //             this.m_background.FillRectangle(x1,y1,x2,y2-1,::ColorToARGB(this.m_element_base.BackColor(),this.m_element_base.AlphaBG()));
+      //          if(this.m_foreground!=NULL)
+      //             this.m_foreground.FillRectangle(x1,y1,x2,y2-1,clrNULL);
+      //    }
+
+      // //+------------------------------------------------------------------+
+      // // | CTableCellView::Assigns row, background and foreground canvases |
+      // //+------------------------------------------------------------------+
+      // void CTableCellView::RowAssign(CTableRowView *base_element)
+      // {
+      //       if(base_element==NULL)
+      //       {
+      //          ::PrintFormat("%s: Error. Empty element passed",__FUNCTION__);
+      //          return;
+      //       }
+      //       this.m_element_base=base_element;
+      //       this.m_background=this.m_element_base.GetBackground();
+      //       this.m_foreground=this.m_element_base.GetForeground();
+      //       this.m_painter=this.m_element_base.Painter();
+      //       this.m_fore_color=this.m_element_base.ForeColor();
+      //       this.m_back_color=this.m_element_base.BackColor();
+      // }
+
+      //    //+------------------------------------------------------------------+
+      //    // | CTableCellView::Returns a pointer |
+      //    // | to the table row panel container |
+      //    //+------------------------------------------------------------------+
+      //    CContainer *CTableCellView::GetRowsPanelContainer(void)
+      //       {
+      //       // --- Checking the string
+      //          if(this.m_element_base==NULL)
+      //             return NULL;
+      //       // --- We get a panel for placing lines
+      //          CPanel *rows_area=this.m_element_base.GetContainer();
+      //          if(rows_area==NULL)
+      //             return NULL;
+      //       // --- Return the panel container with rows
+      //          return rows_area.GetContainer();
+      //       }
+      // //+------------------------------------------------------------------+
+      // // | CTableCellView::Returns the flag that the object |
+      // // | located outside of its container |
+      // //+------------------------------------------------------------------+
+      // bool CTableCellView::IsOutOfContainer(void)
+      //  {
+      //    // --- Checking the string
+      //       if(this.m_element_base==NULL)
+      //          return false;
+
+      //    // --- We get a panel container with rows
+      //       CContainer *container=this.GetRowsPanelContainer();
+      //       if(container==NULL)
+      //          return false;
+         
+      //    // --- We get the cell boundaries on all sides
+      //       int cell_l=this.m_element_base.X()+this.X();
+      //       int cell_r=this.m_element_base.X()+this.Right();
+      //       int cell_t=this.m_element_base.Y()+this.Y();
+      //       int cell_b=this.m_element_base.Y()+this.Bottom();
+            
+      //    // --- Return the result of checking that the object completely extends beyond the container
+      //       return(cell_r <= container.X() || cell_l >= container.Right() || cell_b <= container.Y() || cell_t >= container.Bottom());
+      //  }
+   #endif // MOVE_TO_DELIB_MQH
+
   #endif // CTABLECELLVIEW_IMPLEMENTATION
 #endif // __TABLECELLVIEW_MQH__
 

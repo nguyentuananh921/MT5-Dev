@@ -21,7 +21,8 @@
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
    #include "TableRow.mqh"
-   #include "MqlParamObj.mqh"  
+   #include "MqlParamObj.mqh"
+   #include "..\Base\BaseObj.mqh"  
  class CTableModel : public CObject
   {
    protected:
@@ -761,8 +762,15 @@ void CTableModel::SortByColumn(const uint column,const bool descending)
 //+------------------------------------------------------------------+
 string CTableModel::Description(void)
  {
-   return(::StringFormat("%s: Rows %u, Cells in row %u, Cells Total %u",
-                        TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.RowsTotal(),this.CellsInRow(0),this.CellsTotal()));
+   // --- Get the formatted object type from the static helper
+   string typeStr = CBaseObj::FormatObjectType((ENUM_OBJECT_TYPE)this.Type());
+
+   // --- Return the row description including index and count of cells
+   return ::StringFormat("%s: Row %u, Cells in row: %u, Cells Total %u", 
+                         typeStr, this.RowsTotal(),this.CellsInRow(0),this.CellsTotal());
+                         
+   /*return(::StringFormat("%s: Rows %u, Cells in row %u, Cells Total %u",
+                        TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.RowsTotal(),this.CellsInRow(0),this.CellsTotal()));*/
  }
 //+------------------------------------------------------------------+
 //| Logs a description of an object                                  |

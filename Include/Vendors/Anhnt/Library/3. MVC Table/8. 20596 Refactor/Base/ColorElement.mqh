@@ -3,7 +3,12 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/17960  |
+//| First See in                                                     |
+//|       Base graphical element                                     |
+//|                           https://www.mql5.com/en/articles/17960 |
+//| Update in                                                        |
+//|       Simple controls                                            |
+//|                           https://www.mql5.com/en/articles/18221 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -47,10 +52,11 @@
 
       // --- Returns an interpolated color between three colors depending on the coefficient value (from -1 to +1)
          color             InterpolateColorByCoeff(const color color1, const color color2, const color color3, const double coeff);
-
-      // --- Class initialization
+      //| Update in                                                        |
+      //|       Simple controls                                            |
+      //|                           https://www.mql5.com/en/articles/18221 |
+        // --- Class initialization
          void              Init(void);
-
       // --- Initializing the colors of various states
          bool              InitDefault(const color clr)              { return this.m_default.SetColor(clr);       }
          bool              InitFocused(const color clr)              { return this.m_focused.SetColor(clr);       }
@@ -83,7 +89,7 @@
                            CColorElement(void);
                            CColorElement(const color clr);
                            CColorElement(const color clr_default,const color clr_focused,const color clr_pressed,const color clr_blocked);
-                        ~CColorElement(void) {}
+                           ~CColorElement(void) {}
    };
    #ifndef CCOLORELEMENT_IMPLEMENTATION
    #define CCOLORELEMENT_IMPLEMENTATION
@@ -94,12 +100,16 @@
       {
          this.InitColors(clrNULL,clrNULL,clrNULL,clrNULL);
          this.Init();
+
       }
       //+------------------------------------------------------------------+
       // | CColorElement::Constructor specifying object colors |
       //+------------------------------------------------------------------+
       CColorElement::CColorElement(const color clr_default,const color clr_focused,const color clr_pressed,const color clr_blocked)
       {
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 | 
          this.InitColors(clr_default,clr_focused,clr_pressed,clr_blocked);
          this.Init();
       }
@@ -108,6 +118,9 @@
       //+------------------------------------------------------------------+
       CColorElement::CColorElement(const color clr)
       {
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 |
          this.InitColors(clr);
          this.Init();
       }
@@ -116,6 +129,9 @@
       //+------------------------------------------------------------------+
       void CColorElement::Init(void)
       {
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 |
          this.m_default.SetName("Default"); this.m_default.SetID(1);
          this.m_focused.SetName("Focused"); this.m_focused.SetID(2);
          this.m_pressed.SetName("Pressed"); this.m_pressed.SetID(3);
@@ -125,27 +141,33 @@
          this.m_current.SetID(0);
       }
       //+------------------------------------------------------------------+
-      // | CColorElement::Sets colors for all states |
+      //| CColorElement::Sets colors for all states                        |
       //+------------------------------------------------------------------+
       void CColorElement::InitColors(const color clr_default,const color clr_focused,const color clr_pressed,const color clr_blocked)
       {
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 |
          this.InitDefault(clr_default);
          this.InitFocused(clr_focused);
          this.InitPressed(clr_pressed);
          this.InitBlocked(clr_blocked);   
       }
       //+------------------------------------------------------------------+
-      // | CColorElement::Sets colors for all states based on the current|
+      //| CColorElement::Sets colors for all states based on the current   |
       //+------------------------------------------------------------------+
       void CColorElement::InitColors(const color clr)
       {
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 |
          this.InitDefault(clr);
          this.InitFocused(clr!=clrNULL ? this.NewColor(clr,-20,-20,-20) : clrNULL);
          this.InitPressed(clr!=clrNULL ? this.NewColor(clr,-40,-40,-40) : clrNULL);
          this.InitBlocked(clrWhiteSmoke);   
       }
       //+-------------------------------------------------------------------+
-      // |CColorElement::Sets one color from the list of colors as the current|
+      //|CColorElement::Sets one color from the list of colors as the current|
       //+-------------------------------------------------------------------+
       bool CColorElement::SetCurrentAs(const ENUM_COLOR_STATE color_state)
       {
@@ -159,7 +181,7 @@
          }
       }
       //+------------------------------------------------------------------+
-      // | CColorElement::Converts RGB to color |
+      //| CColorElement::Converts RGB to color |
       //+------------------------------------------------------------------+
       color CColorElement::RGBToColor(const double r,const double g,const double b) const
       {

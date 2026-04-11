@@ -23,7 +23,7 @@
 
    #include "..\Defines\TableDefines.mqh"
    #include "..\Defines\TableEnums.mqh"
-   #include "..\Services\FunctionLib.mqh"
+   #include "..\Base\BaseObj.mqh"
    #include "ColumnCaption.mqh"  
    class CTableHeader : public CObject
    {
@@ -220,8 +220,14 @@
    //+------------------------------------------------------------------+
    string CTableHeader::Description(void)
    {
-      return(::StringFormat("%s: Captions total: %u",
-                           TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.ColumnsTotal()));
+      // --- Get the formatted object type from the static helper
+      string typeStr = CBaseObj::FormatObjectType((ENUM_OBJECT_TYPE)this.Type());
+   
+      // --- Return the row description including index and count of cells
+      return ::StringFormat("%s: Captions total: %u", 
+                            typeStr, this.ColumnsTotal());
+      // return(::StringFormat("%s: Captions total: %u",
+      //                      TypeDescription((ENUM_OBJECT_TYPE)this.Type()),this.ColumnsTotal()));
    }
    //+------------------------------------------------------------------+
    //| Logs a description of an object                                  |

@@ -3,8 +3,10 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|First See in              https://www.mql5.com/en/articles/17960  |
-//|Current                    https://www.mql5.com/ru/articles/20596 |
+//| First See in                                                     |
+//|       Base graphical element                                     |
+//|                           https://www.mql5.com/en/articles/17960 |
+//| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
@@ -25,8 +27,7 @@
    class CColor : public CBaseObj
    {
       protected:
-         color             m_color;                                  // Color
-         
+         color             m_color;                                  // Color         
       public:
       // --- Sets the color
          bool              SetColor(const color clr)
@@ -80,31 +81,36 @@
       //+------------------------------------------------------------------+
       bool CColor::Save(const int file_handle)
       {
-      // --- Save the data of the parent object
-         if(!CBaseObj::Save(file_handle))
-            return false;
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 |  
+         // --- Save the data of the parent object
+            if(!CBaseObj::Save(file_handle))
+               return false;            
+         // --- Preserve color
+            if(::FileWriteInteger(file_handle,this.m_color,INT_VALUE)!=INT_VALUE)
+               return false;
             
-      // --- Preserve color
-         if(::FileWriteInteger(file_handle,this.m_color,INT_VALUE)!=INT_VALUE)
-            return false;
-         
-      // --- Everything is successful
-         return true;
+         // --- Everything is successful
+            return true;
       }
       //+------------------------------------------------------------------+
       // | CColor::Loading from file |
       //+------------------------------------------------------------------+
       bool CColor::Load(const int file_handle)
       {
-      // --- Loading the data of the parent object
-         if(!CBaseObj::Load(file_handle))
-            return false;
+       //| Update in                                                        |
+       //|       Simple controls                                            |
+       //|                           https://www.mql5.com/en/articles/18221 |  
+         // --- Loading the data of the parent object
+            if(!CBaseObj::Load(file_handle))
+               return false;
+               
+         // --- Loading color
+            this.m_color=(color)::FileReadInteger(file_handle,INT_VALUE);
             
-      // --- Loading color
-         this.m_color=(color)::FileReadInteger(file_handle,INT_VALUE);
-         
-      // --- Everything is successful
-         return true;
+         // --- Everything is successful
+            return true;
       }
    #endif // DECLARATION_IMPLEMENTATION
    //+------------------------------------------------------------------+
