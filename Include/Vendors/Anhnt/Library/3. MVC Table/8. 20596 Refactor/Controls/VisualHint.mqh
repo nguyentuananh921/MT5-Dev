@@ -145,7 +145,7 @@
    void CVisualHint::InitColorsArrowed(void)
     {
       // --- Background is transparent, foreground is opaque
-         this.SetAlphaBG(0);
+         this.SetAlphaBG(255); //| Modify m_alpha_bg(0) to m_alpha_bg(255) to meet MT5 5716 version |
          this.SetAlphaFG(255);
          
       // --- Initialize the background colors for normal and activated states and make it the current background color

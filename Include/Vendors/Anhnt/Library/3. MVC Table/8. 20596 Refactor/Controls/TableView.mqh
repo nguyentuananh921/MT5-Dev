@@ -6,7 +6,9 @@
 //| First See in:                                                    |
 //|   Integrating the Model Component into the View Component        |
 //|                           https://www.mql5.com/en/articles/19288 |
+//| Update in: Symbol Correlation Table                              |
 //|                           https://www.mql5.com/ru/articles/20596 |
+//| Current:                  https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
@@ -22,15 +24,18 @@
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
+   #include "..\Tables\TableModel.mqh"
 
    #include "Panel.mqh"
    #include "Container.mqh"
+   #include "TableRowsHeaderView.mqh"
+
    class CTable; 
    class CTableRowView;
-   class CTableModel;                // Pointer to the table model (obtained from CTable)
+   //class CTableModel;                // Pointer to the table model (obtained from CTable)
    class CTableHeader; 
    class CTableHeaderView;
-   class CTableRowsHeaderView;  
+   //class CTableRowsHeaderView;  
    class CColumnCaptionView;
    class CTableCellView;      
  class CTableView : public CPanel
@@ -199,8 +204,8 @@
       int h=DEF_TABLE_HEADER_H;
      // --- Create a panel for the table header
       this.m_header_panel=this.InsertNewElement(ELEMENT_TYPE_PANEL,"","TableHeaderPanel",x,y,w,h);
-      if(this.m_header_panel==NULL)
-         return;
+      if(this.m_header_panel==NULL)      
+         return;     
      // --- Initialize the background colors of the panel and make it the current background color
       this.m_header_panel.InitBackColors(C'230,230,230',C'230,230,230',C'230,230,230',clrSilver);
       this.m_header_panel.BackColorToDefault();
@@ -252,6 +257,21 @@
       if(m_table_area==NULL)
          return;
       this.m_table_area.SetBorderWidth(0);
+
+      //Print Debug
+       if(this.m_header_panel != NULL)
+         {
+            ::PrintFormat("DEBUG: [HeaderPanel] X=%d, Y=%d, W=%d, H=%d", 
+                        m_header_panel.X(), m_header_panel.Y(), 
+                        m_header_panel.Width(), m_header_panel.Height());
+         }
+
+       if(this.m_table_area != NULL)
+         {
+            ::PrintFormat("DEBUG: [TableArea] X=%d, Y=%d, W=%d, H=%d", 
+                        m_table_area.X(), m_table_area.Y(), 
+                        m_table_area.Width(), m_table_area.Height());
+         }
     }
    //+------------------------------------------------------------------+
    // | CTableView::Sets the table model |
@@ -480,6 +500,8 @@
      // --- If indicated, update the schedule
       if(chart_redraw)
          ::ChartRedraw(this.m_chart_id);
+         //Print(">>> CTableView::Draw");
+      
     }
    //+------------------------------------------------------------------+
    // | CTableView::Sets the row highlighting method |
@@ -589,6 +611,17 @@
 
       // --- 2. Save table-specific data (Example: row/col count)
       // if(!this.m_table.Save(file_handle)) return false;
+
+      return true;
+    }
+    bool CTableView::Load(const int file_handle)
+    {
+      // --- 1. Call parent (CPanel) to save common graphical data
+      if(!CPanel::Load(file_handle))
+         return false;
+
+      // --- 2. Load table-specific data (Example: row/col count)
+      // if(!this.m_table.Load(file_handle)) return false;
 
       return true;
     }

@@ -127,7 +127,7 @@ class CContainer;
    // --- Constructors/destructor
                         CPanel(void);
                         CPanel(const string object_name, const string text, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
-                     ~CPanel (void) { this.m_list_elm.Clear(); this.m_list_bounds.Clear(); }
+                        ~CPanel (void) { this.m_list_elm.Clear(); this.m_list_bounds.Clear(); }
   };
  #ifndef CPANEL_IMPLEMENTATION
  #define CPANEL_IMPLEMENTATION
@@ -159,8 +159,8 @@ class CContainer;
     {
      // --- Initialize default colors
       this.InitColors();
-     // --- Background is transparent, foreground is not
-      this.SetAlphaBG(0);
+     // --- Background is transparent, foreground is not      
+      this.SetAlphaBG(255); //| Modify m_alpha_bg(0) to m_alpha_bg(255) to meet MT5 5716 version |
       this.SetAlphaFG(255);
      // --- Set the offset and dimensions of the image area
       this.SetImageBound(0,0,this.Width(),this.Height());
@@ -217,18 +217,27 @@ class CContainer;
                                           this.ForeColor(),clr_dark,clr_light,this.AlphaFG(),true);
       
      // --- Updating the background canvas without redrawing the graph
-      this.m_background.Update(false);
-      
+      this.m_background.Update(false);      
      // --- Drawing list elements
       for(int i=0;i<this.m_list_elm.Total();i++)
       {
          CElementBase *elm=this.GetAttachedElementAt(i);
+         //If not SCROLLBAR then Draw
          if(elm!=NULL && elm.Type()!=ELEMENT_TYPE_SCROLLBAR_H && elm.Type()!=ELEMENT_TYPE_SCROLLBAR_V)
             elm.Draw(false);
+         //Print Debug
+          if(elm != NULL)
+            {
+               // ::PrintFormat("DEBUG: [Draw Loop] Element: %s | Type: %d | Pos: (%d, %d)", 
+               //             elm.Name(), elm.Type(), elm.X(), elm.Y());               
+               elm.Draw(false);
+            }
       }
      // --- If indicated, update the schedule
       if(chart_redraw)
          ::ChartRedraw(this.m_chart_id);
+      //Print Debug
+      ::Print(">>> CPanel::Draw: ", this.Name());
     }
    //+------------------------------------------------------------------+
    // | CPanel::Adds a new element to the list |

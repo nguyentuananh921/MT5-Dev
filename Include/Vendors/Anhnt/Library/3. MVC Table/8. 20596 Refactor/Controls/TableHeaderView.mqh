@@ -6,7 +6,9 @@
 //| First See in:                                                    |
 //|   Integrating the Model Component into the View Component        |
 //|                           https://www.mql5.com/en/articles/19288 |
+//| Update in: Symbol Correlation Table                              |
 //|                           https://www.mql5.com/ru/articles/20596 |
+//| Current:                  https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"

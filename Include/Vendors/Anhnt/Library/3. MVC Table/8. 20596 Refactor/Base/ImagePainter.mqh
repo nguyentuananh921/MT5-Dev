@@ -9,6 +9,8 @@
 //|                           https://www.mql5.com/en/articles/18658 |
 //| Update in: Resizable elements                                    |
 //|                           https://www.mql5.com/en/articles/18941 |
+//| Update in: Customizable and sortable table columns               |
+//|                           https://www.mql5.com/en/articles/19979 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -84,11 +86,12 @@ class CImagePainter : public CBaseObj
       // --- Draws a diagonal (1) top-left --- down-right, (2) bottom-left --- up-right 17x17 double arrow
          bool              ArrowNWSE(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
          bool              ArrowNESW(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
-   
-   // --- Draws an 18x18 offset arrow along (1) horizontal, (2) vertical
+   //| Update in: Customizable and sortable table columns               |
+   //|                           https://www.mql5.com/en/articles/19979 |
+    // --- Draws an 18x18 offset arrow along (1) horizontal, (2) vertical
       bool              ArrowShiftHorz(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              ArrowShiftVert(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
-   
+   //--------------------------------------------------------------------
    // --- Draws a (1) checked, (2) unchecked CheckBox
       bool              CheckedBox(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              UncheckedBox(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
@@ -102,8 +105,9 @@ class CImagePainter : public CBaseObj
       bool              FrameGroupElements(const int x,const int y,const int w,const int h,const string text,
                                        const color clr_text,const color clr_dark,const color clr_light,
                                        const uchar alpha,const bool update=true);
-   
-   // --- Draws a filled triangle at (1) top-left, (2) bottom-left, (3) top-right, (4) bottom-right corner
+   //| Update in: Symbol Correlation Table                              |
+   //|                           https://www.mql5.com/ru/articles/20596 |
+    // --- Draws a filled triangle at (1) top-left, (2) bottom-left, (3) top-right, (4) bottom-right corner
       bool              TriangleLT(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              TriangleLB(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);
       bool              TriangleRT(const int x,const int y,const int w,const int h,const color clr,const uchar alpha,const bool update=true);

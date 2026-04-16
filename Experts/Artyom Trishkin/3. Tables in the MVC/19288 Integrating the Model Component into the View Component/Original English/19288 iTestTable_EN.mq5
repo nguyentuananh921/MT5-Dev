@@ -13,7 +13,7 @@
 //+------------------------------------------------------------------+
 // | Included Libraries |
 //+------------------------------------------------------------------+
-#include "Controls\Controls.mqh"    // Controls Library
+#include "Controls\Controls_En.mqh"    // Controls Library
 
 CPanel     *panel=NULL; // Pointer to the Panel graphic element
 CTable     *table;      // Pointer to a table object (Model)

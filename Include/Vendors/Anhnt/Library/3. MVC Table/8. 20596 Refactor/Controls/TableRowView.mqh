@@ -46,15 +46,17 @@
          CTableCellView   *InsertNewCellView(const int index,const string text,const int dx,const int dy,const int w,const int h);
       // --- Deletes the specified row area and the cell at the corresponding index
          bool              BoundCellDelete(const int index);
-      // --- Returns a visual representation of (1) table, (2) column headers, (3) rows
+      //| Update in: Symbol Correlation Table                              |
+      //|                           https://www.mql5.com/ru/articles/20596 |
+       // --- Returns a visual representation of (1) table, (2) column headers, (3) rows
          CTableView       *GetTableView(void);
          CTableHeaderView *GetHeaderView(void);
          CTableRowsHeaderView *GetRowsHeaderView(void);
          
-      // --- Sets the specified header (1) column, (2) row as selected
+       // --- Sets the specified header (1) column, (2) row as selected
          void              SetColumnCaptionSelected(const uint index);
          void              SetRowCaptionSelected(const uint index);
-      // --- Deselects all (1) column, (2) row headers
+       // --- Deselects all (1) column, (2) row headers
          void              SetAllColumnCaptionsUnselected(const int exclude=-1);
          void              SetAllRowCaptionsUnselected(const int exclude=-1);
          
@@ -63,6 +65,8 @@
          CListElm         *GetListCells(void)                                 { return &this.m_list_cells;                       }
          int               CellsTotal(void)                             const { return this.m_list_cells.Total();                }
          CTableCellView   *GetCellView(const uint index)                      { return this.m_list_cells.GetNodeAtIndex(index);  }
+      //| Update in: Symbol Correlation Table                              |
+      //|                           https://www.mql5.com/ru/articles/20596 |   
          CColumnCaptionView *GetColumnCaption(const uint index);
          CRowCaptionView  *GetRowCaption(const uint index);
          
@@ -77,8 +81,9 @@
          CTableRow        *GetTableRowModel(void)                             { return this.m_table_row_model;                   }
       // --- Updates the stack with the updated model
          bool              TableRowModelUpdate(CTableRow *row_model);
-
-      // --- (1) Sets, (2) returns the line highlighting mode
+      //| Update in: Symbol Correlation Table                              |
+      //|                           https://www.mql5.com/ru/articles/20596 |
+       // --- (1) Sets, (2) returns the line highlighting mode
          void              SetHighlightMode(const ENUM_ROWS_HIGHLIGHT_MODE mode) { this.m_highlight_mode=mode;                   }
          ENUM_ROWS_HIGHLIGHT_MODE HighlightMode(void)                   const { return this.m_highlight_mode;                    }
          
@@ -100,8 +105,9 @@
       // --- Initialize (1) class object, (2) default object colors
          void              Init(void);
          virtual void      InitColors(void);
-
-      // --- Event handlers for (1) cursor hover (Focus), (2) mouse button clicks (Press),
+      //| Update in: Symbol Correlation Table                              |
+      //|                           https://www.mql5.com/ru/articles/20596 |
+       // --- Event handlers for (1) cursor hover (Focus), (2) mouse button clicks (Press),
          virtual void      OnFocusEvent(const int id, const long lparam, const double dparam, const string sparam);
          virtual void      OnPressEvent(const int id, const long lparam, const double dparam, const string sparam);
          

@@ -3,8 +3,11 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//|                                                                  |
+//| First See in: Customizable and sortable table columns            |
+//|                           https://www.mql5.com/en/articles/19979 |
+//| Update in: Symbol Correlation Table                              |
 //|                           https://www.mql5.com/ru/articles/20596 |
+//| Current:                  https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
@@ -20,6 +23,8 @@
    //+------------------------------------------------------------------+
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
+   #include "..\Collections\ListObj.mqh"
+   #include "TableCellView.mqh"
    #include "Panel.mqh"
    class CTable;
    class CTableView;
@@ -28,9 +33,11 @@
   class CTableControl : public CPanel
   {
    private:
-   // --- Returns the maximum value of an integer array
+   //| Update in: Symbol Correlation Table                              |
+   //|                           https://www.mql5.com/ru/articles/20596 |
+    // --- Returns the maximum value of an integer array
       bool              ArrayMaximumValue(int &array[],int &value);
-   // --- Returns the maximum text width in the row header array
+    // --- Returns the maximum text width in the row header array
       int               GetMaximumRowCaptionTextSize(string &array_row_captions[]);
       
    protected:
@@ -52,7 +59,9 @@
       CTableView       *TableCreate(const uint num_rows, const uint num_columns,const int table_id=WRONG_VALUE);
       CTableView       *TableCreate(const matrix &row_data,const string &column_names[],const int table_id=WRONG_VALUE);
       CTableView       *TableCreate(CList &row_data,const string &column_names[],const int table_id=WRONG_VALUE);
-   template<typename T>
+   //| Update in: Symbol Correlation Table                              |
+   //|                           https://www.mql5.com/ru/articles/20596 |
+    template<typename T>
       CTableView       *TableCreate(T &row_data[][],const string &column_names[],string &row_names[],const int table_id=WRONG_VALUE);
       CTableView       *TableCreate(const uint num_rows, const uint num_columns,string &row_names[],const int table_id=WRONG_VALUE);
       CTableView       *TableCreate(const matrix &row_data,const string &column_names[],string &row_names[],const int table_id=WRONG_VALUE);
@@ -84,12 +93,13 @@
       void              ColumnSetColorNamesFlag(const uint table, const uint col, const bool flag, const bool cells_redraw, const bool chart_redraw);
       void              ColumnSetTextAnchor(const uint table, const uint col, const ENUM_ANCHOR_POINT anchor, const bool cells_redraw, const bool chart_redraw);
       void              ColumnSetDatatype(const uint table, const uint col, const ENUM_DATATYPE type, const bool cells_redraw, const bool chart_redraw);
-
-   // --- Returns the number of (1) rows, (2) cells per row in the specified table
+   //| Update in: Symbol Correlation Table                              |
+   //|                           https://www.mql5.com/ru/articles/20596 |
+     // --- Returns the number of (1) rows, (2) cells per row in the specified table
       uint              RowsTotal(const uint table);
       uint              CellsInRow(const uint table,const uint row);
 
-   // --- Sets (1) the row highlighting mode, (2) the ability to sort the specified table
+     // --- Sets (1) the row highlighting mode, (2) the ability to sort the specified table
       void              SetRowsHighlightMode(const uint table,const ENUM_ROWS_HIGHLIGHT_MODE highlight_mode);
       void              SetSortable(const uint table,const bool flag);
       
@@ -99,7 +109,7 @@
    // --- Constructors/destructor
                         CTableControl(void) { this.m_list_table_model.Clear(); }
                         CTableControl(const string object_name, const long chart_id, const int wnd, const int x, const int y, const int w, const int h);
-                     ~CTableControl(void) {}
+                        ~CTableControl(void) {}
   };
  #ifndef CTABLECONTROL_IMPLEMENTATION
  #define CTABLECONTROL_IMPLEMENTATION

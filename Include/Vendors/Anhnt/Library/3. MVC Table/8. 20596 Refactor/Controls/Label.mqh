@@ -105,7 +105,7 @@
       this.SetText(text);
       this.SetTextPrev("");
      // --- Background is transparent, foreground is not
-      this.SetAlphaBG(0);
+      this.SetAlphaBG(255);  //| Modify m_alpha_bg(0) to m_alpha_bg(255) to meet MT5 5716 version |
       this.SetAlphaFG(255);
     }
    //+------------------------------------------------------------------+

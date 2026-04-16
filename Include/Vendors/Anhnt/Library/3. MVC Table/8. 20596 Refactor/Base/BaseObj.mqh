@@ -50,11 +50,12 @@
    // --- Returns (1) name, (2) identifier
       string            Name(void)                          const { return ::ShortArrayToString(this.m_name);        }
       int               ID(void)                            const { return this.m_id;                                }
-
-   // --- Returns the coordinates of the cursor
+   //| Update in: Customizable and sortable table columns               |
+   //|                           https://www.mql5.com/en/articles/19979 |
+     // --- Returns the coordinates of the cursor
       int               CursorX(void)                       const { return CCommonManager::GetInstance().CursorX();  }
       int               CursorY(void)                       const { return CCommonManager::GetInstance().CursorY();  }
-
+   //--------------------------------------------------------------------
       // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
          virtual int       Compare(const CObject *node,const int mode=0) const;
       //| Update in                                                        |

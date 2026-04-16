@@ -1,5 +1,7 @@
-Cậu ơi. Tác giả Artyom Trishkin 
+Cậu ơi. 
+Tác giả Artyom Trishkin 
 https://www.mql5.com/en/users/artmedia70
+Có Series 8 bài về Table Control Apply MVC
 1	Applying the MVC concept https://www.mql5.com/en/articles/17653
 2	Base graphical element https://www.mql5.com/en/articles/17960
 3	Simple controls https://www.mql5.com/en/articles/18221
@@ -9,7 +11,14 @@ https://www.mql5.com/en/users/artmedia70
 7	Customizable and sortable table columns https://www.mql5.com/en/articles/19979
 8	Symbol Correlation Table https://www.mql5.com/en/articles/20596
 
-Bài nào thì cuối bài cũng có code đi kèm. Ở bài số 8 thì Các class khác nhau được viết chung trong 1 file. Giờ tớ tìm cách tách cái file đấy ra để mỗi class là một file riêng biệt. 
+Bài nào thì cuối bài cũng có code đi kèm. Bài nào cũng có code đi kèm ở cuối bài bao gồm:
+1. Indicator file.
+2. Library file thường sẽ có 2 hoặc 3 tuy bài Base,Control, Table, mỗi file gồm nhiều class.
+
+Từ bài số 3 ngay khi build code gốc thì cái kết quả đã không như ở cuối bài.
+Chắc chúng ta phải rà soát lại cái library cậu nhỉ. Có thể có cái sự thay đổi quái quỷ gì ở MQL5 ấy
+
+Ở bài số 8 thì Các class khác nhau được viết chung trong 1 file. Giờ tớ tìm cách tách cái file đấy ra để mỗi class là một file riêng biệt. 
 
 
 Cậu ơi, tớ có 2 EA cùng dùng Library của bài này.

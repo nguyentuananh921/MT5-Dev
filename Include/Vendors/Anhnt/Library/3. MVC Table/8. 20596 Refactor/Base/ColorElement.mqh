@@ -49,8 +49,9 @@
       public:
       // --- Returns the new color
          color             NewColor(color base_color, int shift_red, int shift_green, int shift_blue);
-
-      // --- Returns an interpolated color between three colors depending on the coefficient value (from -1 to +1)
+      //| Update in: Symbol Correlation Table                              |
+      //|                           https://www.mql5.com/ru/articles/20596 |
+         // --- Returns an interpolated color between three colors depending on the coefficient value (from -1 to +1)
          color             InterpolateColorByCoeff(const color color1, const color color2, const color color3, const double coeff);
       //| Update in                                                        |
       //|       Simple controls                                            |

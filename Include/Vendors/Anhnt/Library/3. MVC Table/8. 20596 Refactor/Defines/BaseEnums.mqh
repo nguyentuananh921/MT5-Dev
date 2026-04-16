@@ -47,7 +47,10 @@
       ELEMENT_TYPE_TABLE_HEADER_VIEW,        // Table title (View)
       ELEMENT_TYPE_TABLE_ROWS_HEADER_VIEW,   // Table row header (View)
       ELEMENT_TYPE_TABLE_VIEW,               // Table (View)
-      ELEMENT_TYPE_TABLE_CONTROL_VIEW,       // Table Control (View)
+   //| Update in: Customizable and sortable table columns               |
+   //|                           https://www.mql5.com/en/articles/19979 |
+      ELEMENT_TYPE_TABLE_CONTROL_VIEW,       // Table Control (View) 
+   //--------------------------------------------------------------------   
       ELEMENT_TYPE_PANEL,                    // Panel control
       ELEMENT_TYPE_GROUPBOX,                 // GroupBox control
       ELEMENT_TYPE_CONTAINER,                // Container control

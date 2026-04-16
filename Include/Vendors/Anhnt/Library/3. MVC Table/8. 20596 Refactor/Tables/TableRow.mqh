@@ -4,6 +4,8 @@
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
 //| First See in             https://www.mql5.com/en/articles/17653  |
+//| Update in: Customizable and sortable table columns               |
+//|                           https://www.mql5.com/en/articles/19979 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -111,33 +113,35 @@
             const CTableRow *obj=node;
             return(this.Index()>obj.Index() ? 1 : this.Index()<obj.Index() ? -1 : 0);
         }
-        
-    //---
-        bool asc=(mode>=ASC_IDX_CORRECTION && mode<DESC_IDX_CORRECTION);
-        int  col= mode%(asc ? ASC_IDX_CORRECTION : DESC_IDX_CORRECTION);
-            
-    // --- Remove node constancy
-        CTableRow *nonconst_this=(CTableRow*)&this;
-        CTableRow *nonconst_node=(CTableRow*)node;
+    //| Update in: Customizable and sortable table columns               |
+    //|                           https://www.mql5.com/en/articles/19979 |
+        //--- Sort by cell index in ascending/descending order
+        //--- Sorting direction flag and cell index for sorting    
+            bool asc=(mode>=ASC_IDX_CORRECTION && mode<DESC_IDX_CORRECTION);
+            int  col= mode%(asc ? ASC_IDX_CORRECTION : DESC_IDX_CORRECTION);
+                
+        // --- Remove node constancy
+            CTableRow *nonconst_this=(CTableRow*)&this;
+            CTableRow *nonconst_node=(CTableRow*)node;
 
-    // --- Get the current and compared cells by index mode
-        CTableCell *cell_current =nonconst_this.GetCell(col);
-        CTableCell *cell_compared=nonconst_node.GetCell(col);
-        if(cell_current==NULL || cell_compared==NULL)
-            return -1;
-        
-    // --- Compare depending on cell type
-        int cmp=0;
-        switch(cell_current.Datatype())
-        {
-            case TYPE_DOUBLE  :  cmp=(cell_current.ValueD()>cell_compared.ValueD() ? 1 : cell_current.ValueD()<cell_compared.ValueD() ? -1 : 0); break;
-            case TYPE_LONG    :
-            case TYPE_DATETIME:
-            case TYPE_COLOR   :  cmp=(cell_current.ValueL()>cell_compared.ValueL() ? 1 : cell_current.ValueL()<cell_compared.ValueL() ? -1 : 0); break;
-            case TYPE_STRING  :  cmp=::StringCompare(cell_current.ValueS(),cell_compared.ValueS());                                              break;
-            default           :  break;
-        }
-        return(asc ? cmp : -cmp);   
+        // --- Get the current and compared cells by index mode
+            CTableCell *cell_current =nonconst_this.GetCell(col);
+            CTableCell *cell_compared=nonconst_node.GetCell(col);
+            if(cell_current==NULL || cell_compared==NULL)
+                return -1;
+            
+        // --- Compare depending on cell type
+            int cmp=0;
+            switch(cell_current.Datatype())
+            {
+                case TYPE_DOUBLE  :  cmp=(cell_current.ValueD()>cell_compared.ValueD() ? 1 : cell_current.ValueD()<cell_compared.ValueD() ? -1 : 0); break;
+                case TYPE_LONG    :
+                case TYPE_DATETIME:
+                case TYPE_COLOR   :  cmp=(cell_current.ValueL()>cell_compared.ValueL() ? 1 : cell_current.ValueL()<cell_compared.ValueL() ? -1 : 0); break;
+                case TYPE_STRING  :  cmp=::StringCompare(cell_current.ValueS(),cell_compared.ValueS());                                              break;
+                default           :  break;
+            }
+            return(asc ? cmp : -cmp);   
    }
    //+------------------------------------------------------------------+
    // | Creates a new double cell and adds it to the end of the list |

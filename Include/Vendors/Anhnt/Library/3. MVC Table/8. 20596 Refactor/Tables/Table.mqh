@@ -4,6 +4,8 @@
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
 //| First See in             https://www.mql5.com/en/articles/17653  |
+//| Update in: Customizable and sortable table columns               |
+//|                           https://www.mql5.com/en/articles/19979 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -140,6 +142,8 @@
       // --- flags for displaying (3) time, (4) color names to the specified column
          void              ColumnCaptionSetValue(const uint index,const string value);
          void              ColumnSetDigits(const uint index,const int digits);
+      //| Update in: Customizable and sortable table columns               |
+      //|                           https://www.mql5.com/en/articles/19979 |
          void              ColumnSetTimeFlags(const uint index,const uint flags);
          void              ColumnSetColorNamesFlag(const uint col, const bool flag);
          
@@ -150,7 +154,8 @@
       // --- (1) Returns, (2) logs a description of the object
          virtual string    Description(void);
          void              Print(const int column_width=CELL_WIDTH_IN_CHARS);
-      
+      //| Update in: Customizable and sortable table columns               |
+      //|                           https://www.mql5.com/en/articles/19979 |
       // --- Sorts the table by the specified column and direction
          void              SortByColumn(const uint column, const bool descending)
                            {

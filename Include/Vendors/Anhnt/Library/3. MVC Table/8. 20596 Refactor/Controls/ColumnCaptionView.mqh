@@ -23,7 +23,10 @@
    //| Included Custome Libraries                                       |
    //+------------------------------------------------------------------+
    #include "CaptionView.mqh"
-   #include "..\Tables\ColumnCaption.mqh"   
+   #include "..\Tables\ColumnCaption.mqh"
+//| Update in: Symbol Correlation Table                              |
+//|                           https://www.mql5.com/ru/articles/20596 |
+//|         class CColumnCaptionView : public CButton                |   
  class CColumnCaptionView : public CCaptionView
   {
    protected:

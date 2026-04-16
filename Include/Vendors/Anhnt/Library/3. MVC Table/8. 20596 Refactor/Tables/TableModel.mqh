@@ -3,7 +3,10 @@
 //|                                  Copyright 2025, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //| MVC Paradigm in MQL5                                             |
-//| First See in             https://www.mql5.com/en/articles/17653  |
+//| First See in: Applying the MVC concept                           |
+//|                           https://www.mql5.com/en/articles/17653 |
+//| Update in: Customizable and sortable table columns               |
+//|                           https://www.mql5.com/en/articles/19979 |
 //| Current                   https://www.mql5.com/ru/articles/20596 |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, MetaQuotes Ltd."
@@ -106,11 +109,12 @@
       void              ColumnClearData(const uint index);
       void              ColumnSetDatatype(const uint index,const ENUM_DATATYPE type);
       void              ColumnSetDigits(const uint index,const int digits);
-      
+   //| Update in: Customizable and sortable table columns               |
+   //|                           https://www.mql5.com/en/articles/19979 |
       void              ColumnSetTimeFlags(const uint index, const uint flags);
       void              ColumnSetColorNamesFlag(const uint index, const bool flag);
    
-   // --- Sorts the table by the specified column and direction
+     // --- Sorts the table by the specified column and direction
       void              SortByColumn(const uint column, const bool descending);
       
    // --- (1) Returns, (2) logs the table description

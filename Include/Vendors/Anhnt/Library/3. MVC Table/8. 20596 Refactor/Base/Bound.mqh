@@ -72,10 +72,10 @@
          void              UnassignObject(void)                      { this.m_assigned_obj=NULL;                                    }           
          CBaseObj         *GetAssignedObj(void)                      { return this.m_assigned_obj;                                  }
       
-      // --- Returns a description of the object
+   // --- Returns a description of the object
          virtual string    Description(void);
       
-      // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+   // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
          virtual int       Compare(const CObject *node,const int mode=0) const;
          virtual bool      Save(const int file_handle);
          virtual bool      Load(const int file_handle);

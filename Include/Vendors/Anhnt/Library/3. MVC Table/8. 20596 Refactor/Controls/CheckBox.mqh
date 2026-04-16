@@ -75,7 +75,7 @@
       // --- Set default colors, transparency for background and foreground,
       // --- and coordinates and boundaries of the button icon drawing area
          this.InitColors();
-         this.SetAlphaBG(0);
+         this.SetAlphaBG(255);        //| Modify m_alpha_bg(0) to m_alpha_bg(255) to meet MT5 5716 version |
          this.SetAlphaFG(255);
          this.SetImageBound(1,1,this.Height()-2,this.Height()-2);
     }
