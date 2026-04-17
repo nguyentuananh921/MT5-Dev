@@ -44,47 +44,47 @@
       ushort            m_name[];                                 // Name
       
    public:
-   // --- Sets (1) name, (2) identifier
-      void              SetName(const string name)                { ::StringToShortArray(name,this.m_name);          }
-      virtual void      SetID(const int id)                       { this.m_id=id;                                    }
-   // --- Returns (1) name, (2) identifier
-      string            Name(void)                          const { return ::ShortArrayToString(this.m_name);        }
-      int               ID(void)                            const { return this.m_id;                                }
-   //| Update in: Customizable and sortable table columns               |
-   //|                           https://www.mql5.com/en/articles/19979 |
-     // --- Returns the coordinates of the cursor
-      int               CursorX(void)                       const { return CCommonManager::GetInstance().CursorX();  }
-      int               CursorY(void)                       const { return CCommonManager::GetInstance().CursorY();  }
-   //--------------------------------------------------------------------
-      // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
-         virtual int       Compare(const CObject *node,const int mode=0) const;
-      //| Update in                                                        |
-      //|       Simple controls                                            |
-      //|                           https://www.mql5.com/en/articles/18221 | 
-         virtual bool      Save(const int file_handle);
-         virtual bool      Load(const int file_handle);
-      virtual int       Type(void)                          const { return(ELEMENT_TYPE_BASE); }
-      //Virtual method to move function to class
-         // --- Virtual method to get short name replace ElementShortName function
-         virtual string    ShortName(void) const { return CBaseObj::FormatElementShortName((ENUM_ELEMENT_TYPE)this.Type()); }
-         // --- Helper for element short names (Replacing ElementShortName)
-         static string     FormatElementShortName(const ENUM_ELEMENT_TYPE type);
-         // --- Helper for standard MT5 object types (Replacing TypeDescription) Returns the object type as a string
-         static string            FormatObjectType(const ENUM_OBJECT_TYPE type);   
-         // --- Helper for library element types (Replacing ElementDescription) Returns the element type as a string
-         static string            FormatElementType(const ENUM_ELEMENT_TYPE type); 
-         // --- Static helper to split element names by delimiter 
-         static int        GetElementNames(string value, string sep, string &array[]);  
-      //| Update in                                                        |
-      //|       Simple controls                                            |
-      //|                           https://www.mql5.com/en/articles/18221 |  
-         // --- (1) Returns, (2) logs a description of the object
-         virtual string    Description(void);
-         virtual void      Print(void);
-      
-   // --- Constructor/destructor
-                     CBaseObj (void) : m_id(-1) { this.SetName(""); }
-                     ~CBaseObj (void) {}
+      // --- Sets (1) name, (2) identifier
+         void              SetName(const string name)                { ::StringToShortArray(name,this.m_name);          }
+         virtual void      SetID(const int id)                       { this.m_id=id;                                    }
+      // --- Returns (1) name, (2) identifier
+         string            Name(void)                          const { return ::ShortArrayToString(this.m_name);        }
+         int               ID(void)                            const { return this.m_id;                                }
+      //| Update in: Customizable and sortable table columns               |
+      //|                           https://www.mql5.com/en/articles/19979 |
+      // --- Returns the coordinates of the cursor
+         int               CursorX(void)                       const { return CCommonManager::GetInstance().CursorX();  }
+         int               CursorY(void)                       const { return CCommonManager::GetInstance().CursorY();  }
+      //--------------------------------------------------------------------
+         // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+            virtual int       Compare(const CObject *node,const int mode=0) const;
+         //| Update in                                                        |
+         //|       Simple controls                                            |
+         //|                           https://www.mql5.com/en/articles/18221 | 
+            virtual bool      Save(const int file_handle);
+            virtual bool      Load(const int file_handle);
+         virtual int       Type(void)                          const { return(ELEMENT_TYPE_BASE); }
+         //Virtual method to move function to class
+            // --- Virtual method to get short name replace ElementShortName function
+            virtual string    ShortName(void) const { return CBaseObj::FormatElementShortName((ENUM_ELEMENT_TYPE)this.Type()); }
+            // --- Helper for element short names (Replacing ElementShortName)
+            static string     FormatElementShortName(const ENUM_ELEMENT_TYPE type);
+            // --- Helper for standard MT5 object types (Replacing TypeDescription) Returns the object type as a string
+            static string            FormatObjectType(const ENUM_OBJECT_TYPE type);   
+            // --- Helper for library element types (Replacing ElementDescription) Returns the element type as a string
+            static string            FormatElementType(const ENUM_ELEMENT_TYPE type); 
+            // --- Static helper to split element names by delimiter 
+            static int        GetElementNames(string value, string sep, string &array[]);  
+         //| Update in                                                        |
+         //|       Simple controls                                            |
+         //|                           https://www.mql5.com/en/articles/18221 |  
+            // --- (1) Returns, (2) logs a description of the object
+            virtual string    Description(void);
+            virtual void      Print(void);
+         
+      // --- Constructor/destructor
+                        CBaseObj (void) : m_id(-1) { this.SetName(""); }
+                        ~CBaseObj (void) {}
   };
 #ifndef __CBASEOBJ_IMPLEMENTATION__
 #define __CBASEOBJ_IMPLEMENTATION__

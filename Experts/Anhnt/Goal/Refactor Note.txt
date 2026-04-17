@@ -79,3 +79,5 @@ DebLib.mqh
     CVisualHint* CElementBase::CreateNewHint(...) { ... }
     CVisualHint* CElementBase::CreateAndAddNewHint(...) { ... }
     // ... tất cả ResizeZone*Handler ...	
+
+GetAndCalculateData
