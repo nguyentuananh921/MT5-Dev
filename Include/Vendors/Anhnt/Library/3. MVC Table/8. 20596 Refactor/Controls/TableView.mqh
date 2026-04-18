@@ -160,19 +160,19 @@
       this.Init();
     }
    //+------------------------------------------------------------------+
-   // | CTableView::Parametric constructor.                         |
-   // | Plots an element in the specified window of the specified chart |
-   // | with specified text, coordinates and dimensions |
+   //| CTableView::Parametric constructor.                              |
+   //| Plots an element in the specified window of the specified chart  |
+   //| with specified text, coordinates and dimensions                  |
    //+------------------------------------------------------------------+
    CTableView::CTableView(const string object_name,const string text,const long chart_id,const int wnd,const int x,const int y,const int w,const int h) :
       CPanel(object_name,text,chart_id,wnd,x,y,w,h),m_table_model(NULL),m_header_model(NULL),m_rows_header_view(NULL),m_table_obj(NULL),m_header_view(NULL),
       m_table_area(NULL),m_table_area_container(NULL),m_rows_header_panel_w(0),m_sortable(true)
     {
-     // ---Initialization
+      // ---Initialization
       this.Init();
     }
    //+------------------------------------------------------------------+
-   // | CTableView::Initialization |
+   //| CTableView::Initialization                                       |
    //+------------------------------------------------------------------+
    void CTableView::Init(void)
     {
@@ -191,12 +191,10 @@
       
      // --- X coordinate offset for table header and rows (vertical row header width)
       int dx=(int)::StringToInteger(this.Text());
-
       this.m_rows_header_panel_w=dx;
       this.SetText("");
       if(dx>DEF_TABLE_ROWS_HEADER_W)
-         dx+=12;
-      
+         dx+=12;      
      // --- Coordinates and dimensions of the table header panel (table header is horizontal)
       int x=1+dx;
       int y=1;
@@ -215,8 +213,7 @@
       this.m_header_view=this.m_header_panel.InsertNewElement(ELEMENT_TYPE_TABLE_HEADER_VIEW,"","TableHeader",0,0,this.m_header_panel.Width(),this.m_header_panel.Height());
       if(this.m_header_view==NULL)
          return;
-      this.m_header_view.SetBorderWidth(0);
-      
+      this.m_header_view.SetBorderWidth(0);      
      // --- Coordinates and dimensions of the panel for the table row header (the table header is vertical)
       x=1;
       y=DEF_TABLE_HEADER_H;
@@ -238,8 +235,7 @@
       this.m_rows_header_view.SetBorderWidth(0);
       this.m_rows_header_view.SetAlphaBG(0);
       if(this.m_rows_header_panel_w==0)
-         this.m_rows_header_view.Hide(false);
-      
+         this.m_rows_header_view.Hide(false);      
      // --- Coordinates and dimensions of the container in which the table row panel will be located
       x=1+dx;
       y=1+DEF_TABLE_HEADER_H;
@@ -250,8 +246,7 @@
       if(this.m_table_area_container==NULL)
          return;
       this.m_table_area_container.SetBorderWidth(0);
-      this.m_table_area_container.SetScrollable(true);
-      
+      this.m_table_area_container.SetScrollable(true);      
      // --- Attach a panel to the container for storing table rows
       this.m_table_area=this.m_table_area_container.InsertNewElement(ELEMENT_TYPE_PANEL,"","TableAreaPanel",0,0,this.m_table_area_container.Width()-0,this.m_table_area_container.Height()-0);
       if(m_table_area==NULL)
@@ -395,20 +390,26 @@
       return this.m_table_area.ResizeH(table_height+y);
     }
    //+------------------------------------------------------------------+
-   // | CTableView::Updates a modified table |
+   //| CTableView::Updates a modified table                             |
    //+------------------------------------------------------------------+
    bool CTableView::UpdateTable(void)
     {
-      if(this.m_table_area==NULL)
-         return false;
+      // //Print Debug
+      //    ::Print("--- ĐÃ VÀO HÀM UPDATETABLE ---"); // Thêm dòng này ở ĐẦU HÀM  
       
+      //Continue Original
+      if(this.m_table_area==NULL)
+         {
+            ::Print("From CTableView::UpdateTable LỖI: m_table_area bị NULL!");
+            return false; 
+         }
+              
       int total_model=(int)this.m_table_model.RowsTotal();        // Number of rows in the model
       int total_view =this.m_table_area.AttachedElementsTotal();  // Number of rows in visual representation
       int diff=total_model-total_view;                            // Difference in number of rows of two components
       int y=1;                                                    // Vertical offset
       int table_height=0;                                         // Calculated panel height
-      CTableRowView *row=NULL;                                    // Pointer to a string rendering object
-      
+      CTableRowView *row=NULL;                                    // Pointer to a string rendering object      
      // --- If there are more rows in the model than in the visual representation, we will create the missing rows in the visual representation at the end of the list
       if(diff>0)
       {
@@ -423,7 +424,6 @@
                return false;
          }
       }
-
      // --- If there are more lines in the visual representation than in the model, delete the extra lines in the visual representation at the end of the list
       if(diff<0)
       {
@@ -438,45 +438,49 @@
             res &=list.Delete(i);
          if(!res)
             return false;
-      }
-      
+      }      
      // --- Looping through a list of table model rows
       for(int i=0;i<total_model;i++)
       {
          // --- we get from the list of the row panel the next object of visual representation of a table row
-         row=this.m_table_area.GetAttachedElementAt(i);
-         if(row==NULL)
+          row=this.m_table_area.GetAttachedElementAt(i);
+          if(row==NULL)
             return false;
          // --- Let's check the object type
-         if(row.Type()!=ELEMENT_TYPE_TABLE_ROW_VIEW)
-            continue;
-            
+          if(row.Type()!=ELEMENT_TYPE_TABLE_ROW_VIEW)
+            continue;            
          // --- Set the row identifier
-         row.SetID(i);
-         row.SetIndex(i);
+           row.SetID(i);
+           row.SetIndex(i);
          // --- Depending on the line number (even/odd), we set its background color
-         if(row.ID()%2==0)
+          if(row.ID()%2==0)
             row.InitBackColorDefault(clrWhite);
-         else
+          else
             row.InitBackColorDefault(C'242,242,242');
-         row.BackColorToDefault();
-         row.InitBackColorFocused(row.GetBackColorControl().NewColor(row.BackColor(),-4,-4,-4));
-         
+            row.BackColorToDefault();
+            row.InitBackColorFocused(row.GetBackColorControl().NewColor(row.BackColor(),-4,-4,-4));         
          // --- Getting the row model from the table object
-         CTableRow *row_model=this.m_table_model.GetRow(i);
-         if(row_model==NULL)
+          CTableRow *row_model=this.m_table_model.GetRow(i);
+          if(row_model==NULL)
             return false;
-
          // --- Update the cells of the table row object according to the row model
-         row.TableRowModelUpdate(row_model);
+          row.TableRowModelUpdate(row_model);
          // --- Calculate the new value of the panel height
-         table_height+=row.Height();
+          table_height+=row.Height();
+         // //Print Debug 
+         //    // Lấy con trỏ đến Cell thứ 0
+         //    CTableCell *cell = row_model.GetCell(0);
+         //    if(cell != NULL)
+         //       {
+         //          // In ra giá trị thuần của Cell để đối chiếu với tab Experts
+         //          ::Print("Debug: Row ", i, " | Cell 0 Value = ", cell.Value()); 
+         //       }   
       }
      // --- Return the result of resizing the panel to the value calculated in the loop
       return this.m_table_area.ResizeH(table_height+y);
     }
    //+------------------------------------------------------------------+
-   // | CTableView::Draws appearance |
+   //| CTableView::Draws appearance |
    //+------------------------------------------------------------------+
    void CTableView::Draw(const bool chart_redraw)
     {

@@ -15,7 +15,7 @@
  #include "Colors.mqh"
  #include <Graphics\Graphic.mqh>
  #include <ChartObjects\ChartObjectSubChart.mqh>
- #include <EasyAndFastGUI\Resources.mqh>
+ #include "Resources.mqh"
  class CImage
   {
 protected:
@@ -31,15 +31,15 @@ public:
                      CImage(void);
                     ~CImage(void);
    // --- (1) Data array size, (2) set/return data (pixel color)
-   uint              DataTotal(void)                             { return(::ArraySize(m_image_data)); }
-   uint              Data(const uint data_index)                 { return(m_image_data[data_index]);  }
-   void              Data(const uint data_index,const uint data) { m_image_data[data_index]=data;     }
+    uint              DataTotal(void)                             { return(::ArraySize(m_image_data)); }
+    uint              Data(const uint data_index)                 { return(m_image_data[data_index]);  }
+    void              Data(const uint data_index,const uint data) { m_image_data[data_index]=data;     }
    // --- Set/return image width
-   void              Width(const uint width)                     { m_image_width=width;               }
-   uint              Width(void)                                 { return(m_image_width);             }
+    void              Width(const uint width)                     { m_image_width=width;               }
+    uint              Width(void)                                 { return(m_image_width);             }
    // --- Set/return image height
-   void              Height(const uint height)                   { m_image_height=height;             }
-   uint              Height(void)                                { return(m_image_height);            }
+    void              Height(const uint height)                   { m_image_height=height;             }
+    uint              Height(void)                                { return(m_image_height);            }
    // --- Set/return image path
    void              BmpPath(const string bmp_file_path)         { m_bmp_path=bmp_file_path;          }
    string            BmpPath(void)                               { return(m_bmp_path);                }
@@ -87,7 +87,7 @@ bool CImage::ReadImageData(const string bmp_file_path)
   // --- Read and save image data
    if(!::ResourceReadImage("::"+m_bmp_path,m_image_data,m_image_width,m_image_height))
      {
-      ::Print(__FUNCTION__," > Ошибка при чтении изображения ("+m_bmp_path+"): ",::GetLastError());
+      ::Print(__FUNCTION__," > Error reading image ("+m_bmp_path+"): ",::GetLastError());
       return(false);
      }
   //---

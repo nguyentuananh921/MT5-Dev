@@ -1,181 +1,182 @@
 //+------------------------------------------------------------------+
 //|                                                    WndEvents.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
 #include "Defines.mqh"
 #include "WndContainer.mqh"
 //+------------------------------------------------------------------+
 // | Event handling class |
 //+------------------------------------------------------------------+
-class CWndEvents : public CWndContainer {
- protected:
-  // --- An instance of the class for managing the graph
-  CChart            m_chart;
-  // --- Chart window ID and number
-  long              m_chart_id;
-  int               m_subwin;
-  // --- Program name
-  string            m_program_name;
-  // --- Short name of the indicator
-  string            m_indicator_shortname;
-  // --- Active window index
-  int               m_active_window_index;
-  // --- Expert subwindow handle
-  int               m_subwindow_handle;
-  // --- Expert subwindow name
-  string            m_subwindow_shortname;
-  // --- Number of subwindows on the chart after installing the Expert Advisor subwindow
-  int               m_subwindows_total;
-  //---
- private:
-  // ---Event settings
-  int               m_id;
-  long              m_lparam;
-  double            m_dparam;
-  string            m_sparam;
-  //---
- public:
-  CWndEvents(void);
-  ~CWndEvents(void);
-  // --- Virtual graph event handler
-  virtual void      OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {}
-  // --- Timer
-  void              OnTimerEvent(void);
-  //---
- public:
-  // ---Graph event handlers
-  void              ChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
-  //---
- public:
-  // --- Returns the index of the activated window
-  int               GetActiveWindowIndex(void) {
-    return(m_active_window_index);
-  }
-  //---
- private:
-  void              ChartEventCustom(void);
-  void              ChartEventClick(void);
-  void              ChartEventMouseMove(void);
-  void              ChartEventObjectClick(void);
-  void              ChartEventEndEdit(void);
-  void              ChartEventChartChange(void);
-  // --- Checking events in controls
-  void              CheckElementsEvents(void);
+class CWndEvents : public CWndContainer 
+ {
+    protected:
+     // --- An instance of the class for managing the graph
+       CChart            m_chart;
+     // --- Chart window ID and number
+      long              m_chart_id;
+      int               m_subwin;
+     // --- Program name
+      string            m_program_name;
+     // --- Short name of the indicator
+      string            m_indicator_shortname;
+     // --- Active window index
+      int               m_active_window_index;
+     // --- Expert subwindow handle
+      int               m_subwindow_handle;
+     // --- Expert subwindow name
+      string            m_subwindow_shortname;
+     // --- Number of subwindows on the chart after installing the Expert Advisor subwindow
+      int               m_subwindows_total;
+      //---
+    private:
+      // ---Event settings
+      int               m_id;
+      long              m_lparam;
+      double            m_dparam;
+      string            m_sparam;
+      //---
+    public:
+      CWndEvents(void);
+      ~CWndEvents(void);
+      // --- Virtual graph event handler
+      virtual void      OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {}
+      // --- Timer
+      void              OnTimerEvent(void);
+      //---
+      public:
+      // ---Graph event handlers
+      void              ChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
+      //---
+      public:
+      // --- Returns the index of the activated window
+      int               GetActiveWindowIndex(void) {
+        return(m_active_window_index);
+      }
+      //---
+      private:
+      void              ChartEventCustom(void);
+      void              ChartEventClick(void);
+      void              ChartEventMouseMove(void);
+      void              ChartEventObjectClick(void);
+      void              ChartEventEndEdit(void);
+      void              ChartEventChartChange(void);
+      // --- Checking events in controls
+      void              CheckElementsEvents(void);
 
-  // --- Determining the subwindow number
-  void              DetermineSubwindow(void);
-  // --- Delete Expert Advisor subwindow
-  void              DeleteExpertSubwindow(void);
-  // --- Checking and updating the expert window number
-  void              CheckExpertSubwindowNumber(void);
-  // --- Checking and updating the indicator window number
-  void              CheckSubwindowNumber(void);
-  // --- Resizing a locked main form
-  void              ResizeLockedWindow(void);
+      // --- Determining the subwindow number
+      void              DetermineSubwindow(void);
+      // --- Delete Expert Advisor subwindow
+      void              DeleteExpertSubwindow(void);
+      // --- Checking and updating the expert window number
+      void              CheckExpertSubwindowNumber(void);
+      // --- Checking and updating the indicator window number
+      void              CheckSubwindowNumber(void);
+      // --- Resizing a locked main form
+      void              ResizeLockedWindow(void);
 
-  // --- Initializing event parameters
-  void              InitChartEventsParams(const int id, const long lparam, const double dparam, const string sparam);
-  // --- Moving the window
-  void              MovingWindow(const bool moving_mode = false);
-  // --- Checking events of all elements using a timer
-  void              CheckElementsEventsTimer(void);
-  // --- Setting the chart state
-  void              SetChartState(void);
-  //---
- protected:
-  // --- Removing an interface
-  void              Destroy(void);
-  // --- Redrawing the window
-  void              ResetWindow(void);
-  //---
- public:
-  // --- Kernel initialization
-  void              InitializeCore(void);
-  // --- Completing GUI creation
-  void              CompletedGUI(void);
-  // ---Updating the position of elements
-  void              Moving(void);
-  //---
- protected:
-  // --- Hiding all elements
-  void              Hide(void);
-  // --- Show elements of the specified window
-  void              Show(const uint window_index);
-  // --- Restoring left-click priorities
-  void              SetZorders(void);
-  // --- Redrawing elements
-  void              Update(const bool redraw = false);
+      // --- Initializing event parameters
+      void              InitChartEventsParams(const int id, const long lparam, const double dparam, const string sparam);
+      // --- Moving the window
+      void              MovingWindow(const bool moving_mode = false);
+      // --- Checking events of all elements using a timer
+      void              CheckElementsEventsTimer(void);
+      // --- Setting the chart state
+      void              SetChartState(void);
+      //---
+      protected:
+      // --- Removing an interface
+      void              Destroy(void);
+      // --- Redrawing the window
+      void              ResetWindow(void);
+      //---
+      public:
+      // --- Kernel initialization
+      void              InitializeCore(void);
+      // --- Completing GUI creation
+      void              CompletedGUI(void);
+      // ---Updating the position of elements
+      void              Moving(void);
+      //---
+      protected:
+      // --- Hiding all elements
+      void              Hide(void);
+      // --- Show elements of the specified window
+      void              Show(const uint window_index);
+      // --- Restoring left-click priorities
+      void              SetZorders(void);
+      // --- Redrawing elements
+      void              Update(const bool redraw = false);
 
-  // --- Moves tooltips to the top layer
-  void              ResetTooltips(void);
-  // --- Shows items in selected tabs only
-  void              ShowTabElements(const uint window_index);
-  // --- Sets the accessibility status of elements
-  void              SetAvailable(const uint window_index, const bool state);
+      // --- Moves tooltips to the top layer
+      void              ResetTooltips(void);
+      // --- Shows items in selected tabs only
+      void              ShowTabElements(const uint window_index);
+      // --- Sets the accessibility status of elements
+      void              SetAvailable(const uint window_index, const bool state);
 
-  // --- Forms an array of elements with a timer
-  void              FormTimerElementsArray(void);
-  // --- Forms an array of available elements
-  void              FormAvailableElementsArray(void);
-  // --- Forms an array of elements with auto-resize (X)
-  void              FormAutoXResizeElementsArray(void);
-  // --- Forms an array of elements with auto-resize (Y)
-  void              FormAutoYResizeElementsArray(void);
-  //---
- private:
-  // --- Form drag and drop completed
-  bool              OnWindowEndDrag(void);
-  // --- Collapse/expand form
-  bool              OnWindowCollapse(void);
-  bool              OnWindowExpand(void);
-  // --- Handling window resizing
-  bool              OnWindowChangeXSize(void);
-  bool              OnWindowChangeYSize(void);
-  // --- Enable/disable tooltips
-  bool              OnWindowTooltips(void);
-  // --- Hiding all context menus from the initiator item
-  bool              OnHideBackContextMenus(void);
-  // --- Hiding all context menus
-  bool              OnHideContextMenus(void);
-  // --- Opening a dialog box
-  bool              OnOpenDialogBox(void);
-  // ---Close the dialog box
-  bool              OnCloseDialogBox(void);
-  // --- Determine available elements
-  bool              OnSetAvailable(void);
-  // --- Defining blocked elements
-  bool              OnSetLocked(void);
-  // --- Changes in GUI
-  bool              OnChangeGUI(void);
-  //---
- private:
-  // --- Returns the index of the activated window
-  int               ActivatedWindowIndex(void);
-  // --- Returns the index of the activated main menu
-  int               ActivatedMenuBarIndex(void);
-  // --- Returns the index of the activated menu item
-  int               ActivatedMenuItemIndex(void);
-  // --- Returns the index of the activated double button
-  int               ActivatedSplitButtonIndex(void);
-  // --- Returns the index of the activated combo box
-  int               ActivatedComboBoxIndex(void);
-  // --- Returns the index of the activated dropdown calendar
-  int               ActivatedDropCalendarIndex(void);
-  // --- Returns the index of the activated scrollbar
-  int               ActivatedScrollIndex(void);
-  // --- Returns the index of the activated table
-  int               ActivatedTableIndex(void);
-  // --- Returns the index of the activated slider
-  int               ActivatedSliderIndex(void);
-  // --- Returns the index of the activated tree list
-  int               ActivatedTreeViewIndex(void);
-  // --- Returns the index of the activated standard chart
-  int               ActivatedSubChartIndex(void);
+      // --- Forms an array of elements with a timer
+      void              FormTimerElementsArray(void);
+      // --- Forms an array of available elements
+      void              FormAvailableElementsArray(void);
+      // --- Forms an array of elements with auto-resize (X)
+      void              FormAutoXResizeElementsArray(void);
+      // --- Forms an array of elements with auto-resize (Y)
+      void              FormAutoYResizeElementsArray(void);
+      //---
+      private:
+      // --- Form drag and drop completed
+      bool              OnWindowEndDrag(void);
+      // --- Collapse/expand form
+      bool              OnWindowCollapse(void);
+      bool              OnWindowExpand(void);
+      // --- Handling window resizing
+      bool              OnWindowChangeXSize(void);
+      bool              OnWindowChangeYSize(void);
+      // --- Enable/disable tooltips
+      bool              OnWindowTooltips(void);
+      // --- Hiding all context menus from the initiator item
+      bool              OnHideBackContextMenus(void);
+      // --- Hiding all context menus
+      bool              OnHideContextMenus(void);
+      // --- Opening a dialog box
+      bool              OnOpenDialogBox(void);
+      // ---Close the dialog box
+      bool              OnCloseDialogBox(void);
+      // --- Determine available elements
+      bool              OnSetAvailable(void);
+      // --- Defining blocked elements
+      bool              OnSetLocked(void);
+      // --- Changes in GUI
+      bool              OnChangeGUI(void);
+      //---
+      private:
+      // --- Returns the index of the activated window
+      int               ActivatedWindowIndex(void);
+      // --- Returns the index of the activated main menu
+      int               ActivatedMenuBarIndex(void);
+      // --- Returns the index of the activated menu item
+      int               ActivatedMenuItemIndex(void);
+      // --- Returns the index of the activated double button
+      int               ActivatedSplitButtonIndex(void);
+      // --- Returns the index of the activated combo box
+      int               ActivatedComboBoxIndex(void);
+      // --- Returns the index of the activated dropdown calendar
+      int               ActivatedDropCalendarIndex(void);
+      // --- Returns the index of the activated scrollbar
+      int               ActivatedScrollIndex(void);
+      // --- Returns the index of the activated table
+      int               ActivatedTableIndex(void);
+      // --- Returns the index of the activated slider
+      int               ActivatedSliderIndex(void);
+      // --- Returns the index of the activated tree list
+      int               ActivatedTreeViewIndex(void);
+      // --- Returns the index of the activated standard chart
+      int               ActivatedSubChartIndex(void);
 
-  // --- Checks and makes the context menu available
-  void              CheckContextMenu(CMenuItem &object);
-};
+      // --- Checks and makes the context menu available
+      void              CheckContextMenu(CMenuItem &object);
+ };
 //+------------------------------------------------------------------+
 //| Constructor                                                      |
 //+------------------------------------------------------------------+
@@ -186,55 +187,57 @@ CWndEvents::CWndEvents(void) : m_chart_id(::ChartID()),
   m_program_name(PROGRAM_NAME),
   m_subwindow_handle(INVALID_HANDLE),
   m_subwindow_shortname(""),
-  m_subwindows_total(1) {
-
-// --- Quit if this is not real time
-  if(::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
-    return;
-// --- Kernel initialization
-  InitializeCore();
-}
+  m_subwindows_total(1) 
+ {
+  // --- Quit if this is not real time
+    if(::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
+      return;
+  // --- Kernel initialization
+    InitializeCore();
+ }
 //+------------------------------------------------------------------+
 //| Destructor                                                       |
 //+------------------------------------------------------------------+
-CWndEvents::~CWndEvents(void) {
-// --- Quit if this is not real time
-  if(::MQLInfoInteger(MQL_TESTER))
-    return;
-// --- Delete timer
-  ::EventKillTimer();
-// --- Let's turn on the control
-  m_chart.MouseScroll(true);
-  m_chart.SetInteger(CHART_DRAG_TRADE_LEVELS, true);
-// --- Disable tracking of mouse events
-  m_chart.EventMouseMove(false);
-// --- Enable the command line call for the Space and Enter keys
-  m_chart.SetInteger(CHART_QUICK_NAVIGATION, true);
-// ---Disconnect from schedule
-  m_chart.Detach();
-// --- Remove the indicator subwindow
-  DeleteExpertSubwindow();
-// --- Erase comment
-  ::Comment("");
-}
+CWndEvents::~CWndEvents(void) 
+ {
+  // --- Quit if this is not real time
+    if(::MQLInfoInteger(MQL_TESTER))
+      return;
+  // --- Delete timer
+    ::EventKillTimer();
+  // --- Let's turn on the control
+    m_chart.MouseScroll(true);
+    m_chart.SetInteger(CHART_DRAG_TRADE_LEVELS, true);
+  // --- Disable tracking of mouse events
+    m_chart.EventMouseMove(false);
+  // --- Enable the command line call for the Space and Enter keys
+    m_chart.SetInteger(CHART_QUICK_NAVIGATION, true);
+  // ---Disconnect from schedule
+    m_chart.Detach();
+  // --- Remove the indicator subwindow
+    DeleteExpertSubwindow();
+  // --- Erase comment
+    ::Comment("");
+ }
 //+------------------------------------------------------------------+
 // | Kernel initialization |
 //+------------------------------------------------------------------+
-void CWndEvents::InitializeCore(void) {
-// --- Turn on the timer if outside the tester
-  if(!::MQLInfoInteger(MQL_TESTER)) {
-    ::ResetLastError();
-    bool is_timer =::EventSetMillisecondTimer(TIMER_STEP_MSC);
-  }
-// --- Get the ID of the current chart
-  m_chart.Attach();
-// --- Enable tracking of mouse events
-  m_chart.EventMouseMove(true);
-// --- Disable the command line call for the Space and Enter keys
-  m_chart.SetInteger(CHART_QUICK_NAVIGATION, false);
-// --- Determining the subwindow number
-  DetermineSubwindow();
-}
+void CWndEvents::InitializeCore(void) 
+ {
+  // --- Turn on the timer if outside the tester
+    if(!::MQLInfoInteger(MQL_TESTER)) {
+      ::ResetLastError();
+      bool is_timer =::EventSetMillisecondTimer(TIMER_STEP_MSC);
+    }
+  // --- Get the ID of the current chart
+    m_chart.Attach();
+  // --- Enable tracking of mouse events
+    m_chart.EventMouseMove(true);
+  // --- Disable the command line call for the Space and Enter keys
+    m_chart.SetInteger(CHART_QUICK_NAVIGATION, false);
+  // --- Determining the subwindow number
+    DetermineSubwindow();
+ }
 //+------------------------------------------------------------------+
 // | Initializing event variables |
 //+------------------------------------------------------------------+

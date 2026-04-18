@@ -12,7 +12,7 @@
 // --- Program type
 #define PROGRAM_TYPE (ENUM_PROGRAM_TYPE)::MQLInfoInteger(MQL_PROGRAM_TYPE)
 // --- Preventing out of range
-#define PREVENTING_OUT_OF_RANGE __FUNCTION__," > Предотвращение выхода за пределы массива."
+#define PREVENTING_OUT_OF_RANGE __FUNCTION__," > Preventing array out-of-bounds."
 
 // --- Timer step (milliseconds)
 #define TIMER_STEP_MSC (16)

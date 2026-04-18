@@ -78,7 +78,7 @@
                             }
                             }
     public:
-    // --- Returning coordinates and cell properties
+      // --- Returning coordinates and cell properties
         uint              Row(void)                           const { return this.m_row;                      }
         uint              Col(void)                           const { return this.m_col;                      }
         ENUM_DATATYPE     Datatype(void)                      const { return this.m_datatype;                 }
@@ -86,11 +86,11 @@
         uint              DatetimeFlags(void)                 const { return this.m_time_flags;               }
         bool              ColorNameFlag(void)                 const { return this.m_color_flag;               }
         bool              IsEditable(void)                    const { return this.m_editable;                 }
-    // --- Returns (1) double, (2) long, (3) string value
+      // --- Returns (1) double, (2) long, (3) string value
         double            ValueD(void)                        const { return this.m_datatype_value.ValueD();  }
         long              ValueL(void)                        const { return this.m_datatype_value.ValueL();  }
         string            ValueS(void)                        const { return this.m_datatype_value.ValueS();  }
-    // --- Returns the value as a formatted string
+      // --- Returns the value as a formatted string
         string            Value(void) const
                             {
                             switch(this.m_datatype)
@@ -102,16 +102,16 @@
                                 default           :  return this.ValueS();
                             }
                             }
-    // --- Returns a description of the type of the stored value
+      // --- Returns a description of the type of the stored value
         string            DatatypeDescription(void) const
                             {
                             string type=::StringSubstr(::EnumToString(this.m_datatype),5);
                             type.Lower();
                             return type;
                             }
-    // --- Clears data
+      // --- Clears data
         void              ClearData(void)                           { this.SetEmptyValue();                   }
-    // --- Setting variable values
+      // --- Setting variable values
         void              SetRow(const uint row)                    { this.m_row=(int)row;                    }
         void              SetCol(const uint col)                    { this.m_col=(int)col;                    }
         void              SetDatatype(const ENUM_DATATYPE datatype) { this.m_datatype=datatype;               }
@@ -119,13 +119,13 @@
         void              SetDatetimeFlags(const uint flags)        { this.m_time_flags=flags;                }
         void              SetColorNameFlag(const bool flag)         { this.m_color_flag=flag;                 }
         void              SetEditable(const bool flag)              { this.m_editable=flag;                   }
-    // --- Sets row and column
+      // --- Sets row and column
         void              SetPositionInTable(const uint row,const uint col)
                             {
                             this.SetRow(row);
                             this.SetCol(col);
                             }
-    // --- Assigns an object to a cell
+      // --- Assigns an object to a cell
         void              AssignObject(CObject *object)
                             {
                             if(object==NULL)
@@ -136,46 +136,46 @@
                             this.m_object=object;
                             this.m_object_type=(ENUM_OBJECT_TYPE)object.Type();
                             }
-    // --- Unassigns an object
+      // --- Unassigns an object
         void              UnassignObject(void)
                             {
                             this.m_object=NULL;
                             this.m_object_type=-1;
                             }
                             
-    // --- Returns (1) the object assigned to the cell, (2) the type of the object assigned to the cell
+      // --- Returns (1) the object assigned to the cell, (2) the type of the object assigned to the cell
         CObject          *AssignedObject(void)                      { return this.m_object;                   }
         ENUM_OBJECT_TYPE  AssignedObjType(void)               const { return this.m_object_type;              }
 
-    // --- Sets a double value
+      // --- Sets a double value
         void              SetValue(const double value)
                             {
                             this.m_datatype=TYPE_DOUBLE;
                             if(this.m_editable)
                                 this.m_datatype_value.SetValueD(value);
                             }
-    // --- Sets a long value
+      // --- Sets a long value
         void              SetValue(const long value)
                             {
                             this.m_datatype=TYPE_LONG;
                             if(this.m_editable)
                                 this.m_datatype_value.SetValueL(value);
                             }
-    // --- Sets the datetime value
+      // --- Sets the datetime value
         void              SetValue(const datetime value)
                             {
                             this.m_datatype=TYPE_DATETIME;
                             if(this.m_editable)
                                 this.m_datatype_value.SetValueL(value);
                             }
-    // --- Sets the color value
+      // --- Sets the color value
         void              SetValue(const color value)
                             {
                             this.m_datatype=TYPE_COLOR;
                             if(this.m_editable)
                                 this.m_datatype_value.SetValueL(value);
                             }
-    // --- Sets the string value
+      // --- Sets the string value
         void              SetValue(const string value)
                             {
                             this.m_datatype=TYPE_STRING;
@@ -183,18 +183,18 @@
                                 this.m_datatype_value.SetValueS(value);
                             }
         
-    // --- (1) Returns, (2) logs a description of the object
+      // --- (1) Returns, (2) logs a description of the object
         virtual string    Description(void);
         void              Print(void);
 
-    // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
+      // --- Virtual methods (1) compare, (2) save to file, (3) load from file, (4) object type
         virtual int       Compare(const CObject *node,const int mode=0) const;
         virtual bool      Save(const int file_handle);
         virtual bool      Load(const int file_handle);
         virtual int       Type(void)                          const { return(OBJECT_TYPE_TABLE_CELL);}
         
         
-    // --- Constructors/destructor
+      // --- Constructors/destructor
                             CTableCell(void) : m_row(0), m_col(0), m_datatype(-1), m_digits(0), m_time_flags(0), m_color_flag(false), m_editable(true), m_object(NULL), m_object_type(-1)
                             {
                             this.m_datatype_value.SetValueD(0);
@@ -235,7 +235,7 @@
    // | Comparison of two objects |
    //+------------------------------------------------------------------+
    int CTableCell::Compare(const CObject *node,const int mode=0) const
-   {
+    {
       if(node==NULL)
          return -1;
       const CTableCell *obj=node;
@@ -250,53 +250,53 @@
                                           this.Col()>obj.Col() ? 1 : this.Col()<obj.Col() ? -1 : 0
                                        );
       }
-   }
+    }
    //+------------------------------------------------------------------+
    // | Saving to file |
    //+------------------------------------------------------------------+
    bool CTableCell::Save(const int file_handle)
-   {
-    // --- Checking the handle
+    {
+     // --- Checking the handle
         if(file_handle==INVALID_HANDLE)
             return(false);
-    // --- Save the data start marker - 0xFFFFFFFFFFFFFFFF
+     // --- Save the data start marker - 0xFFFFFFFFFFFFFFFF
         if(::FileWriteLong(file_handle,MARKER_START_DATA)!=sizeof(long))
             return(false);
-    // --- Save the object type
+     // --- Save the object type
         if(::FileWriteInteger(file_handle,this.Type(),INT_VALUE)!=INT_VALUE)
             return(false);
 
-    // --- Save the data type
-    if(::FileWriteInteger(file_handle,this.m_datatype,INT_VALUE)!=INT_VALUE)
+     // --- Save the data type
+      if(::FileWriteInteger(file_handle,this.m_datatype,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save the object type in a cell
-    if(::FileWriteInteger(file_handle,this.m_object_type,INT_VALUE)!=INT_VALUE)
+     // --- Save the object type in a cell
+      if(::FileWriteInteger(file_handle,this.m_object_type,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save the line number
-    if(::FileWriteInteger(file_handle,this.m_row,INT_VALUE)!=INT_VALUE)
+     // --- Save the line number
+      if(::FileWriteInteger(file_handle,this.m_row,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save the column number
-    if(::FileWriteInteger(file_handle,this.m_col,INT_VALUE)!=INT_VALUE)
+     // --- Save the column number
+      if(::FileWriteInteger(file_handle,this.m_col,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Maintaining accurate data presentation
-    if(::FileWriteInteger(file_handle,this.m_digits,INT_VALUE)!=INT_VALUE)
+     // --- Maintaining accurate data presentation
+      if(::FileWriteInteger(file_handle,this.m_digits,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save date/time display flags
-    if(::FileWriteInteger(file_handle,this.m_time_flags,INT_VALUE)!=INT_VALUE)
+     // --- Save date/time display flags
+      if(::FileWriteInteger(file_handle,this.m_time_flags,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save the color name display flag
-    if(::FileWriteInteger(file_handle,this.m_color_flag,INT_VALUE)!=INT_VALUE)
+     // --- Save the color name display flag
+      if(::FileWriteInteger(file_handle,this.m_color_flag,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save the flag of the edited cell
-    if(::FileWriteInteger(file_handle,this.m_editable,INT_VALUE)!=INT_VALUE)
+     // --- Save the flag of the edited cell
+      if(::FileWriteInteger(file_handle,this.m_editable,INT_VALUE)!=INT_VALUE)
         return(false);
-    // --- Save the value
-    if(::FileWriteStruct(file_handle,this.m_datatype_value)!=sizeof(this.m_datatype_value))
+     // --- Save the value
+      if(::FileWriteStruct(file_handle,this.m_datatype_value)!=sizeof(this.m_datatype_value))
         return(false);
       
-    // --- Everything is successful
+     // --- Everything is successful
       return true;
-   }
+    }
    //+------------------------------------------------------------------+
    // | Loading from file |
    //+------------------------------------------------------------------+

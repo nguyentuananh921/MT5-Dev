@@ -155,12 +155,18 @@
    //+------------------------------------------------------------------+
    void CLabel::DrawText(const int dx,const int dy,const string text,const bool chart_redraw)
     {
+      //Print Debug
+         if(text != "") 
+            ::Print("Label '", this.Name(), "' is drawing text: ", text);
+         else
+            ::Print("Label '", this.Name(), "' is drawing EMPTY text!");
+      
       // --- Clear the previous text and install a new one
          this.ClearText();
          this.SetText(text);
       // --- Output the set text
-         this.m_foreground.TextOut(this.AdjX(dx),this.AdjY(dy),this.Text(),::ColorToARGB(this.ForeColor(),this.AlphaFG()));
-         
+         //this.m_foreground.TextOut(this.AdjX(dx),this.AdjY(dy),this.Text(),::ColorToARGB(this.ForeColor(),this.AlphaFG()));
+         this.m_foreground.TextOut(10, 2, this.Text(), ::ColorToARGB(clrRed, 255));
       // --- If the text extends beyond the right border of the object
          if(this.Width()-dx<this.m_foreground.TextWidth(text))
          {

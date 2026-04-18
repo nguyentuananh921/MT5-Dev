@@ -7,12 +7,13 @@
 //+------------------------------------------------------------------+
 // | Class for creating elements |
 //+------------------------------------------------------------------+
-class CWndCreate : public CWndEvents {
- protected:
-  CWndCreate(void);
-  ~CWndCreate(void);
+class CWndCreate : public CWndEvents 
+ {
+  protected:
+    CWndCreate(void);
+    ~CWndCreate(void);
   //---
- public:
+  public:
   // --- Form
   bool              CreateWindow(CWindow &object, const string text,
                                  const int x = 1, const int y = 1, const int x_size = 200, const int y_size = 200,
@@ -171,7 +172,7 @@ class CWndCreate : public CWndEvents {
   bool              CreateSepLine(CSeparateLine &object, CElement &main, const int window_index,
                                   const int x, const int y, const int x_size, const int y_size,
                                   color dark_clr, color light_clr, ENUM_TYPE_SEP_LINE type_line);
-};
+ };
 //+------------------------------------------------------------------+
 //| Constructor                                                      |
 //+------------------------------------------------------------------+

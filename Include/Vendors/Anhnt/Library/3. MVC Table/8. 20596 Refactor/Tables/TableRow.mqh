@@ -88,7 +88,7 @@
     // --- Constructors/destructor
                             CTableRow(void) : m_index(0) {}
                             CTableRow(const uint index) : m_index(index) {}
-                        ~CTableRow(void){}
+                            ~CTableRow(void){}
    };
    //+------------------------------------------------------------------+
    // | Comparison of two objects |

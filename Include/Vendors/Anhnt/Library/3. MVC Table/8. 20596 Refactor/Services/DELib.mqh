@@ -1209,10 +1209,10 @@
       y2=this.AdjY(this.Bottom()-1);
       this.m_background.FillRectangle(x1,y1,x2,y2,::ColorToARGB(this.BackColor(),this.m_element_base.AlphaBG()));
       if(this.m_element_base!=NULL && this.Index()<this.m_element_base.CellsTotal()-1)
-      {
+       {
          int line_x=this.AdjX(this.Right());
          this.m_background.Line(line_x,y1,line_x,y2,::ColorToARGB(this.m_element_base.BorderColor(),this.m_element_base.AlphaBG()));
-      }
+       }
       this.m_background.Update(chart_redraw);
    }
   //+------------------------------------------------------------------+

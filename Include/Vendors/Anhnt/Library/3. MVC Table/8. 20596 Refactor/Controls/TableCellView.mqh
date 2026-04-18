@@ -74,6 +74,7 @@
             // int               ContainerLimitRight(void)  const { return(this.m_element_base==NULL ? this.Right()  :  this.m_element_base.LimitRight());  }
             // int               ContainerLimitTop(void)    const { return(this.m_element_base==NULL ? this.Y()      :  this.m_element_base.LimitTop());    }
             // int               ContainerLimitBottom(void) const { return(this.m_element_base==NULL ? this.Bottom() :  this.m_element_base.LimitBottom()); }
+         //--------------------------------------------------------------------
          int               ContainerLimitLeft(void)   const;
          int               ContainerLimitRight(void)  const;
          int               ContainerLimitTop(void)    const;

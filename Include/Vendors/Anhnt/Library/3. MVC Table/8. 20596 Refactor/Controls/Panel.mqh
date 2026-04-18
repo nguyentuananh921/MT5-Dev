@@ -229,7 +229,10 @@ class CContainer;
           if(elm != NULL)
             {
                // ::PrintFormat("DEBUG: [Draw Loop] Element: %s | Type: %d | Pos: (%d, %d)", 
-               //             elm.Name(), elm.Type(), elm.X(), elm.Y());               
+               //             elm.Name(), elm.Type(), elm.X(), elm.Y());
+               ::PrintFormat(">>> Draw element: %s, X:%d Y:%d W:%d H:%d Alpha:%d",
+                  elm.Name(), elm.X(), elm.Y(), 
+                  elm.Width(), elm.Height(), elm.AlphaBG());              
                elm.Draw(false);
             }
       }
