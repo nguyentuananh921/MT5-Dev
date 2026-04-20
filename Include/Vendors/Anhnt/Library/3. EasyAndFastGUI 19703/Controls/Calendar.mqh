@@ -279,13 +279,13 @@ bool CCalendar::CreateMonthArrow(CButton &button_obj,const int index)
 // --- Labels for buttons
    if(index<1)
      {
-      button_obj.IconFile(RESOURCE_LEFT_THIN_BLACK);
-      button_obj.IconFileLocked(RESOURCE_LEFT_THIN_BLACK);
+      button_obj.IconFile(IMAGE_RESOURCE_CONTROLS_LEFT_THIN_BLACK_BMP);
+      button_obj.IconFileLocked(IMAGE_RESOURCE_CONTROLS_LEFT_THIN_BLACK_BMP);
      }
    else
      {
-      button_obj.IconFile(RESOURCE_RIGHT_THIN_BLACK);
-      button_obj.IconFileLocked(RESOURCE_RIGHT_THIN_BLACK);
+      button_obj.IconFile(IMAGE_RESOURCE_CONTROLS_RIGHT_THIN_BLACK_BMP);
+      button_obj.IconFileLocked(IMAGE_RESOURCE_CONTROLS_RIGHT_THIN_BLACK_BMP);
       button_obj.AnchorRightWindowSide(true);
      }
 // --- Let's create a control
@@ -452,10 +452,10 @@ bool CCalendar::CreateButtonToday(void)
    m_button_today.BorderColorPressed(m_back_color);
    m_button_today.LabelColorHover(C'0,102,250');
    m_button_today.IsDropdown(CElementBase::IsDropdown());
-   m_button_today.IconFile(RESOURCE_CALENDAR_TODAY);
-   m_button_today.IconFileLocked(RESOURCE_CALENDAR_TODAY);
-   m_button_today.CElement::IconFilePressed(RESOURCE_CALENDAR_TODAY);
-   m_button_today.CElement::IconFilePressedLocked(RESOURCE_CALENDAR_TODAY);
+   m_button_today.IconFile(IMAGE_RESOURCE_CONTROLS_CALENDAR_TODAY_BMP);
+   m_button_today.IconFileLocked(IMAGE_RESOURCE_CONTROLS_CALENDAR_TODAY_BMP);
+   m_button_today.CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_CALENDAR_TODAY_BMP);
+   m_button_today.CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CALENDAR_TODAY_BMP);
 // --- Let's create a control
    if(!m_button_today.CreateButton("Today: "+::TimeToString(::TimeLocal(),TIME_DATE),x,y))
       return(false);

@@ -283,13 +283,13 @@ bool CPicturesSlider::CreateArrow(CButton &button_obj,const int index)
 // --- Labels for buttons
    if(index<1)
      {
-      button_obj.IconFile(RESOURCE_LEFT_THIN_BLACK);
-      button_obj.IconFileLocked(RESOURCE_LEFT_THIN_BLACK);
+      button_obj.IconFile(IMAGE_RESOURCE_CONTROLS_LEFT_THIN_BLACK_BMP);
+      button_obj.IconFileLocked(IMAGE_RESOURCE_CONTROLS_LEFT_THIN_BLACK_BMP);
      }
    else
      {
-      button_obj.IconFile(RESOURCE_RIGHT_THIN_BLACK);
-      button_obj.IconFileLocked(RESOURCE_RIGHT_THIN_BLACK);
+      button_obj.IconFile(IMAGE_RESOURCE_CONTROLS_RIGHT_THIN_BLACK_BMP);
+      button_obj.IconFileLocked(IMAGE_RESOURCE_CONTROLS_RIGHT_THIN_BLACK_BMP);
       button_obj.AnchorRightWindowSide(true);
      }
 // --- Let's create a control

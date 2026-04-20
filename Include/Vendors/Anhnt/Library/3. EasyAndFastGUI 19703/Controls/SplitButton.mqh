@@ -204,10 +204,10 @@ bool CSplitButton::CreateDropButton(void)
    m_drop_button.YSize(m_y_size);
    m_drop_button.IconXGap(icon_x_gap);
    m_drop_button.IconYGap(icon_y_gap);
-   m_drop_button.IconFile(RESOURCE_DOWN_THIN_BLACK);
-   m_drop_button.IconFileLocked(RESOURCE_DOWN_THIN_BLACK);
-   m_drop_button.CElement::IconFilePressed(RESOURCE_UP_THIN_BLACK);
-   m_drop_button.CElement::IconFilePressedLocked(RESOURCE_UP_THIN_BLACK);
+   m_drop_button.IconFile(IMAGE_RESOURCE_CONTROLS_DOWN_THIN_BLACK_BMP);
+   m_drop_button.IconFileLocked(IMAGE_RESOURCE_CONTROLS_DOWN_THIN_BLACK_BMP);
+   m_drop_button.CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_UP_THIN_BLACK_BMP);
+   m_drop_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_UP_THIN_BLACK_BMP);
 // --- Let's create a control
    if(!m_drop_button.CreateButton("",x,y))
       return(false);

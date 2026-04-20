@@ -5,14 +5,14 @@
 //+------------------------------------------------------------------+
 #ifndef CELEMENT
 #define CELEMENT
-   #include "ElementBase.mqh"
-   #include "Image.mqh"
-   class CWindow;
+ #include "ElementBase.mqh"
+ #include "Image.mqh"
+  class CWindow;
    //+------------------------------------------------------------------+
    // | Control derived class |
    //+------------------------------------------------------------------+
-   class CElement : public CElementBase
-    {
+ class CElement : public CElementBase
+  {
      protected:
       // --- Pointer to form
       CWindow          *m_wnd;
@@ -233,9 +233,9 @@
        virtual void      DrawImage(void);
       // --- Draws text
        virtual void      DrawText(void);
-    };
-  #ifndef CELEMENT_IMPLEMENTATION
-  #define CELEMENT_IMPLEMENTATION
+   };
+ #ifndef CELEMENT_IMPLEMENTATION
+ #define CELEMENT_IMPLEMENTATION
     //+------------------------------------------------------------------+
     //| Constructor                                                      |
     //+------------------------------------------------------------------+
@@ -1105,7 +1105,7 @@
             m_canvas.TextOut(x,y,m_label_text,::ColorToARGB(clr),TA_LEFT);
     }
    //+------------------------------------------------------------------+
-  #endif // CELEMENT_IMPLEMENTATION
+ #endif // CELEMENT_IMPLEMENTATION
 #endif // CELEMENT
 
 

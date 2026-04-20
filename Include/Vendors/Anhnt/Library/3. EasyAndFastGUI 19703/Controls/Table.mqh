@@ -877,9 +877,9 @@ bool CTable::CreateHeaders(void)
 // --- Let's define pictures as a sign of the possibility of sorting the table
    ::ArrayResize(m_sort_arrows,2);
    if(m_sort_arrows[0].ResourceIndex()==INT_MAX)
-      m_sort_arrows[0].ResourceIndex(RESOURCE_SPIN_INC);
+      m_sort_arrows[0].ResourceIndex(IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP);
    if(m_sort_arrows[1].ResourceIndex()==INT_MAX)
-      m_sort_arrows[1].ResourceIndex(RESOURCE_SPIN_DEC);
+      m_sort_arrows[1].ResourceIndex(IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP);
 // --- Save images to arrays
    for(int i=0; i<2; i++)
       m_sort_arrows[i].ReadImageData(m_sort_arrows[i].ResourceIndex());

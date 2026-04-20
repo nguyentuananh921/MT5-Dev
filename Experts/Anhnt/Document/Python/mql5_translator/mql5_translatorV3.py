@@ -6,7 +6,7 @@ from pathlib import Path
 
 # --- CẤU HÌNH GỐC ---
 # Tớ để thư mục gốc chứa tất cả các bài của Artyom Trishkin
-SOURCE_DIR = r'C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Include\Vendors\Anhnt\Library\3. EasyAndFastGUI 19703'
+SOURCE_DIR = r'C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Include\Vendors\Anatoli Kazharski\3. EasyAndFastGUI 19703'
 translator = GoogleTranslator(source='ru', target='en')
 
 def process_file(file_path):

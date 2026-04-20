@@ -190,10 +190,10 @@ bool CDropCalendar::CreateDropButton(void)
    m_drop_button.IconXGap(icon_x_gap);
    m_drop_button.IconYGap(icon_y_gap);
    m_drop_button.AnchorRightWindowSide(true);
-   m_drop_button.IconFile(RESOURCE_CALENDAR_DROP_OFF);
-   m_drop_button.IconFileLocked(RESOURCE_CALENDAR_DROP_LOCKED);
-   m_drop_button.CElement::IconFilePressed(RESOURCE_CALENDAR_DROP_ON);
-   m_drop_button.CElement::IconFilePressedLocked(RESOURCE_CALENDAR_DROP_LOCKED);
+   m_drop_button.IconFile(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_OFF_BMP);
+   m_drop_button.IconFileLocked(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_LOCKED_BMP);
+   m_drop_button.CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_ON_BMP);
+   m_drop_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_LOCKED_BMP);
 // --- Let's create a control
    if(!m_drop_button.CreateButton("",x,y))
       return(false);

@@ -201,47 +201,47 @@ void CPointer::SetPointerBmp(void)
    switch(m_type)
      {
       case MP_X_RESIZE :
-         m_file_on  =(string)RESOURCE_POINTER_X_RS;
-         m_file_off =(string)RESOURCE_POINTER_X_RS_BLUE;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_BLUE_BMP;
          break;
       case MP_Y_RESIZE :
-         m_file_on  =(string)RESOURCE_POINTER_Y_RS;
-         m_file_off =(string)RESOURCE_POINTER_Y_RS_BLUE;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_BLUE_BMP;
          break;
       case MP_XY1_RESIZE :
-         m_file_on  =(string)RESOURCE_POINTER_XY1_RS;
-         m_file_off =(string)RESOURCE_POINTER_XY1_RS_BLUE;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_XY1_RS_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_XY1_RS_BLUE_BMP;
          break;
       case MP_XY2_RESIZE :
-         m_file_on  =(string)RESOURCE_POINTER_XY2_RS;
-         m_file_off =(string)RESOURCE_POINTER_XY2_RS_BLUE;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_XY2_RS_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_XY2_RS_BLUE_BMP;
          break;
       case MP_WINDOW_RESIZE :
         {
          CElement::AddImagesGroup(0,0);
-         CElement::AddImage(0,(string)RESOURCE_POINTER_X_RS);
-         CElement::AddImage(0,(string)RESOURCE_POINTER_Y_RS);
+         CElement::AddImage(0,(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_BMP);
+         CElement::AddImage(0,(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_BMP);
          break;
         }
       case MP_X_RESIZE_RELATIVE :
-         m_file_on  =(string)RESOURCE_POINTER_X_RS_REL;
-         m_file_off =(string)RESOURCE_POINTER_X_RS_REL;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_REL_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_REL_BMP;
          break;
       case MP_Y_RESIZE_RELATIVE :
-         m_file_on  =(string)RESOURCE_POINTER_Y_RS_REL;
-         m_file_off =(string)RESOURCE_POINTER_Y_RS_REL;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_REL_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_REL_BMP;
          break;
       case MP_X_SCROLL :
-         m_file_on  =(string)RESOURCE_POINTER_X_SCROLL;
-         m_file_off =(string)RESOURCE_POINTER_X_SCROLL_BLUE;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_SCROLL_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_X_SCROLL_BLUE_BMP;
          break;
       case MP_Y_SCROLL :
-         m_file_on  =(string)RESOURCE_POINTER_Y_SCROLL;
-         m_file_off =(string)RESOURCE_POINTER_Y_SCROLL_BLUE;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_SCROLL_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_Y_SCROLL_BLUE_BMP;
          break;
       case MP_TEXT_SELECT :
-         m_file_on  =(string)RESOURCE_POINTER_TEXT_SELECT;
-         m_file_off =(string)RESOURCE_POINTER_TEXT_SELECT;
+         m_file_on  =(string)IMAGE_RESOURCE_CONTROLS_POINTER_TEXT_SELECT_BMP;
+         m_file_off =(string)IMAGE_RESOURCE_CONTROLS_POINTER_TEXT_SELECT_BMP;
          break;
      }
 // --- If a custom type is specified (MP_CUSTOM)

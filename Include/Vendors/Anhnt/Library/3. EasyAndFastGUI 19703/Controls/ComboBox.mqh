@@ -199,10 +199,10 @@ bool CComboBox::CreateCanvas(void)
 // --- If you need an element with a checkbox
    if(m_checkbox_mode)
      {
-      IconFile(RESOURCE_CHECKBOX_OFF);
-      IconFileLocked(RESOURCE_CHECKBOX_OFF_LOCKED);
-      IconFilePressed(RESOURCE_CHECKBOX_ON);
-      IconFilePressedLocked(RESOURCE_CHECKBOX_ON_LOCKED);
+      IconFile(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_BMP);
+      IconFileLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_LOCKED_BMP);
+      IconFilePressed(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_BMP);
+      IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_LOCKED_BMP);
      }
 // ---Create an object
    if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
@@ -239,10 +239,10 @@ bool CComboBox::CreateButton(void)
    m_button.LabelXGap(label_x_gap);
    m_button.LabelYGap(label_y_gap);
    m_button.IsDropdown(CElementBase::IsDropdown());
-   m_button.IconFile(RESOURCE_DOWN_THIN_BLACK);
-   m_button.IconFileLocked(RESOURCE_DOWN_THIN_BLACK);
-   m_button.CElement::IconFilePressed(RESOURCE_UP_THIN_BLACK);
-   m_button.CElement::IconFilePressedLocked(RESOURCE_UP_THIN_BLACK);
+   m_button.IconFile(IMAGE_RESOURCE_CONTROLS_DOWN_THIN_BLACK_BMP);
+   m_button.IconFileLocked(IMAGE_RESOURCE_CONTROLS_DOWN_THIN_BLACK_BMP);
+   m_button.CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_UP_THIN_BLACK_BMP);
+   m_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_UP_THIN_BLACK_BMP);
    
 // --- Let's create a control
    if(!m_button.CreateButton("",x,y))

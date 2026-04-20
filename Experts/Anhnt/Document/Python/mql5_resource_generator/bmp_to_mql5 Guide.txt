@@ -1,0 +1,5 @@
+Cậu chưa cài Pillow. Gõ lệnh này vào terminal:
+pip install pillow
+Chờ cài xong rồi chạy lại:
+python mql5_resource_generator_V3.py
+

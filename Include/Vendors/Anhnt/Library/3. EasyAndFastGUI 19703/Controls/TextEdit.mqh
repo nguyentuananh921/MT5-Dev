@@ -262,10 +262,15 @@ bool CTextEdit::CreateEdit(void)
 // --- If you need an element with a checkbox
    if(m_checkbox_mode)
      {
-      IconFile(RESOURCE_CHECKBOX_OFF);
+      /*IconFile(RESOURCE_CHECKBOX_OFF);
       IconFileLocked(RESOURCE_CHECKBOX_OFF_LOCKED);
       IconFilePressed(RESOURCE_CHECKBOX_ON);
-      IconFilePressedLocked(RESOURCE_CHECKBOX_ON_LOCKED);
+      IconFilePressedLocked(RESOURCE_CHECKBOX_ON_LOCKED);*/
+      
+      IconFile(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_BMP);
+      IconFileLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_LOCKED_BMP);
+      IconFilePressed(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_BMP);
+      IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_LOCKED_BMP);
      }
 // --- Set the properties before creating
    if(m_index!=WRONG_VALUE)
@@ -306,9 +311,9 @@ bool CTextEdit::CreateSpinButton(CButton &button_obj,const int index)
       y      =1;
       y_size =m_edit.YSize()/2;
       //--- 
-      file         =(string)RESOURCE_SPIN_INC;
-      file_locked  =(string)RESOURCE_SPIN_INC;
-      file_pressed =(string)RESOURCE_SPIN_INC;
+      file         =(string)IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP;
+      file_locked  =(string)IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP;
+      file_pressed =(string)IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP;
       //---
       button_obj.NamePart(button_obj.NamePart()==""? "spin_inc" : button_obj.NamePart());
       button_obj.AnchorRightWindowSide(true);
@@ -321,9 +326,9 @@ bool CTextEdit::CreateSpinButton(CButton &button_obj,const int index)
       y      =m_button_inc.YGap()+m_button_inc.YSize()-1;
       y_size =m_edit.Y2()-m_button_inc.Y2();
       //---
-      file         =(string)RESOURCE_SPIN_DEC;
-      file_locked  =(string)RESOURCE_SPIN_DEC;
-      file_pressed =(string)RESOURCE_SPIN_DEC;
+      file         =(string)IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP;
+      file_locked  =(string)IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP;
+      file_pressed =(string)IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP;
       //---
       button_obj.NamePart(button_obj.NamePart()==""? "spin_dec" : button_obj.NamePart());
       button_obj.AnchorRightWindowSide(true);

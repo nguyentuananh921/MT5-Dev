@@ -102,8 +102,8 @@ bool CTreeItem::CreateTreeItem(const int x_gap,const int y_gap,const ENUM_TYPE_T
    if(m_item_type==TI_HAS_ITEMS)
      {
       CElement::AddImagesGroup(m_arrow_x_gap,2);
-      CElement::AddImage(1,RESOURCE_DOWN_THICK_BLACK);
-      CElement::AddImage(1,RESOURCE_RIGHT_THICK_BLACK);
+      CElement::AddImage(1,IMAGE_RESOURCE_CONTROLS_DOWN_THICK_BLACK_BMP);
+      CElement::AddImage(1,IMAGE_RESOURCE_CONTROLS_RIGHT_THICK_BLACK_BMP);
       // --- Select the appropriate image
       CButton::ChangeImage(1,(m_item_state)? 1 : 0);
      }

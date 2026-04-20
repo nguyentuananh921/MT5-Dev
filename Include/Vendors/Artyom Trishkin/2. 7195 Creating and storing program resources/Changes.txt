@@ -1,0 +1,204 @@
+Part 2	Defines.mqh	received the order status to the ENUM_ORDER_PROP_INTEGER enumeration
+Part 2	In Defines.mqh	re-arranged the list of order property enumerations for displaying in the journal
+Part 2	Order.mqh	received OrderState(void) "Return order status" in the integer properties
+Part 2	In Order.mqh	TypeOrder() method type changed to 'long'
+Part 2	To Order.mqh	added StateDescription(void) "Return order status description"
+Part 2	In Order.mqh	added order status description to GetPropertyDescription(ENUM_ORDER_PROP_INTEGER property)
+Part 2	To HistoryOrder.mqh	added the SupportProperty method (ENUM_ORDER_PROP_DOUBLE property)
+Part 2	In HistoryOrder.mqh	added unsupported properties for MQL5 in the SupportProperty method (ENUM_ORDER_PROP_INTEGER property)
+
+To do:
+Change journal entries about new orders and deals during the first launch.
+Add a queue of historical and market collections events so that messages about changes are not lost. 
+Create a class for displaying messages with logging level flags in the journal.
+
+======================================================================================================
+Part 3 	
+In 	Defines.mqh	ORDER_STATUS_MARKET_ACTIVE replaced with ORDER_STATUS_MARKET_POSITION
+In	Engine		added m_list_of_events;       // Event queue list
+
+======================================================================================================
+Many things have changed due to separation. 
+Below are the things that should be added:
+
+Check the presence of a market order. If it is present, add the market order object to the collection
+
+m_trade_event_code
+======================================================================================================
+Part 5
+/*
+Moved order objects to the Orders folder. 
+
+In Order.mqh, replaced the path 
+#include "..\Services\DELib.mqh" 
+with 
+#include "..\..\Services\DELib.mqh"
+
+In HistoryCollection.mqh and MarketCollection.mqh, replaced the paths 
+#include "Select.mqh"
+#include "..\Objects\HistoryOrder.mqh"
+#include "..\Objects\HistoryPending.mqh"
+#include "..\Objects\HistoryDeal.mqh"
+ with 
+#include "..\Services\Select.mqh"
+#include "..\Objects\Orders\HistoryOrder.mqh"
+#include "..\Objects\Orders\HistoryPending.mqh"
+#include "..\Objects\Orders\HistoryDeal.mqh"
+
+In Defines.mqh, added collection IDs, 
+collection lists are now inherited from CListObj to identify the lists
+added DFUN_ERR_LINE for displaying error messages with a string number
+
+In DELib.mqh, included the #include list <Arrays\ArrayLong.mqh>
+
+In CEngine, replaced 
+//--- Return the last (1) removed pending order, (2) historical market order, (3) historical market order by its ticket
+with
+//--- Return the last (1) removed pending order, (2) historical market order, (3) historical order (market or pending one) by its ticket
+and replaced the GetHistoryOrder() method with receiving a market or pending order by a ticket
+*/
+//In CEngine constructor, added the check for the timer successful creation.
+//Further on, the flag is to be returned to the control program's OnInit().
+
+//The order removal block should be checked when the order is activated. In the removal block, check the absence of a deal for the order
+
+
+======================================================================================================
+//Part 6, 7
+
+//all is done
+
+======================================================================================================
+
+//strange symbol background color with the value of 4278190080 means the color is not specified...
+
+//In CAccountsCollection::GetEvent(constint shift=WRONG_VALUE), change the event receiving logic:
+//if -1 is passed, return the event from total-1, if the passed value exceeds the list size, return the event from index 0
+//Implement position ID calculation in MQL4 - the ticket of the very first parent order
+//Implement assigning extended comments to order objects
+
+In part 5 and CEngine constructor, added the check for the timer successful creation.
+The flag should be returned to the control program's OnInit().
+To do this, create m_global_error codes in each object where necessary and fill in the error codes,
+in CEngine, survey these codes in classes, write them in CEngine::m_global_error and get it from the program
+
+
+Implement the method of removing unnecessary control orders from the list in the CMarketCollection class using the DeleteOrderFromListControl method
+
+Implement the StopLimit order class in MQL4
+
+When implementing graphics, keep in mind the probability to accidentally remove an object by pressing Backspace
+
+//Move the method for searching a symbol on the Exist(const string name) server to DELib.mqh and remove it from the symbol classes
+
+//If the server features more than 1000 symbols, use only 1000 with the warning
+
+The last trading event should not be checked to save the changes of these events in the EA, since it may happen that the last event is the same as the penultimate one.
+Consider the number of recent trading events: if it is more than zero, then handle it.
+
+In Account.mqh, page 158: Trading on an account !!!!!!!! should think this through and page 169 Auto trading on an account !!!!!!!! the return of boolean values should be considered
+
+Consider how to return event codes for copiers
+
+Make it possible to use the basic magic number + ID in the same magic number value
+
+In the Create() method of the FileGen.mqh file - string 61: Add the check for the number of written bytes at the very end. If the value is different from the array size, this is not the full file entry. Inform of that, delete the created file and return 'false'
+
+//Move ENUM_SYMBOLS_MODE from Defines.mqh to Datas.mqh
+
+//In the UshortToByte() method of the base object class, remove the index check. Previously, it was checked in the UshortToLong method. They work in conjunction.
+//in the same place, but in EventDescription, specify a name of the class the event is located in, since symbol events feature no symbol description
+
+/*
+
+This should be added to Defines.mqh. Also, need to implement the normal resource collection:
+
+//+------------------------------------------------------------------+
+//| Integer properties of program resource data                      |
+//+------------------------------------------------------------------+
+enum ENUM_RESOURCE_PROP_INTEGER
+  {
+   RESOURCE_PROP_FILE_TYPE = 0,                             // File type (audio/image)
+  }; 
+#define RESOURCE_PROP_INTEGER_TOTAL  (1)                    // Total number of integer properties
+#define RESOURCE_PROP_INTEGER_SKIP   (0)                    // Number of integer resource data properties not used in sorting
+//+------------------------------------------------------------------+
+//| Real properties of program resource data                         |
+//+------------------------------------------------------------------+
+enum ENUM_RESOURCE_PROP_DOUBLE
+  {
+   
+  }; 
+#define RESOURCE_PROP_DOUBLE_TOTAL   (0)                    // Total number of real properties
+#define RESOURCE_PROP_DOUBLE_SKIP    (0)                    // Number of real resource data properties not used in sorting
+//+------------------------------------------------------------------+
+//| String properties of program resource data                       |
+//+------------------------------------------------------------------+
+enum ENUM_RESOURCE_PROP_STRING
+  {
+   RESOURCE_PROP_FILE_NAME = (RESOURCE_PROP_INTEGER_TOTAL+RESOURCE_PROP_DOUBLE_TOTAL), // File name
+   RESOURCE_PROP_PATH,                                      // Path to the file
+   RESOURCE_PROP_DESCRIPTION,                               // Resource data description
+  };
+#define RESOURCE_PROP_STRING_TOTAL  (3)                     // Total number of string properties
+//+------------------------------------------------------------------+
+//| Possible criteria of sorting program resource data               |
+//+------------------------------------------------------------------+
+#define FIRST_RES_DBL_PROP          (RESOURCE_PROP_INTEGER_TOTAL-RESOURCE_PROP_INTEGER_SKIP)
+#define FIRST_RES_STR_PROP          (RESOURCE_PROP_INTEGER_TOTAL-RESOURCE_PROP_INTEGER_SKIP+RESOURCE_PROP_DOUBLE_TOTAL-RESOURCE_PROP_DOUBLE_SKIP)
+enum ENUM_SORT_RESOURCE_MODE
+  {
+//--- Sort by integer properties
+   SORT_BY_RESOURCE_FILE_TYPE = 0,                          // Sort by file type (audio/image)
+//--- Sort by real properties
+//---
+//--- Sort by string properties
+   SORT_BY_RESOURCE_PROP_FILE_NAME = FIRST_RES_STR_PROP,    // Sort by file name
+   SORT_BY_RESOURCE_PROP_PATH,                              // Sort by file path
+   SORT_BY_RESOURCE_PROP_DESCRIPTION,                       // Sort by file description
+  };
+//+------------------------------------------------------------------+
+
+
+
+Decide how to send three prices (order, stop loss, take profit) at once to the chart from the modification event.
+
+
+
+
+
+Add to EventModify:
+
+private:
+   double            m_price;                               // Price sent to an event
+//--- (1) Convert double value into the specified long number byte, (2) Pack three double numbers to a resulting long value
+   long              ConvertDataToByte(const double value,const uchar byte);
+   long              PackThreeLevelsToLong(const double value1,const double value2,const double value3);
+
+...
+
+in the end:
+
+//+------------------------------------------------------------------+
+//| Convert double value into the specified long number byte         |
+//+------------------------------------------------------------------+
+long CEventModify::ConvertDataToByte(const double value,const uchar byte)
+  {
+   if(byte>2)
+     {
+      Print(DFUN,TextByLanguage("Ошибка. Значение byte должно быть в пределах 0 - 2","Error. \"byte\" value should be between 0 - 2."));
+      return 0;
+     }
+   return (long)value<<(16*byte);
+  }
+//+------------------------------------------------------------------+
+//| Pack three double numbers into a resulting long value            |
+//+------------------------------------------------------------------+
+long CEventModify::PackThreeLevelsToLong(const double value1,const double value2,const double value3)
+  {
+   return((long)value1 | this.ConvertDataToByte(value2,1) | this.ConvertDataToByte(value3,2));
+  }
+//+------------------------------------------------------------------+
+
+*/
+

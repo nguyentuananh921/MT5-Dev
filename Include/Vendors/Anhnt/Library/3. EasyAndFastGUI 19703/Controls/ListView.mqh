@@ -398,10 +398,10 @@ bool CListView::CreateList(void)
 // --- If you need a list with checkboxes
    if(m_checkbox_mode)
      {
-      IconFile(RESOURCE_CHECKBOX_OFF);
-      IconFileLocked(RESOURCE_CHECKBOX_OFF_LOCKED);
-      CElement::IconFilePressed(RESOURCE_CHECKBOX_ON);
-      CElement::IconFilePressedLocked(RESOURCE_CHECKBOX_ON_LOCKED);
+      IconFile(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_BMP);
+      IconFileLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_LOCKED_BMP);
+      CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_BMP);
+      CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_LOCKED_BMP);
      }
 // ---Coordinates
    m_listview.X(x);

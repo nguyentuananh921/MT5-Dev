@@ -115,45 +115,50 @@
       return(false);
     }
    // --- Initializing properties
-   InitializeProperties();
+     InitializeProperties();
    // --- Creates a tooltip
-   if(!CreateCanvas())
+     if(!CreateCanvas())
       return(false);
    //---
    return(true);
-   }
-   //+------------------------------------------------------------------+
-   // | Initializing properties |
-   //+------------------------------------------------------------------+
-   void CTooltip::InitializeProperties(void)
+  }
+  //+------------------------------------------------------------------+
+  // | Initializing properties |
+  //+------------------------------------------------------------------+
+  void CTooltip::InitializeProperties(void)
    {
-   m_x        =CElement::CalculateX(m_element.XGap());
-   m_y        =CElement::CalculateY(m_element.YGap()+m_element.YSize()+1);
-   m_x_size   =(m_x_size<1)? 100 : m_x_size;
-   m_y_size   =(m_y_size<1)? 50 : m_y_size;
-   // ---Default colors
-   m_border_color =(m_border_color!=clrNONE)? m_border_color : C'150,170,180';
-   m_label_color  =(m_label_color!=clrNONE)? m_label_color : clrDimGray;
-   // --- Indents from the extreme point
-   CElement::XGap(CElement::CalculateXGap(m_x));
-   CElement::YGap(CElement::CalculateYGap(m_y));
+      m_x        =CElement::CalculateX(m_element.XGap());
+      m_y        =CElement::CalculateY(m_element.YGap()+m_element.YSize()+1);
+      m_x_size   =(m_x_size<1)? 100 : m_x_size;
+      m_y_size   =(m_y_size<1)? 50 : m_y_size;
+
+      // ---Default colors
+      //m_border_color =(m_border_color!=clrNONE)? m_border_color : C'150,170,180';
+      //m_border_color = (m_border_color != clrNONE && (int)m_border_color != -1)? m_border_color : C'150,170,180';
+      if(m_border_color == clrNONE)
+         m_border_color = C'150,170,180';
+      
+      m_label_color  =(m_label_color!=clrNONE)? m_label_color : clrDimGray;
+      // --- Indents from the extreme point
+      CElement::XGap(CElement::CalculateXGap(m_x));
+      CElement::YGap(CElement::CalculateYGap(m_y));
    }
-   //+------------------------------------------------------------------+
-   // | Creates a canvas for drawing |
-   //+------------------------------------------------------------------+
-   bool CTooltip::CreateCanvas(void)
+  //+------------------------------------------------------------------+
+  // | Creates a canvas for drawing |
+  //+------------------------------------------------------------------+
+  bool CTooltip::CreateCanvas(void)
    {
-   // --- Formation of object name
-   string name=CElementBase::ElementName("tooltip");
-   // ---Create an object
-   if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
-      return(false);
-   // --- Clearing the drawing canvas
-   m_canvas.Erase(::ColorToARGB(clrNONE,0));
-   m_canvas.Update();
-   // --- Reset push priority
-   Z_Order(WRONG_VALUE);
-   return(true);
+      // --- Formation of object name
+      string name=CElementBase::ElementName("tooltip");
+      // ---Create an object
+      if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
+         return(false);
+      // --- Clearing the drawing canvas
+      m_canvas.Erase(::ColorToARGB(clrNONE,0));
+      m_canvas.Update();
+      // --- Reset push priority
+      Z_Order(WRONG_VALUE);
+      return(true);
    }
    //+------------------------------------------------------------------+
    // | Adds the line |
@@ -170,41 +175,42 @@
    // | Displays tooltip |
    //+------------------------------------------------------------------+
    void CTooltip::ShowTooltip(void)
-   {
-   // --- Quit if the tooltip is 100% visible
-   if(m_alpha>=255)
-      return;
-   // --- Coordinates and indentation for the title
-   int x=5,y=5;
-   int y_offset=15;
-   // --- Fully visible tooltip sign
-   m_alpha=255;
-   // --- Draw the background and frame
-   DrawBackground();
-   DrawBorder();
-   // --- Draw the title (if installed)
-   if(m_header_text!="")
-      {
+    {
+      // --- Quit if the tooltip is 100% visible
+         if(m_alpha>=255)
+            return;
+      // --- Coordinates and indentation for the title
+         int x=5,y=5;
+         int y_offset=15;
+      // --- Fully visible tooltip sign
+         m_alpha=255;
+      // --- Draw the background and frame
+         //DrawBackground(); // ✅ Thay vì DrawBackground() — erase trong suốt trước, rồi vẽ box tooltip
+            m_canvas.Erase(::ColorToARGB(clrNONE, 0));  // xóa sạch
+         //DrawBorder();  //Remove to Draw transparent Tooltips
+      // --- Draw the title (if installed)
+      if(m_header_text!="")
+         {
+         // --- Set font parameters
+         m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_BLACK);
+         // --- Drawing the title text
+         m_canvas.TextOut(x,y,m_header_text,::ColorToARGB(m_header_color),TA_LEFT|TA_TOP);
+         }
+      // --- Coordinates for the main text of the tooltip (taking into account the presence of a title)
+      x =(m_header_text!="")? 15 : 5;
+      y =(m_header_text!="")? 25 : 5;
       // --- Set font parameters
-      m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_BLACK);
-      // --- Drawing the title text
-      m_canvas.TextOut(x,y,m_header_text,::ColorToARGB(m_header_color),TA_LEFT|TA_TOP);
-      }
-   // --- Coordinates for the main text of the tooltip (taking into account the presence of a title)
-   x =(m_header_text!="")? 15 : 5;
-   y =(m_header_text!="")? 25 : 5;
-   // --- Set font parameters
-   m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_THIN);
-   // --- Drawing the main text of the tooltip
-   int lines_total=::ArraySize(m_tooltip_lines);
-   for(int i=0; i<lines_total; i++)
-      {
-      m_canvas.TextOut(x,y,m_tooltip_lines[i],::ColorToARGB(m_label_color),TA_LEFT|TA_TOP);
-      y=y+y_offset;
-      }
-   // --- Refresh canvas
-   m_canvas.Update();
-   }
+      m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_THIN);
+      // --- Drawing the main text of the tooltip
+      int lines_total=::ArraySize(m_tooltip_lines);
+      for(int i=0; i<lines_total; i++)
+         {
+         m_canvas.TextOut(x,y,m_tooltip_lines[i],::ColorToARGB(m_label_color),TA_LEFT|TA_TOP);
+         y=y+y_offset;
+         }
+      // --- Refresh canvas
+      m_canvas.Update();
+    }
    //+------------------------------------------------------------------+
    // | Fade out tooltip |
    //+------------------------------------------------------------------+

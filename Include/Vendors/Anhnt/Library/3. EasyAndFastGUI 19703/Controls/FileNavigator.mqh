@@ -122,7 +122,7 @@ CFileNavigator::CFileNavigator(void) : m_current_path(""),
                                        m_file_icon("Images\\EasyAndFastGUI\\Icons\\bmp16\\text_file_w10.bmp"),
                                        m_folder_icon("Images\\EasyAndFastGUI\\Icons\\bmp16\\folder_w10.bmp")
   {
-// --- Save the element class name in the base class
+   // --- Save the element class name in the base class
    CElementBase::ClassName(CLASS_NAME);
   }
 //+------------------------------------------------------------------+

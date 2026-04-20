@@ -3,12 +3,17 @@
 //|                        Copyright 2015, MetaQuotes Software Corp. |
 //|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
-#include "..\ElementBase.mqh"
-#include "Button.mqh"
-#include "Pointer.mqh"
 //+------------------------------------------------------------------+
 //| Form class for controls                                          |
 //+------------------------------------------------------------------+
+#ifndef __WINDOW_MQH__
+#define __WINDOW_MQH__
+ #include "..\ElementBase.mqh"
+ #include "Button.mqh"
+ #include "Pointer.mqh"
+ #include "..\GUIDefines\ControlsDefines.mqh"
+
+
 class CWindow : public CElement
  {
   private:
@@ -238,7 +243,7 @@ class CWindow : public CElement
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
   CWindow::CWindow(void) : m_right_limit(0),
-                          m_caption_height(20),
+                          m_caption_height(WINDOW_CAPTION_HEIGHT),//WINDOW_CAPTION_HEIGHT=22
                           m_caption_color(C'77,118,201'),
                           m_caption_color_hover(C'77,118,201'),
                           m_caption_color_locked(C'188,165,219'),
@@ -518,67 +523,67 @@ class CWindow : public CElement
     if(CElementBase::ProgramType()==PROGRAM_SCRIPT)
         return(true);
     // --- Counter, size, quantity
-    int i=0,x_size=20;
-    int buttons_total=4;
+      int i=0,x_size=WINDOW_BUTTON_SIZE; //WINDOW_BUTTON_SIZE=20
+      int buttons_total=4;
     // --- File path
-    uint icon_index=INT_MAX;
+      uint icon_index=INT_MAX;
     // --- Exception in capture area
-    m_right_limit=0;
+      m_right_limit=0;
     //---
     CButton *button_obj=NULL;
     //---
     for(int b=0; b<buttons_total; b++)
       {
         //---
-        if(b==0)
-        {
-          CElementBase::LastId(LastId()-1);
-          m_button_close.MainPointer(this);
-          if(!m_close_button)
-              continue;
-          //---
-          button_obj =::GetPointer(m_button_close);
-          icon_index =RESOURCE_CLOSE_WHITE;
-        }
-        else if(b==1)
-        {
-          m_button_fullscreen.MainPointer(this);
-          // --- Quit if (1) the button is not enabled or (2) it's a dialog box
-          if(!m_fullscreen_button || m_window_type==W_DIALOG)
-              continue;
-          //---
-          button_obj =::GetPointer(m_button_fullscreen);
-          icon_index =RESOURCE_FULL_SCREEN;
-        }
-        else if(b==2)
-        {
-          m_button_collapse.MainPointer(this);
-          // --- Quit if (1) the button is not enabled or (2) it's a dialog box
-          if(!m_collapse_button || m_window_type==W_DIALOG)
-              continue;
-          //---
-          button_obj=::GetPointer(m_button_collapse);
-          if(m_is_minimized)
-              icon_index =RESOURCE_DOWN_THIN_WHITE;
-          else
-              icon_index =RESOURCE_UP_THIN_WHITE;
-        }
-        else if(b==3)
-        {
-          m_button_tooltip.MainPointer(this);
-          // --- Quit if (1) the button is not enabled or (2) it's a dialog box
-          if(!m_tooltips_button || m_window_type==W_DIALOG)
-              continue;
-          //---
-          button_obj =::GetPointer(m_button_tooltip);
-          icon_index =RESOURCE_HELP;
-        }
+          if(b==0)
+          {
+            CElementBase::LastId(LastId()-1);
+            m_button_close.MainPointer(this);
+            if(!m_close_button)
+                continue;
+            //---
+            button_obj =::GetPointer(m_button_close);
+            icon_index =IMAGE_RESOURCE_CONTROLS_CLOSE_BMP;
+          }
+          else if(b==1)
+          {
+            m_button_fullscreen.MainPointer(this);
+            // --- Quit if (1) the button is not enabled or (2) it's a dialog box
+            if(!m_fullscreen_button || m_window_type==W_DIALOG)
+                continue;
+            //---
+            button_obj =::GetPointer(m_button_fullscreen);
+            icon_index =IMAGE_RESOURCE_CONTROLS_FULL_SCREEN_BMP;
+          }
+          else if(b==2)
+          {
+            m_button_collapse.MainPointer(this);
+            // --- Quit if (1) the button is not enabled or (2) it's a dialog box
+            if(!m_collapse_button || m_window_type==W_DIALOG)
+                continue;
+            //---
+            button_obj=::GetPointer(m_button_collapse);
+            if(m_is_minimized)
+                icon_index =IMAGE_RESOURCE_CONTROLS_DOWN_THIN_WHITE_BMP;
+            else
+                icon_index =IMAGE_RESOURCE_CONTROLS_UP_THIN_WHITE_BMP;
+          }
+          else if(b==3)
+          {
+            m_button_tooltip.MainPointer(this);
+            // --- Quit if (1) the button is not enabled or (2) it's a dialog box
+            if(!m_tooltips_button || m_window_type==W_DIALOG)
+                continue;
+            //---
+            button_obj =::GetPointer(m_button_tooltip);
+            icon_index =IMAGE_RESOURCE_CONTROLS_HELP_DARK_BMP;
+          }
         // --- Properties
           button_obj.Index(i);
           button_obj.XSize(x_size);
           button_obj.YSize(x_size);
-          button_obj.IconXGap(2);
-          button_obj.IconYGap(2);
+          button_obj.IconXGap(WINDOW_BUTTON_ICON_GAP); //WINDOW_BUTTON_ICON_GAP=2
+          button_obj.IconYGap(WINDOW_BUTTON_ICON_GAP); //WINDOW_BUTTON_ICON_GAP=2
           button_obj.BackColor(m_caption_color);
           button_obj.BackColorHover((b<1)? C'242,27,45' : C'90,139,232');
           button_obj.BackColorPressed((b<1)? C'149,68,116' : C'67,103,173');
@@ -600,7 +605,8 @@ class CWindow : public CElement
         m_right_limit+=x_size-((i<3)? 0 : 1);
         i++;
         // --- Let's create an element
-        if(!button_obj.CreateButton("",m_right_limit,0))
+        int btn_y_gap = (WINDOW_CAPTION_HEIGHT - WINDOW_BUTTON_SIZE) / 2;
+        if(!button_obj.CreateButton("",m_right_limit,btn_y_gap))
           return(false);
         // --- Add element to array
         CElement::AddToArray(button_obj);
@@ -634,19 +640,19 @@ class CWindow : public CElement
   //+------------------------------------------------------------------+
   uint CWindow::DefaultIcon(void)
    {
-    uint resource_index =RESOURCE_ADVISOR;   
+    uint resource_index =IMAGE_RESOURCE_CONTROLS_ADVISOR_BMP;   
     switch(CElementBase::ProgramType()) 
       {
       case PROGRAM_SCRIPT: {
-        resource_index =RESOURCE_SCRIPT;
+        resource_index =IMAGE_RESOURCE_CONTROLS_SCRIPT_BMP;
         break;
         }
       case PROGRAM_EXPERT: {
-        resource_index =RESOURCE_ADVISOR;
+        resource_index =IMAGE_RESOURCE_CONTROLS_ADVISOR_BMP;
         break;
         }
       case PROGRAM_INDICATOR: {
-        resource_index =RESOURCE_INDICATOR;
+        resource_index =IMAGE_RESOURCE_CONTROLS_INDICATOR_BMP;
         break;
         }
       }
@@ -1147,8 +1153,8 @@ class CWindow : public CElement
         m_x=m_y=1;
         Moving(m_x,m_y);
       // --- Replace the image in the button
-        m_button_fullscreen.IconFile((uint)RESOURCE_MINIMIZE_TO_WINDOW);
-        m_button_fullscreen.IconFileLocked((uint)RESOURCE_MINIMIZE_TO_WINDOW);
+        m_button_fullscreen.IconFile((uint)IMAGE_RESOURCE_CONTROLS_MINIMIZE_TO_WINDOW_BMP);
+        m_button_fullscreen.IconFileLocked((uint)IMAGE_RESOURCE_CONTROLS_MINIMIZE_TO_WINDOW_BMP);
       }
     // --- If the window is in full screen size
     else
@@ -1168,8 +1174,8 @@ class CWindow : public CElement
         m_y=m_last_y;
         Moving(m_x,m_y);
       // --- Replace the image in the button
-        m_button_fullscreen.IconFile((uint)RESOURCE_FULL_SCREEN);
-        m_button_fullscreen.IconFileLocked((uint)RESOURCE_FULL_SCREEN);
+        m_button_fullscreen.IconFile((uint)IMAGE_RESOURCE_CONTROLS_FULL_SCREEN_BMP);
+        m_button_fullscreen.IconFileLocked((uint)IMAGE_RESOURCE_CONTROLS_FULL_SCREEN_BMP);
       }
     // --- Remove focus from a button
     m_button_fullscreen.MouseFocus(false);
@@ -1204,8 +1210,8 @@ class CWindow : public CElement
   void CWindow::Collapse(void)
    {
     // --- Replace button
-    m_button_collapse.IconFile((uint)RESOURCE_DOWN_THIN_WHITE);
-    m_button_collapse.IconFileLocked((uint)RESOURCE_DOWN_THIN_WHITE);
+    m_button_collapse.IconFile((uint)IMAGE_RESOURCE_CONTROLS_DOWN_THIN_WHITE_BMP);
+    m_button_collapse.IconFileLocked((uint)IMAGE_RESOURCE_CONTROLS_DOWN_THIN_WHITE_BMP);
     // ---Set and remember size
     CElementBase::YSize(m_caption_height);
     m_canvas.YSize(m_caption_height);
@@ -1234,8 +1240,8 @@ class CWindow : public CElement
   void CWindow::Expand(void)
    {
     // --- Replace button
-    m_button_collapse.IconFile((uint)RESOURCE_UP_THIN_WHITE);
-    m_button_collapse.IconFileLocked((uint)RESOURCE_UP_THIN_WHITE);
+    m_button_collapse.IconFile((uint)IMAGE_RESOURCE_CONTROLS_UP_THIN_WHITE_BMP);
+    m_button_collapse.IconFileLocked((uint)IMAGE_RESOURCE_CONTROLS_UP_THIN_WHITE_BMP);
     // ---Set and remember size
     CElementBase::YSize(m_full_height);
     m_canvas.YSize(m_full_height);
@@ -1531,6 +1537,9 @@ class CWindow : public CElement
     m_canvas.FillRectangle(x,y,x2,y2,::ColorToARGB(m_back_color,(m_transparent_only_caption)?(uchar)255 : m_alpha));
    }
   //+------------------------------------------------------------------+
-#endif // CWINDOW_IMPLEMENTATION
+ #endif // CWINDOW_IMPLEMENTATION
+#endif // __WINDOW_MQH__
+
+
 
 
