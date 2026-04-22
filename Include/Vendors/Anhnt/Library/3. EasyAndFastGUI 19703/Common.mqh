@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                       Common.mqh |
 //|                                  Copyright 2022, MetaQuotes Ltd. |
-//|                                              http://www.mql5.com |
+//|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
 #ifndef __COMMON_MQH__
 #define __COMMON_MQH__
@@ -31,16 +31,17 @@
 //+------------------------------------------------------------------+
 //| EX5 imports                                                      |
 //+------------------------------------------------------------------+
-class CCommon {
- public:
-   // --- Chart window ID and number
-   static long       m_chart_id;
-   static int        m_subwin;
-   // --- ID of the last created control
-   static int        m_last_id;
-   // ---Graph angle and object anchor point
-   ENUM_BASE_CORNER  m_corner;
-   ENUM_ANCHOR_POINT m_anchor;
-};
+  class CCommon 
+  {
+   public:
+    // --- Chart window ID and number
+    static long       m_chart_id;
+    static int        m_subwin;
+    // --- ID of the last created control
+    static int        m_last_id;
+    // ---Graph angle and object anchor point
+    ENUM_BASE_CORNER  m_corner;
+    ENUM_ANCHOR_POINT m_anchor;
+  };
 //+------------------------------------------------------------------+
 #endif // __COMMON_MQH__

@@ -27,41 +27,34 @@
         bool CreateCanvas(void);
         //---
     public:
-        // --- (1) Setting the button mode, (2) button state (pressed/released)
-        bool TwoState(void) const {
-            return (m_two_state);
-        }
-        void TwoState(const bool flag) {
-            m_two_state = flag;
-        }
-        bool IsPressed(void) const {return (m_is_pressed);}
-        void IsPressed(const bool state);
-        // --- Set shortcuts for the button in the pressed state (available/locked)
-        void IconFilePressed(const string file_path);
-        void IconFilePressedLocked(const string file_path);
-        void IconFilePressed(const uint resource_index);
-        void IconFilePressedLocked(const uint resource_index);
+      // --- (1) Setting the button mode, (2) button state (pressed/released)
+        bool    TwoState(void) const {return (m_two_state);}
+        void    TwoState(const bool flag) {m_two_state = flag;}
+        bool    IsPressed(void) const {return (m_is_pressed);}
+        void    IsPressed(const bool state);
+      // --- Set shortcuts for the button in the pressed state (available/locked)
+        void    IconFilePressed(const string file_path);
+        void    IconFilePressedLocked(const string file_path);
+        void    IconFilePressed(const uint resource_index);
+        void    IconFilePressedLocked(const uint resource_index);
         // --- Resizing
         void ChangeSize(const uint x_size, const uint y_size);
-        //---
     public:
-        // ---Graph event handler
+      // ---Graph event handler
         virtual void OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam);
-        // --- Draws an element
+      // --- Draws an element
         virtual void Draw(void);
-        //---
     protected:
-        // --- Draws the background
+      // --- Draws the background
         virtual void DrawBackground(void);
-        // --- Draws a frame
+      // --- Draws a frame
         virtual void DrawBorder(void);
-        // --- Draws a picture
+      // --- Draws a picture
         virtual void DrawImage(void);
-        //---
     private:
-        // --- Handling a button click
+      // --- Handling a button click
         bool OnClickButton(const string pressed_object);
-        // --- Change the width along the right edge of the window
+      // --- Change the width along the right edge of the window
         virtual void ChangeWidthByRightWindowSide(void);
     };
  #ifndef CBUTTON_MQH_IMPLEMENTATION
@@ -69,19 +62,20 @@
     //+------------------------------------------------------------------+
     //| Constructor                                                      |
     //+------------------------------------------------------------------+
-    CButton::CButton(void) : m_two_state(false) {
-    // --- Save the element class name in the base class
-    CElementBase::ClassName(CLASS_NAME);
-    }
+    CButton::CButton(void) : m_two_state(false) 
+     {
+        // --- Save the element class name in the base class
+        CElementBase::ClassName(CLASS_NAME);
+     }
     //+------------------------------------------------------------------+
     //| Destructor                                                       |
     //+------------------------------------------------------------------+
-    CButton::~CButton(void) {
-    }
+    CButton::~CButton(void) {}
     //+------------------------------------------------------------------+
     // | Event Handler |
     //+------------------------------------------------------------------+
-    void CButton::OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam) {
+    void CButton::OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam) 
+     {
         // --- Handling the cursor movement event
         if (id == CHARTEVENT_MOUSE_MOVE) {
             // --- Redraw the element if there was a border crossing
@@ -105,11 +99,12 @@
             Update(true);
             return;
         }
-    }
+     }
     //+------------------------------------------------------------------+
     // | Creates an element |
     //+------------------------------------------------------------------+
-    bool CButton::CreateButton(const string text, const int x_gap, const int y_gap) {
+    bool CButton::CreateButton(const string text, const int x_gap, const int y_gap) 
+     {
         // --- Quit if there is no pointer to the main element
         if (!CElement::CheckMainPointer())
             return (false);
@@ -120,11 +115,12 @@
             return (false);
         //---
         return (true);
-    }
+     }
     //+------------------------------------------------------------------+
     // | Initializing properties |
     //+------------------------------------------------------------------+
-    void CButton::InitializeProperties(const string text, const int x_gap, const int y_gap) {
+    void CButton::InitializeProperties(const string text, const int x_gap, const int y_gap) 
+     {
         m_x = CElement::CalculateX(x_gap);
         m_y = CElement::CalculateY(y_gap);
         m_x_size = (m_x_size < 1 || m_auto_xresize_mode)
@@ -161,11 +157,12 @@
         // --- Indents from the extreme point
         CElementBase::XGap(x_gap);
         CElementBase::YGap(y_gap);
-    }
+     }
     //+------------------------------------------------------------------+
     // | Creates an object to draw |
     //+------------------------------------------------------------------+
-    bool CButton::CreateCanvas(void) {
+    bool CButton::CreateCanvas(void) 
+     {
         // --- Formation of object name
         string name = CElementBase::ElementName("button");
         // ---Create an object
@@ -173,11 +170,12 @@
             return (false);
         //---
         return (true);
-    }
+     }
     //+------------------------------------------------------------------+
     // | Setting the button state - pressed/released |
     //+------------------------------------------------------------------+
-    void CButton::IsPressed(const bool state) {
+    void CButton::IsPressed(const bool state) 
+     {
         // --- Exit if (1) not in Two-State mode or (2) the element is locked or (3)
         // the button is already in this state
         if (!m_two_state || CElementBase::IsLocked() || m_is_pressed == state)
@@ -186,17 +184,18 @@
         m_is_pressed = state;
         // --- Set the corresponding picture
         CElement::ChangeImage(0, !m_is_pressed ? 0 : 2);
-    }
+     }
     //+------------------------------------------------------------------+
     // | Setting a picture for the pressed state (available) |
     //+------------------------------------------------------------------+
-    void CButton::IconFilePressed(const string file_path) {
+    void CButton::IconFilePressed(const string file_path) 
+     {
         // --- Exit if the button has "Two states" mode disabled
         if (!m_two_state)
             return;
         // --- Add an image
         CElement::IconFilePressed(file_path);
-    }
+     }
     //+------------------------------------------------------------------+
     // | Setting the picture for the pressed state (locked) |
     //+------------------------------------------------------------------+

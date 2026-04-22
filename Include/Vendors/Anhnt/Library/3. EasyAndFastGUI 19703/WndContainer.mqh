@@ -3,7 +3,9 @@
 //|                        Copyright 2015, MetaQuotes Software Corp. |
 //|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
-
+//+------------------------------------------------------------------+
+//| Class for storing all interface objects |
+//+------------------------------------------------------------------+
 #ifndef __WNDCONTAINER_MQH__
 #define __WNDCONTAINER_MQH__
 #property strict
@@ -43,9 +45,6 @@
    #include "Controls\Window.mqh"
  // --- Reserve size of arrays
  #define RESERVE_SIZE_ARRAY 1000
-//+------------------------------------------------------------------+
-// | Class for storing all interface objects |
-//+------------------------------------------------------------------+
  class CWndContainer
   {
    private:
@@ -107,106 +106,101 @@
       //      
       //    Print(__FUNCTION__, ":");
       //    Print(out);
-      //  }
-   //---
+      //  }   
    public:
                      CWndContainer(void);
-                    ~CWndContainer(void);
-   //---
+                    ~CWndContainer(void);   
    public:
-      // --- Number of windows in the interface
+    // --- Number of windows in the interface
       int               WindowsTotal(void) { return(::ArraySize(m_windows)); }
-      // --- Number of all elements
+    // --- Number of all elements
       int               ElementsTotal(const int window_index);
-      // --- Number of main elements
+    // --- Number of main elements
       int               MainElementsTotal(const int window_index);
-      // --- Number of elements with timers
+    // --- Number of elements with timers
       int               TimerElementsTotal(const int window_index);
-      // --- Number of elements with auto-resize along the X axis
+    // --- Number of elements with auto-resize along the X axis
       int               AutoXResizeElementsTotal(const int window_index);
-      // --- Number of elements with auto-resize along the Y axis
+    // --- Number of elements with auto-resize along the Y axis
       int               AutoYResizeElementsTotal(const int window_index);
-      // --- Number of items currently available
+    // --- Number of items currently available
       int               AvailableElementsTotal(const int window_index);
-      // --- Number of elements of the specified type
-      int               ElementsTotal(const int window_index,const ENUM_ELEMENT_TYPE type);
-      //---
+    // --- Number of elements of the specified type
+      int               ElementsTotal(const int window_index,const ENUM_ELEMENT_TYPE type);      
    protected:
-      // --- Adds a window pointer to the interface element database
+    // --- Adds a window pointer to the interface element database
       void              AddWindow(CWindow &object);
-      // --- Adds a pointer to an array of elements
+    // --- Adds a pointer to an array of elements
       void              AddToElementsArray(const int window_index,CElementBase &object);
-      // --- Adds a pointer to the array of elements with timers
+    // --- Adds a pointer to the array of elements with timers
       void              AddTimerElement(const int window_index,CElement &object);
-      // --- Adds a pointer to an array of elements with auto-resizing along the X axis
+    // --- Adds a pointer to an array of elements with auto-resizing along the X axis
       void              AddAutoXResizeElement(const int window_index,CElement &object);
-      // --- Adds a pointer to an array of elements with auto-resizing along the Y axis
+    // --- Adds a pointer to an array of elements with auto-resizing along the Y axis
       void              AddAutoYResizeElement(const int window_index,CElement &object);
-      // --- Adds a pointer to the array of currently available elements
-      void              AddAvailableElement(const int window_index,CElement &object);
-      //---
+    // --- Adds a pointer to the array of currently available elements
+      void              AddAvailableElement(const int window_index,CElement &object);   
    private:
-      // --- Increments the array by one element and returns the last index
+    // --- Increments the array by one element and returns the last index
       template<typename T>
       int               ResizeArray(T &array[]);
-      // --- Template method for adding pointers to an array passed by reference
+    // --- Template method for adding pointers to an array passed by reference
       template<typename T1,typename T2>
-      void              AddToPersonalArray(T1 &object,T2 &array[]);
-      //---
+      void              AddToPersonalArray(T1 &object,T2 &array[]);      
    private:
-      // --- Checking out of range
+    // --- Checking out of range
       int               CheckOutOfRange(const int window_index);
-      // --- Stores pointers to window objects
+    // --- Stores pointers to window objects
       bool              AddWindowElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to context menu items
+    // --- Saves pointers to context menu items
       bool              AddContextMenuElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to main menu items
+    // --- Saves pointers to main menu items
       bool              AddMenuBarElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to menu item items
+    // --- Stores pointers to menu item items
       bool              AddMenuItemElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to elements of the status line
+    // --- Stores pointers to elements of the status line
       bool              AddStatusBarElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to double button elements
+    // --- Saves pointers to double button elements
       bool              AddSplitButtonElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to tab group items
+    // --- Saves pointers to tab group items
       bool              AddButtonsGroupElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to list objects
+    // --- Stores pointers to list objects
       bool              AddListViewElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to scrollbar objects to the database
+    // --- Saves pointers to scrollbar objects to the database
       bool              AddScrollElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to drop-down list elements (combo box)
+    // --- Saves pointers to drop-down list elements (combo box)
       bool              AddComboBoxElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to button elements for calling the color palette
+    // --- Saves pointers to button elements for calling the color palette
       bool              AddColorButtonElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to table elements
+    // --- Stores pointers to table elements
       bool              AddTableElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to tabs in a personal array
+    // --- Saves pointers to tabs in a personal array
       bool              AddTabsElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to calendar items
+    // --- Stores pointers to calendar items
       bool              AddCalendarElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to drop-down calendar items
+    // --- Saves pointers to drop-down calendar items
       bool              AddDropCalendarElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to color palette elements
+    // --- Stores pointers to color palette elements
       bool              AddColorPickersElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to elements of graphic objects
+    // --- Saves pointers to elements of graphic objects
       bool              AddSubChartsElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to image slider elements
+    // --- Saves pointers to image slider elements
       bool              AddPicturesSliderElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to Time elements
+    // --- Stores pointers to Time elements
       bool              AddTimeEditsElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to multiline input field objects
+    // --- Stores pointers to multiline input field objects
       bool              AddTextBoxElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to text input field objects
+    // --- Stores pointers to text input field objects
       bool              AddTextEditElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to slider objects
+    // --- Saves pointers to slider objects
       bool              AddSliderElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to elements of tree lists
+    // --- Stores pointers to elements of tree lists
       bool              AddTreeViewListsElements(const int window_index,CElementBase &object);
-      // --- Saves pointers to navigator elements
+    // --- Saves pointers to navigator elements
       bool              AddFileNavigatorElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to tooltip elements
+    // --- Stores pointers to tooltip elements
       bool              AddTooltipElements(const int window_index,CElementBase &object);
-      // --- Stores pointers to area elements
+    // --- Stores pointers to area elements
       bool              AddFrameElements(const int window_index,CElementBase &object);
   };
  #ifndef CWNDCONTAINER_MQH_IMPLEMENTATION

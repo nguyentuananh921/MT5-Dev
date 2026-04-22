@@ -24,11 +24,11 @@
    // --- Methods for creating a status line
    bool              CreateStatusBar(const int x_gap,const int y_gap);
    //---
-   private:
-   void              InitializeProperties(const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateItems(void);
-   bool              CreateSeparateLine(const int line_index);
+      private:
+      void              InitializeProperties(const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateItems(void);
+      bool              CreateSeparateLine(const int line_index);
    //---
    public:
    // --- Returns pointer and dividing line
@@ -38,7 +38,7 @@
    int               ItemsTotal(void)         const { return(::ArraySize(m_items));    }
    int               SeparateLinesTotal(void) const { return(::ArraySize(m_sep_line)); }
    // --- Adds an item with the specified properties before creating the status line
-   void              AddItem(const string text,const int width);
+      void              AddItem(const string text,const int width);
    // --- Setting the value at the specified index
    void              SetValue(const uint index,const string value);
    //---
@@ -57,7 +57,7 @@
    int               CalculationItemX(const int item_index=0);
    // --- Change the width along the right edge of the window
    virtual void      ChangeWidthByRightWindowSide(void);
- };
+  };
   #ifndef CSTATUSBAR_MQH_IMPLEMENTATION
   #define CSTATUSBAR_MQH_IMPLEMENTATION
    //+------------------------------------------------------------------+
@@ -228,14 +228,14 @@
    // | Adds a menu item |
    //+------------------------------------------------------------------+
    void CStatusBar::AddItem(const string text,const int width)
-     {
+   {
    // --- Increase the size of the arrays by one element
       int array_size=::ArraySize(m_items);
       ::ArrayResize(m_items,array_size+1);
    // --- Save the values ​​of the passed parameters
       m_items[array_size].XSize(width);
       m_items[array_size].LabelText(text);
-     }
+   }
    //+------------------------------------------------------------------+
    // | Sets the value at the specified index |
    //+------------------------------------------------------------------+
