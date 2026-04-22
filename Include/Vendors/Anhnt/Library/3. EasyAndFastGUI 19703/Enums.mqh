@@ -6,6 +6,8 @@
 //+------------------------------------------------------------------+
 // | Enumeration of window types |
 //+------------------------------------------------------------------+
+#ifndef __ENUMS_MQH__
+#define __ENUMS_MQH__
 enum ENUM_WINDOW_TYPE
   {
    W_MAIN   =0,
@@ -162,3 +164,4 @@ enum ENUM_MOVE_TEXT_CURSOR
    TO_END_LAST_LINE     =9
   };
 //+------------------------------------------------------------------+
+#endif // __ENUMS_MQH__

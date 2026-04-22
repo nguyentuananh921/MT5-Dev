@@ -4,6 +4,8 @@
 //|                                              http://www.mql5.com |
 //+------------------------------------------------------------------+
 // --- "Expert window" mode
+#ifndef __DEFINES_MQH__
+#define __DEFINES_MQH__
 #define EXPERT_IN_SUBWINDOW false
 // --- Class name
 #define CLASS_NAME ::StringSubstr(__FUNCTION__,0,::StringFind(__FUNCTION__,"::"))
@@ -79,3 +81,4 @@
 //---
 #define ON_END_CREATE_GUI           (42) // GUI created
 //+------------------------------------------------------------------+
+#endif // __DEFINES_MQH__

@@ -14,6 +14,8 @@
 // class CImage;
 // class CRectCanvas;
 // class CSubChart;
+#ifndef __OBJECTS_MQH__
+#define __OBJECTS_MQH__
 #ifndef MOVE_TO_IMAGE_MQH
 #define MOVE_TO_IMAGE_MQH
   // //+------------------------------------------------------------------+
@@ -264,3 +266,4 @@
   // //+------------------------------------------------------------------+
 #endif // MOVE_TO_SUBCHART_MQH
 
+#endif // __OBJECTS_MQH__

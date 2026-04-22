@@ -1,0 +1,11 @@
+Cách 1: Dùng Git Bash (Khuyên dùng vì cậu đang mở sẵn)
+Trong cửa sổ Git Bash, cậu di chuyển đến thư mục chứa các file đó (dùng lệnh cd) rồi chạy lệnh sau:
+
+Bash
+find . -name "*_EN.mqh" -type f -delete
+Giải thích: Lệnh này sẽ tìm tất cả các file (-type f) có tên kết thúc bằng _EN.mqh trong thư mục hiện tại và các thư mục con, sau đó thực hiện lệnh xóa (-delete).
+
+find . -name "*_EN.mqh" -type f -delete
+
+Move file to.
+find . -maxdepth 1 -name "*_EN.mqh" -exec mv {} ./Eng/ \;

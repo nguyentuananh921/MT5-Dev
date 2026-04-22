@@ -3,16 +3,16 @@
 //|                        Copyright 2016, MetaQuotes Software Corp. |
 //|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
-#ifndef CELEMENT
-#define CELEMENT
- #include "ElementBase.mqh"
+#ifndef __ELEMENT_MQH__
+#define __ELEMENT_MQH__
+#include "ElementBase.mqh"
  #include "Image.mqh"
   class CWindow;
    //+------------------------------------------------------------------+
    // | Control derived class |
    //+------------------------------------------------------------------+
  class CElement : public CElementBase
-  {
+   {
      protected:
       // --- Pointer to form
       CWindow          *m_wnd;
@@ -233,879 +233,877 @@
        virtual void      DrawImage(void);
       // --- Draws text
        virtual void      DrawText(void);
-   };
- #ifndef CELEMENT_IMPLEMENTATION
- #define CELEMENT_IMPLEMENTATION
-    //+------------------------------------------------------------------+
-    //| Constructor                                                      |
-    //+------------------------------------------------------------------+
-    CElement::CElement(void) : m_alpha(255),
-                              m_tooltip_text("\n"),
-                              m_back_color(clrNONE),
-                              m_back_color_hover(clrNONE),
-                              m_back_color_locked(clrNONE),
-                              m_back_color_pressed(clrNONE),
-                              m_border_color(clrNONE),
-                              m_border_color_hover(clrNONE),
-                              m_border_color_locked(clrNONE),
-                              m_border_color_pressed(clrNONE),
-                              m_icon_x_gap(WRONG_VALUE),
-                              m_icon_y_gap(WRONG_VALUE),
-                              m_label_text(""),
-                              m_label_x_gap(WRONG_VALUE),
-                              m_label_y_gap(WRONG_VALUE),
-                              m_label_color(clrNONE),
-                              m_label_color_hover(clrNONE),
-                              m_label_color_locked(clrNONE),
-                              m_label_color_pressed(clrNONE),
-                              m_font("Calibri"),
-                              m_font_size(8),
-                              m_is_center_text(false),
-                              m_zorder(WRONG_VALUE)
-     {
-     }
-    //+------------------------------------------------------------------+
-    //| Destructor                                                       |
-    //+------------------------------------------------------------------+
-    CElement::~CElement(void)
-     {
-     }
-    //+------------------------------------------------------------------+
-    //| Creating a Canvas for Drawing an Element |
-    //+------------------------------------------------------------------+
-    bool CElement::CreateCanvas(const string name,const int x,const int y,
-                              const int x_size,const int y_size,ENUM_COLOR_FORMAT clr_format=COLOR_FORMAT_ARGB_NORMALIZE)
-     {
-      // --- Size adjustment
-         int xsize =(x_size<1)? 50 : x_size;
-         int ysize =(y_size<1)? 20 : y_size;
-      // --- Reset last error
-         ::ResetLastError();
-      // ---Create an object
-         if(!m_canvas.CreateBitmapLabel(m_chart_id,m_subwin,name,x,y,xsize,ysize,clr_format))
-         {
-            ::Print(__FUNCTION__," > name: ",name);
-            ::Print(__FUNCTION__," > Unable to create canvas to draw element ("+m_class_name+"): ",::GetLastError());
-            return(false);
-         }
-      // --- Reset last error
-         ::ResetLastError();
-      // --- Get a pointer to the base class
-         if(!m_canvas.Attach(m_chart_id,name,clr_format))
-         {
-            ::Print(__FUNCTION__," > Failed to attach drawing canvas to chart: ",::GetLastError());
-            return(false);
-         }
-      // --- Properties
-         ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,"\n");
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_CORNER,m_corner);
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_SELECTABLE,false);
+  };
+ #ifndef CELEMENT_MQH_IMPLEMENTATION
+ #define CELEMENT_MQH_IMPLEMENTATION
+  //+------------------------------------------------------------------+
+  //| Constructor                                                      |
+  //+------------------------------------------------------------------+
+  CElement::CElement(void) : m_alpha(255),
+                           m_tooltip_text("\n"),
+                           m_back_color(clrNONE),
+                           m_back_color_hover(clrNONE),
+                           m_back_color_locked(clrNONE),
+                           m_back_color_pressed(clrNONE),
+                           m_border_color(clrNONE),
+                           m_border_color_hover(clrNONE),
+                           m_border_color_locked(clrNONE),
+                           m_border_color_pressed(clrNONE),
+                           m_icon_x_gap(WRONG_VALUE),
+                           m_icon_y_gap(WRONG_VALUE),
+                           m_label_text(""),
+                           m_label_x_gap(WRONG_VALUE),
+                           m_label_y_gap(WRONG_VALUE),
+                           m_label_color(clrNONE),
+                           m_label_color_hover(clrNONE),
+                           m_label_color_locked(clrNONE),
+                           m_label_color_pressed(clrNONE),
+                           m_font("Calibri"),
+                           m_font_size(8),
+                           m_is_center_text(false),
+                           m_zorder(WRONG_VALUE)
+   {
+   }
+   //+------------------------------------------------------------------+
+   //| Destructor                                                       |
+   //+------------------------------------------------------------------+
+   CElement::~CElement(void)
+   {
+   }
+   //+------------------------------------------------------------------+
+   //| Creating a Canvas for Drawing an Element |
+   //+------------------------------------------------------------------+
+   bool CElement::CreateCanvas(const string name,const int x,const int y,
+                           const int x_size,const int y_size,ENUM_COLOR_FORMAT clr_format=COLOR_FORMAT_ARGB_NORMALIZE)
+   {
+   // --- Size adjustment
+      int xsize =(x_size<1)? 50 : x_size;
+      int ysize =(y_size<1)? 20 : y_size;
+   // --- Reset last error
+      ::ResetLastError();
+   // ---Create an object
+      if(!m_canvas.CreateBitmapLabel(m_chart_id,m_subwin,name,x,y,xsize,ysize,clr_format))
+      {
+         ::Print(__FUNCTION__," > name: ",name);
+         ::Print(__FUNCTION__," > Unable to create canvas to draw element ("+m_class_name+"): ",::GetLastError());
+         return(false);
+      }
+   // --- Reset last error
+      ::ResetLastError();
+   // --- Get a pointer to the base class
+      if(!m_canvas.Attach(m_chart_id,name,clr_format))
+      {
+         ::Print(__FUNCTION__," > Failed to attach drawing canvas to chart: ",::GetLastError());
+         return(false);
+      }
+   // --- Properties
+      ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,"\n");
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_CORNER,m_corner);
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_SELECTABLE,false);
 
-      // --- All elements except the form have a higher priority than the main element
-         Z_Order((dynamic_cast<CWindow*>(&this)!=NULL)? 0 : m_main.Z_Order()+1);
-      // ---Coordinates
-         m_canvas.X(x);
-         m_canvas.Y(y);
-      // --- Dimensions
-         m_canvas.XSize(x_size);
-         m_canvas.YSize(y_size);
-      // --- Indents from the extreme point
-         m_canvas.XGap(CalculateXGap(x));
-         m_canvas.YGap(CalculateYGap(y));
-      return(true);
-     }
+   // --- All elements except the form have a higher priority than the main element
+      Z_Order((dynamic_cast<CWindow*>(&this)!=NULL)? 0 : m_main.Z_Order()+1);
+   // ---Coordinates
+      m_canvas.X(x);
+      m_canvas.Y(y);
+   // --- Dimensions
+      m_canvas.XSize(x_size);
+      m_canvas.YSize(y_size);
+   // --- Indents from the extreme point
+      m_canvas.XGap(CalculateXGap(x));
+      m_canvas.YGap(CalculateYGap(y));
+   return(true);
+   }
    //+------------------------------------------------------------------+
    // | Returns the indent for images from the specified group |
    //+------------------------------------------------------------------+
    int CElement::ImageGroupXGap(const uint index)
-    {
-     // --- Return object pointer
-      return(m_images_group[index].m_x_gap);
-    }
+   {
+   // --- Return object pointer
+   return(m_images_group[index].m_x_gap);
+   }
    //+------------------------------------------------------------------+
    //| Setting the indent for pictures from the specified group |
    //+------------------------------------------------------------------+
    void CElement::ImageGroupXGap(const uint index,const int x_gap)
-    {
-      m_images_group[index].m_x_gap=x_gap;
-    }
+   {
+   m_images_group[index].m_x_gap=x_gap;
+   }
    //+------------------------------------------------------------------+
    // | Returns a pointer to the connected element |
    //+------------------------------------------------------------------+
    CElement *CElement::Element(const uint index)
-    {
-      uint array_size=::ArraySize(m_elements);
-     // --- Checking the size of an array of objects
-      if(array_size<1)
-      {
-         ::Print(__FUNCTION__," > В этом элементе ("+m_class_name+") нет элементов-потомков!");
-         return(NULL);
-      }
-     // --- Adjustment in case of leaving the range
-      uint i=(index>=array_size)? array_size-1 : index;
-     // --- Return object pointer
-      return(::GetPointer(m_elements[i]));
-    }
+   {
+   uint array_size=::ArraySize(m_elements);
+   // --- Checking the size of an array of objects
+   if(array_size<1)
+   {
+      ::Print(__FUNCTION__," > В этом элементе ("+m_class_name+") нет элементов-потомков!");
+      return(NULL);
+   }
+   // --- Adjustment in case of leaving the range
+   uint i=(index>=array_size)? array_size-1 : index;
+   // --- Return object pointer
+   return(::GetPointer(m_elements[i]));
+   }
    //+------------------------------------------------------------------+
    // | Setting the tooltip to show |
    //+------------------------------------------------------------------+
    void CElement::ShowTooltip(const bool state)
-    {
-      if(state)
-         ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,m_tooltip_text);
-      else
-         ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,"\n");
-    }
+   {
+   if(state)
+      ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,m_tooltip_text);
+   else
+      ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,"\n");
+   }
    //+------------------------------------------------------------------+
    // | Left click priority |
    //+------------------------------------------------------------------+
    void CElement::Z_Order(const long z_order)
-    {
-      m_zorder=z_order;
-      SetZorders();
-    }
+   {
+   m_zorder=z_order;
+   SetZorders();
+   }
    //+------------------------------------------------------------------+
    // | Lock/unlock an element |
    //+------------------------------------------------------------------+
    void CElement::IsLocked(const bool state)
-    {
-      // --- Exit if already installed
-         if(state==CElementBase::IsLocked())
-            return;
-      // ---Save state
-         CElementBase::IsLocked(state);
-      // --- Other elements
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].IsLocked(state);
-      // --- Pointer check
-         if(::CheckPointer(m_main)==POINTER_INVALID)
-            return;
-      // --- Event sends only the main element of the composite group
-         if(this.Id()!=m_main.Id())
+   {
+   // --- Exit if already installed
+      if(state==CElementBase::IsLocked())
+         return;
+   // ---Save state
+      CElementBase::IsLocked(state);
+   // --- Other elements
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].IsLocked(state);
+   // --- Pointer check
+      if(::CheckPointer(m_main)==POINTER_INVALID)
+         return;
+   // --- Event sends only the main element of the composite group
+      if(this.Id()!=m_main.Id())
+      {
+         ::EventChartCustom(m_chart_id,ON_SET_LOCKED,CElementBase::Id(),(int)state,"");
+         // --- Send a message about the change in the graphical interface
+         ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0.0,"");
+      }
+      else
+      {
+         if(state!=m_main.CElementBase::IsLocked())
          {
             ::EventChartCustom(m_chart_id,ON_SET_LOCKED,CElementBase::Id(),(int)state,"");
             // --- Send a message about the change in the graphical interface
             ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0.0,"");
          }
-         else
-         {
-            if(state!=m_main.CElementBase::IsLocked())
-            {
-               ::EventChartCustom(m_chart_id,ON_SET_LOCKED,CElementBase::Id(),(int)state,"");
-               // --- Send a message about the change in the graphical interface
-               ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0.0,"");
-            }
-         }
-    }
+      }
+   }
    //+------------------------------------------------------------------+
    // | Item Availability |
    //+------------------------------------------------------------------+
    void CElement::IsAvailable(const bool state)
-    {
-      // --- Exit if already installed
-         if(state==CElementBase::IsAvailable())
-            return;
-      // --- Install
-         CElementBase::IsAvailable(state);
-      // --- Other elements
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].IsAvailable(state);
-      // --- Set left click priorities
-         if(state)
-            SetZorders();
-         else
-            ResetZorders();
-    }
+   {
+   // --- Exit if already installed
+      if(state==CElementBase::IsAvailable())
+         return;
+   // --- Install
+      CElementBase::IsAvailable(state);
+   // --- Other elements
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].IsAvailable(state);
+   // --- Set left click priorities
+      if(state)
+         SetZorders();
+      else
+         ResetZorders();
+   }
    //+------------------------------------------------------------------+
    // | Setting a picture for the active state |
    //+------------------------------------------------------------------+
    void CElement::IconFile(const string file_path)
-    {
-      // --- If there are no groups of images yet
-         if(ImagesGroupTotal()<1)
-         {
-            m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
-            m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
-            // --- Add a group and an image
-            AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
-            AddImage(0,file_path);
-            AddImage(1,"");
-            // ---Default image
-            m_images_group[0].m_selected_image=0;
-            return;
-         }
-      // --- Set the image to the first group as the first element
-         SetImage(0,0,file_path);
-    }
+   {
+   // --- If there are no groups of images yet
+      if(ImagesGroupTotal()<1)
+      {
+         m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
+         m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
+         // --- Add a group and an image
+         AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
+         AddImage(0,file_path);
+         AddImage(1,"");
+         // ---Default image
+         m_images_group[0].m_selected_image=0;
+         return;
+      }
+   // --- Set the image to the first group as the first element
+      SetImage(0,0,file_path);
+   }
    //+------------------------------------------------------------------+
    //| Setting a picture for the active state (index from the resource) |
    //+------------------------------------------------------------------+
    void CElement::IconFile(const uint resource_index)
-    {
-     // --- If there are no groups of images yet
-      if(ImagesGroupTotal()<1)
-      {
-         m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
-         m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
-         // --- Add a group and an image
-         AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
-         AddImage(0,resource_index);
-         AddImage(1,INT_MAX);
-         // ---Default image
-         m_images_group[0].m_selected_image=0;
-         return;
-      }
-     // --- Set the image to the first group as the first element
-      SetImage(0,0,resource_index);
-    }
+   {
+   // --- If there are no groups of images yet
+   if(ImagesGroupTotal()<1)
+   {
+      m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
+      m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
+      // --- Add a group and an image
+      AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
+      AddImage(0,resource_index);
+      AddImage(1,INT_MAX);
+      // ---Default image
+      m_images_group[0].m_selected_image=0;
+      return;
+   }
+   // --- Set the image to the first group as the first element
+   SetImage(0,0,resource_index);
+   }
    //+------------------------------------------------------------------+
    // | Returns the image |
    //+------------------------------------------------------------------+
    string CElement::IconFile(bool resource_index_mode = false)
-    {
-     // --- Empty line if there are no image groups
-      if(ImagesGroupTotal()<1)
-         return("");
-     // ---If there is no image in the group
-      if(::ArraySize(m_images_group[0].m_image)<1)
-         return("");
-     // --- Return image path
-      return((!resource_index_mode)? 
-      m_images_group[0].m_image[0].BmpPath() : 
-      (string)m_images_group[0].m_image[0].ResourceIndex());
-    }
+   {
+   // --- Empty line if there are no image groups
+   if(ImagesGroupTotal()<1)
+      return("");
+   // ---If there is no image in the group
+   if(::ArraySize(m_images_group[0].m_image)<1)
+      return("");
+   // --- Return image path
+   return((!resource_index_mode)? 
+   m_images_group[0].m_image[0].BmpPath() : 
+   (string)m_images_group[0].m_image[0].ResourceIndex());
+   }
    //+------------------------------------------------------------------+
    // | Setting a picture for the locked state |
    //+------------------------------------------------------------------+
    void CElement::IconFileLocked(const string file_path)
-    {
-     // --- If there are no groups of images yet
-      if(ImagesGroupTotal()<1)
-      {
-         m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
-         m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
-         // --- Add a group and an image
-         AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
-         AddImage(0,"");
-         AddImage(1,file_path);
-         // ---Default image
-         m_images_group[0].m_selected_image=0;
-         return;
-      }
-     // --- Set the image to the first group as the second element
-      SetImage(0,1,file_path);
-    }
+   {
+   // --- If there are no groups of images yet
+   if(ImagesGroupTotal()<1)
+   {
+      m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
+      m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
+      // --- Add a group and an image
+      AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
+      AddImage(0,"");
+      AddImage(1,file_path);
+      // ---Default image
+      m_images_group[0].m_selected_image=0;
+      return;
+   }
+   // --- Set the image to the first group as the second element
+   SetImage(0,1,file_path);
+   }
    //+------------------------------------------------------------------+
    // | Setting a picture for the locked state |
    //+------------------------------------------------------------------+
    void CElement::IconFileLocked(const uint resource_index)
-    {
-     // --- If there are no groups of images yet
-      if(ImagesGroupTotal()<1)
-      {
-         m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
-         m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
-         // --- Add a group and an image
-         AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
-         AddImage(0,INT_MAX);
-         AddImage(1,resource_index);
-         // ---Default image
-         m_images_group[0].m_selected_image=0;
-         return;
-      }
-     // --- Set the image to the first group as the second element
-      SetImage(0,1,resource_index);
-    }
+   {
+   // --- If there are no groups of images yet
+   if(ImagesGroupTotal()<1)
+   {
+      m_icon_x_gap =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 0;
+      m_icon_y_gap =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 0;
+      // --- Add a group and an image
+      AddImagesGroup(m_icon_x_gap,m_icon_y_gap);
+      AddImage(0,INT_MAX);
+      AddImage(1,resource_index);
+      // ---Default image
+      m_images_group[0].m_selected_image=0;
+      return;
+   }
+   // --- Set the image to the first group as the second element
+   SetImage(0,1,resource_index);
+   }
    //+------------------------------------------------------------------+
    // | Returns the image |
    //+------------------------------------------------------------------+
    string CElement::IconFileLocked(bool resource_index_mode = false)
-    {
-      // --- Empty line if there are no image groups
-         if(ImagesGroupTotal()<1)
-            return("");
-      // ---If there is no image in the group
-         if(::ArraySize(m_images_group[0].m_image)<2)
-            return("");
-      // --- Return image path
-         return((!resource_index_mode)? 
-         m_images_group[0].m_image[1].BmpPath() : 
-         (string)m_images_group[0].m_image[1].ResourceIndex());
-    }
+   {
+   // --- Empty line if there are no image groups
+      if(ImagesGroupTotal()<1)
+         return("");
+   // ---If there is no image in the group
+      if(::ArraySize(m_images_group[0].m_image)<2)
+         return("");
+   // --- Return image path
+      return((!resource_index_mode)? 
+      m_images_group[0].m_image[1].BmpPath() : 
+      (string)m_images_group[0].m_image[1].ResourceIndex());
+   }
    //+------------------------------------------------------------------+
    // | Setting a picture for the pressed state (available) |
    //+------------------------------------------------------------------+
    void CElement::IconFilePressed(const string file_path)
-    {
-      // --- Add a place for the image if it doesn't exist yet
-         while(!CElement::CheckOutOfRange(0,2))
-            AddImage(0,"");
-      // --- Set picture
-         CElement::SetImage(0,2,file_path);
-    }
+   {
+   // --- Add a place for the image if it doesn't exist yet
+      while(!CElement::CheckOutOfRange(0,2))
+         AddImage(0,"");
+   // --- Set picture
+      CElement::SetImage(0,2,file_path);
+   }
    //+------------------------------------------------------------------+
    // | Setting a picture for the pressed state (available) |
    //+------------------------------------------------------------------+
    void CElement::IconFilePressed(const uint resource_index)
-    {
-      // --- Add a place for the image if it doesn't exist yet
-         while(!CElement::CheckOutOfRange(0,2))
-            AddImage(0,INT_MAX);
-      // --- Set picture
-         CElement::SetImage(0,2,resource_index);
-    }
+   {
+   // --- Add a place for the image if it doesn't exist yet
+      while(!CElement::CheckOutOfRange(0,2))
+         AddImage(0,INT_MAX);
+   // --- Set picture
+      CElement::SetImage(0,2,resource_index);
+   }
    //+------------------------------------------------------------------+
    // | Returns the image |
    //+------------------------------------------------------------------+
    string CElement::IconFilePressed(bool resource_index_mode = false)
-    {
-      // --- Empty line if there are no image groups
-         if(ImagesGroupTotal()<1)
-            return("");
-      // ---If there is no image in the group
-         if(::ArraySize(m_images_group[0].m_image)<3)
-            return("");
-      // --- Return image path
-         return((!resource_index_mode)? 
-         m_images_group[0].m_image[2].BmpPath() : 
-         (string)m_images_group[0].m_image[2].ResourceIndex());
-    }
+   {
+   // --- Empty line if there are no image groups
+      if(ImagesGroupTotal()<1)
+         return("");
+   // ---If there is no image in the group
+      if(::ArraySize(m_images_group[0].m_image)<3)
+         return("");
+   // --- Return image path
+      return((!resource_index_mode)? 
+      m_images_group[0].m_image[2].BmpPath() : 
+      (string)m_images_group[0].m_image[2].ResourceIndex());
+   }
    //+------------------------------------------------------------------+
    // | Setting the picture for the pressed state (locked) |
    //+------------------------------------------------------------------+
    void CElement::IconFilePressedLocked(const string file_path)
-    {
-      // --- Add a place for the image if it doesn't exist yet
-         while(!CElement::CheckOutOfRange(0,3))
-            AddImage(0,"");
-      // --- Set picture
-         CElement::SetImage(0,3,file_path);
-    }
+   {
+   // --- Add a place for the image if it doesn't exist yet
+      while(!CElement::CheckOutOfRange(0,3))
+         AddImage(0,"");
+   // --- Set picture
+      CElement::SetImage(0,3,file_path);
+   }
    //+------------------------------------------------------------------+
    // | Setting the picture for the pressed state (locked) |
    //+------------------------------------------------------------------+
    void CElement::IconFilePressedLocked(const uint resource_index)
-    {
-      // --- Add a place for the image if it doesn't exist yet
-         while(!CElement::CheckOutOfRange(0,3))
-            AddImage(0,INT_MAX);
-      // --- Set picture
-         CElement::SetImage(0,3,resource_index);
-    }
+   {
+   // --- Add a place for the image if it doesn't exist yet
+      while(!CElement::CheckOutOfRange(0,3))
+         AddImage(0,INT_MAX);
+   // --- Set picture
+      CElement::SetImage(0,3,resource_index);
+   }
    //+------------------------------------------------------------------+
    //| Returns the image                                                |
    //+------------------------------------------------------------------+
    string CElement::IconFilePressedLocked(bool resource_index_mode = false)
-    {
-      // --- Empty line if there are no image groups
-         if(ImagesGroupTotal()<1)
-            return("");
-      // ---If there is no image in the group
-         if(::ArraySize(m_images_group[0].m_image)<4)
-            return("");
-      // --- Return image path
-         return((!resource_index_mode)? 
-         m_images_group[0].m_image[3].BmpPath() : 
-         (string)m_images_group[0].m_image[3].ResourceIndex());
-    }
+   {
+   // --- Empty line if there are no image groups
+      if(ImagesGroupTotal()<1)
+         return("");
+   // ---If there is no image in the group
+      if(::ArraySize(m_images_group[0].m_image)<4)
+         return("");
+   // --- Return image path
+      return((!resource_index_mode)? 
+      m_images_group[0].m_image[3].BmpPath() : 
+      (string)m_images_group[0].m_image[3].ResourceIndex());
+   }
    //+------------------------------------------------------------------+
    // | Item Update |
    //+------------------------------------------------------------------+
    void CElement::Update(const bool redraw=false)
-    {
-      // --- With element redrawing
-         if(redraw)
-         {
-            Draw();
-            m_canvas.Update(true);
-            return;
-         }
-      // --- Apply
-         m_canvas.Update();
-    }
+   {
+   // --- With element redrawing
+      if(redraw)
+      {
+         Draw();
+         m_canvas.Update(true);
+         return;
+      }
+   // --- Apply
+      m_canvas.Update();
+   }
    //+------------------------------------------------------------------+
    // | Moving an element |
    //+------------------------------------------------------------------+
    void CElement::Moving(const bool only_visible=true)
-    {
-      // --- Exit if element is hidden
-         if(only_visible)
-            if(!CElementBase::IsVisible())
-               return;
-      // --- If the anchor is on the right
-         if(m_anchor_right_window_side)
-         {
-            // ---Saving coordinates in element fields
-            CElementBase::X(m_main.X2()-XGap());
-            // ---Saving coordinates in object fields
-            m_canvas.X(m_main.X2()-m_canvas.XGap());
-         }
-         else
-         {
-            CElementBase::X(m_main.X()+XGap());
-            m_canvas.X(m_main.X()+m_canvas.XGap());
-         }
-      // --- If the binding is below
-         if(m_anchor_bottom_window_side)
-         {
-            CElementBase::Y(m_main.Y2()-YGap());
-            m_canvas.Y(m_main.Y2()-m_canvas.YGap());
-         }
-         else
-         {
-            CElementBase::Y(m_main.Y()+YGap());
-            m_canvas.Y(m_main.Y()+m_canvas.YGap());
-         }
-      // --- Updating the coordinates of graphic objects
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XDISTANCE,m_canvas.X());
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_YDISTANCE,m_canvas.Y());
-      // --- Moving connected elements
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].Moving(only_visible);
-    }
+   {
+   // --- Exit if element is hidden
+      if(only_visible)
+         if(!CElementBase::IsVisible())
+            return;
+   // --- If the anchor is on the right
+      if(m_anchor_right_window_side)
+      {
+         // ---Saving coordinates in element fields
+         CElementBase::X(m_main.X2()-XGap());
+         // ---Saving coordinates in object fields
+         m_canvas.X(m_main.X2()-m_canvas.XGap());
+      }
+      else
+      {
+         CElementBase::X(m_main.X()+XGap());
+         m_canvas.X(m_main.X()+m_canvas.XGap());
+      }
+   // --- If the binding is below
+      if(m_anchor_bottom_window_side)
+      {
+         CElementBase::Y(m_main.Y2()-YGap());
+         m_canvas.Y(m_main.Y2()-m_canvas.YGap());
+      }
+      else
+      {
+         CElementBase::Y(m_main.Y()+YGap());
+         m_canvas.Y(m_main.Y()+m_canvas.YGap());
+      }
+   // --- Updating the coordinates of graphic objects
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XDISTANCE,m_canvas.X());
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_YDISTANCE,m_canvas.Y());
+   // --- Moving connected elements
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].Moving(only_visible);
+   }
    //+------------------------------------------------------------------+
    // | Shows element |
    //+------------------------------------------------------------------+
    void CElement::Show(void)
-    {
-      // --- Exit if element is already visible
-         if(CElementBase::IsVisible())
-            return;
-      // --- Visibility state
-         CElementBase::IsVisible(true);
-      // --- Update object position
-         Moving();
-      // --- Show object
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS);
-      // --- Show connected items
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-         {
-            if(!m_elements[i].IsDropdown())
-               m_elements[i].Show();
-         }
-    }
+   {
+   // --- Exit if element is already visible
+      if(CElementBase::IsVisible())
+         return;
+   // --- Visibility state
+      CElementBase::IsVisible(true);
+   // --- Update object position
+      Moving();
+   // --- Show object
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS);
+   // --- Show connected items
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+      {
+         if(!m_elements[i].IsDropdown())
+            m_elements[i].Show();
+      }
+   }
    //+------------------------------------------------------------------+
    // | Hides the element |
    //+------------------------------------------------------------------+
    void CElement::Hide(void)
-    {
-      // --- Exit if element is already hidden
-         if(!CElementBase::IsVisible())
-            return;
-      // --- Hide object
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
-      // --- Visibility state
-         CElementBase::IsVisible(false);
-         CElementBase::MouseFocus(false);
-      // --- Hide connected items
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].Hide();
-    }
+   {
+   // --- Exit if element is already hidden
+      if(!CElementBase::IsVisible())
+         return;
+   // --- Hide object
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
+   // --- Visibility state
+      CElementBase::IsVisible(false);
+      CElementBase::MouseFocus(false);
+   // --- Hide connected items
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].Hide();
+   }
    //+------------------------------------------------------------------+
    // | Move to top layer |
    //+------------------------------------------------------------------+
    void CElement::Reset(void)
-    {
-      // --- Exit if the element is drop-down
-         if(CElementBase::IsDropdown())
-            return;
-      // --- Hide and show connected elements
-         Hide();
-         Show();
-    }
+   {
+   // --- Exit if the element is drop-down
+      if(CElementBase::IsDropdown())
+         return;
+   // --- Hide and show connected elements
+      Hide();
+      Show();
+   }
    //+------------------------------------------------------------------+
    // | Removal |
    //+------------------------------------------------------------------+
    void CElement::Delete(void)
-    {
-      // --- Deleting objects
-         m_canvas.Destroy();
-      // --- Delete connected elements
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].Delete();
-      // --- Freeing an array of connected elements
-         FreeElementsArray();
-      // --- Initializing variables to default values
-         CElementBase::LastId(0);
-         CElementBase::Id(WRONG_VALUE);
-         CElementBase::MouseFocus(false);
-         CElementBase::IsVisible(true);
-         CElementBase::IsAvailable(true);
-      // --- Reset priorities
-         m_zorder=WRONG_VALUE;
-    }
+   {
+   // --- Deleting objects
+      m_canvas.Destroy();
+   // --- Delete connected elements
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].Delete();
+   // --- Freeing an array of connected elements
+      FreeElementsArray();
+   // --- Initializing variables to default values
+      CElementBase::LastId(0);
+      CElementBase::Id(WRONG_VALUE);
+      CElementBase::MouseFocus(false);
+      CElementBase::IsVisible(true);
+      CElementBase::IsAvailable(true);
+   // --- Reset priorities
+      m_zorder=WRONG_VALUE;
+   }
    //+------------------------------------------------------------------+
    // | Setting Priorities |
    //+------------------------------------------------------------------+
    void CElement::SetZorders(void)
-    {
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_ZORDER,m_zorder);
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].SetZorders();
-    }
+   {
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_ZORDER,m_zorder);
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].SetZorders();
+   }
    //+------------------------------------------------------------------+
    // | Reset priorities |
    //+------------------------------------------------------------------+
    void CElement::ResetZorders(void)
-    {
-         ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_ZORDER,WRONG_VALUE);
-         int elements_total=ElementsTotal();
-         for(int i=0; i<elements_total; i++)
-            m_elements[i].ResetZorders();
-    }
+   {
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_ZORDER,WRONG_VALUE);
+      int elements_total=ElementsTotal();
+      for(int i=0; i<elements_total; i++)
+         m_elements[i].ResetZorders();
+   }
    //+------------------------------------------------------------------+
    // | Method for adding pointers to connected elements |
    //+------------------------------------------------------------------+
    void CElement::AddToArray(CElement &object)
-    {
-      int size=ElementsTotal();
-      ::ArrayResize(m_elements,size+1);
-      m_elements[size]=::GetPointer(object);
-    }
+   {
+   int size=ElementsTotal();
+   ::ArrayResize(m_elements,size+1);
+   m_elements[size]=::GetPointer(object);
+   }
    //+------------------------------------------------------------------+
    // | Check out of range |
    //+------------------------------------------------------------------+
    bool CElement::CheckOutOfRange(const uint group_index,const uint image_index)
-    {
-     // --- Group index check
-      uint images_group_total=::ArraySize(m_images_group);
-      if(images_group_total<1 || group_index>=images_group_total)
-         return(false);
-     // --- Image index check
-      uint images_total=::ArraySize(m_images_group[group_index].m_image);
-      if(images_total<1 || image_index>=images_total)
-         return(false);
-     //---
-      return(true);
-    }
+   {
+   // --- Group index check
+   uint images_group_total=::ArraySize(m_images_group);
+   if(images_group_total<1 || group_index>=images_group_total)
+      return(false);
+   // --- Image index check
+   uint images_total=::ArraySize(m_images_group[group_index].m_image);
+   if(images_total<1 || image_index>=images_total)
+      return(false);
+   //---
+   return(true);
+   }
    //+------------------------------------------------------------------+
    // | Returns the number of images in the specified group |
    //+------------------------------------------------------------------+
    int CElement::ImagesTotal(const uint group_index)
-    {
-     // --- Group index check
-      uint images_group_total=::ArraySize(m_images_group);
-      if(images_group_total<1 || group_index>=images_group_total)
-         return(WRONG_VALUE);
-     // --- Number of images
-      return(::ArraySize(m_images_group[group_index].m_image));
-    }
+   {
+   // --- Group index check
+   uint images_group_total=::ArraySize(m_images_group);
+   if(images_group_total<1 || group_index>=images_group_total)
+      return(WRONG_VALUE);
+   // --- Number of images
+   return(::ArraySize(m_images_group[group_index].m_image));
+   }
    //+------------------------------------------------------------------+
    // | Adding an Image Group with an Image Array |
    //+------------------------------------------------------------------+
    void CElement::AddImagesGroup(const int x_gap,const int y_gap,const string &file_pathways[])
-    {
-     // --- Get the size of the array of image groups
-      uint images_group_total=::ArraySize(m_images_group);
-     // --- Add one group
-      ::ArrayResize(m_images_group,images_group_total+1);
-     // --- Set padding for images
-      m_images_group[images_group_total].m_x_gap =x_gap;
-      m_images_group[images_group_total].m_y_gap =y_gap;
-     // ---Default image
-      m_images_group[images_group_total].m_selected_image=0;
-     // --- Get the size of the array of added images
-      uint images_total=::ArraySize(file_pathways);
-    // --- Add images to a new group if a non-empty array was passed
-      for(uint i=0; i<images_total; i++)
-         AddImage(images_group_total,file_pathways[i]);
-    }
+   {
+   // --- Get the size of the array of image groups
+   uint images_group_total=::ArraySize(m_images_group);
+   // --- Add one group
+   ::ArrayResize(m_images_group,images_group_total+1);
+   // --- Set padding for images
+   m_images_group[images_group_total].m_x_gap =x_gap;
+   m_images_group[images_group_total].m_y_gap =y_gap;
+   // ---Default image
+   m_images_group[images_group_total].m_selected_image=0;
+   // --- Get the size of the array of added images
+   uint images_total=::ArraySize(file_pathways);
+   // --- Add images to a new group if a non-empty array was passed
+   for(uint i=0; i<images_total; i++)
+      AddImage(images_group_total,file_pathways[i]);
+   }
    //+------------------------------------------------------------------+
    // | Adding a group of images |
    //+------------------------------------------------------------------+
    void CElement::AddImagesGroup(const int x_gap,const int y_gap)
-    {
-      // --- Get the size of the array of image groups
-         uint images_group_total=::ArraySize(m_images_group);
-      // --- Add one group
-         ::ArrayResize(m_images_group,images_group_total+1);
-      // --- Set padding for images
-         m_images_group[images_group_total].m_x_gap=x_gap;
-         m_images_group[images_group_total].m_y_gap=y_gap;
-      // ---Default image
-         m_images_group[images_group_total].m_selected_image=0;
-    }
+   {
+   // --- Get the size of the array of image groups
+      uint images_group_total=::ArraySize(m_images_group);
+   // --- Add one group
+      ::ArrayResize(m_images_group,images_group_total+1);
+   // --- Set padding for images
+      m_images_group[images_group_total].m_x_gap=x_gap;
+      m_images_group[images_group_total].m_y_gap=y_gap;
+   // ---Default image
+      m_images_group[images_group_total].m_selected_image=0;
+   }
    //+------------------------------------------------------------------+
    // | Adding an image (resource path) to the specified group |
    //+------------------------------------------------------------------+
    void CElement::AddImage(const uint group_index,const string file_path)
-    {
-      // --- Get the size of the array of image groups
-         uint images_group_total=::ArraySize(m_images_group);
-      // --- Quit if there are no groups
-         if(images_group_total<1)
-         {
-            Print(__FUNCTION__," > You can add a group of images using methods CElement::AddImagesGroup()");
-            return;
-         }
-      // --- Preventing out of range
-         uint check_group_index=(group_index<images_group_total)? group_index : images_group_total-1;
-      // --- Get the size of the image array
-         uint images_total=::ArraySize(m_images_group[check_group_index].m_image);
-      // --- Increase the size of the array by one element
-         ::ArrayResize(m_images_group[check_group_index].m_image,images_total+1);
-      // --- Add an image
-         m_images_group[check_group_index].m_image[images_total].ReadImageData(file_path);
-    }
+   {
+   // --- Get the size of the array of image groups
+      uint images_group_total=::ArraySize(m_images_group);
+   // --- Quit if there are no groups
+      if(images_group_total<1)
+      {
+         Print(__FUNCTION__," > You can add a group of images using methods CElement::AddImagesGroup()");
+         return;
+      }
+   // --- Preventing out of range
+      uint check_group_index=(group_index<images_group_total)? group_index : images_group_total-1;
+   // --- Get the size of the image array
+      uint images_total=::ArraySize(m_images_group[check_group_index].m_image);
+   // --- Increase the size of the array by one element
+      ::ArrayResize(m_images_group[check_group_index].m_image,images_total+1);
+   // --- Add an image
+      m_images_group[check_group_index].m_image[images_total].ReadImageData(file_path);
+   }
    //+------------------------------------------------------------------+
    // | Adding an image (index to a resource) to the specified group |
    //+------------------------------------------------------------------+
    void CElement::AddImage(const uint group_index,const uint resource_index)
-    {
-      // --- Get the size of the array of image groups
-         uint images_group_total=::ArraySize(m_images_group);
-      // --- Quit if there are no groups
-         if(images_group_total<1)
-         {
-            Print(__FUNCTION__," > You can add a group of images using methods CElement::AddImagesGroup()");
-            return;
-         }
-      // --- Preventing out of range
-         uint check_group_index=(group_index<images_group_total)? group_index : images_group_total-1;
-      // --- Get the size of the image array
-         uint images_total=::ArraySize(m_images_group[check_group_index].m_image);
-      // --- Increase the size of the array by one element
-         ::ArrayResize(m_images_group[check_group_index].m_image,images_total+1);
-      // --- Add an image
-         m_images_group[check_group_index].m_image[images_total].ReadImageData(resource_index);
-    }
+   {
+   // --- Get the size of the array of image groups
+      uint images_group_total=::ArraySize(m_images_group);
+   // --- Quit if there are no groups
+      if(images_group_total<1)
+      {
+         Print(__FUNCTION__," > You can add a group of images using methods CElement::AddImagesGroup()");
+         return;
+      }
+   // --- Preventing out of range
+      uint check_group_index=(group_index<images_group_total)? group_index : images_group_total-1;
+   // --- Get the size of the image array
+      uint images_total=::ArraySize(m_images_group[check_group_index].m_image);
+   // --- Increase the size of the array by one element
+      ::ArrayResize(m_images_group[check_group_index].m_image,images_total+1);
+   // --- Add an image
+      m_images_group[check_group_index].m_image[images_total].ReadImageData(resource_index);
+   }
    //+------------------------------------------------------------------+
    // | Installing/replacing an image (path to resource) |
    //+------------------------------------------------------------------+
    void CElement::SetImage(const uint group_index,const uint image_index,const string file_path)
-    {
-      // --- Check for out of range
-         if(!CheckOutOfRange(group_index,image_index))
-            return;
-      // ---Delete image
-         m_images_group[group_index].m_image[image_index].DeleteImageData();
-      // --- Add an image
-         m_images_group[group_index].m_image[image_index].ReadImageData(file_path);
-    }
+   {
+   // --- Check for out of range
+      if(!CheckOutOfRange(group_index,image_index))
+         return;
+   // ---Delete image
+      m_images_group[group_index].m_image[image_index].DeleteImageData();
+   // --- Add an image
+      m_images_group[group_index].m_image[image_index].ReadImageData(file_path);
+   }
    //+------------------------------------------------------------------+
    // | Installing/replacing an image (index to resource) |
    //+------------------------------------------------------------------+
    void CElement::SetImage(const uint group_index,const uint image_index,const uint resource_index)
-    {
-      // --- Check for out of range
-         if(!CheckOutOfRange(group_index,image_index))
-            return;
-      // ---Delete image
-         m_images_group[group_index].m_image[image_index].DeleteImageData();
-      // --- Add an image
-         m_images_group[group_index].m_image[image_index].ReadImageData(resource_index);
-    }
+   {
+   // --- Check for out of range
+      if(!CheckOutOfRange(group_index,image_index))
+         return;
+   // ---Delete image
+      m_images_group[group_index].m_image[image_index].DeleteImageData();
+   // --- Add an image
+      m_images_group[group_index].m_image[image_index].ReadImageData(resource_index);
+   }
    //+------------------------------------------------------------------+
    // | Switch image |
    //+------------------------------------------------------------------+
    void CElement::ChangeImage(const uint group_index,const uint image_index)
-    {
-      // --- Check for out of range
-         if(!CheckOutOfRange(group_index,image_index))
-            return;
-      // --- Save image index for display
-         m_images_group[group_index].m_selected_image=(int)image_index;
-    }
+   {
+   // --- Check for out of range
+      if(!CheckOutOfRange(group_index,image_index))
+         return;
+   // --- Save image index for display
+      m_images_group[group_index].m_selected_image=(int)image_index;
+   }
    //+------------------------------------------------------------------+
    // | Returns the image selected for display in the specified group |
    //+------------------------------------------------------------------+
    int CElement::SelectedImage(const uint group_index=0)
-    {
-      // --- Quit if there are no groups
-         uint images_group_total=::ArraySize(m_images_group);
-         if(images_group_total<1 || group_index>=images_group_total)
-            return(WRONG_VALUE);
-      // --- Exit if there is not one image in the specified group
-         uint images_total=::ArraySize(m_images_group[group_index].m_image);
-         if(images_total<1)
-            return(WRONG_VALUE);
-      // --- Return the image selected for display
-         return(m_images_group[group_index].m_selected_image);
-    }
+   {
+   // --- Quit if there are no groups
+      uint images_group_total=::ArraySize(m_images_group);
+      if(images_group_total<1 || group_index>=images_group_total)
+         return(WRONG_VALUE);
+   // --- Exit if there is not one image in the specified group
+      uint images_total=::ArraySize(m_images_group[group_index].m_image);
+      if(images_total<1)
+         return(WRONG_VALUE);
+   // --- Return the image selected for display
+      return(m_images_group[group_index].m_selected_image);
+   }
    //+------------------------------------------------------------------+
    // | Checking for the presence of a pointer to the main element |
    //+------------------------------------------------------------------+
    bool CElement::CheckMainPointer(void)
-    {
-      // --- If there is no pointer
-         if(::CheckPointer(m_main)==POINTER_INVALID)
-         {
-            // --- Print a message to the terminal log
-            ::Print(__FUNCTION__,
-                  " > Before creating an element... \n...you need to pass a pointer to the main element: "+
-                  ClassName()+"::MainPointer(CElementBase &object)");
-            // --- Abort building the application GUI
-            return(false);
-         }
-      // ---Saving a pointer to the form
-         m_wnd =m_main.WindowPointer();
-      // --- If there is no pointer to the form
-         if(::CheckPointer(m_wnd)==POINTER_INVALID)
-         {
-            // --- Print a message to the terminal log
-            ::Print(__FUNCTION__,
-                  " > At the element "+ClassName()+" no form pointer!...\n"+
-                  "...Elements must be created in the order in which they are nested.!");
-            // --- Abort building the application GUI
-            return(false);
-         }
-      // ---Saving the pointer to the mouse cursor
-         m_mouse =m_main.MousePointer();
-         
+   {
+   // --- If there is no pointer
+      if(::CheckPointer(m_main)==POINTER_INVALID)
+      {
+         // --- Print a message to the terminal log
+         ::Print(__FUNCTION__,
+               " > Before creating an element... \n...you need to pass a pointer to the main element: "+
+               ClassName()+"::MainPointer(CElementBase &object)");
+         // --- Abort building the application GUI
+         return(false);
+      }
+   // ---Saving a pointer to the form
+      m_wnd =m_main.WindowPointer();
+   // --- If there is no pointer to the form
+      if(::CheckPointer(m_wnd)==POINTER_INVALID)
+      {
+         // --- Print a message to the terminal log
+         ::Print(__FUNCTION__,
+               " > At the element "+ClassName()+" no form pointer!...\n"+
+               "...Elements must be created in the order in which they are nested.!");
+         // --- Abort building the application GUI
+         return(false);
+      }
+   // ---Saving the pointer to the mouse cursor
+      m_mouse =m_main.MousePointer();
+      
       // ---Saving properties
-         //Print(__FUNCTION__,
-         // " > dynamic_cast<CWindow*>(&this) != NULL: ", dynamic_cast<CWindow*>(&this) != NULL,
-         // "; m_main.ClassName(): ", m_main.ClassName(),
-         // "; m_wnd: ",m_wnd,
-         // "; m_wnd.LastId(): ",m_wnd.LastId(),
-         // "; m_main.LastId(): ",m_main.LastId());         
-         m_id       =m_wnd.LastId()+1;
-         m_chart_id =m_wnd.ChartId();
-         m_subwin   =m_wnd.SubwindowNumber();
-         m_corner   =(ENUM_BASE_CORNER)m_wnd.Corner();
-         m_anchor   =(ENUM_ANCHOR_POINT)m_wnd.Anchor();
-         
-      // --- Send a sign of the presence of a pointer
-         return(true);
-    }
+      //Print(__FUNCTION__,
+      // " > dynamic_cast<CWindow*>(&this) != NULL: ", dynamic_cast<CWindow*>(&this) != NULL,
+      // "; m_main.ClassName(): ", m_main.ClassName(),
+      // "; m_wnd: ",m_wnd,
+      // "; m_wnd.LastId(): ",m_wnd.LastId(),
+      // "; m_main.LastId(): ",m_main.LastId());         
+      m_id       =m_wnd.LastId()+1;
+      m_chart_id =m_wnd.ChartId();
+      m_subwin   =m_wnd.SubwindowNumber();
+      m_corner   =(ENUM_BASE_CORNER)m_wnd.Corner();
+      m_anchor   =(ENUM_ANCHOR_POINT)m_wnd.Anchor();
+      
+   // --- Send a sign of the presence of a pointer
+      return(true);
+   }
    //+------------------------------------------------------------------+
    // | Calculation of absolute X-coordinate |
    //+------------------------------------------------------------------+
    int CElement::CalculateX(const int x_gap)
-    {
-      return((AnchorRightWindowSide())? m_main.X2()-x_gap : m_main.X()+x_gap);
-    }
+   {
+   return((AnchorRightWindowSide())? m_main.X2()-x_gap : m_main.X()+x_gap);
+   }
    //+------------------------------------------------------------------+
    // | Calculation of absolute Y-coordinate |
    //+------------------------------------------------------------------+
    int CElement::CalculateY(const int y_gap)
-    {
-      return((AnchorBottomWindowSide())? m_main.Y2()-y_gap : m_main.Y()+y_gap);
-    }
+   {
+   return((AnchorBottomWindowSide())? m_main.Y2()-y_gap : m_main.Y()+y_gap);
+   }
    //+------------------------------------------------------------------+
    // | Calculation of the relative X-coordinate from the extreme point of the shape |
    //+------------------------------------------------------------------+
    int CElement::CalculateXGap(const int x)
-    {
-      return((AnchorRightWindowSide())? m_main.X2()-x : x-m_main.X());
-    }
+   {
+   return((AnchorRightWindowSide())? m_main.X2()-x : x-m_main.X());
+   }
    //+------------------------------------------------------------------+
    // | Calculation of the relative Y-coordinate from the extreme point of the form |
    //+------------------------------------------------------------------+
    int CElement::CalculateYGap(const int y)
-    {
-      return((AnchorBottomWindowSide())? m_main.Y2()-y : y-m_main.Y());
-    }
+   {
+   return((AnchorBottomWindowSide())? m_main.Y2()-y : y-m_main.Y());
+   }
    //+------------------------------------------------------------------+
    // | Draws background |
    //+------------------------------------------------------------------+
    void CElement::DrawBackground(void)
-    {
-      m_canvas.Erase(::ColorToARGB(m_back_color,m_alpha));
-    }
+   {
+   m_canvas.Erase(::ColorToARGB(m_back_color,m_alpha));
+   }
    //+------------------------------------------------------------------+
    // | Draws a frame |
    //+------------------------------------------------------------------+
    void CElement::DrawBorder(void)
-    {
-      // ---Coordinates
-         int x1=0,y1=0;
-         int x2=(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XSIZE)-1;
-         int y2=(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_YSIZE)-1;
-      // --- Draw a rectangle without fill
-         m_canvas.Rectangle(x1,y1,x2,y2,::ColorToARGB(m_border_color,m_alpha));
-    }
+   {
+   // ---Coordinates
+      int x1=0,y1=0;
+      int x2=(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XSIZE)-1;
+      int y2=(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_YSIZE)-1;
+   // --- Draw a rectangle without fill
+      m_canvas.Rectangle(x1,y1,x2,y2,::ColorToARGB(m_border_color,m_alpha));
+   }
    //+------------------------------------------------------------------+
    // | Draws a picture |
    //+------------------------------------------------------------------+
    void CElement::DrawImage(void)
-    {
-      // --- Number of groups
-         uint group_total=ImagesGroupTotal();
-      // --- Drawing images
-         for(uint g=0; g<group_total; g++)
+   {
+   // --- Number of groups
+      uint group_total=ImagesGroupTotal();
+   // --- Drawing images
+      for(uint g=0; g<group_total; g++)
+      {
+         // --- Index of selected image
+         int i=SelectedImage(g);
+         // ---If there are no images
+         if(i==WRONG_VALUE)
+            continue;
+         // ---Coordinates
+         int x =m_images_group[g].m_x_gap;
+         int y =m_images_group[g].m_y_gap;
+         // --- Dimensions
+         uint height =m_images_group[g].m_image[i].Height();
+         uint width  =m_images_group[g].m_image[i].Width();
+         
+         // --- Draw
+         for(uint ly=0,p=0; ly<height; ly++)
          {
-            // --- Index of selected image
-            int i=SelectedImage(g);
-            // ---If there are no images
-            if(i==WRONG_VALUE)
-               continue;
-            // ---Coordinates
-            int x =m_images_group[g].m_x_gap;
-            int y =m_images_group[g].m_y_gap;
-            // --- Dimensions
-            uint height =m_images_group[g].m_image[i].Height();
-            uint width  =m_images_group[g].m_image[i].Width();
-            
-            // --- Draw
-            for(uint ly=0,p=0; ly<height; ly++)
+            for(uint lx=0; lx<width; lx++, p++)
             {
-               for(uint lx=0; lx<width; lx++, p++)
-               {
-                  // ---If there is no color, move to the next pixel
-                  if(m_images_group[g].m_image[i].Data(p)<1)
-                     continue;
-                  //---
-                  uint rx =x+lx;
-                  uint ry =y+ly;
-                  // --- Get the color of the bottom layer and the color of the specified pixel in the image
-                  uint background  =::ColorToARGB(m_canvas.PixelGet(rx,ry));
-                  uint pixel_color =m_images_group[g].m_image[i].Data(p);
-                  // --- Mix colors
-                  uint foreground=::ColorToARGB(m_clr.BlendColors(background,pixel_color));
-                  // --- Drawing a pixel of the layered image
-                  m_canvas.PixelSet(rx,ry,foreground);
-               }
+               // ---If there is no color, move to the next pixel
+               if(m_images_group[g].m_image[i].Data(p)<1)
+                  continue;
+               //---
+               uint rx =x+lx;
+               uint ry =y+ly;
+               // --- Get the color of the bottom layer and the color of the specified pixel in the image
+               uint background  =::ColorToARGB(m_canvas.PixelGet(rx,ry));
+               uint pixel_color =m_images_group[g].m_image[i].Data(p);
+               // --- Mix colors
+               uint foreground=::ColorToARGB(m_clr.BlendColors(background,pixel_color));
+               // --- Drawing a pixel of the layered image
+               m_canvas.PixelSet(rx,ry,foreground);
             }
          }
-    }
+      }
+   }
    //+------------------------------------------------------------------+
    // | Draws text |
    //+------------------------------------------------------------------+
    void CElement::DrawText(void)
-    {
-      // ---Coordinates
-         int x =m_label_x_gap;
-         int y =m_label_y_gap;
-      // --- Define the color for the text label
-         color clr=clrBlack;
-      // --- If the element is locked
-         if(m_is_locked)
-            clr=m_label_color_locked;
+   {
+   // ---Coordinates
+      int x =m_label_x_gap;
+      int y =m_label_y_gap;
+   // --- Define the color for the text label
+      color clr=clrBlack;
+   // --- If the element is locked
+      if(m_is_locked)
+         clr=m_label_color_locked;
+      else
+      {
+         // --- If the element is in a pressed state
+         if(!m_is_pressed)
+            clr=(m_mouse_focus)? m_label_color_hover : m_label_color;
          else
          {
-            // --- If the element is in a pressed state
-            if(!m_is_pressed)
-               clr=(m_mouse_focus)? m_label_color_hover : m_label_color;
+            if(m_class_name=="CButton")
+               clr=m_label_color_pressed;
             else
-            {
-               if(m_class_name=="CButton")
-                  clr=m_label_color_pressed;
-               else
-                  clr=(m_mouse_focus)? m_label_color_hover : m_label_color_pressed;
-            }
+               clr=(m_mouse_focus)? m_label_color_hover : m_label_color_pressed;
          }
-      // --- Font properties
-         m_canvas.FontSet(m_font,-m_font_size*10,FW_NORMAL);
-      // --- Draw text using the center alignment mode
-         if(m_is_center_text)
-         {
-            x =m_x_size>>1;
-            y =m_y_size>>1;
-            m_canvas.TextOut(x,y,m_label_text,::ColorToARGB(clr),TA_CENTER|TA_VCENTER);
-         }
-         else
-            m_canvas.TextOut(x,y,m_label_text,::ColorToARGB(clr),TA_LEFT);
-    }
+      }
+   // --- Font properties
+      m_canvas.FontSet(m_font,-m_font_size*10,FW_NORMAL);
+   // --- Draw text using the center alignment mode
+      if(m_is_center_text)
+      {
+         x =m_x_size>>1;
+         y =m_y_size>>1;
+         m_canvas.TextOut(x,y,m_label_text,::ColorToARGB(clr),TA_CENTER|TA_VCENTER);
+      }
+      else
+         m_canvas.TextOut(x,y,m_label_text,::ColorToARGB(clr),TA_LEFT);
+   }
    //+------------------------------------------------------------------+
- #endif // CELEMENT_IMPLEMENTATION
-#endif // CELEMENT
-
-
+ #endif // CELEMENT_MQH_IMPLEMENTATION 
+#endif // __ELEMENT_MQH__ 

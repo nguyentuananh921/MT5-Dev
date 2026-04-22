@@ -233,9 +233,9 @@ class CWindow : public CElement
     void              CalculateAndResizeWindow(const int distance);
 
    // --- Draws the background
-    virtual void      DrawBackground(void);
+    virtual void        DrawBackground(void);
    // --- Draws the foreground
-   virtual void      DrawForeground(void);
+    virtual void        DrawForeground(void);
  };
 #ifndef CWINDOW_IMPLEMENTATION
 #define CWINDOW_IMPLEMENTATION
@@ -418,7 +418,6 @@ class CWindow : public CElement
    {
     //Print Debug
     ::Print("--- Debug: CWindow::CreateWindow start ---");
-
     // --- Quit if identifier is not defined
      if(CElementBase::Id()==WRONG_VALUE)
       {
@@ -435,12 +434,12 @@ class CWindow : public CElement
     // --- Create all window objects
       if(!CreateCanvas())
         return(false);
-    if(!CreateButtons())
+      if(!CreateButtons())
         return(false);
-    if(!CreateResizePointer())
+      if(!CreateResizePointer())
         return(false);
     // --- Value of the last installed ID
-    CElementBase::LastId(CElementBase::Id());
+      CElementBase::LastId(CElementBase::Id());
     // --- If this program indicator
     if(CElementBase::ProgramType()==PROGRAM_INDICATOR)
       {
@@ -450,67 +449,64 @@ class CWindow : public CElement
           m_subwindow_height=m_full_height+3;
           ChangeSubwindowHeight(m_subwindow_height);
           }
-      }
-    //---
-    
+      }        
     //Print Debug
-    ::Print("--- Debug: CWindow::CreateWindow Complete Successfully ---");
+      ::Print("--- Debug: CWindow::CreateWindow Complete Successfully ---");
     return(true);
    }
   //+------------------------------------------------------------------+
-  // | Initializing properties |
+  //| Initializing properties |
   //+------------------------------------------------------------------+
   void CWindow::InitializeProperties(const long chart_id,const int subwin,const string caption_text,const int x_gap,const int y_gap)
    {
-    m_chart_id   =chart_id;
-    m_subwin     =subwin;
-    m_label_text =caption_text;
-    // ---Coordinates and dimensions
-      m_x              =x_gap;
-      m_y              =y_gap;
-      m_x_size         =(m_auto_xresize_mode)? m_chart_width-2 : m_x_size;
-      m_y_size         =(m_auto_yresize_mode)? m_chart_height-3 : m_y_size;
-      m_x_size         =(m_x_size<1)? 200 : m_x_size;
-      m_y_size         =(m_y_size<1)? 200 : m_y_size;
-      m_full_height    =m_y_size;
-      m_last_x_size    =m_x_size;
-      m_last_y_size    =m_y_size;
-      m_minimum_x_size =(m_minimum_x_size<200)? m_x_size : m_minimum_x_size;
-      m_minimum_y_size =(m_minimum_y_size<200)? m_y_size : m_minimum_y_size;
-    // ---Default properties
-      m_back_color         =(m_back_color!=clrNONE)? m_back_color : clrWhiteSmoke;
-      m_icon_x_gap         =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 5;
-      m_icon_y_gap         =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 2;
-      m_label_x_gap        =(m_label_x_gap!=WRONG_VALUE)? m_label_x_gap : 24;
-      m_label_y_gap        =(m_label_y_gap!=WRONG_VALUE)? m_label_y_gap : 3;
-      m_label_color        =(m_label_color!=clrNONE)? m_label_color : clrWhite;
-      m_label_color_hover  =(m_label_color_hover!=clrNONE)? m_label_color_hover : clrWhite;
-      m_label_color_locked =(m_label_color_locked!=clrNONE)? m_label_color_locked : clrBlack;
-    // --- Indents from the extreme point
-      CElementBase::XGap(x_gap);
-      CElementBase::YGap(y_gap);
+      m_chart_id   =chart_id;
+      m_subwin     =subwin;
+      m_label_text =caption_text;
+      // ---Coordinates and dimensions
+        m_x              =x_gap;
+        m_y              =y_gap;
+        m_x_size         =(m_auto_xresize_mode)? m_chart_width-2 : m_x_size;
+        m_y_size         =(m_auto_yresize_mode)? m_chart_height-3 : m_y_size;
+        m_x_size         =(m_x_size<1)? 200 : m_x_size;
+        m_y_size         =(m_y_size<1)? 200 : m_y_size;
+        m_full_height    =m_y_size;
+        m_last_x_size    =m_x_size;
+        m_last_y_size    =m_y_size;
+        m_minimum_x_size =(m_minimum_x_size<200)? m_x_size : m_minimum_x_size;
+        m_minimum_y_size =(m_minimum_y_size<200)? m_y_size : m_minimum_y_size;
+      // ---Default properties
+        m_back_color         =(m_back_color!=clrNONE)? m_back_color : clrWhiteSmoke;
+        m_icon_x_gap         =(m_icon_x_gap!=WRONG_VALUE)? m_icon_x_gap : 5;
+        m_icon_y_gap         =(m_icon_y_gap!=WRONG_VALUE)? m_icon_y_gap : 2;
+        m_label_x_gap        =(m_label_x_gap!=WRONG_VALUE)? m_label_x_gap : 24;
+        m_label_y_gap        =(m_label_y_gap!=WRONG_VALUE)? m_label_y_gap : 3;
+        m_label_color        =(m_label_color!=clrNONE)? m_label_color : clrWhite;
+        m_label_color_hover  =(m_label_color_hover!=clrNONE)? m_label_color_hover : clrWhite;
+        m_label_color_locked =(m_label_color_locked!=clrNONE)? m_label_color_locked : clrBlack;
+      // --- Indents from the extreme point
+        CElementBase::XGap(x_gap);
+        CElementBase::YGap(y_gap);
    }
   //+------------------------------------------------------------------+
   // | Creates an object to draw |
   //+------------------------------------------------------------------+
   bool CWindow::CreateCanvas(void)
    {
-    // --- Formation of object name
+     // --- Formation of object name
       string name=CElementBase::ElementName("window");
-    // --- The size of the main window depends on the state (collapsed/expanded)
+     // --- The size of the main window depends on the state (collapsed/expanded)
       if(m_window_type==W_MAIN)
         m_y_size=(m_is_minimized)? m_caption_height : m_full_height;
-    // ---Create an object
+     // ---Create an object
       if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
         return(false);
-    // --- Set properties
+     // --- Set properties
       if(CElement::IconFile() == "")
         {
           CElement::IconFile((uint)DefaultIcon());
           CElement::IconFileLocked((uint)DefaultIcon());
-        }
-    //---
-    //--- Debug Icon data
+        }     
+     //--- Debug Icon data
       ::Print(__FUNCTION__, " > DefaultIcon value: ", DefaultIcon());
     return(true);
    }
@@ -524,7 +520,7 @@ class CWindow : public CElement
         return(true);
     // --- Counter, size, quantity
       int i=0,x_size=WINDOW_BUTTON_SIZE; //WINDOW_BUTTON_SIZE=20
-      int buttons_total=4;
+      int buttons_total=4; //Four basic button of the windows
     // --- File path
       uint icon_index=INT_MAX;
     // --- Exception in capture area
@@ -534,51 +530,42 @@ class CWindow : public CElement
     //---
     for(int b=0; b<buttons_total; b++)
       {
-        //---
-          if(b==0)
+          if(b==0)   //Close Button
           {
             CElementBase::LastId(LastId()-1);
             m_button_close.MainPointer(this);
-            if(!m_close_button)
-                continue;
-            //---
+            if(!m_close_button) continue;            
             button_obj =::GetPointer(m_button_close);
-            icon_index =IMAGE_RESOURCE_CONTROLS_CLOSE_BMP;
+            icon_index =IMAGE_RESOURCE_CONTROLS_CLOSE_WHITE_BMP;
           }
-          else if(b==1)
+          else if(b==1) //Full Screen Button
           {
             m_button_fullscreen.MainPointer(this);
             // --- Quit if (1) the button is not enabled or (2) it's a dialog box
-            if(!m_fullscreen_button || m_window_type==W_DIALOG)
-                continue;
-            //---
+            if(!m_fullscreen_button || m_window_type==W_DIALOG) continue;            
             button_obj =::GetPointer(m_button_fullscreen);
             icon_index =IMAGE_RESOURCE_CONTROLS_FULL_SCREEN_BMP;
           }
-          else if(b==2)
+          else if(b==2) //Collapse Button
           {
             m_button_collapse.MainPointer(this);
             // --- Quit if (1) the button is not enabled or (2) it's a dialog box
-            if(!m_collapse_button || m_window_type==W_DIALOG)
-                continue;
-            //---
+            if(!m_collapse_button || m_window_type==W_DIALOG) continue;            
             button_obj=::GetPointer(m_button_collapse);
             if(m_is_minimized)
                 icon_index =IMAGE_RESOURCE_CONTROLS_DOWN_THIN_WHITE_BMP;
             else
                 icon_index =IMAGE_RESOURCE_CONTROLS_UP_THIN_WHITE_BMP;
           }
-          else if(b==3)
+          else if(b==3) //Tooltip Button
           {
             m_button_tooltip.MainPointer(this);
             // --- Quit if (1) the button is not enabled or (2) it's a dialog box
-            if(!m_tooltips_button || m_window_type==W_DIALOG)
-                continue;
-            //---
+            if(!m_tooltips_button || m_window_type==W_DIALOG) continue;            
             button_obj =::GetPointer(m_button_tooltip);
-            icon_index =IMAGE_RESOURCE_CONTROLS_HELP_DARK_BMP;
+            icon_index =IMAGE_RESOURCE_CONTROLS_HELP_LIGHT_BMP;
           }
-        // --- Properties
+        // Setting the same Properties for 4 button
           button_obj.Index(i);
           button_obj.XSize(x_size);
           button_obj.YSize(x_size);
@@ -594,7 +581,7 @@ class CWindow : public CElement
           button_obj.BorderColorPressed(m_caption_color);
           button_obj.IconFile((uint)icon_index);
           button_obj.IconFileLocked((uint)icon_index);
-        if(b==3)
+        if(b==3) //Tooltip Button
         {
           button_obj.TwoState(true);
           button_obj.CElement::IconFilePressed((uint)icon_index);
@@ -602,14 +589,13 @@ class CWindow : public CElement
         }
         button_obj.AnchorRightWindowSide(true);
         // --- Calculate the indentation for the next button
-        m_right_limit+=x_size-((i<3)? 0 : 1);
-        i++;
+          m_right_limit+=x_size-((i<3)? 0 : 1);
+          i++;
         // --- Let's create an element
-        int btn_y_gap = (WINDOW_CAPTION_HEIGHT - WINDOW_BUTTON_SIZE) / 2;
-        if(!button_obj.CreateButton("",m_right_limit,btn_y_gap))
-          return(false);
+          int btn_y_gap = (WINDOW_CAPTION_HEIGHT - WINDOW_BUTTON_SIZE) / 2;
+          if(!button_obj.CreateButton("",m_right_limit,btn_y_gap)) return(false);
         // --- Add element to array
-        CElement::AddToArray(button_obj);
+          CElement::AddToArray(button_obj);
       }
     //---
     return(true);

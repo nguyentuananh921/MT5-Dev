@@ -3,6 +3,8 @@
 //|                        Copyright 2015, MetaQuotes Software Corp. |
 //|                                              http://www.mql5.com |
 //+------------------------------------------------------------------+
+#ifndef __SEPARATELINE_MQH__
+#define __SEPARATELINE_MQH__
 #include "..\Element.mqh"
 //+------------------------------------------------------------------+
 // | Class for creating a dividing line |
@@ -35,88 +37,92 @@ public:
    // --- Draws an element
    virtual void      Draw(void);
   };
-//+------------------------------------------------------------------+
-//| Constructor                                                      |
-//+------------------------------------------------------------------+
-CSeparateLine::CSeparateLine(void) : m_type_sep_line(H_SEP_LINE),
-                                     m_dark_color(C'160,160,160'),
-                                     m_light_color(clrWhite)
-  {
-// --- Save the element class name in the base class
-   CElementBase::ClassName(CLASS_NAME);
-  }
-//+------------------------------------------------------------------+
-//| Destructor                                                       |
-//+------------------------------------------------------------------+
-CSeparateLine::~CSeparateLine(void)
-  {
-  }
-//+------------------------------------------------------------------+
-// | Creates a dividing line |
-//+------------------------------------------------------------------+
-bool CSeparateLine::CreateSeparateLine(const int x_gap,const int y_gap,const int x_size,const int y_size)
-  {
-// --- Quit if there is no pointer to the main element
-   if(!CElement::CheckMainPointer())
-      return(false);
-// --- Initializing properties
-   m_x      =CElement::CalculateX(x_gap);
-   m_y      =CElement::CalculateY(y_gap);
-   m_x_size =x_size;
-   m_y_size =y_size;
-// --- Indents from the extreme point
-   CElementBase::XGap(x_gap);
-   CElementBase::YGap(y_gap);
-// ---Creating an element
-   if(!CreateSepLine())
-      return(false);
-//---
-   return(true);
-  }
-//+------------------------------------------------------------------+
-// | Creates a canvas for drawing a dividing line |
-//+------------------------------------------------------------------+
-bool CSeparateLine::CreateSepLine(void)
-  {
-// --- Formation of object name
-   string name=CElementBase::ElementName("separate_line");
-// ---Create an object
-   if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
-     return(false);
-//---
-   return(true);
-  }
-//+------------------------------------------------------------------+
-// | Draws an element |
-//+------------------------------------------------------------------+
-void CSeparateLine::Draw(void)
-  {
-// --- Coordinates for lines
-   int x1=0,x2=0,y1=0,y2=0;
-// ---Canvas sizes
-   int x_size =(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XSIZE)-1;
-   int y_size =(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_YSIZE)-1;
-// --- Clear canvas
-   m_canvas.Erase(::ColorToARGB(clrNONE,0));
-// --- If the line is horizontal
-   if(m_type_sep_line==H_SEP_LINE)
+ #ifndef CSEPARATELINE_MQH_IMPLEMENTATION
+ #define CSEPARATELINE_MQH_IMPLEMENTATION
+   //+------------------------------------------------------------------+
+   //| Constructor                                                      |
+   //+------------------------------------------------------------------+
+   CSeparateLine::CSeparateLine(void) : m_type_sep_line(H_SEP_LINE),
+                                        m_dark_color(C'160,160,160'),
+                                        m_light_color(clrWhite)
      {
-      // --- Dark line on top
-      x1=0; y1=0; x2=x_size; y2=0;
-      m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_dark_color));
-      // --- Light line below
-      x1=0; x2=x_size; y1=y_size; y2=y_size;
-      m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_light_color));
+   // --- Save the element class name in the base class
+      CElementBase::ClassName(CLASS_NAME);
      }
-// --- If the line is vertical
-   else
+   //+------------------------------------------------------------------+
+   //| Destructor                                                       |
+   //+------------------------------------------------------------------+
+   CSeparateLine::~CSeparateLine(void)
      {
-      // --- Dark line on the left
-      x1=0; x2=0; y1=0; y2=y_size;
-      m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_dark_color));
-      // --- Light line on the right
-      x1=x_size; y1=0; x2=x_size; y2=y_size;
-      m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_light_color));
      }
-  }
-//+------------------------------------------------------------------+
+   //+------------------------------------------------------------------+
+   // | Creates a dividing line |
+   //+------------------------------------------------------------------+
+   bool CSeparateLine::CreateSeparateLine(const int x_gap,const int y_gap,const int x_size,const int y_size)
+     {
+   // --- Quit if there is no pointer to the main element
+      if(!CElement::CheckMainPointer())
+         return(false);
+   // --- Initializing properties
+      m_x      =CElement::CalculateX(x_gap);
+      m_y      =CElement::CalculateY(y_gap);
+      m_x_size =x_size;
+      m_y_size =y_size;
+   // --- Indents from the extreme point
+      CElementBase::XGap(x_gap);
+      CElementBase::YGap(y_gap);
+   // ---Creating an element
+      if(!CreateSepLine())
+         return(false);
+   //---
+      return(true);
+     }
+   //+------------------------------------------------------------------+
+   // | Creates a canvas for drawing a dividing line |
+   //+------------------------------------------------------------------+
+   bool CSeparateLine::CreateSepLine(void)
+     {
+   // --- Formation of object name
+      string name=CElementBase::ElementName("separate_line");
+   // ---Create an object
+      if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
+        return(false);
+   //---
+      return(true);
+     }
+   //+------------------------------------------------------------------+
+   // | Draws an element |
+   //+------------------------------------------------------------------+
+   void CSeparateLine::Draw(void)
+     {
+   // --- Coordinates for lines
+      int x1=0,x2=0,y1=0,y2=0;
+   // ---Canvas sizes
+      int x_size =(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XSIZE)-1;
+      int y_size =(int)::ObjectGetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_YSIZE)-1;
+   // --- Clear canvas
+      m_canvas.Erase(::ColorToARGB(clrNONE,0));
+   // --- If the line is horizontal
+      if(m_type_sep_line==H_SEP_LINE)
+        {
+         // --- Dark line on top
+         x1=0; y1=0; x2=x_size; y2=0;
+         m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_dark_color));
+         // --- Light line below
+         x1=0; x2=x_size; y1=y_size; y2=y_size;
+         m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_light_color));
+        }
+   // --- If the line is vertical
+      else
+        {
+         // --- Dark line on the left
+         x1=0; x2=0; y1=0; y2=y_size;
+         m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_dark_color));
+         // --- Light line on the right
+         x1=x_size; y1=0; x2=x_size; y2=y_size;
+         m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(m_light_color));
+        }
+     }
+   //+------------------------------------------------------------------+
+ #endif // CSEPARATELINE_MQH_IMPLEMENTATION
+#endif // __SEPARATELINE_MQH__

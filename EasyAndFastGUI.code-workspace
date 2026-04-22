@@ -1,0 +1,54 @@
+{
+	"folders": [
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/3. EasyAndFastGUI"
+		},
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/3. EasyAndFastGUI 19703"
+		},
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Files"
+		},
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/3. EasyAndFastGUI/2207"
+		},
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anatoli Kazharski/3. EasyAndFastGUI 19703 Eng"
+		},
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anatoli Kazharski"
+		},
+		{
+			"path": "C:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anatoli Kazharski"
+		}
+	],
+	"settings": {
+		"clangd.fallbackFlags": [
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/3. EasyAndFastGUI 19703",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/3. EasyAndFastGUI 19703/Include",
+			"-xc++",
+			"-std=c++17",
+			"-D__MQL__",
+			"-D__MQL5__",
+			"-includec:/Users/nguye/.antigravity/extensions/ngsoftware.mql-clangd-1.1.39-universal/files/mql_clangd_compat.h",
+			"-fms-extensions",
+			"-fms-compatibility",
+			"-ferror-limit=0",
+			"-Wno-invalid-token-paste",
+			"-Wno-unused-value",
+			"-Wno-unknown-pragmas",
+			"-Wno-writable-strings",
+			"-Xclang",
+			"-Wno-invalid-pp-directive",
+			"-Wno-unknown-directives",
+			"-Wno-language-extension-token",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/3. EasyAndFastGUI/2207",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/3. EasyAndFastGUI/2207/Include"
+		],
+		"files.associations": {
+			"*.mqh": "cpp",
+			"*.mq4": "cpp",
+			"*.mq5": "cpp"
+		}
+	}
+}

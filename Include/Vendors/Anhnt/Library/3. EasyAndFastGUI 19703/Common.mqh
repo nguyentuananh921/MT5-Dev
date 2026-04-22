@@ -3,6 +3,8 @@
 //|                                  Copyright 2022, MetaQuotes Ltd. |
 //|                                              http://www.mql5.com |
 //+------------------------------------------------------------------+
+#ifndef __COMMON_MQH__
+#define __COMMON_MQH__
 #property copyright "Copyright 2021, MetaQuotes Ltd."
 #property link      "http://www.mql5.com"
 //+------------------------------------------------------------------+
@@ -41,3 +43,4 @@ class CCommon {
    ENUM_ANCHOR_POINT m_anchor;
 };
 //+------------------------------------------------------------------+
+#endif // __COMMON_MQH__

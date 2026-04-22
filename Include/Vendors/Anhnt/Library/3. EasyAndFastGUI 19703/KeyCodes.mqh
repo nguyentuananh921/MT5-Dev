@@ -7,6 +7,8 @@
 // | ASCII character and control key codes |
 // | to handle the keypress event (long event parameter) |
 //+------------------------------------------------------------------+
+#ifndef __KEYCODES_MQH__
+#define __KEYCODES_MQH__
 #define KEY_BACKSPACE          8
 #define KEY_TAB                9
 #define KEY_NUMPAD_5           12
@@ -199,3 +201,4 @@
 #define KEYSTATE_INSERT        338
 #define KEYSTATE_DELETE        339
 //+------------------------------------------------------------------+
+#endif // __KEYCODES_MQH__

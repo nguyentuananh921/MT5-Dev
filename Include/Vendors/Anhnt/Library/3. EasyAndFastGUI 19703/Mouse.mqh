@@ -3,6 +3,8 @@
 //|                        Copyright 2016, MetaQuotes Software Corp. |
 //|                                              http://www.mql5.com |
 //+------------------------------------------------------------------+
+#ifndef __MOUSE_MQH__
+#define __MOUSE_MQH__
 #include "Defines.mqh"
 //#include "Objects.mqh"
 #include "RectCanvas.mqh"
@@ -64,103 +66,107 @@ private:
    // --- Checking double-clicking the left mouse button
    void              CheckDoubleClick(void);
   };
-//+------------------------------------------------------------------+
-//| Constructor                                                      |
-//+------------------------------------------------------------------+
-CMouse::CMouse(void) : m_x(0),
-                       m_y(0),
-                       m_subwin(WRONG_VALUE),
-                       m_time(NULL),
-                       m_level(0.0),
-                       m_left_button_state(false),
-                       m_call_counter(::GetTickCount()),
-                       m_pause_between_clicks(300)
-  {
-// --- Get the ID of the current chart
-   m_chart.Attach();
-  }
-//+------------------------------------------------------------------+
-//| Destructor                                                       |
-//+------------------------------------------------------------------+
-CMouse::~CMouse(void)
-  {
-// ---Disconnect from schedule
-   m_chart.Detach();
-  }
-//+------------------------------------------------------------------+
-// | Handling mouse events |
-//+------------------------------------------------------------------+
-void CMouse::OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
-  {
-// --- Handling the cursor movement event
-   if(id==CHARTEVENT_MOUSE_MOVE)
+ #ifndef CMOUSE_MQH_IMPLEMENTATION
+ #define CMOUSE_MQH_IMPLEMENTATION
+   //+------------------------------------------------------------------+
+   //| Constructor                                                      |
+   //+------------------------------------------------------------------+
+   CMouse::CMouse(void) : m_x(0),
+                          m_y(0),
+                          m_subwin(WRONG_VALUE),
+                          m_time(NULL),
+                          m_level(0.0),
+                          m_left_button_state(false),
+                          m_call_counter(::GetTickCount()),
+                          m_pause_between_clicks(300)
      {
-      // --- Coordinates and state of the left mouse button
-      m_x                 =(int)lparam;
-      m_y                 =(int)dparam;
-      m_left_button_state =CheckChangeLeftButtonState(sparam);
-      // --- Save the call counter value
-      m_call_counter=::GetTickCount();
-      // --- Get the cursor location
-      if(!::ChartXYToTimePrice(m_chart.ChartId(),m_x,m_y,m_subwin,m_time,m_level))
+   // --- Get the ID of the current chart
+      m_chart.Attach();
+     }
+   //+------------------------------------------------------------------+
+   //| Destructor                                                       |
+   //+------------------------------------------------------------------+
+   CMouse::~CMouse(void)
+     {
+   // ---Disconnect from schedule
+      m_chart.Detach();
+     }
+   //+------------------------------------------------------------------+
+   // | Handling mouse events |
+   //+------------------------------------------------------------------+
+   void CMouse::OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+     {
+   // --- Handling the cursor movement event
+      if(id==CHARTEVENT_MOUSE_MOVE)
+        {
+         // --- Coordinates and state of the left mouse button
+         m_x                 =(int)lparam;
+         m_y                 =(int)dparam;
+         m_left_button_state =CheckChangeLeftButtonState(sparam);
+         // --- Save the call counter value
+         m_call_counter=::GetTickCount();
+         // --- Get the cursor location
+         if(!::ChartXYToTimePrice(m_chart.ChartId(),m_x,m_y,m_subwin,m_time,m_level))
+            return;
+         // --- Get the relative Y coordinate
+         if(m_subwin>0)
+            m_y=m_y-m_chart.SubwindowY(m_subwin);
          return;
-      // --- Get the relative Y coordinate
-      if(m_subwin>0)
-         m_y=m_y-m_chart.SubwindowY(m_subwin);
-      return;
+        }
+   // --- Processing the click event on the chart
+      if(id==CHARTEVENT_CLICK)
+        {
+         // --- Let's check double-clicking the left mouse button
+         CheckDoubleClick();
+         return;
+        }
      }
-// --- Processing the click event on the chart
-   if(id==CHARTEVENT_CLICK)
+   //+------------------------------------------------------------------+
+   // | Returns the relative X-coordinate of the mouse cursor |
+   // | from the passed canvas object for drawing |
+   //+------------------------------------------------------------------+
+   int CMouse::RelativeX(CRectCanvas &object)
      {
-      // --- Let's check double-clicking the left mouse button
-      CheckDoubleClick();
-      return;
+      return(m_x-object.X()+(int)ObjectGetInteger(0,object.ChartObjectName(),OBJPROP_XOFFSET));
      }
-  }
-//+------------------------------------------------------------------+
-// | Returns the relative X-coordinate of the mouse cursor |
-// | from the passed canvas object for drawing |
-//+------------------------------------------------------------------+
-int CMouse::RelativeX(CRectCanvas &object)
-  {
-   return(m_x-object.X()+(int)ObjectGetInteger(0,object.ChartObjectName(),OBJPROP_XOFFSET));
-  }
-//+------------------------------------------------------------------+
-// | Returns the relative Y-coordinate of the mouse cursor |
-// | from the passed canvas object for drawing |
-//+------------------------------------------------------------------+
-int CMouse::RelativeY(CRectCanvas &object)
-  {
-   return(m_y-object.Y()+(int)ObjectGetInteger(0,object.ChartObjectName(),OBJPROP_YOFFSET));
-  }
-//+------------------------------------------------------------------+
-// | Checking the state change of the left mouse button |
-//+------------------------------------------------------------------+
-bool CMouse::CheckChangeLeftButtonState(const string mouse_state)
-  {
-   bool left_button_state=(bool)int(mouse_state);
-// --- Send a message about the change in the state of the left mouse button
-   if(m_left_button_state!=left_button_state)
-      ::EventChartCustom(m_chart.ChartId(),ON_CHANGE_MOUSE_LEFT_BUTTON,0,0.0,"");
-// --- Reset the current state of the left mouse button
-   return(left_button_state);
-  }
-//+------------------------------------------------------------------+
-// | Checking double-clicking the left mouse button |
-//+------------------------------------------------------------------+
-void CMouse::CheckDoubleClick(void)
-  {
-   static uint prev_depressed =0;
-   static uint curr_depressed =::GetTickCount();
-// --- Update the values
-   prev_depressed =curr_depressed;
-   curr_depressed =::GetTickCount();
-// --- Determine the time between presses
-   uint counter = curr_depressed - prev_depressed;
-// --- If less time has passed between clicks than specified, we will send a message about the double click
-   if(counter < m_pause_between_clicks)
+   //+------------------------------------------------------------------+
+   // | Returns the relative Y-coordinate of the mouse cursor |
+   // | from the passed canvas object for drawing |
+   //+------------------------------------------------------------------+
+   int CMouse::RelativeY(CRectCanvas &object)
      {
-      ::EventChartCustom(m_chart.ChartId(),ON_DOUBLE_CLICK,counter,0.0,"");
+      return(m_y-object.Y()+(int)ObjectGetInteger(0,object.ChartObjectName(),OBJPROP_YOFFSET));
      }
-  }
-//+------------------------------------------------------------------+
+   //+------------------------------------------------------------------+
+   // | Checking the state change of the left mouse button |
+   //+------------------------------------------------------------------+
+   bool CMouse::CheckChangeLeftButtonState(const string mouse_state)
+     {
+      bool left_button_state=(bool)int(mouse_state);
+   // --- Send a message about the change in the state of the left mouse button
+      if(m_left_button_state!=left_button_state)
+         ::EventChartCustom(m_chart.ChartId(),ON_CHANGE_MOUSE_LEFT_BUTTON,0,0.0,"");
+   // --- Reset the current state of the left mouse button
+      return(left_button_state);
+     }
+   //+------------------------------------------------------------------+
+   // | Checking double-clicking the left mouse button |
+   //+------------------------------------------------------------------+
+   void CMouse::CheckDoubleClick(void)
+     {
+      static uint prev_depressed =0;
+      static uint curr_depressed =::GetTickCount();
+   // --- Update the values
+      prev_depressed =curr_depressed;
+      curr_depressed =::GetTickCount();
+   // --- Determine the time between presses
+      uint counter = curr_depressed - prev_depressed;
+   // --- If less time has passed between clicks than specified, we will send a message about the double click
+      if(counter < m_pause_between_clicks)
+        {
+         ::EventChartCustom(m_chart.ChartId(),ON_DOUBLE_CLICK,counter,0.0,"");
+        }
+     }
+   //+------------------------------------------------------------------+
+ #endif // CMOUSE_MQH_IMPLEMENTATION
+#endif // __MOUSE_MQH__
