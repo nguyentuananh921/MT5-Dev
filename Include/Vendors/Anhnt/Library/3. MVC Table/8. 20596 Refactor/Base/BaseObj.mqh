@@ -41,8 +41,7 @@
   {
    protected:
       int               m_id;                                     // Identifier
-      ushort            m_name[];                                 // Name
-      
+      ushort            m_name[];                                 // Name      
    public:
       // --- Sets (1) name, (2) identifier
          void              SetName(const string name)                { ::StringToShortArray(name,this.m_name);          }

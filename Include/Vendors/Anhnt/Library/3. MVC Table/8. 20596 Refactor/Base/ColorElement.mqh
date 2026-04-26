@@ -62,12 +62,10 @@
          bool              InitDefault(const color clr)              { return this.m_default.SetColor(clr);       }
          bool              InitFocused(const color clr)              { return this.m_focused.SetColor(clr);       }
          bool              InitPressed(const color clr)              { return this.m_pressed.SetColor(clr);       }
-         bool              InitBlocked(const color clr)              { return this.m_blocked.SetColor(clr);       }
-         
+         bool              InitBlocked(const color clr)              { return this.m_blocked.SetColor(clr);       }         
       // --- Set colors for all states
          void              InitColors(const color clr_default, const color clr_focused, const color clr_pressed, const color clr_blocked);
-         void              InitColors(const color clr);
-         
+         void              InitColors(const color clr);         
       // ---Return colors of different states
          color             GetCurrent(void)                    const { return this.m_current.Get();               }
          color             GetDefault(void)                    const { return this.m_default.Get();               }
