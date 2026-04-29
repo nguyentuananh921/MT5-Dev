@@ -31,7 +31,7 @@ public:
    double            DParam(void)     const     { return m_dparam;   }
    void              SParam(const string v)     { m_sparam=v;        }
    string            SParam(void)     const     { return m_sparam;   }
-   
+   //--- Default constructor
                      CEventBaseObj(const ushort event_id,
                                    const long   lparam,
                                    const double dparam,

@@ -10,6 +10,7 @@
  // TODO: review includes
   #include <Object.mqh>
   #include "..\Defines\Defines.mqh"
+  #include "..\Notify\Message\Message.mqh"
   //#include "..\..\Services\DELib.mqh"
   #ifndef CBASEOBJ_MQH_DECLARATION
   #define CBASEOBJ_MQH_DECLARATION

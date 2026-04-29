@@ -12,7 +12,7 @@
     #include "BaseObj.mqh"
     #include "EventBaseObj.mqh"
     #include "BaseEvent.mqh"
-    #include "..\Notify\Message.mqh"
+    #include "..\Notify\Message\Message.mqh"
     #define CONTROLS_TOTAL  (10)
 
  #ifndef CBASEOBJEXT_MQH_DECLARATION
