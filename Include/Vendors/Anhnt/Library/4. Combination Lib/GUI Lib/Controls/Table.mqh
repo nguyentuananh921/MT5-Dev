@@ -16,148 +16,297 @@
  class CTable : public CElement
   {
    private:
-    // --- Objects for creating a table
-      CRectCanvas       m_headers;
-      CRectCanvas       m_table;
-      CScrollV          m_scrollv;
-      CScrollH          m_scrollh;
-      CTextEdit         m_edit;
-      CComboBox         m_combobox;
-      CPointer          m_column_resize;
-    // --- Table cell properties
-    struct CTCell
-     {
-      ENUM_TYPE_CELL    m_type;           // Cell type
-      CImage            m_images[];       // Image array
-      int               m_selected_image; // Index of the selected (displayed) picture
-      string            m_full_text;      // Full text
-      string            m_short_text;     // Short text
-      string            m_value_list[];   // Array of values ​​(for cells with combo boxes)
-      int               m_selected_item;  // Selected item in the combo box list
-      color             m_text_color;     // Text color
-      color             m_back_color;     // Background color
-      uint              m_digits;         // Number of decimal places
-     };
-    // --- Array of rows and table column properties
-    struct CTOptions
-     {
-      int               m_x;              // X-coordinate of the left edge of the column
-      int               m_x2;             // X-coordinate of the right edge of the column
-      int               m_width;          // Column width
-      ENUM_DATATYPE     m_data_type;      // Column data type
-      ENUM_ALIGN_MODE   m_text_align;     // How to align text in column cells
-      int               m_text_x_offset;  // Text indentation
-      int               m_image_x_offset; // Indent of the image from the X-edge of the cell
-      int               m_image_y_offset; // Indent of the image from the Y-edge of the cell
-      string            m_header_text;    // Column header text
-      CTCell            m_rows[];         // Array of table rows
-     };
-    CTOptions         m_columns[];
-    // --- Array of table row properties
-    struct CTRowOptions
-     {
-      int               m_y;  // Y-coordinate of the top edge of the string
-      int               m_y2; // Y-coordinate of the bottom edge of the line
-     };
-    CTRowOptions      m_rows[];
-    // --- Number of rows and columns
-      uint              m_rows_total;
-      uint              m_columns_total;
-    // --- Overall size and visible size of the table
-      int               m_table_x_size;
-      int               m_table_y_size;
-      int               m_table_visible_x_size;
-      int               m_table_visible_y_size;
-    // --- Availability of cells with input fields and combo boxes
-      bool              m_edit_state;
-      bool              m_combobox_state;
-    // --- Column and row indexes of the last edited cell
-      int               m_last_edit_row_index;
-      int               m_last_edit_column_index;
-    // --- Minimum width for columns
-      int               m_min_column_width;
-    // --- Default values: (1) width, (2) data type, (3) text alignment
-      int               m_default_width;
-      ENUM_DATATYPE     m_default_type_data;
-      ENUM_ALIGN_MODE   m_default_text_align;
-    // --- Mesh color
-      color             m_grid_color;
-    // --- Table header display mode
-      bool              m_show_headers;
-    // --- Size (height) of headings
-      int               m_header_y_size;
-    // --- Color of headings (background) in different states
-      color             m_headers_color;
-      color             m_headers_color_hover;
-      color             m_headers_color_pressed;
-    // --- Header text color
-      color             m_headers_text_color;
-    // --- Labels for the sorted data attribute
-      CImage            m_sort_arrows[];
-    // --- Indentation for the label indicating sorted data
-      int               m_sort_arrow_x_gap;
-      int               m_sort_arrow_y_gap;
-    // --- Size (height) of cells
-      int               m_cell_y_size;
-    // --- Cell color in different states
-      color             m_cell_color;
-      color             m_cell_color_hover;
-    // --- Color of (1) background and (2) text of the selected line
-      color             m_selected_row_color;
-      color             m_selected_row_text_color;
-    // --- (1) Index and (2) text of the selected line
-      int               m_selected_item;
-      string            m_selected_item_text;
-    // --- Index of the previous selected row
-      int               m_prev_selected_item;
-    // --- Indentation from the boundaries of the dividing lines to show the mouse pointer in the mode of changing the width of the columns
-      int               m_sep_x_offset;
-    // --- Line highlighting mode when hovering the mouse cursor
-      bool              m_lights_hover;
-    // --- Mode of sorting data by columns
-      bool              m_is_sort_mode;
-    // --- Index of the sorted column (WRONG_VALUE - the table is not sorted)
-      int               m_is_sorted_column_index;
-    // --- Last sort direction
-      ENUM_CSORT_MODE   m_last_sort_direction;
-    // --- Selected line mode
-      bool              m_selectable_row;
-    // --- Without deselecting a row when clicking again
-      bool              m_is_without_deselect;
-    // --- Zebra formatting mode
-      color             m_is_zebra_format_rows;
-    // --- State of the left mouse button (pressed/released)
-      bool              m_mouse_state;
-    // --- Timer counter for list rewind
-      int               m_timer_counter;
-    // --- To determine the focus of a row
-      int               m_item_index_focus;
-    // --- To determine the moment the mouse cursor moves from one line to another
-      int               m_prev_item_index_focus;
-    // --- To determine when the mouse cursor moves from one heading to another
-      int               m_prev_header_index_focus;
-    // --- Autosize columns
-      bool              m_autoresize_columns;
-    // --- Auto-column width mode (according to the maximum text width in the column)
-      bool              m_auto_correct_columns_width_mode;
-    // --- Column width changing mode
-      bool              m_column_resize_mode;
-    // --- Capture header border state to change column width
-      int               m_column_resize_control;
-    // --- Auxiliary fields for calculations in changing column widths
-      int               m_column_resize_x_fixed;
-      int               m_column_resize_prev_width;
-      int               m_column_resize_prev_thumb;
-    // --- To determine the indexes of the visible part of the table
-      uint              m_visible_table_from_index;
-      uint              m_visible_table_to_index;
-    // --- Step size for horizontal offset
-      int               m_shift_x_step;
-    // --- Offset restrictions
-      int               m_shift_x2_limit;
-      int               m_shift_y2_limit;
-    // ---Disable scroll bars
-      bool              m_is_disabled_scrolls;   
+    //Private variables
+      // --- Objects for creating a table
+        CRectCanvas       m_headers;
+        CRectCanvas       m_table;
+        CScrollV          m_scrollv;
+        CScrollH          m_scrollh;
+        CTextEdit         m_edit;
+        CComboBox         m_combobox;
+        CPointer          m_column_resize;
+      // --- Table cell properties
+      struct CTCell
+      {
+        ENUM_TYPE_CELL    m_type;           // Cell type
+        CImage            m_images[];       // Image array
+        int               m_selected_image; // Index of the selected (displayed) picture
+        string            m_full_text;      // Full text
+        string            m_short_text;     // Short text
+        string            m_value_list[];   // Array of values ​​(for cells with combo boxes)
+        int               m_selected_item;  // Selected item in the combo box list
+        color             m_text_color;     // Text color
+        color             m_back_color;     // Background color
+        uint              m_digits;         // Number of decimal places
+      };
+      // --- Array of rows and table column properties
+      struct CTOptions
+      {
+        int               m_x;              // X-coordinate of the left edge of the column
+        int               m_x2;             // X-coordinate of the right edge of the column
+        int               m_width;          // Column width
+        ENUM_DATATYPE     m_data_type;      // Column data type
+        ENUM_ALIGN_MODE   m_text_align;     // How to align text in column cells
+        int               m_text_x_offset;  // Text indentation
+        int               m_image_x_offset; // Indent of the image from the X-edge of the cell
+        int               m_image_y_offset; // Indent of the image from the Y-edge of the cell
+        string            m_header_text;    // Column header text
+        CTCell            m_rows[];         // Array of table rows
+      };
+      CTOptions         m_columns[];
+      // --- Array of table row properties
+      struct CTRowOptions
+      {
+        int               m_y;  // Y-coordinate of the top edge of the string
+        int               m_y2; // Y-coordinate of the bottom edge of the line
+      };
+      CTRowOptions      m_rows[];
+      // --- Number of rows and columns
+        uint              m_rows_total;
+        uint              m_columns_total;
+      // --- Overall size and visible size of the table
+        int               m_table_x_size;
+        int               m_table_y_size;
+        int               m_table_visible_x_size;
+        int               m_table_visible_y_size;
+      // --- Availability of cells with input fields and combo boxes
+        bool              m_edit_state;
+        bool              m_combobox_state;
+      // --- Column and row indexes of the last edited cell
+        int               m_last_edit_row_index;
+        int               m_last_edit_column_index;
+      // --- Minimum width for columns
+        int               m_min_column_width;
+      // --- Default values: (1) width, (2) data type, (3) text alignment
+        int               m_default_width;
+        ENUM_DATATYPE     m_default_type_data;
+        ENUM_ALIGN_MODE   m_default_text_align;
+      // --- Mesh color
+        color             m_grid_color;
+      // --- Table header display mode
+        bool              m_show_headers;
+      // --- Size (height) of headings
+        int               m_header_y_size;
+      // --- Color of headings (background) in different states
+        color             m_headers_color;
+        color             m_headers_color_hover;
+        color             m_headers_color_pressed;
+      // --- Header text color
+        color             m_headers_text_color;
+      // --- Labels for the sorted data attribute
+        CImage            m_sort_arrows[];
+      // --- Indentation for the label indicating sorted data
+        int               m_sort_arrow_x_gap;
+        int               m_sort_arrow_y_gap;
+      // --- Size (height) of cells
+        int               m_cell_y_size;
+      // --- Cell color in different states
+        color             m_cell_color;
+        color             m_cell_color_hover;
+      // --- Color of (1) background and (2) text of the selected line
+        color             m_selected_row_color;
+        color             m_selected_row_text_color;
+      // --- (1) Index and (2) text of the selected line
+        int               m_selected_item;
+        string            m_selected_item_text;
+      // --- Index of the previous selected row
+        int               m_prev_selected_item;
+      // --- Indentation from the boundaries of the dividing lines to show the mouse pointer in the mode of changing the width of the columns
+        int               m_sep_x_offset;
+      // --- Line highlighting mode when hovering the mouse cursor
+        bool              m_lights_hover;
+      // --- Mode of sorting data by columns
+        bool              m_is_sort_mode;
+      // --- Index of the sorted column (WRONG_VALUE - the table is not sorted)
+        int               m_is_sorted_column_index;
+      // --- Last sort direction
+        ENUM_CSORT_MODE   m_last_sort_direction;
+      // --- Selected line mode
+        bool              m_selectable_row;
+      // --- Without deselecting a row when clicking again
+        bool              m_is_without_deselect;
+      // --- Zebra formatting mode
+        color             m_is_zebra_format_rows;
+      // --- State of the left mouse button (pressed/released)
+        bool              m_mouse_state;
+      // --- Timer counter for list rewind
+        int               m_timer_counter;
+      // --- To determine the focus of a row
+        int               m_item_index_focus;
+      // --- To determine the moment the mouse cursor moves from one line to another
+        int               m_prev_item_index_focus;
+      // --- To determine when the mouse cursor moves from one heading to another
+        int               m_prev_header_index_focus;
+      // --- Autosize columns
+        bool              m_autoresize_columns;
+      // --- Auto-column width mode (according to the maximum text width in the column)
+        bool              m_auto_correct_columns_width_mode;
+      // --- Column width changing mode
+        bool              m_column_resize_mode;
+      // --- Capture header border state to change column width
+        int               m_column_resize_control;
+      // --- Auxiliary fields for calculations in changing column widths
+        int               m_column_resize_x_fixed;
+        int               m_column_resize_prev_width;
+        int               m_column_resize_prev_thumb;
+      // --- To determine the indexes of the visible part of the table
+        uint              m_visible_table_from_index;
+        uint              m_visible_table_to_index;
+      // --- Step size for horizontal offset
+        int               m_shift_x_step;
+      // --- Offset restrictions
+        int               m_shift_x2_limit;
+        int               m_shift_y2_limit;
+      // ---Disable scroll bars
+        bool              m_is_disabled_scrolls;
+    //Private methods
+        void              InitializeProperties(const int x_gap,const int y_gap);
+        bool              CreateCanvas(void);
+        bool              CreateHeaders(void);
+        bool              CreateTable(void);
+        bool              CreateScrollV(void);
+        bool              CreateScrollH(void);
+        bool              CreateEdit(void);
+        bool              CreateCombobox(void);
+        bool              CreateColumnResizePointer(void); 
+      // --- Handling clicks on header
+        bool              OnClickHeaders(const string clicked_object);
+      // --- Handling clicks on the table
+        bool              OnClickTable(const string clicked_object);
+      // --- Handling double clicks on the table
+        bool              OnDoubleClickTable(const string clicked_object);
+      // --- Handling the end of entering a value into a cell
+        bool              OnEndEditCell(const int id);
+      // --- Processing item selection in a cell drop-down list
+        bool              OnClickComboboxItem(const int id);
+      // --- Processing row selection
+        bool              OnSelectRow(const int row_index);
+      // --- Checking elements in cells for hiding
+        void              CheckAndHideEdit(void);
+        void              CheckAndHideCombobox(void);
+      // --- Returns the index of the clicked row
+        int               PressedRowIndex(void);
+      // --- Returns the column index of the clicked cell
+        int               PressedCellColumnIndex(void);
+      // --- Checks whether an element in a cell was clicked when clicked
+        bool              CheckCellElement(const int column_index,const int row_index,const bool double_click=false);
+      // --- Checks whether a button in a cell has been clicked
+        bool              CheckPressedButton(const int column_index,const int row_index,const bool double_click=false);
+      // --- Checks whether a checkbox in a cell has been clicked
+        bool              CheckPressedCheckBox(const int column_index,const int row_index,const bool double_click=false);
+      // --- Checks whether a cell with an input field has been clicked
+        bool              CheckPressedEdit(const int column_index,const int row_index,const bool double_click=false);
+      // --- Checks whether there was a click on a cell with a combo box
+        bool              CheckPressedCombobox(const int column_index,const int row_index,const bool double_click=false);
+      // --- Quick sort method
+        void              QuickSort(uint beg,uint end,uint column,const ENUM_CSORT_MODE mode=SORT_ASCEND);
+      // --- Checking the sort condition
+        bool              CheckSortCondition(uint column_index,uint row_index,const string check_value,const bool direction);
+      // --- Swap the values ​​in the specified cells
+        void              Swap(uint r1,uint r2);
+      // --- Calculates table sizes
+        void              CalculateTableSize(void);
+      // --- Calculate the full size of the table along the X and Y axis
+        void              CalculateTableXSize(void);
+        void              CalculateTableYSize(void);
+      // --- Calculate the apparent size of the table along the X and Y axis
+        void              CalculateTableVisibleXSize(void);
+        void              CalculateTableVisibleYSize(void);
+      // --- Change the main table dimensions
+        void              ChangeMainSize(const int x_size,const int y_size);
+      // --- Resize table
+        void              ChangeTableSize(void);
+      // --- Resize scrollbars
+        void              ChangeScrollsSize(void);
+      // --- Defining indexes of the visible table area
+        void              VisibleTableIndexes(void);    
+      // --- Returns the text
+        string            Text(const int column_index,const int row_index);
+      // --- Returns the X-coordinate of the text in the specified column
+        int               TextX(const int column_index,const bool headers=false);
+      // --- Returns how text is aligned in the specified column
+        uint              TextAlign(const int column_index,const uint anchor);
+      // --- Returns the text color of a cell
+        uint              TextColor(const int column_index,const int row_index);
+      // --- Returns the background color of a cell
+        uint              BackColor(const int column_index,const int row_index);
+      // --- Returns the current header background color
+        uint              HeaderColorCurrent(const bool is_header_focus);
+      // --- Returns the current background color of a row
+        uint              RowColorCurrent(const int column_index,const int row_index,const bool is_row_focus);
+      // --- Draws an element
+        void              Draw(void);
+      // --- Draws a table taking into account the latest changes made
+        void              DrawTable(const bool only_visible=false);
+      // --- Draws table headers
+        void              DrawTableHeaders(void);
+      // --- Draws headings
+        void              DrawHeaders(void);
+      // --- Draws a table header grid
+        void              DrawHeadersGrid(void);
+      // --- Draws a sign that the table can be sorted
+        void              DrawSignSortedData(void);
+      // --- Draws table header text
+        void              DrawHeadersText(void);
+      // --- Draws table row background
+        void              DrawRows(void);
+      // --- Draws the selected line
+        void              DrawSelectedRow(void);
+      // --- Draws a mesh
+        void              DrawGrid(void);
+      // --- Draws all table images
+        void              DrawImages(void);
+      // --- Draws an image in the specified cell
+        void              DrawImage(const int column_index,const int row_index);
+      // --- Draws text
+        void              DrawText(void);
+      // --- Redraws the specified table cell
+        void              RedrawCell(const int column_index,const int row_index);
+      // --- Draws the specified table row using the specified mode
+        void              DrawRow(int &indexes[],const int item_index,const int prev_item_index,const bool is_user=true);
+      // --- Redraws the specified table row using the specified mode
+        void              RedrawRow(const bool is_selected_row=false);  
+      // --- Checking focus on headings
+        void              CheckHeaderFocus(void);
+      // --- Checking focus on table rows
+        int               CheckRowFocus(void);
+      // --- Check for focus on heading borders to change their width
+        void              CheckColumnResizeFocus(void);
+      // --- Changes the width of the captured column
+        void              ChangeColumnWidth(void);
+      // --- Checks the size of the passed array and returns the adjusted value
+        template<typename T>
+        int               CheckArraySize(const T &array[]);
+      // --- Check column out of range
+        bool              CheckOutOfColumnRange(const uint column_index);
+      // --- Check for out of range columns and rows
+        virtual bool      CheckOutOfRange(const uint column_index,const uint row_index);
+      // --- Calculation taking into account the latest changes and changing the table size
+        void              RecalculateAndResizeTable(const bool redraw=false);
+      // --- Initialize the specified column with default values
+        void              ColumnInitialize(const uint column_index);
+      // --- Initialize the specified cell with default values
+        void              CellInitialize(const uint column_index,const uint row_index);
+      // --- Makes a copy of the specified column (source) to a new location (dest.)
+        void              ColumnCopy(const uint destination,const uint source);
+      // --- Makes a copy of the specified cell (source) to a new location (dest.)
+        void              CellCopy(const uint column_dest,const uint row_dest,const uint column_source,const uint row_source);
+      // --- Copies image data from one array to another
+        void              ImageCopy(CImage &destination[],CImage &source[],const int index);   
+      // --- Changes the color of table objects
+        void              ChangeObjectsColor(void);
+      // --- Changes the color of headers on mouseover
+        void              ChangeHeadersColor(void);
+      // --- Changing the color of rows on mouse hover
+        void              ChangeRowsColor(void);
+      // --- Returns adjusted text to fit the column width
+        string            CorrectingText(const int column_index,const int row_index,const bool headers=false);
+      // --- Fast forward table
+        void              FastSwitching(void);
+      // --- Change the width along the right edge of the window
+        virtual void      ChangeWidthByRightWindowSide(void);
+      // --- Change the height along the bottom edge of the window
+        virtual void      ChangeHeightByBottomWindowSide(void);
    public:
                      CTable(void);
                      ~CTable(void);
@@ -307,156 +456,7 @@
       virtual void      ResetZorders(void);
     // --- Item update
       virtual void      Update(const bool redraw=false);
-   
-   private:
-      void              InitializeProperties(const int x_gap,const int y_gap);
-      bool              CreateCanvas(void);
-      bool              CreateHeaders(void);
-      bool              CreateTable(void);
-      bool              CreateScrollV(void);
-      bool              CreateScrollH(void);
-      bool              CreateEdit(void);
-      bool              CreateCombobox(void);
-      bool              CreateColumnResizePointer(void); 
-    // --- Handling clicks on header
-      bool              OnClickHeaders(const string clicked_object);
-    // --- Handling clicks on the table
-      bool              OnClickTable(const string clicked_object);
-    // --- Handling double clicks on the table
-      bool              OnDoubleClickTable(const string clicked_object);
-    // --- Handling the end of entering a value into a cell
-      bool              OnEndEditCell(const int id);
-    // --- Processing item selection in a cell drop-down list
-      bool              OnClickComboboxItem(const int id);
-    // --- Processing row selection
-      bool              OnSelectRow(const int row_index);
-    // --- Checking elements in cells for hiding
-      void              CheckAndHideEdit(void);
-      void              CheckAndHideCombobox(void);
-    // --- Returns the index of the clicked row
-      int               PressedRowIndex(void);
-    // --- Returns the column index of the clicked cell
-      int               PressedCellColumnIndex(void);
-    // --- Checks whether an element in a cell was clicked when clicked
-      bool              CheckCellElement(const int column_index,const int row_index,const bool double_click=false);
-    // --- Checks whether a button in a cell has been clicked
-      bool              CheckPressedButton(const int column_index,const int row_index,const bool double_click=false);
-    // --- Checks whether a checkbox in a cell has been clicked
-      bool              CheckPressedCheckBox(const int column_index,const int row_index,const bool double_click=false);
-    // --- Checks whether a cell with an input field has been clicked
-      bool              CheckPressedEdit(const int column_index,const int row_index,const bool double_click=false);
-    // --- Checks whether there was a click on a cell with a combo box
-      bool              CheckPressedCombobox(const int column_index,const int row_index,const bool double_click=false);
-    // --- Quick sort method
-      void              QuickSort(uint beg,uint end,uint column,const ENUM_CSORT_MODE mode=SORT_ASCEND);
-    // --- Checking the sort condition
-      bool              CheckSortCondition(uint column_index,uint row_index,const string check_value,const bool direction);
-    // --- Swap the values ​​in the specified cells
-      void              Swap(uint r1,uint r2);
-    // --- Calculates table sizes
-      void              CalculateTableSize(void);
-    // --- Calculate the full size of the table along the X and Y axis
-      void              CalculateTableXSize(void);
-      void              CalculateTableYSize(void);
-    // --- Calculate the apparent size of the table along the X and Y axis
-      void              CalculateTableVisibleXSize(void);
-      void              CalculateTableVisibleYSize(void);
-    // --- Change the main table dimensions
-      void              ChangeMainSize(const int x_size,const int y_size);
-    // --- Resize table
-      void              ChangeTableSize(void);
-    // --- Resize scrollbars
-      void              ChangeScrollsSize(void);
-    // --- Defining indexes of the visible table area
-      void              VisibleTableIndexes(void);    
-    // --- Returns the text
-      string            Text(const int column_index,const int row_index);
-    // --- Returns the X-coordinate of the text in the specified column
-      int               TextX(const int column_index,const bool headers=false);
-    // --- Returns how text is aligned in the specified column
-      uint              TextAlign(const int column_index,const uint anchor);
-    // --- Returns the text color of a cell
-      uint              TextColor(const int column_index,const int row_index);
-    // --- Returns the background color of a cell
-      uint              BackColor(const int column_index,const int row_index);
-    // --- Returns the current header background color
-      uint              HeaderColorCurrent(const bool is_header_focus);
-    // --- Returns the current background color of a row
-      uint              RowColorCurrent(const int column_index,const int row_index,const bool is_row_focus);
-    // --- Draws an element
-      void              Draw(void);
-    // --- Draws a table taking into account the latest changes made
-      void              DrawTable(const bool only_visible=false);
-    // --- Draws table headers
-      void              DrawTableHeaders(void);
-    // --- Draws headings
-      void              DrawHeaders(void);
-    // --- Draws a table header grid
-      void              DrawHeadersGrid(void);
-    // --- Draws a sign that the table can be sorted
-      void              DrawSignSortedData(void);
-    // --- Draws table header text
-      void              DrawHeadersText(void);
-    // --- Draws table row background
-      void              DrawRows(void);
-    // --- Draws the selected line
-      void              DrawSelectedRow(void);
-    // --- Draws a mesh
-      void              DrawGrid(void);
-    // --- Draws all table images
-      void              DrawImages(void);
-    // --- Draws an image in the specified cell
-      void              DrawImage(const int column_index,const int row_index);
-    // --- Draws text
-      void              DrawText(void);
-    // --- Redraws the specified table cell
-      void              RedrawCell(const int column_index,const int row_index);
-    // --- Draws the specified table row using the specified mode
-      void              DrawRow(int &indexes[],const int item_index,const int prev_item_index,const bool is_user=true);
-    // --- Redraws the specified table row using the specified mode
-      void              RedrawRow(const bool is_selected_row=false);  
-    // --- Checking focus on headings
-      void              CheckHeaderFocus(void);
-    // --- Checking focus on table rows
-      int               CheckRowFocus(void);
-    // --- Check for focus on heading borders to change their width
-      void              CheckColumnResizeFocus(void);
-    // --- Changes the width of the captured column
-      void              ChangeColumnWidth(void);
-    // --- Checks the size of the passed array and returns the adjusted value
-      template<typename T>
-      int               CheckArraySize(const T &array[]);
-    // --- Check column out of range
-      bool              CheckOutOfColumnRange(const uint column_index);
-    // --- Check for out of range columns and rows
-      virtual bool      CheckOutOfRange(const uint column_index,const uint row_index);
-    // --- Calculation taking into account the latest changes and changing the table size
-      void              RecalculateAndResizeTable(const bool redraw=false);
-    // --- Initialize the specified column with default values
-      void              ColumnInitialize(const uint column_index);
-    // --- Initialize the specified cell with default values
-      void              CellInitialize(const uint column_index,const uint row_index);
-    // --- Makes a copy of the specified column (source) to a new location (dest.)
-      void              ColumnCopy(const uint destination,const uint source);
-    // --- Makes a copy of the specified cell (source) to a new location (dest.)
-      void              CellCopy(const uint column_dest,const uint row_dest,const uint column_source,const uint row_source);
-    // --- Copies image data from one array to another
-      void              ImageCopy(CImage &destination[],CImage &source[],const int index);   
-    // --- Changes the color of table objects
-      void              ChangeObjectsColor(void);
-    // --- Changes the color of headers on mouseover
-      void              ChangeHeadersColor(void);
-    // --- Changing the color of rows on mouse hover
-      void              ChangeRowsColor(void);
-    // --- Returns adjusted text to fit the column width
-      string            CorrectingText(const int column_index,const int row_index,const bool headers=false);
-    // --- Fast forward table
-      void              FastSwitching(void);
-    // --- Change the width along the right edge of the window
-      virtual void      ChangeWidthByRightWindowSide(void);
-    // --- Change the height along the bottom edge of the window
-      virtual void      ChangeHeightByBottomWindowSide(void);
-   };
+  };
  #ifndef CTABLE_MQH_IMPLEMENTATION
  #define CTABLE_MQH_IMPLEMENTATION
   //+------------------------------------------------------------------+
@@ -685,7 +685,7 @@
         }
    }
   //+------------------------------------------------------------------+
-  // | Timer |
+  //| Timer |
   //+------------------------------------------------------------------+
   void CTable::OnEventTimer(void)
    {
@@ -1841,27 +1841,27 @@
     // --- Redraw the table if specified
       if(redraw)
          {
-         // --- Autosize columns
-         AutoCorrectWidthColumns();
-         AutoResizeColumns();
-         // --- Set new table background size
-         ChangeMainSize(m_x_size,m_y_size);
-         // --- Calculate table dimensions
-         CalculateTableSize();
-         // --- Set new table size
-         ChangeTableSize();
-         // --- Redraw the table
-         DrawTable();
-         // --- Update table
-         m_canvas.Update();
-         m_table.Update();
-         // --- Update headers if enabled
-         if(m_show_headers)
-            m_headers.Update();
-         // --- Refresh scrollbars
-         m_scrollv.Update(true);
-         m_scrollh.Update(true);
-         return;
+          // --- Autosize columns
+          AutoCorrectWidthColumns();
+          AutoResizeColumns();
+          // --- Set new table background size
+          ChangeMainSize(m_x_size,m_y_size);
+          // --- Calculate table dimensions
+          CalculateTableSize();
+          // --- Set new table size
+          ChangeTableSize();
+          // --- Redraw the table
+          DrawTable();
+          // --- Update table
+          m_canvas.Update();
+          m_table.Update();
+          // --- Update headers if enabled
+          if(m_show_headers)
+              m_headers.Update();
+          // --- Refresh scrollbars in case of resizing the table
+            m_scrollv.Update(true);
+            m_scrollh.Update(true);
+          return;
          }
     // --- Autosize columns
       AutoCorrectWidthColumns();

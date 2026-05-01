@@ -9,6 +9,8 @@
 #ifndef CGUIPANNEL_MQH_DECLARATION
 #define CGUIPANNEL_MQH_DECLARATION
 #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\WndEvents.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
+
 
 //Define GUI control
   //id for m_tabsTrade
@@ -20,6 +22,14 @@
         TAB_TAB_TRADE_HISTORY,
         TAB_TAB_TRADE_SETTINGS,       
       }; 
+  // Status bar items
+    #define STATUS_LABELS_TOTAL 3
+    enum ENUM_STATUS_BAR_ITEM 
+     {
+        STATUS_BAR_HELP         = 0,
+        STATUS_BAR_DEPOSIT_LOAD ,
+        STATUS_BAR_SERVER_TIME,
+     };
 class CGUIPannel : public CWndEvents 
  {
   private:   //Private variables
@@ -37,6 +47,7 @@ class CGUIPannel : public CWndEvents
     //--- Table
         CTable m_table_positions;
         CTable m_table_account_info;
+        CTable m_table_symb;
     //--- Edits
       //CTextEdit m_symb_filter;
       CTextEdit m_lot;
@@ -55,6 +66,7 @@ class CGUIPannel : public CWndEvents
     //--- Tabs
         bool CreateTab_Trade(const int x_gap, const int y_gap);
     //--- Table
+      //For Account Info Table
         bool CreateAccountInfoTable(const int x_gap, const int y_gap);
       //For Positions Table
         bool CreatePositionsTable(const int x_gap, const int y_gap);
@@ -78,7 +90,11 @@ class CGUIPannel : public CWndEvents
         double DepositLoad(const bool percent_mode, const double price = 0.0,const string symbol = "", const double volume = 0.0);
         //--- Check a new trade on history
         bool IsLastDealTicket(void);
-    //--- Lot edit box
+      //--- Symbols table
+        bool CreateSymbolsTable(const int x_gap, const int y_gap);
+        //--- Update the symbol table
+        void UpdateSymbolsTable(void);
+        //--- Lot edit box
         bool CreateLot(const int x_gap, const int y_gap, const string text);
     //--- Up level edit box
         bool CreateUpLevel(const int x_gap, const int y_gap, const string text);
@@ -98,8 +114,9 @@ class CGUIPannel : public CWndEvents
     //Update table
 
       //For Account Info Table
-      bool InitTableAccountInfoStatic();
-      bool UpdateTableAccountInfoDynamic();     
+        bool InitTableAccountInfoStatic();
+        bool UpdateTableAccountInfoDynamic();  
+        void UpdateTableAccountInfoDynamicFromEngine(CAccount *acc);   
     
  };
 #endif // CGUIPANNEL_MQH_DECLARATION
@@ -156,22 +173,28 @@ class CGUIPannel : public CWndEvents
             return (false);
         }
         InitializePositionsTable();        
-    
-    if(!CreateLot(180, 30, "Lot"))
-    {
-        Print(__FUNCTION__, " > Failed to create Lot!");
-        return (false);
-    }
-    if(!CreateUpLevel(400, 30, "Up Level"))
-    {
-        Print(__FUNCTION__, " > Failed to create Up Level!");
-        return (false);
-    }
-    if(!CreateDownLevel(510, 30, "Down Level"))
-    {
-        Print(__FUNCTION__, " > Failed to create Down Level!");
-        return (false);
-    }
+    //Tab Trade
+        if (!CreateSymbolsTable(2,55))
+        {
+          Print(__FUNCTION__, " > Failed to create Symbols Table!");
+            return (false);
+        }
+     //Control in Trade tab   
+      if(!CreateLot(180, 30, "Lot"))
+      {
+          Print(__FUNCTION__, " > Failed to create Lot!");
+          return (false);
+      }
+      if(!CreateUpLevel(400, 30, "Up Level"))
+      {
+          Print(__FUNCTION__, " > Failed to create Up Level!");
+          return (false);
+      }
+      if(!CreateDownLevel(510, 30, "Down Level"))
+      {
+          Print(__FUNCTION__, " > Failed to create Down Level!");
+          return (false);
+      }
     CWndEvents::CompletedGUI();
     m_chart.Redraw();
     return (true);
@@ -185,18 +208,49 @@ class CGUIPannel : public CWndEvents
   }
  void CGUIPannel::OnTickEvent(void)
    {
-      //UpdateTableAccountInfoDynamic(); //No Need to update every tick, only when there is an event in account
+      //For Account info table, only update dynamic info when there is an event in account, no need to update every tick
+        //UpdateTableAccountInfoDynamic();  
+      //For symbols table at Trade tab
+        UpdateSymbolsTable(); //Temporary doing nothing.
       //For Positions Table
         //--- Get symbols of open positions
         string symbols_name[];
         int symbols_total = GetPositionsSymbols(symbols_name);
-        //--- Update values in the table
-        SetValuesToPositionsTable(symbols_name);
-        //--- Sort if this has already been done by a user before the update
-          // m_table_positions.SortData((uint)m_table_positions.IsSortedColumnIndex(),
-          //                           m_table_positions.IsSortDirection());
-        //--- Update the table
-        UpdatePositionsTable();
+        //If there are positions, update the table, otherwise only update status bar
+        if(symbols_total > 0)
+          {
+            //--- Update values in the table
+              SetValuesToPositionsTable(symbols_name);
+            //--- Sort if this has already been done by a user before the update
+            // m_table_positions.SortData((uint)m_table_positions.IsSortedColumnIndex(),
+            //                           m_table_positions.IsSortDirection());
+            //--- Update the table
+              UpdatePositionsTable();
+          }        
+      //--- Update status bar only when value changes  
+          static string status_bar_prev_deposit = "";
+          static string status_bar_prev_time    = "";
+          string new_deposit = "Deposit load: " + ::DoubleToString(DepositLoad(false), 2) + "/" + ::DoubleToString(DepositLoad(true), 2) + "%";
+          string new_time    = ::TimeToString(::TimeTradeServer(), TIME_DATE | TIME_SECONDS);
+          if(new_deposit != status_bar_prev_deposit)
+            {
+              status_bar_prev_deposit = new_deposit;
+              //m_status_bar.SetValue(STATUS_BAR_DEPOSIT_LOAD, new_deposit);
+              //m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD).Update(true);
+              m_status_bar.SetValue(STATUS_BAR_DEPOSIT_LOAD, new_deposit);
+              m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD).Draw();
+              m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD).Update(false);
+            }
+          if(new_time != status_bar_prev_time)
+            {
+              status_bar_prev_time = new_time;
+              //m_status_bar.SetValue(STATUS_BAR_SERVER_TIME, new_time);
+              //m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Update(true);
+              m_status_bar.SetValue(STATUS_BAR_SERVER_TIME, new_time);
+              m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Draw();
+              m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Update(false);
+            } 
+      ::ChartRedraw()           
    }
  //+------------------------------------------------------------------+
  //| Deinit                                                           |
@@ -215,19 +269,6 @@ class CGUIPannel : public CWndEvents
         return;
     //--- Handling the elements
       CWndEvents::OnTimerEvent();
-    //--- Update points in the status bar
-     if (m_gui_timecounter.CheckTimeCounter()) 
-      {
-        // //--- Set the values
-        // m_status_bar.SetValue(
-        //     1, "Deposit load: " + ::DoubleToString(DepositLoad(false), 2) + "/" +
-        //           ::DoubleToString(DepositLoad(true), 2) + "%");
-        m_status_bar.SetValue(
-            2, ::TimeToString(::TimeTradeServer(), TIME_DATE | TIME_SECONDS));
-        //--- Update the points
-        //m_status_bar.GetItemPointer(1).Update(true);
-        m_status_bar.GetItemPointer(2).Update(true);        
-      }    
   }
  //+------------------------------------------------------------------+
  //| Trade operation event                                            |
@@ -275,8 +316,7 @@ class CGUIPannel : public CWndEvents
   //| Creates the status bar                                           |
   //+------------------------------------------------------------------+
   bool CGUIPannel::CreateStatusBar(const int x_gap, const int y_gap) 
-    {
-      #define STATUS_LABELS_TOTAL 3
+    {      
      //--- Store the window pointer
       m_status_bar.MainPointer(m_Mainwindow);
      //--- Properties
@@ -292,7 +332,7 @@ class CGUIPannel : public CWndEvents
       if (!m_status_bar.CreateStatusBar(x_gap, y_gap))
           return (false);
      //--- Set text to the items of the status bar
-      m_status_bar.SetValue(0, "For Help, press F1");
+      m_status_bar.SetValue(STATUS_BAR_HELP, "For Help, press F1");
      //--- Add the object to the common array of object groups
       CWndContainer::AddToElementsArray(0, m_status_bar);
       return (true);
@@ -325,7 +365,7 @@ class CGUIPannel : public CWndEvents
       CWndContainer::AddToElementsArray(0,m_tabsTrade);
       return(true);
    }
- //For Account Infor Table
+ //For Account Infor Table at Tab Account infor
    bool CGUIPannel::CreateAccountInfoTable(const int x_gap, const int y_gap)
     {
       // Implementation for creating account info table
@@ -418,7 +458,45 @@ class CGUIPannel : public CWndEvents
       m_table_account_info.Update(true);      
       return(true);
     } 
- //For Positions Table
+   // Updates dynamic account info using CAccount* from TradingEngine
+    void CGUIPannel::UpdateTableAccountInfoDynamicFromEngine(CAccount *acc)
+    {
+        static double s_prev_profit = DBL_MAX;
+        static double s_prev_equity = DBL_MAX;
+        if(acc.Profit() == s_prev_profit && acc.Equity() == s_prev_equity)
+            return;
+        s_prev_profit = acc.Profit();
+        s_prev_equity = acc.Equity();
+        int digits = (int)acc.CurrencyDigits();
+        //Set values from CAccount object
+          m_table_account_info.SetValue(1, 6,  DoubleToString(acc.Balance(),     digits));
+          m_table_account_info.SetValue(1, 7,  DoubleToString(acc.Equity(),      digits));
+          m_table_account_info.SetValue(1, 8,  DoubleToString(acc.Margin(),      digits));
+          m_table_account_info.SetValue(1, 9,  DoubleToString(acc.MarginFree(),  digits));
+          m_table_account_info.SetValue(1, 10, DoubleToString(acc.MarginLevel(),  2) + " %");
+          m_table_account_info.SetValue(1, 11, DoubleToString(acc.Profit(),      digits));
+        //Setting Color Text For Value
+        // Equity: green if above balance, red if below
+          color clr_equity = (acc.Equity() > acc.Balance()) ? clrLime :
+                            (acc.Equity() < acc.Balance()) ? clrRed  : clrSilver;
+          m_table_account_info.TextColor(1, 7, clr_equity);
+
+        // Margin Level: green safe, yellow caution, red danger
+          double margin_level = acc.MarginLevel();
+          color clr_margin;
+          if(margin_level == 0 || margin_level > 200) clr_margin = clrLime;
+          else if(margin_level > 100)                 clr_margin = clrYellow;
+          else                                        clr_margin = clrRed;
+          m_table_account_info.TextColor(1, 10, clr_margin);
+
+          // Profit: green positive, red negative
+          color clr_profit = (acc.Profit() > 0) ? clrLime :
+                            (acc.Profit() < 0) ? clrRed  : clrSilver;
+          m_table_account_info.TextColor(1, 11, clr_profit);
+          m_table_account_info.Update(true);
+    }
+  
+ //For Positions Table at tab Positions
   //+------------------------------------------------------------------+
   //| Create a position table                                          |
   //+------------------------------------------------------------------+
@@ -484,9 +562,10 @@ class CGUIPannel : public CWndEvents
   void CGUIPannel::UpdatePositionsTable(void) 
    {
     //--- Update the table
-    m_table_positions.Update(true);
-    m_table_positions.GetScrollVPointer().Update(true);
-    m_table_positions.GetScrollHPointer().Update(true);
+      m_table_positions.Update(true);
+      //--- Update scroll bars if new Position has been added and the table has been scrolled to the end before update
+        m_table_positions.GetScrollVPointer().Update(false);
+        m_table_positions.GetScrollHPointer().Update(false);
    }
   //+------------------------------------------------------------------+
   //| Initializing the position table                                  |
@@ -502,20 +581,21 @@ class CGUIPannel : public CWndEvents
     for (int i = 0; i < symbols_total - 1; i++)
       m_table_positions.AddRow(i);
     //--- If there are positions
-    if (symbols_total > 0) {
-      //--- Array of images for buttons
-      //string button_images[1] = {"Images\\EasyAndFastGUI\\Controls\\close_black.bmp"};
-      uint button_images[1]={IMAGE_RESOURCE_CONTROLS_CLOSE_BLACK_BMP};
-      //--- Set the values in the third column
-      for (uint r = 0; r < (uint)symbols_total; r++) 
-       {
-        //--- Set the type and the images
-        m_table_positions.CellType(0, r, CELL_BUTTON);
-        m_table_positions.SetImages(0, r, button_images);
-       }
-      //--- Set the values in the table
-        SetValuesToPositionsTable(symbols_name);
-    }
+    if (symbols_total > 0) 
+      {
+        //--- Array of images for buttons
+        //string button_images[1] = {"Images\\EasyAndFastGUI\\Controls\\close_black.bmp"};
+        uint button_images[1]={IMAGE_RESOURCE_CONTROLS_CLOSE_BLACK_BMP};
+        //--- Set the values in the third column
+        for (uint r = 0; r < (uint)symbols_total; r++) 
+        {
+          //--- Set the type and the images
+          m_table_positions.CellType(0, r, CELL_BUTTON);
+          m_table_positions.SetImages(0, r, button_images);
+        }
+        //--- Set the values in the table
+          SetValuesToPositionsTable(symbols_name);
+      }
     //--- Update the table
     UpdatePositionsTable();
    }
@@ -530,58 +610,46 @@ class CGUIPannel : public CWndEvents
     if (symbols_total < rows_total)
       return;
     //--- Get the indicators in the table
-    for (uint r = 0; r < rows_total; r++) {
-      int positions_total = PositionsTotal(symbols_name[r]);
-      double pos_volume = PositionsVolumeTotal(symbols_name[r]);
-      double buy_volume =
-          PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_BUY);
-      double sell_volume =
-          PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_SELL);
-      double pos_profit = PositionsFloatingProfitTotal(symbols_name[r]);
-      double buy_profit =
-          PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_BUY);
-      double sell_profit =
-          PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_SELL);
-      double average_price = PositionAveragePrice(symbols_name[r]);
-      string deposit_load =
-          ::DoubleToString(
-              DepositLoad(false, average_price, symbols_name[r], pos_volume), 2) +
-          "/" +
-          ::DoubleToString(
-              DepositLoad(true, average_price, symbols_name[r], pos_volume), 2) +
-          "%";
+    for (uint r = 0; r < rows_total; r++) 
+    {
+      //Calculation values in the table
+        int positions_total = PositionsTotal(symbols_name[r]);
+        double pos_volume = PositionsVolumeTotal(symbols_name[r]);
+        double buy_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_BUY);
+        double sell_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_SELL);
+        double pos_profit = PositionsFloatingProfitTotal(symbols_name[r]);
+        double buy_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_BUY);
+        double sell_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_SELL);
+        double average_price = PositionAveragePrice(symbols_name[r]);
+        string deposit_load =
+            ::DoubleToString(
+                DepositLoad(false, average_price, symbols_name[r], pos_volume), 2) +
+            "/" +
+            ::DoubleToString(
+                DepositLoad(true, average_price, symbols_name[r], pos_volume), 2) +
+            "%";
+      //Set color first before setting values 
+        m_table_positions.TextColor(3, r, (buy_volume > 0)  ? clrBlack : clrLightGray);
+        m_table_positions.TextColor(4, r, (sell_volume > 0) ? clrBlack : clrLightGray);
+        m_table_positions.TextColor(5, r, (pos_profit  != 0) ? (pos_profit  > 0 ? clrGreen : clrRed) : clrLightGray);
+        m_table_positions.TextColor(6, r, (buy_profit  != 0) ? (buy_profit  > 0 ? clrGreen : clrRed) : clrLightGray);
+        m_table_positions.TextColor(7, r, (sell_profit != 0) ? (sell_profit > 0 ? clrGreen : clrRed) : clrLightGray);
       //--- Set the values
-      m_table_positions.SetValue(0, r, symbols_name[r]);
-      m_table_positions.SetValue(1, r, (string)positions_total);
-      m_table_positions.SetValue(2, r, ::DoubleToString(pos_volume, 2));
-      m_table_positions.SetValue(3, r, ::DoubleToString(buy_volume, 2));
-      m_table_positions.SetValue(4, r, ::DoubleToString(sell_volume, 2));
-      m_table_positions.SetValue(5, r, ::DoubleToString(pos_profit, 2));
-      m_table_positions.SetValue(6, r, ::DoubleToString(buy_profit, 2));
-      m_table_positions.SetValue(7, r, ::DoubleToString(sell_profit, 2));
-      m_table_positions.SetValue(8, r, deposit_load);
-      m_table_positions.SetValue(
-          9, r,
-          ::DoubleToString(average_price, (int)::SymbolInfoInteger(
-                                              symbols_name[r], SYMBOL_DIGITS)));
-      //--- Set the color
-      m_table_positions.TextColor(3, r,
-                                  (buy_volume > 0) ? clrBlack : clrLightGray);
-      m_table_positions.TextColor(4, r,
-                                  (sell_volume > 0) ? clrBlack : clrLightGray);
-      m_table_positions.TextColor(5, r,
-                                  (pos_profit != 0)
-                                      ? (pos_profit > 0) ? clrGreen : clrRed
-                                      : clrLightGray);
-      m_table_positions.TextColor(6, r,
-                                  (buy_profit != 0)
-                                      ? (buy_profit > 0) ? clrGreen : clrRed
-                                      : clrLightGray);
-      m_table_positions.TextColor(7, r,
-                                  (sell_profit != 0)
-                                      ? (sell_profit > 0) ? clrGreen : clrRed
-                                      : clrLightGray);
+        m_table_positions.SetValue(0, r, symbols_name[r],0,true);
+        m_table_positions.SetValue(1, r, (string)positions_total);
+        m_table_positions.SetValue(2, r, ::DoubleToString(pos_volume, 2),0,true);
+        m_table_positions.SetValue(3, r, ::DoubleToString(buy_volume, 2),0,true);
+        m_table_positions.SetValue(4, r, ::DoubleToString(sell_volume, 2),0,true);
+        m_table_positions.SetValue(5, r, ::DoubleToString(pos_profit, 2),0,true);
+        m_table_positions.SetValue(6, r, ::DoubleToString(buy_profit, 2),0,true);
+        m_table_positions.SetValue(7, r, ::DoubleToString(sell_profit, 2),0,true);
+        m_table_positions.SetValue(8, r, deposit_load,0,true);
+        m_table_positions.SetValue(9, r,::DoubleToString(average_price, (int)::SymbolInfoInteger(
+                                                symbols_name[r], SYMBOL_DIGITS)));      
     }
+    //Update table after setting values in the row
+        //m_table_positions.Update(false);
+        //::ChartRedraw();
    }
   //+------------------------------------------------------------------+
   //| Get symbols of open positions in the array                       |
@@ -712,6 +780,9 @@ class CGUIPannel : public CWndEvents
    }
   //+------------------------------------------------------------------+
   //| Deposit load                                                     |
+  //| Using in                                                         |
+  //|    - CGUIPannel::SetValuesToPositionsTable                       |
+  //|    - m_status_bar.SetValue                                       |
   //+------------------------------------------------------------------+
   double CGUIPannel::DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "",const double volume = 0.0) 
    {
@@ -776,7 +847,78 @@ class CGUIPannel : public CWndEvents
     //--- Tickets of another symbol
     return (false);
    }
-
+ //For symbols table at tab Trade
+   //+------------------------------------------------------------------+
+   //| Create a symbol table                                            |
+   //+------------------------------------------------------------------+
+   bool CGUIPannel::CreateSymbolsTable(const int x_gap,const int y_gap)
+    {
+      #define COLUMNS1_TOTAL 2
+      #define ROWS1_TOTAL    1
+      //--- Store the pointer to the main control
+        m_table_symb.MainPointer(m_tabsTrade);
+      //--- Attach to tab
+        m_tabsTrade.AddToElementsArray(TAB_TAB_TRADE_TRADE,m_table_symb);
+      //--- Array of column widths
+        int width[COLUMNS1_TOTAL]={95,58};
+      //--- Array of text alignment in columns
+        ENUM_ALIGN_MODE align[COLUMNS1_TOTAL]={ALIGN_LEFT,ALIGN_RIGHT};
+      //--- Array of text offset along the X axis in the columns
+        int text_x_offset[COLUMNS1_TOTAL]={5,5};
+      //--- Properties
+        m_table_symb.XSize(168);
+        m_table_symb.TableSize(COLUMNS1_TOTAL,ROWS1_TOTAL);
+        m_table_symb.ColumnsWidth(width);
+        m_table_symb.TextAlign(align);
+        m_table_symb.TextXOffset(text_x_offset);
+        m_table_symb.ShowHeaders(true);
+        m_table_symb.SelectableRow(true);
+        m_table_symb.ColumnResizeMode(true);
+        m_table_symb.IsZebraFormatRows(clrWhiteSmoke);
+        m_table_symb.AutoYResizeMode(true);
+        m_table_symb.AutoYResizeBottomOffset(2);
+      //--- Create a control element
+        if(!m_table_symb.CreateTable(x_gap,y_gap))
+            return(false);
+      //--- Set the header titles
+        m_table_symb.SetHeaderText(0,"Symbol");
+        m_table_symb.SetHeaderText(1,"Values");
+      //--- Add the object to the common array of object groups
+        CWndContainer::AddToElementsArray(0,m_table_symb);
+        return(true);
+    }
+   //+------------------------------------------------------------------+
+   //| Update the symbol table                                          |
+   //+------------------------------------------------------------------+
+   void CGUIPannel::UpdateSymbolsTable(void) 
+    {
+      //Temporatry remove
+        // uint values_total = ::ArraySize(m_values);
+        // //--- Set the values in the symbol table
+        // uint rows_total = m_table_symb.RowsTotal();
+        // for (uint r = 0; r < (uint)rows_total; r++) {
+        //   //--- Stop the loop if the array is out of range
+        //   if (r > values_total - 1 || values_total < 1)
+        //     break;
+        //   //--- Set the values
+        //   m_table_symb.SetValue(1, r, ::DoubleToString(m_values[r], 2));
+        //   //--- Set the colors
+        //   color clr = (m_values[r] > (double)m_up_level.GetValue()) ? clrRed
+        //               : (m_values[r] < (double)m_down_level.GetValue())
+        //                   ? C'85,170,255'
+        //                   : clrBlack;
+        //   m_table_symb.TextColor(0, r, clr, true);
+        //   m_table_symb.TextColor(1, r, clr, true);
+        //   //--- Update the progress bar
+        //   m_progress_bar.LabelText("Initialize tables: " + string(rows_total) + "/" +
+        //                           string(r) + "...");
+        //   m_progress_bar.Update(r, rows_total);
+        //   ::Sleep(5);
+        // }
+        // //--- Update the table
+        // m_table_symb.Update();
+    }
+ 
  //+------------------------------------------------------------------+
  //| Create the "Lot" edit box                                        |
  //+------------------------------------------------------------------+

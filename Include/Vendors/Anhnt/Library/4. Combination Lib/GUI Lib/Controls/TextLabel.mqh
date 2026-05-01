@@ -96,12 +96,12 @@ public:
    //+------------------------------------------------------------------+
    void CTextLabel::Draw(void)
      {
-   // --- Draw background
-      CElement::DrawBackground();
-   // --- Draw a picture
-      CElement::DrawImage();
-   // --- Draw text
-      CElement::DrawText();
+      // --- Draw background
+         CElement::DrawBackground();
+      // --- Draw a picture
+         CElement::DrawImage();
+      // --- Draw text
+         CElement::DrawText();
      }
    //+------------------------------------------------------------------+
  #endif // CTEXTLABEL_MQH_IMPLEMENTATION

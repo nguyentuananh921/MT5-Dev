@@ -18,37 +18,10 @@
    CTextLabel        m_items[];
    CSeparateLine     m_sep_line[];
    //---
-   public:
-                     CStatusBar(void);
-                     ~CStatusBar(void);
-   // --- Methods for creating a status line
-   bool              CreateStatusBar(const int x_gap,const int y_gap);
-   //---
-      private:
-      void              InitializeProperties(const int x_gap,const int y_gap);
-      bool              CreateCanvas(void);
-      bool              CreateItems(void);
-      bool              CreateSeparateLine(const int line_index);
-   //---
-   public:
-   // --- Returns pointer and dividing line
-   CTextLabel       *GetItemPointer(const uint index);
-   CSeparateLine    *GetSeparateLinePointer(const uint index);
-   // --- (1) Number of points and (2) dividing lines
-   int               ItemsTotal(void)         const { return(::ArraySize(m_items));    }
-   int               SeparateLinesTotal(void) const { return(::ArraySize(m_sep_line)); }
-   // --- Adds an item with the specified properties before creating the status line
-      void              AddItem(const string text,const int width);
-   // --- Setting the value at the specified index
-   void              SetValue(const uint index,const string value);
-   //---
-   public:
-   // ---Delete
-   virtual void      Delete(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-   private:
+   void              InitializeProperties(const int x_gap,const int y_gap);
+   bool              CreateCanvas(void);
+   bool              CreateItems(void);
+   bool              CreateSeparateLine(const int line_index);
    // --- Calculation of element width
    int               CalculationXSize(void);
    // --- Calculation of the width of the first paragraph
@@ -57,6 +30,28 @@
    int               CalculationItemX(const int item_index=0);
    // --- Change the width along the right edge of the window
    virtual void      ChangeWidthByRightWindowSide(void);
+
+   public:
+                     CStatusBar(void);
+                    ~CStatusBar(void);
+   // --- Methods for creating a status line
+   bool              CreateStatusBar(const int x_gap,const int y_gap);
+   //---
+   // --- Returns pointer and dividing line
+   CTextLabel       *GetItemPointer(const uint index);
+   CSeparateLine    *GetSeparateLinePointer(const uint index);
+   // --- (1) Number of points and (2) dividing lines
+   int               ItemsTotal(void)         const { return(::ArraySize(m_items));    }
+   int               SeparateLinesTotal(void) const { return(::ArraySize(m_sep_line)); }
+   // --- Adds an item with the specified properties before creating the status line
+   void              AddItem(const string text,const int width);
+   // --- Setting the value at the specified index
+   void              SetValue(const uint index,const string value);
+   //---
+   // ---Delete
+   virtual void      Delete(void);
+   // --- Draws an element
+   virtual void      Draw(void);
   };
   #ifndef CSTATUSBAR_MQH_IMPLEMENTATION
   #define CSTATUSBAR_MQH_IMPLEMENTATION
