@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                        Mouse.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|Lib Link https://www.mql5.com/en/code/19703                       |
+//| Introduction at https://www.mql5.com/en/articles/3030            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __MOUSE_MQH__
 #define __MOUSE_MQH__
@@ -11,60 +12,58 @@
 #include <Charts\Chart.mqh>
 
 //+------------------------------------------------------------------+
-// | Class for getting mouse parameters |
+//| Class for getting mouse parameters |
 //+------------------------------------------------------------------+
 class CMouse
   {
-private:
-   // --- An instance of the class for managing the graph
-   CChart            m_chart;
-   // ---Coordinates
-   int               m_x;
-   int               m_y;
-   // --- Number of the window in which the cursor is located
-   int               m_subwin;
-   // --- Time corresponding to the X coordinate
-   datetime          m_time;
-   // --- Level (price) corresponding to the Y coordinate
-   double            m_level;
-   // --- State of the left mouse button (pressed/released)
-   bool              m_left_button_state;
-   // --- Call counter
-   ulong             m_call_counter;
-   // --- Pause between left mouse clicks (to detect double click)
-   uint              m_pause_between_clicks;
-   //---
-public:
-                     CMouse(void);
-                    ~CMouse(void);
-   // --- Event handler
-   void              OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+   private:
+    //Private properties:
+     // --- An instance of the class for managing the graph
+      CChart            m_chart;
+     // ---Coordinates
+      int               m_x;
+      int               m_y;
+     // --- Number of the window in which the cursor is located
+      int               m_subwin;
+     // --- Time corresponding to the X coordinate
+      datetime          m_time;
+     // --- Level (price) corresponding to the Y coordinate
+      double            m_level;
+     // --- State of the left mouse button (pressed/released)
+      bool              m_left_button_state;
+     // --- Call counter
+      ulong             m_call_counter;
+     // --- Pause between left mouse clicks (to detect double click)
+      uint              m_pause_between_clicks;
+    //Private methods:    
+     // --- Checking the state change of the left mouse button
+      bool              CheckChangeLeftButtonState(const string mouse_state);
+     // --- Checking double-clicking the left mouse button
+      void              CheckDoubleClick(void);
+   public:
+                        CMouse(void);
+                        ~CMouse(void);
+    // --- Event handler
+      void              OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
 
-   // --- Returns the absolute coordinates of the mouse cursor
-   int               X(void)               const { return(m_x);                             }
-   int               Y(void)               const { return(m_y);                             }
-   // --- (1) Returns the number of the window in which the cursor is located, (2) the time corresponding to the X coordinate,
-   // (3) level (price) corresponding to the Y coordinate
-   int               SubWindowNumber(void) const { return(m_subwin);                        }
-   datetime          Time(void)            const { return(m_time);                          }
-   double            Level(void)           const { return(m_level);                         }
-   // --- Returns the state of the left mouse button (pressed/released)
-   bool              LeftButtonState(void) const { return(m_left_button_state);             }
+    // --- Returns the absolute coordinates of the mouse cursor
+      int               X(void)               const { return(m_x);                             }
+      int               Y(void)               const { return(m_y);                             }
+    // --- (1) Returns the number of the window in which the cursor is located, (2) the time corresponding to the X coordinate,
+    // (3) level (price) corresponding to the Y coordinate
+      int               SubWindowNumber(void) const { return(m_subwin);                        }
+      datetime          Time(void)            const { return(m_time);                          }
+      double            Level(void)           const { return(m_level);                         }
+    // --- Returns the state of the left mouse button (pressed/released)
+      bool              LeftButtonState(void) const { return(m_left_button_state);             }
 
-   // --- Returns (1) the counter value saved during the last call (ms) and
-   // (2) the difference (ms) between calls to the mouse cursor event handler
-   ulong             CallCounter(void)     const { return(m_call_counter);                  }
-   ulong             GapBetweenCalls(void) const { return(::GetTickCount()-m_call_counter); }
-
-   // --- Returns the relative coordinates of the mouse cursor from the passed canvas object for drawing
-   int               RelativeX(CRectCanvas &object);
-   int               RelativeY(CRectCanvas &object);
-   //---
-private:
-   // --- Checking the state change of the left mouse button
-   bool              CheckChangeLeftButtonState(const string mouse_state);
-   // --- Checking double-clicking the left mouse button
-   void              CheckDoubleClick(void);
+    // --- Returns (1) the counter value saved during the last call (ms) and
+    // (2) the difference (ms) between calls to the mouse cursor event handler
+      ulong             CallCounter(void)     const { return(m_call_counter);                  }
+      ulong             GapBetweenCalls(void) const { return(::GetTickCount()-m_call_counter); }
+    // --- Returns the relative coordinates of the mouse cursor from the passed canvas object for drawing
+      int               RelativeX(CRectCanvas &object);
+      int               RelativeY(CRectCanvas &object);      
   };
  #ifndef CMOUSE_MQH_IMPLEMENTATION
  #define CMOUSE_MQH_IMPLEMENTATION

@@ -12,21 +12,22 @@
  class CButton : public CElement 
   {
     private:
+      //Private properties:
         // --- Two-state button mode
-        bool m_two_state;
-        //---
+            bool m_two_state;
+      //Private methods:
+        void InitializeProperties(const string text, const int x_gap,
+                                const int y_gap);
+        bool CreateCanvas(void);    
+       // --- Handling a button click
+        bool OnClickButton(const string pressed_object);
+       // --- Change the width along the right edge of the window
+        virtual void ChangeWidthByRightWindowSide(void);        
     public:
         CButton(void);
         ~CButton(void);
-        // --- Methods for creating a button
-        bool CreateButton(const string text, const int x_gap, const int y_gap);
-        //---
-    private:
-        void InitializeProperties(const string text, const int x_gap,
-                                const int y_gap);
-        bool CreateCanvas(void);
-        //---
-    public:
+      // --- Methods for creating a button
+            bool CreateButton(const string text, const int x_gap, const int y_gap);        
       // --- (1) Setting the button mode, (2) button state (pressed/released)
         bool    TwoState(void) const {return (m_two_state);}
         void    TwoState(const bool flag) {m_two_state = flag;}
@@ -37,9 +38,8 @@
         void    IconFilePressedLocked(const string file_path);
         void    IconFilePressed(const uint resource_index);
         void    IconFilePressedLocked(const uint resource_index);
-        // --- Resizing
-        void ChangeSize(const uint x_size, const uint y_size);
-    public:
+      // --- Resizing
+        void ChangeSize(const uint x_size, const uint y_size);    
       // ---Graph event handler
         virtual void OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam);
       // --- Draws an element
@@ -51,11 +51,7 @@
         virtual void DrawBorder(void);
       // --- Draws a picture
         virtual void DrawImage(void);
-    private:
-      // --- Handling a button click
-        bool OnClickButton(const string pressed_object);
-      // --- Change the width along the right edge of the window
-        virtual void ChangeWidthByRightWindowSide(void);
+    
     };
  #ifndef CBUTTON_MQH_IMPLEMENTATION
  #define CBUTTON_MQH_IMPLEMENTATION

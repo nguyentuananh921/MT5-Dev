@@ -183,7 +183,7 @@ ENUM_TIMEFRAMES TimestampByDescription(const string timeframe)
 //+------------------------------------------------------------------+
 //| Return timeframe description                                     |
 //+------------------------------------------------------------------+
-string TimestampDescription(const ENUM_TIMEFRAMES timeframe)
+string TimeframeDescription(const ENUM_TIMEFRAMES timeframe)
   {
     return StringSubstr(EnumToString((timeframe>PERIOD_CURRENT ? timeframe : (ENUM_TIMEFRAMES)Period())),7);
   }
@@ -195,7 +195,7 @@ bool CreateUsedTimeframesArray(const ENUM_TIMEFRAMES_MODE mode_used_periods, str
     if(mode_used_periods==TIMEFRAMES_MODE_CURRENT)
       {
         ArrayResize(used_periods_array,1,21);
-        used_periods_array[0]=TimestampDescription((ENUM_TIMEFRAMES)Period());
+        used_periods_array[0]=TimeframeDescription((ENUM_TIMEFRAMES)Period());
         return true;
       }
     else if(mode_used_periods==TIMEFRAMES_MODE_LIST)
@@ -207,12 +207,12 @@ bool CreateUsedTimeframesArray(const ENUM_TIMEFRAMES_MODE mode_used_periods, str
             int err_code=GetLastError();
             string err=
                 (n==0 ?
-                  DFUN_ERR_LINE+CMessage::Text(MSG_LIB_SYS_ERROR_EMPTY_PERIODS_STRING)+TimestampDescription((ENUM_TIMEFRAMES)Period()) :
+                  DFUN_ERR_LINE+CMessage::Text(MSG_LIB_SYS_ERROR_EMPTY_PERIODS_STRING)+TimeframeDescription((ENUM_TIMEFRAMES)Period()) :
                   DFUN_ERR_LINE+CMessage::Text(MSG_LIB_SYS_FAILED_PREPARING_PERIODS_ARRAY)+(string)err_code+": "+CMessage::Text(err_code)
                 );
             Print(err);
             ArrayResize(used_periods_array,1,21);
-            used_periods_array[0]=TimestampDescription((ENUM_TIMEFRAMES)Period());
+            used_periods_array[0]=TimeframeDescription((ENUM_TIMEFRAMES)Period());
             return false;
           }
       }
@@ -220,12 +220,12 @@ bool CreateUsedTimeframesArray(const ENUM_TIMEFRAMES_MODE mode_used_periods, str
       {
         ArrayResize(used_periods_array,21,21);
         for(int i=0;i<21;i++)
-              used_periods_array[i]=TimestampDescription(TimestampByEnumIndex(uchar(i+1)));
+              used_periods_array[i]=TimeframeDescription(TimestampByEnumIndex(uchar(i+1)));
       }
     bool f=false;
     for(int i=0;i<ArraySize(used_periods_array);i++)
       {
-        if(used_periods_array[i]==TimestampDescription((ENUM_TIMEFRAMES)Period()))
+        if(used_periods_array[i]==TimeframeDescription((ENUM_TIMEFRAMES)Period()))
           {
             f=true;
             break;
@@ -234,7 +234,7 @@ bool CreateUsedTimeframesArray(const ENUM_TIMEFRAMES_MODE mode_used_periods, str
     if(!f)
       {
         ArrayResize(used_periods_array,ArraySize(used_periods_array)+1);
-        used_periods_array[ArraySize(used_periods_array)-1]=TimestampDescription((ENUM_TIMEFRAMES)Period());
+        used_periods_array[ArraySize(used_periods_array)-1]=TimeframeDescription((ENUM_TIMEFRAMES)Period());
       }
     return true;
   }

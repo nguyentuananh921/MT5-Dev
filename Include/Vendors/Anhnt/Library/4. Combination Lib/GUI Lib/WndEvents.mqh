@@ -186,36 +186,36 @@
     m_subwindow_handle(INVALID_HANDLE),
     m_subwindow_shortname(""),
     m_subwindows_total(1) 
-  {
-    // --- Quit if this is not real time
-      if(::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
-        return;
-    // --- Kernel initialization
-      InitializeCore();
-  }
+    {
+      // --- Quit if this is not real time
+        if(::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
+          return;
+      // --- Kernel initialization
+        InitializeCore();
+    }
   //+------------------------------------------------------------------+
   //| Destructor                                                       |
   //+------------------------------------------------------------------+
   CWndEvents::~CWndEvents(void) 
   {
-    // --- Quit if this is not real time
-      if(::MQLInfoInteger(MQL_TESTER))
-        return;
-    // --- Delete timer
-      ::EventKillTimer();
-    // --- Let's turn on the control
-      m_chart.MouseScroll(true);
-      m_chart.SetInteger(CHART_DRAG_TRADE_LEVELS, true);
-    // --- Disable tracking of mouse events
-      m_chart.EventMouseMove(false);
-    // --- Enable the command line call for the Space and Enter keys
-      m_chart.SetInteger(CHART_QUICK_NAVIGATION, true);
-    // ---Disconnect from schedule
-      m_chart.Detach();
-    // --- Remove the indicator subwindow
-      DeleteExpertSubwindow();
-    // --- Erase comment
-      ::Comment("");
+      // --- Quit if this is not real time
+        if(::MQLInfoInteger(MQL_TESTER))
+          return;
+      // --- Delete timer
+        ::EventKillTimer();
+      // --- Let's turn on the control
+        m_chart.MouseScroll(true);
+        m_chart.SetInteger(CHART_DRAG_TRADE_LEVELS, true);
+      // --- Disable tracking of mouse events
+        m_chart.EventMouseMove(false);
+      // --- Enable the command line call for the Space and Enter keys
+        m_chart.SetInteger(CHART_QUICK_NAVIGATION, true);
+      // ---Disconnect from schedule
+        m_chart.Detach();
+      // --- Remove the indicator subwindow
+        DeleteExpertSubwindow();
+      // --- Erase comment
+        ::Comment("");
   }
   //+------------------------------------------------------------------+
   // | Kernel initialization |
@@ -276,32 +276,34 @@
   void CWndEvents::CheckElementsEvents(void) 
    {
     // --- Handling the mouse cursor movement event
-      if(m_id == CHARTEVENT_MOUSE_MOVE) {
-        // --- Exit if the form is in another chart subwindow
-        if(!m_windows[m_active_window_index].CheckSubwindowNumber())
-          return;
-        // --- We check only available elements
-        int available_elements_total = CWndContainer::AvailableElementsTotal(m_active_window_index);
-        for(int e = 0; e < available_elements_total; e++) {
-          CElement *el = m_wnd[m_active_window_index].m_available_elements[e];
-          // --- Checking focus on elements
-          el.CheckMouseFocus();
-          // --- Event processing
-          el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
-        }
-      }
-    // --- All events except mouse cursor movement
-      else {
-        int elements_total = CWndContainer::ElementsTotal(m_active_window_index);
-        for(int e = 0; e < elements_total; e++) {
+      if(m_id == CHARTEVENT_MOUSE_MOVE) 
+        {
+          // --- Exit if the form is in another chart subwindow
+          if(!m_windows[m_active_window_index].CheckSubwindowNumber())
+            return;
           // --- We check only available elements
-          CElement *el = m_wnd[m_active_window_index].m_elements[e];
-          if(!el.IsVisible() || !el.CElementBase::IsAvailable() || el.CElementBase::IsLocked())
-            continue;
-          // --- Handling the event in the element handler
-          el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
+          int available_elements_total = CWndContainer::AvailableElementsTotal(m_active_window_index);
+          for(int e = 0; e < available_elements_total; e++) {
+            CElement *el = m_wnd[m_active_window_index].m_available_elements[e];
+            // --- Checking focus on elements
+            el.CheckMouseFocus();
+            // --- Event processing
+            el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
+          }
         }
-      }
+    // --- All events except mouse cursor movement
+      else 
+        {
+          int elements_total = CWndContainer::ElementsTotal(m_active_window_index);
+          for(int e = 0; e < elements_total; e++) {
+            // --- We check only available elements
+            CElement *el = m_wnd[m_active_window_index].m_elements[e];
+            if(!el.IsVisible() || !el.CElementBase::IsAvailable() || el.CElementBase::IsLocked())
+              continue;
+            // --- Handling the event in the element handler
+            el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
+          }
+        }
     // --- Direct event to application file
       OnEvent(m_id, m_lparam, m_dparam, m_sparam);
    }
@@ -310,45 +312,45 @@
   //+------------------------------------------------------------------+
   void CWndEvents::ChartEventCustom(void) 
    {
-    // --- If the signal is to determine the available elements
-      if(OnSetAvailable())
-        return;
-    // --- If the change signal in the GUI
-      if(OnChangeGUI())
-        return;
-    // --- If the signal is to detect blocked elements
-      if(OnSetLocked())
-        return;
-    // --- If the signal indicates the end of dragging the form
-      if(OnWindowEndDrag())
-        return;
-    // ---If the signal is to collapse the form
-      if(OnWindowCollapse())
-        return;
-    // ---If the signal is to expand the form
-      if(OnWindowExpand())
-        return;
-    // ---If the signal is to change the size of the elements along the X axis
-      if(OnWindowChangeXSize())
-        return;
-    // ---If the signal is to change the size of elements along the Y axis
-      if(OnWindowChangeYSize())
-        return;
-    // --- If the signal is enabled/disabled, tooltips
-      if(OnWindowTooltips())
-        return;
-    // --- If the signal is to hide context menus from the initiator item
-      if(OnHideBackContextMenus())
-        return;
-    // --- If the signal is to hide all context menus
-      if(OnHideContextMenus())
-        return;
-    // --- If the signal to open the dialog box
-      if(OnOpenDialogBox())
-        return;
-    // --- If the signal to close the dialog box
-      if(OnCloseDialogBox())
-        return;
+      // --- If the signal is to determine the available elements
+        if(OnSetAvailable())
+          return;
+      // --- If the change signal in the GUI
+        if(OnChangeGUI())
+          return;
+      // --- If the signal is to detect blocked elements
+        if(OnSetLocked())
+          return;
+      // --- If the signal indicates the end of dragging the form
+        if(OnWindowEndDrag())
+          return;
+      // ---If the signal is to collapse the form
+        if(OnWindowCollapse())
+          return;
+      // ---If the signal is to expand the form
+        if(OnWindowExpand())
+          return;
+      // ---If the signal is to change the size of the elements along the X axis
+        if(OnWindowChangeXSize())
+          return;
+      // ---If the signal is to change the size of elements along the Y axis
+        if(OnWindowChangeYSize())
+          return;
+      // --- If the signal is enabled/disabled, tooltips
+        if(OnWindowTooltips())
+          return;
+      // --- If the signal is to hide context menus from the initiator item
+        if(OnHideBackContextMenus())
+          return;
+      // --- If the signal is to hide all context menus
+        if(OnHideContextMenus())
+          return;
+      // --- If the signal to open the dialog box
+        if(OnOpenDialogBox())
+          return;
+      // --- If the signal to close the dialog box
+        if(OnCloseDialogBox())
+          return;
    }
   //+------------------------------------------------------------------+
   //| Event CHARTEVENT CLICK                                           |
@@ -361,13 +363,13 @@
   //+------------------------------------------------------------------+
   void CWndEvents::ChartEventMouseMove(void) 
    {
-    // --- Exit if this is not a cursor move event
-      if(m_id != CHARTEVENT_MOUSE_MOVE)
-        return;
-    // --- Moving the window
-      MovingWindow();
-    // --- Setting the chart state
-      SetChartState();
+      // --- Exit if this is not a cursor move event
+        if(m_id != CHARTEVENT_MOUSE_MOVE)
+          return;
+      // --- Moving the window
+        MovingWindow();
+      // --- Setting the chart state
+        SetChartState();
    }
   //+------------------------------------------------------------------+
   // | CHARTEVENT OBJECT CLICK event |

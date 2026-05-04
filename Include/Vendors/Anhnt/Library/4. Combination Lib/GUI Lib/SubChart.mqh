@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                     SubChart.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
+//| Introduction at https://www.mql5.com/en/articles/2763            |
 //| Library link https://www.mql5.com/en/code/19703                  |
 //+------------------------------------------------------------------+
 #ifndef __SUBCHART_MQH__

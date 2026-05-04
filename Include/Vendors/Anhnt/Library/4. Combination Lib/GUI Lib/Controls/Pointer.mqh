@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                      Pointer.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2763            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __POINTER_MQH__
 #define __POINTER_MQH__

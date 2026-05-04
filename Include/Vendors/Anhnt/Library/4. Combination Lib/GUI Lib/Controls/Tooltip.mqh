@@ -13,25 +13,22 @@
  class CTooltip : public CElement
   {
    private:
-    // --- Pointer to the element to which the tooltip is attached
-     CElement         *m_element;
-    // --- Header text and color
-     string            m_header_text;
-     color             m_header_color;
-    // --- Array of tooltip text strings
-     string            m_tooltip_lines[];
-    //---
+    //Private Properties
+      // --- Pointer to the element to which the tooltip is attached
+      CElement         *m_element;
+      // --- Header text and color
+      string            m_header_text;
+      color             m_header_color;
+      // --- Array of tooltip text strings
+      string            m_tooltip_lines[];
+    //Private methods:
+      void              InitializeProperties(void);
+      bool              CreateCanvas(void);
    public:
                      CTooltip(void);
                      ~CTooltip(void);
     // ---Methods for creating a tooltip
-     bool              CreateTooltip(void);
-    //---
-   private:
-      void              InitializeProperties(void);
-      bool              CreateCanvas(void);
-    //---
-   public:
+     bool              CreateTooltip(void);    
     // --- (1) Stores the element pointer, (2) the tooltip title
       void              ElementPointer(CElement &object) { m_element=::GetPointer(object); }
       void              HeaderText(const string text)    { m_header_text=text;             }
@@ -41,9 +38,7 @@
 
     // --- (1) Shows and (2) hides the tooltip
       void              ShowTooltip(void);
-      void              FadeOutTooltip(void);
-    //---
-      public:
+      void              FadeOutTooltip(void);    
     // ---Graph event handler
       virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
     // --- Management

@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                               PicturesSlider.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2829            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 //| Class for creating an image slider |
@@ -17,41 +18,44 @@
  class CPicturesSlider : public CElement
   {
    private:
-      // --- Objects for creating an element
+    // --- Private properties
+     // --- Objects for creating an element
       CPicture          m_pictures[];
       CButtonsGroup     m_radio_buttons;
       CButton           m_left_arrow;
       CButton           m_right_arrow;
-      // --- Array of pictures (path to pictures)
+     // --- Array of pictures (path to pictures)
          uint     m_image_resource_index[];  //string            m_file_path[];
-      // --- Path to default image
+     // --- Path to default image
          uint     m_default_index; //string            m_default_index;
-      // --- Indent for pictures along the Y axis
+     // --- Indent for pictures along the Y axis
       int               m_pictures_y_gap;
-      // --- Padding for buttons
+     // --- Padding for buttons
       int               m_arrows_x_gap;
       int               m_arrows_y_gap;
-      // --- Radio button width
+     // --- Radio button width
       int               m_radio_button_width;
-      // --- Padding for radio buttons
+     // --- Padding for radio buttons
       int               m_radio_buttons_x_gap;
       int               m_radio_buttons_y_gap;
       int               m_radio_buttons_x_offset;
-      //---
-   public:
-                        CPicturesSlider(void);
-                        ~CPicturesSlider(void);
-       // --- Methods for creating an image slider
-        bool              CreatePicturesSlider(const int x_gap,const int y_gap);
-       //---
-   private:
+    //Private methods:
          void              InitializeProperties(const int x_gap,const int y_gap);
          bool              CreateCanvas(void);
          bool              CreatePictures(void);
          bool              CreateRadioButtons(void);
          bool              CreateArrow(CButton &button_obj,const int index);
-      //---
+     // --- Handling a click on a radio button
+      bool              OnClickRadioButton(const string clicked_object,const int id,const int index);
+      // --- Handling clicks on the left button
+      bool              OnClickLeftArrow(const string clicked_object,const int id,const int index);
+     // --- Handling clicks on the right button
+      bool              OnClickRightArrow(const string clicked_object,const int id,const int index);      
    public:
+                        CPicturesSlider(void);
+                        ~CPicturesSlider(void);
+    // --- Methods for creating an image slider
+        bool              CreatePicturesSlider(const int x_gap,const int y_gap);      
     // --- Returns pointers to constituent elements
       CButtonsGroup    *GetRadioButtonsPointer(void)            { return(::GetPointer(m_radio_buttons)); }
       CButton          *GetLeftArrowPointer(void)               { return(::GetPointer(m_left_arrow));    }
@@ -70,24 +74,14 @@
     // --- Adds a picture
       void              AddPicture(const uint resource_index=0);  //AddPicture(const string file_path="");
     // --- Switches the image at the specified index
-      void              SelectPicture(const int index);
-    //---
-   public:
+      void              SelectPicture(const int index);    
     // ---Graph event handler
       virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
     // --- Show, delete
       virtual void      Show(void);
       virtual void      Delete(void);
     // --- Draws an element
-      virtual void      Draw(void);
-    //---
-   private:
-    // --- Handling a click on a radio button
-      bool              OnClickRadioButton(const string clicked_object,const int id,const int index);
-    // --- Handling clicks on the left button
-      bool              OnClickLeftArrow(const string clicked_object,const int id,const int index);
-    // --- Handling clicks on the right button
-      bool              OnClickRightArrow(const string clicked_object,const int id,const int index);
+      virtual void      Draw(void);    
   };
  #ifndef CPICTURESSLIDER_MQH_IMPLEMENTATION
  #define CPICTURESSLIDER_MQH_IMPLEMENTATION

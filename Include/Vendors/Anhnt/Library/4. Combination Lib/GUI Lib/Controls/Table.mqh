@@ -1874,7 +1874,7 @@
          m_headers.Update();
    }
   //+------------------------------------------------------------------+
-  // | Handling clicks on header |
+  //| Handling clicks on header |
   //+------------------------------------------------------------------+
   bool CTable::OnClickHeaders(const string clicked_object)
    {

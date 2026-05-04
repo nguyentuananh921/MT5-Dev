@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                      Scrolls.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __SCROLLS_MQH__
 #define __SCROLLS_MQH__
@@ -15,122 +15,115 @@ class CScrollH;
 // | Base class for creating a scrollbar |
 //+------------------------------------------------------------------+
 class CScroll : public CElement
-  {
-protected:
+ {  
+  protected:
+  //Protected properties:
    // --- Objects for creating a scrollbar
-   CButton           m_button_inc;
-   CButton           m_button_dec;
+      CButton           m_button_inc;
+      CButton           m_button_dec;
    // --- Scrollbar total area properties
-   int               m_area_width;
-   int               m_area_length;
+      int               m_area_width;
+      int               m_area_length;
    // --- Pictures for buttons
-   string            m_inc_file;
-   string            m_inc_file_locked;
-   string            m_inc_file_pressed;
-   string            m_dec_file;
-   string            m_dec_file_locked;
-   string            m_dec_file_pressed;
+      string            m_inc_file;
+      string            m_inc_file_locked;
+      string            m_inc_file_pressed;
+      string            m_dec_file;
+      string            m_dec_file_locked;
+      string            m_dec_file_pressed;
    // --- (1) Focus on the slider and (2) the moment it crosses the boundaries
-   bool              m_thumb_focus;
-   bool              m_is_crossing_thumb_border;
+      bool              m_thumb_focus;
+      bool              m_is_crossing_thumb_border;
    // --- Slider colors in different states
-   color             m_thumb_color;
-   color             m_thumb_color_hover;
-   color             m_thumb_color_pressed;
+      color             m_thumb_color;
+      color             m_thumb_color_hover;
+      color             m_thumb_color_pressed;
    // --- (1) Total number of items and (2) visible
-   int               m_items_total;
-   int               m_visible_items_total;
+      int               m_items_total;
+      int               m_visible_items_total;
    // --- Slider coordinates
-   int               m_thumb_x;
-   int               m_thumb_y;
+      int               m_thumb_x;
+      int               m_thumb_y;
    // --- (1) Slider width, (2) Slider length, and (3) Slider minimum length
-   int               m_thumb_width;
-   int               m_thumb_length;
-   int               m_thumb_min_length;
+      int               m_thumb_width;
+      int               m_thumb_length;
+      int               m_thumb_min_length;
    // --- (1) Slider step size and (2) number of steps
-   double            m_thumb_step_size;
-   double            m_thumb_steps_total;
+      double            m_thumb_step_size;
+      double            m_thumb_steps_total;
    // --- Variables associated with slider movement
-   bool              m_scroll_state;
-   int               m_thumb_size_fixing;
-   int               m_thumb_point_fixing;
+      bool              m_scroll_state;
+      int               m_thumb_size_fixing;
+      int               m_thumb_point_fixing;
    // --- Current position of the slider
-   int               m_current_pos;
+      int               m_current_pos;
    // --- To determine the area where the left mouse button is pressed
-   ENUM_MOUSE_STATE  m_clamping_area_mouse;
-   //---
-public:
+      ENUM_MOUSE_STATE  m_clamping_area_mouse;
+  //Protected methods:
+      // --- Current slider color
+      uint              ThumbColorCurrent(void);
+      // --- Checking focus above the slider
+      bool              CheckThumbFocus(const int x,const int y);
+      // --- Defines the area where the left mouse button is pressed
+      void              CheckMouseButtonState(void);
+      // --- Resetting variables
+      void              ZeroThumbVariables(void);
+      // --- Calculate the length of the scrollbar slider
+      bool              CalculateThumbSize(void);
+      // --- Calculate scroll bar boundaries
+      void              CalculateThumbBoundaries(int &x1,int &y1,int &x2,int &y2);   
+  private:
+   //Private methods:   
+      void              InitializeProperties(const int x_gap,const int y_gap,
+                                             const int items_total,const int visible_items_total);
+      bool              CreateCanvas(void);
+      bool              CreateScrollButton(CButton &button_obj,const int index);
+    // --- Draws the background
+      virtual void      DrawThumb(void); 
+  public:
                      CScroll(void);
                     ~CScroll(void);
    // ---Methods for creating a scrollbar
-   bool              CreateScroll(const int x_gap,const int y_gap,
+      bool              CreateScroll(const int x_gap,const int y_gap,
                                   const int items_total,const int visible_items_total);
-   //---
-private:
-   void              InitializeProperties(const int x_gap,const int y_gap,
-                                          const int items_total,const int visible_items_total);
-   bool              CreateCanvas(void);
-   bool              CreateScrollButton(CButton &button_obj,const int index);
-   //---
-public:
    // --- Returns pointers to the scrollbar buttons
-   CButton          *GetIncButtonPointer(void)                { return(::GetPointer(m_button_inc)); }
-   CButton          *GetDecButtonPointer(void)                { return(::GetPointer(m_button_dec)); }
+      CButton          *GetIncButtonPointer(void)                { return(::GetPointer(m_button_inc)); }
+      CButton          *GetDecButtonPointer(void)                { return(::GetPointer(m_button_dec)); }
    // ---Scrollbar width
-   void              ScrollWidth(const int width)             { m_area_width=width;                 }
-   int               ScrollWidth(void)                  const { return(m_area_width);               }
+      void              ScrollWidth(const int width)             { m_area_width=width;                 }
+      int               ScrollWidth(void)                  const { return(m_area_width);               }
    // --- Setting images for buttons
-   void              IncFile(const string file_path)          { m_inc_file=file_path;               }
-   void              IncFileLocked(const string file_path)    { m_inc_file_locked=file_path;        }
-   void              IncFilePressed(const string file_path)   { m_inc_file_pressed=file_path;       }
-   void              DecFile(const string file_path)          { m_dec_file=file_path;               }
-   void              DecFileLocked(const string file_path)    { m_dec_file_locked=file_path;        }
-   void              DecFilePressed(const string file_path)   { m_dec_file_pressed=file_path;       }
+      void              IncFile(const string file_path)          { m_inc_file=file_path;               }
+      void              IncFileLocked(const string file_path)    { m_inc_file_locked=file_path;        }
+      void              IncFilePressed(const string file_path)   { m_inc_file_pressed=file_path;       }
+      void              DecFile(const string file_path)          { m_dec_file=file_path;               }
+      void              DecFileLocked(const string file_path)    { m_dec_file_locked=file_path;        }
+      void              DecFilePressed(const string file_path)   { m_dec_file_pressed=file_path;       }
    // --- (1) Slider colors and (2) Slider frame
-   void              ThumbColor(const color clr)              { m_thumb_color=clr;                  }
-   void              ThumbColorHover(const color clr)         { m_thumb_color_hover=clr;            }
-   void              ThumbColorPressed(const color clr)       { m_thumb_color_pressed=clr;          }
+      void              ThumbColor(const color clr)              { m_thumb_color=clr;                  }
+      void              ThumbColorHover(const color clr)         { m_thumb_color_hover=clr;            }
+      void              ThumbColorPressed(const color clr)       { m_thumb_color_pressed=clr;          }
    // --- Button status
-   bool              ScrollIncState(void)               const { return(m_button_inc.IsPressed());   }
-   bool              ScrollDecState(void)               const { return(m_button_dec.IsPressed());   }
+      bool              ScrollIncState(void)               const { return(m_button_inc.IsPressed());   }
+      bool              ScrollDecState(void)               const { return(m_button_dec.IsPressed());   }
    // --- Scrollbar state (free/slider moving mode)
-   void              State(const bool scroll_state)           { m_scroll_state=scroll_state;        }
-   bool              State(void)                        const { return(m_scroll_state);             }
+      void              State(const bool scroll_state)           { m_scroll_state=scroll_state;        }
+      bool              State(void)                        const { return(m_scroll_state);             }
    // --- Current position of the slider
-   void              CurrentPos(const int pos)                { m_current_pos=pos;                  }
-   int               CurrentPos(void)                   const { return(m_current_pos);              }
+      void              CurrentPos(const int pos)                { m_current_pos=pos;                  }
+      int               CurrentPos(void)                   const { return(m_current_pos);              }
    // --- Initialization with new values
-   void              Reinit(const int items_total,const int visible_items_total);
+      void              Reinit(const int items_total,const int visible_items_total);
    // --- Changing the slider size according to new conditions
-   void              ChangeThumbSize(const int items_total,const int visible_items_total);
+      void              ChangeThumbSize(const int items_total,const int visible_items_total);
    // --- The need to show a scroll bar
-   bool              IsScroll(void) const { return(m_items_total>m_visible_items_total); }
-   //---
-protected:
-   // --- Current slider color
-   uint              ThumbColorCurrent(void);
-   // --- Checking focus above the slider
-   bool              CheckThumbFocus(const int x,const int y);
-   // --- Defines the area where the left mouse button is pressed
-   void              CheckMouseButtonState(void);
-   // --- Resetting variables
-   void              ZeroThumbVariables(void);
-   // --- Calculate the length of the scrollbar slider
-   bool              CalculateThumbSize(void);
-   // --- Calculate scroll bar boundaries
-   void              CalculateThumbBoundaries(int &x1,int &y1,int &x2,int &y2);
-   //---
-public:
+      bool              IsScroll(void) const { return(m_items_total>m_visible_items_total); };
    // --- Management
    virtual void      Show(void);
    virtual void      Hide(void);
    virtual void      Delete(void);
    // --- Draws an element
    virtual void      Draw(void);
-   //---
-private:
-   // --- Draws the background
-   virtual void      DrawThumb(void);
   };
  #ifndef CSCROLLS_MQH_IMPLEMENTATION
  #define CSCROLLS_MQH_IMPLEMENTATION

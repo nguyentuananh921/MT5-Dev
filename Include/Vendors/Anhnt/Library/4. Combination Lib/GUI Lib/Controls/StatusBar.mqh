@@ -14,22 +14,23 @@
  class CStatusBar : public CElement
   {
    private:
-    // --- Objects for creating an element
+    //Private properties:
+     // --- Objects for creating an element
       CTextLabel        m_items[];
       CSeparateLine     m_sep_line[];
-    //---
-      void              InitializeProperties(const int x_gap,const int y_gap);
-      bool              CreateCanvas(void);
-      bool              CreateItems(void);
-      bool              CreateSeparateLine(const int line_index);
-    // --- Calculation of element width
-      int               CalculationXSize(void);
-    // --- Calculation of the width of the first paragraph
-      int               CalculationFirstItemXSize(void);
-    // --- Calculate the X-coordinate of a point
-      int               CalculationItemX(const int item_index=0);
-    // --- Change the width along the right edge of the window
-      virtual void      ChangeWidthByRightWindowSide(void);
+    //Private methods:
+         void              InitializeProperties(const int x_gap,const int y_gap);
+         bool              CreateCanvas(void);
+         bool              CreateItems(void);
+         bool              CreateSeparateLine(const int line_index);
+      // --- Calculation of element width
+         int               CalculationXSize(void);
+      // --- Calculation of the width of the first paragraph
+         int               CalculationFirstItemXSize(void);
+      // --- Calculate the X-coordinate of a point
+         int               CalculationItemX(const int item_index=0);
+      // --- Change the width along the right edge of the window
+         virtual void      ChangeWidthByRightWindowSide(void);
 
    public:
                      CStatusBar(void);

@@ -6,71 +6,67 @@
 //+------------------------------------------------------------------+
 //| Menu item creation class                                         |
 //+------------------------------------------------------------------+
-
 #ifndef __MENUITEM_MQH__
 #define __MENUITEM_MQH__
  #include "..\Element.mqh"
  #include "Button.mqh"
  class CContextMenu; //Forward Declare
- //2200 class CMenuItem : public CElement
- 
+ //2200 class CMenuItem : public CElement 
  class CMenuItem : public CButton
   {
    private:
+    //Private properties:
       // --- Pointer to previous node
-      CMenuItem        *m_prev_node;
+         CMenuItem        *m_prev_node;
       // --- Pointer to the bound context menu
-      CContextMenu     *m_context_menu;
+         CContextMenu     *m_context_menu;
       // --- Menu item type
-      ENUM_TYPE_MENU_ITEM m_type_menu_item;
+         ENUM_TYPE_MENU_ITEM m_type_menu_item;
       // --- Context menu attribute properties
-      bool              m_show_right_arrow;
-      int               m_arrow_x_gap;
+         bool              m_show_right_arrow;
+         int               m_arrow_x_gap;
       // --- Checkbox state
-      bool              m_checkbox_state;
+         bool              m_checkbox_state;
       // --- Radio button state and its identifier
-      bool              m_radiobutton_state;
-      int               m_radiobutton_id;
+         bool              m_radiobutton_state;
+         int               m_radiobutton_id;
+    //Private methods:
+      // --- Click on a menu item
+         bool              OnClickMenuItem(const string pressed_object,const int id,const int index);
+      // --- Draws a picture
+         virtual void      DrawImage(void);
       //---
    public:
                         CMenuItem(void);
                         ~CMenuItem(void);
       // ---Methods for creating a menu item
-      bool              CreateMenuItem(const string text,const int x_gap,const int y_gap);
+         bool              CreateMenuItem(const string text,const int x_gap,const int y_gap);
       //---
-      public:
+         public:
       // --- (1) Receive and (2) store the previous node pointer
-      void              GetPrevNodePointer(CMenuItem &object)                { m_prev_node=::GetPointer(object);    }
-      CMenuItem        *GetPrevNodePointer(void)                       const { return(m_prev_node);                 }
-      void              GetContextMenuPointer(CContextMenu &object)          { m_context_menu=::GetPointer(object); }
-      CContextMenu     *GetContextMenuPointer(void)                    const { return(m_context_menu);              }
+         void              GetPrevNodePointer(CMenuItem &object)                { m_prev_node=::GetPointer(object);    }
+         CMenuItem        *GetPrevNodePointer(void)                       const { return(m_prev_node);                 }
+         void              GetContextMenuPointer(CContextMenu &object)          { m_context_menu=::GetPointer(object); }
+         CContextMenu     *GetContextMenuPointer(void)                    const { return(m_context_menu);              }
       // --- (1) Set and get type, (2) index number
-      void              TypeMenuItem(const ENUM_TYPE_MENU_ITEM type)         { m_type_menu_item=type;               }
-      ENUM_TYPE_MENU_ITEM TypeMenuItem(void)                           const { return(m_type_menu_item);            }
+         void              TypeMenuItem(const ENUM_TYPE_MENU_ITEM type)         { m_type_menu_item=type;               }
+         ENUM_TYPE_MENU_ITEM TypeMenuItem(void)                           const { return(m_type_menu_item);            }
       // --- (1) Displays the indication of the presence of a context menu, (2) the general state of the checkbox item
-      void              ShowRightArrow(const bool flag)                      { m_show_right_arrow=flag;             }
-      bool              CheckBoxState(void)                            const { return(m_checkbox_state);            }
-      void              CheckBoxState(const bool state);
+         void              ShowRightArrow(const bool flag)                      { m_show_right_arrow=flag;             }
+         bool              CheckBoxState(void)                            const { return(m_checkbox_state);            }
+         void              CheckBoxState(const bool state);
       // --- (1) Radio point identifier, (2) radio point status
-      void              RadioButtonID(const int id)                          { m_radiobutton_id=id;                 }
-      int               RadioButtonID(void)                            const { return(m_radiobutton_id);            }
-      bool              RadioButtonState(void)                         const { return(m_radiobutton_state);         }
-      void              RadioButtonState(const bool state);
-      //---
-   public:
+         void              RadioButtonID(const int id)                          { m_radiobutton_id=id;                 }
+         int               RadioButtonID(void)                            const { return(m_radiobutton_id);            }
+         bool              RadioButtonState(void)                         const { return(m_radiobutton_state);         }
+         void              RadioButtonState(const bool state);
       // ---Graph event handler
-      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+         virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
       // --- Management
-      virtual void      Show(void);
-      virtual void      Hide(void);
+         virtual void      Show(void);
+         virtual void      Hide(void);
       // --- Draws an element
-      virtual void      Draw(void);
-      //---
-      private:
-      // --- Click on a menu item
-      bool              OnClickMenuItem(const string pressed_object,const int id,const int index);
-      // --- Draws a picture
-      virtual void      DrawImage(void);
+         virtual void      Draw(void);    
   };
  #ifndef CMENUITEM_MQH_IMPLEMENTATION
  #define CMENUITEM_MQH_IMPLEMENTATION

@@ -12,132 +12,123 @@
 //+------------------------------------------------------------------+
 class CSlider : public CElement
   {
-private:
-   // --- Objects for creating an element
-   CTextEdit         m_left_edit;
-   CTextEdit         m_right_edit;
-   // --- (1) Coordinate and (2) size of indicator area
-   int               m_slot_y;
-   int               m_slot_y_size;
-   // ---Indicator colors in different states
-   color             m_slot_line_dark_color;
-   color             m_slot_line_light_color;
-   color             m_slot_indicator_color;
-   color             m_slot_indicator_color_locked;
-   // --- Current slider position: (1) value, (2) XY coordinates
-   double            m_thumb_x_pos_left;
-   double            m_thumb_x_pos_right;
-   double            m_thumb_x_left;
-   double            m_thumb_x_right;
-   int               m_thumb_y;
-   // --- Slider Slider Dimensions
-   int               m_thumb_x_size;
-   int               m_thumb_y_size;
-   // ---Slider Slider Colors
-   color             m_thumb_color;
-   color             m_thumb_color_hover;
-   color             m_thumb_color_locked;
-   color             m_thumb_color_pressed;
-   // --- (1) Focus on the slider and (2) the moment it crosses the boundaries
-   bool              m_thumb_focus_left;
-   bool              m_thumb_focus_right;
-   bool              m_is_crossing_left_thumb_border;
-   bool              m_is_crossing_right_thumb_border;
-   // --- Number of pixels in the work area
-   int               m_pixels_total;
-   // --- Number of steps in the range of work area values
-   int               m_value_steps_total;
-   // --- Step size relative to the width of the work area
-   double            m_position_step;
-   // ---Mouse button state (pressed/released)
-   ENUM_MOUSE_STATE  m_clamping_left_thumb;
-   ENUM_MOUSE_STATE  m_clamping_right_thumb;
-   // --- To determine the mode of movement of the slider slider
-   bool              m_slider_thumb_state;
-   // --- Variables associated with slider movement
-   int               m_slider_size_fixing;
-   int               m_slider_point_fixing;
-   // ---Double slider mode
-   bool              m_dual_slider_mode;
-   //---
-public:
-                     CSlider(void);
-                    ~CSlider(void);
-   // --- Methods for creating an element
-   bool              CreateSlider(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateLeftTextEdit(void);
-   bool              CreateRightTextEdit(void);
-   //---
-public:
-   // --- Returns pointers to elements
-   CTextEdit        *GetLeftEditPointer(void)                   { return(::GetPointer(m_left_edit));  }
-   CTextEdit        *GetRightEditPointer(void)                  { return(::GetPointer(m_right_edit)); }
-   // --- Slider indicator colors in different states
-   void              SlotLineDarkColor(const color clr)         { m_slot_line_dark_color=clr;         }
-   void              SlotLineLightColor(const color clr)        { m_slot_line_light_color=clr;        }
-   void              SlotIndicatorColor(const color clr)        { m_slot_indicator_color=clr;         }
-   void              SlotIndicatorColorLocked(const color clr)  { m_slot_indicator_color_locked=clr;  }
-   // ---Double slider mode
-   void              DualSliderMode(const bool state)           { m_dual_slider_mode=state;           }
-   bool              DualSliderMode(void)                 const { return(m_dual_slider_mode);         }
-   bool              State(void)                          const { return(m_slider_thumb_state);       }
-   // --- Slider Slider Dimensions
-   void              ThumbXSize(const int x_size)               { m_thumb_x_size=x_size;              }
-   void              ThumbYSize(const int y_size)               { m_thumb_y_size=y_size;              }
-   // ---Slider Slider Colors
-   void              ThumbColor(const color clr)                { m_thumb_color=clr;                  }
-   void              ThumbColorHover(const color clr)           { m_thumb_color_hover=clr;            }
-   void              ThumbColorLocked(const color clr)          { m_thumb_color_locked=clr;           }
-   void              ThumbColorPressed(const color clr)         { m_thumb_color_pressed=clr;          }
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Processing the value entered into the input field
-   bool              OnEndEditLeftThumb(const int id,const int index);
-   bool              OnEndEditRightThumb(const int id,const int index);
-   // --- Process of moving the slider slider
-   void              OnDragLeftThumb(void);
-   void              OnDragRightThumb(void);
-   // ---Updating the slider position
-   void              UpdateLeftThumb(const int new_x_point);
-   void              UpdateRightThumb(const int new_x_point);
-
-   // --- Checking focus above the slider
-   bool              CheckLeftThumbFocus(void);
-   bool              CheckRightThumbFocus(void);
-   // --- Checks the state of the mouse button
-   void              CheckMouseOnLeftThumb(void);
-   void              CheckMouseOnRightThumb(void);
-   // --- Resetting variables associated with moving the slider slider
-   void              ZeroLeftThumbVariables(void);
-   void              ZeroRightThumbVariables(void);
-   // --- Calculation of values ​​(steps and coefficients)
-   bool              CalculateCoefficients(void);
-   // --- Calculate the X coordinate of the slider
-   void              CalculateLeftThumbX(void);
-   void              CalculateRightThumbX(void);
-   // --- Changes the position of the slider relative to the current value
-   void              CalculateLeftThumbPos(void);
-   void              CalculateRightThumbPos(void);
-   // --- Current slider color
-   uint              ThumbColorCurrent(const bool thumb_focus,const ENUM_MOUSE_STATE thumb_clamping);
-
-   // --- Draws borders for the indicator
-   void              DrawSlot(void);
-   // --- Draws an indicator
-   void              DrawIndicator(void);
-   // --- Draws the slider slider
-   void              DrawLeftThumb(void);
-   void              DrawRightThumb(void);
+   private:
+    //Private properties:
+     // --- Objects for creating an element
+      CTextEdit         m_left_edit;
+      CTextEdit         m_right_edit;
+     // --- (1) Coordinate and (2) size of indicator area
+      int               m_slot_y;
+      int               m_slot_y_size;
+     // ---Indicator colors in different states
+      color             m_slot_line_dark_color;
+      color             m_slot_line_light_color;
+      color             m_slot_indicator_color;
+      color             m_slot_indicator_color_locked;
+     // --- Current slider position: (1) value, (2) XY coordinates
+      double            m_thumb_x_pos_left;
+      double            m_thumb_x_pos_right;
+      double            m_thumb_x_left;
+      double            m_thumb_x_right;
+      int               m_thumb_y;
+     // --- Slider Slider Dimensions
+      int               m_thumb_x_size;
+      int               m_thumb_y_size;
+     // ---Slider Slider Colors
+      color             m_thumb_color;
+      color             m_thumb_color_hover;
+      color             m_thumb_color_locked;
+      color             m_thumb_color_pressed;
+     // --- (1) Focus on the slider and (2) the moment it crosses the boundaries
+      bool              m_thumb_focus_left;
+      bool              m_thumb_focus_right;
+      bool              m_is_crossing_left_thumb_border;
+      bool              m_is_crossing_right_thumb_border;
+     // --- Number of pixels in the work area
+      int               m_pixels_total;
+     // --- Number of steps in the range of work area values
+      int               m_value_steps_total;
+     // --- Step size relative to the width of the work area
+      double            m_position_step;
+     // ---Mouse button state (pressed/released)
+      ENUM_MOUSE_STATE  m_clamping_left_thumb;
+      ENUM_MOUSE_STATE  m_clamping_right_thumb;
+     // --- To determine the mode of movement of the slider slider
+      bool              m_slider_thumb_state;
+     // --- Variables associated with slider movement
+      int               m_slider_size_fixing;
+      int               m_slider_point_fixing;
+     // ---Double slider mode
+      bool              m_dual_slider_mode;
+    //Private methods:    
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateLeftTextEdit(void);
+      bool              CreateRightTextEdit(void);    
+     // --- Processing the value entered into the input field
+      bool              OnEndEditLeftThumb(const int id,const int index);
+      bool              OnEndEditRightThumb(const int id,const int index);
+     // --- Process of moving the slider slider
+      void              OnDragLeftThumb(void);
+      void              OnDragRightThumb(void);
+     // ---Updating the slider position
+      void              UpdateLeftThumb(const int new_x_point);
+      void              UpdateRightThumb(const int new_x_point);
+     // --- Checking focus above the slider
+      bool              CheckLeftThumbFocus(void);
+      bool              CheckRightThumbFocus(void);
+     // --- Checks the state of the mouse button
+      void              CheckMouseOnLeftThumb(void);
+      void              CheckMouseOnRightThumb(void);
+     // --- Resetting variables associated with moving the slider slider
+      void              ZeroLeftThumbVariables(void);
+      void              ZeroRightThumbVariables(void);
+     // --- Calculation of values ​​(steps and coefficients)
+      bool              CalculateCoefficients(void);
+     // --- Calculate the X coordinate of the slider
+      void              CalculateLeftThumbX(void);
+      void              CalculateRightThumbX(void);
+     // --- Changes the position of the slider relative to the current value
+      void              CalculateLeftThumbPos(void);
+      void              CalculateRightThumbPos(void);
+     // --- Current slider color
+      uint              ThumbColorCurrent(const bool thumb_focus,const ENUM_MOUSE_STATE thumb_clamping);
+     // --- Draws borders for the indicator
+      void              DrawSlot(void);
+     // --- Draws an indicator
+      void              DrawIndicator(void);
+     // --- Draws the slider slider
+      void              DrawLeftThumb(void);
+      void              DrawRightThumb(void); 
+   public:
+                        CSlider(void);
+                     ~CSlider(void);
+     // --- Methods for creating an element
+      bool              CreateSlider(const string text,const int x_gap,const int y_gap);      
+     // --- Returns pointers to elements
+      CTextEdit        *GetLeftEditPointer(void)                   { return(::GetPointer(m_left_edit));  }
+      CTextEdit        *GetRightEditPointer(void)                  { return(::GetPointer(m_right_edit)); }
+     // --- Slider indicator colors in different states
+      void              SlotLineDarkColor(const color clr)         { m_slot_line_dark_color=clr;         }
+      void              SlotLineLightColor(const color clr)        { m_slot_line_light_color=clr;        }
+      void              SlotIndicatorColor(const color clr)        { m_slot_indicator_color=clr;         }
+      void              SlotIndicatorColorLocked(const color clr)  { m_slot_indicator_color_locked=clr;  }
+     // ---Double slider mode
+      void              DualSliderMode(const bool state)           { m_dual_slider_mode=state;           }
+      bool              DualSliderMode(void)                 const { return(m_dual_slider_mode);         }
+      bool              State(void)                          const { return(m_slider_thumb_state);       }
+     // --- Slider Slider Dimensions
+      void              ThumbXSize(const int x_size)               { m_thumb_x_size=x_size;              }
+      void              ThumbYSize(const int y_size)               { m_thumb_y_size=y_size;              }
+     // ---Slider Slider Colors
+      void              ThumbColor(const color clr)                { m_thumb_color=clr;                  }
+      void              ThumbColorHover(const color clr)           { m_thumb_color_hover=clr;            }
+      void              ThumbColorLocked(const color clr)          { m_thumb_color_locked=clr;           }
+      void              ThumbColorPressed(const color clr)         { m_thumb_color_pressed=clr;          }      
+     // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+     // --- Draws an element
+      virtual void      Draw(void);      
   };
  #ifndef CSLIDER_MQH_IMPLEMENTATION
  #define CSLIDER_MQH_IMPLEMENTATION

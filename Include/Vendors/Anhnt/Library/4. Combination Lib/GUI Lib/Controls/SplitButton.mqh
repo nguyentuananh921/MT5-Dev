@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                  SplitButton.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __SPLITBUTTON_MQH__
 #define __SPLITBUTTON_MQH__
@@ -11,57 +11,44 @@
 //+------------------------------------------------------------------+
 // | Class for creating a double button |
 //+------------------------------------------------------------------+
-class CSplitButton : public CElement {
+class CSplitButton : public CElement 
+ {
   private:
+   //Private properties:
     // --- Objects for creating a button
     CButton m_button;
     CButton m_drop_button;
     CContextMenu m_drop_menu;
     // --- Context menu status
     bool m_drop_menu_state;
-    //---
+   //Private methods:    
+        void InitializeProperties(const string text, const int x_gap, const int y_gap);
+        bool CreateButton(void);
+        bool CreateDropButton(void);
+        bool CreateDropMenu(void);   
+    // --- Handling a button click
+        bool OnClickButton(const string pressed_object, const int id, const int index);
+    // --- Handling a click on a button with a drop-down menu
+        bool OnClickDropButton(const string pressed_object, const int id, const int index);
+    // --- Hides the dropdown menu
+        void HideDropDownMenu(void);
   public:
-    CSplitButton(void);
-    ~CSplitButton(void);
-    // --- Methods for creating a button
-    bool CreateSplitButton(const string text, const int x_gap, const int y_gap);
-    //---
-  private:
-    void InitializeProperties(const string text, const int x_gap, const int y_gap);
-    bool CreateButton(void);
-    bool CreateDropButton(void);
-    bool CreateDropMenu(void);
-    //---
-  public:
-    // --- (1) getting the context menu pointer, (2) the general state of the button (available/locked)
-    CButton* GetButtonPointer(void) {
-        return (::GetPointer(m_button));
-    }
-    CButton* GetDropButtonPointer(void) {
-        return (::GetPointer(m_drop_button));
-    }
-    CContextMenu* GetContextMenuPointer(void) {
-        return (::GetPointer(m_drop_menu));
-    }
+        CSplitButton(void);
+        ~CSplitButton(void);
+   // --- Methods for creating a button
+        bool CreateSplitButton(const string text, const int x_gap, const int y_gap);   
+   // --- (1) getting the context menu pointer, (2) the general state of the button (available/locked)
+    CButton* GetButtonPointer(void)             {return (::GetPointer(m_button));}
+    CButton* GetDropButtonPointer(void)         {return (::GetPointer(m_drop_button));}
+    CContextMenu* GetContextMenuPointer(void)   {return (::GetPointer(m_drop_menu));}
     // --- Adds a menu item with the specified properties before creating the context menu
-    // void              AddItem(const string text,const string path_bmp_on,const string path_bmp_off);
+       // void              AddItem(const string text,const string path_bmp_on,const string path_bmp_off);
        void                 AddItem(const string text, const uint resource_index_on, const uint resource_index_off);
         // --- Adds a separator line after the specified item before creating the context menu
-        void AddSeparateLine(const int item_index);
-    //---
-  public:
+        void AddSeparateLine(const int item_index);  
     // ---Graph event handler
-    virtual void OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam);
-    //---
-  private:
-    // --- Handling a button click
-    bool OnClickButton(const string pressed_object, const int id, const int index);
-    // --- Handling a click on a button with a drop-down menu
-    bool OnClickDropButton(const string pressed_object, const int id, const int index);
-
-    // --- Hides the dropdown menu
-    void HideDropDownMenu(void);
-};
+    virtual void OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam);    
+ };
 #ifndef CSPLITBUTTON_MQH_IMPLEMENTATION
 #define CSPLITBUTTON_MQH_IMPLEMENTATION
 //+------------------------------------------------------------------+

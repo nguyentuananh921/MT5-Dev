@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                      TextBox.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/3004            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __TEXTBOX_MQH__
 #define __TEXTBOX_MQH__
@@ -15,362 +16,335 @@
 //+------------------------------------------------------------------+
 class CTextBox : public CElement
   {
-private:
-   // --- An instance of the class for working with the keyboard
-   CKeys             m_keys;
-   // --- Object for working with a timer counter
-   CTimeCounter      m_counter;
-   // --- Objects for creating an element
-   CRectCanvas       m_textbox;
-   CScrollV          m_scrollv;
-   CScrollH          m_scrollh;
-   // --- Symbols and their properties
-   struct StringOptions
-     {
-      string            m_symbol[];     // Symbols
-      int               m_width[];      // Character width
-      bool              m_end_of_line;  // Line terminator
-     };
-   StringOptions     m_lines[];
-   // --- Overall size and visible size of the element
-   int               m_area_x_size;
-   int               m_area_y_size;
-   int               m_area_visible_x_size;
-   int               m_area_visible_y_size;
-   // --- Background and character color of selected text
-   color             m_selected_back_color;
-   color             m_selected_text_color;
-   // --- Starting and ending indexes of lines and characters (selected text)
-   int               m_selected_line_from;
-   int               m_selected_line_to;
-   int               m_selected_symbol_from;
-   int               m_selected_symbol_to;
-   // ---Default text color
-   color             m_default_text_color;
-   // ---Default text
-   string            m_default_text;
-   // --- Variable for working with a string
-   string            m_temp_input_string;
-   // --- Indents for text from the edges of the input field
-   int               m_text_x_offset;
-   int               m_text_y_offset;
-   // --- Current coordinates of the text cursor
-   int               m_text_cursor_x;
-   int               m_text_cursor_y;
-   // --- Current position of the text cursor
-   uint              m_text_cursor_x_pos;
-   uint              m_text_cursor_y_pos;
-   // --- To calculate the boundaries of the visible part of the input field
-   int               m_x_limit;
-   int               m_y_limit;
-   int               m_x2_limit;
-   int               m_y2_limit;
-   // --- Step size for horizontal offset
-   int               m_shift_x_step;
-   // --- Offset restrictions
-   int               m_shift_x2_limit;
-   int               m_shift_y2_limit;
-   // --- Multiline mode
-   bool              m_multi_line_mode;
-   // --- "Word Wrap" mode
-   bool              m_word_wrap_mode;
-   // --- Read-only mode
-   bool              m_read_only_mode;
-   // --- Auto text selection mode
-   bool              m_auto_selection_mode;
-   // --- Input field status
-   bool              m_text_edit_state;
-   // --- Timer counter for list rewind
-   int               m_timer_counter;
-   //---
-public:
-                     CTextBox(void);
-                    ~CTextBox(void);
-   // --- Methods for creating an element
-   bool              CreateTextBox(const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateTextBox(void);
-   bool              CreateScrollV(void);
-   bool              CreateScrollH(void);
-   //---
-public:
-   // --- Returns pointers to scroll bars
-   CScrollV         *GetScrollVPointer(void)                   { return(::GetPointer(m_scrollv)); }
-   CScrollH         *GetScrollHPointer(void)                   { return(::GetPointer(m_scrollh)); }
-   // --- Background and character color of selected text
-   void              SelectedBackColor(const color clr)        { m_selected_back_color=clr;       }
-   void              SelectedTextColor(const color clr)        { m_selected_text_color=clr;       }
-   // --- (1) Default text and (2) default text color
-   void              DefaultText(const string text)            { m_default_text=text;             }
-   void              DefaultTextColor(const color clr)         { m_default_text_color=clr;        }
-   // --- (1) Multiline mode, (2) Word Wrap mode
-   void              MultiLineMode(const bool mode)            { m_multi_line_mode=mode;          }
-   bool              MultiLineMode(void)                const  { return(m_multi_line_mode);       }
-   void              WordWrapMode(const bool mode)             { m_word_wrap_mode=mode;           }
-   // --- (1) Read-only mode, (2) input field state, (3) mode for automatic text selection
-   bool              ReadOnlyMode(void)                  const { return(m_read_only_mode);        }
-   void              ReadOnlyMode(const bool mode)             { m_read_only_mode=mode;           }
-   bool              TextEditState(void)                 const { return(m_text_edit_state);       }
-   void              AutoSelectionMode(const bool state)       { m_auto_selection_mode=state;     }
-   // --- (1) Indents for text from the edges of the input field, (2) text alignment mode
-   void              TextXOffset(const int x_offset)           { m_text_x_offset=x_offset;        }
-   void              TextYOffset(const int y_offset)           { m_text_y_offset=y_offset;        }
-   // --- Returns the index of the (1) line, (2) character on which the text cursor is located,
-   // (3) number of lines, (4) number of visible lines
-   uint              TextCursorLine(void)                      { return(m_text_cursor_y_pos);     }
-   uint              TextCursorColumn(void)                    { return(m_text_cursor_x_pos);     }
-   uint              LinesTotal(void)                          { return(::ArraySize(m_lines));    }
-   uint              VisibleLinesTotal(void);
-   // --- Number of characters in the specified string
-   uint              ColumnsTotal(const uint line_index);
-   // --- Text cursor information (line/number of lines, column/number of columns)
-   string            TextCursorInfo(void);
-   // --- Adds a line
-   void              AddLine(const string added_text="");
-   // --- Adds text to the specified line
-   void              AddText(const uint line_index,const string added_text);
-   // --- Returns text from the specified string
-   string            GetValue(const uint line_index=0);
-   // --- Clears the text input field
-   void              ClearTextBox(void);
-   // --- Table scrolling: (1) vertical and (2) horizontal
-   void              VerticalScrolling(const int pos=WRONG_VALUE);
-   void              HorizontalScrolling(const int pos=WRONG_VALUE);
-   // --- Data offset relative to scrollbar positions
-   void              ShiftData(void);
-   // --- Adjusting the size of the input field
-   void              CorrectSize(void);
-   // --- Activate the input field
-   void              ActivateTextBox(void);
-   // --- Disables the input field
-   void              DeactivateTextBox(void);
-   // --- Resizing
-   void              ChangeSize(const uint x_size,const uint y_size);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Timer
-   virtual void      OnEventTimer(void);
-   // ---Move element
-   virtual void      Moving(const bool only_visible=true);
-   // --- Management
-   virtual void      Show(void);
-   virtual void      Hide(void);
-   virtual void      Delete(void);
-   // --- (1) Installation, (2) reset priorities by pressing the left mouse button
-   virtual void      SetZorders(void);
-   virtual void      ResetZorders(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   // --- Item update
-   virtual void      Update(const bool redraw=false);
-   //---
-private:
-   // --- Handling clicks on an element
-   bool              OnClickTextBox(const string clicked_object);
-
-   // --- Keystroke processing
-   bool              OnPressedKey(const long key_code);
-   // --- Handling the "Backspace" key press
-   bool              OnPressedKeyBackspace(const long key_code);
-   // --- Handling pressing the "Enter" key
-   bool              OnPressedKeyEnter(const long key_code);
-   // --- Processing the "Left" key press
-   bool              OnPressedKeyLeft(const long key_code);
-   // --- Handling the "Right" key press
-   bool              OnPressedKeyRight(const long key_code);
-   // --- Handling the "Up" key press
-   bool              OnPressedKeyUp(const long key_code);
-   // --- Handling the "Down" key press
-   bool              OnPressedKeyDown(const long key_code);
-   // --- Handling the "Home" key press
-   bool              OnPressedKeyHome(const long key_code);
-   // --- Handling the "End" key
-   bool              OnPressedKeyEnd(const long key_code);
-
-   // --- Handling the Ctrl + Left key press
-   bool              OnPressedKeyCtrlAndLeft(const long key_code);
-   // --- Handling the Ctrl + Right key press
-   bool              OnPressedKeyCtrlAndRight(const long key_code);
-   // --- Handling simultaneous pressing of Ctrl + Home keys
-   bool              OnPressedKeyCtrlAndHome(const long key_code);
-   // --- Handling simultaneous Ctrl + End key presses
-   bool              OnPressedKeyCtrlAndEnd(const long key_code);
-
-   // --- Handling Shift + Left key presses
-   bool              OnPressedKeyShiftAndLeft(const long key_code);
-   // --- Handling Shift + Right key presses
-   bool              OnPressedKeyShiftAndRight(const long key_code);
-   // --- Handling Shift + Up key presses
-   bool              OnPressedKeyShiftAndUp(const long key_code);
-   // --- Handling Shift + Down key presses
-   bool              OnPressedKeyShiftAndDown(const long key_code);
-   // --- Handling Shift + Home key presses
-   bool              OnPressedKeyShiftAndHome(const long key_code);
-   // --- Handling Shift + End key presses
-   bool              OnPressedKeyShiftAndEnd(const long key_code);
-
-   // --- Handling key presses Ctrl + Shift + Left
-   bool              OnPressedKeyCtrlShiftAndLeft(const long key_code);
-   // --- Handling key presses Ctrl + Shift + Right
-   bool              OnPressedKeyCtrlShiftAndRight(const long key_code);
-   // --- Handling key presses Ctrl + Shift + Home
-   bool              OnPressedKeyCtrlShiftAndHome(const long key_code);
-   // --- Handling key presses Ctrl + Shift + End
-   bool              OnPressedKeyCtrlShiftAndEnd(const long key_code);
-   //---
-private:
-   // --- Sets (1) starting and (2) ending indexes for text selection
-   void              SetStartSelectedTextIndexes(void);
-   void              SetEndSelectedTextIndexes(void);
-   // --- Select all text
-   void              SelectAllText(void);
-   // --- Reset selected text
-   void              ResetSelectedText(void);
-   // --- Fast forward input field
-   void              FastSwitching(void);
-
-   // --- Outputting text to canvas
-   void              TextOut(void);
-   // --- Draws a frame
-   virtual void      DrawBorder(void);
-   // --- Draws a text cursor
-   void              DrawCursor(void);
-   // ---Displays text and blinking cursor
-   void              DrawTextAndCursor(const bool show_state=false);
-
-   // --- Returns the current background color
-   uint              AreaColorCurrent(void);
-   // --- Returns the current text color
-   uint              TextColorCurrent(void);
-   // --- Returns the current border color
-   uint              BorderColorCurrent(void);
-   // --- Changing the color of objects
-   void              ChangeObjectsColor(void);
-
-   // --- Collects a string of characters
-   string            CollectString(const uint line_index,const uint symbols_total=0);
-   // --- Adds a symbol and its properties to structure arrays
-   void              AddSymbol(const string key_symbol);
-   // --- Deletes a character
-   void              DeleteSymbol(void);
-   // --- Deletes (1) selected text, (2) on one line, (3) on multiple lines
-   bool              DeleteSelectedText(void);
-   void              DeleteTextOnOneLine(void);
-   void              DeleteTextOnMultipleLines(void);
-
-   // --- Returns the row height
-   uint              LineHeight(void);
-   // --- Returns the line width of the specified character in pixels
-   uint              LineWidth(const uint symbol_index,const uint line_index);
-   // --- Returns the maximum line width
-   uint              MaxLineWidth(void);
-
-   // --- Shifts rows up one position
-   void              ShiftOnePositionUp(void);
-   // --- Shifts rows down one position
-   void              ShiftOnePositionDown(void);
-
-   // --- Checking for selected text
-   bool              CheckSelectedText(const uint line_index,const uint symbol_index);
-   // --- Check for mandatory first line
-   uint              CheckFirstLine(void);
-
-   // --- Sets a new size to the property arrays of the specified string
-   void              ArraysResize(const uint line_index,const uint new_size);
-   // --- Makes a copy of the specified (source) string to a new location (destination)
-   void              LineCopy(const uint destination,const uint source);
-   // --- Clears the specified string
-   void              ClearLine(const uint line_index);
-
-   // --- Move the text cursor in the specified direction
-   void              MoveTextCursor(const ENUM_MOVE_TEXT_CURSOR direction);
-   void              MoveTextCursor(const ENUM_MOVE_TEXT_CURSOR direction,const bool with_highlighted_text);
-   // --- Move the text cursor to the left
-   void              MoveTextCursorToLeft(const bool to_next_word=false);
-   // --- Move the text cursor to the right
-   void              MoveTextCursorToRight(const bool to_next_word=false);
-   // --- Move the text cursor up one line
-   void              MoveTextCursorToUp(void);
-   // --- Move the text cursor down one line
-   void              MoveTextCursorToDown(void);
-
-   // --- Places the cursor at the specified positions
-   void              SetTextCursor(const uint x_pos,const uint y_pos);
-   // --- Places the cursor at the specified positions by the mouse cursor
-   void              SetTextCursorByMouseCursor(void);
-   // ---Adjusting the text cursor along the X axis
-   void              CorrectingTextCursorXPos(const int x_pos=WRONG_VALUE);
-
-   // --- Calculation of coordinates for a text cursor
-   void              CalculateTextCursorX(void);
-   void              CalculateTextCursorY(void);
-
-   // --- Calculation of input field boundaries
-   void              CalculateBoundaries(void);
-   void              CalculateXBoundaries(void);
-   void              CalculateYBoundaries(void);
-   // --- Calculate the X-position of the scroll bar in the left border of the input field
-   int               CalculateScrollThumbX(void);
-   // --- Calculate the X-position of the scroll bar at the right edge of the input field
-   int               CalculateScrollThumbX2(void);
-   // --- Calculate the X-position of the scrollbar slider
-   int               CalculateScrollPosX(const bool to_right=false);
-   // --- Calculate the Y-position of the scroll bar at the top border of the input field
-   int               CalculateScrollThumbY(void);
-   // --- Calculate the Y-position of the scroll bar at the bottom border of the input field
-   int               CalculateScrollThumbY2(void);
-   // --- Calculate the Y-position of the scroll bar slider
-   int               CalculateScrollPosY(const bool to_down=false);
-   // ---Adjusting the horizontal scroll bar
-   void              CorrectingHorizontalScrollThumb(void);
-   // ---Adjusting the vertical scroll bar
-   void              CorrectingVerticalScrollThumb(void);
-
-   // --- Calculates the dimensions of a text input field
-   void              CalculateTextBoxSize(void);
-   bool              CalculateTextBoxXSize(void);
-   bool              CalculateTextBoxYSize(void);
-   // --- Change the basic dimensions of an element
-   void              ChangeMainSize(const int x_size,const int y_size);
-   // --- Resize the input field
-   void              ChangeTextBoxSize(const bool x_offset=false,const bool y_offset=false);
-   // --- Resize scrollbars
-   void              ChangeScrollsSize(void);
-
-   // --- Word wrapping
-   void              WordWrap(void);
-   // --- Returns the indexes of the first visible character and space
-   bool              CheckForOverflow(const uint line_index,int &symbol_index,int &space_index);
-   // --- Number of words in the specified line
-   uint              WordsTotal(const uint line_index);
-   // --- Returns the number of characters to be carried
-   bool              WrapSymbolsTotal(const uint line_index,uint &wrap_symbols_total);
-   // --- Returns the index of the space character by its number
-   uint              SymbolIndexBySpaceNumber(const uint line_index,const uint space_index);
-   // --- Moves lines
-   void              MoveLines(const uint from_index,const uint to_index,const uint count,const bool to_down=true);
-   // --- Move characters in the specified string
-   void              MoveSymbols(const uint line_index,const uint from_pos,const uint to_pos,const bool to_left=true);
-   // --- Add text to the specified line
-   void              AddToString(const uint line_index,const string text);
-   // --- Copies characters for wrapping to another line into the passed array
-   void              CopyWrapSymbols(const uint line_index,const uint start_pos,const uint symbols_total,string &array[]);
-   // --- Inserts characters from the passed array into the specified string
-   void              PasteWrapSymbols(const uint line_index,const uint start_pos,string &array[]);
-   // --- Wrap text to next line
-   void              WrapTextToNewLine(const uint curr_line_index,const uint symbol_index,const bool by_pressed_enter=false);
-   // --- Wrap text from the specified line to the previous one
-   void              WrapTextToPrevLine(const uint next_line_index,const uint wrap_symbols_total,const bool is_all_text=false);
-
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
-   // --- Change the height along the bottom edge of the window
-   virtual void      ChangeHeightByBottomWindowSide(void);
+   private:
+    //Private properties:
+     // --- An instance of the class for working with the keyboard
+      CKeys             m_keys;
+     // --- Object for working with a timer counter
+      CTimeCounter      m_counter;
+     // --- Objects for creating an element
+      CRectCanvas       m_textbox;
+      CScrollV          m_scrollv;
+      CScrollH          m_scrollh;
+     // --- Symbols and their properties
+      struct StringOptions
+       {
+         string            m_symbol[];     // Symbols
+         int               m_width[];      // Character width
+         bool              m_end_of_line;  // Line terminator
+       };
+      StringOptions     m_lines[];
+     // --- Overall size and visible size of the element
+      int               m_area_x_size;
+      int               m_area_y_size;
+      int               m_area_visible_x_size;
+      int               m_area_visible_y_size;
+     // --- Background and character color of selected text
+      color             m_selected_back_color;
+      color             m_selected_text_color;
+     // --- Starting and ending indexes of lines and characters (selected text)
+      int               m_selected_line_from;
+      int               m_selected_line_to;
+      int               m_selected_symbol_from;
+      int               m_selected_symbol_to;
+     // ---Default text color
+      color             m_default_text_color;
+     // ---Default text
+      string            m_default_text;
+     // --- Variable for working with a string
+      string            m_temp_input_string;
+     // --- Indents for text from the edges of the input field
+      int               m_text_x_offset;
+      int               m_text_y_offset;
+     // --- Current coordinates of the text cursor
+      int               m_text_cursor_x;
+      int               m_text_cursor_y;
+     // --- Current position of the text cursor
+      uint              m_text_cursor_x_pos;
+      uint              m_text_cursor_y_pos;
+     // --- To calculate the boundaries of the visible part of the input field
+      int               m_x_limit;
+      int               m_y_limit;
+      int               m_x2_limit;
+      int               m_y2_limit;
+     // --- Step size for horizontal offset
+      int               m_shift_x_step;
+     // --- Offset restrictions
+      int               m_shift_x2_limit;
+      int               m_shift_y2_limit;
+     // --- Multiline mode
+      bool              m_multi_line_mode;
+     // --- "Word Wrap" mode
+      bool              m_word_wrap_mode;
+     // --- Read-only mode
+      bool              m_read_only_mode;
+     // --- Auto text selection mode
+      bool              m_auto_selection_mode;
+     // --- Input field status
+      bool              m_text_edit_state;
+     // --- Timer counter for list rewind
+      int               m_timer_counter;
+    //Private methods:     
+      void              InitializeProperties(const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateTextBox(void);
+      bool              CreateScrollV(void);
+      bool              CreateScrollH(void);   
+     // --- Handling clicks on an element
+      bool              OnClickTextBox(const string clicked_object);
+     // --- Keystroke processing
+      bool              OnPressedKey(const long key_code);
+     // --- Handling the "Backspace" key press
+      bool              OnPressedKeyBackspace(const long key_code);
+     // --- Handling pressing the "Enter" key
+      bool              OnPressedKeyEnter(const long key_code);
+     // --- Processing the "Left" key press
+      bool              OnPressedKeyLeft(const long key_code);
+     // --- Handling the "Right" key press
+      bool              OnPressedKeyRight(const long key_code);
+     // --- Handling the "Up" key press
+      bool              OnPressedKeyUp(const long key_code);
+     // --- Handling the "Down" key press
+      bool              OnPressedKeyDown(const long key_code);
+     // --- Handling the "Home" key press
+      bool              OnPressedKeyHome(const long key_code);
+     // --- Handling the "End" key
+      bool              OnPressedKeyEnd(const long key_code);
+     // --- Handling the Ctrl + Left key press
+      bool              OnPressedKeyCtrlAndLeft(const long key_code);
+     // --- Handling the Ctrl + Right key press
+      bool              OnPressedKeyCtrlAndRight(const long key_code);
+     // --- Handling simultaneous pressing of Ctrl + Home keys
+      bool              OnPressedKeyCtrlAndHome(const long key_code);
+     // --- Handling simultaneous Ctrl + End key presses
+      bool              OnPressedKeyCtrlAndEnd(const long key_code);
+     // --- Handling Shift + Left key presses
+      bool              OnPressedKeyShiftAndLeft(const long key_code);
+     // --- Handling Shift + Right key presses
+      bool              OnPressedKeyShiftAndRight(const long key_code);
+     // --- Handling Shift + Up key presses
+      bool              OnPressedKeyShiftAndUp(const long key_code);
+     // --- Handling Shift + Down key presses
+      bool              OnPressedKeyShiftAndDown(const long key_code);
+     // --- Handling Shift + Home key presses
+      bool              OnPressedKeyShiftAndHome(const long key_code);
+     // --- Handling Shift + End key presses
+      bool              OnPressedKeyShiftAndEnd(const long key_code);
+     // --- Handling key presses Ctrl + Shift + Left
+      bool              OnPressedKeyCtrlShiftAndLeft(const long key_code);
+     // --- Handling key presses Ctrl + Shift + Right
+      bool              OnPressedKeyCtrlShiftAndRight(const long key_code);
+     // --- Handling key presses Ctrl + Shift + Home
+      bool              OnPressedKeyCtrlShiftAndHome(const long key_code);
+     // --- Handling key presses Ctrl + Shift + End
+      bool              OnPressedKeyCtrlShiftAndEnd(const long key_code);
+     // --- Sets (1) starting and (2) ending indexes for text selection
+      void              SetStartSelectedTextIndexes(void);
+      void              SetEndSelectedTextIndexes(void);
+     // --- Select all text
+      void              SelectAllText(void);
+     // --- Reset selected text
+      void              ResetSelectedText(void);
+     // --- Fast forward input field
+      void              FastSwitching(void);
+     // --- Outputting text to canvas
+      void              TextOut(void);
+     // --- Draws a frame
+      virtual void      DrawBorder(void);
+     // --- Draws a text cursor
+      void              DrawCursor(void);
+     // ---Displays text and blinking cursor
+      void              DrawTextAndCursor(const bool show_state=false);
+     // --- Returns the current background color
+      uint              AreaColorCurrent(void);
+     // --- Returns the current text color
+      uint              TextColorCurrent(void);
+     // --- Returns the current border color
+      uint              BorderColorCurrent(void);
+     // --- Changing the color of objects
+      void              ChangeObjectsColor(void);
+     // --- Collects a string of characters
+      string            CollectString(const uint line_index,const uint symbols_total=0);
+     // --- Adds a symbol and its properties to structure arrays
+      void              AddSymbol(const string key_symbol);
+     // --- Deletes a character
+      void              DeleteSymbol(void);
+     // --- Deletes (1) selected text, (2) on one line, (3) on multiple lines
+      bool              DeleteSelectedText(void);
+      void              DeleteTextOnOneLine(void);
+      void              DeleteTextOnMultipleLines(void);
+     // --- Returns the row height
+      uint              LineHeight(void);
+     // --- Returns the line width of the specified character in pixels
+      uint              LineWidth(const uint symbol_index,const uint line_index);
+     // --- Returns the maximum line width
+      uint              MaxLineWidth(void);
+     // --- Shifts rows up one position
+      void              ShiftOnePositionUp(void);
+     // --- Shifts rows down one position
+      void              ShiftOnePositionDown(void);
+     // --- Checking for selected text
+      bool              CheckSelectedText(const uint line_index,const uint symbol_index);
+     // --- Check for mandatory first line
+      uint              CheckFirstLine(void);
+     // --- Sets a new size to the property arrays of the specified string
+      void              ArraysResize(const uint line_index,const uint new_size);
+     // --- Makes a copy of the specified (source) string to a new location (destination)
+      void              LineCopy(const uint destination,const uint source);
+     // --- Clears the specified string
+      void              ClearLine(const uint line_index);
+     // --- Move the text cursor in the specified direction
+      void              MoveTextCursor(const ENUM_MOVE_TEXT_CURSOR direction);
+      void              MoveTextCursor(const ENUM_MOVE_TEXT_CURSOR direction,const bool with_highlighted_text);
+     // --- Move the text cursor to the left
+      void              MoveTextCursorToLeft(const bool to_next_word=false);
+     // --- Move the text cursor to the right
+      void              MoveTextCursorToRight(const bool to_next_word=false);
+     // --- Move the text cursor up one line
+      void              MoveTextCursorToUp(void);
+     // --- Move the text cursor down one line
+      void              MoveTextCursorToDown(void);
+     // --- Places the cursor at the specified positions
+      void              SetTextCursor(const uint x_pos,const uint y_pos);
+     // --- Places the cursor at the specified positions by the mouse cursor
+      void              SetTextCursorByMouseCursor(void);
+     // ---Adjusting the text cursor along the X axis
+      void              CorrectingTextCursorXPos(const int x_pos=WRONG_VALUE);
+     // --- Calculation of coordinates for a text cursor
+      void              CalculateTextCursorX(void);
+      void              CalculateTextCursorY(void);
+     // --- Calculation of input field boundaries
+      void              CalculateBoundaries(void);
+      void              CalculateXBoundaries(void);
+      void              CalculateYBoundaries(void);
+     // --- Calculate the X-position of the scroll bar in the left border of the input field
+      int               CalculateScrollThumbX(void);
+     // --- Calculate the X-position of the scroll bar at the right edge of the input field
+      int               CalculateScrollThumbX2(void);
+     // --- Calculate the X-position of the scrollbar slider
+      int               CalculateScrollPosX(const bool to_right=false);
+     // --- Calculate the Y-position of the scroll bar at the top border of the input field
+      int               CalculateScrollThumbY(void);
+     // --- Calculate the Y-position of the scroll bar at the bottom border of the input field
+      int               CalculateScrollThumbY2(void);
+     // --- Calculate the Y-position of the scroll bar slider
+      int               CalculateScrollPosY(const bool to_down=false);
+     // ---Adjusting the horizontal scroll bar
+      void              CorrectingHorizontalScrollThumb(void);
+     // ---Adjusting the vertical scroll bar
+      void              CorrectingVerticalScrollThumb(void);
+     // --- Calculates the dimensions of a text input field
+      void              CalculateTextBoxSize(void);
+      bool              CalculateTextBoxXSize(void);
+      bool              CalculateTextBoxYSize(void);
+     // --- Change the basic dimensions of an element
+      void              ChangeMainSize(const int x_size,const int y_size);
+     // --- Resize the input field
+      void              ChangeTextBoxSize(const bool x_offset=false,const bool y_offset=false);
+     // --- Resize scrollbars
+      void              ChangeScrollsSize(void);
+     // --- Word wrapping
+      void              WordWrap(void);
+     // --- Returns the indexes of the first visible character and space
+      bool              CheckForOverflow(const uint line_index,int &symbol_index,int &space_index);
+     // --- Number of words in the specified line
+      uint              WordsTotal(const uint line_index);
+     // --- Returns the number of characters to be carried
+      bool              WrapSymbolsTotal(const uint line_index,uint &wrap_symbols_total);
+     // --- Returns the index of the space character by its number
+      uint              SymbolIndexBySpaceNumber(const uint line_index,const uint space_index);
+     // --- Moves lines
+      void              MoveLines(const uint from_index,const uint to_index,const uint count,const bool to_down=true);
+     // --- Move characters in the specified string
+      void              MoveSymbols(const uint line_index,const uint from_pos,const uint to_pos,const bool to_left=true);
+     // --- Add text to the specified line
+      void              AddToString(const uint line_index,const string text);
+     // --- Copies characters for wrapping to another line into the passed array
+      void              CopyWrapSymbols(const uint line_index,const uint start_pos,const uint symbols_total,string &array[]);
+     // --- Inserts characters from the passed array into the specified string
+      void              PasteWrapSymbols(const uint line_index,const uint start_pos,string &array[]);
+     // --- Wrap text to next line
+      void              WrapTextToNewLine(const uint curr_line_index,const uint symbol_index,const bool by_pressed_enter=false);
+     // --- Wrap text from the specified line to the previous one
+      void              WrapTextToPrevLine(const uint next_line_index,const uint wrap_symbols_total,const bool is_all_text=false);
+     // --- Change the width along the right edge of the window
+      virtual void      ChangeWidthByRightWindowSide(void);
+     // --- Change the height along the bottom edge of the window
+      virtual void      ChangeHeightByBottomWindowSide(void);
+   public:
+                        CTextBox(void);
+                     ~CTextBox(void);
+     // --- Methods for creating an element
+      bool              CreateTextBox(const int x_gap,const int y_gap);      
+     // --- Returns pointers to scroll bars
+      CScrollV         *GetScrollVPointer(void)                   { return(::GetPointer(m_scrollv)); }
+      CScrollH         *GetScrollHPointer(void)                   { return(::GetPointer(m_scrollh)); }
+     // --- Background and character color of selected text
+      void              SelectedBackColor(const color clr)        { m_selected_back_color=clr;       }
+      void              SelectedTextColor(const color clr)        { m_selected_text_color=clr;       }
+     // --- (1) Default text and (2) default text color
+      void              DefaultText(const string text)            { m_default_text=text;             }
+      void              DefaultTextColor(const color clr)         { m_default_text_color=clr;        }
+     // --- (1) Multiline mode, (2) Word Wrap mode
+      void              MultiLineMode(const bool mode)            { m_multi_line_mode=mode;          }
+      bool              MultiLineMode(void)                const  { return(m_multi_line_mode);       }
+      void              WordWrapMode(const bool mode)             { m_word_wrap_mode=mode;           }
+     // --- (1) Read-only mode, (2) input field state, (3) mode for automatic text selection
+      bool              ReadOnlyMode(void)                  const { return(m_read_only_mode);        }
+      void              ReadOnlyMode(const bool mode)             { m_read_only_mode=mode;           }
+      bool              TextEditState(void)                 const { return(m_text_edit_state);       }
+      void              AutoSelectionMode(const bool state)       { m_auto_selection_mode=state;     }
+     // --- (1) Indents for text from the edges of the input field, (2) text alignment mode
+      void              TextXOffset(const int x_offset)           { m_text_x_offset=x_offset;        }
+      void              TextYOffset(const int y_offset)           { m_text_y_offset=y_offset;        }
+     // --- Returns the index of the (1) line, (2) character on which the text cursor is located,
+     // (3) number of lines, (4) number of visible lines
+      uint              TextCursorLine(void)                      { return(m_text_cursor_y_pos);     }
+      uint              TextCursorColumn(void)                    { return(m_text_cursor_x_pos);     }
+      uint              LinesTotal(void)                          { return(::ArraySize(m_lines));    }
+      uint              VisibleLinesTotal(void);
+     // --- Number of characters in the specified string
+      uint              ColumnsTotal(const uint line_index);
+     // --- Text cursor information (line/number of lines, column/number of columns)
+      string            TextCursorInfo(void);
+     // --- Adds a line
+      void              AddLine(const string added_text="");
+     // --- Adds text to the specified line
+      void              AddText(const uint line_index,const string added_text);
+     // --- Returns text from the specified string
+      string            GetValue(const uint line_index=0);
+     // --- Clears the text input field
+      void              ClearTextBox(void);
+     // --- Table scrolling: (1) vertical and (2) horizontal
+      void              VerticalScrolling(const int pos=WRONG_VALUE);
+      void              HorizontalScrolling(const int pos=WRONG_VALUE);
+     // --- Data offset relative to scrollbar positions
+      void              ShiftData(void);
+     // --- Adjusting the size of the input field
+      void              CorrectSize(void);
+     // --- Activate the input field
+      void              ActivateTextBox(void);
+     // --- Disables the input field
+      void              DeactivateTextBox(void);
+     // --- Resizing
+      void              ChangeSize(const uint x_size,const uint y_size);      
+     // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+     // --- Timer
+      virtual void      OnEventTimer(void);
+     // ---Move element
+      virtual void      Moving(const bool only_visible=true);
+     // --- Management
+      virtual void      Show(void);
+      virtual void      Hide(void);
+      virtual void      Delete(void);
+     // --- (1) Installation, (2) reset priorities by pressing the left mouse button
+      virtual void      SetZorders(void);
+      virtual void      ResetZorders(void);
+     // --- Draws an element
+      virtual void      Draw(void);
+     // --- Item update
+      virtual void      Update(const bool redraw=false);
   };
  #ifndef CTEXTBOX_MQH_IMPLEMENTATION
  #define CTEXTBOX_MQH_IMPLEMENTATION

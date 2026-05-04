@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                  ProgressBar.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2580            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __PROGRESSBAR_MQH__
 #define __PROGRESSBAR_MQH__
@@ -11,70 +12,63 @@
 //+------------------------------------------------------------------+
 class CProgressBar : public CElement
   {
-private:
-   // --- Progress bar background and background frame colors
-   color             m_bar_back_color;
-   // --- Progress bar dimensions
-   int               m_bar_x_size;
-   int               m_bar_y_size;
-   // --- Progress bar displacement along two axes
-   int               m_bar_x_gap;
-   int               m_bar_y_gap;
-   // --- Thickness of the progress bar frame
-   int               m_bar_border_width;
-   // ---Indicator color
-   color             m_indicator_color;
-   // --- Percentage label offset
-   int               m_percent_x_gap;
-   int               m_percent_y_gap;
-   // --- Number of decimal places
-   int               m_digits;
-   // ---Number of range steps
-   double            m_steps_total;
-   // --- Current indicator position
-   double            m_current_index;
-   //---
-public:
-                     CProgressBar(void);
-                    ~CProgressBar(void);
-   // --- Methods for creating an element
-   bool              CreateProgressBar(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   //---
-public:
-   // --- Color of (1) background and (2) frame of the progress bar, (3) color of the indicator
-   void              IndicatorBackColor(const color clr) { m_bar_back_color=clr;     }
-   void              IndicatorColor(const color clr)     { m_indicator_color=clr;    }
-   // --- (1) Frame thickness, (2) Y-dimension of indicator area
-   void              BarBorderWidth(const int width)     { m_bar_border_width=width; }
-   void              BarYSize(const int y_size)          { m_bar_y_size=y_size;      }
-   // --- (1) Shift of the progress bar along two axes, (2) Shift of the percentage indicator label
-   void              BarXGap(const int x_gap)            { m_bar_x_gap=x_gap;        }
-   void              BarYGap(const int y_gap)            { m_bar_y_gap=y_gap;        }
-   // --- (1) Text label offset (process percentage), (2) number of decimal places
-   void              PercentXGap(const int x_gap)        { m_percent_x_gap=x_gap;    }
-   void              PercentYGap(const int y_gap)        { m_percent_y_gap=y_gap;    }
-   void              SetDigits(const int digits)         { m_digits=::fabs(digits);  }
-   // --- Updating the indicator using the specified values
-   void              Update(const int index,const int total);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Draws an indicator
-   void              DrawIndicator(void);
-   // --- Draws a progress percentage display
-   void              DrawPercent(void);
-
-   // --- Setting new values ​​for the indicator
-   void              CurrentIndex(const int index);
-   void              StepsTotal(const int total);
-
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
+   private:
+    //Private properties:
+     // --- Progress bar background and background frame colors
+      color             m_bar_back_color;
+     // --- Progress bar dimensions
+      int               m_bar_x_size;
+      int               m_bar_y_size;
+     // --- Progress bar displacement along two axes
+      int               m_bar_x_gap;
+      int               m_bar_y_gap;
+     // --- Thickness of the progress bar frame
+      int               m_bar_border_width;
+     // ---Indicator color
+      color             m_indicator_color;
+     // --- Percentage label offset
+      int               m_percent_x_gap;
+      int               m_percent_y_gap;
+     // --- Number of decimal places
+      int               m_digits;
+     // ---Number of range steps
+      double            m_steps_total;
+     // --- Current indicator position
+      double            m_current_index;
+    //Private methods:   
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+     // --- Draws an indicator
+      void              DrawIndicator(void);
+     // --- Draws a progress percentage display
+      void              DrawPercent(void);
+     // --- Setting new values ​​for the indicator
+      void              CurrentIndex(const int index);
+      void              StepsTotal(const int total);
+     // --- Change the width along the right edge of the window
+      virtual void      ChangeWidthByRightWindowSide(void);     
+   public:
+                        CProgressBar(void);
+                     ~CProgressBar(void);
+    // --- Methods for creating an element
+      bool              CreateProgressBar(const string text,const int x_gap,const int y_gap);      
+    // --- Color of (1) background and (2) frame of the progress bar, (3) color of the indicator
+      void              IndicatorBackColor(const color clr) { m_bar_back_color=clr;     }
+      void              IndicatorColor(const color clr)     { m_indicator_color=clr;    }
+    // --- (1) Frame thickness, (2) Y-dimension of indicator area
+      void              BarBorderWidth(const int width)     { m_bar_border_width=width; }
+      void              BarYSize(const int y_size)          { m_bar_y_size=y_size;      }
+    // --- (1) Shift of the progress bar along two axes, (2) Shift of the percentage indicator label
+      void              BarXGap(const int x_gap)            { m_bar_x_gap=x_gap;        }
+      void              BarYGap(const int y_gap)            { m_bar_y_gap=y_gap;        }
+    // --- (1) Text label offset (process percentage), (2) number of decimal places
+      void              PercentXGap(const int x_gap)        { m_percent_x_gap=x_gap;    }
+      void              PercentYGap(const int y_gap)        { m_percent_y_gap=y_gap;    }
+      void              SetDigits(const int digits)         { m_digits=::fabs(digits);  }
+    // --- Updating the indicator using the specified values
+      void              Update(const int index,const int total);
+    // --- Draws an element
+      virtual void      Draw(void);      
   };
  #ifndef CPROGRESSBAR_MQH_IMPLEMENTATION
  #define CPROGRESSBAR_MQH_IMPLEMENTATION

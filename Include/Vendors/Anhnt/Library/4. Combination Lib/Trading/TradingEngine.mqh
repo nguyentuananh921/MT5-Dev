@@ -9,6 +9,8 @@
   //| Include files                                                    |
   //+------------------------------------------------------------------+
   #include "Collections\AccountsCollection.mqh"
+  #include "Collections\SymbolsCollection.mqh"
+  #include "..\Services\InputData\TradingInpData.mqh"
 
   //+------------------------------------------------------------------+
   //| Event codes                                                      |
@@ -30,6 +32,7 @@
     {
      private:
         CAccountsCollection      m_accounts;
+        CSymbolsCollection       m_symbols;    //For sybols information at tab Trade
         bool                     m_is_event;
         ENUM_ENGINE_EVENT        m_event_code;
 
@@ -43,8 +46,11 @@
 
         bool              IsEvent(void)      const { return m_is_event;   }
         ENUM_ENGINE_EVENT GetEventCode(void) const { return m_event_code; }
+       //For Account info at tab Trade
         CAccount *GetCurrentAccount(void);
         CAccountsCollection *GetAccounts(void);
+       //For Symbols Information at tab Trade
+        CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; };
     };
 #endif // CTRADING_ENGINE_MQH_DECLARATION
 
@@ -68,18 +74,21 @@
   //+------------------------------------------------------------------+
   bool CTradingEngine::OnInitEvent(void)
     {
-     m_accounts.RefreshAndEventsControl();
-     int index = m_accounts.IndexCurrentAccount();
-               if(index == WRONG_VALUE) return false;    
-     CAccount *acc = (CAccount*)m_accounts.GetList().At(index);
-       if(acc == NULL) return false;
-     //Seting control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
-      acc.SetControlBalanceInc(0);
-      acc.SetControlBalanceDec(0);
-      acc.SetControlProfitInc(0);
-      acc.SetControlProfitDec(0);
-      acc.SetControlEquityInc(0);
-      acc.SetControlEquityDec(0);
+      //For Account info at tab Trade, initialize account collection and set control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
+        m_accounts.RefreshAndEventsControl();
+        int index = m_accounts.IndexCurrentAccount();
+                  if(index == WRONG_VALUE) return false;    
+        CAccount *acc = (CAccount*)m_accounts.GetList().At(index);
+          if(acc == NULL) return false;
+        //Seting control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
+          acc.SetControlBalanceInc(0);
+          acc.SetControlBalanceDec(0);
+          acc.SetControlProfitInc(0);
+          acc.SetControlProfitDec(0);
+          acc.SetControlEquityInc(0);
+          acc.SetControlEquityDec(0);
+      //For Symbols Information at tab Trade, initialize symbols collection
+        m_symbols.RefreshAndEventsControl();
      return true;
     }
   //+------------------------------------------------------------------+
@@ -87,15 +96,23 @@
   //+------------------------------------------------------------------+
   void CTradingEngine::OnTickEvent(void)
     {
-     m_is_event   = false;
-     m_event_code = ENGINE_EVENT_NONE;
+      //For Account info at tab Trade, only update dynamic info when there is an event in account, no need to update every tick
+        m_is_event   = false;
+        m_event_code = ENGINE_EVENT_NONE;
 
-     m_accounts.RefreshAndEventsControl();
-     if(m_accounts.IsEvent())
-       {
-        m_is_event   = true;
-        m_event_code = ENGINE_EVENT_ACCOUNT;
-       }
+        m_accounts.RefreshAndEventsControl();
+        if(m_accounts.IsEvent())
+          {
+            m_is_event   = true;
+            m_event_code = ENGINE_EVENT_ACCOUNT;
+          }
+      //For Symbols Information at tab Trade, only update symbols collection when there is an event in symbols, no need to update every tick
+      m_symbols.RefreshAndEventsControl();
+      if(m_symbols.IsEvent())
+        {
+          m_is_event   = true;
+          m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_SYMBOL);
+        }
     }
   CAccount * CTradingEngine::GetCurrentAccount(void)
     {

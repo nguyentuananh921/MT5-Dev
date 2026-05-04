@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                     ListView.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __LISTVIEW_MQH__
 #define __LISTVIEW_MQH__
@@ -12,190 +12,177 @@
 //+------------------------------------------------------------------+
 class CListView : public CElement
   {
-private:
-   // --- Objects for creating a list
-   CRectCanvas       m_listview;
-   CScrollV          m_scrollv;
-   // --- Array of list item properties
-   struct LVItemOptions
-     {
-      int               m_y;     // Y-coordinate of the top edge of the line
-      int               m_y2;    // Y-coordinate of the bottom edge of the line
-      string            m_value; // Item text
-      bool              m_state; // Checkbox state
-     };
-   LVItemOptions     m_items[];
-   // --- Size of the list and its visible part
-   int               m_items_total;
-   // --- Overall size and size of the visible part of the list
-   int               m_list_y_size;
-   int               m_list_visible_y_size;
-   // --- General list offset
-   int               m_y_offset;
-   // --- Y axis point size
-   int               m_item_y_size;
-   // --- (1) Index and (2) text of the selected item
-   int               m_selected_item;
-   string            m_selected_item_text;
-   // --- Index of the previous selected item
-   int               m_prev_selected_item;
-   // --- To determine the focus of a row
-   int               m_item_index_focus;
-   // --- To determine the moment the mouse cursor moves from one line to another
-   int               m_prev_item_index_focus;
-   // --- List mode with checkboxes
-   bool              m_checkbox_mode;
-   // --- To calculate the boundaries of the visible part of the input field
-   int               m_y_limit;
-   int               m_y2_limit;
-   // ---Hover highlight mode
-   bool              m_lights_hover;
-   // --- Timer counter for list rewind
-   int               m_timer_counter;
-   // --- To determine the indexes of the visible part of the list
-   int               m_visible_list_from_index;
-   int               m_visible_list_to_index;
-   //---
-public:
-                     CListView(void);
-                    ~CListView(void);
-   // --- Methods for creating a list
-   bool              CreateListView(const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateList(void);
-   bool              CreateScrollV(void);
-   //---
-public:
-   // --- Returns a pointer to the scroll bar
-   CScrollV         *GetScrollVPointer(void) { return(::GetPointer(m_scrollv)); }
-   // --- (1) Item height, returns (2) the size of the list and (3) the visible part of it
-   void              ItemYSize(const int y_size)                         { m_item_y_size=y_size;         }
-   int               ItemsTotal(void)                              const { return(::ArraySize(m_items)); }
-   int               VisibleItemsTotal(void);
-   // --- (1) Scrollbar state, (2) hover highlighting mode, (3) list mode with checkboxes
-   bool              ScrollState(void)                             const { return(m_scrollv.State());    }
-   void              LightsHover(const bool state)                       { m_lights_hover=state;         }
-   void              CheckBoxMode(const bool state)                      { m_checkbox_mode=state;        }
-   // --- Returns (1) the index and (2) the text of the selected item in the list
-   int               SelectedItemIndex(void)                       const { return(m_selected_item);      }
-   string            SelectedItemText(void)                        const { return(m_selected_item_text); }
-   // --- Set shortcuts for the button in the pressed state (available/locked)
-   void              IconFilePressed(const string file_path);
-   void              IconFilePressedLocked(const string file_path);
-   // --- (1) Set value, (2) get value, (3) get state
-   void              SetValue(const uint item_index,const string value,const bool redraw=false);
-   string            GetValue(const uint item_index);
-   bool              GetState(const uint item_index);
-   // --- Select an item
-   void              SelectItem(const uint item_index,const bool redraw=false);
-   // --- Setting (1) the size of the list and (2) the visible part of it
-   void              ListSize(const int items_total);
-   // --- List reconstruction
-   void              Rebuilding(const int items_total,const bool redraw=false);
-   // --- Adds an item to the list
-   void              AddItem(const int item_index,const string value="",const bool redraw=false);
-   // --- Removes an item from the list
-   void              DeleteItem(const int item_index,const bool redraw=false);
-   // --- Clears the list (removing all items)
-   void              Clear(const bool redraw=false);
-   // --- Scroll the list
-   void              Scrolling(const int pos=WRONG_VALUE);
-   // --- Resizing
-   void              ChangeSize(const uint x_size,const uint y_size);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Timer
-   virtual void      OnEventTimer(void);
-   // ---Move element
-   virtual void      Moving(const bool only_visible=true);
-   // --- Management
-   virtual void      Show(void);
-   virtual void      Hide(void);
-   virtual void      Delete(void);
-   // --- (1) Installation, (2) reset priorities by pressing the left mouse button
-   virtual void      SetZorders(void);
-   virtual void      ResetZorders(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   // --- Item update
-   virtual void      Update(const bool redraw=false);
-   //---
-private:
-   // --- Handling clicks on a list item
-   bool              OnClickList(const string pressed_object);
-   // --- Returns the index of the item clicked on
-   int               PressedItemIndex(void);
-
-   // --- Change the color of list items on hover
-   void              ChangeItemsColor(void);
-   // --- Checking list line focus on hover
-   int               CheckItemFocus(void);
-   // --- List offset relative to scrollbar position
-   void              ShiftData(void);
-   // --- Fast forward list
-   void              FastSwitching(void);
-
-   // --- Calculates list size
-   void              CalculateListYSize(void);
-   // --- Change the basic dimensions of an element
-   void              ChangeMainSize(const int x_size,const int y_size);
-   // --- Resize list
-   void              ChangeListSize(void);
-   // --- Resize scrollbars
-   void              ChangeScrollsSize(void);
-
-   // --- Calculation taking into account the latest changes and resizing the list
-   void              RecalculateAndResizeList(const bool redraw=false);
-   // --- Initialize the specified item with default values
-   void              ItemInitialize(const uint item_index);
-   // --- Makes a copy of the specified item (source) to a new location (dest.)
-   void              ItemCopy(const uint item_dest,const uint item_source);
-
-   // --- Calculation of the Y-coordinate of a point
-   int               CalculationItemY(const int item_index=0);
-   // --- Calculation of point width
-   int               CalculationItemsWidth(void);
-   // --- Calculation of input field boundaries along the Y axis
-   void              CalculateYBoundaries(void);
-   // ---Adjusting the vertical scroll bar
-   void              CorrectingVerticalScrollThumb(void);
-   // --- Calculate the Y-position of the scroll bar slider
-   int               CalculateScrollPosY(const bool to_down=false);
-   // --- Calculate the Y-coordinates of the scroll bar at the top/bottom border of the list
-   int               CalculateScrollThumbY(void);
-   int               CalculateScrollThumbY2(void);
-   // --- Determining the indexes of the visible list area
-   void              VisibleListIndexes(void);
-
-   // --- Draws a list
-   virtual void      DrawList(const bool only_visible=false);
-   // --- Draws a frame
-   virtual void      DrawBorder(void);
-   // --- Draws pictures of items
-   virtual void      DrawImages(void);
-   // --- Draws a picture
-   virtual void      DrawImage(void);
-   // --- Draws the text of the items
-   virtual void      DrawText(void);
-
-   // --- Redraws the specified list item
-   void              RedrawItem(const int item_index);
-   // --- Redraws list items according to the specified mode
-   void              RedrawItemsByMode(const bool is_selected_row=false);
-   // --- Returns the current background color of the item
-   uint              ItemColorCurrent(const int item_index,const bool is_item_focus);
-   // --- Returns the text color of the item
-   uint              TextColor(const int item_index);
-
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
-   // --- Change the height along the bottom edge of the window
-   virtual void      ChangeHeightByBottomWindowSide(void);
+   private:
+    //Private properties:
+      // --- Objects for creating a list
+         CRectCanvas       m_listview;
+         CScrollV          m_scrollv;
+      // --- Array of list item properties
+      struct LVItemOptions
+       {
+         int               m_y;     // Y-coordinate of the top edge of the line
+         int               m_y2;    // Y-coordinate of the bottom edge of the line
+         string            m_value; // Item text
+         bool              m_state; // Checkbox state
+       };
+      LVItemOptions     m_items[];
+      // --- Size of the list and its visible part
+         int               m_items_total;
+      // --- Overall size and size of the visible part of the list
+         int               m_list_y_size;
+         int               m_list_visible_y_size;
+      // --- General list offset
+         int               m_y_offset;
+      // --- Y axis point size
+         int               m_item_y_size;
+      // --- (1) Index and (2) text of the selected item
+         int               m_selected_item;
+         string            m_selected_item_text;
+      // --- Index of the previous selected item
+         int               m_prev_selected_item;
+      // --- To determine the focus of a row
+         int               m_item_index_focus;
+      // --- To determine the moment the mouse cursor moves from one line to another
+         int               m_prev_item_index_focus;
+      // --- List mode with checkboxes
+         bool              m_checkbox_mode;
+      // --- To calculate the boundaries of the visible part of the input field
+         int               m_y_limit;
+         int               m_y2_limit;
+      // ---Hover highlight mode
+         bool              m_lights_hover;
+      // --- Timer counter for list rewind
+         int               m_timer_counter;
+      // --- To determine the indexes of the visible part of the list
+         int               m_visible_list_from_index;
+         int               m_visible_list_to_index;
+    //Private methods:      
+      void              InitializeProperties(const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateList(void);
+      bool              CreateScrollV(void); 
+     // --- Handling clicks on a list item
+      bool              OnClickList(const string pressed_object);
+     // --- Returns the index of the item clicked on
+      int               PressedItemIndex(void);
+     // --- Change the color of list items on hover
+      void              ChangeItemsColor(void);
+     // --- Checking list line focus on hover
+      int               CheckItemFocus(void);
+     // --- List offset relative to scrollbar position
+      void              ShiftData(void);
+     // --- Fast forward list
+      void              FastSwitching(void);
+     // --- Calculates list size
+      void              CalculateListYSize(void);
+     // --- Change the basic dimensions of an element
+      void              ChangeMainSize(const int x_size,const int y_size);
+     // --- Resize list
+      void              ChangeListSize(void);
+     // --- Resize scrollbars
+      void              ChangeScrollsSize(void);
+     // --- Calculation taking into account the latest changes and resizing the list
+      void              RecalculateAndResizeList(const bool redraw=false);
+     // --- Initialize the specified item with default values
+      void              ItemInitialize(const uint item_index);
+     // --- Makes a copy of the specified item (source) to a new location (dest.)
+      void              ItemCopy(const uint item_dest,const uint item_source);
+     // --- Calculation of the Y-coordinate of a point
+      int               CalculationItemY(const int item_index=0);
+     // --- Calculation of point width
+      int               CalculationItemsWidth(void);
+     // --- Calculation of input field boundaries along the Y axis
+      void              CalculateYBoundaries(void);
+     // ---Adjusting the vertical scroll bar
+      void              CorrectingVerticalScrollThumb(void);
+     // --- Calculate the Y-position of the scroll bar slider
+      int               CalculateScrollPosY(const bool to_down=false);
+     // --- Calculate the Y-coordinates of the scroll bar at the top/bottom border of the list
+      int               CalculateScrollThumbY(void);
+      int               CalculateScrollThumbY2(void);
+     // --- Determining the indexes of the visible list area
+      void              VisibleListIndexes(void);
+     // --- Draws a list
+      virtual void      DrawList(const bool only_visible=false);
+     // --- Draws a frame
+      virtual void      DrawBorder(void);
+     // --- Draws pictures of items
+      virtual void      DrawImages(void);
+     // --- Draws a picture
+      virtual void      DrawImage(void);
+     // --- Draws the text of the items
+      virtual void      DrawText(void);
+     // --- Redraws the specified list item
+      void              RedrawItem(const int item_index);
+     // --- Redraws list items according to the specified mode
+      void              RedrawItemsByMode(const bool is_selected_row=false);
+     // --- Returns the current background color of the item
+      uint              ItemColorCurrent(const int item_index,const bool is_item_focus);
+     // --- Returns the text color of the item
+      uint              TextColor(const int item_index);
+     // --- Change the width along the right edge of the window
+      virtual void      ChangeWidthByRightWindowSide(void);
+     // --- Change the height along the bottom edge of the window
+      virtual void      ChangeHeightByBottomWindowSide(void);
+   public:
+                        CListView(void);
+                        ~CListView(void);
+    // --- Methods for creating a list
+      bool              CreateListView(const int x_gap,const int y_gap);      
+    // --- Returns a pointer to the scroll bar
+      CScrollV         *GetScrollVPointer(void) { return(::GetPointer(m_scrollv)); }
+    // --- (1) Item height, returns (2) the size of the list and (3) the visible part of it
+      void              ItemYSize(const int y_size)                         { m_item_y_size=y_size;         }
+      int               ItemsTotal(void)                              const { return(::ArraySize(m_items)); }
+      int               VisibleItemsTotal(void);
+    // --- (1) Scrollbar state, (2) hover highlighting mode, (3) list mode with checkboxes
+      bool              ScrollState(void)                             const { return(m_scrollv.State());    }
+      void              LightsHover(const bool state)                       { m_lights_hover=state;         }
+      void              CheckBoxMode(const bool state)                      { m_checkbox_mode=state;        }
+    // --- Returns (1) the index and (2) the text of the selected item in the list
+      int               SelectedItemIndex(void)                       const { return(m_selected_item);      }
+      string            SelectedItemText(void)                        const { return(m_selected_item_text); }
+    // --- Set shortcuts for the button in the pressed state (available/locked)
+      void              IconFilePressed(const string file_path);
+      void              IconFilePressedLocked(const string file_path);
+    // --- (1) Set value, (2) get value, (3) get state
+      void              SetValue(const uint item_index,const string value,const bool redraw=false);
+      string            GetValue(const uint item_index);
+      bool              GetState(const uint item_index);
+    // --- Select an item
+      void              SelectItem(const uint item_index,const bool redraw=false);
+    // --- Setting (1) the size of the list and (2) the visible part of it
+      void              ListSize(const int items_total);
+    // --- List reconstruction
+      void              Rebuilding(const int items_total,const bool redraw=false);
+    // --- Adds an item to the list
+      void              AddItem(const int item_index,const string value="",const bool redraw=false);
+    // --- Removes an item from the list
+      void              DeleteItem(const int item_index,const bool redraw=false);
+    // --- Clears the list (removing all items)
+      void              Clear(const bool redraw=false);
+    // --- Scroll the list
+      void              Scrolling(const int pos=WRONG_VALUE);
+    // --- Resizing
+      void              ChangeSize(const uint x_size,const uint y_size);      
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // --- Timer
+      virtual void      OnEventTimer(void);
+    // ---Move element
+      virtual void      Moving(const bool only_visible=true);
+    // --- Management
+      virtual void      Show(void);
+      virtual void      Hide(void);
+      virtual void      Delete(void);
+    // --- (1) Installation, (2) reset priorities by pressing the left mouse button
+      virtual void      SetZorders(void);
+      virtual void      ResetZorders(void);
+    // --- Draws an element
+      virtual void      Draw(void);
+    // --- Item update
+      virtual void      Update(const bool redraw=false);
+      
   };
  #ifndef CLISTVIEW_MQH_IMPLEMENTATION
  #define CLISTVIEW_MQH_IMPLEMENTATION

@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                     TextEdit.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2829            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __TEXTEDIT_MQH__
 #define __TEXTEDIT_MQH__
@@ -13,101 +14,92 @@ class CCalendar;
 //+------------------------------------------------------------------+
 class CTextEdit : public CElement
   {
-private:
-   // --- Objects for creating an input field
-   CTextBox          m_edit;
-   CButton           m_button_inc;
-   CButton           m_button_dec;
-   // --- Element mode with checkbox
-   bool              m_checkbox_mode;
-   // --- Numeric input field mode with buttons
-   bool              m_spin_edit_mode;
-   // --- Current value in the input field
-   string            m_edit_value;
-   // --- Reset mode (empty line)
-   bool              m_reset_mode;
-   // ---Min/max value
-   double            m_min_value;
-   double            m_max_value;
-   // --- Step to change the value in the input field
-   double            m_step_value;
-   // --- Timer counter for list rewind
-   int               m_timer_counter;
-   // --- Number of decimal places
-   int               m_digits;
-   //---
-public:
-                     CTextEdit(void);
-                    ~CTextEdit(void);
-   // --- Methods for creating a text input field
-   bool              CreateTextEdit(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateEdit(void);
-   bool              CreateSpinButton(CButton &button_obj,const int index);
-   //---
-public:
-   // --- Returns pointers to constituent elements
-   CTextBox         *GetTextBoxPointer(void)                 { return(::GetPointer(m_edit));       }
-   CButton          *GetIncButtonPointer(void)               { return(::GetPointer(m_button_inc)); }
-   CButton          *GetDecButtonPointer(void)               { return(::GetPointer(m_button_dec)); }
-   // --- Reset mode when clicking on the text label
-   bool              ResetMode(void)                   const { return(m_reset_mode);               }
-   void              ResetMode(const bool mode)              { m_reset_mode=mode;                  }
-   // --- (1) Checkbox and (2) numeric input field modes
-   void              CheckBoxMode(const bool state)          { m_checkbox_mode=state;              }
-   bool              SpinEditMode(void)                const { return(m_spin_edit_mode);           }
-   void              SpinEditMode(const bool state)          { m_spin_edit_mode=state;             }
-   // --- Minimum value
-   double            MinValue(void)                    const { return(m_min_value);                }
-   void              MinValue(const double value)            { m_min_value=value;                  }
-   // ---Maximum value
-   double            MaxValue(void)                    const { return(m_max_value);                }
-   void              MaxValue(const double value)            { m_max_value=value;                  }
-   // --- (1) Value step, (2) setting the number of decimal places
-   double            StepValue(void)                   const { return(m_step_value);               }
-   void              StepValue(const double value)           { m_step_value=(value<=0)? 1 : value; }
-   int               GetDigits(void)                   const { return(m_digits);                   }
-   void              SetDigits(const int digits)             { m_digits=::fabs(digits);            }
-   // --- Element state (pressed/released)
-   bool              IsPressed(void) const { return(m_is_pressed); }
-   void              IsPressed(const bool state);
-   // --- Return and set the value of an input field
-   string            GetValue(void) { return(m_edit.GetValue(0)); }
-   void              SetValue(const string value,const bool is_size_adjustment=true);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Timer
-   virtual void      OnEventTimer(void);
-   // --- Lock
-   virtual void      IsLocked(const bool state);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Handling clicks on an element
-   bool              OnClickElement(const string clicked_object);
-   // --- Processing the end of value entry
-   bool              OnEndEdit(const uint id);
-   // --- Handling input field button clicks
-   bool              OnClickButtonInc(const string pressed_object,const uint id,const uint index);
-   bool              OnClickButtonDec(const string pressed_object,const uint id,const uint index);
-   // --- Fast forward values ​​in the input field
-   void              FastSwitching(void);
-
-   // --- Value adjustment
-   string            AdjustmentValue(const double value);
-   // --- Limit highlighting
-   void              HighlightLimit(void);
-
-   // --- Draws a picture
-   virtual void      DrawImage(void);
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
+   private:
+    //Private properties:  
+     // --- Objects for creating an input field
+      CTextBox          m_edit;
+      CButton           m_button_inc;
+      CButton           m_button_dec;
+     // --- Element mode with checkbox
+      bool              m_checkbox_mode;
+     // --- Numeric input field mode with buttons
+      bool              m_spin_edit_mode;
+     // --- Current value in the input field
+      string            m_edit_value;
+     // --- Reset mode (empty line)
+      bool              m_reset_mode;
+     // ---Min/max value
+      double            m_min_value;
+      double            m_max_value;
+     // --- Step to change the value in the input field
+      double            m_step_value;
+     // --- Timer counter for list rewind
+      int               m_timer_counter;
+     // --- Number of decimal places
+      int               m_digits;
+    //Private methods:    
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateEdit(void);
+      bool              CreateSpinButton(CButton &button_obj,const int index);   
+     // --- Handling clicks on an element
+      bool              OnClickElement(const string clicked_object);
+     // --- Processing the end of value entry
+      bool              OnEndEdit(const uint id);
+     // --- Handling input field button clicks
+      bool              OnClickButtonInc(const string pressed_object,const uint id,const uint index);
+      bool              OnClickButtonDec(const string pressed_object,const uint id,const uint index);
+     // --- Fast forward values ​​in the input field
+      void              FastSwitching(void);
+     // --- Value adjustment
+      string            AdjustmentValue(const double value);
+     // --- Limit highlighting
+      void              HighlightLimit(void);
+     // --- Draws a picture
+      virtual void      DrawImage(void);
+     // --- Change the width along the right edge of the window
+      virtual void      ChangeWidthByRightWindowSide(void);      
+   public:
+                        CTextEdit(void);
+                     ~CTextEdit(void);
+     // --- Methods for creating a text input field
+      bool              CreateTextEdit(const string text,const int x_gap,const int y_gap);      
+     // --- Returns pointers to constituent elements
+      CTextBox         *GetTextBoxPointer(void)                 { return(::GetPointer(m_edit));       }
+      CButton          *GetIncButtonPointer(void)               { return(::GetPointer(m_button_inc)); }
+      CButton          *GetDecButtonPointer(void)               { return(::GetPointer(m_button_dec)); }
+     // --- Reset mode when clicking on the text label
+      bool              ResetMode(void)                   const { return(m_reset_mode);               }
+      void              ResetMode(const bool mode)              { m_reset_mode=mode;                  }
+     // --- (1) Checkbox and (2) numeric input field modes
+      void              CheckBoxMode(const bool state)          { m_checkbox_mode=state;              }
+      bool              SpinEditMode(void)                const { return(m_spin_edit_mode);           }
+      void              SpinEditMode(const bool state)          { m_spin_edit_mode=state;             }
+     // --- Minimum value
+      double            MinValue(void)                    const { return(m_min_value);                }
+      void              MinValue(const double value)            { m_min_value=value;                  }
+     // ---Maximum value
+      double            MaxValue(void)                    const { return(m_max_value);                }
+      void              MaxValue(const double value)            { m_max_value=value;                  }
+     // --- (1) Value step, (2) setting the number of decimal places
+      double            StepValue(void)                   const { return(m_step_value);               }
+      void              StepValue(const double value)           { m_step_value=(value<=0)? 1 : value; }
+      int               GetDigits(void)                   const { return(m_digits);                   }
+      void              SetDigits(const int digits)             { m_digits=::fabs(digits);            }
+     // --- Element state (pressed/released)
+      bool              IsPressed(void) const { return(m_is_pressed); }
+      void              IsPressed(const bool state);
+     // --- Return and set the value of an input field
+      string            GetValue(void) { return(m_edit.GetValue(0)); }
+      void              SetValue(const string value,const bool is_size_adjustment=true);      
+     // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+     // --- Timer
+      virtual void      OnEventTimer(void);
+     // --- Lock
+      virtual void      IsLocked(const bool state);
+     // --- Draws an element
+      virtual void      Draw(void);      
   };
  #ifndef CTEXTEDIT_MQH_IMPLEMENTATION
  #define CTEXTEDIT_MQH_IMPLEMENTATION

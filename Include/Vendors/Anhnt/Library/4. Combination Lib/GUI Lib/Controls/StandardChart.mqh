@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                StandardChart.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __STANDARDCHART_MQH__
 #define __STANDARDCHART_MQH__
@@ -13,79 +13,69 @@
 //+------------------------------------------------------------------+
 class CStandardChart : public CElement
   {
-private:
-   // --- Objects for creating an element
-   CSubChart         m_sub_chart[];
-   CPointer          m_x_scroll;
-   // --- Chart properties:
-   long              m_sub_chart_id[];
-   string            m_sub_chart_symbol[];
-   ENUM_TIMEFRAMES   m_sub_chart_tf[];
-   // ---Horizontal scroll mode
-   bool              m_x_scroll_mode;
-   // --- Variables associated with horizontal scrolling of the chart
-   int               m_prev_x;
-   int               m_new_x_point;
-   int               m_prev_new_x_point;
-   // --- Mode for changing the height of the subwindow
-   bool              m_drag_border_window_mode;
-   //---
-public:
-                     CStandardChart(void);
-                    ~CStandardChart(void);
-   // ---Methods for creating a standard chart
-   bool              CreateStandardChart(const int x_gap,const int y_gap);
-   //---
-private:
-   bool              CreateSubCharts(void);
-   bool              CreateXScrollPointer(void);
-   //---
-public:
-   // --- (1) Returns a pointer to the mouse cursor, (2) returns the size of the graph array
-   CPointer         *GetMousePointer(void)                        { return(::GetPointer(m_x_scroll)); }
-   int               SubChartsTotal(void)                   const { return(::ArraySize(m_sub_chart)); }
-   // --- Returns a pointer to a graph object at the specified index
-   CSubChart        *GetSubChartPointer(const uint index);
-   // ---Horizontal scroll mode
-   void              XScrollMode(const bool mode) { m_x_scroll_mode=mode; }
-   // --- Adds a graph with the specified properties before creation
-   void              AddSubChart(const string symbol,const ENUM_TIMEFRAMES tf);
-   // --- Go to the specified date
-   void              SubChartNavigate(const datetime date);
-   // --- Reset graphs
-   void              ResetCharts(void);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // ---Move element
-   virtual void      Moving(const bool only_visible=true);
-   // --- Management
-   virtual void      Show(void);
-   virtual void      Hide(void);
-   virtual void      Delete(void);
-   // --- (1) Installation, (2) reset priorities by pressing the left mouse button
-   virtual void      SetZorders(void);
-   virtual void      ResetZorders(void);
-   //---
-private:
-   // --- Processing clicks on the chart
-   bool              OnClickSubChart(const string clicked_object);
-
-   // --- Character check
-   bool              CheckSymbol(const string symbol);
-   // ---Horizontal scrolling
-   void              HorizontalScroll(void);
-   // --- Resetting horizontal scroll variables
-   void              ZeroHorizontalScrollVariables(void);
-
-   // --- Checking the mode of resizing the chart subwindow
-   bool              CheckDragBorderWindowMode(void);
-
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
-   // --- Change the height along the bottom edge of the window
-   virtual void      ChangeHeightByBottomWindowSide(void);
+   private:
+    //Private properties:
+     // --- Objects for creating an element
+      CSubChart         m_sub_chart[];
+      CPointer          m_x_scroll;
+     // --- Chart properties:
+      long              m_sub_chart_id[];
+      string            m_sub_chart_symbol[];
+      ENUM_TIMEFRAMES   m_sub_chart_tf[];
+     // ---Horizontal scroll mode
+      bool              m_x_scroll_mode;
+     // --- Variables associated with horizontal scrolling of the chart
+      int               m_prev_x;
+      int               m_new_x_point;
+      int               m_prev_new_x_point;
+     // --- Mode for changing the height of the subwindow
+      bool              m_drag_border_window_mode;
+    // --- Private methods
+         bool              CreateSubCharts(void);
+         bool              CreateXScrollPointer(void);     
+      // --- Processing clicks on the chart
+         bool              OnClickSubChart(const string clicked_object);
+      // --- Character check
+         bool              CheckSymbol(const string symbol);
+      // ---Horizontal scrolling
+         void              HorizontalScroll(void);
+      // --- Resetting horizontal scroll variables
+         void              ZeroHorizontalScrollVariables(void);
+      // --- Checking the mode of resizing the chart subwindow
+         bool              CheckDragBorderWindowMode(void);
+      // --- Change the width along the right edge of the window
+         virtual void      ChangeWidthByRightWindowSide(void);
+      // --- Change the height along the bottom edge of the window
+         virtual void      ChangeHeightByBottomWindowSide(void); 
+   public:
+                        CStandardChart(void);
+                     ~CStandardChart(void);
+    // ---Methods for creating a standard chart
+      bool              CreateStandardChart(const int x_gap,const int y_gap);      
+    // --- (1) Returns a pointer to the mouse cursor, (2) returns the size of the graph array
+      CPointer         *GetMousePointer(void)                        { return(::GetPointer(m_x_scroll)); }
+      int               SubChartsTotal(void)                   const { return(::ArraySize(m_sub_chart)); }
+    // --- Returns a pointer to a graph object at the specified index
+      CSubChart        *GetSubChartPointer(const uint index);
+    // ---Horizontal scroll mode
+      void              XScrollMode(const bool mode) { m_x_scroll_mode=mode; }
+    // --- Adds a graph with the specified properties before creation
+      void              AddSubChart(const string symbol,const ENUM_TIMEFRAMES tf);
+    // --- Go to the specified date
+      void              SubChartNavigate(const datetime date);
+    // --- Reset graphs
+      void              ResetCharts(void);
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // ---Move element
+      virtual void      Moving(const bool only_visible=true);
+    // --- Management
+      virtual void      Show(void);
+      virtual void      Hide(void);
+      virtual void      Delete(void);
+    // --- (1) Installation, (2) reset priorities by pressing the left mouse button
+      virtual void      SetZorders(void);
+      virtual void      ResetZorders(void);     
   };
  #ifndef CSTANDARDCHART_MQH_IMPLEMENTATION
  #define CSTANDARDCHART_MQH_IMPLEMENTATION

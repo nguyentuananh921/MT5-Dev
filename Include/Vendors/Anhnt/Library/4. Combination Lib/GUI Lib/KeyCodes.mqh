@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                     KeyCodes.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|Lib Link https://www.mql5.com/en/code/19703                       |
+//| Introduction at https://www.mql5.com/en/articles/3004            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 // | ASCII character and control key codes |

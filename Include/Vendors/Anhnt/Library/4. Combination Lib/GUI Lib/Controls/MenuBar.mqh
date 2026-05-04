@@ -12,29 +12,35 @@
  #include "MenuItem.mqh"
  #include "ContextMenu.mqh"
  class CMenuBar : public CElement
-  {
-   private:
-    // --- Objects for creating a menu item
-      CMenuItem         m_items[];
-    // --- Array of pointers to context menus
-      CContextMenu     *m_contextmenus[];
-    // --- Main menu status
-      bool              m_menubar_state;
-    // --- Index of the previous activated item
-      int               m_prev_active_item_index;
-    //---
+  {    
+    private:
+    //Private properties:
+      // --- Objects for creating a menu item
+        CMenuItem         m_items[];
+      // --- Array of pointers to context menus
+        CContextMenu     *m_contextmenus[];
+      // --- Main menu status
+        bool              m_menubar_state;
+      // --- Index of the previous activated item
+        int               m_prev_active_item_index;
+    //Private methods:    
+        void              InitializeProperties(const int x_gap,const int y_gap);
+        bool              CreateCanvas(void);
+        bool              CreateItems(void); 
+      // --- Handling clicks on a menu item
+        bool              OnClickMenuItem(const int id,const int index);
+      // --- Returns the active main menu item
+        int               ActiveItemIndex(void);
+      // --- Toggles the context menus of the main menu by hovering the cursor
+        void              SwitchContextMenuByFocus(void);
+
+      // --- Change the width along the right edge of the window
+        virtual void      ChangeWidthByRightWindowSide(void);  
    public:
                      CMenuBar(void);
                      ~CMenuBar(void);
     // --- Methods for creating an element
-      bool              CreateMenuBar(const int x_gap,const int y_gap);
-    //---
-   private:
-      void              InitializeProperties(const int x_gap,const int y_gap);
-      bool              CreateCanvas(void);
-      bool              CreateItems(void);
-      //---
-   public:
+      bool              CreateMenuBar(const int x_gap,const int y_gap); 
     // --- (1) Get the pointer to the specified menu item, (2) get the pointer to the specified context menu
       CMenuItem        *GetItemPointer(const uint index);
       CContextMenu     *GetContextMenuPointer(const uint index);
@@ -46,26 +52,13 @@
     // --- Adds a menu item with the specified properties before creating the main menu
       void              AddItem(const int width,const string text);
     // --- Attaches the passed context menu to the specified main menu item
-      void              AddContextMenuPointer(const uint index,CContextMenu &object);
-    //---
-   public:
+      void              AddContextMenuPointer(const uint index,CContextMenu &object);    
     // ---Graph event handler
       virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
     // ---Delete
       virtual void      Delete(void);
     // --- Draws an element
-      virtual void      Draw(void);
-    //---
-      private:
-    // --- Handling clicks on a menu item
-      bool              OnClickMenuItem(const int id,const int index);
-    // --- Returns the active main menu item
-      int               ActiveItemIndex(void);
-    // --- Toggles the context menus of the main menu by hovering the cursor
-      void              SwitchContextMenuByFocus(void);
-
-    // --- Change the width along the right edge of the window
-      virtual void      ChangeWidthByRightWindowSide(void);
+      virtual void      Draw(void); 
   };
  #ifndef CMENUBAR_MQH_IMPLEMENTATION
  #define CMENUBAR_MQH_IMPLEMENTATION

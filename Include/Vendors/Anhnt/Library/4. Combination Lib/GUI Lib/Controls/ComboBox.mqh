@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                     ComboBox.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __COMBOBOX_MQH__
 #define __COMBOBOX_MQH__
@@ -12,67 +12,60 @@
 //+------------------------------------------------------------------+
 class CComboBox : public CElement
   {
-private:
-   // --- Instances to create an element
-   CButton           m_button;
-   CListView         m_listview;
-   // --- Element mode with checkbox
-   bool              m_checkbox_mode;
-   //---
-public:
-                     CComboBox(void);
-                    ~CComboBox(void);
-   // ---Methods for creating a combo box
-   bool              CreateComboBox(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateButton(void);
-   bool              CreateList(void);
-   //---
-public:
-   // --- Returns pointers to (1) a button, (2) a list, and (3) a scrollbar
-   CButton          *GetButtonPointer(void)                 { return(::GetPointer(m_button));         }
-   CListView        *GetListViewPointer(void)               { return(::GetPointer(m_listview));       }
-   CScrollV         *GetScrollVPointer(void)                { return(m_listview.GetScrollVPointer()); }
-   // --- (1) List size (number of items) (2) setting the element mode with a checkbox
-   void              ItemsTotal(const int items_total)      { m_listview.ListSize(items_total);       }
-   void              CheckBoxMode(const bool state)         { m_checkbox_mode=state;                  }
-   // --- Element state (pressed/released)
-   bool              IsPressed(void) const { return(m_is_pressed); }
-   void              IsPressed(const bool state);
-   // --- Stores the passed value in a list at the specified index
-   void              SetValue(const int item_index,const string item_text);
-   // --- Returns the selected value in the list
-   string            GetValue(void);
-   // --- Select an item by the specified index
-   void              SelectItem(const int item_index);
-   // --- Changes the current state of the combo box to the opposite
-   void              ChangeComboBoxListState(void);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Lock
-   virtual void      IsLocked(const bool state);
-   // --- Visibility control
-   virtual void      Hide(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Handling clicks on an element
-   bool              OnClickElement(const string pressed_object);
-   // --- Handling a button click
-   bool              OnClickButton(const string pressed_object,const int id,const int index);
-   // --- Handling clicks on a list item
-   bool              OnClickListItem(const int id);
+   private:
+     //Private properties:
+      // --- Instances to create an element
+         CButton           m_button;
+         CListView         m_listview;
+      // --- Element mode with checkbox
+         bool              m_checkbox_mode;
+     // --- Private methods:
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateButton(void);
+      bool              CreateList(void);
+      // --- Handling clicks on an element
+      bool              OnClickElement(const string pressed_object);
+      // --- Handling a button click
+      bool              OnClickButton(const string pressed_object,const int id,const int index);
+      // --- Handling clicks on a list item
+      bool              OnClickListItem(const int id);
 
-   // --- Checking the left mouse button pressed above the combo box button
-   void              CheckPressedOverButton(void);
-   // --- Draws a picture
-   virtual void      DrawImage(void);
+      // --- Checking the left mouse button pressed above the combo box button
+      void              CheckPressedOverButton(void);
+      // --- Draws a picture
+      virtual void      DrawImage(void);     
+   public:
+                        CComboBox(void);
+                        ~CComboBox(void);
+    // ---Methods for creating a combo box
+      bool              CreateComboBox(const string text,const int x_gap,const int y_gap);
+    // --- Returns pointers to (1) a button, (2) a list, and (3) a scrollbar
+      CButton          *GetButtonPointer(void)                 { return(::GetPointer(m_button));         }
+      CListView        *GetListViewPointer(void)               { return(::GetPointer(m_listview));       }
+      CScrollV         *GetScrollVPointer(void)                { return(m_listview.GetScrollVPointer()); }
+    // --- (1) List size (number of items) (2) setting the element mode with a checkbox
+      void              ItemsTotal(const int items_total)      { m_listview.ListSize(items_total);       }
+      void              CheckBoxMode(const bool state)         { m_checkbox_mode=state;                  }
+    // --- Element state (pressed/released)
+      bool              IsPressed(void) const { return(m_is_pressed); }
+      void              IsPressed(const bool state);
+    // --- Stores the passed value in a list at the specified index
+      void              SetValue(const int item_index,const string item_text);
+    // --- Returns the selected value in the list
+      string            GetValue(void);
+    // --- Select an item by the specified index
+      void              SelectItem(const int item_index);
+    // --- Changes the current state of the combo box to the opposite
+      void              ChangeComboBoxListState(void);      
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // --- Lock
+      virtual void      IsLocked(const bool state);
+    // --- Visibility control
+      virtual void      Hide(void);
+    // --- Draws an element
+      virtual void      Draw(void);      
   };
  #ifndef CCOMBOBOX_MQH_IMPLEMENTATION
  #define CCOMBOBOX_MQH_IMPLEMENTATION

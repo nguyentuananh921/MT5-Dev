@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                     TimeEdit.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2897            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __TIMEEDIT_MQH__
 #define __TIMEEDIT_MQH__
@@ -12,56 +13,49 @@
 //+------------------------------------------------------------------+
 class CTimeEdit : public CElement
   {
-private:
-   // --- Objects for creating an element
-   CTextEdit         m_hours;
-   CTextEdit         m_minutes;
-   // ---Value reset mode
-   bool              m_reset_mode;
-   // --- Element mode with checkbox
-   bool              m_checkbox_mode;
-   //---
-public:
-                     CTimeEdit(void);
-                    ~CTimeEdit(void);
-   // --- Methods for creating an element
-   bool              CreateTimeEdit(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateSpinEdit(CTextEdit &edit_obj,const int index);
-   //---
-public:
-   // --- (1) Returns input field pointers, (2) returns/sets the element's accessibility state
-   CTextEdit        *GetHoursEditPointer(void)        { return(::GetPointer(m_hours));     }
-   CTextEdit        *GetMinutesEditPointer(void)      { return(::GetPointer(m_minutes));   }
-   // --- (1) Reset mode when clicking on a text label, (2) element mode with a checkbox
-   bool              ResetMode(void)                  { return(m_reset_mode);              }
-   void              ResetMode(const bool mode)       { m_reset_mode=mode;                 }
-   void              CheckBoxMode(const bool state)   { m_checkbox_mode=state;             }
-   // --- Returning and setting input field values
-   int               GetHours(void)                   { return((int)m_hours.GetValue());   }
-   int               GetMinutes(void)                 { return((int)m_minutes.GetValue()); }
-   void              SetHours(const uint value)       { m_hours.SetValue((string)value);   }
-   void              SetMinutes(const uint value)     { m_minutes.SetValue((string)value); }
-   // --- Element state (pressed/released)
-   bool              IsPressed(void) const { return(m_is_pressed); }
-   void              IsPressed(const bool state);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Lock
-   virtual void      IsLocked(const bool state);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Handling clicks on an element
-   bool              OnClickElement(const string clicked_object);
-   // --- Draws a picture
-   virtual void      DrawImage(void);
+   private:
+    //Private properties:
+     // --- Objects for creating an element
+      CTextEdit         m_hours;
+      CTextEdit         m_minutes;
+     // ---Value reset mode
+      bool              m_reset_mode;
+     // --- Element mode with checkbox
+      bool              m_checkbox_mode;
+    //Private methods:    
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateSpinEdit(CTextEdit &edit_obj,const int index);
+     // --- Handling clicks on an element
+      bool              OnClickElement(const string clicked_object);
+     // --- Draws a picture
+      virtual void      DrawImage(void);  
+   public:
+                        CTimeEdit(void);
+                     ~CTimeEdit(void);
+    // --- Methods for creating an element
+      bool              CreateTimeEdit(const string text,const int x_gap,const int y_gap);      
+    // --- (1) Returns input field pointers, (2) returns/sets the element's accessibility state
+      CTextEdit        *GetHoursEditPointer(void)        { return(::GetPointer(m_hours));     }
+      CTextEdit        *GetMinutesEditPointer(void)      { return(::GetPointer(m_minutes));   }
+    // --- (1) Reset mode when clicking on a text label, (2) element mode with a checkbox
+      bool              ResetMode(void)                  { return(m_reset_mode);              }
+      void              ResetMode(const bool mode)       { m_reset_mode=mode;                 }
+      void              CheckBoxMode(const bool state)   { m_checkbox_mode=state;             }
+    // --- Returning and setting input field values
+      int               GetHours(void)                   { return((int)m_hours.GetValue());   }
+      int               GetMinutes(void)                 { return((int)m_minutes.GetValue()); }
+      void              SetHours(const uint value)       { m_hours.SetValue((string)value);   }
+      void              SetMinutes(const uint value)     { m_minutes.SetValue((string)value); }
+    // --- Element state (pressed/released)
+      bool              IsPressed(void) const { return(m_is_pressed); }
+      void              IsPressed(const bool state);      
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // --- Lock
+      virtual void      IsLocked(const bool state);
+    // --- Draws an element
+      virtual void      Draw(void);      
   };
  #ifndef CTIMEEDIT_MQH_IMPLEMENTATION
  #define CTIMEEDIT_MQH_IMPLEMENTATION

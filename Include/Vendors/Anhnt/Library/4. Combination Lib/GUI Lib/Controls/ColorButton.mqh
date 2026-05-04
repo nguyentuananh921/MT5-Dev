@@ -1,51 +1,45 @@
 //+------------------------------------------------------------------+
 //|                                                  ColorButton.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2579            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __COLORBUTTON_MQH__
 #define __COLORBUTTON_MQH__
 #include "..\Element.mqh"
 #include "Button.mqh"
 //+------------------------------------------------------------------+
-// | Class for creating a color palette call button |
+//| Class for creating a color palette call button |
 //+------------------------------------------------------------------+
 class CColorButton : public CElement
   {
-private:
-   // --- Instances to create an element
-   CButton           m_button;
-   // --- Selected color
-   color             m_current_color;
-   // --- Resource name for the color marker image on the button
-   string            m_resource_name;
-   //---
-public:
+   private:
+    //Private properties:  
+      // --- Instances to create an element
+      CButton           m_button;
+      // --- Selected color
+      color             m_current_color;
+      // --- Resource name for the color marker image on the button
+      string            m_resource_name;
+    //Private methods:   
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateButton(void);      
+    // --- Draws a picture
+      virtual void      DrawImage(void);      
+   public:
                      CColorButton(void);
-                    ~CColorButton(void);
-   // --- Methods for creating an element
-   bool              CreateColorButton(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateButton(void);
-   //---
-public:
-   // --- Returns pointers to the button
-   CButton          *GetButtonPointer(void)                 { return(::GetPointer(m_button)); }
-   color             CurrentColor(void)               const { return(m_current_color);        }
-   void              CurrentColor(const color clr);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Draws a picture
-   virtual void      DrawImage(void);
+                     ~CColorButton(void);
+     // --- Methods for creating an element
+      bool              CreateColorButton(const string text,const int x_gap,const int y_gap);      
+     // --- Returns pointers to the button
+      CButton          *GetButtonPointer(void)                 { return(::GetPointer(m_button)); }
+      color             CurrentColor(void)               const { return(m_current_color);        }
+      void              CurrentColor(const color clr);      
+     // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+     // --- Draws an element
+      virtual void      Draw(void);  
   };
  #ifndef CCOLORBUTTON_MQH_IMPLEMENTATION
  #define CCOLORBUTTON_MQH_IMPLEMENTATION

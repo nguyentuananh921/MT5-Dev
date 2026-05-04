@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                FileNavigator.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __FILENAVIGATOR_MQH__
 #define __FILENAVIGATOR_MQH__
@@ -12,106 +12,95 @@
 //+------------------------------------------------------------------+
 class CFileNavigator : public CElement
   {
-private:
-   // --- Objects for creating an element
-   CTreeView         m_treeview;
-   // --- Basic data storage arrays
-   int               m_g_list_index[];           // general index
-   int               m_g_prev_node_list_index[]; // general index of the previous node
-   string            m_g_item_text[];            // folder/file name
-   int               m_g_item_index[];           // local index
-   int               m_g_node_level[];           // node level
-   int               m_g_prev_node_item_index[]; // local index of the previous node
-   int               m_g_items_total[];          // total items in the folder
-   int               m_g_folders_total[];        // number of folders in a folder
-   bool              m_g_is_folder[];            // folder sign
-   bool              m_g_item_state[];           // item status (collapsed/opened)
-   // --- Auxiliary arrays for data collection
-   int               m_l_prev_node_list_index[];
-   string            m_l_item_text[];
-   string            m_l_path[];
-   int               m_l_item_index[];
-   int               m_l_item_total[];
-   int               m_l_folders_total[];
-   // --- Tree list area width
-   int               m_treeview_width;
-   // --- Pictures for (1) folders and (2) files
-   uint              m_file_icon;
-   uint              m_folder_icon;
-   // --- Current path relative to the terminal file sandbox
-   string            m_current_path;
-   // --- Current full path relative to the file system including the hard disk volume label
-   string            m_current_full_path;
-   // --- Current directory area
-   int               m_directory_area;
-   // --- File navigator content mode
-   ENUM_FILE_NAVIGATOR_CONTENT m_navigator_content;
-   //---
-public:
-                     CFileNavigator(void);
-                    ~CFileNavigator(void);
-   // --- Methods for creating a file navigator
-   bool              CreateFileNavigator(const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateTreeView(void);
-   //---
-public:
-   // --- (1) Returns a tree list pointer,
-   // (2) navigator mode (Show all/Folders only), (3) navigator content (Shared folder/Local/All)
-   CTreeView        *GetTreeViewPointer(void)                                 { return(::GetPointer(m_treeview));          }
-   void              NavigatorMode(const ENUM_FILE_NAVIGATOR_MODE mode)       { m_treeview.NavigatorMode(mode);            }
-   void              NavigatorContent(const ENUM_FILE_NAVIGATOR_CONTENT mode) { m_navigator_content=mode;                  }
-   // --- (1) width of the tree list, (2) setting the file path for files and folders
-   void              TreeViewWidth(const int x_size)                          { m_treeview_width=x_size;                   }
-   void              FileIcon(const uint resource_index)                      { m_file_icon=resource_index;                }
-   void              FolderIcon(const uint resource_index)                    { m_folder_icon=resource_index;              }
-   // --- Returns (1) the current path and (2) the full path, (3) the selected file
-   string            CurrentPath(void)                                  const { return(m_current_path);                    }
-   string            CurrentFullPath(void)                              const { return(m_current_full_path);               }
-   // --- Returns (1) the directory area and (2) the selected file
-   int               DirectoryArea(void)                                const { return(m_directory_area);                  }
-   string            SelectedFile(void)                                 const { return(m_treeview.SelectedItemFileName()); }
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Management
-   virtual void      Delete(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Handling the event of selecting a new path in the tree list
-   void              OnChangeTreePath(void);
-
-   // --- Fills arrays with parameters of terminal file system elements
-   void              FillArraysData(void);
-   // --- Reads the file system and writes parameters to arrays
-   void              FileSystemScan(const int root_index,int &list_index,int &node_level,int &item_index,int search_area);
-   // --- Resizes auxiliary arrays relative to the current node level
-   void              AuxiliaryArraysResize(const int node_level);
-   // --- Determines whether the folder or file name is passed
-   bool              IsFolder(const string file_name);
-   // --- Returns the number of (1) items and (2) folders in the specified directory
-   int               ItemsTotal(const string search_path,const int mode);
-   int               FoldersTotal(const string search_path,const int mode);
-   // --- Returns the local index of the previous node relative to the passed parameters
-   int               PrevNodeItemIndex(const int root_index,const int node_level);
-
-   // --- Adds an item to arrays
-   void              AddItem(const int list_index,const string item_text,const int node_level,const int prev_node_item_index,
-                             const int item_index,const int items_total,const int folders_total,const bool is_folder);
-   // --- Move to next node
-   void              ToNextNode(const int root_index,int list_index,int &node_level,
-                                int &item_index,long &handle,const string item_text,const int search_area);
-
-   virtual void      DrawText(void);
-
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
+   private:
+    //Private properties:
+      // --- Objects for creating an element
+         CTreeView         m_treeview;
+      // --- Basic data storage arrays
+         int               m_g_list_index[];           // general index
+         int               m_g_prev_node_list_index[]; // general index of the previous node
+         string            m_g_item_text[];            // folder/file name
+         int               m_g_item_index[];           // local index
+         int               m_g_node_level[];           // node level
+         int               m_g_prev_node_item_index[]; // local index of the previous node
+         int               m_g_items_total[];          // total items in the folder
+         int               m_g_folders_total[];        // number of folders in a folder
+         bool              m_g_is_folder[];            // folder sign
+         bool              m_g_item_state[];           // item status (collapsed/opened)
+      // --- Auxiliary arrays for data collection
+         int               m_l_prev_node_list_index[];
+         string            m_l_item_text[];
+         string            m_l_path[];
+         int               m_l_item_index[];
+         int               m_l_item_total[];
+         int               m_l_folders_total[];
+      // --- Tree list area width
+         int               m_treeview_width;
+      // --- Pictures for (1) folders and (2) files
+         uint              m_file_icon;
+         uint              m_folder_icon;
+      // --- Current path relative to the terminal file sandbox
+         string            m_current_path;
+      // --- Current full path relative to the file system including the hard disk volume label
+         string            m_current_full_path;
+      // --- Current directory area
+         int               m_directory_area;
+      // --- File navigator content mode
+         ENUM_FILE_NAVIGATOR_CONTENT m_navigator_content;
+    //Private methods:   
+      void              InitializeProperties(const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateTreeView(void);
+     // --- Handling the event of selecting a new path in the tree list
+      void              OnChangeTreePath(void);
+     // --- Fills arrays with parameters of terminal file system elements
+      void              FillArraysData(void);
+     // --- Reads the file system and writes parameters to arrays
+      void              FileSystemScan(const int root_index,int &list_index,int &node_level,int &item_index,int search_area);
+     // --- Resizes auxiliary arrays relative to the current node level
+      void              AuxiliaryArraysResize(const int node_level);
+     // --- Determines whether the folder or file name is passed
+      bool              IsFolder(const string file_name);
+     // --- Returns the number of (1) items and (2) folders in the specified directory
+      int               ItemsTotal(const string search_path,const int mode);
+      int               FoldersTotal(const string search_path,const int mode);
+     // --- Returns the local index of the previous node relative to the passed parameters
+      int               PrevNodeItemIndex(const int root_index,const int node_level);
+     // --- Adds an item to arrays
+      void              AddItem(const int list_index,const string item_text,const int node_level,const int prev_node_item_index,
+                              const int item_index,const int items_total,const int folders_total,const bool is_folder);
+     // --- Move to next node
+      void              ToNextNode(const int root_index,int list_index,int &node_level,
+                                 int &item_index,long &handle,const string item_text,const int search_area);
+      virtual void      DrawText(void);
+     // --- Change the width along the right edge of the window
+      virtual void      ChangeWidthByRightWindowSide(void);     
+   public:
+                        CFileNavigator(void);
+                        ~CFileNavigator(void);
+    // --- Methods for creating a file navigator
+         bool              CreateFileNavigator(const int x_gap,const int y_gap);      
+    // --- (1) Returns a tree list pointer,
+    // (2) navigator mode (Show all/Folders only), (3) navigator content (Shared folder/Local/All)
+      CTreeView        *GetTreeViewPointer(void)                                 { return(::GetPointer(m_treeview));          }
+      void              NavigatorMode(const ENUM_FILE_NAVIGATOR_MODE mode)       { m_treeview.NavigatorMode(mode);            }
+      void              NavigatorContent(const ENUM_FILE_NAVIGATOR_CONTENT mode) { m_navigator_content=mode;                  }
+    // --- (1) width of the tree list, (2) setting the file path for files and folders
+      void              TreeViewWidth(const int x_size)                          { m_treeview_width=x_size;                   }
+      void              FileIcon(const uint resource_index)                      { m_file_icon=resource_index;                }
+      void              FolderIcon(const uint resource_index)                    { m_folder_icon=resource_index;              }
+    // --- Returns (1) the current path and (2) the full path, (3) the selected file
+      string            CurrentPath(void)                                  const { return(m_current_path);                    }
+      string            CurrentFullPath(void)                              const { return(m_current_full_path);               }
+    // --- Returns (1) the directory area and (2) the selected file
+      int               DirectoryArea(void)                                const { return(m_directory_area);                  }
+      string            SelectedFile(void)                                 const { return(m_treeview.SelectedItemFileName()); }      
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // --- Management
+      virtual void      Delete(void);
+    // --- Draws an element
+      virtual void      Draw(void);   
   };
  #ifndef CFILENAVIGATOR_MQH_IMPLEMENTATION
  #define CFILENAVIGATOR_MQH_IMPLEMENTATION

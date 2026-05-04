@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                         Keys.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//|Lib Link https://www.mql5.com/en/code/19703                       |
+//| Introduction at https://www.mql5.com/en/articles/3004            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __KEYS_MQH__
 #define __KEYS_MQH__
@@ -14,11 +15,11 @@
     public:
                      CKeys(void);
                     ~CKeys(void);
-    // --- Returns the character of the pressed key
+     // --- Returns the character of the pressed key
       string            KeySymbol(const long key_code);
-    // --- Returns the state of the Ctrl key
+     // --- Returns the state of the Ctrl key
       bool              KeyCtrlState(void);
-    // --- Returns the state of the Shift key
+     // --- Returns the state of the Shift key
       bool              KeyShiftState(void);
    };
  #ifndef CKEYS_MQH_IMPLEMENTATION

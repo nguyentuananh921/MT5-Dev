@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                  ColorPicker.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Introduction at https://www.mql5.com/en/articles/2579            |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __COLORPICKER_MQH__
 #define __COLORPICKER_MQH__
@@ -15,126 +16,114 @@
 //+------------------------------------------------------------------+
 class CColorPicker : public CElement
   {
-private:
-   // --- Pointer to the button calling the element to select a color
-   CColorButton     *m_color_button;
-   // --- Instances to create an element
-   CButtonsGroup     m_radio_buttons;
-   CTextEdit         m_spin_edits[9];
-   CButton           m_buttons[2];
-   // --- Coordinates
-   int               m_pallete_x1;
-   int               m_pallete_y1;
-   int               m_pallete_x2;
-   int               m_pallete_y2;
-   // --- Palette sizes
-   double            m_pallete_x_size;
-   double            m_pallete_y_size;
-   // --- Palette frame color
-   color             m_palette_border_color;
-   // --- Colors of (1) current, (2) selected and (3) mouse pointer
-   color             m_current_color;
-   color             m_picked_color;
-   color             m_hover_color;
-   // ---Component values ​​in different color models:
-   //    HSL
-   double            m_hsl_h;
-   double            m_hsl_s;
-   double            m_hsl_l;
-   //--- RGB
-   double            m_rgb_r;
-   double            m_rgb_g;
-   double            m_rgb_b;
-   //--- Lab
-   double            m_lab_l;
-   double            m_lab_a;
-   double            m_lab_b;
-   //--- XYZ
-   double            m_xyz_x;
-   double            m_xyz_y;
-   double            m_xyz_z;
-   // --- Timer counter for list rewind
-   int               m_timer_counter;
-   //---
-public:
-                     CColorPicker(void);
-                    ~CColorPicker(void);
-   // --- Methods for creating an element
-   bool              CreateColorPicker(const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateRadioButtons(void);
-   bool              CreateSpinEdits(void);
-   bool              CreateButtons(void);
-   //---
-public:
-   // --- Returns pointers to form elements
-   CButtonsGroup    *GetRadioButtonsPointer(void) { return(::GetPointer(m_radio_buttons)); }
-   CTextEdit        *GetSpinEditPointer(const uint index);
-   CButton          *GetButtonPointer(const uint index);
-   // --- Saves the pointer to the button that calls the color palette
-   void              ColorButtonPointer(CColorButton &object);
-   // --- Set the color of the user-selected color on the palette
-   void              CurrentColor(const color clr);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Timer
-   virtual void      OnEventTimer(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Getting color under the mouse cursor
-   bool              OnHoverColor(const int x,const int y);
-   // --- Handling clicks on the palette
-   bool              OnClickPalette(const string clicked_object);
-   // --- Handling a click on a radio button
-   bool              OnClickRadioButton(const uint id,const uint index,const string pressed_object);
-   // --- Processing the entry of a new value into the input field
-   bool              OnEndEdit(const uint id,const uint index,const string pressed_object="");
-   // --- Handling clicks on the 'OK' button
-   bool              OnClickButtonOK(const uint id,const uint index,const string pressed_object);
-   // --- Handling clicks on the 'Cancel' button
-   bool              OnClickButtonCancel(const uint id,const uint index,const string pressed_object);
-
-   // --- Draws a palette
-   void              DrawPalette(const int index);
-   // --- Draws a palette using the HSL color model (0: H, 1: S, 2: L)
-   void              DrawHSL(const int index);
-   // --- Draws a palette using the RGB color model (3: R, 4: G, 5: B)
-   void              DrawRGB(const int index);
-   // --- Draws a palette using the LAB color model (6: L, 7: a, 8: b)
-   void              DrawLab(const int index);
-   // --- Draws a palette frame
-   void              DrawPaletteBorder(void);
-   // --- Draws a frame of color markers
-   void              DrawSamplesBorder(void);
-   // --- Draws color markers
-   void              DrawCurrentSample(void);
-   void              DrawPickedSample(void);
-   void              DrawHoverSample(void);
-
-   // --- Calculation and installation of color components
-   void              SetComponents(const int index,const bool fix_selected);
-   // --- Setting current parameters in input fields
-   void              SetControls(const int index,const bool fix_selected);
-
-   // --- Setting color model parameters relative to (1) HSL, (2) RGB, (3) Lab
-   void              SetHSL(void);
-   void              SetRGB(void);
-   void              SetLab(void);
-
-   // --- Adjustment of RGB components
-   void              AdjustmentComponentRGB(void);
-   // ---Adjustment of HSL components
-   void              AdjustmentComponentHSL(void);
-
-   // --- Fast forward values ​​in the input field
-   void              FastSwitching(void);
+   private:
+    //Private properties:
+     // --- Pointer to the button calling the element to select a color
+       CColorButton     *m_color_button;
+     // --- Instances to create an element
+      CButtonsGroup     m_radio_buttons;
+      CTextEdit         m_spin_edits[9];
+      CButton           m_buttons[2];
+     // --- Coordinates
+      int               m_pallete_x1;
+      int               m_pallete_y1;
+      int               m_pallete_x2;
+      int               m_pallete_y2;
+     // --- Palette sizes
+      double            m_pallete_x_size;
+      double            m_pallete_y_size;
+     // --- Palette frame color
+      color             m_palette_border_color;
+     // --- Colors of (1) current, (2) selected and (3) mouse pointer
+      color             m_current_color;
+      color             m_picked_color;
+      color             m_hover_color;
+     // ---Component values ​​in different color models:
+      //    HSL
+         double            m_hsl_h;
+         double            m_hsl_s;
+         double            m_hsl_l;
+      //--- RGB
+         double            m_rgb_r;
+         double            m_rgb_g;
+         double            m_rgb_b;
+      //--- Lab
+         double            m_lab_l;
+         double            m_lab_a;
+         double            m_lab_b;
+      //--- XYZ
+         double            m_xyz_x;
+         double            m_xyz_y;
+         double            m_xyz_z;
+     // --- Timer counter for list rewind
+      int               m_timer_counter;
+    //Private methods:
+      void              InitializeProperties(const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      bool              CreateRadioButtons(void);
+      bool              CreateSpinEdits(void);
+      bool              CreateButtons(void);     
+   public:
+                        CColorPicker(void);
+                     ~CColorPicker(void);
+    // --- Methods for creating an element
+      bool              CreateColorPicker(const int x_gap,const int y_gap);   
+    // --- Returns pointers to form elements
+      CButtonsGroup    *GetRadioButtonsPointer(void) { return(::GetPointer(m_radio_buttons)); }
+      CTextEdit        *GetSpinEditPointer(const uint index);
+      CButton          *GetButtonPointer(const uint index);
+    // --- Saves the pointer to the button that calls the color palette
+      void              ColorButtonPointer(CColorButton &object);
+    // --- Set the color of the user-selected color on the palette
+      void              CurrentColor(const color clr);   
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // --- Timer
+      virtual void      OnEventTimer(void);
+    // --- Draws an element
+      virtual void      Draw(void);
+    // --- Getting color under the mouse cursor
+      bool              OnHoverColor(const int x,const int y);
+    // --- Handling clicks on the palette
+      bool              OnClickPalette(const string clicked_object);
+    // --- Handling a click on a radio button
+      bool              OnClickRadioButton(const uint id,const uint index,const string pressed_object);
+    // --- Processing the entry of a new value into the input field
+      bool              OnEndEdit(const uint id,const uint index,const string pressed_object="");
+    // --- Handling clicks on the 'OK' button
+      bool              OnClickButtonOK(const uint id,const uint index,const string pressed_object);
+    // --- Handling clicks on the 'Cancel' button
+      bool              OnClickButtonCancel(const uint id,const uint index,const string pressed_object);
+    // --- Draws a palette
+      void              DrawPalette(const int index);
+    // --- Draws a palette using the HSL color model (0: H, 1: S, 2: L)
+      void              DrawHSL(const int index);
+    // --- Draws a palette using the RGB color model (3: R, 4: G, 5: B)
+      void              DrawRGB(const int index);
+    // --- Draws a palette using the LAB color model (6: L, 7: a, 8: b)
+      void              DrawLab(const int index);
+    // --- Draws a palette frame
+      void              DrawPaletteBorder(void);
+    // --- Draws a frame of color markers
+      void              DrawSamplesBorder(void);
+    // --- Draws color markers
+      void              DrawCurrentSample(void);
+      void              DrawPickedSample(void);
+      void              DrawHoverSample(void);
+    // --- Calculation and installation of color components
+      void              SetComponents(const int index,const bool fix_selected);
+    // --- Setting current parameters in input fields
+      void              SetControls(const int index,const bool fix_selected);
+    // --- Setting color model parameters relative to (1) HSL, (2) RGB, (3) Lab
+      void              SetHSL(void);
+      void              SetRGB(void);
+      void              SetLab(void);
+    // --- Adjustment of RGB components
+      void              AdjustmentComponentRGB(void);
+    // ---Adjustment of HSL components
+      void              AdjustmentComponentHSL(void);
+    // --- Fast forward values ​​in the input field
+      void              FastSwitching(void);
   };
  #ifndef CCOLORPICKER_MQH_IMPLEMENTATION
  #define CCOLORPICKER_MQH_IMPLEMENTATION

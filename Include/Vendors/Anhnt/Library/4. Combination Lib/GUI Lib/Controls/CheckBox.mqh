@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                     CheckBox.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __CHECKBOX_MQH__
 #define __CHECKBOX_MQH__
@@ -11,32 +11,25 @@
 //+------------------------------------------------------------------+
 class CCheckBox : public CElement
   {
-public:
-                     CCheckBox(void);
-                    ~CCheckBox(void);
-   // --- Methods for creating a checkbox
-   bool              CreateCheckBox(const string text,const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const string text,const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   //---
-public:
-   // --- Button state (pressed/released)
-   bool              IsPressed(void) const { return(m_is_pressed); }
-   void              IsPressed(const bool state);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Draws an element
-   virtual void      Draw(void);
-   //---
-private:
-   // --- Handling clicks on an element
-   bool              OnClickCheckbox(const string pressed_object);
-   // --- Draws a picture
-   virtual void      DrawImage(void);
+   private:
+      void              InitializeProperties(const string text,const int x_gap,const int y_gap);
+      bool              CreateCanvas(void);
+      // --- Handling clicks on an element
+      bool              OnClickCheckbox(const string pressed_object);
+      // --- Draws a picture
+      virtual void      DrawImage(void);
+   public:
+                      CCheckBox(void);
+                     ~CCheckBox(void);
+    // --- Methods for creating a checkbox
+      bool              CreateCheckBox(const string text,const int x_gap,const int y_gap);      
+    // --- Button state (pressed/released)
+      bool              IsPressed(void) const { return(m_is_pressed); }
+      void              IsPressed(const bool state);      
+    // ---Graph event handler
+      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    // --- Draws an element
+      virtual void      Draw(void);      
   };
  #ifndef CCHECKBOX_MQH_IMPLEMENTATION
  #define CCHECKBOX_MQH_IMPLEMENTATION

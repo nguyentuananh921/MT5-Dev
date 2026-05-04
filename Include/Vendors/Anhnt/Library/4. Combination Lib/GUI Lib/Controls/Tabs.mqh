@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                         Tabs.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 #ifndef __TABS_MQH__
 #define __TABS_MQH__
@@ -12,85 +12,76 @@
 //+------------------------------------------------------------------+
 class CTabs : public CElement
   {
-private:
-   // --- Instances to create an element
-   CButtonsGroup     m_tabs;
-   // --- Structure of properties and arrays of elements assigned to each tab
-   struct TElements
-     {
-      CElement         *elements[];
-     };
-   TElements         m_tab[];
-   // --- Positioning tabs
-   ENUM_TABS_POSITION m_position_mode;
-   // --- Y Axis Tabs Size
-   int               m_tab_y_size;
-   // --- Index of the selected tab
-   int               m_selected_tab;
-   //---
-public:
-                     CTabs(void);
-                    ~CTabs(void);
-   // --- Methods for creating tabs
-   bool              CreateTabs(const int x_gap,const int y_gap);
-   //---
-private:
-   void              InitializeProperties(const int x_gap,const int y_gap);
-   bool              CreateCanvas(void);
-   bool              CreateButtons(void);
-   //---
-public:
-   // --- Returns a pointer to a group of buttons
-   CButtonsGroup    *GetButtonsGroupPointer(void) { return(::GetPointer(m_tabs)); }
-   // --- (1) returns the number of tabs,
-   // (2) sets/gets the position of the tabs (top/bottom/left/right), (3) sets the size of the tabs along the Y axis
-   int               TabsTotal(void)                           const { return(m_tabs.ButtonsTotal()); }
-   void              PositionMode(const ENUM_TABS_POSITION mode)     { m_position_mode=mode;          }
-   ENUM_TABS_POSITION PositionMode(void)                       const { return(m_position_mode);       }
-   void              TabsYSize(const int y_size);
-   // --- (1) Saves and (2) returns the index of the selected tab
-   void              SelectedTab(const int index)                    { m_selected_tab=index;          }
-   int               SelectedTab(void)                         const { return(m_selected_tab);        }
-   // --- Sets the text at the specified index
-   void              Text(const uint index,const string text);
-   // --- Highlights the specified tab
-   void              SelectTab(const int index);
-   // --- Adds a tab
-   void              AddTab(const string tab_text="",const int tab_width=50);
-   // --- Adds an element to the tab array
-   void              AddToElementsArray(const int tab_index,CElement &object);
-   // --- Show items in the selected tab only
-   void              ShowTabElements(void);
-   //---
-public:
-   // ---Graph event handler
-   virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   // --- Management
-   virtual void      Show(void);
-   virtual void      Hide(void);
-   virtual void      Delete(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-   // --- Updates the element to reflect the latest changes
-   virtual void      Update(void);
-   //---
-private:
-   // --- Handling clicks on a tab
-   bool              OnClickTab(const int id,const int index);
-   // --- Width of all tabs
-   int               SumWidthTabs(void);
-   // --- Checking the index of the selected tab
-   void              CheckTabIndex();
-
-   // --- Change the width along the right edge of the window
-   virtual void      ChangeWidthByRightWindowSide(void);
-   // --- Change the height along the bottom edge of the window
-   virtual void      ChangeHeightByBottomWindowSide(void);
-
-   // --- Draws the background of the element area
-   void              DrawMainArea(void);
-   // --- Draws a tab label
-   void              DrawPatch();
+   private:
+     //Private properties:
+      // --- Instances to create an element
+         CButtonsGroup     m_tabs;
+      // --- Structure of properties and arrays of elements assigned to each tab
+      struct TElements
+       {
+         CElement         *elements[];
+       };
+      TElements         m_tab[];
+      // --- Positioning tabs
+         ENUM_TABS_POSITION m_position_mode;
+      // --- Y Axis Tabs Size
+         int               m_tab_y_size;
+      // --- Index of the selected tab
+         int               m_selected_tab;
+     //Private methods:private:
+         void              InitializeProperties(const int x_gap,const int y_gap);
+         bool              CreateCanvas(void);
+         bool              CreateButtons(void);         
+       // --- Handling clicks on a tab
+         bool              OnClickTab(const int id,const int index);
+       // --- Width of all tabs
+         int               SumWidthTabs(void);
+       // --- Checking the index of the selected tab
+         void              CheckTabIndex();
+       // --- Change the width along the right edge of the window
+         virtual void      ChangeWidthByRightWindowSide(void);
+       // --- Change the height along the bottom edge of the window
+         virtual void      ChangeHeightByBottomWindowSide(void);
+       // --- Draws the background of the element area
+         void              DrawMainArea(void);
+       // --- Draws a tab label
+         void              DrawPatch();      
+   public:
+                        CTabs(void);
+                        ~CTabs(void);
+      // --- Methods for creating tabs
+         bool              CreateTabs(const int x_gap,const int y_gap);      
+      // --- Returns a pointer to a group of buttons
+         CButtonsGroup    *GetButtonsGroupPointer(void) { return(::GetPointer(m_tabs)); }
+      // --- (1) returns the number of tabs,
+      // (2) sets/gets the position of the tabs (top/bottom/left/right), (3) sets the size of the tabs along the Y axis
+         int               TabsTotal(void)                           const { return(m_tabs.ButtonsTotal()); }
+         void              PositionMode(const ENUM_TABS_POSITION mode)     { m_position_mode=mode;          }
+         ENUM_TABS_POSITION PositionMode(void)                       const { return(m_position_mode);       }
+         void              TabsYSize(const int y_size);
+      // --- (1) Saves and (2) returns the index of the selected tab
+         void              SelectedTab(const int index)                    { m_selected_tab=index;          }
+         int               SelectedTab(void)                         const { return(m_selected_tab);        }
+      // --- Sets the text at the specified index
+         void              Text(const uint index,const string text);
+      // --- Highlights the specified tab
+         void              SelectTab(const int index);
+      // --- Adds a tab
+         void              AddTab(const string tab_text="",const int tab_width=50);
+      // --- Adds an element to the tab array
+         void              AddToElementsArray(const int tab_index,CElement &object);
+      // --- Show items in the selected tab only
+         void              ShowTabElements(void);      
+      // ---Graph event handler
+         virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+      // --- Management
+         virtual void      Show(void);
+         virtual void      Hide(void);
+         virtual void      Delete(void);
+      // --- Draws an element
+         virtual void      Draw(void);
+      // --- Updates the element to reflect the latest changes
+         virtual void      Update(void);      
   };
  #ifndef CTABS_MQH_IMPLEMENTATION
  #define CTABS_MQH_IMPLEMENTATION

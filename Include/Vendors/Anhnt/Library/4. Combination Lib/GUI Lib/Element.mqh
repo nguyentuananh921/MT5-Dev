@@ -14,83 +14,84 @@
  class CElement : public CElementBase 
   {    
     protected:
-     // --- Pointer to form
-        CWindow* m_wnd;
-     // --- Pointer to the main element
-        CElement* m_main;
-     // --- Canvas for drawing element, new in https://www.mql5.com/en/articles/3366
-        CRectCanvas m_canvas;
-     // --- Pointers to connected elements
-        CElement* m_elements[];
-     // ---Image groups
-      struct EImagesGroup 
-       {
-            // --- Image array
-            CImage m_image[];
-            // --- Label padding
-            int m_x_gap;
-            int m_y_gap;
-            // --- The image selected for display in the group
-            int m_selected_image;
-        };
-      EImagesGroup m_images_group[];
-     // --- Label padding
-        int m_icon_x_gap;
-        int m_icon_y_gap;
-     // ---Background color in different states
-        color m_back_color;
-        color m_back_color_hover;
-        color m_back_color_locked;
-        color m_back_color_pressed;
-     // --- Frame color in different states
-        color m_border_color;
-        color m_border_color_hover;
-        color m_border_color_locked;
-        color m_border_color_pressed;
-     // --- Text colors in different states
-        color m_label_color;
-        color m_label_color_hover;
-        color m_label_color_locked;
-        color m_label_color_pressed;
-     // --- Description text
-        string m_label_text;
-     // ---Text Label Indents
-        int m_label_x_gap;
-        int m_label_y_gap;
-     // --- Font
-        string m_font;
-        int m_font_size;
-     // --- Alpha channel value (element transparency), new in https://www.mql5.com/en/articles/3366
-        uchar m_alpha; 
-     // --- Tooltip text
-        string m_tooltip_text;
-     // ---Text alignment mode
-        bool m_is_center_text;
-     // ---Priority on left mouse button click
-        long m_zorder;  
-    protected:
-     // ---Creating a canvas for drawing
+     //Protected properties
+      // --- Pointer to form
+         CWindow* m_wnd;
+      // --- Pointer to the main element
+         CElement* m_main;
+      // --- Canvas for drawing element, new in https://www.mql5.com/en/articles/3366
+         CRectCanvas m_canvas;
+      // --- Pointers to connected elements
+         CElement* m_elements[];
+      // ---Image groups
+         struct EImagesGroup 
+         {
+               // --- Image array
+               CImage m_image[];
+               // --- Label padding
+               int m_x_gap;
+               int m_y_gap;
+               // --- The image selected for display in the group
+               int m_selected_image;
+         };
+         EImagesGroup m_images_group[];
+      // --- Label padding
+         int m_icon_x_gap;
+         int m_icon_y_gap;
+      // ---Background color in different states
+         color m_back_color;
+         color m_back_color_hover;
+         color m_back_color_locked;
+         color m_back_color_pressed;
+      // --- Frame color in different states
+         color m_border_color;
+         color m_border_color_hover;
+         color m_border_color_locked;
+         color m_border_color_pressed;
+      // --- Text colors in different states
+         color m_label_color;
+         color m_label_color_hover;
+         color m_label_color_locked;
+         color m_label_color_pressed;
+      // --- Description text
+         string m_label_text;
+      // ---Text Label Indents
+         int m_label_x_gap;
+         int m_label_y_gap;
+      // --- Font
+         string m_font;
+         int m_font_size;
+      // --- Alpha channel value (element transparency), new in https://www.mql5.com/en/articles/3366
+         uchar m_alpha; 
+      // --- Tooltip text
+         string m_tooltip_text;
+      // ---Text alignment mode
+         bool m_is_center_text;
+      // ---Priority on left mouse button click
+         long m_zorder; 
+     //Protected methods
+      // ---Creating a canvas for drawing
         bool CreateCanvas(const string name, const int x, const int y,
                         const int x_size, const int y_size, ENUM_COLOR_FORMAT clr_format = COLOR_FORMAT_ARGB_NORMALIZE);
-     // --- Method for adding pointers to descendant elements to a common array
+      // --- Method for adding pointers to descendant elements to a common array
         void            AddToArray(CElement& object);
-     // --- Check if image groups are out of range
+      // --- Check if image groups are out of range
         virtual bool    CheckOutOfRange(const uint group_index, const uint image_index);
-     // --- Checking for the presence of a pointer to the main element
+      // --- Checking for the presence of a pointer to the main element
         bool            CheckMainPointer(void);
-     // --- Calculation of absolute coordinates
+      // --- Calculation of absolute coordinates
         int             CalculateX(const int x_gap);
         int             CalculateY(const int y_gap);
-     // --- Calculation of relative coordinates from the extreme point of the form
+      // --- Calculation of relative coordinates from the extreme point of the form
         int             CalculateXGap(const int x);
         int             CalculateYGap(const int y);
-     // --- Draws the background
+      // --- Draws the background
         virtual void    DrawBackground(void);
-     // --- Draws a frame
+      // --- Draws a frame
         virtual void    DrawBorder(void);
-     // --- Draws a picture
+      // --- Draws a picture
         virtual void    DrawImage(void);
-     // --- Draws text
+      // --- Draws text
         virtual void    DrawText(void);
     public:
                    CElement(void);
