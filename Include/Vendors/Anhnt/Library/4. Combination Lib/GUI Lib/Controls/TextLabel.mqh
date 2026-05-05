@@ -62,34 +62,34 @@ public:
    //+------------------------------------------------------------------+
    void CTextLabel::InitializeProperties(const string text,const int x_gap,const int y_gap)
      {
-      m_x          =CElement::CalculateX(x_gap);
-      m_y          =CElement::CalculateY(y_gap);
-      m_x_size     =(m_x_size<1)? 100 : m_x_size;
-      m_y_size     =(m_y_size<1)? 20 : m_y_size;
-      m_label_text =text;
-   // ---Default background color
-      m_back_color=(m_back_color!=clrNONE)? m_back_color : m_main.BackColor();
-   // --- Indentation and color of text label
-      m_label_color =(m_label_color!=clrNONE)? m_label_color : clrBlack;
-      m_label_x_gap =(m_label_x_gap!=WRONG_VALUE)? m_label_x_gap : 0;
-      m_label_y_gap =(m_label_y_gap!=WRONG_VALUE)? m_label_y_gap : 0;
-   // --- Indents from the extreme point
-      CElementBase::XGap(x_gap);
-      CElementBase::YGap(y_gap);
+         m_x          =CElement::CalculateX(x_gap);
+         m_y          =CElement::CalculateY(y_gap);
+         m_x_size     =(m_x_size<1)? 100 : m_x_size;
+         m_y_size     =(m_y_size<1)? 20 : m_y_size;
+         m_label_text =text;
+      // ---Default background color
+         m_back_color=(m_back_color!=clrNONE)? m_back_color : m_main.BackColor();
+      // --- Indentation and color of text label
+         m_label_color =(m_label_color!=clrNONE)? m_label_color : clrBlack;
+         m_label_x_gap =(m_label_x_gap!=WRONG_VALUE)? m_label_x_gap : 0;
+         m_label_y_gap =(m_label_y_gap!=WRONG_VALUE)? m_label_y_gap : 0;
+      // --- Indents from the extreme point
+         CElementBase::XGap(x_gap);
+         CElementBase::YGap(y_gap);
      }
    //+------------------------------------------------------------------+
    // | Creates an object to draw |
    //+------------------------------------------------------------------+
    bool CTextLabel::CreateCanvas(void)
      {
-   // --- Formation of object name
-      string name=CElementBase::ElementName("text_label");
-   // ---Create an object
-      if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
-         return(false);
-   //---
-      ShowTooltip(true);
-      return(true);
+      // --- Formation of object name
+         string name=CElementBase::ElementName("text_label");
+      // ---Create an object
+         if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
+            return(false);
+      //---
+         ShowTooltip(true);
+         return(true);
      }
    //+------------------------------------------------------------------+
    // | Draws an element |
