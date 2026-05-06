@@ -24,7 +24,7 @@
     //| Base class providing the CompareValues method                    |
     //| to all derived Select classes                                    |
     //+------------------------------------------------------------------+
-  class CSelectCommon
+  class CCommonSelect
     {
      protected:
        //--- Method for comparing two values
@@ -40,7 +40,7 @@
     //| Two values comparison method                                     |
     //+------------------------------------------------------------------+
     template<typename T>
-    bool CSelectCommon::CompareValues(T value1, T value2, ENUM_COMPARER_TYPE mode)
+    bool CCommonSelect::CompareValues(T value1, T value2, ENUM_COMPARER_TYPE mode)
       {
         switch(mode)
           {

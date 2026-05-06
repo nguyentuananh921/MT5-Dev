@@ -8,8 +8,8 @@
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+
-  #include "Collections\AccountsCollection.mqh"
-  #include "Collections\SymbolsCollection.mqh"
+  #include "..\Collections\AccountsCollection.mqh"
+  #include "..\Collections\SymbolsCollection.mqh"
   #include "..\Services\InputData\TradingInpData.mqh"
 
   //+------------------------------------------------------------------+
