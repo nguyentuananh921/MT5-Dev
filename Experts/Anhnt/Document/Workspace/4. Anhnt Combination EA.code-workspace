@@ -1,0 +1,55 @@
+{
+	"folders": [
+		{
+			"path": "../../Example/4. Combination EA"
+		},
+		{
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
+		},
+		{
+			"path": "../../../../Logs"
+		},
+		{
+			"path": "../../Example/2. Trailling"
+		},
+		{
+			"path": "../../../../Include/Vendors/Anhnt/Library/2. DoEasy. Service functions Lib"
+		},
+		{
+			"path": "../../../Artyom Trishkin/2. DoEasy. Service functions EA"
+		},
+		{
+			"path": "../../Example/2. DoEasy Graphics"
+		},
+		{
+			"path": "../../../../Include/Vendors/Anhnt/Library/2. DoEasy Graphic/81. 9751 Integrating graphics into library objects Lib"
+		}
+	],
+	"settings": {
+		"clangd.fallbackFlags": [
+			"-xc++",
+			"-std=c++17",
+			"-D__MQL__",
+			"-D__MQL5__",
+			"-includec:/Users/nguye/.antigravity/extensions/ngsoftware.mql-clangd-1.1.42-universal/files/mql_clangd_compat.h",
+			"-fms-extensions",
+			"-fms-compatibility",
+			"-ferror-limit=0",
+			"-Wno-invalid-token-paste",
+			"-Wno-unused-value",
+			"-Wno-unknown-pragmas",
+			"-Wno-writable-strings",
+			"-Xclang",
+			"-Wno-invalid-pp-directive",
+			"-Wno-unknown-directives",
+			"-Wno-language-extension-token",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib/Include"
+		],
+		"files.associations": {
+			"*.mqh": "cpp",
+			"*.mq4": "cpp",
+			"*.mq5": "cpp"
+		}
+	}
+}
