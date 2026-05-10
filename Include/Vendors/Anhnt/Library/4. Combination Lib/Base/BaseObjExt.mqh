@@ -124,10 +124,13 @@
 
 #ifndef CBASEOBJEXT_MQH_IMPLEMENTATION
 #define CBASEOBJEXT_MQH_IMPLEMENTATION
-  CBaseObjExt::CBaseObjExt() : m_hash_sum(0),m_hash_sum_prev(0),
+ //+------------------------------------------------------------------+
+ //| Constructor                                                      |
+ //+------------------------------------------------------------------+
+ CBaseObjExt::CBaseObjExt() : m_hash_sum(0),m_hash_sum_prev(0),
                                 m_is_event(false),m_event_code(WRONG_VALUE),
                                 m_long_prop_total(0),m_double_prop_total(0)
-    {
+   {
     m_type=OBJECT_DE_TYPE_BASE_EXT;
     ::ArrayResize(m_long_prop_event,0,100);
     ::ArrayResize(m_double_prop_event,0,100);
@@ -143,10 +146,13 @@
     );
     m_list_events.Clear();       m_list_events.Sort();
     m_list_events_base.Clear();  m_list_events_base.Sort();
-    }
-
-  void CBaseObjExt::Refresh(void)
-    {
+   }
+ //+------------------------------------------------------------------+
+ //| Update the object data to search changes in them                 |
+ //| Call from descendants: CBaseObj::Refresh()                       |
+ //+------------------------------------------------------------------+
+ void CBaseObjExt::Refresh(void)
+   {
     if(!CheckControlDataArraySize() || !CheckControlDataArraySize(false))
         return;
     m_is_event=false;
@@ -168,10 +174,25 @@
         m_list_events_base.Clear(); m_list_events_base.Sort();
         return;
       }
-    }
-
-  template<typename T> bool CBaseObjExt::FillPropertySettings(const int index,T &array[][CONTROLS_TOTAL],T &array_prev[][CONTROLS_TOTAL],int &event_id)
-    {
+   }
+ //+------------------------------------------------------------------+
+ //| Fill in the object property array                                |
+ //+------------------------------------------------------------------+
+ template<typename T> bool CBaseObjExt::FillPropertySettings(const int index,T &array[][CONTROLS_TOTAL],T &array_prev[][CONTROLS_TOTAL],int &event_id)
+   {
+    //--- Data in the array cells
+    //--- [Property index][0] Controlled property increase value
+    //--- [Property index][1] Controlled property decrease value
+    //--- [Property index][2] Controlled property value level
+    //--- [Property index][3] Property value
+    //--- [Property index][4] Property value change
+    //--- [Property index][5] Flag of a property change exceeding the increase value
+    //--- [Property index][6] Flag of a property change exceeding the decrease value
+    //--- [Property index][7] Flag of a property increase exceeding the control level
+    //--- [Property index][8] Flag of a property decrease being less than the control level
+    //--- [Property index][9] Flag of a property value being equal to the control level
+   
+    //--- Set the shift of the 'double' property index and the event ID
     event_id=index+(typename(T)=="double" ? m_long_prop_total : 0);
     for(int j=5;j<CONTROLS_TOTAL;j++) array[index][j]=false;
     T value=array[index][3]-array_prev[index][3];
@@ -217,7 +238,7 @@
           }
       }
     return true;
-    }
+   }
 
   bool CBaseObjExt::SetControlDataArraySizeLong(const int size)
     {

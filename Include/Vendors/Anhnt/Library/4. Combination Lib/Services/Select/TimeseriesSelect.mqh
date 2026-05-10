@@ -5,9 +5,10 @@
 //+------------------------------------------------------------------+
 #ifndef __TIMESERIES_SELECT_MQH__
 #define __TIMESERIES_SELECT_MQH__
-
 #include "CommonSelect.mqh"
-
+#include "..\..\Timeseries\Bars\Bar.mqh"
+#include "..\..\Timeseries\Bars\BarSeriesPatterns\Pattern.mqh"
+#include "..\..\Timeseries\Indicators\DataInd.mqh"
 #ifndef CTIMESERIES_SELECT_MQH_DECLARATION
 #define CTIMESERIES_SELECT_MQH_DECLARATION
 //+------------------------------------------------------------------+
@@ -42,7 +43,6 @@ class CTimeseriesSelect : public CCommonSelect
       static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source, ENUM_IND_DATA_PROP_STRING  property, string value, ENUM_COMPARER_TYPE mode);
   };
 #endif // CTIMESERIES_SELECT_MQH_DECLARATION
-
 #ifndef CTIMESERIES_SELECT_MQH_IMPLEMENTATION
 #define CTIMESERIES_SELECT_MQH_IMPLEMENTATION
 //+------------------------------------------------------------------+
@@ -203,7 +203,7 @@ CArrayObj *CTimeseriesSelect::ByPatternProperty(CArrayObj *list_source, ENUM_PAT
     int total = list_source.Total();
     for(int i = 0; i < total; i++)
       {
-        CPattern *obj = list_source.At(i);
+        CBarPattern *obj = list_source.At(i);
         if(!obj.SupportProperty(property)) continue;
         if(CompareValues(obj.GetProperty(property), value, mode)) list.Add(obj);
       }
@@ -221,7 +221,7 @@ CArrayObj *CTimeseriesSelect::ByPatternProperty(CArrayObj *list_source, ENUM_PAT
     CommonListStorage.Add(list);
     for(int i = 0; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
+        CBarPattern *obj = list_source.At(i);
         if(!obj.SupportProperty(property)) continue;
         if(CompareValues(obj.GetProperty(property), value, mode)) list.Add(obj);
       }
@@ -239,7 +239,7 @@ CArrayObj *CTimeseriesSelect::ByPatternProperty(CArrayObj *list_source, ENUM_PAT
     CommonListStorage.Add(list);
     for(int i = 0; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
+        CBarPattern *obj = list_source.At(i);
         if(!obj.SupportProperty(property)) continue;
         if(CompareValues(obj.GetProperty(property), value, mode)) list.Add(obj);
       }
@@ -254,8 +254,8 @@ int CTimeseriesSelect::FindPatternMax(CArrayObj *list_source, ENUM_PATTERN_PROP_
     int index = 0;
     for(int i = 1; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
-        CPattern *max = list_source.At(index);
+        CBarPattern *obj = list_source.At(i);
+        CBarPattern *max = list_source.At(index);
         if(CompareValues(obj.GetProperty(property), max.GetProperty(property), MORE)) index = i;
       }
     return index;
@@ -269,8 +269,8 @@ int CTimeseriesSelect::FindPatternMax(CArrayObj *list_source, ENUM_PATTERN_PROP_
     int index = 0;
     for(int i = 1; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
-        CPattern *max = list_source.At(index);
+        CBarPattern *obj = list_source.At(i);
+        CBarPattern *max = list_source.At(index);
         if(CompareValues(obj.GetProperty(property), max.GetProperty(property), MORE)) index = i;
       }
     return index;
@@ -284,8 +284,8 @@ int CTimeseriesSelect::FindPatternMax(CArrayObj *list_source, ENUM_PATTERN_PROP_
     int index = 0;
     for(int i = 1; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
-        CPattern *max = list_source.At(index);
+        CBarPattern *obj = list_source.At(i);
+        CBarPattern *max = list_source.At(index);
         if(CompareValues(obj.GetProperty(property), max.GetProperty(property), MORE)) index = i;
       }
     return index;
@@ -299,8 +299,8 @@ int CTimeseriesSelect::FindPatternMin(CArrayObj *list_source, ENUM_PATTERN_PROP_
     int index = 0;
     for(int i = 1; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
-        CPattern *min = list_source.At(index);
+        CBarPattern *obj = list_source.At(i);
+        CBarPattern *min = list_source.At(index);
         if(CompareValues(obj.GetProperty(property), min.GetProperty(property), LESS)) index = i;
       }
     return index;
@@ -314,8 +314,8 @@ int CTimeseriesSelect::FindPatternMin(CArrayObj *list_source, ENUM_PATTERN_PROP_
     int index = 0;
     for(int i = 1; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
-        CPattern *min = list_source.At(index);
+        CBarPattern *obj = list_source.At(i);
+        CBarPattern *min = list_source.At(index);
         if(CompareValues(obj.GetProperty(property), min.GetProperty(property), LESS)) index = i;
       }
     return index;
@@ -329,8 +329,8 @@ int CTimeseriesSelect::FindPatternMin(CArrayObj *list_source, ENUM_PATTERN_PROP_
     int index = 0;
     for(int i = 1; i < list_source.Total(); i++)
       {
-        CPattern *obj = list_source.At(i);
-        CPattern *min = list_source.At(index);
+        CBarPattern *obj = list_source.At(i);
+        CBarPattern *min = list_source.At(index);
         if(CompareValues(obj.GetProperty(property), min.GetProperty(property), LESS)) index = i;
       }
     return index;
@@ -391,5 +391,4 @@ CArrayObj *CTimeseriesSelect::ByIndicatorDataProperty(CArrayObj *list_source, EN
     return list;
   }
 #endif // CTIMESERIES_SELECT_MQH_IMPLEMENTATION
-
 #endif // __TIMESERIES_SELECT_MQH__

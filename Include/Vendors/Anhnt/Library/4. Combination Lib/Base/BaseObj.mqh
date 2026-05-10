@@ -52,6 +52,7 @@
       int               GetError(void)                 const     { return m_global_error;        }
       string            GetName(void)                  const     { return m_name;                }
       virtual int       Type(void)                     const     { return m_type;                }
+     //New added in https://www.mql5.com/en/articles/9751
       virtual void      Print(const bool full_prop=false,const bool dash=false)      { return; }
       virtual void      PrintShort(const bool dash=false,const bool symbol=false)    { return; }
     CBaseObj() : m_program((ENUM_PROGRAM_TYPE)::MQLInfoInteger(MQL_PROGRAM_TYPE)),

@@ -14,7 +14,7 @@
  #include "Colors.mqh"
  #include <Graphics\Graphic.mqh>
  #include <ChartObjects\ChartObjectSubChart.mqh>
- #include "\Resources\ImageResources.mqh"
+ #include "..\Resources\ImageResources.mqh"
  class CImage
   {
     protected:

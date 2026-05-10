@@ -7,8 +7,6 @@
 #ifndef __CEVENTBASEOBJ_MQH__
 #define __CEVENTBASEOBJ_MQH__
 #include <Object.mqh>
-
-
 class CEventBaseObj : public CObject
   {
 private:
