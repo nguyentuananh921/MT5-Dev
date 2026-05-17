@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                BarPatternControlMorningStar.mqh  |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
 //|                          https://mql5.com/en/users/artmedia70    |
@@ -64,10 +64,10 @@
     CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_MORNING_STAR,
                        list_series, list_patterns, param)
     {
-    this.m_min_body_size                       = (uint)this.PatternParams[0].integer_value;
-    this.m_ratio_body_to_candle_size           = this.PatternParams[1].double_value;
-    this.m_ratio_larger_shadow_to_candle_size  = this.PatternParams[2].double_value;
-    this.m_ratio_smaller_shadow_to_candle_size = this.PatternParams[3].double_value;
+    this.m_min_body_size                       = 0;
+    this.m_ratio_body_to_candle_size           = PATTERN_DEF_LARGE_BODY;
+    this.m_ratio_larger_shadow_to_candle_size  = PATTERN_DEF_INNER_BODY;
+    this.m_ratio_smaller_shadow_to_candle_size = PATTERN_DEF_PENETRATION;
     this.m_ratio_candle_sizes                  = 0;
     this.m_object_id                           = this.CreateObjectID();
     }
@@ -157,5 +157,5 @@
       list            = CTimeseriesSelect::ByPatternProperty(list, PATTERN_PROP_TYPE,                          PATTERN_TYPE_MORNING_STAR,     EQUAL);
       return            CTimeseriesSelect::ByPatternProperty(list, PATTERN_PROP_CTRL_OBJ_ID,                   this.ObjectID(),               EQUAL);
      }
- endif // CBarPatternControlMorningStar_MQH_IMPLEMENTATION
+ #endif // CBarPatternControlMorningStar_MQH_IMPLEMENTATION
 #endif // __BARPATTERNCONTROLMORNINGSTAR_MQH__

@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                             CommonDELib.mqh      |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
 //| Lib https://www.mql5.com/en/articles/14710                       |
@@ -359,6 +359,9 @@ string PatternTypeDescription(const ENUM_PATTERN_TYPE type)
         case PATTERN_TYPE_EVENING_DOJI_STAR    : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_EVENING_DOJI_STAR);
         case PATTERN_TYPE_THREE_STARS          : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_THREE_STARS);
         case PATTERN_TYPE_ABANDONED_BABY       : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_ABANDONED_BABY);
+        case PATTERN_TYPE_THREE_INSIDE_UP      : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_THREE_INSIDE_UP);
+        case PATTERN_TYPE_THREE_INSIDE_DOWN    : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_THREE_INSIDE_DOWN);
+        case PATTERN_TYPE_ENGULFING            : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_ENGULFING);
         case PATTERN_TYPE_PIVOT_POINT_REVERSAL : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_PIVOT_POINT_REVERSAL);
         case PATTERN_TYPE_OUTSIDE_BAR          : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_OUTSIDE_BAR);
         case PATTERN_TYPE_INSIDE_BAR           : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_INSIDE_BAR);

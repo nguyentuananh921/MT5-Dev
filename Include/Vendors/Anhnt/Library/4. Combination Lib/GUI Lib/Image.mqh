@@ -11,7 +11,7 @@
  #include "Enums.mqh"
  #include "Defines.mqh"
  #include "Fonts.mqh"
- #include "Colors.mqh"
+ //#include "Colors.mqh"
  #include <Graphics\Graphic.mqh>
  #include <ChartObjects\ChartObjectSubChart.mqh>
  #include "..\Resources\ImageResources.mqh"

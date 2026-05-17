@@ -17,7 +17,9 @@
 class CTimeseriesSelect : public CCommonSelect
   {
    public:
-    //--- Bar
+    //+------------------------------------------------------------------+
+    //| Methods of working with timeseries bars                          |
+    //+------------------------------------------------------------------+
       static CArrayObj *ByBarProperty(CArrayObj *list_source, ENUM_BAR_PROP_INTEGER property, long   value, ENUM_COMPARER_TYPE mode);
       static CArrayObj *ByBarProperty(CArrayObj *list_source, ENUM_BAR_PROP_DOUBLE  property, double value, ENUM_COMPARER_TYPE mode);
       static CArrayObj *ByBarProperty(CArrayObj *list_source, ENUM_BAR_PROP_STRING  property, string value, ENUM_COMPARER_TYPE mode);
@@ -27,20 +29,81 @@ class CTimeseriesSelect : public CCommonSelect
       static int        FindBarMin   (CArrayObj *list_source, ENUM_BAR_PROP_INTEGER property);
       static int        FindBarMin   (CArrayObj *list_source, ENUM_BAR_PROP_DOUBLE  property);
       static int        FindBarMin   (CArrayObj *list_source, ENUM_BAR_PROP_STRING  property);
-    //--- Pattern
-      static CArrayObj *ByPatternProperty(CArrayObj *list_source, ENUM_PATTERN_PROP_INTEGER property, long   value, ENUM_COMPARER_TYPE mode);
-      static CArrayObj *ByPatternProperty(CArrayObj *list_source, ENUM_PATTERN_PROP_DOUBLE  property, double value, ENUM_COMPARER_TYPE mode);
-      static CArrayObj *ByPatternProperty(CArrayObj *list_source, ENUM_PATTERN_PROP_STRING  property, string value, ENUM_COMPARER_TYPE mode);
-      static int        FindPatternMax   (CArrayObj *list_source, ENUM_PATTERN_PROP_INTEGER property);
-      static int        FindPatternMax   (CArrayObj *list_source, ENUM_PATTERN_PROP_DOUBLE  property);
-      static int        FindPatternMax   (CArrayObj *list_source, ENUM_PATTERN_PROP_STRING  property);
-      static int        FindPatternMin   (CArrayObj *list_source, ENUM_PATTERN_PROP_INTEGER property);
-      static int        FindPatternMin   (CArrayObj *list_source, ENUM_PATTERN_PROP_DOUBLE  property);
-      static int        FindPatternMin   (CArrayObj *list_source, ENUM_PATTERN_PROP_STRING  property);
-    //--- Indicator Data
-      static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source, ENUM_IND_DATA_PROP_INTEGER property, long   value, ENUM_COMPARER_TYPE mode);
-      static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source, ENUM_IND_DATA_PROP_DOUBLE  property, double value, ENUM_COMPARER_TYPE mode);
-      static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source, ENUM_IND_DATA_PROP_STRING  property, string value, ENUM_COMPARER_TYPE mode);
+    //+------------------------------------------------------------------+
+    //| Methods of working with tick data                                |
+    //+------------------------------------------------------------------+
+    //--- Return the list of tick data with one out of (1) integer, (2) real and (3) string properties meeting a specified criterion
+      static CArrayObj *ByTickDataProperty(CArrayObj *list_source,ENUM_TICK_PROP_INTEGER property,long value,ENUM_COMPARER_TYPE mode);
+      static CArrayObj *ByTickDataProperty(CArrayObj *list_source,ENUM_TICK_PROP_DOUBLE property,double value,ENUM_COMPARER_TYPE mode);
+      static CArrayObj *ByTickDataProperty(CArrayObj *list_source,ENUM_TICK_PROP_STRING property,string value,ENUM_COMPARER_TYPE mode);
+    //--- Return the tick data index in the list with the maximum value of (1) integer, (2) real and (3) string property of data
+      static int        FindTickDataMax(CArrayObj *list_source,ENUM_TICK_PROP_INTEGER property);
+      static int        FindTickDataMax(CArrayObj *list_source,ENUM_TICK_PROP_DOUBLE property);
+      static int        FindTickDataMax(CArrayObj *list_source,ENUM_TICK_PROP_STRING property);
+    //--- Return the tick data index in the list with the minimum value of (1) integer, (2) real and (3) string property of data
+      static int        FindTickDataMin(CArrayObj *list_source,ENUM_TICK_PROP_INTEGER property);
+      static int        FindTickDataMin(CArrayObj *list_source,ENUM_TICK_PROP_DOUBLE property);
+      static int        FindTickDataMin(CArrayObj *list_source,ENUM_TICK_PROP_STRING property);
+    //+------------------------------------------------------------------+
+    //| Methods for working with timeseries patterns                     |
+    //+------------------------------------------------------------------+
+     //--- Return the list of patterns with one out of (1) integer, (2) real and (3) string properties meeting a specified criterion
+      static CArrayObj *ByPatternProperty(CArrayObj *list_source,ENUM_PATTERN_PROP_INTEGER property,long value,ENUM_COMPARER_TYPE mode);
+      static CArrayObj *ByPatternProperty(CArrayObj *list_source,ENUM_PATTERN_PROP_DOUBLE property,double value,ENUM_COMPARER_TYPE mode);
+      static CArrayObj *ByPatternProperty(CArrayObj *list_source,ENUM_PATTERN_PROP_STRING property,string value,ENUM_COMPARER_TYPE mode);
+     //--- Return the pattern index in the list with the maximum value of the pattern (1) integer, (2) real and (3) string properties
+      static int        FindPatternMax(CArrayObj *list_source,ENUM_PATTERN_PROP_INTEGER property);
+      static int        FindPatternMax(CArrayObj *list_source,ENUM_PATTERN_PROP_DOUBLE property);
+      static int        FindPatternMax(CArrayObj *list_source,ENUM_PATTERN_PROP_STRING property);
+     //--- Return the pattern index in the list with the minimum value of the pattern (1) integer, (2) real and (3) string properties
+      static int        FindPatternMin(CArrayObj *list_source,ENUM_PATTERN_PROP_INTEGER property);
+      static int        FindPatternMin(CArrayObj *list_source,ENUM_PATTERN_PROP_DOUBLE property);
+      static int        FindPatternMin(CArrayObj *list_source,ENUM_PATTERN_PROP_STRING property);    
+    //+------------------------------------------------------------------+
+    //| Methods of working with indicator buffers                        |
+    //+------------------------------------------------------------------+
+    //--- Return the list of buffers with one out of (1) integer, (2) real and (3) string properties meeting a specified criterion
+   static CArrayObj *ByBufferProperty(CArrayObj *list_source,ENUM_BUFFER_PROP_INTEGER property,long value,ENUM_COMPARER_TYPE mode);
+   static CArrayObj *ByBufferProperty(CArrayObj *list_source,ENUM_BUFFER_PROP_DOUBLE property,double value,ENUM_COMPARER_TYPE mode);
+   static CArrayObj *ByBufferProperty(CArrayObj *list_source,ENUM_BUFFER_PROP_STRING property,string value,ENUM_COMPARER_TYPE mode);
+   //--- Return the buffer index in the list with the maximum value of the buffer's (1) integer, (2) real and (3) string properties
+   static int        FindBufferMax(CArrayObj *list_source,ENUM_BUFFER_PROP_INTEGER property);
+   static int        FindBufferMax(CArrayObj *list_source,ENUM_BUFFER_PROP_DOUBLE property);
+   static int        FindBufferMax(CArrayObj *list_source,ENUM_BUFFER_PROP_STRING property);
+   //--- Return the buffer index in the list with the minimum value of the buffer's (1) integer, (2) real and (3) string properties
+   static int        FindBufferMin(CArrayObj *list_source,ENUM_BUFFER_PROP_INTEGER property);
+   static int        FindBufferMin(CArrayObj *list_source,ENUM_BUFFER_PROP_DOUBLE property);
+   static int        FindBufferMin(CArrayObj *list_source,ENUM_BUFFER_PROP_STRING property);
+//+------------------------------------------------------------------+
+//| Methods of working with indicators                               |
+//+------------------------------------------------------------------+
+   //--- Return the list of indicators with one out of (1) integer, (2) real and (3) string properties meeting a specified criterion
+   static CArrayObj *ByIndicatorProperty(CArrayObj *list_source,ENUM_INDICATOR_PROP_INTEGER property,long value,ENUM_COMPARER_TYPE mode);
+   static CArrayObj *ByIndicatorProperty(CArrayObj *list_source,ENUM_INDICATOR_PROP_DOUBLE property,double value,ENUM_COMPARER_TYPE mode);
+   static CArrayObj *ByIndicatorProperty(CArrayObj *list_source,ENUM_INDICATOR_PROP_STRING property,string value,ENUM_COMPARER_TYPE mode);
+   //--- Return the indicator index in the list with the maximum value of the indicator's (1) integer, (2) real and (3) string property
+   static int        FindIndicatorMax(CArrayObj *list_source,ENUM_INDICATOR_PROP_INTEGER property);
+   static int        FindIndicatorMax(CArrayObj *list_source,ENUM_INDICATOR_PROP_DOUBLE property);
+   static int        FindIndicatorMax(CArrayObj *list_source,ENUM_INDICATOR_PROP_STRING property);
+   //--- Return the indicator index in the list with the minimum value of the indicator's (1) integer, (2) real and (3) string property
+   static int        FindIndicatorMin(CArrayObj *list_source,ENUM_INDICATOR_PROP_INTEGER property);
+   static int        FindIndicatorMin(CArrayObj *list_source,ENUM_INDICATOR_PROP_DOUBLE property);
+   static int        FindIndicatorMin(CArrayObj *list_source,ENUM_INDICATOR_PROP_STRING property);
+//+------------------------------------------------------------------+
+//| Methods of work with indicator data                              |
+//+------------------------------------------------------------------+
+   //--- Return the list of indicator data with one out of (1) integer, (2) real and (3) string properties meeting a specified criterion
+   static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source,ENUM_IND_DATA_PROP_INTEGER property,long value,ENUM_COMPARER_TYPE mode);
+   static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source,ENUM_IND_DATA_PROP_DOUBLE property,double value,ENUM_COMPARER_TYPE mode);
+   static CArrayObj *ByIndicatorDataProperty(CArrayObj *list_source,ENUM_IND_DATA_PROP_STRING property,string value,ENUM_COMPARER_TYPE mode);
+   //--- Return the indicator data index in the list with the maximum value of (1) integer, (2) real and (3) string property of data
+   static int        FindIndDataMax(CArrayObj *list_source,ENUM_IND_DATA_PROP_INTEGER property);
+   static int        FindIndDataMax(CArrayObj *list_source,ENUM_IND_DATA_PROP_DOUBLE property);
+   static int        FindIndDataMax(CArrayObj *list_source,ENUM_IND_DATA_PROP_STRING property);
+   //--- Return the indicator data index in the list with the minimum value of (1) integer, (2) real and (3) string property of data
+   static int        FindIndDataMin(CArrayObj *list_source,ENUM_IND_DATA_PROP_INTEGER property);
+   static int        FindIndDataMin(CArrayObj *list_source,ENUM_IND_DATA_PROP_DOUBLE property);
+   static int        FindIndDataMin(CArrayObj *list_source,ENUM_IND_DATA_PROP_STRING property);
   };
 #endif // CTIMESERIES_SELECT_MQH_DECLARATION
 #ifndef CTIMESERIES_SELECT_MQH_IMPLEMENTATION

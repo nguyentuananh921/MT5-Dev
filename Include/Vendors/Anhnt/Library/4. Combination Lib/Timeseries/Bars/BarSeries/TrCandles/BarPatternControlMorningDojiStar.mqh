@@ -57,6 +57,8 @@
                                                                          const MqlParam &param[]) :
     CBarPatternControlMorningStar(symbol, timeframe, list_series, list_patterns, param)
     {
+    this.m_ratio_larger_shadow_to_candle_size = PATTERN_DEF_DOJI_BODY;
+    this.m_object_id                          = this.CreateObjectID();
     }
    //+------------------------------------------------------------------+
    //| Create a CPatternMorningDojiStar object                          |

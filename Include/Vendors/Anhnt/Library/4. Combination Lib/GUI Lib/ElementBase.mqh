@@ -9,8 +9,9 @@
 #ifndef __ELEMENTBASE_MQH__
 #define __ELEMENTBASE_MQH__
  #include "Mouse.mqh"
- //#include "Objects.mqh"
+ //#include "Objects.mqh" 
  #include "Common.mqh"
+ #include "..\Services\Colors.mqh"  
  class CElementBase
   {
    protected:

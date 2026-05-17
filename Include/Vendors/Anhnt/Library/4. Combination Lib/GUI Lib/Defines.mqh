@@ -24,10 +24,10 @@
 #define SPACE          (" ")
 
 // --- To represent any names in string format
-#define TO_STRING(A) #A
+#define STRINGIFY(A) #A
 // --- Event data printout
 #define PRINT_EVENT(SID,ID,L,D,S) \
-::Print(__FUNCTION__," > id: ",TO_STRING(SID)," (",ID,"); lparam: ",L,"; dparam: ",D,"; sparam: ",S);
+::Print(__FUNCTION__," > id: ",STRINGIFY(SID)," (",ID,"); lparam: ",L,"; dparam: ",D,"; sparam: ",S);
 
 // --- Event IDs
 #define ON_WINDOW_EXPAND            (1)  // Expanding a form
