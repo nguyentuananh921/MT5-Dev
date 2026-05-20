@@ -135,7 +135,7 @@
      //    candle 1 is bullish → TopBody = Close, BottomBody = Open
       double body1_top    = bar0.TopBody();
       double body1_range  = body1_top - bar0.BottomBody();
-      double max_close    = body1_top - body1_range * this.RatioSmallerShadowToCandleSizeValue();
+      double max_close    = body1_top - body1_range * this.RatioSmallerShadowToCandleSizeValue()/100.0;
       if(bar2.Close() > max_close)                                                   return WRONG_VALUE;
 
      //--- Pattern found — set mother_bar_data to the full 3-candle formation range

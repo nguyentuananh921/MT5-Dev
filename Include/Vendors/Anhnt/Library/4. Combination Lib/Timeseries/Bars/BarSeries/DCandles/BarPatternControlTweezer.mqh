@@ -46,12 +46,12 @@
     CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_TWEEZER,
                        list_series, list_patterns, param)
     {
-    this.m_min_body_size             = PATTERN_DEF_TWEEZER_PTS;
-    this.m_ratio_body_to_candle_size           = 0;
-    this.m_ratio_larger_shadow_to_candle_size  = 0;
-    this.m_ratio_smaller_shadow_to_candle_size = 0;
-    this.m_ratio_candle_sizes                  = 0;
-    this.m_object_id                           = this.CreateObjectID();
+      this.m_min_body_size             = PATTERN_DEF_TWEEZER_PTS;
+      this.m_ratio_body_to_candle_size           = 0;
+      this.m_ratio_larger_shadow_to_candle_size  = 0;
+      this.m_ratio_smaller_shadow_to_candle_size = 0;
+      this.m_ratio_candle_sizes                  = 0;
+      this.m_object_id                           = this.CreateObjectID();
     }
    ulong CBarPatternControlTweezer::CreateObjectID(void)
      {
@@ -86,28 +86,32 @@
 
       double tolerance = this.Point() * (double)this.m_min_body_size;
 
-     //--- Tweezer Bottom: matching Lows → BULLISH
-      if(MathAbs(bar0.Low() - bar1.Low()) <= tolerance)
+     //--- Tweezer Bottom: bar0 BEARISH, bar1 BULLISH, matching Lows
+      if(bar0.TypeBody() == BAR_BODY_TYPE_BEARISH &&
+        bar1.TypeBody() == BAR_BODY_TYPE_BULLISH &&
+        MathAbs(bar0.Low() - bar1.Low()) <= tolerance)
         {
-         mother_bar_data.time        = bar0.Time();
-         mother_bar_data.open        = bar0.Open();
-         mother_bar_data.high        = MathMax(bar0.High(), bar1.High());
-         mother_bar_data.low         = MathMin(bar0.Low(),  bar1.Low());
-         mother_bar_data.close       = bar1.Close();
-         mother_bar_data.tick_volume = 2;
-         return PATTERN_DIRECTION_BULLISH;
+        mother_bar_data.time   = bar0.Time();
+        mother_bar_data.open   = bar0.Open();
+        mother_bar_data.high   = MathMax(bar0.High(), bar1.High());
+        mother_bar_data.low    = MathMin(bar0.Low(),  bar1.Low());
+        mother_bar_data.close  = bar1.Close();
+        mother_bar_data.tick_volume = 2;
+        return PATTERN_DIRECTION_BULLISH;
         }
 
-     //--- Tweezer Top: matching Highs → BEARISH
-      if(MathAbs(bar0.High() - bar1.High()) <= tolerance)
+      //--- Tweezer Top: bar0 BULLISH, bar1 BEARISH, matching Highs
+      if(bar0.TypeBody() == BAR_BODY_TYPE_BULLISH &&
+        bar1.TypeBody() == BAR_BODY_TYPE_BEARISH &&
+        MathAbs(bar0.High() - bar1.High()) <= tolerance)
         {
-         mother_bar_data.time        = bar0.Time();
-         mother_bar_data.open        = bar0.Open();
-         mother_bar_data.high        = MathMax(bar0.High(), bar1.High());
-         mother_bar_data.low         = MathMin(bar0.Low(),  bar1.Low());
-         mother_bar_data.close       = bar1.Close();
-         mother_bar_data.tick_volume = 2;
-         return PATTERN_DIRECTION_BEARISH;
+        mother_bar_data.time   = bar0.Time();
+        mother_bar_data.open   = bar0.Open();
+        mother_bar_data.high   = MathMax(bar0.High(), bar1.High());
+        mother_bar_data.low    = MathMin(bar0.Low(),  bar1.Low());
+        mother_bar_data.close  = bar1.Close();
+        mother_bar_data.tick_volume = 2;
+        return PATTERN_DIRECTION_BEARISH;
         }
 
       return WRONG_VALUE;

@@ -108,7 +108,7 @@
       double body1 = MathAbs(bar1.Open() - bar1.Close());
       if(body0 <= 0 || body1 <= 0) return WRONG_VALUE;
       double similarity = MathMin(body0, body1) / MathMax(body0, body1);
-      if(similarity < minSimilarity) return WRONG_VALUE;
+      if(similarity < minSimilarity/100.0) return WRONG_VALUE;
 
      //--- Direction: bar1 (latest candle) determines the reversal signal
       ENUM_PATTERN_DIRECTION dir = (bar1.TypeBody() == BAR_BODY_TYPE_BULLISH)

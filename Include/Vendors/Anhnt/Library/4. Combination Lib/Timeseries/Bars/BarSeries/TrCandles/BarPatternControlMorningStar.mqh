@@ -64,12 +64,12 @@
     CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_MORNING_STAR,
                        list_series, list_patterns, param)
     {
-    this.m_min_body_size                       = 0;
-    this.m_ratio_body_to_candle_size           = PATTERN_DEF_LARGE_BODY;
-    this.m_ratio_larger_shadow_to_candle_size  = PATTERN_DEF_INNER_BODY;
-    this.m_ratio_smaller_shadow_to_candle_size = PATTERN_DEF_PENETRATION;
-    this.m_ratio_candle_sizes                  = 0;
-    this.m_object_id                           = this.CreateObjectID();
+      this.m_min_body_size                       = 0;
+      this.m_ratio_body_to_candle_size           = PATTERN_DEF_LARGE_BODY;
+      this.m_ratio_larger_shadow_to_candle_size  = PATTERN_DEF_INNER_BODY;
+      this.m_ratio_smaller_shadow_to_candle_size = PATTERN_DEF_PENETRATION;
+      this.m_ratio_candle_sizes                  = 0;
+      this.m_object_id                           = this.CreateObjectID();
     }
    //+------------------------------------------------------------------+
    //| Create object ID based on pattern search criteria                |
@@ -135,7 +135,7 @@
      //    candle 1 is bearish → BottomBody = Close, TopBody = Open
       double body1_bottom = bar0.BottomBody();
       double body1_range  = bar0.TopBody() - body1_bottom;
-      double min_close    = body1_bottom + body1_range * this.RatioSmallerShadowToCandleSizeValue();
+      double min_close    = body1_bottom + body1_range * this.RatioSmallerShadowToCandleSizeValue()/100.0;
       if(bar2.Close() < min_close)                                                   return WRONG_VALUE;
 
      //--- Pattern found — set mother_bar_data to the full 3-candle formation range

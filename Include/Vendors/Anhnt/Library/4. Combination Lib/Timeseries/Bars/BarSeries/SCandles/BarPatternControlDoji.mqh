@@ -23,11 +23,7 @@
     protected:
           virtual ENUM_PATTERN_DIRECTION FindPattern(const datetime series_bar_time, MqlRates &mother_bar_data) const;
           virtual CBarPattern           *CreatePattern(const ENUM_PATTERN_DIRECTION direction, const uint id, CBar *bar);
-          virtual ulong                  GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const
-                                          {
-                                            return(time + PATTERN_TYPE_DOJI + PATTERN_STATUS_PA +
-                                                    direction + this.Timeframe() + this.m_symbol_code);
-                                          }
+          virtual ulong                  GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const;                                          
           virtual CArrayObj             *GetListPatterns(void);
           virtual ulong                  CreateObjectID(void);
     public:
@@ -46,31 +42,36 @@
     CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_DOJI,
                        list_series, list_patterns, param)
     {
-    this.m_min_body_size                       = 0;
-    this.m_ratio_body_to_candle_size           = PATTERN_DEF_DOJI_BODY;
-    this.m_ratio_larger_shadow_to_candle_size  = 0;
-    this.m_ratio_smaller_shadow_to_candle_size = 0;
-    this.m_ratio_candle_sizes                  = 0;
-    this.m_object_id                           = this.CreateObjectID();
+      this.m_min_body_size                       = 0;
+      this.m_ratio_body_to_candle_size           = PATTERN_DEF_DOJI_BODY;
+      this.m_ratio_larger_shadow_to_candle_size  = 0;
+      this.m_ratio_smaller_shadow_to_candle_size = 0;
+      this.m_ratio_candle_sizes                  = 0;
+      this.m_object_id                           = this.CreateObjectID();
     }
+   ulong CBarPatternControlDoji::GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const
+      {
+        return(time + PATTERN_TYPE_DOJI + PATTERN_STATUS_PA +
+                direction + this.Timeframe() + this.m_symbol_code);
+      }
    ulong CBarPatternControlDoji::CreateObjectID(void)
      {
-      ushort c1 = (ushort)(this.RatioBodyToCandleSizeValue() * 100);
-      long   res = 0;
-      return this.UshortToLong(c1, 0, res);
+        ushort c1 = (ushort)(this.RatioBodyToCandleSizeValue() * 100);
+        long   res = 0;
+        return this.UshortToLong(c1, 0, res);
      }
    CBarPattern *CBarPatternControlDoji::CreatePattern(const ENUM_PATTERN_DIRECTION direction,
                                                        const uint id, CBar *bar)
      {
-      if(bar == NULL) return NULL;
-      MqlRates rates = {0};
-      this.SetBarData(bar, rates);
-      CPatternDoji *obj = new CPatternDoji(id, this.Symbol(), this.Timeframe(), rates, direction);
-      if(obj == NULL) return NULL;
-      obj.SetProperty(PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE,                   bar.RatioBodyToCandleSize());
-      obj.SetProperty(PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE_CRITERION,         this.RatioBodyToCandleSizeValue());
-      obj.SetProperty(PATTERN_PROP_CTRL_OBJ_ID, this.ObjectID());
-      return obj;
+        if(bar == NULL) return NULL;
+        MqlRates rates = {0};
+        this.SetBarData(bar, rates);
+        CPatternDoji *obj = new CPatternDoji(id, this.Symbol(), this.Timeframe(), rates, direction);
+        if(obj == NULL) return NULL;
+        obj.SetProperty(PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE,                   bar.RatioBodyToCandleSize());
+        obj.SetProperty(PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE_CRITERION,         this.RatioBodyToCandleSizeValue());
+        obj.SetProperty(PATTERN_PROP_CTRL_OBJ_ID, this.ObjectID());
+        return obj;
      }
    //+------------------------------------------------------------------+
    //| Search for Doji: body ratio <= threshold                         |

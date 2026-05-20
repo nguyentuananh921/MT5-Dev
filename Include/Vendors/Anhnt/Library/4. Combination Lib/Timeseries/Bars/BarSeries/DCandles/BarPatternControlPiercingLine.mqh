@@ -105,7 +105,7 @@
      //--- bar1 closes above bar0's midpoint: BottomBody + body_range * penetration
      //    For bearish bar0: BottomBody = Close, TopBody = Open
       double body_range  = bar0.TopBody() - bar0.BottomBody();
-      double min_close   = bar0.BottomBody() + body_range * this.RatioSmallerShadowToCandleSizeValue();
+      double min_close   = bar0.BottomBody() + body_range * this.RatioSmallerShadowToCandleSizeValue()/100.0;
       if(bar1.Close() < min_close)                               return WRONG_VALUE;
 
      //--- Pattern found

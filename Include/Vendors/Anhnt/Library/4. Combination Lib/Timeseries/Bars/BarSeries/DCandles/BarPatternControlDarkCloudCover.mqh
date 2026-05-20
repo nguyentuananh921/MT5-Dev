@@ -71,7 +71,7 @@
      //--- bar1 closes below bar0's midpoint: TopBody - body_range * penetration
      //    For bullish bar0: BottomBody = Open, TopBody = Close
       double body_range  = bar0.TopBody() - bar0.BottomBody();
-      double max_close   = bar0.TopBody() - body_range * this.RatioSmallerShadowToCandleSizeValue();
+      double max_close   = bar0.TopBody() - body_range * this.RatioSmallerShadowToCandleSizeValue()/100.0;
       if(bar1.Close() > max_close)                               return WRONG_VALUE;
 
      //--- Pattern found

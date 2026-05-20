@@ -53,9 +53,9 @@
          CTable m_table_symb;
          CTable m_table_syminfo;
        //For event table
-         CTable m_table_events;
-         int    m_events_clicked_row;
-         int m_events_row_count;
+         CTable   m_table_events;
+         int      m_events_clicked_row;
+         int      m_events_row_count;
      //--- Edits
       // CTextEdit m_symb_filter;
          CTextEdit m_lot;
@@ -144,17 +144,21 @@
             void SetSymbolModeChanged(const bool value) { m_syminfo_mode_changed = value; }
             void ClearSymbolInfoTable(const string msg);
          //For Table Event at Tab Event on Trade Tab
-            bool AddEventRow(const string type, const string name,
+            int   GetEventsRowCount(void) const {return m_events_row_count;}            
+            bool  SetEventTableRow(const int row, const string symbol, const ENUM_TIMEFRAMES tf,
+                 const string type, const string name,
                  const ENUM_PATTERN_DIRECTION dir, const datetime time);
-            void ClearEventsTable(void);
-            int  GetEventClickedRow(void) const    { return m_events_clicked_row;          }
-            void ResetEventClickedRow(void)        { m_events_clicked_row = WRONG_VALUE;   }            
-            bool IsEventRowVisible(const int row);
-            void FlushEventsTable(void) { m_table_events.Update(true); }
-            void ResizeEventsTable(const int total);
-            bool SetEventRow(const int row, const string type, const string name,
-                           const ENUM_PATTERN_DIRECTION dir, const datetime time);
-            void RefreshEventsTable(CArrayObj *plist);
+            bool  AddEventTableRow(const string symbol, const ENUM_TIMEFRAMES tf,
+                      const string type, const string name,
+                      const ENUM_PATTERN_DIRECTION dir, const datetime time);
+            void  ClearEventsTable(void);
+            void  ResizeEventsTable(const int total);
+            void  FlushEventsTable(void) { m_table_events.Update(true); } 
+            void  SortAndFlushEventsTable(void);
+
+            int   GetEventClickedRow(void) const    { return m_events_clicked_row;          }
+            void  ResetEventClickedRow(void)        { m_events_clicked_row = WRONG_VALUE;   }            
+            bool  IsEventRowVisible(const int row);              
   };
 #endif // CGUIPANNEL_MQH_DECLARATION
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION
@@ -1156,15 +1160,20 @@
  //For Event table at Tab Event
   bool CGUIPannel::CreateEventTable(const int x_gap, const int y_gap)
    {
-      #define EVENT_COLS 5
+      #define EVENT_COLS 6
       #define EVENT_ROWS 1
       m_table_events.MainPointer(m_tabsTrade);
       m_tabsTrade.AddToElementsArray(TAB_TAB_TRADE_EVENTS, m_table_events);
-      int width[EVENT_COLS] = {28, 50, 140, 28, 100};
-      ENUM_ALIGN_MODE align[EVENT_COLS] = {ALIGN_CENTER, ALIGN_CENTER, ALIGN_LEFT, ALIGN_CENTER, ALIGN_CENTER};
-      int text_x_offset[EVENT_COLS]     = {0, 0, 5, 0, 0};
-      int image_x_offset[EVENT_COLS]    = {0, 0, 0, 6, 0};
-      int image_y_offset[EVENT_COLS]    = {0, 0, 0, 4, 0};
+      //Setting Array Properties forTable
+         int width[EVENT_COLS]             = {28,  80,   40,   110,  40,   158};
+         //                                   chk  sym   tf    time  type  name+icon
+         ENUM_ALIGN_MODE align[EVENT_COLS] = {ALIGN_CENTER, ALIGN_LEFT, ALIGN_CENTER,
+                                             ALIGN_CENTER, ALIGN_CENTER, ALIGN_LEFT};
+         int text_x_offset[EVENT_COLS]     = {0,   3,    0,    0,    0,    20};  // col5: offset right of icon
+         int image_x_offset[EVENT_COLS]    = {0,   0,    0,    0,    0,    2};   // col5: icon left
+         int image_y_offset[EVENT_COLS]    = {0,   0,    0,    0,    0,    4};
+                 
+      
       m_table_events.TableSize(EVENT_COLS, EVENT_ROWS);
       m_table_events.ColumnsWidth(width);
       m_table_events.TextAlign(align);
@@ -1172,7 +1181,7 @@
       m_table_events.ImageXOffset(image_x_offset);
       m_table_events.ImageYOffset(image_y_offset);
       m_table_events.ShowHeaders(true);
-      m_table_events.IsSortMode(false);
+      m_table_events.IsSortMode(true);
       m_table_events.SelectableRow(true);
       m_table_events.IsZebraFormatRows(clrWhiteSmoke);
       m_table_events.AutoXResizeMode(true);
@@ -1181,11 +1190,13 @@
       m_table_events.AutoYResizeBottomOffset(2);
       if(!m_table_events.CreateTable(x_gap, y_gap))
          return false;
-      m_table_events.SetHeaderText(0, "");
-      m_table_events.SetHeaderText(1, "Type");
-      m_table_events.SetHeaderText(2, "Name");
-      m_table_events.SetHeaderText(3, "");
-      m_table_events.SetHeaderText(4, "Time");
+      //Setting header.      
+         m_table_events.SetHeaderText(0, "");
+         m_table_events.SetHeaderText(1, "Symbol");
+         m_table_events.SetHeaderText(2, "TF");
+         m_table_events.SetHeaderText(3, "Time");
+         m_table_events.SetHeaderText(4, "Type");
+         m_table_events.SetHeaderText(5, "Name");      
       CWndContainer::AddToElementsArray(0, m_table_events);
       return true;
    } 
@@ -1204,42 +1215,96 @@
    }
   void CGUIPannel::ResizeEventsTable(const int total)
    {
+      static uint dir_icons[3] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP,
+                                IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP,
+                                IMAGE_RESOURCE_ICONS_BMP16_CIRCLE_GRAY_BMP};
       for(int i = 0; i < total - 1; i++)
          m_table_events.AddRow(i);
+      // Set images once for ALL rows here
+      for(int i = 0; i < total; i++)
+      {
+         m_table_events.CellType(0, i, CELL_CHECKBOX);
+         m_table_events.SetImages(5, i, dir_icons); //5 is Column of the icon
+      }
+
    }
-  bool CGUIPannel::SetEventRow(const int row, const string type, const string name,
+  bool CGUIPannel::SetEventTableRow(const int row,const string symbol,const ENUM_TIMEFRAMES tf, const string type, const string name,
                                  const ENUM_PATTERN_DIRECTION dir, const datetime time)
    {
       m_table_events.CellType(0, row, CELL_CHECKBOX);
-      m_table_events.SetValue(1, row, type);
-      m_table_events.SetValue(2, row, name);
+      m_table_events.SetValue(1, row, symbol);
+      //Column 2
+         string tf_str = ::EnumToString(tf);
+         ::StringReplace(tf_str, "PERIOD_", "");
+         m_table_events.SetValue(2, row, tf_str);
+         m_table_events.SetValue(2, row, tf_str);  
+      m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES));
+      m_table_events.SetValue(4, row, type);
       uint dir_icons[3] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP,
                            IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP,
                            IMAGE_RESOURCE_ICONS_BMP16_CIRCLE_GRAY_BMP};
-      m_table_events.SetImages(3, row, dir_icons);
-      m_table_events.ChangeImage(3, row,
+      m_table_events.SetImages(5, row, dir_icons);
+      m_table_events.ChangeImage(5, row,
          (dir == PATTERN_DIRECTION_BULLISH) ? 0 :
          (dir == PATTERN_DIRECTION_BEARISH) ? 1 : 2);
-      m_table_events.SetValue(4, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES));
+      m_table_events.SetValue(5, row, name);
       return true;
    }
-  void CGUIPannel::RefreshEventsTable(CArrayObj *plist)
-   {
-      if(plist == NULL) return;
-      int total = plist.Total();
-      ClearEventsTable();
-      if(total == 0) return;
-      ResizeEventsTable(total);
-      for(int i = 0; i < total; i++)
-      {
-         CBarPattern *p = (CBarPattern*)plist.At(total - 1 - i);
-         if(p == NULL) continue;
-         int nc = (int)p.Candles();
-         string type_str = (nc == 1) ? "S" : (nc == 2) ? "D" : "T";
-         SetEventRow(i, type_str, p.Name(), p.Direction(), p.MotherBarTime());
-      }
-      FlushEventsTable();
+
+  void CGUIPannel::SortAndFlushEventsTable() 
+   { 
+      m_table_events.SortData(3, SORT_DESCEND);
+      m_table_events.Update(true); 
    }
+  bool CGUIPannel::AddEventTableRow(const string symbol, const ENUM_TIMEFRAMES tf,
+                      const string type, const string name,
+                      const ENUM_PATTERN_DIRECTION dir, const datetime time)
+   {
+      if(m_events_row_count > 0)
+         m_table_events.AddRow(m_events_row_count - 1);
+      if(!SetEventTableRow(m_events_row_count, symbol, tf, type, name, dir, time))
+         return false;
+      m_events_row_count++;
+      return true;
+   }
+  //Temporary remove 
+      //   void CGUIPannel::RefreshEventsTable(CArrayObj *plist)
+      //    {
+      //       if(plist == NULL) return;
+      //       plist.Sort(SORT_BY_PATTERN_MOTHERBAR_TIME);
+      //       int total = plist.Total();
+      //       ClearEventsTable();
+      //       if(total == 0) return;
+      //       ResizeEventsTable(total);
+      //       for(int i = 0; i < total; i++)
+      //       {
+      //          CBarPattern *p = (CBarPattern*)plist.At(total - 1 - i);
+      //          if(p == NULL) continue;
+      //          int nc = (int)p.Candles();
+      //          string type_str = (nc == 1) ? "S" : (nc == 2) ? "D" : "T";
+      //          SetEventRow(i, type_str, p.Name(), p.Direction(), p.MotherBarTime());
+      //       }
+      //       FlushEventsTable();
+      //    }
+      //   void CGUIPannel::UpdateEventsTable(CArrayObj *plist)
+      //    {
+      //       if(plist == NULL) return;
+      //       plist.Sort(SORT_BY_PATTERN_MOTHERBAR_TIME);   // ascending: oldest[0] → newest[N-1]
+      //       int new_total = plist.Total();
+      //       if(new_total <= m_events_row_count) return;
+      //       for(int i = m_events_row_count; i < new_total; i++)
+      //        {
+      //             CBarPattern *p = (CBarPattern*)plist.At(i);
+      //             if(p == NULL) continue;
+      //             if(m_events_row_count > 0)
+      //                m_table_events.AddRow(m_events_row_count - 1);
+      //             int nc = (int)p.Candles();
+      //             string type_str = (nc == 1) ? "S" : (nc == 2) ? "D" : "T";
+      //             SetEventRow(m_events_row_count, type_str, p.Name(), p.Direction(), p.MotherBarTime());
+      //        }
+      //       m_table_events.SortData(4, SORT_DESCEND);   // newest at top Sortby TimeColumn
+      //       m_table_events.Update(true);
+      //    }
 
 
  //+------------------------------------------------------------------+
