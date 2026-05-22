@@ -55,7 +55,8 @@
        //For event table
          CTable   m_table_events;
          int      m_events_clicked_row;
-         int      m_events_row_count;
+         int      m_events_row_count;    // rows created in table structure
+         int      m_events_filled_count; // rows actually containing pattern data
      //--- Edits
       // CTextEdit m_symb_filter;
          CTextEdit m_lot;
@@ -144,7 +145,8 @@
             void SetSymbolModeChanged(const bool value) { m_syminfo_mode_changed = value; }
             void ClearSymbolInfoTable(const string msg);
          //For Table Event at Tab Event on Trade Tab
-            int   GetEventsRowCount(void) const {return m_events_row_count;}            
+            int   GetEventsRowCount(void)   const { return m_events_filled_count; }  // filled rows (for new-pattern detection)
+            int   GetEventsCreatedCount(void) const { return m_events_row_count;   }  // total rows in table structure            
             bool  SetEventTableRow(const int row, const string symbol, const ENUM_TIMEFRAMES tf,
                  const string type, const string name,
                  const ENUM_PATTERN_DIRECTION dir, const datetime time);
@@ -171,8 +173,9 @@
    m_gui_timecounter.SetParameters(16, 500);
    m_syminfo_mode_changed = false;
    //For event table
-      m_events_clicked_row = WRONG_VALUE; 
-      m_events_row_count=0;
+      m_events_clicked_row = WRONG_VALUE;
+      m_events_row_count   = 0;
+      m_events_filled_count= 0;
    
   }
  //+------------------------------------------------------------------+
@@ -262,6 +265,7 @@
                Print(__FUNCTION__, " > Failed to create Event Table!");
                return(false);
             }
+           ResizeEventsTable(1000);   // pre-create 1000 rows once — EA only calls SetEventTableRow
       CWndEvents::CompletedGUI();
       m_chart.Redraw();
       return (true);
@@ -486,7 +490,7 @@
   bool CGUIPannel::CreateTab_Trade(const int x_gap, const int y_gap)
    {
       #define TABS1_TOTAL 7 // Total number of tabs in m_tabsTrade
-      string tabs_names[TABS1_TOTAL] = {"Account infor", "Symbol Info", "Trade", "Positions", "History", "Settings","Events"};
+      string tabs_names[TABS1_TOTAL] = {"Account infor", "Symbol Info", "Trade", "Positions", "History", "Settings","Bar Events"};
 
       //--- Store the pointer to the main control
       m_tabsTrade.MainPointer(m_Mainwindow);
@@ -1076,7 +1080,6 @@
       int total = symbols.GetSymbolsCollectionTotal();
       if (total == 0)
          return false;
-
       static int s_prev_total = -1;
       static string s_sym[], s_bid[], s_ask[], s_spread[], s_time[];
       static double s_bid_val[];
@@ -1204,8 +1207,9 @@
    {
       m_table_events.DeleteAllRows();
       m_table_events.Update(true);
-      m_events_clicked_row = WRONG_VALUE;
-      m_events_row_count = 0;
+      m_events_clicked_row  = WRONG_VALUE;
+      m_events_row_count    = 0;
+      m_events_filled_count = 0;
    }
   bool CGUIPannel::IsEventRowVisible(const int row)
    {
@@ -1226,35 +1230,45 @@
          m_table_events.CellType(0, i, CELL_CHECKBOX);
          m_table_events.SetImages(5, i, dir_icons); //5 is Column of the icon
       }
+      m_events_row_count = total;   // rows created (structure)
+      // m_events_filled_count updated separately by caller via SetEventTableRow
 
    }
   bool CGUIPannel::SetEventTableRow(const int row,const string symbol,const ENUM_TIMEFRAMES tf, const string type, const string name,
                                  const ENUM_PATTERN_DIRECTION dir, const datetime time)
    {
       m_table_events.CellType(0, row, CELL_CHECKBOX);
-      m_table_events.SetValue(1, row, symbol);
+      //m_table_events.SetValue(1, row, symbol);
+      m_table_events.SetValue(1, row, symbol,  0, true);
       //Column 2
          string tf_str = ::EnumToString(tf);
          ::StringReplace(tf_str, "PERIOD_", "");
-         m_table_events.SetValue(2, row, tf_str);
-         m_table_events.SetValue(2, row, tf_str);  
-      m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES));
-      m_table_events.SetValue(4, row, type);
+         // m_table_events.SetValue(2, row, tf_str);
+         // m_table_events.SetValue(2, row, tf_str);
+         m_table_events.SetValue(2, row, tf_str,  0, true);
+      //m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES));      
+      m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES), 0, true);
+      //m_table_events.SetValue(4, row, type);      
+      m_table_events.SetValue(4, row, type,    0, true);
+
       uint dir_icons[3] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP,
                            IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP,
                            IMAGE_RESOURCE_ICONS_BMP16_CIRCLE_GRAY_BMP};
-      m_table_events.SetImages(5, row, dir_icons);
+      m_table_events.SetImages(5, row, dir_icons);   
       m_table_events.ChangeImage(5, row,
          (dir == PATTERN_DIRECTION_BULLISH) ? 0 :
          (dir == PATTERN_DIRECTION_BEARISH) ? 1 : 2);
-      m_table_events.SetValue(5, row, name);
+      //m_table_events.SetValue(5, row, name);     
+      m_table_events.SetValue(5, row, name,    0, true);
+      if(row + 1 > m_events_filled_count)
+         m_events_filled_count = row + 1;
       return true;
    }
 
-  void CGUIPannel::SortAndFlushEventsTable() 
-   { 
-      m_table_events.SortData(3, SORT_DESCEND);
-      m_table_events.Update(true); 
+  void CGUIPannel::SortAndFlushEventsTable()
+   {
+      // Caller pre-sorts plist before SetEventTableRow — no SortData needed here
+      m_table_events.Update(false);
    }
   bool CGUIPannel::AddEventTableRow(const string symbol, const ENUM_TIMEFRAMES tf,
                       const string type, const string name,
@@ -1266,48 +1280,10 @@
          return false;
       m_events_row_count++;
       return true;
-   }
-  //Temporary remove 
-      //   void CGUIPannel::RefreshEventsTable(CArrayObj *plist)
-      //    {
-      //       if(plist == NULL) return;
-      //       plist.Sort(SORT_BY_PATTERN_MOTHERBAR_TIME);
-      //       int total = plist.Total();
-      //       ClearEventsTable();
-      //       if(total == 0) return;
-      //       ResizeEventsTable(total);
-      //       for(int i = 0; i < total; i++)
-      //       {
-      //          CBarPattern *p = (CBarPattern*)plist.At(total - 1 - i);
-      //          if(p == NULL) continue;
-      //          int nc = (int)p.Candles();
-      //          string type_str = (nc == 1) ? "S" : (nc == 2) ? "D" : "T";
-      //          SetEventRow(i, type_str, p.Name(), p.Direction(), p.MotherBarTime());
-      //       }
-      //       FlushEventsTable();
-      //    }
-      //   void CGUIPannel::UpdateEventsTable(CArrayObj *plist)
-      //    {
-      //       if(plist == NULL) return;
-      //       plist.Sort(SORT_BY_PATTERN_MOTHERBAR_TIME);   // ascending: oldest[0] → newest[N-1]
-      //       int new_total = plist.Total();
-      //       if(new_total <= m_events_row_count) return;
-      //       for(int i = m_events_row_count; i < new_total; i++)
-      //        {
-      //             CBarPattern *p = (CBarPattern*)plist.At(i);
-      //             if(p == NULL) continue;
-      //             if(m_events_row_count > 0)
-      //                m_table_events.AddRow(m_events_row_count - 1);
-      //             int nc = (int)p.Candles();
-      //             string type_str = (nc == 1) ? "S" : (nc == 2) ? "D" : "T";
-      //             SetEventRow(m_events_row_count, type_str, p.Name(), p.Direction(), p.MotherBarTime());
-      //        }
-      //       m_table_events.SortData(4, SORT_DESCEND);   // newest at top Sortby TimeColumn
-      //       m_table_events.Update(true);
-      //    }
+   } 
 
 
- //+------------------------------------------------------------------+
+  //+------------------------------------------------------------------+
   //| Create the "Lot" edit box                                        |
   //+------------------------------------------------------------------+
   bool CGUIPannel::CreateLot(const int x_gap, const int y_gap, const string text)

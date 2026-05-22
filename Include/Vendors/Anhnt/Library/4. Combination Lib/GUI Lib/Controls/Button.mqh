@@ -195,13 +195,14 @@
     //+------------------------------------------------------------------+
     // | Setting the picture for the pressed state (locked) |
     //+------------------------------------------------------------------+
-    void CButton::IconFilePressedLocked(const string file_path) {
-        // --- Exit if the button has "Two states" mode disabled
-        if (!m_two_state)
-            return;
-        // --- Add an image
-        CElement::IconFilePressedLocked(file_path);
-    }
+    void CButton::IconFilePressedLocked(const string file_path) 
+     {
+            // --- Exit if the button has "Two states" mode disabled
+            if (!m_two_state)
+                return;
+            // --- Add an image
+            CElement::IconFilePressedLocked(file_path);
+     }
     //+------------------------------------------------------------------+
     // | Setting a picture for the pressed state (available) |
     //+------------------------------------------------------------------+
