@@ -33,6 +33,8 @@
      private:
         CAccountsCollection      m_accounts;
         CSymbolsCollection       m_symbols;    //For sybols information at tab Trade
+        
+        
         bool                     m_is_event;
         ENUM_ENGINE_EVENT        m_event_code;
         int                      m_symbols_rebuild_count;
@@ -45,7 +47,8 @@
         void              OnTickEvent(void);
         void              OnDeinitEvent(void) {}
 
-        int GetRebuildSymbolsCount(void) const { return m_symbols_rebuild_count; }
+        //Note
+          int GetRebuildSymbolsCount(void) const { return m_symbols_rebuild_count; }
         bool              IsEvent(void)      const { return m_is_event;   }
         ENUM_ENGINE_EVENT GetEventCode(void) const { return m_event_code; }
        //For Account info at tab Trade
@@ -53,6 +56,7 @@
         CAccountsCollection *GetAccounts(void);
        //For Symbols Information at tab Trade
         CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; };
+       //Note
         bool RebuildSymbols(ENUM_SYMBOLS_MODE mode);
     };
 #endif // CTRADING_ENGINE_MQH_DECLARATION
@@ -92,9 +96,11 @@
           acc.SetControlProfitDec(0);
           acc.SetControlEquityInc(0);
           acc.SetControlEquityDec(0);
-      //For Symbols Information at tab Trade, initialize symbols collection
-        m_symbols.RefreshAndEventsControl();
-     return true;
+
+      //For Symbols Information at tab Trade, initialize symbols collection      
+      // Symbols — init with current chart symbol
+      string syms[1] = { ::Symbol() };
+      return m_symbols.SetUsedSymbols(syms);
     }
   //+------------------------------------------------------------------+
   //| Refresh all collections and detect changes                       |

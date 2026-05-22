@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNENGULFING_MQH_DECLARATION
  #define CPATTERNENGULFING_MQH_DECLARATION

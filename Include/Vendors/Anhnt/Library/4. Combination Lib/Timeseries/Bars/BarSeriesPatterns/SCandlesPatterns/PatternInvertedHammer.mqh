@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNINVERTEDHAMMER_MQH__
 #define __PATTERNINVERTEDHAMMER_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CINVERTEDHAMMER_MQH_DECLARATION
  #define CINVERTEDHAMMER_MQH_DECLARATION
   //+------------------------------------------------------------------+

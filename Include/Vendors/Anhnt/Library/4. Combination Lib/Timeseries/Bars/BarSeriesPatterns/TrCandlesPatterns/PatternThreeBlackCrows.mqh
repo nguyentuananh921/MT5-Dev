@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNTHREEBLACKCROWS_MQH_DECLARATION
  #define CPATTERNTHREEBLACKCROWS_MQH_DECLARATION

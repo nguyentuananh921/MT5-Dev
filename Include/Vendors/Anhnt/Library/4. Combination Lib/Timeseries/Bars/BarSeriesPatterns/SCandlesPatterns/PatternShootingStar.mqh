@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNSHOOTINGSTAR_MQH__
 #define __PATTERNSHOOTINGSTAR_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CSHOOTINGSTAR_MQH_DECLARATION
  #define CSHOOTINGSTAR_MQH_DECLARATION
   //+------------------------------------------------------------------+

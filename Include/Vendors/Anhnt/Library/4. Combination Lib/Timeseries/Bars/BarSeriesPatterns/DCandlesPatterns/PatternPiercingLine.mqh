@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNPIERCINGLINE_MQH__
 #define __PATTERNPIERCINGLINE_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CPATTERNPIERCINGLINE_MQH_DECLARATION
  #define CPATTERNPIERCINGLINE_MQH_DECLARATION
   //+------------------------------------------------------------------+

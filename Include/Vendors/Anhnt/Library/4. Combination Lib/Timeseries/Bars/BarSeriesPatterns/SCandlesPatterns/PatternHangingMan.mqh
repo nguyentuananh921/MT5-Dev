@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNHANGINGMAN_MQH__
 #define __PATTERNHANGINGMAN_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CHANGINGMAN_MQH_DECLARATION
  #define CHANGINGMAN_MQH_DECLARATION
   //+------------------------------------------------------------------+

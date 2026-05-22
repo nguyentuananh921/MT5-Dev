@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNHARAMICROSS_MQH_DECLARATION
  #define CPATTERNHARAMICROSS_MQH_DECLARATION

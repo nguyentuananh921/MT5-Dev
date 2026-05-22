@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNTWEEZER_MQH__
 #define __PATTERNTWEEZER_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CPATTERNTWEEZER_MQH_DECLARATION
  #define CPATTERNTWEEZER_MQH_DECLARATION
   //+------------------------------------------------------------------+

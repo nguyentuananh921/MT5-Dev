@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNPIVOTPOINTREVERSAL_MQH__
 #define __PATTERNPIVOTPOINTREVERSAL_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CPATTERNPIVOTPOINTREVERSAL_MQH_DECLARATION
  #define CPATTERNPIVOTPOINTREVERSAL_MQH_DECLARATION
   //+------------------------------------------------------------------+

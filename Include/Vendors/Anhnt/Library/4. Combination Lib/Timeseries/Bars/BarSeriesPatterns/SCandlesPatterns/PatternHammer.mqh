@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNHAMMER_MQH__
 #define __PATTERNHAMMER_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CHAMMER_MQH_DECLARATION
  #define CHAMMER_MQH_DECLARATION
   //+------------------------------------------------------------------+

@@ -12,66 +12,50 @@
 #define __GCNVPATTERNBITMAP_MQH__
 #property strict
 #include "GCnvBitmap.mqh"
-#include "..\..\Timeseries\Bars\BarSeriesPatterns\Pattern.mqh"
+//#include "..\..\Timeseries\Bars\BarSeriesPatterns\Pattern.mqh"
 
 #ifndef CGCNVPATTERNBITMAP_MQH_DECLARATION
 #define CGCNVPATTERNBITMAP_MQH_DECLARATION
-//+------------------------------------------------------------------+
-//| Pattern bitmap — one per CBarPattern instance                    |
-//+------------------------------------------------------------------+
-class CGCnvPatternBitmap : public CGCnvBitmap 
- {
-  private:
-    ENUM_PATTERN_DIRECTION m_dir; // Pattern direction (bullish/bearish/bidirect) — drives fill color
-    int m_bars_formation;         // Number of bars in formation — mirrors CPattern::m_bars_formation
-    long m_chart_id_ref;          // Chart ID reference for scale/price queries
-    double m_price_high;          // Pattern high price (max across all n bars) — used for CalcHeight
-    double m_price_low;           // Pattern low price  (min across all n bars) — used for CalcHeight
+ //+------------------------------------------------------------------+
+ //| Pattern bitmap — one per CBarPattern instance                    |
+ //+------------------------------------------------------------------+
+ class CGCnvPatternBitmap : public CGCnvBitmap 
+  {
+    private:
+        ENUM_PATTERN_DIRECTION m_dir; // Pattern direction (bullish/bearish/bidirect) — drives fill color
+        int m_bars_formation;         // Number of bars in formation — mirrors CPattern::m_bars_formation
+        long m_chart_id_ref;          // Chart ID reference for scale/price queries
+        double m_price_high;          // Pattern high price (max across all n bars) — used for CalcHeight
+        double m_price_low;           // Pattern low price  (min across all n bars) — used for CalcHeight
 
-    color FillColor(void) const;   // Fill color based on m_dir
-    color BorderColor(void) const; // Border color based on m_dir
+        color FillColor(void) const;   // Fill color based on m_dir
+        color BorderColor(void) const; // Border color based on m_dir
 
-    static int CalcWidth(const long chart_id, const int bars_formation);
-    static int CalcHeight(const long chart_id,
-                          const double price_high, const double price_low);
+        static int CalcWidth(const long chart_id, const int bars_formation);
+        static int CalcHeight(const long chart_id,
+                            const double price_high, const double price_low);
 
-  public:
-    CGCnvPatternBitmap(const long chart_id, const int subwin,
-                       const string name, const uint obj_id,
-                       const datetime anchor_time,
-                       const double price_high, const double price_low,
-                       const ENUM_PATTERN_DIRECTION dir,
-                       const int bars_formation);
+    public:
+        CGCnvPatternBitmap(const long chart_id, const int subwin,
+                        const string name, const uint obj_id,
+                        const datetime anchor_time,
+                        const double price_high, const double price_low,
+                        const ENUM_PATTERN_DIRECTION dir,
+                        const int bars_formation);
+        
 
-    void DrawView(void);
-
-    //--- Visibility: hide/show without deleting the chart object (no flicker on TF switch)
-    void Show(void) {
-        ::ObjectSetInteger(m_chart_id_ref, this.Name(), OBJPROP_TIMEFRAMES, OBJ_ALL_PERIODS);
-    }
-    void Hide(void) {
-        ::ObjectSetInteger(m_chart_id_ref, this.Name(), OBJPROP_TIMEFRAMES, OBJ_NO_PERIODS);
-    }
-    bool IsVisible(void) const {
-        return ::ObjectGetInteger(m_chart_id_ref, this.Name(), OBJPROP_TIMEFRAMES) != OBJ_NO_PERIODS;
-    }
-
-    void SetDirection(const ENUM_PATTERN_DIRECTION dir) {
-        m_dir = dir;
-    }
-    ENUM_PATTERN_DIRECTION Direction(void) const {
-        return m_dir;
-    }
-    int BarsFormation(void) const {
-        return m_bars_formation;
-    } // mirrors CPattern::m_bars_formation
-    double PriceHigh(void) const {
-        return m_price_high;
-    }
-    double PriceLow(void) const {
-        return m_price_low;
-    }
- };
+        void DrawView(void);
+        //--- Visibility: hide/show without deleting the chart object (no flicker on TF switch)
+            void Show(void) {::ObjectSetInteger(m_chart_id_ref, this.Name(), OBJPROP_TIMEFRAMES, OBJ_ALL_PERIODS);}
+            void Hide(void) {::ObjectSetInteger(m_chart_id_ref, this.Name(), OBJPROP_TIMEFRAMES, OBJ_NO_PERIODS);}
+            bool IsVisible(void) const {return ::ObjectGetInteger(m_chart_id_ref, this.Name(), OBJPROP_TIMEFRAMES) != OBJ_NO_PERIODS;}
+        //
+            void SetDirection(const ENUM_PATTERN_DIRECTION dir) {m_dir = dir;}
+            ENUM_PATTERN_DIRECTION Direction(void) const {return m_dir;}
+            int BarsFormation(void) const {return m_bars_formation;} // mirrors CPattern::m_bars_formation
+            double PriceHigh(void) const {return m_price_high;}
+            double PriceLow(void) const {return m_price_low;}
+  };
 #endif // CGCNVPATTERNBITMAP_MQH_DECLARATION
 
 #ifndef CGCNVPATTERNBITMAP_MQH_IMPLEMENTATION

@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNDARKCLOUDCOVER_MQH__
 #define __PATTERNDARKCLOUDCOVER_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CPATTERNDARKCLOUDCOVER_MQH_DECLARATION
  #define CPATTERNDARKCLOUDCOVER_MQH_DECLARATION
   //+------------------------------------------------------------------+

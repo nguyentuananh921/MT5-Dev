@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNDRAGONFLYDOJI_MQH__
 #define __PATTERNDRAGONFLYDOJI_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CDRAGONFLYDOJI_MQH_DECLARATION
  #define CDRAGONFLYDOJI_MQH_DECLARATION
   //+------------------------------------------------------------------+

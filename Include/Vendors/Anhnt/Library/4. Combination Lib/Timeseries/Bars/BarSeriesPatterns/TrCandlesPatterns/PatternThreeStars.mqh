@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNTHREESTARS_MQH_DECLARATION
  #define CPATTERNTHREESTARS_MQH_DECLARATION

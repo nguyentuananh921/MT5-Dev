@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNEVENINGDOJISTAR_MQH_DECLARATION
  #define CPATTERNEVENINGDOJISTAR_MQH_DECLARATION

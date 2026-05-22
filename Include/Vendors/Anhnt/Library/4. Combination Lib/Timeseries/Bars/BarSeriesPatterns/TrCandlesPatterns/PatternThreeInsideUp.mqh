@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNTHREEINSIDEUP_MQH_DECLARATION
  #define CPATTERNTHREEINSIDEUP_MQH_DECLARATION

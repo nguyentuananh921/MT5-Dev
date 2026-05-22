@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNDOJI_MQH__
 #define __PATTERNDOJI_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CDOJI_MQH_DECLARATION
  #define CDOJI_MQH_DECLARATION
   //+------------------------------------------------------------------+

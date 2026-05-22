@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content \"C:\\\\Users\\\\nguye\\\\.claude\\\\projects\\\\D--MT5-Dev-Experts-Anhnt-Example-4--Combination-EA\\\\beb9c8dc-3d3f-4365-9882-cf64cdf4830a.jsonl\")",
+      "Bash(Select-Object -Last 200)"
+    ]
+  }
+}

@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNRAILS_MQH__
 #define __PATTERNRAILS_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CPATTERNRAILS_MQH_DECLARATION
  #define CPATTERNRAILS_MQH_DECLARATION
   //+------------------------------------------------------------------+

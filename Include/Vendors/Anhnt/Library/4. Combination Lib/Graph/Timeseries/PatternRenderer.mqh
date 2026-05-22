@@ -18,7 +18,9 @@
 #ifndef __PATTERN_RENDERER_MQH__
 #define __PATTERN_RENDERER_MQH__
  #include <Arrays\ArrayObj.mqh>
+ #include <Arrays\ArrayObj.mqh>
  #include "..\Bitmaps\GCnvPatternBitmap.mqh"
+ #include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh" 
 
  #ifndef CPATTERNRENDERER_MQH_DECLARATION
  #define CPATTERNRENDERER_MQH_DECLARATION
@@ -31,41 +33,74 @@
       string            m_symbol;
       ENUM_TIMEFRAMES   m_period;
       datetime          m_prev_bar0;   // new-bar gate for UpdateNew
-
+      int               m_prev_scale;  // track zoom change internally
       bool              CreatePatternBitmap(CBarPattern *p);
+
+      
       void              GetVisibleTimeRange(datetime &t_from, datetime &t_to) const;
       void              CleanupChartObjects(void);   // remove stale "PR_" objects on deinit/init
-
+      void              Redraw    (CArrayObj *plist, const bool redraw=true);   // zoom changed: recreate bitmaps
+      void              Reposition(void)  { ::ChartRedraw(m_chart_id); }
+      void              SetPeriod (const ENUM_TIMEFRAMES tf); 
     public:
       bool              OnInitEvent(const long chart_id, const int subwin,
                                     const string symbol, const ENUM_TIMEFRAMES period);
-      void              OnDeinitEvent(void)              { CleanupChartObjects(); }
+      void OnDeinitEvent(CArrayObj *plist = NULL);
+      bool OnChartEvent(const int id, CArrayObj *plist);
+
 
       void              Refresh   (CArrayObj *plist, const bool redraw=true);   // show/hide/create per TF + coverage
-      void              UpdateNew (CArrayObj *plist, const bool redraw=true);   // incremental: new bar only
-      void              Redraw    (CArrayObj *plist, const bool redraw=true);   // zoom changed: recreate bitmaps
-      void              Reposition(void)                { ::ChartRedraw(m_chart_id); }
-      void              SetPeriod (const ENUM_TIMEFRAMES tf);
-      void              Clear     (CArrayObj *plist);   // clear all bitmaps + chart objects
+      void              UpdateNew (CArrayObj *plist, const bool redraw=true);   // incremental: new bar only           
    };
  #endif // CPATTERNRENDERER_MQH_DECLARATION
 
  #ifndef CPATTERNRENDERER_MQH_IMPLEMENTATION
  #define CPATTERNRENDERER_MQH_IMPLEMENTATION
-
   bool CPatternRenderer::OnInitEvent(const long chart_id, const int subwin,
                                       const string symbol, const ENUM_TIMEFRAMES period)
    {
-    m_chart_id  = (chart_id == 0 || chart_id == NULL ? ::ChartID() : chart_id);
-    m_subwin    = subwin;
-    m_obj_id    = 0;
-    m_symbol    = (symbol == NULL || symbol == "" ? ::Symbol() : symbol);
-    m_period    = (period == PERIOD_CURRENT ? ::Period() : period);
-    m_prev_bar0 = 0;
-    CleanupChartObjects();   // remove any stale bitmaps from a previous run
-    return true;
+      m_chart_id  = (chart_id == 0 || chart_id == NULL ? ::ChartID() : chart_id);
+      m_subwin    = subwin;
+      m_obj_id    = 0;
+      m_symbol    = (symbol == NULL || symbol == "" ? ::Symbol() : symbol);
+      m_period    = (period == PERIOD_CURRENT ? ::Period() : period);
+      m_prev_bar0 = 0;
+      m_prev_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE); // init scale
+      CleanupChartObjects();
+      return true;
    }
-
+  void CPatternRenderer::OnDeinitEvent(CArrayObj *plist)
+    {
+        if(plist != NULL)
+            for(int i = 0; i < plist.Total(); i++)
+            {
+                CBarPattern *p = plist.At(i);
+                if(p != NULL) p.ClearBitmap();
+            }
+        CleanupChartObjects();
+    }
+  bool CPatternRenderer::OnChartEvent(const int id, CArrayObj *plist)
+    {
+        if(id != CHARTEVENT_CHART_CHANGE) return false;
+        
+        ENUM_TIMEFRAMES curr_period = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+        int curr_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);
+        
+        if(curr_period != m_period)
+        {
+            SetPeriod(curr_period);
+            Refresh(plist, false);
+            return true; // TF changed
+        }
+        if(curr_scale != m_prev_scale)
+        {
+            m_prev_scale = curr_scale;
+            Redraw(plist, false);
+            return false;
+        }
+        Reposition();
+        return false;
+    }
   void CPatternRenderer::CleanupChartObjects(void)
    {
     if(m_chart_id == 0) return;
@@ -302,23 +337,6 @@
    {
     m_period = (tf == PERIOD_CURRENT ? ::Period() : tf);
    }
-
-  //+------------------------------------------------------------------+
-  //| Clear all pattern bitmaps and stale chart objects.               |
-  //+------------------------------------------------------------------+
-  void CPatternRenderer::Clear(CArrayObj *plist)
-   {
-    if(plist != NULL)
-      {
-       int total = plist.Total();
-       for(int i = 0; i < total; i++)
-         {
-          CBarPattern *p = plist.At(i);
-          if(p != NULL) p.ClearBitmap();
-         }
-      }
-    CleanupChartObjects();
-   }
-
+  
  #endif // CPATTERNRENDERER_MQH_IMPLEMENTATION
 #endif // __PATTERN_RENDERER_MQH__

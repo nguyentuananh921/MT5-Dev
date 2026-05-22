@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNABANDONEDBY_MQH_DECLARATION
  #define CPATTERNABANDONEDBY_MQH_DECLARATION

@@ -9,7 +9,7 @@
 #property strict    // Necessary for mql4
 #ifndef __PATTERNGRAVESTONEDOJI_MQH__
 #define __PATTERNGRAVESTONEDOJI_MQH__
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
  #ifndef CGRAVESTONEDOJI_MQH_DECLARATION
  #define CGRAVESTONEDOJI_MQH_DECLARATION
   //+------------------------------------------------------------------+

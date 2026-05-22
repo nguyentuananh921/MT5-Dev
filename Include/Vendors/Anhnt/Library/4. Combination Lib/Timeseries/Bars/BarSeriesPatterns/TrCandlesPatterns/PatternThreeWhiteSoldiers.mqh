@@ -14,7 +14,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\Pattern.mqh"
+ #include "..\BarPattern.mqh"
 
  #ifndef CPATTERNTHREEWHITESOLDIERS_MQH_DECLARATION
  #define CPATTERNTHREEWHITESOLDIERS_MQH_DECLARATION
