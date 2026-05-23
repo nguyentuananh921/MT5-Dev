@@ -17,8 +17,7 @@
 //+------------------------------------------------------------------+
 #ifndef __PATTERN_RENDERER_MQH__
 #define __PATTERN_RENDERER_MQH__
- #include <Arrays\ArrayObj.mqh>
- #include <Arrays\ArrayObj.mqh>
+ #include <Arrays\ArrayObj.mqh> 
  #include "..\Bitmaps\GCnvPatternBitmap.mqh"
  #include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh" 
 

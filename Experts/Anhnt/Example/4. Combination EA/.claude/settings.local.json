@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(Get-Content \"C:\\\\Users\\\\nguye\\\\.claude\\\\projects\\\\D--MT5-Dev-Experts-Anhnt-Example-4--Combination-EA\\\\beb9c8dc-3d3f-4365-9882-cf64cdf4830a.jsonl\")",
-      "Bash(Select-Object -Last 200)"
+      "Bash(Select-Object -Last 200)",
+      "Bash(find \"c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include\" -name \"CBaseObj*\" 2>/dev/null | head -20)",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/**)",
+      "Bash(find \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5\" -name \"CBaseObj*\" 2>/dev/null | head -20; find \"/c/Program Files/MetaTrader 5\" -name \"CBaseObj*\" 2>/dev/null | head -5; find \"/c/Program Files \\(x86\\)/MetaTrader 5\" -name \"CBaseObj*\" 2>/dev/null | head -5)",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/**)",
+      "Read(//c/Program Files/MetaTrader 5/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "PowerShell(Head -20)",
+      "PowerShell(Test-Path \"C:\\\\Program Files\\\\MetaTrader 5\\\\MQL5\\\\Include\"; Get-ChildItem \"C:\\\\Program Files\\\\MetaTrader 5\\\\MQL5\\\\Include\" -ErrorAction SilentlyContinue | Select-Object -First 5 | ForEach-Object { $_.Name })",
+      "Bash(find \"/c/Program Files/MetaTrader 5\" -name \"ArrayObj.mqh\" 2>/dev/null; find \"/c/Users/nguye/AppData/Roaming/MetaQuotes\" -name \"ArrayObj.mqh\" 2>/dev/null | head -5)",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/**)"
     ]
   }
 }

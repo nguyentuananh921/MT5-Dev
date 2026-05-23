@@ -115,7 +115,7 @@
       }
     //Print Debug
       string name = m_resources.GetData(resource_index, m_image_data, m_image_width, m_image_height);    
-      Print("ReadImageData index=", resource_index, " name=", name, " w=", m_image_width, " h=", m_image_height);
+      // Print("ReadImageData index=", resource_index, " name=", name, " w=", m_image_width, " h=", m_image_height);
       if(name == "")
       {
           Print(__FUNCTION__, " > Image not found in CImageResources at index: ", resource_index);
