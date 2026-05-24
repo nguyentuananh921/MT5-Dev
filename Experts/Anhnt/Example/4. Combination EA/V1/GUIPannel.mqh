@@ -566,15 +566,15 @@
       string account_type = "";
      switch ((ENUM_ACCOUNT_TRADE_MODE)AccountInfoInteger(ACCOUNT_TRADE_MODE))
       {
-      case ACCOUNT_TRADE_MODE_DEMO:
-         account_type = "Demo";
-         break;
-      case ACCOUNT_TRADE_MODE_CONTEST:
-         account_type = "Contest";
-         break;
-      case ACCOUNT_TRADE_MODE_REAL:
-         account_type = "Real";
-         break;
+         case ACCOUNT_TRADE_MODE_DEMO:
+            account_type = "Demo";
+            break;
+         case ACCOUNT_TRADE_MODE_CONTEST:
+            account_type = "Contest";
+            break;
+         case ACCOUNT_TRADE_MODE_REAL:
+            account_type = "Real";
+            break;
       }
       m_table_account_info.SetValue(1, 3, account_type);
       m_table_account_info.SetValue(1, 4, AccountInfoString(ACCOUNT_CURRENCY));
@@ -1239,17 +1239,17 @@
    {
       m_table_events.CellType(0, row, CELL_CHECKBOX);
       //m_table_events.SetValue(1, row, symbol);
-      m_table_events.SetValue(1, row, symbol,  0, true);
+      m_table_events.SetValue(1, row, symbol,  0, false);
       //Column 2
          string tf_str = ::EnumToString(tf);
          ::StringReplace(tf_str, "PERIOD_", "");
          // m_table_events.SetValue(2, row, tf_str);
          // m_table_events.SetValue(2, row, tf_str);
-         m_table_events.SetValue(2, row, tf_str,  0, true);
+         m_table_events.SetValue(2, row, tf_str,  0, false);
       //m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES));      
-      m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES), 0, true);
+      m_table_events.SetValue(3, row, ::TimeToString(time, TIME_DATE|TIME_MINUTES), 0, false);
       //m_table_events.SetValue(4, row, type);      
-      m_table_events.SetValue(4, row, type,    0, true);
+      m_table_events.SetValue(4, row, type,    0, false);
 
       uint dir_icons[3] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP,
                            IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP,
@@ -1259,7 +1259,7 @@
          (dir == PATTERN_DIRECTION_BULLISH) ? 0 :
          (dir == PATTERN_DIRECTION_BEARISH) ? 1 : 2);
       //m_table_events.SetValue(5, row, name);     
-      m_table_events.SetValue(5, row, name,    0, true);
+      m_table_events.SetValue(5, row, name,    0, false);
       if(row + 1 > m_events_filled_count)
          m_events_filled_count = row + 1;
       return true;

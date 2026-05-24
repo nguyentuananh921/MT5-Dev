@@ -33,8 +33,8 @@
       ENUM_TIMEFRAMES   m_period;
       datetime          m_prev_bar0;   // new-bar gate for UpdateNew
       int               m_prev_scale;  // track zoom change internally
+      
       bool              CreatePatternBitmap(CBarPattern *p);
-
       
       void              GetVisibleTimeRange(datetime &t_from, datetime &t_to) const;
       void              CleanupChartObjects(void);   // remove stale "PR_" objects on deinit/init
@@ -42,12 +42,13 @@
       void              Reposition(void)  { ::ChartRedraw(m_chart_id); }
       void              SetPeriod (const ENUM_TIMEFRAMES tf); 
     public:
-      bool              OnInitEvent(const long chart_id, const int subwin,
-                                    const string symbol, const ENUM_TIMEFRAMES period);
-      void OnDeinitEvent(CArrayObj *plist = NULL);
-      bool OnChartEvent(const int id, CArrayObj *plist);
+      //CPatternRenderer Lifecycle
+        bool              OnInitEvent(const long chart_id, const int subwin,
+                                      const string symbol, const ENUM_TIMEFRAMES period);
+        void OnDeinitEvent(CArrayObj *plist = NULL);
+        bool OnChartEvent(const int id, CArrayObj *plist);
 
-
+        
       void              Refresh   (CArrayObj *plist, const bool redraw=true);   // show/hide/create per TF + coverage
       void              UpdateNew (CArrayObj *plist, const bool redraw=true);   // incremental: new bar only           
    };
@@ -97,29 +98,29 @@
             Redraw(plist, false);
             return false;
         }
-        Reposition();
+        //Reposition();
+        Refresh(plist, false);
         return false;
     }
-  void CPatternRenderer::CleanupChartObjects(void)
-   {
-    if(m_chart_id == 0) return;
-    for(int i = ::ObjectsTotal(m_chart_id, m_subwin, OBJ_BITMAP) - 1; i >= 0; i--)
-      {
-       string name = ::ObjectName(m_chart_id, i, m_subwin, OBJ_BITMAP);
-       if(::StringFind(name, "PR_") == 0)
-          ::ObjectDelete(m_chart_id, name);
-      }
-    ::ChartRedraw(m_chart_id);
-   }
+  
+ void CPatternRenderer::CleanupChartObjects(void)
+    {
+        long cid = (m_chart_id == 0 ? ::ChartID() : m_chart_id);
+        for(int i = ::ObjectsTotal(cid, m_subwin, OBJ_BITMAP) - 1; i >= 0; i--)
+        {
+            string name = ::ObjectName(cid, i, m_subwin, OBJ_BITMAP);
+            ::ObjectDelete(cid, name);
+        }
+        ::ChartRedraw(cid);
+    }    
   void CPatternRenderer::GetVisibleTimeRange(datetime &t_from, datetime &t_to) const
-  {
+   {
       int first_vis = (int)::ChartGetInteger(m_chart_id, CHART_FIRST_VISIBLE_BAR);
       t_from = ::iTime(m_symbol, m_period, first_vis);
       t_to   = ::iTime(m_symbol, m_period, 0);
       if(t_to == 0)   t_to   = ::TimeCurrent();          // ← ADD này
       if(t_from == 0) t_from = t_to - (datetime)(first_vis * ::PeriodSeconds(m_period));
-  }
-    
+   }
 
   //+------------------------------------------------------------------+
   //| Create CGCnvPatternBitmap, attach to pattern, draw, show.        |
