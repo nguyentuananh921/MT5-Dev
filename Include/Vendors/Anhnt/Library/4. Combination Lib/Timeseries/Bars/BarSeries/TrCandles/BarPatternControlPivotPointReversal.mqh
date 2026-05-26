@@ -47,12 +47,12 @@
     CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_PIVOT_POINT_REVERSAL,
                        list_series, list_patterns, param)
     {
-    this.m_min_body_size                       = 0;
-    this.m_ratio_body_to_candle_size           = 0;
-    this.m_ratio_larger_shadow_to_candle_size  = 0;
-    this.m_ratio_smaller_shadow_to_candle_size = 0;
-    this.m_ratio_candle_sizes                  = 0;
-    this.m_object_id                           = this.CreateObjectID();
+      this.m_min_body_size                       = 0;
+      this.m_ratio_body_to_candle_size           = 0;
+      this.m_ratio_larger_shadow_to_candle_size  = 0;
+      this.m_ratio_smaller_shadow_to_candle_size = 0;
+      this.m_ratio_candle_sizes                  = 0;
+      this.m_object_id                           = this.CreateObjectID();
     }
    ulong CBarPatternControlPivotPointReversal::CreateObjectID(void)
      {
