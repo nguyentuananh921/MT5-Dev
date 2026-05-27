@@ -9,14 +9,14 @@
  // For GUI controls
  #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\WndEvents.mqh>
  // For trading data
- #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SymbolsCollection.mqh>
- #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
- #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
+//  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SymbolsCollection.mqh>
+//  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
+//  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
 #define CGUIPANNEL_MQH_DECLARATION
  // Define GUI control
  // id for m_tabsTrade
- enum ENUM_TAB_TRADE
+ enum ENUM_TAB_MAIN
    {
       TAB_TAB_TRADE_ACCOUNT_INFO = 0,
       TAB_TAB_TRADE_SYMBOL_INFO,

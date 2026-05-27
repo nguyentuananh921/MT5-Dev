@@ -37,7 +37,7 @@
         
         bool                     m_is_event;
         ENUM_ENGINE_EVENT        m_event_code;
-        int                      m_symbols_rebuild_count;
+        // int                      m_symbols_rebuild_count;
 
      public:
         CTradingEngine(void);
@@ -48,7 +48,7 @@
         void              OnDeinitEvent(void) {}
 
         //Note
-          int GetRebuildSymbolsCount(void) const { return m_symbols_rebuild_count; }
+          // int GetRebuildSymbolsCount(void) const { return m_symbols_rebuild_count; }
         bool              IsEvent(void)      const { return m_is_event;   }
         ENUM_ENGINE_EVENT GetEventCode(void) const { return m_event_code; }
        //For Account info at tab Trade
@@ -57,7 +57,7 @@
        //For Symbols Information at tab Trade
         CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; };
        //Note
-        bool RebuildSymbols(ENUM_SYMBOLS_MODE mode);
+        //bool RebuildSymbols(ENUM_SYMBOLS_MODE mode);
     };
 #endif // CTRADING_ENGINE_MQH_DECLARATION
 
@@ -67,8 +67,7 @@
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
   CTradingEngine::CTradingEngine(void) : m_is_event(false),
-                                         m_event_code(ENGINE_EVENT_NONE),
-                                         m_symbols_rebuild_count(0)
+                                         m_event_code(ENGINE_EVENT_NONE)
     {
 
     }
@@ -83,7 +82,8 @@
   //+------------------------------------------------------------------+
   bool CTradingEngine::OnInitEvent(void)
     {
-      //For Account info at tab Trade, initialize account collection and set control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
+      //For m_accounts
+      //Using in Account info at tab Trade, initialize account collection and set control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
         m_accounts.RefreshAndEventsControl();
         int index = m_accounts.IndexCurrentAccount();
                   if(index == WRONG_VALUE) return false;    
@@ -96,11 +96,9 @@
           acc.SetControlProfitDec(0);
           acc.SetControlEquityInc(0);
           acc.SetControlEquityDec(0);
-
       //For Symbols Information at tab Trade, initialize symbols collection      
-      // Symbols — init with current chart symbol
-      string syms[1] = { ::Symbol() };
-      return m_symbols.SetUsedSymbols(syms);
+        // Symbols — init with current chart symbol
+        return m_symbols.CreateSymbolsList(true);  // true = MarketWatch        
     }
   //+------------------------------------------------------------------+
   //| Refresh all collections and detect changes                       |
@@ -134,48 +132,48 @@
 
   //Rebuild symbols collection for Symbols Information at tab Trade according to 
   // the selected mode in the GUI and return true if it is successful, otherwise false
-  bool CTradingEngine::RebuildSymbols(ENUM_SYMBOLS_MODE mode)
-  {
-    if(mode == SYMBOLS_MODE_CURRENT)
-      {
-        string syms[1] = { ::Symbol() };
-        m_symbols_rebuild_count = 1;
-        return m_symbols.SetUsedSymbols(syms);
-      }
-    if(mode == SYMBOLS_MODE_DEFINES)
-      {
-        string syms[];
-        string buf = "";
-        int total = ::PositionsTotal();
-        for(int i = 0; i < total; i++)
-          {
-            string sym = ::PositionGetSymbol(i);
-            if(sym == "") continue;
-            if(::StringFind(buf, sym, 0) == WRONG_VALUE)
-                ::StringAdd(buf, (buf == "") ? sym : "," + sym);
-          }
-        ushort sep = ::StringGetCharacter(",", 0);
-        ::StringSplit(buf, sep, syms);
-        m_symbols_rebuild_count = ::ArraySize(syms);
-        if(m_symbols_rebuild_count == 0)
-            return true;  // no positions, skip rebuild
-        return m_symbols.SetUsedSymbols(syms);
-      }
-    if(mode == SYMBOLS_MODE_MARKET_WATCH)
-      {
-        string clear[1] = { ::Symbol() };
-        m_symbols.SetUsedSymbols(clear);  // force clear collection
-        bool res = m_symbols.CreateSymbolsList(true);
-        m_symbols_rebuild_count = m_symbols.GetSymbolsCollectionTotal();
-        return res;
-      }
-    // SYMBOLS_MODE_ALL
-      string clear[1] = { ::Symbol() };
-      m_symbols.SetUsedSymbols(clear);  // force clear collection
-      bool res = m_symbols.CreateSymbolsList(false);
-      m_symbols_rebuild_count = m_symbols.GetSymbolsCollectionTotal();
-    return res;
-  }
+  // bool CTradingEngine::RebuildSymbols(ENUM_SYMBOLS_MODE mode)
+  // {
+  //   if(mode == SYMBOLS_MODE_CURRENT)
+  //     {
+  //       string syms[1] = { ::Symbol() };
+  //       m_symbols_rebuild_count = 1;
+  //       return m_symbols.SetUsedSymbols(syms);
+  //     }
+  //   if(mode == SYMBOLS_MODE_DEFINES)
+  //     {
+  //       string syms[];
+  //       string buf = "";
+  //       int total = ::PositionsTotal();
+  //       for(int i = 0; i < total; i++)
+  //         {
+  //           string sym = ::PositionGetSymbol(i);
+  //           if(sym == "") continue;
+  //           if(::StringFind(buf, sym, 0) == WRONG_VALUE)
+  //               ::StringAdd(buf, (buf == "") ? sym : "," + sym);
+  //         }
+  //       ushort sep = ::StringGetCharacter(",", 0);
+  //       ::StringSplit(buf, sep, syms);
+  //       m_symbols_rebuild_count = ::ArraySize(syms);
+  //       if(m_symbols_rebuild_count == 0)
+  //           return true;  // no positions, skip rebuild
+  //       return m_symbols.SetUsedSymbols(syms);
+  //     }
+  //   if(mode == SYMBOLS_MODE_MARKET_WATCH)
+  //     {
+  //       string clear[1] = { ::Symbol() };
+  //       m_symbols.SetUsedSymbols(clear);  // force clear collection
+  //       bool res = m_symbols.CreateSymbolsList(true);
+  //       m_symbols_rebuild_count = m_symbols.GetSymbolsCollectionTotal();
+  //       return res;
+  //     }
+  //   // SYMBOLS_MODE_ALL
+  //     string clear[1] = { ::Symbol() };
+  //     m_symbols.SetUsedSymbols(clear);  // force clear collection
+  //     bool res = m_symbols.CreateSymbolsList(false);
+  //     m_symbols_rebuild_count = m_symbols.GetSymbolsCollectionTotal();
+  //   return res;
+  // }
 
 #endif // CTRADING_ENGINE_MQH_IMPLEMENTATION
 #endif // __TRADING_ENGINE_MQH__

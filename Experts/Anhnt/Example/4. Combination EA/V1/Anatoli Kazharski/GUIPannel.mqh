@@ -157,7 +157,6 @@
             void  ResizeEventsTable(const int total);
             void  FlushEventsTable(void) { m_table_events.Update(true); } 
             void  SortAndFlushEventsTable(void);
-
             int   GetEventClickedRow(void) const    { return m_events_clicked_row;          }
             void  ResetEventClickedRow(void)        { m_events_clicked_row = WRONG_VALUE;   }            
             bool  IsEventRowVisible(const int row);              
