@@ -5,9 +5,8 @@
 //+------------------------------------------------------------------+
 #ifndef __COMMON_INP_DATA_MQH__
 #define __COMMON_INP_DATA_MQH__
-
-#property copyright "Copyright 2020, MetaQuotes Software Corp."
-#property link      "https://mql5.com/en/users/artmedia70"
+  #property copyright "Copyright 2020, MetaQuotes Software Corp."
+  #property link      "https://mql5.com/en/users/artmedia70"
   //+------------------------------------------------------------------+
   //| Macro substitutions                                              |
   //+------------------------------------------------------------------+
@@ -15,9 +14,7 @@
   //+------------------------------------------------------------------+
   //| Input enumerations                                               |
   //+------------------------------------------------------------------+
-#ifdef COMPILE_EN
-  #ifndef CCOMMON_INP_DATA_MQH_DECLARATION
-  #define CCOMMON_INP_DATA_MQH_DECLARATION
+  #ifdef COMPILE_EN    
     //+------------------------------------------------------------------+
     //| "Yes" / "No"                                                     |
     //+------------------------------------------------------------------+
@@ -36,11 +33,7 @@
         TIMEFRAMES_MODE_ALL          // Work with a complete list of timeframes
       };
     //+------------------------------------------------------------------+
-  #endif // CCOMMON_INP_DATA_MQH_DECLARATION
-//+------------------------------------------------------------------+
-#else
-  #ifndef CCOMMON_INP_DATA_MQH_DECLARATION
-  #define CCOMMON_INP_DATA_MQH_DECLARATION
+  #else
     //+------------------------------------------------------------------+
     //| "Yes" / "No"                                                     |
     //+------------------------------------------------------------------+
@@ -59,12 +52,7 @@
         TIMEFRAMES_MODE_ALL          // Work with the full timeframe list
       };
     //+------------------------------------------------------------------+
-  #endif // CCOMMON_INP_DATA_MQH_DECLARATION
-#endif // COMPILE_EN
-
-  #ifndef CCOMMON_INP_DATA_MQH_IMPLEMENTATION
-  #define CCOMMON_INP_DATA_MQH_IMPLEMENTATION
-    //+------------------------------------------------------------------+
-  #endif // CCOMMON_INP_DATA_MQH_IMPLEMENTATION
+  
+  #endif // COMPILE_EN  
 
 #endif // __COMMON_INP_DATA_MQH__

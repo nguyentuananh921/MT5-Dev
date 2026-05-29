@@ -111,7 +111,6 @@
          void              ShowTabElements(const uint window_index);
         // --- Sets the accessibility status of elements
          void              SetAvailable(const uint window_index, const bool state);
-
         // --- Forms an array of elements with a timer
          void              FormTimerElementsArray(void);
         // --- Forms an array of available elements
@@ -149,29 +148,29 @@
       //---
     private:
       // --- Returns the index of the activated window
-      int               ActivatedWindowIndex(void);
+       int               ActivatedWindowIndex(void);
       // --- Returns the index of the activated main menu
-      int               ActivatedMenuBarIndex(void);
+       int               ActivatedMenuBarIndex(void);
       // --- Returns the index of the activated menu item
-      int               ActivatedMenuItemIndex(void);
+       int               ActivatedMenuItemIndex(void);
       // --- Returns the index of the activated double button
-      int               ActivatedSplitButtonIndex(void);
+       int               ActivatedSplitButtonIndex(void);
       // --- Returns the index of the activated combo box
-      int               ActivatedComboBoxIndex(void);
+       int               ActivatedComboBoxIndex(void);
       // --- Returns the index of the activated dropdown calendar
-      int               ActivatedDropCalendarIndex(void);
+       int               ActivatedDropCalendarIndex(void);
       // --- Returns the index of the activated scrollbar
-      int               ActivatedScrollIndex(void);
+       int               ActivatedScrollIndex(void);
       // --- Returns the index of the activated table
-      int               ActivatedTableIndex(void);
+       int               ActivatedTableIndex(void);
       // --- Returns the index of the activated slider
-      int               ActivatedSliderIndex(void);
+       int               ActivatedSliderIndex(void);
       // --- Returns the index of the activated tree list
-      int               ActivatedTreeViewIndex(void);
+       int               ActivatedTreeViewIndex(void);
       // --- Returns the index of the activated standard chart
-      int               ActivatedSubChartIndex(void);
+       int               ActivatedSubChartIndex(void);
       // --- Checks and makes the context menu available
-      void              CheckContextMenu(CMenuItem &object);
+       void              CheckContextMenu(CMenuItem &object);
    };
  #ifndef CWNDEVENTS_MQH_IMPLEMENTATION
  #define CWNDEVENTS_MQH_IMPLEMENTATION

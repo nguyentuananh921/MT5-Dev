@@ -169,62 +169,62 @@ private:
    //+------------------------------------------------------------------+
    void CTreeItem::UpdateX(const int x)
      {
-   // ---Updating global coordinates and offset from extreme point
-      CElementBase::X(CElement::CalculateX(x));
-      CElementBase::XGap(x);
-   // --- Coordinates and offset
-      m_canvas.X(x);
-      m_canvas.XGap(x);
+      // ---Updating global coordinates and offset from extreme point
+         CElementBase::X(CElement::CalculateX(x));
+         CElementBase::XGap(x);
+      // --- Coordinates and offset
+         m_canvas.X(x);
+         m_canvas.XGap(x);
      }
    //+------------------------------------------------------------------+
    // | Y Coordinate Update |
    //+------------------------------------------------------------------+
    void CTreeItem::UpdateY(const int y)
      {
-   // ---Updating global coordinates and offset from extreme point
-      CElementBase::Y(CElement::CalculateY(y));
-      CElementBase::YGap(y);
-   // --- Coordinates and offset
-      m_canvas.Y(y);
-      m_canvas.YGap(y);
+      // ---Updating global coordinates and offset from extreme point
+         CElementBase::Y(CElement::CalculateY(y));
+         CElementBase::YGap(y);
+      // --- Coordinates and offset
+         m_canvas.Y(y);
+         m_canvas.YGap(y);
      }
    //+------------------------------------------------------------------+
    // | Update width |
    //+------------------------------------------------------------------+
    void CTreeItem::UpdateWidth(const int width)
      {
-   // ---Background width
-      CElementBase::XSize(width);
-      m_canvas.XSize(width);
-      m_canvas.Resize(width,m_y_size);
+      // ---Background width
+         CElementBase::XSize(width);
+         m_canvas.XSize(width);
+         m_canvas.Resize(width,m_y_size);
      }
    //+------------------------------------------------------------------+
    // | Draws an element |
    //+------------------------------------------------------------------+
    void CTreeItem::Draw(void)
      {
-   // --- Draw background
-      CButton::DrawBackground();
-   // --- Draw a picture
-      if(m_item_type==TI_HAS_ITEMS)
-         CTreeItem::DrawImage();
-      else
-         CButton::DrawImage();
-   // --- Draw text
-      CElement::DrawText();
+      // --- Draw background
+         CButton::DrawBackground();
+      // --- Draw a picture
+         if(m_item_type==TI_HAS_ITEMS)
+            CTreeItem::DrawImage();
+         else
+            CButton::DrawImage();
+      // --- Draw text
+         CElement::DrawText();
      }
    //+------------------------------------------------------------------+
    // | Draws a picture |
    //+------------------------------------------------------------------+
    void CTreeItem::DrawImage(void)
      {
-   // --- Define the index
-      uint image_index=(m_item_state)? 0 : 1;
-   // --- Save index of selected image
-      CElement::ChangeImage(1,image_index);
-   // --- Draw a picture
-      CElement::DrawImage();
-     }
+      // --- Define the index
+         uint image_index=(m_item_state)? 0 : 1;
+      // --- Save index of selected image
+         CElement::ChangeImage(1,image_index);
+      // --- Draw a picture
+         CElement::DrawImage();
+     }  
    //+------------------------------------------------------------------+
  #endif // CTREEITEM_MQH_IMPLEMENTATION
 #endif // __TREEITEM_MQH__

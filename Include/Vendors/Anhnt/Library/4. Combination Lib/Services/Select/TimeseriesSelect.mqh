@@ -5,16 +5,16 @@
 //+------------------------------------------------------------------+
 #ifndef __TIMESERIES_SELECT_MQH__
 #define __TIMESERIES_SELECT_MQH__
-#include "CommonSelect.mqh"
-#include "..\..\Timeseries\Bars\Bar.mqh"
-#include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh"
-#include "..\..\Timeseries\Indicators\DataInd.mqh"
+   #include "CommonSelect.mqh"
+   #include "..\..\Timeseries\Bars\Bar.mqh"
+   #include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh"
+   #include "..\..\Timeseries\Indicators\DataInd.mqh"
 #ifndef CTIMESERIES_SELECT_MQH_DECLARATION
 #define CTIMESERIES_SELECT_MQH_DECLARATION
-//+------------------------------------------------------------------+
-//| Select class for Timeseries objects (Bar, Pattern, DataInd)      |
-//+------------------------------------------------------------------+
-class CTimeseriesSelect : public CCommonSelect
+ //+------------------------------------------------------------------+
+ //| Select class for Timeseries objects (Bar, Pattern, DataInd)      |
+ //+------------------------------------------------------------------+
+ class CTimeseriesSelect : public CCommonSelect
   {
    public:
     //+------------------------------------------------------------------+
