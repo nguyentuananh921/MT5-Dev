@@ -29,6 +29,12 @@
 		},
 		{
 			"path": "../../../Le Xuan Quy"
+		},
+		{
+			"path": "../../../Anatoli Kazharski/11. 3394 Text edit boxes and Combo boxes in table cells"
+		},
+		{
+			"path": "../../../Anatoli Kazharski/8.2. 2539 The Tree View Control"
 		}
 	],
 	"settings": {
@@ -41,7 +47,7 @@
 			"-std=c++17",
 			"-D__MQL__",
 			"-D__MQL5__",
-			"-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.52-universal/files/mql_clangd_compat.h",
+			"-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.54-universal/files/mql_clangd_compat.h",
 			"-fms-extensions",
 			"-fms-compatibility",
 			"-ferror-limit=0",

@@ -3,20 +3,18 @@
 //|                         Copyright 2020, MetaQuotes Software Corp.|
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
-#ifndef __TIMESERIES_DELIB_MQH__
-#define __TIMESERIES_DELIB_MQH__
-
 #property copyright "Copyright 2020, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
-  //+------------------------------------------------------------------+
-  //| Include files                                                    |
-  //+------------------------------------------------------------------+
-  #include "CommonDELib.mqh"
-
-//+------------------------------------------------------------------+
-//| Return description of the line style                             |
-//+------------------------------------------------------------------+
-string LineStyleDescription(const ENUM_LINE_STYLE style)
+#ifndef __TIMESERIES_DELIB_MQH__
+#define __TIMESERIES_DELIB_MQH__
+ //+------------------------------------------------------------------+
+ //| Include files                                                    |
+ //+------------------------------------------------------------------+
+ #include "CommonDELib.mqh"
+ //+------------------------------------------------------------------+
+ //| Return description of the line style                             |
+ //+------------------------------------------------------------------+
+ string LineStyleDescription(const ENUM_LINE_STYLE style)
   {
     return
         (
@@ -28,10 +26,10 @@ string LineStyleDescription(const ENUM_LINE_STYLE style)
           "Unknown"
         );
   }
-//+------------------------------------------------------------------+
-//| Compare two MqlParam structures                                  |
-//+------------------------------------------------------------------+
-bool IsEqualMqlParams(MqlParam &struct1, MqlParam &struct2)
+ //+------------------------------------------------------------------+
+ //| Compare two MqlParam structures                                  |
+ //+------------------------------------------------------------------+
+ bool IsEqualMqlParams(MqlParam &struct1, MqlParam &struct2)
   {
     if(struct1.type != struct2.type)
         return false;
@@ -46,10 +44,10 @@ bool IsEqualMqlParams(MqlParam &struct1, MqlParam &struct2)
         default           : return false;
       }
   }
-//+------------------------------------------------------------------+
-//| Compare two MqlParam arrays element by element                   |
-//+------------------------------------------------------------------+
-bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
+ //+------------------------------------------------------------------+
+ //| Compare two MqlParam arrays element by element                   |
+ //+------------------------------------------------------------------+
+ bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
   {
     int total = ArraySize(array1);
     int size  = ArraySize(array2);
@@ -62,6 +60,26 @@ bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
       }
     return true;
   }
-//+------------------------------------------------------------------+
+ //+------------------------------------------------------------------+
+ //| Return the number of candles for a given pattern type            |
+ //+------------------------------------------------------------------+
+ int CandlesForPatternType(const ENUM_PATTERN_TYPE type)
+    {
+      // Single Candlestick (1 bar) 8 pattern
+      if(type==PATTERN_TYPE_SHOOTING_STAR || type==PATTERN_TYPE_HAMMER ||
+        type==PATTERN_TYPE_INVERTED_HAMMER || type==PATTERN_TYPE_HANGING_MAN ||
+        type==PATTERN_TYPE_DOJI || type==PATTERN_TYPE_DRAGONFLY_DOJI ||
+        type==PATTERN_TYPE_GRAVESTONE_DOJI || type==PATTERN_TYPE_PIN_BAR)
+          return 1;
+      // Double Candlestick (2 bars) 9 pattern
+      if(type==PATTERN_TYPE_HARAMI || type==PATTERN_TYPE_HARAMI_CROSS ||
+        type==PATTERN_TYPE_TWEEZER || type==PATTERN_TYPE_PIERCING_LINE ||
+        type==PATTERN_TYPE_DARK_CLOUD_COVER || type==PATTERN_TYPE_ENGULFING ||
+        type==PATTERN_TYPE_OUTSIDE_BAR || type==PATTERN_TYPE_INSIDE_BAR ||
+        type==PATTERN_TYPE_RAILS)
+          return 2;
+      return 3; // Triple (3 bars) 11 pattern
+    }
+ //+------------------------------------------------------------------+
 
 #endif // __TIMESERIES_DELIB_MQH__
