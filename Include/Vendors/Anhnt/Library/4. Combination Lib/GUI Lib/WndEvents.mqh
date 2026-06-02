@@ -44,17 +44,13 @@
       // --- Virtual graph event handler
         virtual void      OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {}
       // --- Timer
-        void              OnTimerEvent(void);
-      //---
-    public:
+        void              OnTimerEvent(void);   
       // ---Graph event handlers
-        void              ChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
-      //---
-    public:
+        void              ChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);      
       // --- Returns the index of the activated window
       int               GetActiveWindowIndex(void) {return(m_active_window_index); }
       //---
-        private:
+    private:
         void              ChartEventCustom(void);
         void              ChartEventClick(void);
         void              ChartEventMouseMove(void);

@@ -17,9 +17,9 @@
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
 #define CGUIPANNEL_MQH_DECLARATION
- // Define GUI control
- // id for m_tabsTrade
- enum ENUM_TAB_MAIN
+  // Define GUI control
+  // id for m_tabsTrade
+  enum ENUM_TAB_MAIN
    {
       TAB_TAB_TRADE_ACCOUNT_INFO = 0,
       TAB_TAB_TRADE_SYMBOL_INFO,
@@ -30,8 +30,8 @@
       TAB_TAB_TRADE_EVENTS, //For Pattern Information
       TABS1_TOTAL,          //Total Tab
    };
- // Status bar items
- #define STATUS_LABELS_TOTAL 4
+  // Status bar items
+  #define STATUS_LABELS_TOTAL 4
    enum ENUM_STATUS_BAR_ITEM
    {
       STATUS_BAR_HELP = 0,
@@ -39,14 +39,15 @@
       STATUS_BAR_PROFIT,
       STATUS_BAR_SERVER_TIME,
    };
-  //Tab
-   enum ENUM_TAB_INFO
+  //+------------------------------------------------------------------+
+  //| Tab indices                                                      |
+  //+------------------------------------------------------------------+
+  enum ENUM_TAB_INFO
    {
       TAB_INFO_PATTERNS   = 0,   // Candle pattern confluence
       TAB_INFO_INDICATORS = 1,   // Indicator values (future)
       TAB_INFO_TOTAL
    };
-
  class CGUIPannel : public CWndEvents
   {
    private: 
@@ -81,18 +82,19 @@
          CCheckBox   m_bull_checks[PATTERNS_TOTAL];
          CCheckBox   m_bear_checks[PATTERNS_TOTAL]; 
        //For Infor Windows 
-        CWindow           m_infoWindow;
-        CTabs             m_infotabs;
-        CTextLabel        m_lbl_infotime;
-        CTextLabel        m_lbl_infoopen;
-        CTextLabel        m_lbl_infohigh;
-        CTextLabel        m_lbl_infolow;
-        CTextLabel        m_lbl_infoclose;
-        CTable            m_info_pattern_table;
+        CWindow           m_info_Window;
+        CTabs             m_tab_info_tabs;
+        CTextLabel        m_lbl_info_time;
+        CTextLabel        m_lbl_info_open;
+        CTextLabel        m_lbl_info_high;
+        CTextLabel        m_lbl_info_low;
+        CTextLabel        m_lbl_info_close;
+        CTable            m_tbl_info_pattern_table;    
     //Test Purpose
       CTextLabel m_test_labels[TABS1_TOTAL];    
    private: // Private methods
      //--- Form
+         int WindowIdx(CWindow &wnd);
          bool CreateMainWindow(const string text);
      // For Main Tab
          bool CreateTab_Main(const int x_gap, const int y_gap);
@@ -107,12 +109,12 @@
        //For table PatternConfig
         void InitializePatternTable(void);
         bool CreatePatternConfigTable(const int x, const int y);
-       //For information Windows
+     //For information Windows
          bool              CreateInfoWindow(void);
-         bool              CreateTabs(const int x_gap, const int y_gap);
-         bool              CreateLabels(const int x_gap, const int y_gap);
-         bool              CreatePatternTable(void);  // new
-         void              ScanPatterns(CArrayObj *plist,
+         bool              CreateInfoTabs(const int x_gap, const int y_gap);
+         bool              CreateInfoLabels(const int x_gap, const int y_gap);
+         bool              CreateInfoPatternTable(void);  // new
+         void              ScanPatternsInfo(CArrayObj *plist,
                               const string symbol,
                               const ENUM_TIMEFRAMES tf_current,
                               const datetime T);
@@ -128,19 +130,18 @@
        void OnTickEvent(void);
        virtual void OnEvent(const int id, const long &lparam,
                            const double &dparam, const string &sparam);
+       //--- Trading event handler
+         void OnTradeEvent(void);
        //For GUI         
         void RefreshGUI(void); 
-        CWindow *GetMainWindowPointer(void) { return &m_Mainwindow; }
-      //--- Trading event handler
-         void OnTradeEvent(void);
-
+        CWindow *GetMainWindowPointer(void) { return &m_Mainwindow; }      
       //For Information windows
-         void ShowAt(const int x, const int y,
-                  CBar *bar, const int digits,
-                  CArrayObj *plist,
-                  const string symbol,
-                  const ENUM_TIMEFRAMES tf_current);
-         void              Hide(void);
+         void ShowInfoWindowAt(const int x, const int y,
+                     CBar *bar, const int digits,
+                     CArrayObj *plist,
+                     const string symbol,
+                     const ENUM_TIMEFRAMES tf_current);
+         void              HideInfoWindow(void);
       //For Pointer      
          void  SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbols = symbols; }      
          void  SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_timeseries = ts; }         
@@ -168,8 +169,17 @@
   CGUIPannel::~CGUIPannel(void)
    {
    }
- // CGUIPannel Lifecycle
-  //+------------------------------------------------------------------+
+ //Get window index
+  int CGUIPannel::WindowIdx(CWindow &wnd)
+   {
+      for(int i = 0; i < WindowsTotal(); i++)
+         if(m_windows[i] == GetPointer(wnd))
+            return i;
+      return 0;
+   } 
+// CGUIPannel Lifecycle
+  
+ //+------------------------------------------------------------------+
   //| Init                                                             |
   //+------------------------------------------------------------------+ 
   bool CGUIPannel::OnInitEvent(void)
@@ -209,8 +219,12 @@
             if(!CreatePatternConfigTable(215, 5)) return false;
              //Print("MyDebug from CGUIPannel::OnInitEvent OK: all created");
       
+      //For infor windows
+       if(!CreateInfoWindow()) return false;
       CWndEvents::CompletedGUI();
-      InitializePatternTable(); 
+
+       InitializePatternTable();
+       HideInfoWindow();
       m_chart.Redraw();
       return (true);      
    };
@@ -779,77 +793,213 @@
       CWndContainer::AddToElementsArray(0, m_pattern_table);
       return true;
    }
-
- //For Information Windows
+ //Adding control for Information windows
   //+------------------------------------------------------------------+
   //| Create the info window                                           |
   //+------------------------------------------------------------------+
-  bool CInfoPannel::CreateInfoWindow(void)
-   {
-    CWndContainer::AddWindow(m_infoWindow);
+  bool CGUIPannel::CreateInfoWindow(void)
+   {    
+    CWndContainer::AddWindow(m_info_Window);
     //--- Properties
-      m_infoWindow.XSize(250);
-      m_infoWindow.YSize(300);
-      m_infoWindow.FontSize(9);
-      m_infoWindow.IsMovable(true);
-      m_infoWindow.CloseButtonIsUsed(false);
-      m_infoWindow.CollapseButtonIsUsed(false);
-      m_infoWindow.FullscreenButtonIsUsed(false);
-      m_infoWindow.TooltipsButtonIsUsed(false);
+      m_info_Window.XSize(250);
+      m_info_Window.YSize(300);
+      m_info_Window.FontSize(9);
+      m_info_Window.IsMovable(true);
+      m_info_Window.CloseButtonIsUsed(false);
+      m_info_Window.CollapseButtonIsUsed(false);
+      m_info_Window.FullscreenButtonIsUsed(false);
+      m_info_Window.TooltipsButtonIsUsed(false);
       m_info_Window.WindowType(W_DIALOG);
     //--- Create at off-screen position, hidden initially
-      if(!m_infoWindow.CreateWindow(m_chart_id, m_subwin, "Bar Info", 0, 0)) return(false);
+      if(!m_info_Window.CreateWindow(m_chart_id, m_subwin, "Bar Info", 0, 0)) return(false);
     //--- Create child controls inside this window
-      if(!CreateInfoLabels(6, 25))   return false; 
+      if(!CreateInfoLabels(6, 25))     return false;      
       if(!CreateInfoTabs(3, 120))    return false;
       if(!CreateInfoPatternTable())  return false;      
       return(true);
-   }
+   } 
   //+------------------------------------------------------------------+
-  //| Create tabs                                                      |
+  //| Create tabs at m_info_Window                                                     |
   //+------------------------------------------------------------------+
-  bool CInfoPannel::CreateInfoTabs(const int x_gap, const int y_gap)
+  bool CGUIPannel::CreateInfoTabs(const int x_gap, const int y_gap)
    {    
     string tab_names[TAB_INFO_TOTAL] = {"Patterns", "Indicators"};
     //--- Attach to window
-      m_tabs.MainPointer(m_infoWindow);
+      m_tab_info_tabs.MainPointer(m_info_Window);
     //--- Properties
-      m_tabs.IsCenterText(true);
-      m_tabs.PositionMode(TABS_TOP);
-      m_tabs.AutoXResizeMode(true);
-      m_tabs.AutoYResizeMode(true);
-      m_tabs.AutoXResizeRightOffset(3);
-      m_tabs.AutoYResizeBottomOffset(3);
+      m_tab_info_tabs.IsCenterText(true);
+      m_tab_info_tabs.PositionMode(TABS_TOP);
+      m_tab_info_tabs.AutoXResizeMode(true);
+      m_tab_info_tabs.AutoYResizeMode(true);
+      m_tab_info_tabs.AutoXResizeRightOffset(3);
+      m_tab_info_tabs.AutoYResizeBottomOffset(3);
     //--- Add tab
       for(int i = 0; i < TAB_INFO_TOTAL; i++)
-         m_tabs.AddTab(tab_names[i], 100);
+         m_tab_info_tabs.AddTab(tab_names[i], 100);
     //--- Create
-      if(!m_tabs.CreateTabs(x_gap, y_gap))
+      if(!m_tab_info_tabs.CreateTabs(x_gap, y_gap))
         return(false);
-      CWndContainer::AddToElementsArray(0, m_tabs);
+      CWndContainer::AddToElementsArray(WindowIdx(m_info_Window), m_tab_info_tabs);
         return(true);
    }
   //+------------------------------------------------------------------+
-  //| Create text labels for OHLC inside the tab                      |
+  //| Create text labels for OHLC inside the m_info_Window              |
   //+------------------------------------------------------------------+
-  bool CInfoPannel::CreateInfoLabels(const int x_gap, const int y_gap)
+  bool CGUIPannel::CreateInfoLabels(const int x_gap, const int y_gap)
    {
       int       row_h    = 20;
       string    init_texts[] = {"T: -", "O: -", "H: -", "L: -", "C: -"};
-      CTextLabel *labels[]   = {&m_lbl_time, &m_lbl_open, &m_lbl_high, &m_lbl_low, &m_lbl_close};
+      CTextLabel *labels[]   = {&m_lbl_info_time, &m_lbl_info_open, &m_lbl_info_high, &m_lbl_info_low, &m_lbl_info_close};
       for(int i = 0; i < 5; i++)
       {
         //--- Attach to tabs, inside TAB_INFO_BAR
-        labels[i].MainPointer(m_infoWindow);
-        CWndContainer::AddToElementsArray(0, *labels[i]);        
+        labels[i].MainPointer(m_info_Window);                
         labels[i].FontSize(9);
-        //--- Create
-        if(!labels[i].CreateTextLabel(init_texts[i], x_gap, y_gap + i * row_h))
+        //--- Create        
+         if(!labels[i].CreateTextLabel(init_texts[i], x_gap, y_gap + i * row_h))
           return(false);
-        CWndContainer::AddToElementsArray(0, *labels[i]);
+         CWndContainer::AddToElementsArray(WindowIdx(m_info_Window), *labels[i]);
+        
       }
       return(true);
-   } 
+   }
+  //+------------------------------------------------------------------+
+  //| Create Pattern Table inside the m_info_Window                     |
+  //+------------------------------------------------------------------+   
+  bool CGUIPannel::CreateInfoPatternTable(void)
+   {
+         m_tbl_info_pattern_table.MainPointer(m_tab_info_tabs);
+         m_tab_info_tabs.AddToElementsArray(TAB_INFO_PATTERNS, m_tbl_info_pattern_table);
+         m_tbl_info_pattern_table.AutoXResizeMode(true);
+         m_tbl_info_pattern_table.AutoXResizeRightOffset(3);
+         m_tbl_info_pattern_table.AutoYResizeMode(true);
+         m_tbl_info_pattern_table.AutoYResizeBottomOffset(3);
+         m_tbl_info_pattern_table.ShowHeaders(true);
+         m_tbl_info_pattern_table.SelectableRow(true);
+         m_tbl_info_pattern_table.TableSize(4, 1);
+         int widths[4]    = {38, 120, 16, 22};
+         int img_x_off[4] = {0, 0, 0, 3};
+         int img_y_off[4] = {0, 0, 0, 3};
+         ENUM_ALIGN_MODE align[4] = {ALIGN_CENTER, ALIGN_LEFT, ALIGN_CENTER, ALIGN_LEFT};
+         m_tbl_info_pattern_table.ColumnsWidth(widths);
+         m_tbl_info_pattern_table.ImageXOffset(img_x_off);   
+         m_tbl_info_pattern_table.ImageYOffset(img_y_off);   
+         m_tbl_info_pattern_table.TextAlign(align);  
+         if(!m_tbl_info_pattern_table.CreateTable(3, 3)) return false;
+
+         //Set header 
+         m_tbl_info_pattern_table.SetHeaderText(0, "TF");
+         m_tbl_info_pattern_table.SetHeaderText(1, "Pattern");
+         m_tbl_info_pattern_table.SetHeaderText(2, "#");
+         m_tbl_info_pattern_table.SetHeaderText(3, "Dir");
+         
+         CWndContainer::AddToElementsArray(WindowIdx(m_info_Window), m_tbl_info_pattern_table);
+         return true;
+   }
+ void CGUIPannel::ScanPatternsInfo(CArrayObj *plist, const string symbol,
+                                  const ENUM_TIMEFRAMES tf_current, const datetime T)
+  {
+    //Setting Icon
+     uint arrow_up[] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP};
+     uint arrow_dn[] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP};
+    m_tbl_info_pattern_table.DeleteAllRows();
+    if(plist == NULL) { m_tbl_info_pattern_table.Update(true); return; }
+
+    int row = 0;
+     for(int i = 0; i < plist.Total(); i++)
+      {
+          CBarPattern *p = plist.At(i);
+          if(p == NULL) continue;
+          if(p.GetProperty(PATTERN_PROP_SYMBOL) != symbol) continue;
+          ENUM_TIMEFRAMES p_tf = (ENUM_TIMEFRAMES)p.GetProperty(PATTERN_PROP_PERIOD);
+          if((int)p_tf < (int)tf_current) continue;
+          datetime p_time = (datetime)p.GetProperty(PATTERN_PROP_TIME);
+          if(p_time > T || T >= p_time + PeriodSeconds(p_tf)) continue;
+
+          if(row > 0) m_tbl_info_pattern_table.AddRow(row);
+
+
+          string tf_str = StringSubstr(EnumToString(p_tf), 7); // "PERIOD_M1"→"M1"
+          string name   = p.GetProperty(PATTERN_PROP_NAME);
+          int    candles = (int)p.GetProperty(PATTERN_PROP_CANDLES);
+          long   dir    = p.GetProperty(PATTERN_PROP_DIRECTION);
+          //Update here
+            m_tbl_info_pattern_table.SetValue(0, row, tf_str);
+            m_tbl_info_pattern_table.SetValue(1, row, name);
+            m_tbl_info_pattern_table.SetValue(2, row, string(candles));
+            // Col 3: icon
+             m_tbl_info_pattern_table.CellType(3, row, CELL_BUTTON);
+             if(dir == PATTERN_DIRECTION_BULLISH)
+                m_tbl_info_pattern_table.SetImages(3, row, arrow_up);
+             else if(dir == PATTERN_DIRECTION_BEARISH)
+                m_tbl_info_pattern_table.SetImages(3, row, arrow_dn);
+             else // BOTH
+              {
+                m_tbl_info_pattern_table.CellType(3, row, CELL_SIMPLE);
+                m_tbl_info_pattern_table.SetValue(3, row, "±");
+              }            
+          row++;
+      }
+      if(row == 0)
+          m_tbl_info_pattern_table.SetValue(1, 0, "No patterns");
+      m_tbl_info_pattern_table.Update(true);
+  }
+ //+------------------------------------------------------------------+
+ //| Show panel at chart position with bar data                       |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::ShowInfoWindowAt(const int x, const int y, CBar *bar, const int digits,
+                          CArrayObj *plist, const string symbol,
+                          const ENUM_TIMEFRAMES tf_current)
+  {
+      if(bar == NULL) return;     
+     // Update ALL OHLC labels
+      m_lbl_info_time.LabelText("T: " + TimeToString(bar.Time(), TIME_DATE|TIME_MINUTES));
+      m_lbl_info_open.LabelText("O: " + DoubleToString(bar.Open(), digits));
+      m_lbl_info_high.LabelText("H: " + DoubleToString(bar.High(), digits));
+      m_lbl_info_low.LabelText("L: " + DoubleToString(bar.Low(), digits));
+      m_lbl_info_close.LabelText("C: " + DoubleToString(bar.Close(), digits));   
+     // Scan patterns
+      ScanPatternsInfo(plist, symbol, tf_current, bar.Time());
+
+      // Position với overflow flip
+      long chart_w, chart_h;
+      ChartGetInteger(0, CHART_WIDTH_IN_PIXELS,  0, chart_w);
+      ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS, 0, chart_h);
+      int px = x + 15;
+      int py = y - 10;
+      if(px + 250 > (int)chart_w) px = x - 255;
+      if(py + 300 > (int)chart_h) py = y - 300;
+
+      m_info_Window.X(px);
+      m_info_Window.Y(py);         
+      m_active_window_index = WindowIdx(m_info_Window);  
+      Moving();
+      CWndEvents::Show(m_active_window_index);     // synchronous
+      ShowTabElements(m_active_window_index);      // show đúng tab
+     // Redraw Label after Moving
+      m_lbl_info_time.Draw();   m_lbl_info_time.Draw(); m_lbl_info_time.Update(false);
+      m_lbl_info_open.Draw();   m_lbl_info_open.Draw(); m_lbl_info_open.Update(false);
+      m_lbl_info_high.Draw();   m_lbl_info_high.Draw(); m_lbl_info_high.Update(false);
+      m_lbl_info_low.Draw();    m_lbl_info_low.Draw();  m_lbl_info_low.Update(false);
+      m_lbl_info_close.Draw();  m_lbl_info_low.Draw();  m_lbl_info_close.Update(false);
+      m_chart.Redraw();
+  }
+
+ //+------------------------------------------------------------------+
+ //| Hide the panel                                                   |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::HideInfoWindow(void)
+  {   
+    int win_idx = WindowIdx(m_info_Window);
+    // Hide tất cả child elements trong info window group
+      int main_total = MainElementsTotal(win_idx);
+      for(int i = 0; i < main_total; i++)
+         m_wnd[win_idx].m_main_elements[i].Hide();
+    // Hide window canvas
+      m_info_Window.Hide();
+      m_active_window_index = WindowIdx(m_Mainwindow);
+    m_chart.Redraw();
+  }
    
   //---------
  //Calculatioon for display in Control
