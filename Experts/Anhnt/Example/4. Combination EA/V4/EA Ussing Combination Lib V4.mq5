@@ -44,6 +44,7 @@
       //For GUI.Now set both pointers before GUI init              
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
+        mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection()); 
         // GUI init: m_symbols và m_timeseries đều đã có
          static bool s_gui_ready = false;
          static bool s_info_ready   = false;
@@ -55,8 +56,7 @@
           else
            {
              mGUIPannel.RefreshGUI(); 
-           }
-          mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());  
+           }  
       //For patternRenderer
         patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
         mGUIPannel.SetPatternRenderer(&patternRenderer);
@@ -145,6 +145,12 @@
             return;
     //For TimeSeriesEngine must before mGUIPannel ChartEvent to UpdateTreeNodeStates and before patternRenderer ChartEvent to UpdateNewPatterns
       timeSeriesEngine.OnChartEvent(id, lparam, dparam, sparam);
+    // When chart changes (TF, indicator add/remove/modify),
+    // refresh TreeView to reflect collection updates
+       if(id == CHARTEVENT_CHART_CHANGE)
+        {
+          mGUIPannel.RefreshGUI();
+        }
     //For GUI     
      mGUIPannel.ChartEvent(id, lparam, dparam, sparam);         
      //Mouse move → show InfoPanel
@@ -186,9 +192,7 @@
               mGUIPannel.HideInfoWindow();
          }        
       } 
-
-
-    // //For PatternRender
+     // For PatternRender
       // 2. Renderer after: plist already has new patterns if any were added
       CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
       patternRenderer.OnChartEvent(id, plist);        

@@ -6,7 +6,6 @@
 //| Add By Anhnt: bool CreateItemsFrom(const int start_index);       |
 //| Add By Anhnt: void SetItemsTotal(const int index, const int total);|
 //+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
 //| Class for creating a tree list                                   |
 //+------------------------------------------------------------------+
 #ifndef __TREEVIEW_MQH__
@@ -175,7 +174,7 @@
                  const uint path_bmp, const int item_index, const int node_number,
                  const int item_number, const int items_total,
                  const int folders_total, const bool item_state,
-                 const bool is_folder = true);
+                 const bool is_folder = true);    
     // --- Adds an element to the tab item array
      void AddToElementsArray(const int item_index, CElement &object);
     // --- Show elements of only the selected tab item
@@ -201,12 +200,10 @@
     // --- Updates (1) the tree list and (2) the contents list
       void UpdateTreeList(void);
       void UpdateContentList(void);
-    // ---My Adding Method
+    // ---My Adding Method      
       bool CreateItemsFrom(const int start_index);
-      void SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; }
-
-      //   void RebuildItems(void);
-      //   void RecreateVisuals(void);  
+      void SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; }      
+            
   };
 #endif // CTREEVIEW_MQH_DECLARATION
 #ifndef CTREEVIEW_MQH_IMPLEMENTATION
@@ -1857,13 +1854,12 @@
          m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;
          if(!m_items[i].CreateTreeItem(x, y, type, m_t_list_index[i],
                                        m_t_node_level[i], m_t_item_text[i],
-                                       m_t_item_state[i]))
-                                       
-                {
-                  //For debug
-                  Print("My Debug from CTreeView::CreateItemsFrom CreateTreeItem FAILED at i=", i);
-                  return false;
-                }
+                                       m_t_item_state[i]))                                       
+            {
+              //For debug
+              Print("My Debug from CTreeView::CreateItemsFrom CreateTreeItem FAILED at i=", i);
+              return false;
+            }
       }
       SetNodeLevelBoundaries();
       SetRootItemsTotal();
@@ -1873,40 +1869,8 @@
       RedrawTreeList();
       UpdateTreeList();
       return true;
-   }
-
-//  void CTreeView::RebuildItems(void)
-//    {
-//       // Destroy visual items only (NOT canvas)
-//       int items_total = ::ArraySize(m_items);
-//       for(int i = 0; i < items_total; i++)
-//          m_items[i].Delete();
-//       ::ArrayFree(m_items);
-//       FreeElementsArray();
-//       // Clear all data arrays
-//       ::ArrayFree(m_t_list_index);
-//       ::ArrayFree(m_t_prev_node_list_index);
-//       ::ArrayFree(m_t_item_text);
-//       ::ArrayFree(m_t_path_bmp);
-//       ::ArrayFree(m_t_item_index);
-//       ::ArrayFree(m_t_node_level);
-//       ::ArrayFree(m_t_prev_node_item_index);
-//       ::ArrayFree(m_t_items_total);
-//       ::ArrayFree(m_t_folders_total);
-//       ::ArrayFree(m_t_item_state);
-//       ::ArrayFree(m_t_is_folder);
-//       ::ArrayFree(m_td_list_index);
-//       m_items_total = 0;
-//       m_selected_item_index = 0;
-//    }
-//   void CTreeView::RecreateVisuals(void)
-//    {
-//       CreateItems();
-//       SetNodeLevelBoundaries();
-//       SetRootItemsTotal();
-//       FormTreeList();
-//       RedrawTreeList();
-//    }
+   } 
+ 
 //+------------------------------------------------------------------+
 #endif // CTREEVIEW_MQH_IMPLEMENTATION
 #endif // __TREEVIEW_MQH__

@@ -10,9 +10,11 @@
  #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\WndEvents.mqh>
  // For trading data
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SymbolsCollection.mqh>
+ //For timeseries data  
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BarTimeSeriesCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
-  #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh>  
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh> 
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
@@ -47,22 +49,23 @@
       TAB_INFO_PATTERNS   = 0,   // Candle pattern confluence
       TAB_INFO_INDICATORS = 1,   // Indicator values (future)
       TAB_INFO_TOTAL
-   };
+   };  
  class CGUIPannel : public CWndEvents
   {
    private: 
     // Private Pointer variables    
-      CSymbolsCollection * m_symbols;             //Trading owns
-      CBarTimeSeriesCollection  *m_timeseries;    //CBarTimeSeriesCollection owns
-      CPatternRenderer* m_renderer;               //EA owns PatternRenderer for display New Patterns
-      CBarPatternsControl* m_patterns_ctrl;       // borrowed from EA
+      CSymbolsCollection * m_symbols;                 //Trading owns
+      CBarTimeSeriesCollection  *m_timeseries;        //CBarTimeSeriesCollection owns
+      CPatternRenderer* m_renderer;                   //EA owns PatternRenderer for display New Patterns
+      CBarPatternsControl* m_patterns_ctrl;           // borrowed from EA
+      CIndicatorsCollection *m_indicators_timeseries; //CTimeSeriesEngine owns
     //--- Time counters
       CTimeCounter m_gui_timecounter;
     // Control Elements     
       CWindow     m_Mainwindow;
       CStatusBar  m_status_bar;
       CTabs       m_tabs_main;
-      //For CTreeView
+      //For CTreeView left pannel on tab Setting of m_tabs_main
        CTreeView   m_treeview_settings;
        bool m_tree_initialized;       
        // Symbol node registry — written once at first build (watermark == 0)
@@ -74,14 +77,18 @@
        //For Pattern
         ENUM_PATTERN_TYPE m_pattern_types[];
         string            m_pattern_display_names[];
-       // Pattern panel controls
+       // Right panel in Settings tab
+         CTabs  m_settings_right_tabs;   // [Pattern] [Indicator] tabs                 
+        // Pattern panel controls
          CTable      m_pattern_table;         
          CCheckBox   m_check_all_bull;
          CCheckBox   m_check_all_bear; 
          CTextLabel  m_pattern_labels[PATTERNS_TOTAL];
          CCheckBox   m_bull_checks[PATTERNS_TOTAL];
          CCheckBox   m_bear_checks[PATTERNS_TOTAL]; 
-       //For Infor Windows 
+        // Indicator config table
+         CTable m_indicator_table;       
+      //For Infor Windows 
         CWindow           m_info_Window;
         CTabs             m_tab_info_tabs;
         CTextLabel        m_lbl_info_time;
@@ -102,13 +109,22 @@
          bool CreateStatusBar(const int x_gap, const int y_gap);
          bool UpdateStatusBar(void);
 
-     //For m_treeview_settings Setting Tab at m_tabs_main
-        bool CreateTreeView_Settings(void);
-        void PopulateTreeFromCollections(void); 
-        void DiscoverPatterns(void);         
-       //For table PatternConfig
-        void InitializePatternTable(void);
-        bool CreatePatternConfigTable(const int x, const int y);
+     //For m_treeview_settings Setting Tab TAB_TAB_TRADE_SETTINGS at m_tabs_main
+       //Left Pannel
+        bool CreateTreeView_Settings(void);        
+        void PopulateSymbolTFTree(void); 
+       // For right panel Settings — [Pattern][Indicator] tabs
+        bool CreateSettingsRightTabs(const int x, const int y);
+        
+        //For PatternConfigTable m_pattern_table
+         void DiscoverPatterns(void); 
+         void InitializePatternTable(void);
+         bool CreatePatternConfigTable(const int x, const int y);   
+        //For Indicator table m_indicator_table  
+         bool CreateIndicatorTable(const int x, const int y);      // tạo cấu trúc ← đổi từ CreateIndicatorConfigTable
+         void InitializeIndicatorTable(void);                      // fill ban đầu ← đổi từ RefreshIndicatorTable
+         void SetValuesToIndicatorTable(void);
+        
      //For information Windows
          bool              CreateInfoWindow(void);
          bool              CreateInfoTabs(const int x_gap, const int y_gap);
@@ -147,7 +163,7 @@
          void  SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_timeseries = ts; }         
          void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
          void  SetPatternsControl(CBarPatternsControl* ctrl) { m_patterns_ctrl = ctrl; } 
-            
+         void  SetIndicatorsCollection(CIndicatorsCollection *ind) { m_indicators_timeseries = ind; }   
   };
 #endif // CGUIPANNEL_MQH_DECLARATION
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION
@@ -159,12 +175,7 @@
       m_gui_timecounter.SetParameters(16, 500);
       m_tree_initialized=false;      
       m_renderer = NULL;
-    // m_syminfo_mode_changed = false;
-      // //For event table
-      //    m_events_clicked_row = WRONG_VALUE;
-      //    m_events_row_count   = 0;
-      //    m_events_filled_count= 0;
-   
+      m_indicators_timeseries = NULL;
    } 
   CGUIPannel::~CGUIPannel(void)
    {
@@ -177,16 +188,15 @@
             return i;
       return 0;
    } 
-// CGUIPannel Lifecycle
-  
- //+------------------------------------------------------------------+
+// CGUIPannel Lifecycle  
+  //+------------------------------------------------------------------+
   //| Init                                                             |
   //+------------------------------------------------------------------+ 
   bool CGUIPannel::OnInitEvent(void)
    {
       DiscoverPatterns();
       //--- Creating form 1 for controls
-      if (!CreateMainWindow("EXPERT PANEL V3"))
+      if (!CreateMainWindow("EXPERT PANEL V4"))
          {
             Print(__FUNCTION__, " > Failed to create panel!");
             return (false);
@@ -204,26 +214,17 @@
             }
       //Create control in each tab
          //For Settings Tab at m_tabs_main
-            if(!CreateTreeView_Settings()) 
-             {
-               { 
-                  //Debug
-                   //Print("MyDebug from CGUIPannel::OnInitEvent FAIL: CreateTreeView_Settings");
-                  return false;
-               }
-             }
-            PopulateTreeFromCollections(); 
-             //Debug 
-             //Print("MyDebug from CGUIPannel::OnInitEvent pattern_types count=", ArraySize(m_pattern_types));
-
-            if(!CreatePatternConfigTable(215, 5)) return false;
-             //Print("MyDebug from CGUIPannel::OnInitEvent OK: all created");
-      
+          if(!CreateTreeView_Settings()) return false;
+          if(!CreateSettingsRightTabs(205, 25)) return false;
+          if(!CreatePatternConfigTable(5, 5)) return false;
+          if(!CreateIndicatorTable(5, 5)) return false;    
       //For infor windows
        if(!CreateInfoWindow()) return false;
-      CWndEvents::CompletedGUI();
-
-       InitializePatternTable();
+      CWndEvents::CompletedGUI();     
+      //For Setting Pattern Table
+       InitializePatternTable();      
+       InitializeIndicatorTable(); 
+      //For InfoWindow
        HideInfoWindow();
       m_chart.Redraw();
       return (true);      
@@ -232,6 +233,9 @@
   void CGUIPannel::OnEvent(const int id, const long &lparam,
                          const double &dparam, const string &sparam)
    {
+    // Handle indicator table click (checkbox toggle)
+    
+    // Pattern table handling
       bool is_header = ((id - CHARTEVENT_CUSTOM) == ON_SORT_DATA      && lparam == m_pattern_table.Id());
       bool is_cell   = (id == (CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX) && lparam == m_pattern_table.Id());
       if(!is_header && !is_cell) return;
@@ -332,6 +336,7 @@
                }
                Print("MyDebug from CGUIPannel::OnEvent total enabled types in renderer=", enabled_types);
          }
+     
    }
   void CGUIPannel::OnTickEvent(void)
    {
@@ -362,14 +367,20 @@
    {      
    }
   void CGUIPannel::RefreshGUI(void) 
-   {      
-      int old_count = m_treeview_settings.ItemsTotal();
-      PopulateTreeFromCollections();
-      if(m_treeview_settings.ItemsTotal() > old_count)
-         m_treeview_settings.CreateItemsFrom(old_count);
-      m_chart.Redraw();
-   } 
- //For Control
+   {
+    // Update Symbol+TF tree incrementally (only adds new TF nodes, no rebuild)
+    int old_count = m_treeview_settings.ItemsTotal();
+    PopulateSymbolTFTree();
+    if(m_treeview_settings.ItemsTotal() > old_count)
+        m_treeview_settings.CreateItemsFrom(old_count);
+
+    // Update indicator table (SetValue per-cell, no-flicker)
+    SetValuesToIndicatorTable();
+
+    m_chart.Redraw();
+   }
+  
+//For Control
  // Create GUI controls
   //For Main Window
   //+------------------------------------------------------------------+
@@ -439,7 +450,8 @@
          profit_item.ChangeImage(0, 2); // default: gray
          profit_item.LabelXGap(14);     // shift text right for icon
       //--- Add the object to the common array of object groups
-         CWndContainer::AddToElementsArray(0, m_status_bar);
+         //CWndContainer::AddToElementsArray(0, m_status_bar);
+         CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_status_bar);         
          return (true);
    }
   // Update Status Bar
@@ -540,18 +552,20 @@
                if(!m_test_labels[i].CreateTextLabel(texts[i], 10, 10))
                   return false;
                m_tabs_main.AddToElementsArray(i, m_test_labels[i]);
-            CWndContainer::AddToElementsArray(0, m_test_labels[i]);
+            //CWndContainer::AddToElementsArray(0, m_test_labels[i]);
+            CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_test_labels[i]);            
           }      
       //--- Add the object to the common array of object groups
-      CWndContainer::AddToElementsArray(0, m_tabs_main);
+      //CWndContainer::AddToElementsArray(0, m_tabs_main);
+      CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_tabs_main);      
       return (true);
    }
  //Add Control at Setting Tab at m_tabs_main
   bool CGUIPannel::CreateTreeView_Settings(void)
    {
-      PopulateTreeFromCollections();
-      m_treeview_settings.MainPointer(m_tabs_main);     
-      
+      //Populate Treeview Item before create
+       PopulateSymbolTFTree();       
+      m_treeview_settings.MainPointer(m_tabs_main);
       m_treeview_settings.AutoXResizeMode(false);  // fixed width
       m_treeview_settings.XSize(200);              // tree chiếm 200px bên trái
       m_treeview_settings.AutoYResizeMode(true);
@@ -559,27 +573,27 @@
       m_treeview_settings.VisibleItemsTotal(15);
       m_treeview_settings.LightsHover(true);
       if(!m_treeview_settings.CreateTreeView(10, 10)) return false;
-      m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_treeview_settings);
-      CWndContainer::AddToElementsArray(0, m_treeview_settings);
-      m_tree_initialized = true;
-      return true;
+      if(!m_tree_initialized)   
+         {
+            m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_treeview_settings);
+            CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_treeview_settings);
+            m_tree_initialized = true;
+         }
+    return true;
    }
-  void CGUIPannel::PopulateTreeFromCollections(void)
+  void CGUIPannel::PopulateSymbolTFTree(void)
    {
       if(m_timeseries == NULL) return;
-
       const int tf_total = 21;
       int mw_total  = ::SymbolsTotal(true);
       int watermark = m_treeview_settings.ItemsTotal();
       int g = 0;
-
       // ─────────────────────────────────────────────────────────────────
       // PRE-COMPUTE — Count expected TF children per symbol.
       // Used in Loop 1 so AddItem receives the correct items_total and
       // item_state from the very first call. Counts registered nodes plus
       // new nodes that currently have timeseries data.
       // ─────────────────────────────────────────────────────────────────
-
       int tf_counts[];
       ArrayResize(tf_counts, mw_total);
       for(int i = 0; i < mw_total; i++)
@@ -587,120 +601,224 @@
          string sym_name = ::SymbolName(i, true);
          int count = 0;
          for(int j = 0; j < tf_total; j++)
-         {
-               ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
-
-               bool registered = false;
-               for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
-                  if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
-                     { registered = true; break; }
-
-               if(registered)           { count++; continue; }
-               if(m_timeseries.GetSeries(sym_name, tf) != NULL) count++;
-         }
+          {
+            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
+            bool registered = false;
+            for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
+               if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
+                  { registered = true; break; }
+            if(registered)           { count++; continue; }
+            if(m_timeseries.GetSeries(sym_name, tf) != NULL) count++;
+          }
          tf_counts[i] = count;
        }
 
       // ─────────────────────────────────────────────────────────────────
-      // LOOP 1 — Root node + one symbol node per MarketWatch symbol.
-      // MarketWatch order (SymbolName) is stable across TF-change reinits.
-      // The name→position registry is written only at first build
-      // (watermark == 0) and never overwritten.
+      // LOOP 1 — One symbol node per MarketWatch symbol as ROOT node.
+      // Symbols are root level (parent_g = -1, level = 0).
+      // Registry written once at first build (watermark == 0).
       // ─────────────────────────────────────────────────────────────────
-
-      if(g >= watermark)
-         m_treeview_settings.AddItem(g, -1, "Patterns", 0,
-                                       0, 0, 0,
-                                       mw_total, mw_total, true, true);
-      g++;
-
       for(int i = 0; i < mw_total; i++)
-      {
+       {
          string sym_name = ::SymbolName(i, true);
          int    sym_g    = g;
 
          if(watermark == 0)
-         {
+          {
                int n = ArraySize(m_tree_sym_g);
                ArrayResize(m_tree_sym_g,        n + 1);
                ArrayResize(m_tree_symbol_names, n + 1);
                m_tree_sym_g[n]        = sym_g;
                m_tree_symbol_names[n] = sym_name;
-         }
+          }
 
          if(g >= watermark)
-               m_treeview_settings.AddItem(g, 0, sym_name, 0,
-                                          i, 1, 0,
+               m_treeview_settings.AddItem(g, -1, sym_name, 0,   // parent=-1: root level
+                                          i, 0, 0,               // level=0: top level
                                           tf_counts[i],
                                           0,
                                           tf_counts[i] > 0,
                                           tf_counts[i] > 0);
          g++;
-      }
+       }
 
       // ─────────────────────────────────────────────────────────────────
-      // LOOP 2 — Append TF nodes (outer-join: m_timeseries is right side).
-      // Iterates the stable registry so sym_g is always correct regardless
-      // of DoEasy collection reordering between TF-change reinits.
-      // New nodes are always appended at ItemsTotal() to avoid g-counter
-      // drift. After appending, SetItemsTotal syncs the symbol node's
-      // m_t_items_total so FormTreeList knows the exact child count and
-      // can trigger its sibling-recovery while-loop at the right time.
+      // LOOP 2 — Append TF nodes as children of symbol nodes (level = 1).
+      // New nodes appended at ItemsTotal() to avoid g-counter drift.
+      // SetItemsTotal syncs symbol node's child count for FormTreeList.
       // ─────────────────────────────────────────────────────────────────
-
       int reg_size = ArraySize(m_tree_symbol_names);
       for(int reg_idx = 0; reg_idx < reg_size; reg_idx++)
-      {
+       {
          string sym_name = m_tree_symbol_names[reg_idx];
          int    sym_g    = m_tree_sym_g[reg_idx];
 
          // Count already-registered TF nodes for this symbol
          int tf_idx_base = 0;
          for(int j = 0; j < tf_total; j++)
-         {
-               ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
-               for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
-                  if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
-                     { tf_idx_base++; break; }
-         }
+          {
+            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
+            for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
+               if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
+                  { tf_idx_base++; break; }
+          }
 
          // Add new TF nodes where join condition succeeds
          int new_tf_idx = tf_idx_base;
          for(int j = 0; j < tf_total; j++)
-         {
-               ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
+          {
+            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
 
-               bool already_added = false;
-               for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
-                  if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
-                     { already_added = true; break; }
-               if(already_added) continue;
+            bool already_added = false;
+            for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
+               if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
+                  { already_added = true; break; }
+            if(already_added) continue;
+            if(m_timeseries.GetSeries(sym_name, tf) == NULL) continue;
 
-               if(m_timeseries.GetSeries(sym_name, tf) == NULL) continue;
+            int new_g = m_treeview_settings.ItemsTotal();
+            m_treeview_settings.AddItem(new_g, sym_g,
+                                       EnumToString(tf),
+                                       IMAGE_RESOURCE_ICONS_BMP16_START_BMP,
+                                       new_tf_idx, 1, reg_idx, 0, 0,  // level=1: child of symbol
+                                       false, false);
 
-               int new_g = m_treeview_settings.ItemsTotal();
-               m_treeview_settings.AddItem(new_g, sym_g,
-                                          EnumToString(tf),
-                                          IMAGE_RESOURCE_ICONS_BMP16_START_BMP,
-                                          new_tf_idx, 2, reg_idx, 0, 0,
-                                          false, false);
+            int n = ArraySize(m_tree_tf_syms);
+            ArrayResize(m_tree_tf_syms,   n + 1);
+            ArrayResize(m_tree_tf_values, n + 1);
+            m_tree_tf_syms[n]   = sym_name;
+            m_tree_tf_values[n] = tf;
+            new_tf_idx++;
+          }
 
-               int n = ArraySize(m_tree_tf_syms);
-               ArrayResize(m_tree_tf_syms,   n + 1);
-               ArrayResize(m_tree_tf_values, n + 1);
-               m_tree_tf_syms[n]   = sym_name;
-               m_tree_tf_values[n] = tf;
-               new_tf_idx++;
-         }
-
-         // Sync symbol node's items_total with actual child count.
-         // Existing symbol nodes were skipped by the watermark check in
-         // Loop 1, so their m_t_items_total was not updated by AddItem.
-         // FormTreeList needs this accurate value to trigger the recovery
-         // while-loop (→ process sibling symbols) at the right time.
+         // Sync symbol node's items_total with actual TF child count
          m_treeview_settings.SetItemsTotal(sym_g, new_tf_idx);
-      }
+       }
    }
+  bool CGUIPannel::CreateSettingsRightTabs(const int x_gap, const int y_gap)
+   {
+      string tab_names[2] = {"Pattern", "Indicator"};
+      m_settings_right_tabs.MainPointer(m_tabs_main);
+      m_settings_right_tabs.IsCenterText(true);
+      m_settings_right_tabs.PositionMode(TABS_TOP);
+      m_settings_right_tabs.AutoXResizeMode(true);
+      m_settings_right_tabs.AutoYResizeMode(true);
+      m_settings_right_tabs.AutoXResizeRightOffset(3);
+      m_settings_right_tabs.AutoYResizeBottomOffset(3);
+      for(int i = 0; i < 2; i++)
+         m_settings_right_tabs.AddTab(tab_names[i], 100);
+      if(!m_settings_right_tabs.CreateTabs(x_gap, y_gap)) return false;
+      m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_settings_right_tabs);
+      CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_settings_right_tabs);
+      return true;
+   }
+
+  bool CGUIPannel::CreateIndicatorTable(const int x, const int y)
+   {
+     // Attach to right-panel tab (Indicator tab)
+      m_indicator_table.MainPointer(m_settings_right_tabs);
+      m_settings_right_tabs.AddToElementsArray(TAB_INFO_INDICATORS, m_indicator_table);
+
+     // Auto-resize to fill the tab content area
+      m_indicator_table.AutoXResizeMode(true);
+      m_indicator_table.AutoXResizeRightOffset(3);
+      m_indicator_table.AutoYResizeMode(true);
+      m_indicator_table.AutoYResizeBottomOffset(3);
+
+      m_indicator_table.ShowHeaders(true);
+      m_indicator_table.SelectableRow(true);
+      m_indicator_table.LightsHover(true);
+      m_indicator_table.IsSortMode(true);   // enable header click for "check all"
+
+     // 4 columns: [icon] [name] [group] [checkbox]
+      m_indicator_table.TableSize(4, 20);
+
+      int widths[4]    = {30, 170, 80, 30};
+      int img_x_off[4] = {3,  0,   0,  8};
+      int img_y_off[4] = {3,  0,   0,  3};
+      ENUM_ALIGN_MODE align[4] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+
+      m_indicator_table.ColumnsWidth(widths);
+      m_indicator_table.ImageXOffset(img_x_off);
+      m_indicator_table.ImageYOffset(img_y_off);
+      m_indicator_table.TextAlign(align);
+
+      if(!m_indicator_table.CreateTable(x, y)) return false;
+
+     // Col 0: empty (icon only)
+     // Col 3: "Show" header — click = toggle all checkboxes
+      m_indicator_table.SetHeaderText(0, "");
+      m_indicator_table.SetHeaderText(1, "Indicator");
+      m_indicator_table.SetHeaderText(2, "Group");
+      m_indicator_table.SetHeaderText(3, "Show");
+
+      CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_indicator_table);
+      return true;
+   }
+  void CGUIPannel::InitializeIndicatorTable(void)
+   {
+      SetValuesToIndicatorTable();
+   }
+  void CGUIPannel::SetValuesToIndicatorTable(void)
+   {
+      if(m_indicators_timeseries == NULL) return;
+      CArrayObj *list = m_indicators_timeseries.GetList();
+      if(list == NULL) return;
+
+      // Step 1: Collect unique indicators by shortname (dedup across symbols/TFs)
+      string names[];
+      int    group_ids[];
+      int    count = 0;
+      for(int i = 0; i < list.Total(); i++)
+      {
+         CIndicatorDE *ind = list.At(i);
+         if(ind == NULL) continue;
+         bool dup = false;
+         for(int n = 0; n < count; n++)
+               if(names[n] == ind.ShortName()) { dup = true; break; }
+         if(dup) continue;
+         ArrayResize(names,     count + 1);
+         ArrayResize(group_ids, count + 1);
+         names[count]     = ind.ShortName();
+         group_ids[count] = (int)ind.Group();
+         count++;
+      }
+
+      // Step 2: Always fresh rebuild — same approach as InitializePatternTable
+      m_indicator_table.DeleteAllRows();
+      for(int i = 0; i < count - 1; i++)
+         m_indicator_table.AddRow(i);
+
+      // Step 3: Set all cells per row
+      uint green[] = {IMAGE_RESOURCE_ICONS_BMP16_START_BMP};
+      uint chk[]   = {IMAGE_RESOURCE_CONTROLS_CHECKBOXON_BMP,
+                     IMAGE_RESOURCE_CONTROLS_CHECKBOXOFF_BMP};
+      string group_names[] = {"Trend", "Oscillator", "Volumes", "Arrows"};
+
+      for(int i = 0; i < count; i++)
+      {
+         // Col 0: green indicator icon (has data)
+         m_indicator_table.CellType(0, i, CELL_BUTTON);
+         //m_indicator_table.CellType(0, i, CELL_CHECKBOX);
+         m_indicator_table.SetImages(0, i, green);
+         m_indicator_table.ChangeImage(0, i, 0);  // always image 0 = green ON_G
+
+         // Col 1: indicator shortname
+         m_indicator_table.SetValue(1, i, "  " +names[i]);
+
+         // Col 2: group name
+         string gname = (group_ids[i] >= 0 && group_ids[i] < 4)
+                        ? group_names[group_ids[i]] : "Other";
+         m_indicator_table.SetValue(2, i,"  " + gname);
+
+         // Col 3: checkbox show/hide on chart (default: checked = visible)
+         m_indicator_table.CellType(3, i, CELL_CHECKBOX);
+         m_indicator_table.SetImages(3, i, chk);
+         m_indicator_table.ChangeImage(3, i, 0);
+      }
+      m_indicator_table.Update(true);
+   } 
+
   // Dynamic pattern discovery — call once at init
   void CGUIPannel::DiscoverPatterns(void)
    {
@@ -755,9 +873,10 @@
       m_pattern_table.Update(true);
    }
   bool CGUIPannel::CreatePatternConfigTable(const int x, const int y)
-   {
-      m_pattern_table.MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_pattern_table);
+   {      
+      m_pattern_table.MainPointer(m_settings_right_tabs);
+      m_settings_right_tabs.AddToElementsArray(TAB_INFO_PATTERNS, m_pattern_table);
+
 
       m_pattern_table.AutoXResizeMode(true);
       m_pattern_table.AutoXResizeRightOffset(3);
@@ -790,9 +909,12 @@
       m_pattern_table.SetHeaderText(4, "Bear");
       m_pattern_table.SetHeaderText(5, "");
 
-      CWndContainer::AddToElementsArray(0, m_pattern_table);
+      //CWndContainer::AddToElementsArray(0, m_pattern_table);
+      CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_pattern_table);      
       return true;
    }
+ //For indicator Table
+  
  //Adding control for Information windows
   //+------------------------------------------------------------------+
   //| Create the info window                                           |
@@ -981,7 +1103,7 @@
       m_lbl_info_open.Draw();   m_lbl_info_open.Draw(); m_lbl_info_open.Update(false);
       m_lbl_info_high.Draw();   m_lbl_info_high.Draw(); m_lbl_info_high.Update(false);
       m_lbl_info_low.Draw();    m_lbl_info_low.Draw();  m_lbl_info_low.Update(false);
-      m_lbl_info_close.Draw();  m_lbl_info_low.Draw();  m_lbl_info_close.Update(false);
+      m_lbl_info_close.Draw();  m_lbl_info_close.Draw();  m_lbl_info_close.Update(false);
       m_chart.Redraw();
   }
 

@@ -44,6 +44,7 @@
       //For GUI.Now set both pointers before GUI init              
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
+        mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection()); 
         // GUI init: m_symbols và m_timeseries đều đã có
          static bool s_gui_ready = false;
          static bool s_info_ready   = false;
@@ -55,8 +56,7 @@
           else
            {
              mGUIPannel.RefreshGUI(); 
-           }
-          mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());  
+           }  
       //For patternRenderer
         patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
         mGUIPannel.SetPatternRenderer(&patternRenderer);

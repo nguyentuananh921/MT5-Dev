@@ -81,5 +81,26 @@
       return 3; // Triple (3 bars) 11 pattern
     }
  //+------------------------------------------------------------------+
+ //| Return ENUM_INDICATOR from indicator shortname on chart          |
+ //+------------------------------------------------------------------+
+ ENUM_INDICATOR ShortNameToIndicatorType(const string shortname)
+  {
+    if(StringFind(shortname, "Moving Average") >= 0) return IND_MA;
+    if(StringFind(shortname, "Bollinger")      >= 0) return IND_BANDS;
+    if(StringFind(shortname, "Bands")          >= 0) return IND_BANDS;
+    if(StringFind(shortname, "MACD")           >= 0) return IND_MACD;
+    if(StringFind(shortname, "RSI")            >= 0) return IND_RSI;
+    if(StringFind(shortname, "Stochastic")     >= 0) return IND_STOCHASTIC;
+    if(StringFind(shortname, "ATR")            >= 0) return IND_ATR;
+    if(StringFind(shortname, "CCI")            >= 0) return IND_CCI;
+    if(StringFind(shortname, "ADX")            >= 0) return IND_ADX;
+    if(StringFind(shortname, "Ichimoku")       >= 0) return IND_ICHIMOKU;
+    if(StringFind(shortname, "Envelopes")      >= 0) return IND_ENVELOPES;
+    if(StringFind(shortname, "Momentum")       >= 0) return IND_MOMENTUM;
+    if(StringFind(shortname, "Force")          >= 0) return IND_FORCE;
+    // ... thêm dần khi cần
+    return IND_CUSTOM;  // unknown = skip for now
+  }
+ //+------------------------------------------------------------------+
 
 #endif // __TIMESERIES_DELIB_MQH__
