@@ -19,12 +19,10 @@
 //For CBar Use InfoPannel Instead
   #include <..\Artyom Trishkin\TimeSeriesEngine.mqh>
     CTimeSeriesEngine timeSeriesEngine;
-// //For InfoPannel
-//   #include "\Anatoli Kazharski\InfoPannel.mqh"
-//   CInfoPannel cInfoPannel;
 //For Candle Pattern Render
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
     CPatternRenderer patternRenderer;
+static bool s_need_tree_refresh = false;
  //+------------------------------------------------------------------+
  //| Expert initialization function                                   |
  //+------------------------------------------------------------------+
@@ -35,6 +33,8 @@
       //--- Set the permissions to send cursor movement and mouse scroll events
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_MOVE, true);
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_WHEEL, true);
+      if(_UninitReason == REASON_CHARTCHANGE)   // ← THÊM: set flag khi TF change
+        s_need_tree_refresh = true;
       //For Trading
           tradingEngine.OnInitEvent();
       // Init timeseries engine first
@@ -46,28 +46,12 @@
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
         mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection()); 
         // GUI init: m_symbols và m_timeseries đều đã có
-         static bool s_gui_ready = false;
-         static bool s_info_ready   = false;
-          if(!s_gui_ready)
-            {
-                mGUIPannel.OnInitEvent();
-                s_gui_ready = true;
-            }
-          else
-           {
-             mGUIPannel.RefreshGUI(); 
-           }  
+          mGUIPannel.OnInitEvent();         
       //For patternRenderer
         patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
-        mGUIPannel.SetPatternRenderer(&patternRenderer);
-        // if(!s_info_ready)           // ← thêm guard này
-        //   {
-        //       //cInfoPannel.OnInitEvent();
-        //       s_info_ready = true;
-        //   }        
-        //Get m_pattm_list_all_patterns in CBarTimeSeriesCollection and Draw
-          CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-          if(plist != NULL) patternRenderer.Refresh(plist);
+        mGUIPannel.SetPatternRenderer(&patternRenderer);        
+        CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+        if(plist != NULL) patternRenderer.Refresh(plist);
       EventSetMillisecondTimer(16);    
     return (INIT_SUCCEEDED);
    }
@@ -77,19 +61,18 @@
  //+------------------------------------------------------------------+
  void OnDeinit(const int reason)
   {
-      //  mainProgram.OnDeinitEvent(reason);
-      //For Debug
-        Print(__FUNCTION__, "My Debug EA::OnDeinit reason=", reason,
-            " CHARTCHANGE=", REASON_CHARTCHANGE,
-            " RECOMPILE=", REASON_RECOMPILE);
-      //For GUIPannel And CPatternRenderer Skip destroy when TF Change
-      if(reason != REASON_CHARTCHANGE)
-      {
-          mGUIPannel.OnDeinitEvent(reason);
-          //cInfoPannel.OnDeinitEvent(reason);
-          CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-          patternRenderer.OnDeinitEvent(plist);
-      }     
+    //  mainProgram.OnDeinitEvent(reason);
+    //For Debug
+      Print(__FUNCTION__, "My Debug EA::OnDeinit reason=", reason,
+          " CHARTCHANGE=", REASON_CHARTCHANGE,
+          " RECOMPILE=", REASON_RECOMPILE);
+    //For GUIPannel And CPatternRenderer Skip destroy when TF Change
+    if(reason != REASON_CHARTCHANGE)
+    {
+        mGUIPannel.OnDeinitEvent(reason);          
+        CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+        patternRenderer.OnDeinitEvent(plist);
+    }     
   }
  //+------------------------------------------------------------------+
  //| Expert tick function                                             |
@@ -97,7 +80,7 @@
  void OnTick(void)
   {
     //For Bar
-        //  Refresh pattern renderer on new bar
+       //  Refresh pattern renderer on new bar
         SDataCalculate data_calc;
         MqlRates rates[1];
         if(::CopyRates(Symbol(), PERIOD_CURRENT, 0, 1, rates) == 1)
@@ -109,13 +92,13 @@
         bool any_new_bar = timeSeriesEngine.OnTickEvent(Symbol(), data_calc);
         if(any_new_bar)
          {
+            if(s_need_tree_refresh)             
+              {
+                  mGUIPannel.RefreshGUI();
+                  s_need_tree_refresh = false;
+              }
             CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-            if(plist != NULL)
-            {
-              //Draw new Pattern    
-              //patternRenderer.UpdateNew(plist, false);                          
-              patternRenderer.UpdateNew(plist, true, false);
-            }
+            if(plist != NULL) patternRenderer.UpdateNew(plist, true, false);            
          }
      //::ChartRedraw(ChartID());
   }
