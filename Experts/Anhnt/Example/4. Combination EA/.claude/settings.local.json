@@ -17,7 +17,19 @@
       "Bash(powershell -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Controls' -ErrorAction SilentlyContinue | Select-Object Name; Get-ChildItem -Path 'D:\\\\' -Recurse -File -Filter 'Table.mqh' -ErrorAction SilentlyContinue -Depth 6 | Select-Object -First 5 FullName\")",
       "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include' -Recurse -File -Filter '*.mqh' | Select-String -Pattern 'class CIndicatorDE' -List | Select-Object -ExpandProperty Path\")",
       "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include' -Recurse -File -Filter '*.mqh' | Select-String -Pattern 'CIndicatorDE' | Group-Object Path | Select-Object -ExpandProperty Name\")",
-      "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5' -Recurse -File -Filter '*.mqh' -ErrorAction SilentlyContinue | Select-String -Pattern 'CIndicatorDE' -List | Select-Object -ExpandProperty Path\")"
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5' -Recurse -File -Filter '*.mqh' -ErrorAction SilentlyContinue | Select-String -Pattern 'CIndicatorDE' -List | Select-Object -ExpandProperty Path\")",
+      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\" -Filter \"ImageResources.mqh\")",
+      "Bash(Select-Object FullName)",
+      "Bash(grep -v \"^\\\\s*//\")",
+      "Bash(grep -v \"//\")",
+      "Bash(grep -n \"OnDeinit\\\\|ChartIndicatorDelete\\\\|ChartIndicatorAdd\" \"c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Artyom Trishkin/TimeSeriesEngine.mqh\" | head -20)",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Artyom Trishkin/**)",
+      "Bash(grep -rn \"ScanAndApplyIndicators\" \"c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/\" | head -10)",
+      "Read(//d/MT5-Dev/Include/Vendors/Anhnt/Library/**)",
+      "Bash(grep -rn \"ScanAndApplyIndicators\" \"D:/MT5-Dev/\" 2>/dev/null | grep -v \".git\" | head -10)",
+      "Read(//d/MT5-Dev/**)",
+      "Bash(grep -v \"//\\\\|m_canvas\\\\|m_icon\\\\|m_images_group\\\\[0\\\\]\")",
+      "Bash(python3 -c *)"
     ]
   }
 }

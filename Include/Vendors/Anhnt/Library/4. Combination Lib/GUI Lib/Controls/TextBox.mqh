@@ -405,7 +405,7 @@ class CTextBox : public CElement
          if(m_text_edit_state)
            {
             // --- If (1) not in focus and (2) left mouse button pressed and (3) not in scrollbar moving mode
-            if(!CElementBase::MouseFocus() && m_mouse.LeftButtonState() && !is_scroll_state)
+            if(!CElementBase::MouseFocus() && m_mouse.IsLeftBtn() && !is_scroll_state)
               {
                // --- Send a message about the end of entering a line into the input field if the field was active
                string str=(m_multi_line_mode)? TextCursorInfo() : "";
@@ -435,7 +435,7 @@ class CTextBox : public CElement
             if(m_scrollv.State()) m_scrollv.Update(true);
            }
          // --- If one of the scroll bar buttons is pressed
-         if(m_mouse.LeftButtonState() && 
+         if(m_mouse.IsLeftBtn() && 
             (m_scrollv.ScrollIncState() || m_scrollv.ScrollDecState() || 
             m_scrollh.ScrollIncState() || m_scrollh.ScrollDecState()))
            {
@@ -1579,7 +1579,7 @@ class CTextBox : public CElement
       if(!CElementBase::MouseFocus())
          return;
    // --- Return the counter to its original value if the mouse button is released
-      if(!m_mouse.LeftButtonState() || m_scrollv.State() || m_scrollh.State())
+      if(!m_mouse.IsLeftBtn() || m_scrollv.State() || m_scrollh.State())
          m_timer_counter=SPIN_DELAY_MSC;
    // --- If the mouse button is pressed
       else

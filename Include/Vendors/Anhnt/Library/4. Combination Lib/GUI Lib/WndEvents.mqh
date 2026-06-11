@@ -403,7 +403,7 @@
   void CWndEvents::OnTimerEvent(void) 
    {
     // --- Exit if the mouse cursor is at rest (difference between calls > 300 ms) and the left mouse button is released
-      if(m_mouse.GapBetweenCalls() > 300 && !m_mouse.LeftButtonState()) {
+      if(m_mouse.GapBetweenCalls() > 300 && !m_mouse.IsLeftBtn()) {
         int text_boxes_total = CWndContainer::ElementsTotal(m_active_window_index, E_TEXT_BOX);
         for(int e = 0; e < text_boxes_total; e++)
           m_wnd[m_active_window_index].m_text_boxes[e].OnEventTimer();

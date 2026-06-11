@@ -60,8 +60,8 @@
    //| Constructor                                                      |
    //+------------------------------------------------------------------+
    CPointer::CPointer(void) : m_state(true),
-                              m_file_on(""),
-                              m_file_off(""),
+                              m_file_on(0),
+                              m_file_off(0),
                               m_type(MP_X_RESIZE)
     {
      // --- Save the element class name in the base class
@@ -202,52 +202,52 @@
       switch(m_type)
         {
          case MP_X_RESIZE :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_BLUE_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_X_RS_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_X_RS_BLUE_BMP;
             break;
          case MP_Y_RESIZE :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_BLUE_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BLUE_BMP;
             break;
          case MP_XY1_RESIZE :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_XY1_RS_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_XY1_RS_BLUE_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_XY1_RS_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_XY1_RS_BLUE_BMP;
             break;
          case MP_XY2_RESIZE :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_XY2_RS_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_XY2_RS_BLUE_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_XY2_RS_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_XY2_RS_BLUE_BMP;
             break;
          case MP_WINDOW_RESIZE :
            {
             CElement::AddImagesGroup(0,0);
-            CElement::AddImage(0,IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_BMP);
-            CElement::AddImage(0,IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_BMP);
+            CElement::AddImage(0,IMAGE_RESOURCE_BMP16_POINTER_X_RS_BMP);
+            CElement::AddImage(0,IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BMP);
             break;
            }
          case MP_X_RESIZE_RELATIVE :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_REL_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_X_RS_REL_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_X_RS_REL_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_X_RS_REL_BMP;
             break;
          case MP_Y_RESIZE_RELATIVE :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_REL_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_Y_RS_REL_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_Y_RS_REL_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_Y_RS_REL_BMP;
             break;
          case MP_X_SCROLL :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_X_SCROLL_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_X_SCROLL_BLUE_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_X_SCROLL_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_X_SCROLL_BLUE_BMP;
             break;
          case MP_Y_SCROLL :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_Y_SCROLL_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_Y_SCROLL_BLUE_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_Y_SCROLL_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_Y_SCROLL_BLUE_BMP;
             break;
          case MP_TEXT_SELECT :
-            m_file_on  =IMAGE_RESOURCE_CONTROLS_POINTER_TEXT_SELECT_BMP;
-            m_file_off =IMAGE_RESOURCE_CONTROLS_POINTER_TEXT_SELECT_BMP;
+            m_file_on  =IMAGE_RESOURCE_BMP16_POINTER_TEXT_SELECT_BMP;
+            m_file_off =IMAGE_RESOURCE_BMP16_POINTER_TEXT_SELECT_BMP;
             break;
         }
      // --- If a custom type is specified (MP_CUSTOM)
       if(m_type==MP_CUSTOM)
-         if(m_file_on=="" || m_file_off=="")
+         if(m_file_on==0 || m_file_off==0)
             ::Print(__FUNCTION__," > You need to set pictures for the cursor pointer!");
      // --- Set picture
       if(m_type!=MP_WINDOW_RESIZE)

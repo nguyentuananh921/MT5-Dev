@@ -8,15 +8,15 @@
 //+------------------------------------------------------------------+
 #ifndef __ENUMS_MQH__
 #define __ENUMS_MQH__
-enum ENUM_WINDOW_TYPE
+ enum ENUM_WINDOW_TYPE
   {
    W_MAIN   =0,
    W_DIALOG =1
   };
-//+------------------------------------------------------------------+
-// | Enumeration of element types |
-//+------------------------------------------------------------------+
-enum ENUM_ELEMENT_TYPE
+ //+------------------------------------------------------------------+
+ // | Enumeration of element types |
+ //+------------------------------------------------------------------+
+ enum ENUM_ELEMENT_TYPE
   {
    E_CONTEXT_MENU    =0,
    E_COMBO_BOX       =1,
@@ -39,10 +39,10 @@ enum ENUM_ELEMENT_TYPE
    E_TOOLTIP         =18,
    E_FRAME           =19
   };
-//+------------------------------------------------------------------+
-// | Enumeration of pointer types |
-//+------------------------------------------------------------------+
-enum ENUM_MOUSE_POINTER
+ //+------------------------------------------------------------------+
+ // | Enumeration of pointer types |
+ //+------------------------------------------------------------------+
+ enum ENUM_MOUSE_POINTER
   {
    MP_CUSTOM            =0,
    MP_X_RESIZE          =1,
@@ -56,10 +56,10 @@ enum ENUM_MOUSE_POINTER
    MP_Y_SCROLL          =9,
    MP_TEXT_SELECT       =10
   };
-//+------------------------------------------------------------------+
-// | Enumeration of left-click areas |
-//+------------------------------------------------------------------+
-enum ENUM_MOUSE_STATE
+ //+------------------------------------------------------------------+
+ // | Enumeration of left-click areas |
+ //+------------------------------------------------------------------+
+ enum ENUM_MOUSE_STATE
   {
    NOT_PRESSED           =0,
    PRESSED_INSIDE        =1,
@@ -67,79 +67,79 @@ enum ENUM_MOUSE_STATE
    PRESSED_INSIDE_HEADER =3,
    PRESSED_INSIDE_BORDER =4
   };
-//+------------------------------------------------------------------+
-// | Enumerating menu item types |
-//+------------------------------------------------------------------+
-enum ENUM_TYPE_MENU_ITEM
+ //+------------------------------------------------------------------+
+ // | Enumerating menu item types |
+ //+------------------------------------------------------------------+
+ enum ENUM_TYPE_MENU_ITEM
   {
    MI_SIMPLE           =0,
    MI_CHECKBOX         =1,
    MI_RADIOBUTTON      =2,
    MI_HAS_CONTEXT_MENU =3
   };
-//+------------------------------------------------------------------+
-// | Divider line type enumeration |
-//+------------------------------------------------------------------+
-enum ENUM_TYPE_SEP_LINE
+ //+------------------------------------------------------------------+
+ // | Divider line type enumeration |
+ //+------------------------------------------------------------------+
+ enum ENUM_TYPE_SEP_LINE
   {
    H_SEP_LINE =0,
    V_SEP_LINE =1
   };
-//+------------------------------------------------------------------+
-// | Listing the sides of the menu mount |
-//+------------------------------------------------------------------+
-enum ENUM_FIX_CONTEXT_MENU
+ //+------------------------------------------------------------------+
+ // | Listing the sides of the menu mount |
+ //+------------------------------------------------------------------+
+ enum ENUM_FIX_CONTEXT_MENU
   {
    FIX_RIGHT  =0,
    FIX_BOTTOM =1
   };
-//+------------------------------------------------------------------+
-// | Tab positioning enumeration |
-//+------------------------------------------------------------------+
-enum ENUM_TABS_POSITION
+ //+------------------------------------------------------------------+
+ // | Tab positioning enumeration |
+ //+------------------------------------------------------------------+
+ enum ENUM_TABS_POSITION
   {
    TABS_TOP    =0, // Top
    TABS_BOTTOM =1, // Bottom
    TABS_LEFT   =2, // Left
    TABS_RIGHT  =3  // Right
   };
-//+------------------------------------------------------------------+
-// | Enumerating tree list item types |
-//+------------------------------------------------------------------+
-enum ENUM_TYPE_TREE_ITEM
+ //+------------------------------------------------------------------+
+ // | Enumerating tree list item types |
+ //+------------------------------------------------------------------+
+ enum ENUM_TYPE_TREE_ITEM
   {
    TI_SIMPLE    =0,
    TI_HAS_ITEMS =1
   };
-//+------------------------------------------------------------------+
-// | Enumeration of file navigator modes |
-//+------------------------------------------------------------------+
-enum ENUM_FILE_NAVIGATOR_MODE
+ //+------------------------------------------------------------------+
+ // | Enumeration of file navigator modes |
+ //+------------------------------------------------------------------+
+ enum ENUM_FILE_NAVIGATOR_MODE
   {
    FN_ALL          =0,
    FN_ONLY_FOLDERS =1
   };
-//+------------------------------------------------------------------+
-// | Listing the contents of the file navigator |
-//+------------------------------------------------------------------+
-enum ENUM_FILE_NAVIGATOR_CONTENT
+ //+------------------------------------------------------------------+
+ // | Listing the contents of the file navigator |
+ //+------------------------------------------------------------------+
+ enum ENUM_FILE_NAVIGATOR_CONTENT
   {
    FN_BOTH        =0,
    FN_ONLY_MQL    =1,
    FN_ONLY_COMMON =2
   };
-//+------------------------------------------------------------------+
-// | Enumeration of sorting modes |
-//+------------------------------------------------------------------+
-enum ENUM_CSORT_MODE
+ //+------------------------------------------------------------------+
+ // | Enumeration of sorting modes |
+ //+------------------------------------------------------------------+
+ enum ENUM_CSORT_MODE
   {
    SORT_ASCEND  =0,
    SORT_DESCEND =1
   };
-//+------------------------------------------------------------------+
-// | Enumerating table cell types |
-//+------------------------------------------------------------------+
-enum ENUM_TYPE_CELL
+ //+------------------------------------------------------------------+
+ // | Enumerating table cell types |
+ //+------------------------------------------------------------------+
+ enum ENUM_TYPE_CELL
   {
    CELL_SIMPLE   =0,
    CELL_BUTTON   =1,
@@ -147,10 +147,10 @@ enum ENUM_TYPE_CELL
    CELL_COMBOBOX =3,
    CELL_EDIT     =4
   };
-//+------------------------------------------------------------------+
-// | Enumeration by direction of movement of the text cursor |
-//+------------------------------------------------------------------+
-enum ENUM_MOVE_TEXT_CURSOR
+ //+------------------------------------------------------------------+
+ // | Enumeration by direction of movement of the text cursor |
+ //+------------------------------------------------------------------+
+ enum ENUM_MOVE_TEXT_CURSOR
   {
    TO_NEXT_LEFT_SYMBOL  =0,
    TO_NEXT_RIGHT_SYMBOL =1,

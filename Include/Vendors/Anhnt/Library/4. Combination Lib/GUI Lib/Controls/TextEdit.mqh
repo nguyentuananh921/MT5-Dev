@@ -263,10 +263,10 @@ class CTextEdit : public CElement
          IconFilePressed(RESOURCE_CHECKBOX_ON);
          IconFilePressedLocked(RESOURCE_CHECKBOX_ON_LOCKED);*/
          
-         IconFile(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_BMP);
-         IconFileLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_LOCKED_BMP);
-         IconFilePressed(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_BMP);
-         IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_LOCKED_BMP);
+         IconFile(IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP);
+         IconFileLocked(IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_LOCKED_BMP);
+         IconFilePressed(IMAGE_RESOURCE_BMP16_CHECKBOX_ON_BMP);
+         IconFilePressedLocked(IMAGE_RESOURCE_BMP16_CHECKBOX_ON_LOCKED_BMP);
         }
    // --- Set the properties before creating
       if(m_index!=WRONG_VALUE)
@@ -307,9 +307,9 @@ class CTextEdit : public CElement
          y      =1;
          y_size =m_edit.YSize()/2;
          //--- 
-         file         =(string)IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP;
-         file_locked  =(string)IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP;
-         file_pressed =(string)IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP;
+         file         =(string)IMAGE_RESOURCE_BMP16_SPIN_INC_BMP;
+         file_locked  =(string)IMAGE_RESOURCE_BMP16_SPIN_INC_BMP;
+         file_pressed =(string)IMAGE_RESOURCE_BMP16_SPIN_INC_BMP;
          //---
          button_obj.NamePart(button_obj.NamePart()==""? "spin_inc" : button_obj.NamePart());
          button_obj.AnchorRightWindowSide(true);
@@ -322,9 +322,9 @@ class CTextEdit : public CElement
          y      =m_button_inc.YGap()+m_button_inc.YSize()-1;
          y_size =m_edit.Y2()-m_button_inc.Y2();
          //---
-         file         =(string)IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP;
-         file_locked  =(string)IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP;
-         file_pressed =(string)IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP;
+         file         =(string)IMAGE_RESOURCE_BMP16_SPIN_DEC_BMP;
+         file_locked  =(string)IMAGE_RESOURCE_BMP16_SPIN_DEC_BMP;
+         file_pressed =(string)IMAGE_RESOURCE_BMP16_SPIN_DEC_BMP;
          //---
          button_obj.NamePart(button_obj.NamePart()==""? "spin_dec" : button_obj.NamePart());
          button_obj.AnchorRightWindowSide(true);
@@ -510,7 +510,7 @@ class CTextEdit : public CElement
       if(!CElementBase::MouseFocus() || dynamic_cast<CCalendar*>(m_main)!=NULL)
          return;
    // --- Return the counter to its original value if the mouse button is released
-      if(!m_mouse.LeftButtonState())
+      if(!m_mouse.IsLeftBtn())
          m_timer_counter=SPIN_DELAY_MSC;
    // --- If the mouse button is pressed
       else

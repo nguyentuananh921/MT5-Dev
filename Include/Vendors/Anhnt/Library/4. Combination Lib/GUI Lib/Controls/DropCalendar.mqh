@@ -194,10 +194,10 @@ private:
       m_drop_button.IconXGap(icon_x_gap);
       m_drop_button.IconYGap(icon_y_gap);
       m_drop_button.AnchorRightWindowSide(true);
-      m_drop_button.IconFile(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_OFF_BMP);
-      m_drop_button.IconFileLocked(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_LOCKED_BMP);
-      m_drop_button.CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_ON_BMP);
-      m_drop_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CALENDAR_DROP_LOCKED_BMP);
+      m_drop_button.IconFile(IMAGE_RESOURCE_BMP16_CALENDAR_DROP_OFF_BMP);
+      m_drop_button.IconFileLocked(IMAGE_RESOURCE_BMP16_CALENDAR_DROP_LOCKED_BMP);
+      m_drop_button.CElement::IconFilePressed(IMAGE_RESOURCE_BMP16_CALENDAR_DROP_ON_BMP);
+      m_drop_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_BMP16_CALENDAR_DROP_LOCKED_BMP);
    // --- Let's create a control
       if(!m_drop_button.CreateButton("",x,y))
          return(false);
@@ -286,7 +286,7 @@ private:
    void CDropCalendar::CheckPressedOverButton(void)
      {
    // --- Exit if (1) left mouse button or (2) calendar call button is released
-      if(!m_mouse.LeftButtonState() || !m_drop_button.IsPressed())
+      if(!m_mouse.IsLeftBtn() || !m_drop_button.IsPressed())
          return;
    // --- If there is no focus on the element
       if(!CElementBase::MouseFocus())

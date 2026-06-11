@@ -26,14 +26,20 @@
 		},
 		{
 			"path": "../../../Le Xuan Quy"
+		},
+		{
+			"path": "../../../Clemence Benjamin"
+		},
+		{
+			"path": "../Tools/mql5_resource_generator"
 		}
 	],
 	"settings": {
 		"clangd.fallbackFlags": [
 			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Artyom Trishkin/2. DoEasy. Service functions EA",
 			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Artyom Trishkin/2. DoEasy. Service functions EA/Include",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib/Include",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/Include",
 			"-xc++",
 			"-std=c++17",
 			"-D__MQL__",
@@ -50,8 +56,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/Include"
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

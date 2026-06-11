@@ -1,8 +1,8 @@
 import os
 import struct
 
-SOURCE_DIR = r'D:\MT5-Dev\Temp\19073 Images'
-DEST_FILE  = r'D:\MT5-Dev\Temp\Dest\ImageResources.mqh'
+SOURCE_DIR = r'D:\MT5-Dev\Icons'
+DEST_FILE  = r'D:\MT5-Dev\Experts\Anhnt\Document\Tools\mql5_resource_generator\Dest\ImageResources.mqh'
 
 def get_var_name(root_dir, file_path):
     rel = os.path.relpath(file_path, root_dir)
@@ -200,10 +200,10 @@ def generate_resources():
         for entry in all_files:
             if entry['var_name'] in errors:
                 continue
-            f.write(f" void CImageResources::{entry['var_name']}(uint &image_data[], uint &image_width, uint &image_height)\n")
-            f.write("  {\n")
-            f.write(f"   GetData({entry['enum_name']}, image_data, image_width, image_height);\n")
-            f.write("  }\n\n")
+            f.write(f"  void CImageResources::{entry['var_name']}(uint &image_data[], uint &image_width, uint &image_height)\n")
+            f.write("   {\n")
+            f.write(f"      GetData({entry['enum_name']}, image_data, image_width, image_height);\n")
+            f.write("   }\n\n")
 
         f.write("#endif // CIMAGERESOURCES_IMPLEMENTATION\n")
         f.write("#endif // __IMAGERESOURCES_MQH__\n")

@@ -651,7 +651,7 @@
          if(!m_show_headers)
             return;
          // --- If the left mouse button is released
-         if(m_column_resize_control!=WRONG_VALUE && !m_mouse.LeftButtonState())
+         if(m_column_resize_control!=WRONG_VALUE && !m_mouse.IsLeftBtn())
            {
             // --- Reset width mode
             m_column_resize_control=WRONG_VALUE;
@@ -840,9 +840,9 @@
     // --- Let's define pictures as a sign of the possibility of sorting the table
       ::ArrayResize(m_sort_arrows,2);
       if(m_sort_arrows[0].ResourceIndex()==INT_MAX)
-         m_sort_arrows[0].ResourceIndex(IMAGE_RESOURCE_CONTROLS_SPIN_INC_BMP);
+         m_sort_arrows[0].ResourceIndex(IMAGE_RESOURCE_BMP16_SPIN_INC_BMP);
       if(m_sort_arrows[1].ResourceIndex()==INT_MAX)
-         m_sort_arrows[1].ResourceIndex(IMAGE_RESOURCE_CONTROLS_SPIN_DEC_BMP);
+         m_sort_arrows[1].ResourceIndex(IMAGE_RESOURCE_BMP16_SPIN_DEC_BMP);
     // --- Save images to arrays
       for(int i=0; i<2; i++)
          m_sort_arrows[i].ReadImageData(m_sort_arrows[i].ResourceIndex());
@@ -2027,7 +2027,7 @@
     // --- Let's check the focus
       m_edit.GetTextBoxPointer().CheckMouseFocus();
     // --- Deactivate and hide an input field if it is (1) out of focus and (2) the mouse button is pressed
-      if(!m_edit.GetTextBoxPointer().MouseFocus() && m_mouse.LeftButtonState())
+      if(!m_edit.GetTextBoxPointer().MouseFocus() && m_mouse.IsLeftBtn())
          {
          m_edit.GetTextBoxPointer().DeactivateTextBox();
          m_edit.Hide();
@@ -2043,7 +2043,7 @@
       if(!m_combobox_state || !m_combobox.IsVisible())
          return;
    // --- Hide the combo box if it is out of focus and the mouse button is pressed
-      if(!m_combobox.GetButtonPointer().MouseFocus() && m_mouse.LeftButtonState())
+      if(!m_combobox.GetButtonPointer().MouseFocus() && m_mouse.IsLeftBtn())
          {
          m_combobox.Hide();
          m_chart.Redraw();
@@ -2971,7 +2971,7 @@
          return;
     // --- If the cursor pointer is activated
       if(m_column_resize_control==WRONG_VALUE && 
-         m_column_resize.IsVisible() && m_mouse.LeftButtonState())
+         m_column_resize.IsVisible() && m_mouse.IsLeftBtn())
        {
          // --- Remember the index of the captured column
          m_column_resize_control=m_prev_header_index_focus;
@@ -3471,7 +3471,7 @@
       else
          {
          // --- If the left mouse button is pressed and not in the process of changing the column width
-         bool condition=(m_mouse.LeftButtonState() && m_column_resize_control==WRONG_VALUE);
+         bool condition=(m_mouse.IsLeftBtn() && m_column_resize_control==WRONG_VALUE);
          clr=(condition)? m_headers_color_pressed : m_headers_color_hover;
          }
     // --- Return title color
@@ -3718,7 +3718,7 @@
       if(!CElementBase::MouseFocus())
          return;
     // --- Return the counter to its original value if the mouse button is released
-      if(!m_mouse.LeftButtonState() || m_scrollv.State() || m_scrollh.State())
+      if(!m_mouse.IsLeftBtn() || m_scrollv.State() || m_scrollh.State())
          m_timer_counter=SPIN_DELAY_MSC;
     // --- If the mouse button is pressed
       else

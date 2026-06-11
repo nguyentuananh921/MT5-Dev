@@ -112,8 +112,8 @@ class CFileNavigator : public CElement
                                           m_treeview_width(200),
                                           m_directory_area(FILE_COMMON),
                                           m_navigator_content(FN_ONLY_MQL),
-                                          m_file_icon(IMAGE_RESOURCE_ICONS_BMP16_TEXT_FILE_W10_BMP),
-                                          m_folder_icon(IMAGE_RESOURCE_ICONS_BMP16_FOLDER_W10_BMP)
+                                          m_file_icon(IMAGE_RESOURCE_BMP16_TEXT_FILE_W10_BMP),
+                                          m_folder_icon(IMAGE_RESOURCE_BMP16_FOLDER_W10_BMP)
      {
       // --- Save the element class name in the base class
       CElementBase::ClassName(CLASS_NAME);

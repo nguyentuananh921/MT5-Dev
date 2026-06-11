@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                      Element.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
+//| Link note https://www.mql5.com/en/articles/2943                  |
 //|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
 #ifndef __ELEMENT_MQH__
@@ -25,7 +26,7 @@
          CElement* m_elements[];
       // ---Image groups
          struct EImagesGroup 
-         {
+          {
                // --- Image array
                CImage m_image[];
                // --- Label padding
@@ -33,7 +34,7 @@
                int m_y_gap;
                // --- The image selected for display in the group
                int m_selected_image;
-         };
+          };
          EImagesGroup m_images_group[];
       // --- Label padding
          int m_icon_x_gap;
@@ -932,6 +933,7 @@ bool CElement::CheckMainPointer(void)
     m_id = m_wnd.LastId() + 1;
     m_chart_id = m_wnd.ChartId();
     m_subwin = m_wnd.SubwindowNumber();
+    //m_subwin = m_wnd.SubWin();
     m_corner = (ENUM_BASE_CORNER)m_wnd.Corner();
     m_anchor = (ENUM_ANCHOR_POINT)m_wnd.Anchor();
 
@@ -1012,8 +1014,8 @@ void CElement::DrawImage(void)
          {
             for (uint lx = 0; lx < width; lx++, p++) {
                 // ---If there is no color, move to the next pixel
-                if (m_images_group[g].m_image[i].Data(p) < 1)
-                    continue;
+                  if (m_images_group[g].m_image[i].Data(p) < 1)
+                     continue;
                 //---
                 uint rx = x + lx;
                 uint ry = y + ly;

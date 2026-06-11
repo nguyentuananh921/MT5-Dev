@@ -240,19 +240,19 @@ class CButtonsGroup : public CElement
          m_buttons[array_size].IconYGap(m_icon_y_gap);
          
          //m_buttons[array_size].IconFileLocked(RESOURCE_RADIO_BUTTON_OFF_LOCKED);
-         m_buttons[array_size].IconFileLocked(IMAGE_RESOURCE_CONTROLS_RADIO_BUTTON_OFF_LOCKED_BMP);
+         m_buttons[array_size].IconFileLocked(IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_LOCKED_BMP);
          
          //m_buttons[array_size].IconFile(RESOURCE_RADIO_BUTTON_OFF);
-         m_buttons[array_size].IconFile(IMAGE_RESOURCE_CONTROLS_RADIO_BUTTON_OFF_BMP);
+         m_buttons[array_size].IconFile(IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_BMP);
          
          //m_buttons[array_size].IconFileLocked(RESOURCE_RADIO_BUTTON_OFF_LOCKED);
-         m_buttons[array_size].IconFileLocked(IMAGE_RESOURCE_CONTROLS_RADIO_BUTTON_OFF_LOCKED_BMP);
+         m_buttons[array_size].IconFileLocked(IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_LOCKED_BMP);
          
          //m_buttons[array_size].CElement::IconFilePressed(RESOURCE_RADIO_BUTTON_ON);
          //m_buttons[array_size].CElement::IconFilePressedLocked(RESOURCE_RADIO_BUTTON_ON_LOCKED);
          
-         m_buttons[array_size].CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_RADIO_BUTTON_ON_BMP);
-         m_buttons[array_size].CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_RADIO_BUTTON_ON_LOCKED_BMP);
+         m_buttons[array_size].CElement::IconFilePressed(IMAGE_RESOURCE_BMP16_RADIO_BUTTON_ON_BMP);
+         m_buttons[array_size].CElement::IconFilePressedLocked(IMAGE_RESOURCE_BMP16_RADIO_BUTTON_ON_LOCKED_BMP);
      }
    //+------------------------------------------------------------------+
    //| Toggles the button at the specified index                        |

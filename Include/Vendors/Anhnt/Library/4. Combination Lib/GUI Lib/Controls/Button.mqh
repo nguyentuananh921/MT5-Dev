@@ -280,7 +280,7 @@
         // --- If the element is not locked
         if (!CElementBase::IsLocked()) {
             if (CElementBase::MouseFocus())
-                clr = (m_mouse.LeftButtonState() || m_is_pressed) ? m_back_color_pressed
+                clr = (m_mouse.IsLeftBtn() || m_is_pressed) ? m_back_color_pressed
                                                                 : m_back_color_hover;
         } else
             clr = m_back_color_locked;
@@ -297,7 +297,7 @@
         // --- If the element is not locked
         if (!CElementBase::IsLocked()) {
             if (CElementBase::MouseFocus())
-                clr = (m_mouse.LeftButtonState() || m_is_pressed) ? m_border_color_pressed
+                clr = (m_mouse.IsLeftBtn() || m_is_pressed) ? m_border_color_pressed
                                                                 : m_border_color_hover;
         } else
             clr = m_border_color_locked;
@@ -326,7 +326,7 @@
                 image_index = 0;
             else {
                 if (CElementBase::MouseFocus())
-                    image_index = (m_mouse.LeftButtonState() || m_is_pressed) ? 2 : 0;
+                    image_index = (m_mouse.IsLeftBtn() || m_is_pressed) ? 2 : 0;
             }
         } else
             image_index = (!m_two_state) ? 1 : (m_is_pressed) ? 3

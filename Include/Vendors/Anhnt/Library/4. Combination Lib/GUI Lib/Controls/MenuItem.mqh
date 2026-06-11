@@ -135,8 +135,8 @@
             if(CButton::ImagesGroupTotal()<2)
                {
                CButton::AddImagesGroup(CElementBase::XSize()-m_arrow_x_gap,CElement::IconYGap());
-               CButton::AddImage(1,IMAGE_RESOURCE_CONTROLS_ARROW_RIGHT_BLACK_BMP);
-               CButton::AddImage(1,IMAGE_RESOURCE_CONTROLS_ARROW_RIGHT_WHITE_BMP);
+               CButton::AddImage(1,IMAGE_RESOURCE_BMP16_ARROW_RIGHT_BLACK_BMP);
+               CButton::AddImage(1,IMAGE_RESOURCE_BMP16_ARROW_RIGHT_WHITE_BMP);
                }
             }
          }
@@ -144,16 +144,16 @@
       if(m_type_menu_item==MI_CHECKBOX)
          {
          // ---Default images
-         CButton::SetImage(0,0,IMAGE_RESOURCE_CONTROLS_CHECKBOX_MINI_BLACK_BMP);
-         CButton::SetImage(0,1,IMAGE_RESOURCE_CONTROLS_CHECKBOX_MINI_WHITE_BMP);
+         CButton::SetImage(0,0,IMAGE_RESOURCE_BMP16_CHECKBOX_MINI_BLACK_BMP);
+         CButton::SetImage(0,1,IMAGE_RESOURCE_BMP16_CHECKBOX_MINI_WHITE_BMP);
          CButton::AddImage(0,INT_MAX);
          }
       // ---If it is a radio point
       else if(m_type_menu_item==MI_RADIOBUTTON)
          {
          // ---Default images
-         CButton::SetImage(0,0,IMAGE_RESOURCE_CONTROLS_CHECKBOX_MINI_BLACK_BMP);
-         CButton::SetImage(0,1,IMAGE_RESOURCE_CONTROLS_CHECKBOX_MINI_WHITE_BMP);
+         CButton::SetImage(0,0,IMAGE_RESOURCE_BMP16_CHECKBOX_MINI_BLACK_BMP);
+         CButton::SetImage(0,1,IMAGE_RESOURCE_BMP16_CHECKBOX_MINI_WHITE_BMP);
          CButton::AddImage(0,INT_MAX);
          }
       // --- Properties

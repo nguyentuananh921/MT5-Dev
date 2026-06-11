@@ -47,7 +47,7 @@
                                                                         MqlRates &mother_bar_data) const
     {
       ENUM_PATTERN_DIRECTION dir = CBarPatternControlInvertedHammer::FindPattern(series_bar_time, mother_bar_data);
-      return (dir == PATTERN_DIRECTION_BULLISH) ? PATTERN_DIRECTION_BEARISH : WRONG_VALUE;
+      return (dir == PATTERN_DIRECTION_BULLISH) ? PATTERN_DIRECTION_BEARISH : (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
     }
    CBarPattern *CBarPatternControlShootingStar::CreatePattern(const ENUM_PATTERN_DIRECTION direction,
                                                                const uint id, CBar *bar)

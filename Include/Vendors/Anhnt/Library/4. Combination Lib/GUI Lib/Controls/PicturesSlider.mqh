@@ -88,7 +88,7 @@
    //+------------------------------------------------------------------+
    //| Constructor                                                      |
    //+------------------------------------------------------------------+
-   CPicturesSlider::CPicturesSlider(void) : m_default_index(IMAGE_RESOURCE_ICONS_BMP64_NO_IMAGE_BMP),//m_default_index("Images\\EasyAndFastGUI\\Icons\\bmp64\\no_image.bmp"),
+   CPicturesSlider::CPicturesSlider(void) : m_default_index(IMAGE_RESOURCE_BMP64_NO_IMAGE_BMP),//m_default_index("Images\\EasyAndFastGUI\\Icons\\bmp64\\no_image.bmp"),
                                             m_arrows_x_gap(2),
                                             m_arrows_y_gap(2),
                                             m_radio_button_width(18),
@@ -197,7 +197,7 @@
       for(int i=0; i<pictures_total; i++)
       {
          m_pictures[i].MainPointer(this);
-         string name=CImageResources::Instance().GetData(m_image_resource_index[i],image_data,x_size,y_size);
+         string name=CImage::Instance().GetData(m_image_resource_index[i],image_data,x_size,y_size);
          if(name=="")
          {
             ::Print(__FUNCTION__," > Failed to read image at index=",m_image_resource_index[i]);
@@ -270,13 +270,13 @@
    // --- Labels for buttons
       if(index<1)
         {
-         button_obj.IconFile(IMAGE_RESOURCE_CONTROLS_LEFT_THIN_BLACK_BMP);
-         button_obj.IconFileLocked(IMAGE_RESOURCE_CONTROLS_LEFT_THIN_BLACK_BMP);
+         button_obj.IconFile(IMAGE_RESOURCE_BMP16_LEFT_THIN_BLACK_BMP);
+         button_obj.IconFileLocked(IMAGE_RESOURCE_BMP16_LEFT_THIN_BLACK_BMP);
         }
       else
         {
-         button_obj.IconFile(IMAGE_RESOURCE_CONTROLS_RIGHT_THIN_BLACK_BMP);
-         button_obj.IconFileLocked(IMAGE_RESOURCE_CONTROLS_RIGHT_THIN_BLACK_BMP);
+         button_obj.IconFile(IMAGE_RESOURCE_BMP16_RIGHT_THIN_BLACK_BMP);
+         button_obj.IconFileLocked(IMAGE_RESOURCE_BMP16_RIGHT_THIN_BLACK_BMP);
          button_obj.AnchorRightWindowSide(true);
         }
    // --- Let's create a control

@@ -112,7 +112,7 @@ class CStandardChart : public CElement
          if(CElementBase::MouseFocus())
             HorizontalScroll();
          // --- If there is no focus and the left mouse button is released
-         else if(!m_mouse.LeftButtonState())
+         else if(!m_mouse.IsLeftBtn())
            {
             if(!m_x_scroll.IsVisible())
                return;
@@ -511,7 +511,7 @@ class CStandardChart : public CElement
       if(!m_x_scroll_mode)
          return;
    // ---If the mouse button is pressed
-      if(m_mouse.LeftButtonState())
+      if(m_mouse.IsLeftBtn())
         {
          // --- Remember the current X coordinates of the cursor
          if(m_prev_x==0)
@@ -587,15 +587,15 @@ class CStandardChart : public CElement
    // --- Get the height of the main chart
       int chart_y_size=(int)ChartGetInteger(0,CHART_HEIGHT_IN_PIXELS);
    // ---If the left mouse button is pressed
-      if(m_mouse.LeftButtonState())
+      if(m_mouse.IsLeftBtn())
         {
          // --- If the mode is disabled
          if(!m_drag_border_window_mode)
            {
             // --- Remember the state if the mouse cursor is in the border capture zone to change the height of the subwindow
-            if((m_mouse.SubWindowNumber()==m_subwin && m_mouse.Y()<2) ||
-               (m_mouse.SubWindowNumber()==m_subwin && m_mouse.Y()==chart_y_size+1) ||
-               (m_mouse.SubWindowNumber()==m_subwin-1 && m_mouse.Y()>=chart_y_size-2))
+            if((m_mouse.SubWin()==m_subwin && m_mouse.Y()<2) ||
+               (m_mouse.SubWin()==m_subwin && m_mouse.Y()==chart_y_size+1) ||
+               (m_mouse.SubWin()==m_subwin-1 && m_mouse.Y()>=chart_y_size-2))
               {
                m_drag_border_window_mode=true;
                return(false);

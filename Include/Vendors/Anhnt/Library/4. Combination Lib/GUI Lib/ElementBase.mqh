@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                  ElementBase.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
+//| Link note https://www.mql5.com/en/articles/2943                  |
 //|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
@@ -8,15 +9,16 @@
 //+------------------------------------------------------------------+
 #ifndef __ELEMENTBASE_MQH__
 #define __ELEMENTBASE_MQH__
- #include "Mouse.mqh"
+ #include "Defines.mqh"
+ #include "..\Services\MouseCombine.mqh" 
  //#include "Objects.mqh" 
  #include "Common.mqh"
  #include "..\Services\Colors.mqh"  
  class CElementBase
   {
    protected:
-    // --- An instance of the class for getting mouse parameters
-      CMouse           *m_mouse;
+    // --- An instance of the class for getting mouse parameters      
+      CMouseCombine *m_mouse;
     // --- An instance of a class for working with color
       CColors           m_clr;
     // --- An instance of a class for working with a graph
@@ -74,8 +76,8 @@
                      CElementBase(void);
                     ~CElementBase(void);
     // --- (1) Saves and (2) returns the mouse pointer
-      void              MousePointer(CMouse &object)                    { m_mouse=::GetPointer(object);         }
-      CMouse           *MousePointer(void)                        const { return(::GetPointer(m_mouse));        }
+      void              MousePointer(CMouseCombine &object)                    { m_mouse=::GetPointer(object);         }
+      CMouseCombine           *MousePointer(void)                        const { return(::GetPointer(m_mouse));        }
     // --- (1) Stores and (2) returns the class name
       void              ClassName(const string class_name)              { m_class_name=class_name;              }
       string            ClassName(void)                           const { return(m_class_name);                 }
@@ -282,7 +284,8 @@
   //+------------------------------------------------------------------+
   bool CElementBase::CheckSubwindowNumber(void)
    {
-   return(m_subwin==m_mouse.SubWindowNumber());
+      //return(m_subwin==m_mouse.SubWindowNumber());
+      return(m_subwin==m_mouse.SubWin());
    }
   //+------------------------------------------------------------------+
   // | Checking the mouse cursor position over an element |

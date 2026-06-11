@@ -53,7 +53,8 @@
       //---
    protected:
       // --- An instance of a class for obtaining mouse parameters
-      CMouse            m_mouse;
+      //CMouse            m_mouse;
+      CMouseCombine m_mouse;
       // ---Window Array
       CWindow          *m_windows[];
       // --- Structure of arrays of elements

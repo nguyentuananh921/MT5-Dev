@@ -73,7 +73,7 @@ void CSplitButton::OnEvent(const int id, const long& lparam, const double& dpara
         m_drop_button.MouseFocus(m_mouse.X() > m_drop_button.X() && m_mouse.X() < m_drop_button.X2() &&
                                  m_mouse.Y() > m_drop_button.Y() && m_mouse.Y() < m_drop_button.Y2());
         // --- Outside the element area and with the mouse button pressed
-        if (!CElementBase::MouseFocus() && m_mouse.LeftButtonState()) {
+        if (!CElementBase::MouseFocus() && m_mouse.IsLeftBtn()) {
             // --- Quit if focus is in the context menu
             if (m_drop_menu.MouseFocus())
                 return;
@@ -190,10 +190,10 @@ bool CSplitButton::CreateDropButton(void) {
     m_drop_button.YSize(m_y_size);
     m_drop_button.IconXGap(icon_x_gap);
     m_drop_button.IconYGap(icon_y_gap);
-    m_drop_button.IconFile(IMAGE_RESOURCE_CONTROLS_DOWN_THIN_BLACK_BMP);
-    m_drop_button.IconFileLocked(IMAGE_RESOURCE_CONTROLS_DOWN_THIN_BLACK_BMP);
-    m_drop_button.CElement::IconFilePressed(IMAGE_RESOURCE_CONTROLS_UP_THIN_BLACK_BMP);
-    m_drop_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_UP_THIN_BLACK_BMP);
+    m_drop_button.IconFile(IMAGE_RESOURCE_BMP16_DOWN_THIN_BLACK_BMP);
+    m_drop_button.IconFileLocked(IMAGE_RESOURCE_BMP16_DOWN_THIN_BLACK_BMP);
+    m_drop_button.CElement::IconFilePressed(IMAGE_RESOURCE_BMP16_UP_THIN_BLACK_BMP);
+    m_drop_button.CElement::IconFilePressedLocked(IMAGE_RESOURCE_BMP16_UP_THIN_BLACK_BMP);
     // --- Let's create a control
     if (!m_drop_button.CreateButton("", x, y))
         return (false);

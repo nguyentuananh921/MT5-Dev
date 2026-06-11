@@ -22,18 +22,18 @@
 //For Candle Pattern Render
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
     CPatternRenderer patternRenderer;
-static bool s_need_tree_refresh = false;
+    static bool s_need_tree_refresh = false;
  //+------------------------------------------------------------------+
  //| Expert initialization function                                   |
  //+------------------------------------------------------------------+
  int OnInit(void)
    {      
       // For debug.
-        Print(__FUNCTION__, " My Debug EA:OnInit _UninitReason=", _UninitReason);
+        //Print(__FUNCTION__, " My Debug EA:OnInit _UninitReason=", _UninitReason);
       //--- Set the permissions to send cursor movement and mouse scroll events
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_MOVE, true);
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_WHEEL, true);
-      if(_UninitReason == REASON_CHARTCHANGE)   // ← THÊM: set flag khi TF change
+      if(_UninitReason == REASON_CHARTCHANGE) 
         s_need_tree_refresh = true;
       //For Trading
           tradingEngine.OnInitEvent();
@@ -44,9 +44,11 @@ static bool s_need_tree_refresh = false;
       //For GUI.Now set both pointers before GUI init              
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
-        mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection()); 
+        mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection());
+        mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
+        mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl()); 
         // GUI init: m_symbols và m_timeseries đều đã có
-          mGUIPannel.OnInitEvent();         
+          mGUIPannel.OnInitEvent(_UninitReason);        
       //For patternRenderer
         patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
         mGUIPannel.SetPatternRenderer(&patternRenderer);        
@@ -79,6 +81,7 @@ static bool s_need_tree_refresh = false;
  //+------------------------------------------------------------------+
  void OnTick(void)
   {
+    tradingEngine.OnTickEvent();
     //For Bar
        //  Refresh pattern renderer on new bar
         SDataCalculate data_calc;
@@ -143,7 +146,8 @@ static bool s_need_tree_refresh = false;
         int my = (int)dparam;
         if(!IsCtrlKeyPressed())
           {
-              ChartSetInteger(ChartID(), CHART_MOUSE_SCROLL, true);
+            // if(!mGUIPannel.IsBubbleDragging())
+            //   ChartSetInteger(ChartID(), CHART_MOUSE_SCROLL, true);
               mGUIPannel.HideInfoWindow();
               return;
           }

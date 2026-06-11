@@ -623,7 +623,7 @@ class CSlider : public CElement
       if(!m_dual_slider_mode)
          return;
    // --- If the left mouse button is released
-      if(!m_mouse.LeftButtonState())
+      if(!m_mouse.IsLeftBtn())
         {
          // --- Let's reset the variables
          ZeroLeftThumbVariables();
@@ -659,7 +659,7 @@ class CSlider : public CElement
    void CSlider::CheckMouseOnRightThumb(void)
      {
    // --- If the left mouse button is released
-      if(!m_mouse.LeftButtonState())
+      if(!m_mouse.IsLeftBtn())
         {
          // --- Let's reset the variables
          ZeroRightThumbVariables();

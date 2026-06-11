@@ -4,6 +4,7 @@
 //|                                                       WndInd.mqh |
 //|                                  Copyright 2021, MetaQuotes Ltd. |
 //|Lib https://www.mql5.com/en/articles/14710                        |
+//| Link note https://www.mql5.com/en/articles/9260                  |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2021, MetaQuotes Ltd."
 #property link      "https://mql5.com/en/users/artmedia70"

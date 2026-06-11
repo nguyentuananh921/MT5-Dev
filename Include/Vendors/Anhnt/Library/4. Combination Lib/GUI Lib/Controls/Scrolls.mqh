@@ -236,15 +236,15 @@ class CScroll : public CElement
          // --- Setting properties based on scroll type
          if(CElementBase::ClassName()=="CScrollV")
            {
-            file=(m_inc_file=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_UP_BLACK_BMP : m_inc_file;
-            file_locked=(m_inc_file_locked=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_UP_BLACK_BMP : m_inc_file_locked;
-            file_pressed=(m_inc_file_pressed=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_UP_WHITE_BMP : m_inc_file_pressed;
+            file=(m_inc_file=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_UP_BLACK_BMP : m_inc_file;
+            file_locked=(m_inc_file_locked=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_UP_BLACK_BMP : m_inc_file_locked;
+            file_pressed=(m_inc_file_pressed=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_UP_WHITE_BMP : m_inc_file_pressed;
            }
          else
            {
-            file=(m_inc_file=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_LEFT_BLACK_BMP : m_inc_file;
-            file_locked=(m_inc_file_locked=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_LEFT_BLACK_BMP : m_inc_file_locked;
-            file_pressed=(m_inc_file_pressed=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_LEFT_WHITE_BMP : m_inc_file_pressed;
+            file=(m_inc_file=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_LEFT_BLACK_BMP : m_inc_file;
+            file_locked=(m_inc_file_locked=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_LEFT_BLACK_BMP : m_inc_file_locked;
+            file_pressed=(m_inc_file_pressed=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_LEFT_WHITE_BMP : m_inc_file_pressed;
            }
          // --- Element index
          button_obj.Index(m_index*2);
@@ -256,17 +256,17 @@ class CScroll : public CElement
          if(CElementBase::ClassName()=="CScrollV")
            {
             x=0; y=m_thumb_width;
-            file=(m_dec_file=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_DOWN_BLACK_BMP : m_dec_file;
-            file_locked=(m_dec_file_locked=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_DOWN_BLACK_BMP : m_dec_file_locked;
-            file_pressed=(m_dec_file_pressed=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_DOWN_WHITE_BMP : m_dec_file_pressed;
+            file=(m_dec_file=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_DOWN_BLACK_BMP : m_dec_file;
+            file_locked=(m_dec_file_locked=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_DOWN_BLACK_BMP : m_dec_file_locked;
+            file_pressed=(m_dec_file_pressed=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_DOWN_WHITE_BMP : m_dec_file_pressed;
             button_obj.AnchorBottomWindowSide(true);
            }
          else
            {
             x=m_thumb_width; y=0;
-            file=(m_dec_file=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_RIGHT_BLACK_BMP : m_dec_file;
-            file_locked=(m_dec_file_locked=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_RIGHT_BLACK_BMP : m_dec_file_locked;
-            file_pressed=(m_dec_file_pressed=="")? (string)IMAGE_RESOURCE_CONTROLS_SCROLL_RIGHT_WHITE_BMP : m_dec_file_pressed;
+            file=(m_dec_file=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_BLACK_BMP : m_dec_file;
+            file_locked=(m_dec_file_locked=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_BLACK_BMP : m_dec_file_locked;
+            file_pressed=(m_dec_file_pressed=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_WHITE_BMP : m_dec_file_pressed;
             button_obj.AnchorRightWindowSide(true);
            }
          // --- Element index
@@ -367,7 +367,7 @@ class CScroll : public CElement
    void CScroll::CheckMouseButtonState(void)
      {
    // --- If the left mouse button is released
-      if(!m_mouse.LeftButtonState())
+      if(!m_mouse.IsLeftBtn())
         {
          // --- Let's reset the variables
          ZeroThumbVariables();

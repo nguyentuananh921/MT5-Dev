@@ -1127,7 +1127,7 @@ class CColorPicker : public CElement
       if(!CElementBase::MouseFocus())
          return;
    // --- Return the counter to its original value if the mouse button is released
-      if(!m_mouse.LeftButtonState())
+      if(!m_mouse.IsLeftBtn())
          m_timer_counter=SPIN_DELAY_MSC;
    // --- If the mouse button is pressed
       else

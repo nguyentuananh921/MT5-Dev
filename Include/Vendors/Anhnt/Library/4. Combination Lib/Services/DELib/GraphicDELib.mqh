@@ -12,6 +12,7 @@
   //| Include files                                                    |
   //+------------------------------------------------------------------+
   #include "CommonDELib.mqh"
+  #include "TimeseriesDELib.mqh"
 //+------------------------------------------------------------------+
 //| Return the description of the chart corner for pixel coordinates  |
 //+------------------------------------------------------------------+
@@ -290,6 +291,87 @@ string TabSizeModeDescription(const ENUM_CANV_ELEMENT_TAB_SIZE_MODE mode)
         case CANV_ELEMENT_TAB_SIZE_MODE_FILL   : return CMessage::Text(MSG_LIB_TEXT_TAB_SIZE_MODE_FILL);   break;
         default                                : return "Unknown";                                          break;
       }
+  }
+//+------------------------------------------------------------------+
+//| Return the maximum value in the array                            |
+//+------------------------------------------------------------------+
+template<typename T>
+bool ArrayMaximumValue(const string source,const T &array[],T &max_value)
+  {
+   if(ArraySize(array)==0)
+     {
+      CMessage::ToLog(source,MSG_CANV_ELEMENT_ERR_EMPTY_ARRAY);
+      return false;
+     }
+   max_value=0;
+   int index=ArrayMaximum(array);
+   if(index==WRONG_VALUE)
+      return false;
+   max_value=array[index];
+   return true;
+  }
+//+------------------------------------------------------------------+
+//| Return the minimum value in the array                            |
+//+------------------------------------------------------------------+
+template<typename T>
+bool ArrayMinimumValue(const string source,const T &array[],T &min_value)
+  {
+   if(ArraySize(array)==0)
+     {
+      CMessage::ToLog(source,MSG_CANV_ELEMENT_ERR_EMPTY_ARRAY);
+      return false;
+     }
+   min_value=0;
+   int index=ArrayMinimum(array);
+   if(index==WRONG_VALUE)
+      return false;
+   min_value=array[index];
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//| Return the description of the text alignment mode               |
+//+------------------------------------------------------------------+
+string AlignModeDescription(ENUM_ALIGN_MODE align)
+  {
+   return
+     (
+      align==ALIGN_LEFT    ? CMessage::Text(MSG_LIB_TEXT_ALIGN_LEFT)    :
+      align==ALIGN_CENTER  ? CMessage::Text(MSG_LIB_TEXT_ALIGN_CENTER)  :
+      align==ALIGN_RIGHT   ? CMessage::Text(MSG_LIB_TEXT_ALIGN_RIGHT)   :
+      "Unknown"
+     );
+  }
+//+------------------------------------------------------------------+
+//| Return the description of the Elliott wave degree               |
+//+------------------------------------------------------------------+
+string ElliotWaveDegreeDescription(const ENUM_ELLIOT_WAVE_DEGREE degree)
+  {
+   return
+     (
+      degree==ELLIOTT_GRAND_SUPERCYCLE ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_GRAND_SUPERCYCLE) :
+      degree==ELLIOTT_SUPERCYCLE       ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_SUPERCYCLE)       :
+      degree==ELLIOTT_CYCLE            ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_CYCLE)            :
+      degree==ELLIOTT_PRIMARY          ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_PRIMARY)          :
+      degree==ELLIOTT_INTERMEDIATE     ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_INTERMEDIATE)     :
+      degree==ELLIOTT_MINOR            ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_MINOR)            :
+      degree==ELLIOTT_MINUTE           ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_MINUTE)           :
+      degree==ELLIOTT_MINUETTE         ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_MINUETTE)         :
+      degree==ELLIOTT_SUBMINUETTE      ? CMessage::Text(MSG_LIB_TEXT_ELLIOTT_SUBMINUETTE)      :
+      "Unknown"
+     );
+  }
+//+------------------------------------------------------------------+
+//| Return the description of the Gann line direction               |
+//+------------------------------------------------------------------+
+string GannDirectDescription(const ENUM_GANN_DIRECTION direction)
+  {
+   return
+     (
+      direction==GANN_UP_TREND   ? CMessage::Text(MSG_LIB_TEXT_GANN_UP_TREND)   :
+      direction==GANN_DOWN_TREND ? CMessage::Text(MSG_LIB_TEXT_GANN_DOWN_TREND) :
+      "Unknown"
+     );
   }
 
 #endif // __GRAPHIC_DELIB_MQH__

@@ -4,14 +4,17 @@
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
 #ifndef __TRADING_ENGINE_MQH__
-#define __TRADING_ENGINE_MQH__
+#define __TRADING_ENGINE_MQH__ 
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\AccountsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SymbolsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>  
-
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\MarketCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\HistoryCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\EventsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\TradingControl.mqh>
   //+------------------------------------------------------------------+
   //| Event codes                                                      |
   //+------------------------------------------------------------------+
@@ -31,9 +34,12 @@
   class CTradingEngine
     {
      private:
-        CAccountsCollection      m_accounts;
-        CSymbolsCollection       m_symbols;    //For sybols information at tab Trade
-        
+        CAccountsCollection      m_accounts;       // Account collection
+        CSymbolsCollection       m_symbols;        //For sybols information at tab Trade
+        CMarketCollection        m_market;         // Collection of market orders and deals
+        CHistoryCollection       m_history;        // Collection of historical orders and deals
+        CEventsCollection        m_events;         // Collection of events
+        CTradingControl          m_trading_control;// Trading management object
         
         bool                     m_is_event;
         ENUM_ENGINE_EVENT        m_event_code;
@@ -47,15 +53,19 @@
         void              OnTickEvent(void);
         void              OnDeinitEvent(void) {}
 
-        //Note
-          // int GetRebuildSymbolsCount(void) const { return m_symbols_rebuild_count; }
         bool              IsEvent(void)      const { return m_is_event;   }
         ENUM_ENGINE_EVENT GetEventCode(void) const { return m_event_code; }
-       //For Account info at tab Trade
+       //For Pointer
         CAccount *GetCurrentAccount(void);
-        CAccountsCollection *GetAccounts(void);
-       //For Symbols Information at tab Trade
-        CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; };
+        CAccountsCollection *GetAccounts(void) { return &m_accounts;}
+        CMarketCollection *GetMarketCollection(void) { return &m_market; }       
+        CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; }
+        CTradingControl* GetTradingControl(void) { return &m_trading_control; }
+       //--- Return the list of market (1) positions, (2) pending orders and (3)
+       // market orders
+        CArrayObj *GetListMarketPosition(void);
+        CArrayObj *GetListMarketPendings(void);
+        CArrayObj *GetListMarketOrders(void);
        //Note
         //bool RebuildSymbols(ENUM_SYMBOLS_MODE mode);
     };
@@ -96,15 +106,22 @@
           acc.SetControlProfitDec(0);
           acc.SetControlEquityInc(0);
           acc.SetControlEquityDec(0);
+      //For trading
       //For Symbols Information at tab Trade, initialize symbols collection      
         // Symbols — init with current chart symbol
-        return m_symbols.CreateSymbolsList(true);  // true = MarketWatch        
+        m_market.Refresh();
+        m_history.Refresh();
+        if(!m_symbols.CreateSymbolsList(true)) // true = MarketWatch
+            return false;        
+        m_trading_control.OnInit(GetCurrentAccount(), &m_symbols, &m_market, &m_history, &m_events);
+        return true;  
+      
     }
   //+------------------------------------------------------------------+
   //| Refresh all collections and detect changes                       |
   //+------------------------------------------------------------------+
   void CTradingEngine::OnTickEvent(void)
-    {
+    {      
       //For Account info at tab Trade, only update dynamic info when there is an event in account, no need to update every tick
         m_is_event   = false;
         m_event_code = ENGINE_EVENT_NONE;
@@ -122,14 +139,52 @@
             m_is_event   = true;
             m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_SYMBOL);
           }
+      //For Order and deal
+       m_market.Refresh();
+       if(m_market.IsTradeEvent())
+        {
+          m_is_event   = true;
+          m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_ORDER);
+        }
     }
+//For Pointer
   CAccount * CTradingEngine::GetCurrentAccount(void)
     {
         int index = m_accounts.IndexCurrentAccount();
         if(index == WRONG_VALUE) return NULL;
         return (CAccount*)m_accounts.GetList().At(index);
     }
-
+ //For market Order
+  //+------------------------------------------------------------------+
+  //| Return the list of market positions                              |
+  //+------------------------------------------------------------------+
+  CArrayObj *CTradingEngine::GetListMarketPosition(void) 
+   {
+    CArrayObj *list = this.m_market.GetList();
+    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS,
+                                    ORDER_STATUS_MARKET_POSITION, EQUAL);
+    return list;
+   }
+  //+------------------------------------------------------------------+
+  //| Return the list of market pending orders                         |
+  //+------------------------------------------------------------------+
+  CArrayObj *CTradingEngine::GetListMarketPendings(void) 
+   {
+    CArrayObj *list = this.m_market.GetList();
+    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS,
+                                    ORDER_STATUS_MARKET_PENDING, EQUAL);
+    return list;
+   }
+  //+------------------------------------------------------------------+
+  //| Return the list of market orders                                 |
+  //+------------------------------------------------------------------+
+  CArrayObj *CTradingEngine::GetListMarketOrders(void) 
+   {
+    CArrayObj *list = this.m_market.GetList();
+    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS,
+                                    ORDER_STATUS_MARKET_ORDER, EQUAL);
+    return list;
+   }
   //Rebuild symbols collection for Symbols Information at tab Trade according to 
   // the selected mode in the GUI and return true if it is successful, otherwise false
   // bool CTradingEngine::RebuildSymbols(ENUM_SYMBOLS_MODE mode)

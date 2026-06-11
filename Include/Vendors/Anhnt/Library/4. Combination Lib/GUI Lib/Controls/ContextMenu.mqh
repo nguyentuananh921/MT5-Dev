@@ -142,7 +142,7 @@
          if(m_free_context_menu)
             return;
          // --- If the context menu is enabled and the left mouse button is pressed
-         if(m_mouse.LeftButtonState())
+         if(m_mouse.IsLeftBtn())
            {
             // --- Let's check the conditions for closing all context menus
             CheckHideContextMenus();

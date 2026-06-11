@@ -15,6 +15,7 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh> 
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Trading\TradingLevelBubble.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
@@ -61,6 +62,8 @@
       CIndicatorsCollection *m_indicators_timeseries; //CTimeSeriesEngine owns
     //--- Time counters
       CTimeCounter m_gui_timecounter;
+    // For trading bubble
+      CTradingLevelBubble  m_trading_bubble;
     // Control Elements     
       CWindow     m_Mainwindow;
       CStatusBar  m_status_bar;
@@ -114,8 +117,9 @@
          bool CreateStatusBar(const int x_gap, const int y_gap);
          bool UpdateStatusBar(void);
      //For m_treeview_settings Setting Tab TAB_TAB_TRADE_SETTINGS at m_tabs_main
-       //Left Pannel
-        bool CreateTreeView_Settings(void);        
+       //Left TreeView at Pannel        
+        bool CreateTreeView_Settings(void); 
+        void ApplyTreeHighlight(void);       
         void PopulateSymbolTFTree(void); 
        // For right panel Settings — [Pattern][Indicator] tabs
         bool CreateSettingsRightTabs(const int x, const int y);        
@@ -143,7 +147,7 @@
       // lifecycle method
        CGUIPannel(void);
        ~CGUIPannel(void);
-       bool OnInitEvent(void);
+       bool OnInitEvent(const int uninit_reason = REASON_PROGRAM);
        void OnDeinitEvent(const int reason);
        void OnTimerEvent(void);
        void OnTickEvent(void);
@@ -162,12 +166,16 @@
                      const string symbol,
                      const ENUM_TIMEFRAMES tf_current);
          void              HideInfoWindow(void);
+      //For Bubble
+         bool IsBubbleDragging(void) { return m_trading_bubble.IsDragging(); }
       //For Pointer      
          void  SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbols = symbols; }      
          void  SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_timeseries = ts; }         
          void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
          void  SetPatternsControl(CBarPatternsControl* ctrl) { m_patterns_ctrl = ctrl; } 
-         void  SetIndicatorsCollection(CIndicatorsCollection *ind) { m_indicators_timeseries = ind; }   
+         void  SetIndicatorsCollection(CIndicatorsCollection *ind) { m_indicators_timeseries = ind; }
+         void  SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
+         void  SetTradingControl(CTradingControl *trading_control) { m_trading_bubble.SetTradingControl(trading_control); }   
   };
 #endif // CGUIPANNEL_MQH_DECLARATION
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION
@@ -198,7 +206,7 @@
   //+------------------------------------------------------------------+
   //| Init                                                             |
   //+------------------------------------------------------------------+ 
-  bool CGUIPannel::OnInitEvent(void)
+  bool CGUIPannel::OnInitEvent(const int uninit_reason)
    {      
       if(!m_gui_created)
        {
@@ -206,15 +214,24 @@
          m_gui_created = true;
          InitializePatternTable();
          InitializeIndicatorTable();
+         m_trading_bubble.MousePointer(m_mouse);
+         m_trading_bubble.OnInitEvent(); //First time        
          Update(true);
-       }      
-      // TF change: CHARTEVENT_CHART_CHANGE → RefreshGUI() sẽ lo
+       }  
+      else if(uninit_reason == REASON_CHARTCHANGE)
+       {
+         m_trading_bubble.OnInitEvent();// TF change: canvas cleared by MT5, recreate
+         ApplyTreeHighlight();
+      }   
+      // TF change: CHARTEVENT_CHART_CHANGE → RefreshGUI() sẽ lo      
       return true;           
    };
   // OnEvent handler
   void CGUIPannel::OnEvent(const int id, const long &lparam,
                          const double &dparam, const string &sparam)
    {
+    // Bubble receives raw events first, regardless of control early-returns
+     m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
     // Handle indicator table click (checkbox toggle)
      bool ind_header = ((id - CHARTEVENT_CUSTOM) == ON_SORT_DATA      && lparam == m_indicator_table.Id());
      bool ind_cell   = (id == (CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX) && lparam == m_indicator_table.Id());
@@ -224,17 +241,17 @@
       {
        if(ind_header)
         {
-            if((int)dparam != 3) return;
-            int rows = m_indicator_table.RowsTotal();
-            bool any_off = false;
-            for(int i = 0; i < rows; i++)
-                  if(m_indicator_table.SelectedImageIndex(3, i) != 0)
-                     { any_off = true; break; }
-            int new_state = any_off ? 0 : 1;
-            for(int i = 0; i < rows; i++)
-                  m_indicator_table.ChangeImage(3, i, new_state, false);
-            m_indicator_table.Update(true);
-            m_chart.Redraw();
+          if((int)dparam != 3) return;
+          int rows = (int)m_indicator_table.RowsTotal();
+          bool any_off = false;
+          for(int i = 0; i < rows; i++)
+          if(m_indicator_table.SelectedImageIndex(3, i) != 0)
+            { any_off = true; break; }
+          int new_state = any_off ? 0 : 1;
+          for(int i = 0; i < rows; i++)
+               m_indicator_table.ChangeImage(3, i, new_state, false);
+          m_indicator_table.Update(true);
+          m_chart.Redraw();
         }
        if(ind_cell)
         {
@@ -247,12 +264,20 @@
           string target = m_indicator_table.GetValue(1, row);
           StringTrimLeft(target);
           // Find matching PureData record to get its Handle/Group
-           CArrayObj *list = m_indicators_timeseries.GetList();
-           CIndicatorDE *ind = NULL;
+           string sym = ::Symbol();
+           ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+           CArrayObj *list = m_indicators_timeseries.GetList(); //Full List All TF
+           CIndicatorDE *ind = NULL;  //Temp series
            for(int i = 0; i < list.Total(); i++)
             {
               CIndicatorDE *item = list.At(i);
-              if(item != NULL && item.ShortName() == target) { ind = item; break; }
+              if(item != NULL && item.ShortName() == target
+                        && item.Symbol() == sym 
+                        && item.Timeframe() == tf)
+                  { 
+                     ind = item; 
+                     break;
+                  }
             }
            if(ind == NULL) return;
 
@@ -269,7 +294,8 @@
            else                 // Show: re-attach using the stored handle
             {
               int sub_window = (ind.Group() == INDICATOR_GROUP_TREND) ? 0 : subwindows;
-              ChartIndicatorAdd(0, sub_window, ind.Handle());
+
+              bool added = ChartIndicatorAdd(0, sub_window, ind.Handle());            
             }
            m_chart.Redraw();
         }
@@ -338,45 +364,12 @@
          int col = (int)StringToInteger(StringSubstr(sparam, 0, sep));
          int row = (int)StringToInteger(StringSubstr(sparam, sep + 1));
          if((col != 3 && col != 4) || row < 0 || row >= n) return;
-        }
-      //Debug
-      // ── Debug: dump table state after Phase 1 ─────────────────────
-       for(int i = 0; i < n; i++)
-         {
-            int bull_idx = m_pattern_table.SelectedImageIndex(3, i);
-            int bear_idx = m_pattern_table.SelectedImageIndex(4, i);
-            Print("MyDebug from CGUIPannel::OnEvent [", i, "] ", EnumToString(m_pattern_types[i]),
-                  "  bull_idx=", bull_idx, "(on=", (bull_idx==0), ")",
-                  "  bear_idx=", bear_idx, "(on=", (bear_idx==0), ")");
-         }
-         Print("MyDebug from CGUIPannel::OnEvent renderer=", (m_renderer != NULL),
-               "  timeseries=", (m_timeseries != NULL));
+        }      
        if(m_renderer != NULL && m_timeseries != NULL)
-         {
-            CArrayObj *plist = m_timeseries.GetListAllPatterns();
-            Print("MyDebug from CGUIPannel::OnEvent plist total=", (plist != NULL ? plist.Total() : -1));
-         }
-         // ─────────────────────────────────────────────────────────────
+         CArrayObj *plist = m_timeseries.GetListAllPatterns();         
       // ── Phase 2: Update Chart từ state của m_pattern_table ───────      
        if(m_renderer == NULL || m_timeseries == NULL) return;
-       if(is_cell) m_pattern_table.Update(true);
-       // ── Debug Phase 2 ─────────────────────────────────────────────
-         Print("MyDebug from CGUIPannel::OnEvent Phase2 n=", n, " is_header=", is_header, " is_cell=", is_cell);
-         for(int i = 0; i < n; i++)
-         {
-            string vis_name = m_pattern_table.GetValue(0, i);
-            int orig = -1;
-            for(int j = 0; j < n; j++)
-               if(m_pattern_display_names[j] == vis_name)
-                     { orig = j; break; }
-            int bi = m_pattern_table.SelectedImageIndex(3, i);
-            int ri = m_pattern_table.SelectedImageIndex(4, i);
-            if(bi == 0 || ri == 0)   // chỉ print dòng nào có checkbox bật
-               Print("MyDebug from CGUIPannel::OnEvent  row=", i, " '", vis_name, "' orig=", orig,
-                     " bull=", bi, " bear=", ri,
-                     " ptype=", (orig >= 0 ? EnumToString(m_pattern_types[orig]) : "???"));
-         }
-         // ─────────────────────────────────────────────────────────────
+       if(is_cell) m_pattern_table.Update(true);      
         for(int i = 0; i < n; i++)
          {
             // Resolve visual row i → original pattern index
@@ -393,25 +386,7 @@
          }
        CArrayObj *plist = m_timeseries.GetListAllPatterns();
        if(plist != NULL)
-         {
-            //Update chart
-            m_renderer.Refresh(plist, true, true);
-            // Debug after Refresh — check what renderer actually has enabled
-               int enabled_types = 0;
-               for(int k = 0; k < n; k++)
-               {
-                  bool b = m_renderer.GetFilterBull(m_pattern_types[k]);
-                  bool r = m_renderer.GetFilterBear(m_pattern_types[k]);
-                  if(b || r)
-                  {
-                     enabled_types++;
-                     Print("MyDebug from CGUIPannel::OnEvent filter ON: ", EnumToString(m_pattern_types[k]),
-                           " bull=", b, " bear=", r);
-                  }
-               }
-               Print("MyDebug from CGUIPannel::OnEvent total enabled types in renderer=", enabled_types);
-         }
-     
+         m_renderer.Refresh(plist, true, true);     
    }
   void CGUIPannel::OnTickEvent(void)
    {
@@ -422,6 +397,7 @@
   //+------------------------------------------------------------------+
   void CGUIPannel::OnDeinitEvent(const int reason)
    {
+      m_trading_bubble.OnDeinitEvent();
       CWndEvents::Destroy();
    }
   //+------------------------------------------------------------------+
@@ -434,6 +410,7 @@
          return;
       //--- Handling the elements
       CWndEvents::OnTimerEvent();
+      m_trading_bubble.OnTickEvent();
    }
   //+------------------------------------------------------------------+
   //| Trade operation event                                            |
@@ -466,6 +443,7 @@
        //For Settings Tab at m_tabs_main
           PopulateSymbolTFTree();
           if(!CreateTreeView_Settings()) return false;
+          ApplyTreeHighlight();
           m_tree_prev_count = m_treeview_settings.ItemsTotal();
 
           if(!CreateSettingsRightTabs(205, 25)) return false;
@@ -481,12 +459,13 @@
   void CGUIPannel::RefreshGUI(void) 
    {
     // Update Symbol+TF tree incrementally (only adds new TF nodes, no rebuild)    
-     PopulateSymbolTFTree();  
+     PopulateSymbolTFTree();
     // Update indicator table (SetValue per-cell, no-flicker)
      if(m_treeview_settings.ItemsTotal() > m_tree_prev_count)
         m_treeview_settings.CreateItemsFrom(m_tree_prev_count);
      else
         m_treeview_settings.Update(true);
+     ApplyTreeHighlight();
      SetValuesToIndicatorTable(); 
      //Update(true);
      m_chart.Redraw();
@@ -564,17 +543,17 @@
       //--- Setup icons for Deposit Load item (arrow up=high load, gray=medium, arrow down=low)
          CTextLabel *deposit_item = m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD);
          deposit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
-         deposit_item.AddImage(0, IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP);
-         deposit_item.AddImage(0, IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP);
-         deposit_item.AddImage(0, IMAGE_RESOURCE_ICONS_BMP16_CIRCLE_GRAY_BMP);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_UP_PNG);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
          deposit_item.ChangeImage(0, 2); // default: gray
          deposit_item.LabelXGap(14);     // shift text right for icon
       //--- Setup icons for Profit item (arrow up=profit, arrow down=loss, gray=zero)
          CTextLabel *profit_item = m_status_bar.GetItemPointer(STATUS_BAR_PROFIT);
          profit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
-         profit_item.AddImage(0, IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP);
-         profit_item.AddImage(0, IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP);
-         profit_item.AddImage(0, IMAGE_RESOURCE_ICONS_BMP16_CIRCLE_GRAY_BMP);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_UP_PNG);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
          profit_item.ChangeImage(0, 2); // default: gray
          profit_item.LabelXGap(14);     // shift text right for icon
       //--- Add the object to the common array of object groups
@@ -707,6 +686,47 @@
          }
     return true;
    }
+  void CGUIPannel::ApplyTreeHighlight(void)
+   {
+    int total     = m_treeview_settings.ItemsTotal();
+    int sym_total = ArraySize(m_tree_symbol_names);
+    int tf_total  = ArraySize(m_tree_tf_syms);
+
+    for(int i = 0; i < total; i++)
+     {
+      CTreeItem *item = m_treeview_settings.ItemPointer(i);
+      if(item == NULL) continue;
+
+      if(i < sym_total)
+       {
+        bool sym_active = (m_tree_symbol_names[i] == _Symbol);
+        uint img_down  = sym_active ? IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP
+                            : IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP;
+        uint img_right = sym_active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
+                            : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP;
+        item.SetImage(1, 0, img_down);
+        item.SetImage(1, 1, img_right);
+        //item.Draw();
+        //item.CanvasPointer().Update(false);
+        continue;
+       }
+
+      int tf_idx = i - sym_total;
+      if(tf_idx >= tf_total) continue;
+
+      bool highlight = (m_tree_tf_syms[tf_idx]  == _Symbol &&
+                        m_tree_tf_values[tf_idx] == _Period);
+
+      item.IconFile(highlight
+                    ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
+                    : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
+      //item.Draw();
+      //item.CanvasPointer().Update(false);
+     }
+
+     m_treeview_settings.Update(true);
+   }
+ 
   void CGUIPannel::PopulateSymbolTFTree(void)
    {     
 
@@ -730,7 +750,7 @@
          int count = 0;
          for(int j = 0; j < tf_total; j++)
           {
-            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
+            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex((uchar)(j + 1));
             bool registered = false;
             for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
                if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
@@ -760,7 +780,7 @@
                m_tree_symbol_names[n] = sym_name;
           }
          if(g >= watermark)
-               m_treeview_settings.AddItem(g, -1, sym_name, 0,   // parent=-1: root level
+               m_treeview_settings.AddItem(g, -1, sym_name, INT_MAX,   // parent=-1: root level
                                           i, 0, 0,               // level=0: top level
                                           tf_counts[i],
                                           0,
@@ -784,7 +804,7 @@
          int tf_idx_base = 0;
          for(int j = 0; j < tf_total; j++)
           {
-            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
+            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex((uchar)(j + 1));
             for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
                if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
                   { tf_idx_base++; break; }
@@ -793,7 +813,7 @@
          int new_tf_idx = tf_idx_base;
          for(int j = 0; j < tf_total; j++)
           {
-            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex(j + 1);
+            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex((uchar)(j + 1));
 
             bool already_added = false;
             for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
@@ -805,7 +825,7 @@
             int new_g = m_treeview_settings.ItemsTotal();
             m_treeview_settings.AddItem(new_g, sym_g,
                                        EnumToString(tf),
-                                       IMAGE_RESOURCE_ICONS_BMP16_START_BMP,
+                                       IMAGE_RESOURCE_BMP16_BAR_CHART_BMP,
                                        new_tf_idx, 1, reg_idx, 0, 0,  // level=1: child of symbol
                                        false, false);
 
@@ -898,15 +918,15 @@
      //Get List of Indicator of current symbol and TF
       CArrayObj *list = m_indicators_timeseries.GetListIndBySymbol(sym);
       list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-     // DEBUG
-         Print("MyDebug CGUIPannel::SetValuesToIndicatorTable SetValues: sym=", sym, " tf=", EnumToString(tf),
-               " filtered.Total=", (list == NULL ? -1 : list.Total()));
-         if(list != NULL)
-         for(int d = 0; d < list.Total(); d++)
-         {
-            CIndicatorDE *dbg = list.At(d);
-            if(dbg != NULL) Print("MyDebug SetValues item: ", dbg.ShortName());
-         } 
+   //   // DEBUG
+   //       Print("MyDebug CGUIPannel::SetValuesToIndicatorTable SetValues: sym=", sym, " tf=", EnumToString(tf),
+   //             " filtered.Total=", (list == NULL ? -1 : list.Total()));
+   //       if(list != NULL)
+   //       for(int d = 0; d < list.Total(); d++)
+   //       {
+   //          CIndicatorDE *dbg = list.At(d);
+   //          if(dbg != NULL) Print("MyDebug SetValues item: ", dbg.ShortName());
+   //       } 
      if(list == NULL || list.Total() == 0) 
       {
          m_indicator_table.DeleteAllRows();
@@ -944,19 +964,16 @@
          states[count] = on_chart ? 0 : 1; // 0 = Show (đang có trên chart), 1 = Hide
          count++;
         }
-       if(count == 0) return;
-      // // Snapshot checkbox states before DeleteAllRows wipes the table
-      //   int cur_rows = m_indicator_table.RowsTotal();
-      //   ArrayResize(states, count);
+       if(count == 0) return;      
      // Pass 2: ALL AddRow trước (giống InitializePatternTable)
         m_indicator_table.DeleteAllRows();
         for(int i = 0; i < count-1; i++)  //Only Loop to count-1
           m_indicator_table.AddRow(i);
      // Pass 3: SAU ĐÓ mới SetValue
-        uint green[] = {IMAGE_RESOURCE_ICONS_BMP16_START_BMP};
-        uint red[] = {IMAGE_RESOURCE_ICONS_BMP16_STOP_BMP};
-        uint chk[]   = {IMAGE_RESOURCE_CONTROLS_CHECKBOXON_BMP,
-                        IMAGE_RESOURCE_CONTROLS_CHECKBOXOFF_BMP};
+        uint green[] = {IMAGE_RESOURCE_BMP16_START_BMP};
+        uint red[] = {IMAGE_RESOURCE_BMP16_STOP_BMP};
+        uint chk[]   = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG,
+                        IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP};
         string group_names[] = {"Trend", "Oscillator", "Volumes", "Arrows"};
         for(int row = 0; row < count; row++) 
          {
@@ -1010,10 +1027,10 @@
       for(int i = 0; i < n - 1; i++)
          m_pattern_table.AddRow(i);
 
-      uint arrow_up[]  = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP};
-      uint arrow_dn[]  = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP};
-      uint chk[]       = {IMAGE_RESOURCE_CONTROLS_CHECKBOXON_BMP,
-                        IMAGE_RESOURCE_CONTROLS_CHECKBOXOFF_BMP};      
+      uint arrow_up[]  = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG};
+      uint arrow_dn[]  = {IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG};
+      uint chk[]       = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG,
+                        IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP};      
       for(int i = 0; i < n; i++)
        { 
          m_pattern_table.SetValue(0, i, m_pattern_display_names[i]);
@@ -1184,8 +1201,8 @@
                                   const ENUM_TIMEFRAMES tf_current, const datetime T)
   {
     //Setting Icon
-     uint arrow_up[] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_UP_BMP};
-     uint arrow_dn[] = {IMAGE_RESOURCE_ICONS_BMP16_ARROW_DOWN_BMP};
+     uint arrow_up[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG};
+     uint arrow_dn[] = {IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG};
     m_tbl_info_pattern_table.DeleteAllRows();
     if(plist == NULL) { m_tbl_info_pattern_table.Update(true); return; }
 

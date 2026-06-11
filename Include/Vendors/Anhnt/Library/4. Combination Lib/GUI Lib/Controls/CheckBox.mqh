@@ -117,10 +117,10 @@ class CCheckBox : public CElement
    // --- Formation of object name
       string name=CElementBase::ElementName("checkbox");
    // --- Installation of images
-      IconFile(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_BMP);
-      IconFileLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_OFF_LOCKED_BMP);
-      IconFilePressed(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_BMP);
-      IconFilePressedLocked(IMAGE_RESOURCE_CONTROLS_CHECKBOX_ON_LOCKED_BMP);
+      IconFile(IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP);
+      IconFileLocked(IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_LOCKED_BMP);
+      IconFilePressed(IMAGE_RESOURCE_BMP16_CHECKBOX_ON_BMP);
+      IconFilePressedLocked(IMAGE_RESOURCE_BMP16_CHECKBOX_ON_LOCKED_BMP);
    // ---Create an object
       if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
          return(false);

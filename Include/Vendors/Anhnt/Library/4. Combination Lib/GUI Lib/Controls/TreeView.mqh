@@ -198,7 +198,7 @@
       void RedrawTreeList(void);
       void RedrawContentList(void);
     // --- Updates (1) the tree list and (2) the contents list
-      void UpdateTreeList(void);
+      void UpdateTreeList(const bool redraw = false);
       void UpdateContentList(void);
     // ---My Adding Method      
       bool CreateItemsFrom(const int start_index);
@@ -881,11 +881,13 @@
     m_items[list_index].ItemState(m_t_item_state[list_index]);
     m_items[list_index].IsPressed((list_index == m_selected_item_index) ? true
                                                                       : false);
-    m_items[list_index].Update(true);
+    //m_items[list_index].Update(false);
+    m_items[list_index].Draw();
+    m_items[list_index].CanvasPointer().Update(false);
    // --- Generate a tree list
     FormTreeList();
    // --- Update
-    UpdateTreeList();
+    UpdateTreeList();      //No ChartRedraw(m_chart_id) in UpdateTreeList     
    // --- Calculate scrollbar slider position
     m_scrollv.MovingThumb(m_scrollv.CurrentPos());
    // --- Show elements of the selected tab item
@@ -925,7 +927,9 @@
            if (li == m_selected_item_index) 
             {
               m_items[li].IsPressed(true);
-              m_items[li].Update(true);
+              //m_items[li].Update(true);
+              m_items[li].Draw();
+              m_items[li].CanvasPointer().Update(false);
               return (false);
             }
            // --- If tab item mode is enabled and content display mode is disabled,
@@ -936,17 +940,23 @@
               if (m_t_items_total[li] > 0) 
                {
                   m_items[li].IsPressed(false);
-                  m_items[li].Update(true);
+                  //m_items[li].Update(true);
+                  m_items[li].Draw();
+                  m_items[li].CanvasPointer().Update(false);
                   break;
                }
             }
            // --- Set the color to the previous selected item
             m_items[m_selected_item_index].IsPressed(false);
-            m_items[m_selected_item_index].Update(true);
+           //m_items[m_selected_item_index].Update(true);
+           m_items[m_selected_item_index].Draw();
+           m_items[m_selected_item_index].CanvasPointer().Update(false);
            // --- Remember the index for the current one and change its color
             m_selected_item_index = li;
             m_items[li].IsPressed(true);
-            m_items[li].Update(true);
+            //m_items[li].Update(true);
+            m_items[li].Draw();
+            m_items[li].CanvasPointer().Update(false);
             break;
           }
         v++;
@@ -956,7 +966,9 @@
     if (m_selected_content_item_index >= 0) 
      {
       m_content_items[m_selected_content_item_index].IsPressed(false);
-      m_content_items[m_selected_content_item_index].Update();
+      //m_content_items[m_selected_content_item_index].Update();
+      m_content_items[m_selected_content_item_index].Draw();
+      m_content_items[m_selected_content_item_index].CanvasPointer().Update(false);
      }
      // --- Reset selected item
       m_selected_content_item_index = WRONG_VALUE;
@@ -1055,8 +1067,10 @@
       // --- Index of the selected tab
       int tab_index = m_tab_items[m_selected_item_index].list_index;
       m_selected_item_index = tab_index;
-      m_items[tab_index].IsPressed(true);
-      m_items[tab_index].Update();
+      m_items[tab_index].IsPressed(true);      
+      //m_items[tab_index].Update();
+      m_items[tab_index].Draw();
+      m_items[tab_index].CanvasPointer().Update(false);
      }
   }
  //+------------------------------------------------------------------+
@@ -1198,7 +1212,7 @@
       return;
     }
    // ---If the mouse button is released
-    if (!m_mouse.LeftButtonState()) 
+    if (!m_mouse.IsLeftBtn()) 
       {
         // --- Send a message about the change in the graphical interface
         if (m_timer_counter != SPIN_DELAY_MSC)
@@ -1299,12 +1313,12 @@
    // --- If the pointer is not activated, but the mouse cursor is in its area
     if (!m_x_resize.State() && y > 0 && y < m_y_size && x > m_treeview_width &&
       x < m_treeview_width + 3) 
-      {
+     {
        // --- Update pointer coordinates and make it visible
         m_x_resize.Moving(m_mouse.X(), m_mouse.Y());
         m_x_resize.Reset();
        // --- If the left mouse button is pressed, activate the pointer
-        if (m_mouse.LeftButtonState()) 
+        if (m_mouse.IsLeftBtn()) 
         {
           m_x_resize.State(true);
           m_x_resize.Update(true);
@@ -1314,11 +1328,11 @@
           // --- Send a message about the change in the graphical interface
           ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
         }
-      } 
-      else 
-      {
+     } 
+    else 
+     {
        // --- If the left mouse button is released
-       if (!m_mouse.LeftButtonState()) 
+       if (!m_mouse.IsLeftBtn()) 
         {
          // --- Quit if the cursor is already hidden
          if (!m_x_resize.IsVisible()) return;
@@ -1332,6 +1346,7 @@
            RedrawContentList();
            UpdateTreeList();
            UpdateContentList();
+           ChartRedraw(m_chart_id);
            // --- Send a message to determine available elements
             ::EventChartCustom(m_chart_id, ON_SET_AVAILABLE, CElementBase::Id(), 1,
                               "");
@@ -1341,8 +1356,8 @@
           }
           // --- Hide pointer
             m_x_resize.Hide();
-      }
-    }
+        }
+     }
   }
  //+------------------------------------------------------------------+
  // | Checking for exceeding restrictions |
@@ -1390,7 +1405,9 @@
         int li = m_td_list_index[v];
         // --- Set coordinates and width
         m_items[li].UpdateWidth(w);
-        m_items[li].Update(true);
+        //m_items[li].Update(true);
+        m_items[li].Draw();
+        m_items[li].CanvasPointer().Update(false);
         v++;
       }
     }
@@ -1563,8 +1580,9 @@
  //+------------------------------------------------------------------+
  // | Generates a list of contents |
  //+------------------------------------------------------------------+
- void CTreeView::FormContentList(void) 
+ void CTreeView::FormContentList(void)
   {
+    if(!m_show_item_content) return;
     // --- Index of the selected item
     int li = m_selected_item_index;
     // --- Free the content list arrays
@@ -1623,21 +1641,21 @@
   {
     // --- Hide list items
     int items_total = ::ArraySize(m_items);
-    for (int i = 0; i < items_total; i++)
+     for (int i = 0; i < items_total; i++)
       m_items[i].Hide();
     // --- Hide scrollbar
-    m_scrollv.Hide();
+     m_scrollv.Hide();
     // --- Y coordinate of the first item in the tree list
     int y = 1;
     // --- Get the number of points
-    m_items_total = ::ArraySize(m_td_list_index);
+     m_items_total = ::ArraySize(m_td_list_index);
     // --- Adjust scrollbar sizes
-    m_scrollv.Reinit(m_items_total, m_visible_items_total);
-    m_scrollv.ChangeYSize(m_y_size - 2);
-    m_scrollv.Update(true);
+     m_scrollv.Reinit(m_items_total, m_visible_items_total);
+     m_scrollv.ChangeYSize(m_y_size - 2);
+     m_scrollv.Update(true);
     // --- Calculation of the width of tree list items
-    int w = 0;
-    if (m_show_item_content)
+     int w = 0;
+     if (m_show_item_content)
       w = (m_scrollv.IsScroll()) ? m_treeview_width - m_scrollv.ScrollWidth() - 2
                                 : m_treeview_width - 1;
     else
@@ -1710,26 +1728,31 @@
  //+------------------------------------------------------------------+
  // | Updates the list |
  //+------------------------------------------------------------------+
- void CTreeView::UpdateTreeList(void) 
- {
-  int items_total = ::ArraySize(m_td_list_index);
-  for (int i = 0; i < items_total; i++) {
-    // --- Get the general index of the item in the list
-    int li = m_td_list_index[i];
-    // --- Let's update
-    m_items[li].Update(true);
+ void CTreeView::UpdateTreeList(const bool redraw = false)
+  {
+    int items_total = ArraySize(m_td_list_index);
+    for(int i = 0; i < items_total; i++) {
+        int li = m_td_list_index[i];
+        if(redraw)
+            m_items[li].Update(true);
+        else
+        {
+            m_items[li].Draw();
+            m_items[li].CanvasPointer().Update(false);
+        }
+    }
   }
- }
  //+------------------------------------------------------------------+
  // | Updates the content list |
  //+------------------------------------------------------------------+
- void CTreeView::UpdateContentList(void) 
+ void CTreeView::UpdateContentList(void)
   {
+    if(!m_show_item_content) return;
     int items_total = ::ArraySize(m_cd_list_index);
+    int content_size = ::ArraySize(m_content_items);
     for (int i = 0; i < items_total; i++) {
-      // --- Get the general index of the item in the list
       int li = m_cd_list_index[i];
-      // --- Let's update
+      if(li < 0 || li >= content_size) continue;
       m_content_items[li].Update(true);
     }
   }

@@ -29,8 +29,7 @@
     int               m_delta_graph_obj;         // Difference in the number of graphical objects compared to the previous check
     int               m_handle_ind;              // Event controller indicator handle
     string            m_name_ind;                // Short name of the event controller indicator
-    string            m_name_program;            // Program name
-    
+    string            m_name_program;            // Program name    
     //--- Return the name of the last graphical object added to the chart
      string            LastAddedGraphObjName(void);
     //--- Set the permission to track mouse events and graphical objects
