@@ -29,7 +29,12 @@
       "Bash(grep -rn \"ScanAndApplyIndicators\" \"D:/MT5-Dev/\" 2>/dev/null | grep -v \".git\" | head -10)",
       "Read(//d/MT5-Dev/**)",
       "Bash(grep -v \"//\\\\|m_canvas\\\\|m_icon\\\\|m_images_group\\\\[0\\\\]\")",
-      "Bash(python3 -c *)"
+      "Bash(python3 -c *)",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\Graph\\\\' -Recurse -Filter '*.mqh' | Select-Object FullName\")",
+      "Bash(powershell -Command \"Select-String -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\2. DoEasy. Service functions Lib\\\\*\\\\*.mqh' -Pattern 'GetSeries|GetTimeseries|GetListSeries|class CBarTimeSeries' -SimpleMatch | Select-Object -First 20 | Format-Table LineNumber, Line -AutoSize\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\Graph\\\\Timeseries' -Filter '*.mqh' | Select-Object Name\")",
+      "Bash(powershell -Command \"Get-ChildItem -Recurse -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\Timeseries' -Filter 'BarTimeSeriesDE.mqh' | Select-Object FullName\")",
+      "Bash(powershell -Command \"Get-ChildItem -Recurse -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\Timeseries' -Filter 'BarTimeSeriesDE.mqh' | Select-Object -ExpandProperty FullName\")"
     ]
   }
 }

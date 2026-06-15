@@ -7,14 +7,7 @@
 //| Class with additional properties for the Rectangle Canvas object |
 //+------------------------------------------------------------------+
 #ifndef __RECTCANVAS_MQH__
-#define __RECTCANVAS_MQH__
- //Remove due to no need.
-  //#include "Enums.mqh" 
-  //#include "Defines.mqh"
-  //#include "Fonts.mqh"
-  //#include "Colors.mqh"
-  //#include <ChartObjects\ChartObjectSubChart.mqh>//Remove due to no need.
-  //#include "Resources.mqh" //Remove due to no need.
+#define __RECTCANVAS_MQH__ 
  #include <Graphics\Graphic.mqh> 
  #ifndef CRECTCANVAS_MQH_DECLARATION
  #define CRECTCANVAS_MQH_DECLARATION
@@ -22,10 +15,7 @@
     {
     protected:
       int               m_x;
-      int               m_y;
-      //Remove due to no need.
-        // int               m_x2;
-        // int               m_y2;
+      int               m_y;      
       int               m_x_gap;
       int               m_y_gap;
       int               m_x_size;
@@ -63,9 +53,7 @@
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
   CRectCanvas::CRectCanvas(void) : m_x(0),
-                                  m_y(0),
-                                  //  m_x2(0),
-                                  //  m_y2(0),//Remove due to no need.
+                                  m_y(0),                                  
                                   m_x_gap(0),
                                   m_y_gap(0),
                                   m_x_size(0),

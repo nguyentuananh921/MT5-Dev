@@ -54,46 +54,40 @@
    protected:
       // --- An instance of a class for obtaining mouse parameters
       //CMouse            m_mouse;
-      CMouseCombine m_mouse;
+       CMouseCombine m_mouse;
       // ---Window Array
       CWindow          *m_windows[];
       // --- Structure of arrays of elements
-         struct WindowElements
-         {
-            // --- General array of all elements
-               CElement         *m_elements[];
-            // ---Array of main elements
-               CElement         *m_main_elements[];
-            // --- Elements with timer
-               CElement         *m_timer_elements[];
-            // --- Visible and currently available elements
-               CElement         *m_available_elements[];
-            // --- Elements with auto-resizing along the X axis
-               CElement         *m_auto_x_resize_elements[];
-            // --- Elements with auto-resizing along the Y axis
-               CElement         *m_auto_y_resize_elements[];
-            // --- Personal arrays of elements:
-               CContextMenu     *m_context_menus[];    // Context menus
-               CComboBox        *m_combo_boxes[];      // Combo boxes
-               CSplitButton     *m_split_buttons[];    // Double buttons
-               CMenuBar         *m_menu_bars[];        // Main menus
-               CMenuItem        *m_menu_items[];       // Menu items
-               CElementBase     *m_drop_lists[];       // Dropdown lists
-               CElementBase     *m_scrolls[];          // Scroll bars
-               CElementBase     *m_tables[];           // Tables
-               CTabs            *m_tabs[];             // Tabs
-               CSlider          *m_sliders[];          // Sliders
-               CCalendar        *m_calendars[];        // Calendars
-               CDropCalendar    *m_drop_calendars[];   // Drop-down calendars
-               CStandardChart   *m_sub_charts[];       // Standard graphs
-               CTimeEdit        *m_time_edits[];       // Elements "Time"
-               CTextBox         *m_text_boxes[];       // Multiline input fields
-               CTreeView        *m_treeview_lists[];   // Tree lists
-               CFileNavigator   *m_file_navigators[];  // File navigators
-               CTooltip         *m_tooltips[];         // Tooltips
-               CPicturesSlider  *m_pictures_slider[];  // Picture sliders
-               CFrame           *m_frames[];           // Regions
-         };
+       struct WindowElements
+        {            
+         CElement         *m_elements[];              // --- General array of all elements
+         CElement         *m_main_elements[];         // ---Array of main elements
+         CElement         *m_timer_elements[];        // --- Elements with timer
+         CElement         *m_available_elements[];    // --- Visible and currently available elements
+         CElement         *m_auto_x_resize_elements[];// --- Elements with auto-resizing along the X axis
+         CElement         *m_auto_y_resize_elements[];// --- Elements with auto-resizing along the Y axis
+         // --- Personal arrays of elements:
+            CContextMenu     *m_context_menus[];    // Context menus
+            CComboBox        *m_combo_boxes[];      // Combo boxes
+            CSplitButton     *m_split_buttons[];    // Double buttons
+            CMenuBar         *m_menu_bars[];        // Main menus
+            CMenuItem        *m_menu_items[];       // Menu items
+            CElementBase     *m_drop_lists[];       // Dropdown lists
+            CElementBase     *m_scrolls[];          // Scroll bars
+            CElementBase     *m_tables[];           // Tables
+            CTabs            *m_tabs[];             // Tabs
+            CSlider          *m_sliders[];          // Sliders
+            CCalendar        *m_calendars[];        // Calendars
+            CDropCalendar    *m_drop_calendars[];   // Drop-down calendars
+            CStandardChart   *m_sub_charts[];       // Standard graphs
+            CTimeEdit        *m_time_edits[];       // Elements "Time"
+            CTextBox         *m_text_boxes[];       // Multiline input fields
+            CTreeView        *m_treeview_lists[];   // Tree lists
+            CFileNavigator   *m_file_navigators[];  // File navigators
+            CTooltip         *m_tooltips[];         // Tooltips
+            CPicturesSlider  *m_pictures_slider[];  // Picture sliders
+            CFrame           *m_frames[];           // Regions
+        };
       // --- Array of arrays of elements for each window
       WindowElements    m_wnd[];   
          //  void PrintContainer(void) {

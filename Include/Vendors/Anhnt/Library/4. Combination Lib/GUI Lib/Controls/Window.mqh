@@ -11,9 +11,6 @@
  #include "..\ElementBase.mqh"
  #include "Button.mqh"
  #include "Pointer.mqh"
- #include "..\GUIDefines\ControlsDefines.mqh"
-
-
 class CWindow : public CElement
  {
   private:

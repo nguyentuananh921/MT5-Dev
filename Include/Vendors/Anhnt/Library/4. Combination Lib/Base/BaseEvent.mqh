@@ -7,7 +7,7 @@
 #ifndef __CBASEEVENT_MQH__
 #define __CBASEEVENT_MQH__
 #include <Object.mqh>
-#include "..\Defines\Defines.mqh"
+//#include "..\Defines\Defines.mqh"
 
  class CBaseEvent : public CObject
   {

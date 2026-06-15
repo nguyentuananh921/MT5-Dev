@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                     TreeItem.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//| Topic link https://www.mql5.com/en/articles/2539                 |
+//| Lib Link https://www.mql5.com/en/code/19703                      |
 //+------------------------------------------------------------------+
 #ifndef __TREEITEM_MQH__
 #define __TREEITEM_MQH__
@@ -13,18 +14,12 @@
 class CTreeItem : public CButton
   {
    private:
-    // --- Indentation for the arrow (indicating the presence of a list)
-     int               m_arrow_x_gap;
-    // ---Item type
-     ENUM_TYPE_TREE_ITEM m_item_type;
-    // --- Index of the item in the general list
-     int               m_list_index;
-    // ---Node level
-     int               m_node_level;
-    // --- Item text displayed
-     string            m_item_text;
-    // --- State of the item list (opened/collapsed)
-     bool              m_item_state;
+     int               m_arrow_x_gap;     // ---Indentation for the arrow (indicating the presence of a list)
+     ENUM_TYPE_TREE_ITEM m_item_type;     // ---Item type base on ENUM_TYPE_TREE_ITEM in enum.mqh
+     int               m_list_index;      // --- Index of the item in the general list
+     int               m_node_level;      // ---Node level
+     string            m_item_text;       // --- Item text displayed
+     bool              m_item_state;      // --- State of the item list (opened/collapsed)
    
    public:
                      CTreeItem(void);
@@ -43,6 +38,7 @@ class CTreeItem : public CButton
      void              ItemState(const int state);
      bool              ItemState(void) const { return(m_item_state); }
      ENUM_TYPE_TREE_ITEM Type(void)    const { return(m_item_type);  }
+     int NodeLevel(void) const { return m_node_level; }
     // --- Indent for arrow
      int               ArrowXGap(const int node_level);
      int               ArrowXGap(void) const { return(m_arrow_x_gap); }
@@ -122,7 +118,8 @@ class CTreeItem : public CButton
      {
        m_x           =CElement::CalculateX(x_gap);
        m_y           =CElement::CalculateY(y_gap);
-       m_item_type   =type;
+       m_item_type   =type;             //ENUM_TYPE_TREE_ITEM TI_SIMPLE    = 0,
+                                        //                    TI_HAS_ITEMS = 1,
        m_list_index  =list_index;
        m_node_level  =node_level;
        m_item_text   =text;
@@ -138,7 +135,10 @@ class CTreeItem : public CButton
        m_label_color          =clrBlack;
        m_label_color_hover    =clrBlack;
        m_label_color_pressed  =clrBlack;
-       m_label_x_gap          =(m_label_x_gap!=WRONG_VALUE)? m_icon_x_gap+m_label_x_gap : m_icon_x_gap+22;
+       //Fix here old code
+          //m_label_x_gap          =(m_label_x_gap!=WRONG_VALUE)? m_icon_x_gap+m_label_x_gap : m_icon_x_gap+22;
+        //New version
+         m_label_x_gap = m_icon_x_gap + 22;
        m_label_y_gap          =4;
       // --- Indents from the extreme point
        CElementBase::XGap(x_gap);
@@ -149,7 +149,7 @@ class CTreeItem : public CButton
    //+------------------------------------------------------------------+
    void CTreeItem::ItemState(const int state)
      {
-      m_item_state=state;
+      m_item_state=state;   // --- State of the item list (opened/collapsed)
      }
    //+------------------------------------------------------------------+
    // | Arrow Indent |
@@ -201,19 +201,7 @@ class CTreeItem : public CButton
          CButton::DrawBackground();
       // --- Draw a picture
          if(m_item_type==TI_HAS_ITEMS)
-          {
-            // //Update Lib here
-            //    // Suppress group 0 (icon) — TI_HAS_ITEMS only shows the expand/collapse arrow
-            //    if(ArraySize(m_images_group) > 0)
-            //       {
-            //             ::Print("My Debug CTreeItem::Draw TI_HAS_ITEMS group0.selected BEFORE=", m_images_group[0].m_selected_image, 
-            //                   " group_count=", ArraySize(m_images_group));
-            //             m_images_group[0].m_selected_image = WRONG_VALUE;
-            //             ::Print("My Debug CTreeItem::Draw TI_HAS_ITEMS group0.selected AFTER=", m_images_group[0].m_selected_image,
-            //                   " WRONG_VALUE=", WRONG_VALUE);
-            //       }
-
-            
+          {          
             m_images_group[0].m_selected_image = WRONG_VALUE;
             CTreeItem::DrawImage();
           }            

@@ -9,7 +9,7 @@
 //+------------------------------------------------------------------+
 #ifndef __ELEMENTBASE_MQH__
 #define __ELEMENTBASE_MQH__
- #include "Defines.mqh"
+ #include "..\Defines\GUIDefines.mqh"
  #include "..\Services\MouseCombine.mqh" 
  //#include "Objects.mqh" 
  #include "Common.mqh"

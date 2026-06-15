@@ -7,29 +7,22 @@
 //| Event handling class                                             |
 //+------------------------------------------------------------------+
 #ifndef __WNDEVENTS_MQH__
-#define __WNDEVENTS_MQH__
-  #include "Defines.mqh"
+#define __WNDEVENTS_MQH__  
+  #include "..\Defines\GUIDefines.mqh"
   #include "WndContainer.mqh"
  class CWndEvents : public CWndContainer 
    {
-    protected:
-      // --- An instance of the class for managing the graph
-        CChart            m_chart;
+    protected:      
+        CChart            m_chart;        // --- An instance of the class for managing the graph
       // --- Chart window ID and number
         long              m_chart_id;
         int               m_subwin;
-      // --- Program name
-        string            m_program_name;
-      // --- Short name of the indicator
-        string            m_indicator_shortname;
-      // --- Active window index
-        int               m_active_window_index;
-      // --- Expert subwindow handle
-        int               m_subwindow_handle;
-      // --- Expert subwindow name
-        string            m_subwindow_shortname;
-      // --- Number of subwindows on the chart after installing the Expert Advisor subwindow
-        int               m_subwindows_total;
+        string            m_program_name;        // --- Program name      
+        string            m_indicator_shortname; // --- Short name of the indicator
+        int               m_active_window_index; // --- Active window index
+        int               m_subwindow_handle;    // --- Expert subwindow handle
+        string            m_subwindow_shortname; // --- Expert subwindow name
+        int               m_subwindows_total;    // --- Number of subwindows on the chart after installing the Expert Advisor subwindow
       //---
     private:
       // ---Event settings

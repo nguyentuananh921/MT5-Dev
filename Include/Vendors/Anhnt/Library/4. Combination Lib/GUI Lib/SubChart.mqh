@@ -6,8 +6,7 @@
 //+------------------------------------------------------------------+
 #ifndef __SUBCHART_MQH__
 #define __SUBCHART_MQH__
- #include "Enums.mqh"
- #include "Defines.mqh"
+ #include "..\Defines\GUIDefines.mqh"
  #include "Fonts.mqh"
  //#include "Colors.mqh"
  #include <Graphics\Graphic.mqh>

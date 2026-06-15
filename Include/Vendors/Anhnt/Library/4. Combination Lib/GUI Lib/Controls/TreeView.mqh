@@ -2,9 +2,12 @@
 //|                                                     TreeView.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
 //|                                              http://www.mql5.com |
-//|                                                                  |
+//| Topic link https://www.mql5.com/en/articles/2539                 |
+//| Lib Link https://www.mql5.com/en/code/19703                      |
 //| Add By Anhnt: bool CreateItemsFrom(const int start_index);       |
 //| Add By Anhnt: void SetItemsTotal(const int index, const int total);|
+//| Add by Anhnt: int ItemPrevNode(int index)                        |
+//| Add by Anhnt: SetItemState(const int index, const bool state)    |
 //+------------------------------------------------------------------+
 //| Class for creating a tree list                                   |
 //+------------------------------------------------------------------+
@@ -20,11 +23,11 @@
   {
    private:
     // --- Objects for creating an element
-     CTreeItem m_items[];
-     CTreeItem m_content_items[];
-     CScrollV m_scrollv;
-     CScrollV m_content_scrollv;
-     CPointer m_x_resize;
+     CTreeItem                   m_items[];           //CTreeItem object + canvas
+     CTreeItem                   m_content_items[];
+     CScrollV                    m_scrollv;
+     CScrollV                    m_content_scrollv;
+     CPointer                    m_x_resize;
     // --- Structure of elements assigned to each tab item
      struct TVElements 
       {
@@ -33,177 +36,181 @@
       };
      TVElements m_tab_items[];
     // --- Arrays for all tree list items (full list)
-     int m_t_list_index[];
-     int m_t_prev_node_list_index[];
-     string m_t_item_text[];
-     uint m_t_path_bmp[];
-     int m_t_item_index[];
-     int m_t_node_level[];
-     int m_t_prev_node_item_index[];
-     int m_t_items_total[];
-     int m_t_folders_total[];
-     bool m_t_item_state[];
-     bool m_t_is_folder[];
+     int                        m_t_list_index[];           //list position
+     int                        m_t_prev_node_list_index[]; //parent relationship
+     string                     m_t_item_text[];            //label
+     uint                       m_t_path_bmp[];
+     int                        m_t_item_index[];
+     int                        m_t_node_level[];           //depth
+     int                        m_t_prev_node_item_index[];
+     int                        m_t_items_total[];          //child count
+     int                        m_t_folders_total[];
+     bool                       m_t_item_state[];           //expanded/collapsed
+     bool                       m_t_is_folder[];
     // --- Arrays for the list of displayed tree list items
-     int m_td_list_index[];
+     int                        m_td_list_index[];
     // --- Arrays for the list of contents of items selected in the tree list
     // (full list)
-     int m_c_list_index[];
-     int m_c_tree_list_index[];
-     string m_c_item_text[];
+     int                        m_c_list_index[];
+     int                        m_c_tree_list_index[];
+     string                     m_c_item_text[];
     // --- Arrays for the list of displayed items in the content list
-     int m_cd_list_index[];
-     int m_cd_tree_list_index[];
-     string m_cd_item_text[];
+     int                        m_cd_list_index[];
+     int                        m_cd_tree_list_index[];
+     string                     m_cd_item_text[];
     // --- Total number of items and number in the visible part of the lists
-     int m_items_total;
-     int m_content_items_total;
-     int m_visible_items_total;
+     int                        m_items_total;
+     int                        m_content_items_total;
+     int                        m_visible_items_total;
     // --- Indexes of selected items in lists
-     int m_selected_item_index;
-     int m_selected_content_item_index;
+     int                        m_selected_item_index;
+     int                        m_selected_content_item_index;
     // --- Text of the selected item in the list.
     // Only for files when using the class to create a file navigator.
     // If a file is not selected in the list, then this field should contain the
     // empty string "".
-     string m_selected_item_file_name;
+     string                     m_selected_item_file_name;
     // --- Tree list area width
-     int m_treeview_width;
+     int                        m_treeview_width;
     // --- Height of points
-     int m_item_y_size;
+     int                        m_item_y_size;
     // --- File navigator mode
-     ENUM_FILE_NAVIGATOR_MODE m_file_navigator_mode;
+     ENUM_FILE_NAVIGATOR_MODE   m_file_navigator_mode;
     // ---Hover highlight mode
-     bool m_lights_hover;
+     bool                       m_lights_hover;
     // --- Mode for displaying item contents in the work area
-     bool m_show_item_content;
+     bool                       m_show_item_content;
     // --- Mode for changing list widths
-     bool m_resize_list_mode;
+     bool                       m_resize_list_mode;
     // --- Tab item mode
-     bool m_tab_items_mode;
+     bool                       m_tab_items_mode;
     // --- Timer counter for list rewind
-     int m_timer_counter;
+     int                        m_timer_counter;
     // --- (1) Minimum and (2) maximum node level
-     int m_min_node_level;
-     int m_max_node_level;
+     int                        m_min_node_level;
+     int                        m_max_node_level;
     // --- Number of items in the root directory
-     int m_root_items_total;        
+     int                        m_root_items_total;        
    private:
-    void InitializeProperties(const int x_gap, const int y_gap);
-    bool CreateCanvas(void);
-    bool CreateItems(void);
-    bool CreateScrollV(void);
-    bool CreateContentItems(void);
-    bool CreateContentScrollV(void);
-    bool CreateXResizePointer(void);
+    void                        InitializeProperties(const int x_gap, const int y_gap);
+    bool                        CreateCanvas(void);
+    bool                        CreateItems(void);
+    bool                        CreateScrollV(void);
+    bool                        CreateContentItems(void);
+    bool                        CreateContentScrollV(void);
+    bool                        CreateXResizePointer(void);
     // --- Handling clicks on the button for collapsing/expanding the item list
-     bool OnClickItemArrow(const string clicked_object, const int id,
-                          const int index);
+     bool                        OnClickItemArrow(const string clicked_object,
+                                                const int id,
+                                                const int index);
     // --- Handling a click on a tree list item
-     bool OnClickTreeItem(const string clicked_object, const int id,
-                          const int index);
+     bool                        OnClickTreeItem(const string clicked_object,
+                                               const int id,
+                                               const int index);
     // --- Handling a click on an item in the content list
-     bool OnClickContentItem(const string clicked_object, const int id,
-                           const int index);
+     bool                        OnClickContentItem(const string clicked_object,
+                                                  const int id,
+                                                  const int index);
     // --- Forms an array of tab items
-    void GenerateTabItemsArray(void);
+    void                        GenerateTabItemsArray(void);
     // --- Define and set (1) node boundaries and (2) root directory size
-    void SetNodeLevelBoundaries(void);
-    void SetRootItemsTotal(void);
+    void                        SetNodeLevelBoundaries(void);
+    void                        SetRootItemsTotal(void);
     // --- List offset
-    void ShiftTreeList(void);
-    void ShiftContentList(void);
+    void                        ShiftTreeList(void);
+    void                        ShiftContentList(void);
     // --- Fast forward list
-    void FastSwitching(void);
+    void                        FastSwitching(void);
     // --- Controls the width of lists
-    void ResizeListArea(void);
+    void                        ResizeListArea(void);
     // --- Readiness check for changing list widths
-    void CheckXResizePointer(const int x, const int y);
+    void                        CheckXResizePointer(const int x, const int y);
     // --- Checking for exceeding restrictions
-    bool CheckOutOfArea(const int x, const int y);
+    bool                        CheckOutOfArea(const int x, const int y);
     // ---Updating the width of list items
-    void UpdateXSize(const int x);
+    void                        UpdateXSize(const int x);
     // --- Adds an item to the list in the content area
-    void AddDisplayedTreeItem(const int list_index);
+    void                        AddDisplayedTreeItem(const int list_index);
     // --- Generates (1) a tree list and (2) a content list
-     void FormTreeList(void);
-     void FormContentList(void);   
+     void                        FormTreeList(void);
+     void                        FormContentList(void);   
     // --- Checking the index of the selected item to see if it is out of range
-     void CheckSelectedItemIndex(void);
+     void                        CheckSelectedItemIndex(void);
     // --- Draws a border between areas
-     virtual void DrawResizeBorder(void);
+     virtual void                DrawResizeBorder(void);
     // --- Change the width along the right edge of the window
-     virtual void ChangeWidthByRightWindowSide(void);
+     virtual void                ChangeWidthByRightWindowSide(void);
    public:
-    CTreeView(void);
-    ~CTreeView(void);
+                                  CTreeView(void);
+                                  ~CTreeView(void);
     // --- Methods for creating a tree list
-    bool CreateTreeView(const int x_gap, const int y_gap);
+    bool                        CreateTreeView(const int x_gap, const int y_gap);
     // ---List scroll bar indicators
-    CScrollV *GetScrollVPointer(void) { return (::GetPointer(m_scrollv)); }
-    CScrollV *GetContentScrollVPointer(void) {return (::GetPointer(m_content_scrollv));}
-    CPointer *GetMousePointer(void) { return (::GetPointer(m_x_resize)); }
+    CScrollV                    *GetScrollVPointer(void) { return (::GetPointer(m_scrollv)); }
+    CScrollV                    *GetContentScrollVPointer(void) {return (::GetPointer(m_content_scrollv));}
+    CPointer                    *GetMousePointer(void) { return (::GetPointer(m_x_resize)); }
     // --- Returns (1) a tree list item pointer, (2) a content list item pointer,
-     CTreeItem *ItemPointer(const uint index);
-     CTreeItem *ContentItemPointer(const uint index);
+     CTreeItem                   *ItemPointer(const uint index);
+     CTreeItem                   *ContentItemPointer(const uint index);
     // --- (1) File navigator mode, (2) Backlight mode when hovering the mouse
     // cursor, (3) mode for changing the width of lists, (4) mode of tab items
-     void NavigatorMode(const ENUM_FILE_NAVIGATOR_MODE mode) {m_file_navigator_mode = mode;}
-     void LightsHover(const bool state) { m_lights_hover = state; }
-     void ResizeListMode(const bool state) { m_resize_list_mode = state; }
-     void TabItemsMode(const bool state) { m_tab_items_mode = state; }
-     bool TabItemsMode(void) const { return (m_tab_items_mode); }
+     void                        NavigatorMode(const ENUM_FILE_NAVIGATOR_MODE mode) { m_file_navigator_mode = mode; }
+     void                        LightsHover(const bool state) { m_lights_hover = state; }
+     void                        ResizeListMode(const bool state) { m_resize_list_mode = state; }
+     void                        TabItemsMode(const bool state) { m_tab_items_mode = state; }
+     bool                        TabItemsMode(void) const { return (m_tab_items_mode); }
     // --- Display mode of item content,
-     void ShowItemContent(const bool state) { m_show_item_content = state; }
-     bool ShowItemContent(void) const { return (m_show_item_content); }
+     void                        ShowItemContent(const bool state) { m_show_item_content = state; }
+     bool                        ShowItemContent(void) const { return (m_show_item_content); }
     // --- Number of items (1) in the tree list, (2) in the contents list and (3)
     // visible number of items
-     int ItemsTotal(void) const { return (::ArraySize(m_items)); }
-     int ContentItemsTotal(void) const { return (::ArraySize(m_content_items)); }
-     void VisibleItemsTotal(const int total) { m_visible_items_total = total; }
+     int                         ItemsTotal(void) const { return (::ArraySize(m_items)); }
+     int                         ContentItemsTotal(void) const { return (::ArraySize(m_content_items)); }
+     void                        VisibleItemsTotal(const int total) { m_visible_items_total = total; }
     // --- (1) Height of item, (2) width of tree list and (3) content list
-     void ItemYSize(const int y_size) { m_item_y_size = y_size; }
-     void TreeViewWidth(const int x_size) { m_treeview_width = x_size; }
+     void                        ItemYSize(const int y_size) { m_item_y_size = y_size; }
+     void                        TreeViewWidth(const int x_size) { m_treeview_width = x_size; }
     // --- (1) Selects an item by index and (2) returns the index of the selected
     // item, (3) returns the file name
-     void SelectedItemIndex(const int index) { m_selected_item_index = index; }
-     int SelectedItemIndex(void) const { return (m_selected_item_index); }
-     string SelectedItemFileName(void) const {return (m_selected_item_file_name);}
+     void                        SelectedItemIndex(const int index) { m_selected_item_index = index; }
+     int                         SelectedItemIndex(void) const { return (m_selected_item_index); }
+     string                      SelectedItemFileName(void) const { return (m_selected_item_file_name); }
     // --- Adds an item to the tree list
-     void AddItem(const int list_index, const int list_id, const string item_name,
-                 const uint path_bmp, const int item_index, const int node_number,
-                 const int item_number, const int items_total,
-                 const int folders_total, const bool item_state,
-                 const bool is_folder = true);    
+     void                        AddItem(const int list_index, const int list_id, const string item_name,
+                                     const uint path_bmp, const int item_index, const int node_number,
+                                     const int item_number, const int items_total,
+                                     const int folders_total, const bool item_state,
+                                     const bool is_folder = true);    
     // --- Adds an element to the tab item array
-     void AddToElementsArray(const int item_index, CElement &object);
+     void                        AddToElementsArray(const int item_index, CElement &object);
     // --- Show elements of only the selected tab item
-     void ShowTabElements(void);
+     void                        ShowTabElements(void);
     // --- Returns the full path of the selected item
-     string CurrentFullPath(void);
+     string                      CurrentFullPath(void);
     // ---Graph event handler
-     virtual void OnEvent(const int id, const long &lparam, const double &dparam,
-                         const string &sparam);
+     virtual void                OnEvent(const int id, const long &lparam, const double &dparam,
+                                     const string &sparam);
     // --- Timer
-     virtual void OnEventTimer(void);
+     virtual void                OnEventTimer(void);
     // --- Item availability
-     virtual void IsAvailable(const bool state, const bool without_items = false);
+     virtual void                IsAvailable(const bool state, const bool without_items = false);
     // --- Management
-     virtual void Show(void);
-     virtual void Hide(void);
-     virtual void Delete(void);
+     virtual void                Show(void);
+     virtual void                Hide(void);
+     virtual void                Delete(void);
     // --- Draws an element
-     virtual void Draw(void);
+     virtual void                Draw(void);
     // --- Redrawing lists
-      void RedrawTreeList(void);
-      void RedrawContentList(void);
+      void                        RedrawTreeList(void);
+      void                        RedrawContentList(void);
     // --- Updates (1) the tree list and (2) the contents list
-      void UpdateTreeList(const bool redraw = false);
-      void UpdateContentList(void);
+      void                        UpdateTreeList(const bool redraw = false);
+      void                        UpdateContentList(void);
     // ---My Adding Method      
-      bool CreateItemsFrom(const int start_index);
-      void SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; }      
-            
+      bool                        CreateItemsFrom(const int start_index);
+      void                        SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; }      
+      int                         ItemPrevNode(int index) const { return m_t_prev_node_list_index[index]; } 
+      void                        SetItemState(const int index, const bool state);     
   };
 #endif // CTREEVIEW_MQH_DECLARATION
 #ifndef CTREEVIEW_MQH_IMPLEMENTATION
@@ -283,6 +290,36 @@
         m_content_scrollv.Update(true);
         return;
       }
+      return;
+    }
+   if(id == CHARTEVENT_CUSTOM + ON_DOUBLE_CLICK)
+    {
+      if(m_x_resize.IsVisible() || m_x_resize.State()) return;
+      int v = m_scrollv.CurrentPos();
+      for(int r = 0; r < m_visible_items_total; r++)
+       {
+        if(v < 0 || v >= m_items_total) break;
+        int li = m_td_list_index[v];
+        if(m_mouse.Y() >= m_items[li].Y() && m_mouse.Y() <  m_items[li].Y() + m_items[li].YSize())
+         {
+          if(m_items[li].Type() == TI_HAS_ITEMS)
+           {
+            m_t_item_state[li] = !m_t_item_state[li];
+            m_items[li].ItemState(m_t_item_state[li]);
+            m_items[li].IsPressed((li == m_selected_item_index) ? true : false);
+            m_items[li].Draw();
+            m_items[li].CanvasPointer().Update(false);
+            FormTreeList();
+            UpdateTreeList();
+            m_scrollv.MovingThumb(m_scrollv.CurrentPos());
+            ShowTabElements();
+            ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
+           }
+         ::EventChartCustom(m_chart_id, ON_CHANGE_TREE_PATH, CElementBase::Id(), li, "");
+          return;
+         }
+        v++;
+       }
       return;
     }
   }
@@ -381,7 +418,10 @@
         m_items[i].Index(m_t_list_index[i]);
         m_items[i].XSize(m_treeview_width);
         m_items[i].YSize(m_item_y_size);
-        m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + 17);
+        //Modify here to fix symbol node XGap
+           //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + 17);
+           bool no_icon = (m_t_path_bmp[i] == (uint)INT_MAX);
+           m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon ? 0 : 17));        
         m_items[i].IconYGap(2);
         m_items[i].IconFile(m_t_path_bmp[i]);
         m_items[i].IsHighlighted(m_lights_hover);
@@ -396,12 +436,14 @@
           type = (m_t_folders_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
         }
       // ---Adjusting the initial state of the item
-      m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;
+      m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;      
       // ---Creating an element
       if (!m_items[i].CreateTreeItem(x, y, type, m_t_list_index[i],
                                      m_t_node_level[i], m_t_item_text[i],
                                      m_t_item_state[i]))
         return (false);
+      //Fixing Lib
+        m_items[i].Id(CElementBase::Id()); 
       // --- Add element to array
       CElement::AddToArray(m_items[i]);
      }
@@ -550,8 +592,9 @@
    // --- If there is not a single item in the context menu, report it
    if (array_size < 1) 
     {
-    ::Print(__FUNCTION__, " > Вызов этого метода нужно осуществлять, "
-                          "когда в контекстном меню есть хотя бы один пункт!");
+      //::Print(__FUNCTION__, " > Вызов этого метода нужно осуществлять, "
+      //                      "когда в контекстном меню есть хотя бы один пункт!");
+      ::Print(__FUNCTION__, " > You should call this method when there is at least one item in the context menu!");
     }
    // --- Adjustment in case of leaving the range
     uint i = (index >= array_size) ? array_size - 1 : index;
@@ -567,8 +610,9 @@
    // --- If there is not a single item in the context menu, report it
    if (array_size < 1) 
     {
-    ::Print(__FUNCTION__, " > Вызов этого метода нужно осуществлять, "
-                          "когда в контекстном меню есть хотя бы один пункт!");
+     // ::Print(__FUNCTION__, " > Вызов этого метода нужно осуществлять, "
+     //                       "когда в контекстном меню есть хотя бы один пункт!");
+     ::Print(__FUNCTION__, " > You should call this method when there is at least one item in the context menu!");
     }
    // --- Adjustment in case of leaving the range
     uint i = (index >= array_size) ? array_size - 1 : index;
@@ -695,7 +739,7 @@
     {
       // --- We consider only folders.
       // If it is a file, go to the next point.
-      if (!m_t_is_folder[i])
+       if (!m_t_is_folder[i])
         continue;
       // --- If (1) the index of the shared list is the same as the index of the
       // shared list of the previous node and (2) the index of the local list item
@@ -705,16 +749,16 @@
           m_t_item_index[i] == m_t_prev_node_item_index[li] &&
           m_t_node_level[i] == m_t_node_level[li] - 1) 
           {
-          // --- Increase the array by one element and save the item description
+           // --- Increase the array by one element and save the item description
             int sz = ::ArraySize(path_parts);
             ::ArrayResize(path_parts, sz + 1);
             path_parts[sz] = m_t_item_text[i];
-          // --- Remember the index for the next check
+           // --- Remember the index for the next check
             li = i;
-          // --- If we have reached the zero level of the node, we exit the loop
+           // --- If we have reached the zero level of the node, we exit the loop
             if (m_t_node_level[i] == 0 || i <= 0)
               break;
-          // --- Reset cycle counter
+           // --- Reset cycle counter
             i = -1;
           }
     }
@@ -1460,119 +1504,121 @@
  void CTreeView::FormTreeList(void) 
   {
     // --- Arrays to control the sequence of items:
-    int l_prev_node_list_index[]; // general list index of the previous node
-    int l_item_index[];           // local item index
-    int l_items_total[];          // number of points in a node
-    int l_folders_total[];        // number of folders in a node
+      int l_prev_node_list_index[]; // general list index of the previous node
+      int l_item_index[];           // local item index
+      int l_items_total[];          // number of points in a node
+      int l_folders_total[];        // number of folders in a node
     // --- Set the initial size of the arrays
-    int begin_size = m_max_node_level + 2;
-    ::ArrayResize(l_prev_node_list_index, begin_size);
-    ::ArrayResize(l_item_index, begin_size);
-    ::ArrayResize(l_items_total, begin_size);
-    ::ArrayResize(l_folders_total, begin_size);
+     int begin_size = m_max_node_level + 2;
+      ::ArrayResize(l_prev_node_list_index, begin_size);
+      ::ArrayResize(l_item_index, begin_size);
+      ::ArrayResize(l_items_total, begin_size);
+      ::ArrayResize(l_folders_total, begin_size);
     // --- Initializing arrays
-    ::ArrayInitialize(l_prev_node_list_index, -1);
-    ::ArrayInitialize(l_item_index, -1);
-    ::ArrayInitialize(l_items_total, -1);
-    ::ArrayInitialize(l_folders_total, -1);
+      ::ArrayInitialize(l_prev_node_list_index, -1);
+      ::ArrayInitialize(l_item_index, -1);
+      ::ArrayInitialize(l_items_total, -1);
+      ::ArrayInitialize(l_folders_total, -1);
     // --- Free the array of displayed tree list items
-    ::ArrayFree(m_td_list_index);
+      ::ArrayFree(m_td_list_index);
     // --- Counter of local indexes of points
-    int ii = 0;
+      int ii = 0;
     // --- To set the flag of the last item in the root directory
-    bool end_list = false;
+      bool end_list = false;
     // --- We collect the displayed items into an array. The loop will run until:
     // 1: node counter is not greater than the maximum;
     // 2: did not reach the last item (after checking all the items included in
     // it); 3: The user did not uninstall the program.
-    int items_total = ::ArraySize(m_items);
-    for (int nl = m_min_node_level; nl <= m_max_node_level && !end_list; nl++) {
-      for (int i = 0; i < items_total && !::IsStopped(); i++) {
-        // --- If the "Show folders only" mode is enabled
-        if (m_file_navigator_mode == FN_ONLY_FOLDERS) {
-          // --- If it is a file, go to the next step
-          if (!m_t_is_folder[i])
+      int items_total = ::ArraySize(m_items);
+      for (int nl = m_min_node_level; nl <= m_max_node_level && !end_list; nl++) 
+       {
+        for (int i = 0; i < items_total && !::IsStopped(); i++) 
+         {
+          // --- If the "Show folders only" mode is enabled
+           if (m_file_navigator_mode == FN_ONLY_FOLDERS) 
+           {
+             // --- If it is a file, go to the next step
+             if (!m_t_is_folder[i])
+               continue;
+           }
+          // --- If (1) this is not our node or (2) the sequence of local item
+          // indices is not respected, let's move on to the next one
+          if (nl != m_t_node_level[i] || m_t_item_index[i] <= l_item_index[nl])
             continue;
-        }
-        // --- If (1) this is not our node or (2) the sequence of local item
-        // indices is not respected, let's move on to the next one
-        if (nl != m_t_node_level[i] || m_t_item_index[i] <= l_item_index[nl])
-          continue;
-        // --- Let's move on to the next point if (1) is not currently in the root
-        // directory and (2) the total index of the list of the previous node is
-        // not equal to the same one in memory
-        if (nl > m_min_node_level &&
+          // --- Let's move on to the next point if (1) is not currently in the root
+          // directory and (2) the total index of the list of the previous node is
+          // not equal to the same one in memory
+          if (nl > m_min_node_level &&
             m_t_prev_node_list_index[i] != l_prev_node_list_index[nl])
-          continue;
-        // --- Remember the local index of the item if the next one is not less
-        // than the size of the local list
-        if (m_t_item_index[i] + 1 >= l_items_total[nl])
-          ii = m_t_item_index[i];
-        // --- If the list of the current item is expanded
-        if (m_t_item_state[i]) {
-          // --- Add an item to the array of displayed items in the tree list
-          AddDisplayedTreeItem(i);
-          // --- Let's remember the current values ​​and move on to the next
-          // node
-          int n = nl + 1;
-          l_prev_node_list_index[n] = m_t_list_index[i];
-          l_item_index[nl] = m_t_item_index[i];
-          l_items_total[n] = m_t_items_total[i];
-          l_folders_total[n] = m_t_folders_total[i];
-          // --- Reset the counter of local item indexes
-          ii = 0;
-          // --- Let's move on to the next node
-          break;
-        }
-        // --- Add an item to the array of displayed items in the tree list
-        AddDisplayedTreeItem(i);
-        // --- Increase the counter of local item indexes
-        ii++;
-        // --- If you have reached the last item in the root directory
-        if (nl == m_min_node_level && ii >= m_root_items_total) {
-          // --- Set the flag and end the current loop
-          end_list = true;
-          break;
-        }
-        // --- If you have not yet reached the last item in the root directory
-        else if (nl > m_min_node_level) {
-          // --- Get the number of points in the current node
-          int total = (m_file_navigator_mode == FN_ONLY_FOLDERS)
-                          ? l_folders_total[nl]
-                          : l_items_total[nl];
-          // --- If this is not the last local index of the item, move on to the
-          // next one
-          if (ii < total)
             continue;
-          // --- If you have reached the last local index, then
-          // you need to return to the previous node and continue from the point
-          // where you stopped
-          while (true) {
-            // --- Reset the values ​​of the current node in the arrays listed
-            // below
-            l_prev_node_list_index[nl] = -1;
-            l_item_index[nl] = -1;
-            l_items_total[nl] = -1;
-            // --- Decrease the node counter until equality in the number of items
-            // in local lists is maintained or did not reach the root directory
-            if (l_item_index[nl - 1] + 1 >= l_items_total[nl - 1]) {
-              if (nl - 1 == m_min_node_level)
-                break;
-              //---
-              nl--;
-              continue;
-            }
-            //---
+          // --- Remember the local index of the item if the next one is not less
+          // than the size of the local list
+           if (m_t_item_index[i] + 1 >= l_items_total[nl])
+             ii = m_t_item_index[i];
+          // --- If the list of the current item is expanded
+          if (m_t_item_state[i]) 
+           {
+            // --- Add an item to the array of displayed items in the tree list
+            AddDisplayedTreeItem(i);
+            // --- Let's remember the current values ​​and move on to the next node
+              int n = nl + 1;
+              l_prev_node_list_index[n] = m_t_list_index[i];
+              l_item_index[nl] = m_t_item_index[i];
+              l_items_total[n] = m_t_items_total[i];
+              l_folders_total[n] = m_t_folders_total[i];
+            // --- Reset the counter of local item indexes
+            ii = 0;
+            // --- Let's move on to the next node
+            break;
+           }
+         // --- Add an item to the array of displayed items in the tree list
+          AddDisplayedTreeItem(i);
+         // --- Increase the counter of local item indexes
+          ii++;
+         // --- If you have reached the last item in the root directory
+          if (nl == m_min_node_level && ii >= m_root_items_total) 
+          {
+          // --- Set the flag and end the current loop
+            end_list = true;
             break;
           }
+         // --- If you have not yet reached the last item in the root directory
+          else if (nl > m_min_node_level) 
+          {
+            // --- Get the number of points in the current node
+            int total = (m_file_navigator_mode == FN_ONLY_FOLDERS)
+                          ? l_folders_total[nl]
+                          : l_items_total[nl];
+            // --- If this is not the last local index of the item, move on to the next one
+            if (ii < total)
+              continue;
+            // --- If you have reached the last local index, then
+            // you need to return to the previous node and continue from the point where you stopped
+            while (true) 
+            {
+            // --- Reset the values of the current node in the arrays listed below
+              l_prev_node_list_index[nl] = -1;
+              l_item_index[nl] = -1;
+              l_items_total[nl] = -1;
+            // --- Decrease the node counter until equality in the number of items
+            // in local lists is maintained or did not reach the root directory
+              if (l_item_index[nl - 1] + 1 >= l_items_total[nl - 1]) {
+                if (nl - 1 == m_min_node_level)
+                  break;
+                //---
+                nl--;
+                continue;
+              }
+            //---
+            break;
+            }
           // --- Let's go to the previous node
           nl = nl - 2;
-          // --- Reset the counter of local indexes of points and move on to the
-          // next node
+          // --- Reset the counter of local indexes of points and move on to the next node
           ii = 0;
           break;
-        }
-      }
+          }
+       }
     }
     // --- List redrawing
     RedrawTreeList();
@@ -1586,9 +1632,9 @@
     // --- Index of the selected item
     int li = m_selected_item_index;
     // --- Free the content list arrays
-    ::ArrayFree(m_cd_item_text);
-    ::ArrayFree(m_cd_list_index);
-    ::ArrayFree(m_cd_tree_list_index);
+      ::ArrayFree(m_cd_item_text);
+      ::ArrayFree(m_cd_list_index);
+      ::ArrayFree(m_cd_tree_list_index);
     // --- Let's create a list of contents
     int items_total = ::ArraySize(m_items);
     for (int i = 0; i < items_total; i++) {
@@ -1598,15 +1644,15 @@
           m_t_prev_node_item_index[i] == m_t_item_index[li] &&
           m_t_prev_node_list_index[i] == li) {
         // --- Increase the arrays of displayed content list items
-        int size = ::ArraySize(m_cd_list_index);
-        int new_size = size + 1;
-        ::ArrayResize(m_cd_item_text, new_size);
-        ::ArrayResize(m_cd_list_index, new_size);
-        ::ArrayResize(m_cd_tree_list_index, new_size);
+          int size = ::ArraySize(m_cd_list_index);
+          int new_size = size + 1;
+          ::ArrayResize(m_cd_item_text, new_size);
+          ::ArrayResize(m_cd_list_index, new_size);
+          ::ArrayResize(m_cd_tree_list_index, new_size);
         // --- Let's save the text of the item and the general index of the tree
         // list in arrays
-        m_cd_item_text[size] = m_t_item_text[i];
-        m_cd_tree_list_index[size] = m_t_list_index[i];
+          m_cd_item_text[size] = m_t_item_text[i];
+          m_cd_tree_list_index[size] = m_t_list_index[i];
       }
     }
     // --- If in the end the list is not empty, fill the array of general indexes
@@ -1865,16 +1911,20 @@
       {
          int y = 1 + i * m_item_y_size;
          m_items[i].MainPointer(this);
-         m_items[i].NamePart("tree_item");
+         m_items[i].NamePart("tree_item");         
          m_items[i].Index(m_t_list_index[i]);
          m_items[i].XSize(m_treeview_width);
          m_items[i].YSize(m_item_y_size);
-         m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + 17);
+          //Modify here to fix XGap
+            //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + 17);
+            bool no_icon2 = (m_t_path_bmp[i] == (uint)INT_MAX);
+            m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon2 ? 0 : 17));         
          m_items[i].IconYGap(2);
          m_items[i].IconFile(m_t_path_bmp[i]);
          m_items[i].IsHighlighted(m_lights_hover);
          ENUM_TYPE_TREE_ITEM type = (m_t_items_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
          m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;
+         
          if(!m_items[i].CreateTreeItem(x, y, type, m_t_list_index[i],
                                        m_t_node_level[i], m_t_item_text[i],
                                        m_t_item_state[i]))                                       
@@ -1883,9 +1933,11 @@
               Print("My Debug from CTreeView::CreateItemsFrom CreateTreeItem FAILED at i=", i);
               return false;
             }
+          //fixing
+            m_items[i].Id(CElementBase::Id());
       }
       SetNodeLevelBoundaries();
-      SetRootItemsTotal();
+      //SetRootItemsTotal();
       //For debug
         Print("My Debug from CTreeView::CreateItemsFrom After FormTreeList: td_list size=", ArraySize(m_td_list_index));
       FormTreeList();
@@ -1893,7 +1945,12 @@
       UpdateTreeList();
       return true;
    } 
- 
+ void CTreeView::SetItemState(const int index, const bool state)
+  {
+    if(index < 0 || index >= m_items_total) return;
+    m_t_item_state[index] = state;
+    m_items[index].ItemState((int)state);
+  }
 //+------------------------------------------------------------------+
 #endif // CTREEVIEW_MQH_IMPLEMENTATION
 #endif // __TREEVIEW_MQH__

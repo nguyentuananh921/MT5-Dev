@@ -16,6 +16,7 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh> 
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Trading\TradingLevelBubble.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\Keys.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
@@ -55,56 +56,52 @@
   {
    private: 
     // Private Pointer variables    
-      CSymbolsCollection * m_symbols;                 //Trading owns
-      CBarTimeSeriesCollection  *m_timeseries;        //CBarTimeSeriesCollection owns
-      CPatternRenderer* m_renderer;                   //EA owns PatternRenderer for display New Patterns
-      CBarPatternsControl* m_patterns_ctrl;           // borrowed from EA
-      CIndicatorsCollection *m_indicators_timeseries; //CTimeSeriesEngine owns
-    //--- Time counters
-      CTimeCounter m_gui_timecounter;
+      CSymbolsCollection         *m_symbols;            //Trading owns
+      CBarTimeSeriesCollection   *m_timeseries;         //CBarTimeSeriesCollection owns
+      CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
+      CBarPatternsControl        *m_patterns_ctrl;      // borrowed from EA
+      CIndicatorsCollection      *m_indicators_timeseries; //CTimeSeriesEngine owns    
+      CTimeCounter               m_gui_timecounter;      //--- Time counters
+      CKeys                      m_keys;                 //For Keyboard    
     // For trading bubble
-      CTradingLevelBubble  m_trading_bubble;
+      CTradingLevelBubble        m_trading_bubble;
+    //for Tree view
+         void ApplyTreeHighlight(void); 
     // Control Elements     
-      CWindow     m_Mainwindow;
-      CStatusBar  m_status_bar;
-      CTabs       m_tabs_main;
+      CWindow                    m_Mainwindow;
+      CStatusBar                 m_status_bar;
+      CTabs                      m_tabs_main;
       //For CTreeView left pannel on tab Setting of m_tabs_main
-       CTreeView   m_treeview_settings;
-       bool m_tree_initialized;       
+       CTreeView                  m_treeview_settings;       
        // Symbol node registry — written once at first build (watermark == 0)
-        string      m_tree_symbol_names[];  // symbol name at each registry slot
-        int         m_tree_sym_g[];         // tree position (g) of that symbol node
-       // TF node registry — tracks which (symbol, TF) pairs are in the tree
-        string      m_tree_tf_syms[];       // symbol name of each registered TF node
-        ENUM_TIMEFRAMES m_tree_tf_values[]; // TF value of each registered TF node
-       //For Pattern
-        ENUM_PATTERN_TYPE m_pattern_types[];
-        string            m_pattern_display_names[];
+         int                        m_sym_tree_pos[];        //To save symbol node list_index            
+      //For Pattern
+         ENUM_PATTERN_TYPE          m_pattern_types[];
+         string                     m_pattern_display_names[];
        // Right panel in Settings tab
-         CTabs  m_settings_right_tabs;   // [Pattern] [Indicator] tabs                 
+         CTabs                      m_settings_right_tabs;   // [Pattern] [Indicator] tabs                 
         // Pattern panel controls
-         CTable      m_pattern_table;         
-         CCheckBox   m_check_all_bull;
-         CCheckBox   m_check_all_bear; 
-         CTextLabel  m_pattern_labels[PATTERNS_TOTAL];
-         CCheckBox   m_bull_checks[PATTERNS_TOTAL];
-         CCheckBox   m_bear_checks[PATTERNS_TOTAL]; 
+         CTable                     m_pattern_table;         
+         CCheckBox                  m_check_all_bull;
+         CCheckBox                  m_check_all_bear; 
+         CTextLabel                 m_pattern_labels[PATTERNS_TOTAL];
+         CCheckBox                  m_bull_checks[PATTERNS_TOTAL];
+         CCheckBox                  m_bear_checks[PATTERNS_TOTAL]; 
         // Indicator config table
-         CTable m_indicator_table;       
+         CTable                     m_indicator_table;       
       //For Infor Windows 
-        CWindow           m_info_Window;
-        CTabs             m_tab_info_tabs;
-        CTextLabel        m_lbl_info_time;
-        CTextLabel        m_lbl_info_open;
-        CTextLabel        m_lbl_info_high;
-        CTextLabel        m_lbl_info_low;
-        CTextLabel        m_lbl_info_close;
-        CTable            m_tbl_info_pattern_table;    
+        CWindow                    m_info_Window;
+        CTabs                      m_tab_info_tabs;
+        CTextLabel                 m_lbl_info_time;
+        CTextLabel                 m_lbl_info_open;
+        CTextLabel                 m_lbl_info_high;
+        CTextLabel                 m_lbl_info_low;
+        CTextLabel                 m_lbl_info_close;
+        CTable                     m_tbl_info_pattern_table;    
     //Test Purpose
-      CTextLabel m_test_labels[TABS1_TOTAL];  
+      CTextLabel                   m_test_labels[TABS1_TOTAL];  
     // For guard on GUI.
-     bool m_gui_created;        // guard thay cho s_gui_ready trong EA
-     int  m_tree_prev_count;    // previous symbol count used for tree rebuilding
+     bool                          m_gui_created;        // guard thay cho s_gui_ready trong EA     
    private: // Private methods
      //For GUI
        bool CreateGUIPannel(); 
@@ -118,9 +115,8 @@
          bool UpdateStatusBar(void);
      //For m_treeview_settings Setting Tab TAB_TAB_TRADE_SETTINGS at m_tabs_main
        //Left TreeView at Pannel        
-        bool CreateTreeView_Settings(void); 
-        void ApplyTreeHighlight(void);       
-        void PopulateSymbolTFTree(void); 
+        bool CreateTreeView_Settings(void);               
+        void PopulateSymbolTFTree(void);        
        // For right panel Settings — [Pattern][Indicator] tabs
         bool CreateSettingsRightTabs(const int x, const int y);        
         //For PatternConfigTable m_pattern_table
@@ -165,7 +161,7 @@
                      CArrayObj *plist,
                      const string symbol,
                      const ENUM_TIMEFRAMES tf_current);
-         void              HideInfoWindow(void);
+         void              HideInfoWindow(void);      
       //For Bubble
          bool IsBubbleDragging(void) { return m_trading_bubble.IsDragging(); }
       //For Pointer      
@@ -184,12 +180,10 @@
   CGUIPannel::CGUIPannel(void)
    {
     //--- Setting parameters for the time counters
-      m_gui_timecounter.SetParameters(16, 500);
-      m_tree_initialized=false;      
+      m_gui_timecounter.SetParameters(16, 500);           
       m_renderer = NULL;
       m_indicators_timeseries = NULL;
-      m_gui_created     = false;
-      m_tree_prev_count = 0;
+      m_gui_created     = false;      
    } 
   CGUIPannel::~CGUIPannel(void)
    {
@@ -215,21 +209,81 @@
          InitializePatternTable();
          InitializeIndicatorTable();
          m_trading_bubble.MousePointer(m_mouse);
-         m_trading_bubble.OnInitEvent(); //First time        
+         m_trading_bubble.OnInitEvent();
          Update(true);
        }  
       else if(uninit_reason == REASON_CHARTCHANGE)
        {
-         m_trading_bubble.OnInitEvent();// TF change: canvas cleared by MT5, recreate
-         ApplyTreeHighlight();
-      }   
+         m_trading_bubble.OnInitEvent();// TF change: canvas cleared by MT5, recreate  
+       }   
       // TF change: CHARTEVENT_CHART_CHANGE → RefreshGUI() sẽ lo      
       return true;           
    };
   // OnEvent handler
   void CGUIPannel::OnEvent(const int id, const long &lparam,
-                         const double &dparam, const string &sparam)
+                        const double &dparam, const string &sparam)
    {
+    // Double-click on a tree item: fired by CTreeView after hit-test identifies the node.
+    // lparam = CTreeView::Id() (non-zero, distinguishes from single-click which fires lparam=0)
+    // dparam = list_index of the double-clicked item
+     if(id == CHARTEVENT_CUSTOM + ON_CHANGE_TREE_PATH &&
+        lparam == m_treeview_settings.Id())
+      {
+       int li = (int)dparam;
+       CTreeItem *item = m_treeview_settings.ItemPointer(li);
+       if(item != NULL)
+        {
+         int parent_pos = m_treeview_settings.ItemPrevNode(li);
+         if(parent_pos == -1)
+            ChartSetSymbolPeriod(0, item.LabelText(), _Period);
+         else
+          {
+           CTreeItem *parent = m_treeview_settings.ItemPointer(parent_pos);
+           if(parent != NULL)
+              ChartSetSymbolPeriod(0, parent.LabelText(),
+                                   TimestampByDescription(item.LabelText()));
+          }
+        }
+       return;
+      }
+    //CHARTEVENT_CHART_CHANGE
+     if(id == CHARTEVENT_CHART_CHANGE)
+      {
+         RefreshGUI();
+         return;
+      }
+    // For InfoWindow via Ctrl ──────────────────
+      if(id == CHARTEVENT_MOUSE_MOVE || id == CHARTEVENT_MOUSE_WHEEL)
+       {
+        int mx = (int)lparam;
+        int my = (int)dparam;
+        if(!m_keys.KeyCtrlState())
+         {
+            HideInfoWindow();
+            return;
+         }
+        m_chart.MouseScroll(false);
+        CWindow *w = GetMainWindowPointer();
+        bool over_gui = (w != NULL &&
+                         mx >= w.X() && mx <= w.X() + w.XSize() &&
+                         my >= w.Y() && my <= w.Y() + w.YSize());
+        if(over_gui)
+            HideInfoWindow();
+        else
+         {
+            datetime mouse_time; double mouse_price; int subwin;
+            ChartXYToTimePrice(m_chart.ChartId(), mx, my, subwin, mouse_time, mouse_price);
+            CBarSeriesDE *series = m_timeseries.GetSeries(Symbol(), Period());
+            CBar *bar = (series != NULL) ? series.GetBar(mouse_time) : NULL;
+            CArrayObj *plist = m_timeseries.GetListAllPatterns();
+            int digits = (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS);
+            if(bar != NULL)
+                ShowInfoWindowAt(mx, my, bar, digits, plist, Symbol(), Period());
+            else
+                HideInfoWindow();
+         }
+          return;
+       }
     // Bubble receives raw events first, regardless of control early-returns
      m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
     // Handle indicator table click (checkbox toggle)
@@ -237,10 +291,10 @@
      bool ind_cell   = (id == (CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX) && lparam == m_indicator_table.Id());
      bool ind_btn = (id == (CHARTEVENT_CUSTOM + ON_CLICK_BUTTON) && lparam == m_indicator_table.Id());     
      //Click on Column 3 Check/Uncheck all to show or hide indicator on chart
-     if(ind_header || ind_cell)
-      {
-       if(ind_header)
-        {
+      if(ind_header || ind_cell)
+       {
+        if(ind_header)
+         {
           if((int)dparam != 3) return;
           int rows = (int)m_indicator_table.RowsTotal();
           bool any_off = false;
@@ -252,9 +306,9 @@
                m_indicator_table.ChangeImage(3, i, new_state, false);
           m_indicator_table.Update(true);
           m_chart.Redraw();
-        }
-       if(ind_cell)
-        {
+         }
+        if(ind_cell)
+         {
           int sep = StringFind(sparam, "_");
           if(sep < 0) return;
           int col = (int)StringToInteger(StringSubstr(sparam, 0, sep));
@@ -264,47 +318,45 @@
           string target = m_indicator_table.GetValue(1, row);
           StringTrimLeft(target);
           // Find matching PureData record to get its Handle/Group
-           string sym = ::Symbol();
-           ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
-           CArrayObj *list = m_indicators_timeseries.GetList(); //Full List All TF
-           CIndicatorDE *ind = NULL;  //Temp series
-           for(int i = 0; i < list.Total(); i++)
+          string sym = ::Symbol();
+          ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+          CArrayObj *list = m_indicators_timeseries.GetList(); //Full List All TF
+          CIndicatorDE *ind = NULL;  //Temp series
+          for(int i = 0; i < list.Total(); i++)
             {
               CIndicatorDE *item = list.At(i);
               if(item != NULL && item.ShortName() == target
-                        && item.Symbol() == sym 
-                        && item.Timeframe() == tf)
-                  { 
-                     ind = item; 
-                     break;
+                          && item.Symbol() == sym 
+                          && item.Timeframe() == tf)
+              { 
+                 ind = item; 
+                 break;
+              }
+            }
+          if(ind == NULL) return;
+          int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
+          if(new_state == 1)   // Hide: remove from chart, keep PureData intact
+            {
+               for(int sub = subwindows - 1; sub >= 0; sub--)
+                  for(int i = ChartIndicatorsTotal(0, sub) - 1; i >= 0; i--)
+                  {
+                     string name = ChartIndicatorName(0, sub, i);
+                     if(name == target) ChartIndicatorDelete(0, sub, name);
                   }
             }
-           if(ind == NULL) return;
-
-           int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
-           if(new_state == 1)   // Hide: remove from chart, keep PureData intact
-            {
-             for(int sub = subwindows - 1; sub >= 0; sub--)
-               for(int i = ChartIndicatorsTotal(0, sub) - 1; i >= 0; i--)
-                {
-                  string name = ChartIndicatorName(0, sub, i);
-                  if(name == target) ChartIndicatorDelete(0, sub, name);
-                }
-            }
-           else                 // Show: re-attach using the stored handle
+          else                 // Show: re-attach using the stored handle
             {
               int sub_window = (ind.Group() == INDICATOR_GROUP_TREND) ? 0 : subwindows;
-
               bool added = ChartIndicatorAdd(0, sub_window, ind.Handle());            
             }
-           m_chart.Redraw();
-        }
+          m_chart.Redraw();
+         }
         // ind_cell: framework đã update visual, không cần làm thêm
         return;
-      }
+       }
      //Click on Column 4 -> Delete indicator on Chart, Delete IndicatorDE in CTimeSeriesEngine
-     if(ind_btn)
-      {
+      if(ind_btn)
+       {
         int sep = StringFind(sparam, "_");
         if(sep < 0) return;
         int col = (int)StringToInteger(StringSubstr(sparam, 0, sep));
@@ -336,12 +388,11 @@
         m_indicator_table.Update(true);
         m_chart.Redraw();
         return;
-      }
+       }
     // Pattern table handling
       bool is_header = ((id - CHARTEVENT_CUSTOM) == ON_SORT_DATA      && lparam == m_pattern_table.Id());
       bool is_cell   = (id == (CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX) && lparam == m_pattern_table.Id());
       if(!is_header && !is_cell) return;
-
       // ── Phase 1: Update m_pattern_table ──────────────────────────
        int n = ArraySize(m_pattern_types);
        if(is_header)
@@ -440,15 +491,13 @@
             return (false);
          }
       //Create control in each tab
-       //For Settings Tab at m_tabs_main
-          PopulateSymbolTFTree();
-          if(!CreateTreeView_Settings()) return false;
-          ApplyTreeHighlight();
-          m_tree_prev_count = m_treeview_settings.ItemsTotal();
-
-          if(!CreateSettingsRightTabs(205, 25)) return false;
-          if(!CreatePatternConfigTable(5, 5)) return false;
-          if(!CreateIndicatorTable(5, 5)) return false;    
+       //For Settings Tab at m_tabs_main   
+         PopulateSymbolTFTree();
+         if(!CreateTreeView_Settings()) return false;
+         ApplyTreeHighlight();         
+         if(!CreateSettingsRightTabs(205, 25)) return false;
+         if(!CreatePatternConfigTable(5, 5)) return false;
+         if(!CreateIndicatorTable(5, 5)) return false;    
         //For infor windows
           if(!CreateInfoWindow()) return false;
       CWndEvents::CompletedGUI(); 
@@ -456,37 +505,42 @@
        HideInfoWindow();
       return true;
     }
-  void CGUIPannel::RefreshGUI(void) 
+  void CGUIPannel::RefreshGUI(void)
    {
-    // Update Symbol+TF tree incrementally (only adds new TF nodes, no rebuild)    
-     PopulateSymbolTFTree();
-    // Update indicator table (SetValue per-cell, no-flicker)
-     if(m_treeview_settings.ItemsTotal() > m_tree_prev_count)
-        m_treeview_settings.CreateItemsFrom(m_tree_prev_count);
-     else
-        m_treeview_settings.Update(true);
-     ApplyTreeHighlight();
-     SetValuesToIndicatorTable(); 
-     //Update(true);
-     m_chart.Redraw();
-   }
+      int prev_count = m_treeview_settings.ItemsTotal(); // capture BEFORE populate
+      PopulateSymbolTFTree();
+      if(m_treeview_settings.ItemsTotal() > prev_count)
+       {
+         int rebuild_from = prev_count;
+         for(int j = 0; j < prev_count; j++)
+          {
+            CTreeItem *ti = m_treeview_settings.ItemPointer(j);
+            if(ti == NULL || m_treeview_settings.ItemPrevNode(j) != -1) continue; // skip TF children
+            if(ti.Type() == TI_HAS_ITEMS) continue;  // already correct, skip to avoid duplicate AddImagesGroup            
+            CBarTimeSeriesDE *bts = m_timeseries.GetTimeseries(ti.LabelText());
+            if(bts != NULL && bts.GetListSeries() != NULL && bts.GetListSeries().Total() > 0)
+               rebuild_from = MathMin(rebuild_from, j);
+          }
+         m_treeview_settings.CreateItemsFrom(rebuild_from);
+       }
+      else
+         m_treeview_settings.Update(true);
+      ApplyTreeHighlight();
+      SetValuesToIndicatorTable();
+      m_chart.Redraw();
+   }  
   //+------------------------------------------------------------------+
   //| Update GUI                                                       |
   //+------------------------------------------------------------------+
   void CGUIPannel::Update(const bool redraw)
    {
-      // Tree: new items → CreateItemsFrom, existing only → re-render
-      if(m_treeview_settings.ItemsTotal() > m_tree_prev_count)
-         m_treeview_settings.CreateItemsFrom(m_tree_prev_count);
-      else
-         m_treeview_settings.Update(true);
-
+      // Treeview: new items → CreateItemsFrom, existing only → re-render
+       m_treeview_settings.Update(true);
       // Tables: resize canvas + draw all rows
          m_pattern_table.Update(true);
          m_indicator_table.Update(true);
       if(redraw) m_chart.Redraw();
-   }
-  
+   }  
 //For Control
   // Create GUI controls
   //For Main Window
@@ -668,179 +722,142 @@
       return (true);
    }
  //Add Control at Setting Tab at m_tabs_main
+ //For treeview
   bool CGUIPannel::CreateTreeView_Settings(void)
-   {           
+   { 
       m_treeview_settings.MainPointer(m_tabs_main);
       m_treeview_settings.AutoXResizeMode(false);  // fixed width
       m_treeview_settings.XSize(200);              // tree chiếm 200px bên trái
       m_treeview_settings.AutoYResizeMode(true);
-
       m_treeview_settings.VisibleItemsTotal(15);
       m_treeview_settings.LightsHover(true);
       if(!m_treeview_settings.CreateTreeView(10, 10)) return false;
-      if(!m_tree_initialized)   
-         {
-            m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_treeview_settings);
-            CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_treeview_settings);
-            m_tree_initialized = true;
-         }
-    return true;
+      m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_treeview_settings);
+      CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_treeview_settings);      
+      return true;
    }
+  void CGUIPannel::PopulateSymbolTFTree(void)
+   {
+      if(m_timeseries == NULL) return;
+      int mw_total = ::SymbolsTotal(true);
+
+      // Grow registry if MarketWatch expanded
+      if(ArraySize(m_sym_tree_pos) < mw_total)
+       {
+         int old = ArraySize(m_sym_tree_pos);
+         ArrayResize(m_sym_tree_pos, mw_total);
+         ArrayFill  (m_sym_tree_pos, old, mw_total - old, -1);
+       }
+
+      for(int i = 0; i < mw_total; i++)
+       {
+         string            sym_name = ::SymbolName(i, true);
+         CBarTimeSeriesDE *bts      = m_timeseries.GetTimeseries(sym_name);
+         CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
+         int               tf_cnt   = (list != NULL) ? list.Total() : 0;
+
+         // Step 1: Ensure sym node exists
+          if(m_sym_tree_pos[i] == -1)
+           {
+            int sym_li = m_treeview_settings.ItemsTotal();
+            m_sym_tree_pos[i] = sym_li;
+            m_treeview_settings.AddItem(
+               sym_li, -1, sym_name, (uint)INT_MAX,
+               i, 0, 0,
+               tf_cnt, 0, tf_cnt > 0, true
+            );
+           }
+
+          int sym_li = m_sym_tree_pos[i];
+          if(tf_cnt == 0) continue;   //No TF found on sym_li
+
+         // Step 2: Collect existing TF children of sym_li node
+          int children[];
+          ArrayResize(children, 0);
+          int total_now = m_treeview_settings.ItemsTotal();
+          for(int j = 0; j < total_now; j++)
+            if(m_treeview_settings.ItemPrevNode(j) == sym_li)
+             {
+               int sz = ArraySize(children);
+               ArrayResize(children, sz + 1);
+               children[sz] = j;
+             }
+          int child_count = ArraySize(children);
+
+         // Step 3: Match bts[k] against children[k]
+          for(int k = 0; k < tf_cnt; k++)
+           {
+            CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
+            if(s == NULL) continue;
+            string actual = TimeframeDescription(s.Timeframe());
+
+            if(k < child_count)
+             {
+               // Slot exists — Bug B: update label if period changed
+               CTreeItem *ti = m_treeview_settings.ItemPointer(children[k]);
+               if(ti != NULL && ti.LabelText() != actual)
+               { ti.LabelText(actual); ti.Update(true); }
+             }
+            else
+             {
+               // New slot — add TF node
+                m_treeview_settings.AddItem(
+                  m_treeview_settings.ItemsTotal(), sym_li, actual,
+                  IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
+                  k, 1, i, 0, 0, false, false
+               );
+             }
+           }
+         // Update parent's items_total if new TF nodes were added
+         if(child_count < tf_cnt)
+           {
+             m_treeview_settings.SetItemsTotal(sym_li, tf_cnt);             
+             m_treeview_settings.SetItemState(sym_li, true);
+           }            
+       }
+   } 
+   
   void CGUIPannel::ApplyTreeHighlight(void)
    {
-    int total     = m_treeview_settings.ItemsTotal();
-    int sym_total = ArraySize(m_tree_symbol_names);
-    int tf_total  = ArraySize(m_tree_tf_syms);
+      string chart_tf = TimeframeDescription(_Period);
+      int    total    = m_treeview_settings.ItemsTotal();  // duyệt tất cả items
 
-    for(int i = 0; i < total; i++)
-     {
-      CTreeItem *item = m_treeview_settings.ItemPointer(i);
-      if(item == NULL) continue;
+      for(int i = 0; i < total; i++)
+      {
+         CTreeItem *item = m_treeview_settings.ItemPointer(i);
+         if(item == NULL) continue;
 
-      if(i < sym_total)
-       {
-        bool sym_active = (m_tree_symbol_names[i] == _Symbol);
-        uint img_down  = sym_active ? IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP
-                            : IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP;
-        uint img_right = sym_active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
-                            : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP;
-        item.SetImage(1, 0, img_down);
-        item.SetImage(1, 1, img_right);
-        //item.Draw();
-        //item.CanvasPointer().Update(false);
-        continue;
-       }
-
-      int tf_idx = i - sym_total;
-      if(tf_idx >= tf_total) continue;
-
-      bool highlight = (m_tree_tf_syms[tf_idx]  == _Symbol &&
-                        m_tree_tf_values[tf_idx] == _Period);
-
-      item.IconFile(highlight
-                    ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
-                    : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
-      //item.Draw();
-      //item.CanvasPointer().Update(false);
-     }
-
-     m_treeview_settings.Update(true);
+         if(m_treeview_settings.ItemPrevNode(i) == -1)   // sym node (node_level=0)
+          {
+            bool active = (item.LabelText() == _Symbol);
+            if(item.Type() == TI_HAS_ITEMS)  // sym WITH TF
+            {
+               uint img0 = active ? IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP
+                                 : IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP;
+               uint img1 = active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
+                                 : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP;
+               item.SetImage(1, 0, img0);
+               item.SetImage(1, 1, img1);
+            }
+          else // sym WITHOUT TF
+             {
+               item.IconFile(IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP);
+             }
+          }
+         else   // TF node (node_level=1, ArrowXGap=17)
+         {
+            // find parent sym directly via prev_node index
+            int        parent_pos  = m_treeview_settings.ItemPrevNode(i);
+            CTreeItem *parent_item = m_treeview_settings.ItemPointer(parent_pos);
+            bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
+            bool hl = (parent_is_active && item.LabelText() == chart_tf);
+            item.IconFile(hl ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
+                              : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
+         }
+      }      
+      m_treeview_settings.UpdateTreeList(true);
    }
  
-  void CGUIPannel::PopulateSymbolTFTree(void)
-   {     
-
-      if(m_timeseries == NULL) return;
-      const int tf_total = 21;
-      int mw_total  = ::SymbolsTotal(true);
-      int watermark = m_treeview_settings.ItemsTotal();
-      m_tree_prev_count = m_treeview_settings.ItemsTotal();   // record before populate
-      int g = 0;
-      // ─────────────────────────────────────────────────────────────────
-      // PRE-COMPUTE — Count expected TF children per symbol.
-      // Used in Loop 1 so AddItem receives the correct items_total and
-      // item_state from the very first call. Counts registered nodes plus
-      // new nodes that currently have timeseries data.
-      // ─────────────────────────────────────────────────────────────────
-      int tf_counts[];
-      ArrayResize(tf_counts, mw_total);
-      for(int i = 0; i < mw_total; i++)
-       {
-         string sym_name = ::SymbolName(i, true);
-         int count = 0;
-         for(int j = 0; j < tf_total; j++)
-          {
-            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex((uchar)(j + 1));
-            bool registered = false;
-            for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
-               if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
-                  { registered = true; break; }
-            if(registered)           { count++; continue; }
-            if(m_timeseries.GetSeries(sym_name, tf) != NULL) count++;
-          }
-         tf_counts[i] = count;
-       }
-
-      // ─────────────────────────────────────────────────────────────────
-      // LOOP 1 — One symbol node per MarketWatch symbol as ROOT node.
-      // Symbols are root level (parent_g = -1, level = 0).
-      // Registry written once at first build (watermark == 0).
-      // ─────────────────────────────────────────────────────────────────
-      for(int i = 0; i < mw_total; i++)
-       {
-         string sym_name = ::SymbolName(i, true);
-         int    sym_g    = g;
-
-         if(watermark == 0)
-          {
-               int n = ArraySize(m_tree_sym_g);
-               ArrayResize(m_tree_sym_g,        n + 1);
-               ArrayResize(m_tree_symbol_names, n + 1);
-               m_tree_sym_g[n]        = sym_g;
-               m_tree_symbol_names[n] = sym_name;
-          }
-         if(g >= watermark)
-               m_treeview_settings.AddItem(g, -1, sym_name, INT_MAX,   // parent=-1: root level
-                                          i, 0, 0,               // level=0: top level
-                                          tf_counts[i],
-                                          0,
-                                          tf_counts[i] > 0,
-                                          tf_counts[i] > 0);
-         g++;
-       }
-
-      // ─────────────────────────────────────────────────────────────────
-      // LOOP 2 — Append TF nodes as children of symbol nodes (level = 1).
-      // New nodes appended at ItemsTotal() to avoid g-counter drift.
-      // SetItemsTotal syncs symbol node's child count for FormTreeList.
-      // ─────────────────────────────────────────────────────────────────
-      int reg_size = ArraySize(m_tree_symbol_names);
-      for(int reg_idx = 0; reg_idx < reg_size; reg_idx++)
-       {
-         string sym_name = m_tree_symbol_names[reg_idx];
-         int    sym_g    = m_tree_sym_g[reg_idx];
-
-        // Count already-registered TF nodes for this symbol
-         int tf_idx_base = 0;
-         for(int j = 0; j < tf_total; j++)
-          {
-            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex((uchar)(j + 1));
-            for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
-               if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
-                  { tf_idx_base++; break; }
-          }
-        // Add new TF nodes where join condition succeeds
-         int new_tf_idx = tf_idx_base;
-         for(int j = 0; j < tf_total; j++)
-          {
-            ENUM_TIMEFRAMES tf = TimeframeByEnumIndex((uchar)(j + 1));
-
-            bool already_added = false;
-            for(int n = 0; n < ArraySize(m_tree_tf_syms); n++)
-               if(m_tree_tf_syms[n] == sym_name && m_tree_tf_values[n] == tf)
-                  { already_added = true; break; }
-            if(already_added) continue;
-            if(m_timeseries.GetSeries(sym_name, tf) == NULL) continue;
-
-            int new_g = m_treeview_settings.ItemsTotal();
-            m_treeview_settings.AddItem(new_g, sym_g,
-                                       EnumToString(tf),
-                                       IMAGE_RESOURCE_BMP16_BAR_CHART_BMP,
-                                       new_tf_idx, 1, reg_idx, 0, 0,  // level=1: child of symbol
-                                       false, false);
-
-            int n = ArraySize(m_tree_tf_syms);
-            ArrayResize(m_tree_tf_syms,   n + 1);
-            ArrayResize(m_tree_tf_values, n + 1);
-            m_tree_tf_syms[n]   = sym_name;
-            m_tree_tf_values[n] = tf;
-            new_tf_idx++;
-          }
-
-       // Sync symbol node's items_total with actual TF child count
-         m_treeview_settings.SetItemsTotal(sym_g, new_tf_idx);
-       }
-   }
   bool CGUIPannel::CreateSettingsRightTabs(const int x_gap, const int y_gap)
    {
       string tab_names[2] = {"Pattern", "Indicator"};

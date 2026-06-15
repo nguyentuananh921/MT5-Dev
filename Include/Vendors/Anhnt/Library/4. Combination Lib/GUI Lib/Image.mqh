@@ -5,12 +5,11 @@
 //+------------------------------------------------------------------+
 #ifndef __IMAGE_MQH__
 #define __IMAGE_MQH__
- #include "Enums.mqh"
- #include "Defines.mqh"
+ #include "..\Defines\GUIDefines.mqh"
  #include "Fonts.mqh"
  #include <Graphics\Graphic.mqh>
  #include <ChartObjects\ChartObjectSubChart.mqh>
- #include "GUIDefines\ImageDataDefine.mqh"
+ #include "..\Defines\ImageDataDefine.mqh"
  //+------------------------------------------------------------------+
  //| Class for storing image data                                     |
  //+------------------------------------------------------------------+

@@ -238,7 +238,7 @@ class CWndCreate : public CWndEvents
      if(icon_path != "") {
        object.IconFile(icon_path);
      } else {
-       object.IconFile((uint)RESOURCE_HELP);
+       object.IconFile((uint)IMAGE_RESOURCE_BMP16_HELP_LIGHT_BMP);
      }
    // ---Creating a form
      if(!object.CreateWindow(m_chart_id, m_subwin, caption_text, x, y))

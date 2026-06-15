@@ -53,7 +53,7 @@
         patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
         mGUIPannel.SetPatternRenderer(&patternRenderer);        
         CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-        if(plist != NULL) patternRenderer.Refresh(plist);
+        if(plist != NULL) patternRenderer.Refresh(plist,true,true);
       EventSetMillisecondTimer(16);    
     return (INIT_SUCCEEDED);
    }
@@ -83,26 +83,26 @@
   {
     tradingEngine.OnTickEvent();
     //For Bar
-       //  Refresh pattern renderer on new bar
-        SDataCalculate data_calc;
-        MqlRates rates[1];
-        if(::CopyRates(Symbol(), PERIOD_CURRENT, 0, 1, rates) == 1)
+    //  Refresh pattern renderer on new bar
+      SDataCalculate data_calc;
+      MqlRates rates[1];
+      if(::CopyRates(Symbol(), PERIOD_CURRENT, 0, 1, rates) == 1)
+      {
+          data_calc.rates         = rates[0];
+          data_calc.rates_total   = ::Bars(Symbol(), PERIOD_CURRENT);
+      }
+    //--- sync ALL TFs + race condition fix (returns true if new scan happened)
+      bool any_new_bar = timeSeriesEngine.OnTickEvent(Symbol(), data_calc);
+      if(any_new_bar&& s_need_tree_refresh)
         {
-            data_calc.rates         = rates[0];
-            data_calc.rates_total   = ::Bars(Symbol(), PERIOD_CURRENT);
-        }
-       //--- sync ALL TFs + race condition fix (returns true if new scan happened)
-        bool any_new_bar = timeSeriesEngine.OnTickEvent(Symbol(), data_calc);
-        if(any_new_bar)
-         {
-            if(s_need_tree_refresh)             
-              {
-                  mGUIPannel.RefreshGUI();
-                  s_need_tree_refresh = false;
-              }
+          mGUIPannel.RefreshGUI();
+          s_need_tree_refresh = false;
+        }         
+      if(any_new_bar)
+        {
             CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-            if(plist != NULL) patternRenderer.UpdateNew(plist, true, false);            
-         }
+            if(plist != NULL) patternRenderer.UpdateNew(plist, true, false);
+        }         
      //::ChartRedraw(ChartID());
   }
 
@@ -130,56 +130,10 @@
         if(MQLInfoInteger(MQL_TESTER))
             return;
     //For TimeSeriesEngine must before mGUIPannel ChartEvent to UpdateTreeNodeStates and before patternRenderer ChartEvent to UpdateNewPatterns
-      timeSeriesEngine.OnChartEvent(id, lparam, dparam, sparam);
-    // When chart changes (TF, indicator add/remove/modify),
-    // refresh TreeView to reflect collection updates
-       if(id == CHARTEVENT_CHART_CHANGE)
-        {
-          mGUIPannel.RefreshGUI();
-        }
+      timeSeriesEngine.OnChartEvent(id, lparam, dparam, sparam);    
     //For GUI     
-     mGUIPannel.ChartEvent(id, lparam, dparam, sparam);         
-     //Mouse move → show InfoPanel
-     if(id == CHARTEVENT_MOUSE_MOVE || id == CHARTEVENT_MOUSE_WHEEL)
-      {        
-        int mx = (int)lparam;
-        int my = (int)dparam;
-        if(!IsCtrlKeyPressed())
-          {
-            // if(!mGUIPannel.IsBubbleDragging())
-            //   ChartSetInteger(ChartID(), CHART_MOUSE_SCROLL, true);
-              mGUIPannel.HideInfoWindow();
-              return;
-          }
-        ChartSetInteger(ChartID(), CHART_MOUSE_SCROLL, false);
-        // Suppress InfoPanel khi mouse trong vùng GUIPannel
-        CWindow *w = mGUIPannel.GetMainWindowPointer();
-        bool over_gui = (w != NULL &&
-                        mx >= w.X() && mx <= w.X() + w.XSize() &&
-                        my >= w.Y() && my <= w.Y() + w.YSize());
-        if(over_gui)
-          {            
-            mGUIPannel.HideInfoWindow();
-          }            
-        else
-         {            
-            datetime mouse_time; double mouse_price; int subwin;
-            ChartXYToTimePrice(0, mx, my, subwin, mouse_time, mouse_price);
-
-            CBarSeriesDE *series = timeSeriesEngine.GetTimeSeriesCollection()
-                                      .GetSeries(Symbol(), Period());
-            CBar *bar = (series != NULL) ? series.GetBar(mouse_time) : NULL;
-
-            CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection()
-                                  .GetListAllPatterns();
-            int digits = (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS);
-            if(bar != NULL)                
-              mGUIPannel.ShowInfoWindowAt(mx, my, bar, digits, plist, Symbol(), Period());
-            else                
-              mGUIPannel.HideInfoWindow();
-         }        
-      } 
-     // For PatternRender
+     mGUIPannel.ChartEvent(id, lparam, dparam, sparam); 
+    // For PatternRender
       // 2. Renderer after: plist already has new patterns if any were added
       CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
       patternRenderer.OnChartEvent(id, plist);        
@@ -198,10 +152,3 @@
   {
     //mGUIPannel.UpdateTableAccountInfoDynamic();
   }
-//+------------------------------------------------------------------+
-//| Return the flag of holding Ctrl                                  |
-//+------------------------------------------------------------------+
-bool IsCtrlKeyPressed(void)
- {
-   return((TerminalInfoInteger(TERMINAL_KEYSTATE_CONTROL)&0x80)!=0);
- }
