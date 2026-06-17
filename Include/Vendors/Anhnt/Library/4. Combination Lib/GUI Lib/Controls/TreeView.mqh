@@ -46,8 +46,7 @@
      bool                       m_t_is_folder[];
     // --- Arrays for the list of displayed tree list items
      int                        m_td_list_index[];
-    // --- Arrays for the list of contents of items selected in the tree list
-    // (full list)
+    // --- Arrays for the list of Contents of items selected in the tree list (full list)
      int                        m_c_list_index[];
      int                        m_c_tree_list_index[];
      string                     m_c_item_text[];
@@ -178,6 +177,7 @@
                                      const int item_number, const int items_total,
                                      const int folders_total, const bool item_state,
                                      const bool is_folder = true);
+    //My adding method 
      void                        AddTreeItem(const int list_index, const int prev_node_list_index,
                                     const string item_text, const uint path_bmp,
                                     const int item_index, const int node_level,
@@ -211,9 +211,7 @@
       void                        UpdateContentList(void);
     // ---My Adding Method      
       int                         ItemPrevNode(int index) const;
-      // bool                        CreateItemsFrom(const int start_index);
-      // void                        SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; } 
-      // void                        SetItemState(const int index, const bool state);     
+        
   };
 #endif // CTREEVIEW_MQH_DECLARATION
 #ifndef CTREEVIEW_MQH_IMPLEMENTATION
@@ -238,103 +236,64 @@
  //+------------------------------------------------------------------+
  // | Event Handler |
  //+------------------------------------------------------------------+
- void CTreeView::OnEvent(const int id, const long &lparam, const double &dparam,
-                        const string &sparam) 
+ void CTreeView::OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
    // --- Handling the cursor movement event
-   if (id == CHARTEVENT_MOUSE_MOVE) 
-    {
+    if(id==CHARTEVENT_MOUSE_MOVE)
+     {
       // --- Shift the tree list if the scroll bar control is in action
-      if (m_scrollv.ScrollBarControl()) 
+       if(m_scrollv.ScrollBarControl())
         {
-          ShiftTreeList();
-          m_scrollv.Update(true);
-          return;
+         ShiftTreeList();
+         m_scrollv.Update(true);
+         return;
         }
       // --- We only come in if there is a list
-      //if (m_t_items_total[m_selected_item_index] > 0)
-      if (m_selected_item_index >= 0 && m_t_items_total[m_selected_item_index] > 0) 
-      {
-        // --- Shift the content list if the scroll bar control is in action
-        if (m_content_scrollv.ScrollBarControl()) 
+       if(m_t_items_total[m_selected_item_index]>0)
         {
+         // --- Shift the content list if the scroll bar control is in action
+         if(m_content_scrollv.ScrollBarControl())
+           {
             ShiftContentList();
             m_content_scrollv.Update(true);
             return;
+           }
         }
-      }
       // --- Control the width of the content area
       ResizeListArea();
       return;
-    }
+     }
    // --- Handling click events on scrollbar buttons
-   if (id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON) 
+   if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON)
     {
       // --- Quit if in resizing mode of the content list area
-      if (m_x_resize.IsVisible() || m_x_resize.State()) return;
+       if(m_x_resize.IsVisible() || m_x_resize.State())
+         return;
       // --- Handling clicks on the item arrow
-      if (OnClickItemArrow(sparam, (int)lparam, (int)dparam)) return;
+       if(OnClickItemArrow(sparam,(int)lparam,(int)dparam))
+         return;
       // --- Handling a click on a tree list item
-      if (OnClickTreeItem(sparam, (int)lparam, (int)dparam)) return;
+       if(OnClickTreeItem(sparam,(int)lparam,(int)dparam))
+         return;
       // --- Handling a click on an item in the content list
-      if (OnClickContentItem(sparam, (int)lparam, (int)dparam)) return;
+       if(OnClickContentItem(sparam,(int)lparam,(int)dparam))
+         return;
       // --- If there was a click on the list scroll bar buttons
-      if (m_scrollv.OnClickScrollInc((uint)lparam, (uint)dparam) ||
-        m_scrollv.OnClickScrollDec((uint)lparam, (uint)dparam)) 
-      {
-        ShiftTreeList();
-        m_scrollv.Update(true);
-        return;
-      }
+       if(m_scrollv.OnClickScrollInc((uint)lparam,(uint)dparam) ||
+         m_scrollv.OnClickScrollDec((uint)lparam,(uint)dparam))
+        {
+         ShiftTreeList();
+         m_scrollv.Update(true);
+         return;
+        }
       // --- If there was a click on the list scroll bar buttons
-      if (m_content_scrollv.OnClickScrollInc((uint)lparam, (uint)dparam) ||
-          m_content_scrollv.OnClickScrollDec((uint)lparam, (uint)dparam)) 
-      {
-        ShiftContentList();
-        m_content_scrollv.Update(true);
-        return;
-      }
-      return;
-    }
-   if(id == CHARTEVENT_CUSTOM + ON_DOUBLE_CLICK)
-    {
-      static bool s_busy = false;   // ← thêm guard
-      if(s_busy) return;
-      s_busy = true;
-
-      //Debug
-        Print("My DebugCTreeView::OnEvent [TV ON_DOUBLE_CLICK] fired, mouse.Y=", m_mouse.Y());  // ← thêm dòng này
-      if(m_x_resize.IsVisible() || m_x_resize.State()) return;      
-      int v = m_scrollv.CurrentPos();
-      for(int r = 0; r < m_visible_items_total; r++)
-       {
-        if(v < 0 || v >= m_items_total) break;
-        int li = m_td_list_index[v];
-        if(m_mouse.Y() >= m_items[li].Y() && m_mouse.Y() < m_items[li].Y() + m_items[li].YSize()
-            && m_mouse.X() >= CElementBase::X() && m_mouse.X() < CElementBase::X() + m_treeview_width)
-         {
-          //Debug
-            Print("My DebugCTreeView::OnEvent [TV ON_DOUBLE_CLICK] hit li=", li, " type=", m_items[li].Type(),
-                  " Y_item=", m_items[li].Y(), " Y_mouse=", m_mouse.Y());
-          if(m_items[li].Type() == TI_HAS_ITEMS)
-           {
-            m_t_item_state[li] = !m_t_item_state[li];
-            m_items[li].ItemState(m_t_item_state[li]);
-            m_items[li].IsPressed((li == m_selected_item_index) ? true : false);
-            m_items[li].Draw();
-            m_items[li].CanvasPointer().Update(false);
-            FormTreeList();
-            UpdateTreeList();
-            m_scrollv.MovingThumb(m_scrollv.CurrentPos());
-            ShowTabElements();
-            ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
-           }
-         ::EventChartCustom(m_chart_id, ON_CHANGE_TREE_PATH, CElementBase::Id(), li, "");
-         s_busy = false; //Release before return
-          return;
-         }
-        v++;
-       }
+       if(m_content_scrollv.OnClickScrollInc((uint)lparam,(uint)dparam) ||
+          m_content_scrollv.OnClickScrollDec((uint)lparam,(uint)dparam))
+        {
+         ShiftContentList();
+         m_content_scrollv.Update(true);
+         return;
+        }
       return;
     }
   }
@@ -418,62 +377,46 @@
  //+------------------------------------------------------------------+
  bool CTreeView::CreateItems(void) 
   {
-    // ---Coordinates
-    int x = 1, y = 1;
-    //---
-    int items_total = ::ArraySize(m_items);
-    for (int i = 0; i < items_total; i++) 
+    // --- Coordinates
+     int x=1,y=1;
+    int items_total=::ArraySize(m_items);
+    for(int i=0; i<items_total; i++)
      {
-      // Skip already-initialized items
-      if(::CheckPointer(m_items[i].MainPointer()) != POINTER_INVALID)
-        { y = (i > 0) ? y + m_item_y_size : y; continue; }
-      // --- Y coordinate calculation
-      y = (i > 0) ? y + m_item_y_size : y;
-      // --- Save the parent pointer
-      m_items[i].MainPointer(this);
-      // --- Properties
+       // --- Y coordinate calculation
+        y=(i>0)? y+m_item_y_size : y;
+       // --- Save the parent pointer
+         m_items[i].MainPointer(this);
+       // --- Properties
         m_items[i].NamePart("tree_item");
         m_items[i].Index(m_t_list_index[i]);
         m_items[i].XSize(m_treeview_width);
         m_items[i].YSize(m_item_y_size);
-        //Modify here to fix symbol node XGap
-           //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + 17);
-           bool no_icon = (m_t_path_bmp[i] == (uint)INT_MAX);
-           m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon ? 0 : 17));        
+        m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i])+17);
         m_items[i].IconYGap(2);
         m_items[i].IconFile(m_t_path_bmp[i]);
         m_items[i].IsHighlighted(m_lights_hover);
-      // --- Determine the item type
-      ENUM_TYPE_TREE_ITEM type = TI_SIMPLE;
-      if (m_file_navigator_mode == FN_ALL) 
-        {
-          type = (m_t_items_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
-        }
-      else // FN_ONLY_FOLDERS
-        {
-          type = (m_t_folders_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
-        }
-      // ---Adjusting the initial state of the item
-      m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;      
-      // ---Creating an element
-      if (!m_items[i].CreateTreeItem(x, y, type, m_t_list_index[i],
-                                     m_t_node_level[i], m_t_item_text[i],
-                                     m_t_item_state[i]))
-        {
-          //Print("My Debug from CTreeView::CreateItemsFrom CreateTreeItem FAILED at i=", i);
-          return false;
-        }
-      //Fixing Lib
-        //m_items[i].ItemState((int)m_t_item_state[i]);        
-        m_items[i].Id(CElementBase::Id()); 
-      // --- Add element to array
-      CElement::AddToArray(m_items[i]);
+       // --- Determine the item type
+        ENUM_TYPE_TREE_ITEM type=TI_SIMPLE;
+        if(m_file_navigator_mode==FN_ALL)
+          {
+          type=(m_t_items_total[i]>0)? TI_HAS_ITEMS : TI_SIMPLE;
+          }
+        else // FN_ONLY_FOLDERS
+          {
+          type=(m_t_folders_total[i]>0)? TI_HAS_ITEMS : TI_SIMPLE;
+          }
+       // ---Adjusting the initial state of the item
+        m_t_item_state[i]=(type==TI_HAS_ITEMS)? m_t_item_state[i]: false;
+       // ---Creating an element
+        if(!m_items[i].CreateTreeItem(x,y,type,m_t_list_index[i],m_t_node_level[i],m_t_item_text[i],m_t_item_state[i]))
+         return(false);
+       // --- Add element to array
+        CElement::AddToArray(m_items[i]);
      }
     // --- Set the color of the selected item
-    if (!m_tab_items_mode && m_selected_item_index >= 0)
-      m_items[m_selected_item_index].IsPressed(true);
-    //---
-    return (true);
+     if(!m_tab_items_mode && m_selected_item_index>=0)
+      m_items[m_selected_item_index].IsPressed(true);   
+    return(true);
   }
  //+------------------------------------------------------------------+
  // | Creates a vertical scroll |
@@ -502,32 +445,32 @@
  //+------------------------------------------------------------------+
  bool CTreeView::CreateContentItems(void) 
   {
-    // --- Exit if (1) item contents do not need to be shown or (2) tabbed mode is
-    // enabled
-    if (!m_show_item_content || m_tab_items_mode)
-        return (true);
+    // --- Exit if (1) item contents do not need to be shown or (2) tabbed mode is enabled
+     if(!m_show_item_content || m_tab_items_mode)
+      return(true);
     // ---Array reserve size
-     int reserve_size = 10000;
+     int reserve_size=10000;
     // --- Coordinates and width
-     int x = m_treeview_width, y = 1;
-     int w = m_x_size - m_treeview_width - 2;
+     int x=m_treeview_width,y=1;
+     int w=m_x_size-m_treeview_width-2;
     // --- Point counter
-     int c = 0;
-    //---
-    int items_total = ::ArraySize(m_items);
-    for (int i = 0; i < items_total; i++) 
+     int c=0;
+   //--- 
+    int items_total=::ArraySize(m_items);
+    for(int i=0; i<items_total; i++)
      {
       // --- This list should not include items from the root directory,
       // so if the node level is less than 1, move on to the next one
-       if (m_t_node_level[i] < 1)  continue;
+       if(m_t_node_level[i]<1)
+         continue;
       // --- Increase array sizes by one element
-       int new_size = c + 1;
-       ::ArrayResize(m_content_items, new_size, reserve_size);
-       ::ArrayResize(m_c_item_text, new_size, reserve_size);
-       ::ArrayResize(m_c_tree_list_index, new_size, reserve_size);
-       ::ArrayResize(m_c_list_index, new_size, reserve_size);
+       int new_size=c+1;
+       ::ArrayResize(m_content_items,new_size,reserve_size);
+       ::ArrayResize(m_c_item_text,new_size,reserve_size);
+       ::ArrayResize(m_c_tree_list_index,new_size,reserve_size);
+       ::ArrayResize(m_c_list_index,new_size,reserve_size);
       // --- Y coordinate calculation
-       y = (c > 0) ? y + m_item_y_size : y;
+       y=(c>0)? y+m_item_y_size : y;
       // --- Pass the panel object
        m_content_items[c].MainPointer(this);
       // --- Set the properties before creating
@@ -540,22 +483,20 @@
        m_content_items[c].IconFile(m_t_path_bmp[i]);
        m_content_items[c].IsHighlighted(m_lights_hover);
       // ---Create an object
-       if (!m_content_items[c].CreateTreeItem(x, y, TI_SIMPLE, c, 0,
-                                             m_t_item_text[i], false))
-        return (false);
+       if(!m_content_items[c].CreateTreeItem(x,y,TI_SIMPLE,c,0,m_t_item_text[i],false))
+         return(false);
       // --- Add element to array
        CElement::AddToArray(m_content_items[c]);
-      // --- Save (1) general content list index, (2) tree list index, and (3)
-      // item text
-       m_c_list_index[c] = c;
-       m_c_tree_list_index[c] = m_t_list_index[i];
-       m_c_item_text[c] = m_t_item_text[i];
+      // --- Save (1) general content list index, (2) tree list index, and (3) item text
+       m_c_list_index[c]      =c;
+       m_c_tree_list_index[c] =m_t_list_index[i];
+       m_c_item_text[c]       =m_t_item_text[i];
       //---
-       c++;
+      c++;
      }
-    // ---Save list size
-    m_content_items_total = ::ArraySize(m_content_items);
-    return (true);
+   // ---Save list size
+     m_content_items_total=::ArraySize(m_content_items);
+   return(true);
   }
  //+------------------------------------------------------------------+
  // | Creates a vertical scroll for the workspace |
@@ -689,7 +630,7 @@
       }
 
    }
-
+ //New method to Add a TreeItem to TreeView
  void CTreeView::AddTreeItem(const int list_index, const int prev_node_list_index,
                             const string item_text, const uint path_bmp,
                             const int item_index, const int node_level,
@@ -917,7 +858,7 @@
     m_scrollv.ChangeThumbSize(m_items_total, m_visible_items_total);
   }
  //+------------------------------------------------------------------+
- // | Removal |
+ //| Removal |
  //+------------------------------------------------------------------+
  void CTreeView::Delete(void) 
   {
@@ -968,7 +909,7 @@
       DrawResizeBorder();
   }
  //+------------------------------------------------------------------+
- // | Clicking the button to collapse/expand the item list |
+ //| Clicking the button to collapse/expand the item list |
  //+------------------------------------------------------------------+
  bool CTreeView::OnClickItemArrow(const string clicked_object, const int id,
                                  const int index) 

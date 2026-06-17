@@ -4,9 +4,6 @@
 			"path": "../../Example/4. Combination EA"
 		},
 		{
-			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
-		},
-		{
 			"path": "../../../../Logs"
 		},
 		{
@@ -28,19 +25,7 @@
 			"path": "../../../Le Xuan Quy"
 		},
 		{
-			"path": "../../../Clemence Benjamin"
-		},
-		{
-			"path": "../Tools/mql5_resource_generator"
-		},
-		{
-			"path": "../../../../Include/Vendors/Anhnt/Library/3. EasyAndFastGUI 19703"
-		},
-		{
-			"path": "../../../Alexander Fedosov/3326 Developing custom indicators using CCanvas class EA"
-		},
-		{
-			"path": "../../../../Include/Vendors/Alexander Fedosov/3326 Developing custom indicators using CCanvas class Lib"
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
 		}
 	],
 	"settings": {

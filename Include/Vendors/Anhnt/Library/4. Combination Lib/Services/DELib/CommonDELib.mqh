@@ -11,7 +11,9 @@
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+
-  #include "..\..\Defines\Defines.mqh"
+  //#include "..\..\Defines\Defines.mqh"
+  #include "..\..\Defines\TimeseriesDefines.mqh"
+  #include "..\..\Defines\TradingDefines.mqh"
   #include "..\..\Notify\Message\Message.mqh"
   #include "..\InputData\CommonInpData.mqh"
 //+------------------------------------------------------------------+

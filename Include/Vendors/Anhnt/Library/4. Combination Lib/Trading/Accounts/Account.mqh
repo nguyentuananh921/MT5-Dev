@@ -13,6 +13,7 @@
  //| Include files                                                    |
  //+------------------------------------------------------------------+
  #include "..\..\Base\BaseObjExt.mqh"
+ #include "..\..\Defines\TradingDefines.mqh"
  #ifndef CACCOUNT_MQH_DECLARATION
  #define CACCOUNT_MQH_DECLARATION
  //+------------------------------------------------------------------+

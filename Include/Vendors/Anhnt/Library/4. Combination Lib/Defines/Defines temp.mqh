@@ -4,11 +4,11 @@
 //+------------------------------------------------------------------+
 #ifndef __DOEASY_DEFINES_MASTER_MQH__
 #define __DOEASY_DEFINES_MASTER_MQH__
-#include "CommonDefines.mqh"
-#include "EventDefines.mqh"
-#include "TradingDefines.mqh"
-#include "TimeseriesDefines.mqh"
-#include "ChartDefines.mqh"
-#include "MouseDefines.mqh"
-#include "GraphDefines.mqh"
+// #include "CommonDefines.mqh"
+// #include "EventDefines.mqh"
+// #include "TradingDefines.mqh"
+// #include "TimeseriesDefines.mqh"
+// #include "ChartDefines.mqh"
+// #include "MouseDefines.mqh"
+// #include "GraphDefines.mqh"
 #endif // __DOEASY_DEFINES_MASTER_MQH__

@@ -1085,6 +1085,67 @@ enum ENUM_PEND_REQ_ACTIVATE_BY_EVENT
    PEND_REQ_ACTIVATE_BY_EVENT_POSITION_REVERSED_BY_PENDING_PARTIAL=  MSG_EVN_REASON_REVERSE_BY_PENDING_PARTIALLY, // Position reversal by activating a pending order (netting)
   };
 //+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Data for working with DOM                                        |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| Abstract DOM type (status)                                       |
+//+------------------------------------------------------------------+
+enum ENUM_MBOOK_ORD_STATUS
+  {
+   MBOOK_ORD_STATUS_BUY,                              // Buy side
+   MBOOK_ORD_STATUS_SELL,                             // Sell side
+  };
+//+------------------------------------------------------------------+
+//| Integer properties of DOM order                                  |
+//+------------------------------------------------------------------+
+enum ENUM_MBOOK_ORD_PROP_INTEGER
+  {
+   MBOOK_ORD_PROP_STATUS = 0,                         // Order status
+   MBOOK_ORD_PROP_TYPE,                               // Order type
+   MBOOK_ORD_PROP_VOLUME,                             // Order volume
+   MBOOK_ORD_PROP_TIME_MSC,                           // Time of making a DOM snapshot in milliseconds
+  }; 
+#define MBOOK_ORD_PROP_INTEGER_TOTAL (4)              // Total number of integer properties
+#define MBOOK_ORD_PROP_INTEGER_SKIP  (0)              // Number of integer DOM properties not used in sorting
+//+------------------------------------------------------------------+
+//| Real properties of DOM order                                     |
+//+------------------------------------------------------------------+
+enum ENUM_MBOOK_ORD_PROP_DOUBLE
+  {
+   MBOOK_ORD_PROP_PRICE = MBOOK_ORD_PROP_INTEGER_TOTAL, // Order price
+   MBOOK_ORD_PROP_VOLUME_REAL,                        // Extended accuracy order volume
+  };
+#define MBOOK_ORD_PROP_DOUBLE_TOTAL  (2)              // Total number of real properties
+#define MBOOK_ORD_PROP_DOUBLE_SKIP   (0)              // Number of real properties not used in sorting
+//+------------------------------------------------------------------+
+//| String properties of DOM order                                   |
+//+------------------------------------------------------------------+
+enum ENUM_MBOOK_ORD_PROP_STRING
+  {
+   MBOOK_ORD_PROP_SYMBOL = (MBOOK_ORD_PROP_INTEGER_TOTAL+MBOOK_ORD_PROP_DOUBLE_TOTAL), // Order symbol name
+  };
+#define MBOOK_ORD_PROP_STRING_TOTAL  (1)              // Total number of string properties
+//+------------------------------------------------------------------+
+//| Possible sorting criteria of DOM orders                          |
+//+------------------------------------------------------------------+
+#define FIRST_MB_DBL_PROP  (MBOOK_ORD_PROP_INTEGER_TOTAL-MBOOK_ORD_PROP_INTEGER_SKIP)
+#define FIRST_MB_STR_PROP  (MBOOK_ORD_PROP_INTEGER_TOTAL-MBOOK_ORD_PROP_INTEGER_SKIP+MBOOK_ORD_PROP_DOUBLE_TOTAL-MBOOK_ORD_PROP_DOUBLE_SKIP)
+enum ENUM_SORT_MBOOK_ORD_MODE
+  {
+//--- Sort by integer properties
+   SORT_BY_MBOOK_ORD_STATUS = 0,                      // Sort by order status
+   SORT_BY_MBOOK_ORD_TYPE,                            // Sort by order type
+   SORT_BY_MBOOK_ORD_VOLUME,                          // Sort by order volume
+   SORT_BY_MBOOK_ORD_TIME_MSC,                        // Sort by time of making a DOM snapshot in milliseconds
+//--- Sort by real properties
+   SORT_BY_MBOOK_ORD_PRICE = FIRST_MB_DBL_PROP,       // Sort by order price
+   SORT_BY_MBOOK_ORD_VOLUME_REAL,                     // Sort by extended accuracy order volume
+//--- Sort by string properties
+   SORT_BY_MBOOK_ORD_SYMBOL = FIRST_MB_STR_PROP,      // Sort by symbol name
+  };
+//+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 
 #endif // __TRADING_DEFINES_MQH__

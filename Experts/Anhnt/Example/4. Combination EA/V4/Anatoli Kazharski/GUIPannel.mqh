@@ -785,7 +785,7 @@
             m_sym_tree_pos[i] = sym_li;
             // AddTreeItem() auto-increments parent count + sets state when TF children are added
             m_treeview_settings.AddTreeItem(
-             sym_li, -1, sym_name, (uint)INT_MAX,
+             sym_li, -1, sym_name, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
              i, 0, 0,
              0, 0, false, true
             );

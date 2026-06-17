@@ -16,7 +16,6 @@
  //+------------------------------------------------------------------+
  //#include "..\..\Services\DELib.mqh"
  #include "..\..\Services\DELib\GraphicDELib.mqh"
- #include "..\..\Defines\Defines.mqh"
  #include "CGBaseEvent.mqh"
  #include "..\..\Notify\Message\Message.mqh"
 #ifndef CGBASEEVENT_MQH_DECLARATION

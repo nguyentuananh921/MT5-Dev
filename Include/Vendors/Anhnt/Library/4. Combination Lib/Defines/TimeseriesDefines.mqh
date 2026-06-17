@@ -496,5 +496,121 @@ enum ENUM_SORT_INDICATOR_MODE
     SORT_BY_INDICATOR_SHORTNAME,                             // Sort by indicator short name
  };
 //+------------------------------------------------------------------+
-
+//+------------------------------------------------------------------+
+//| Data for working with indicator data                             |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| Integer properties of indicator data                             |
+//+------------------------------------------------------------------+
+enum ENUM_IND_DATA_PROP_INTEGER
+  {
+   IND_DATA_PROP_TIME = 0,                                  // Start time of indicator data bar period
+   IND_DATA_PROP_PERIOD,                                    // Indicator data period (timeframe)
+   IND_DATA_PROP_INDICATOR_TYPE,                            // Indicator type
+   IND_DATA_PROP_IND_BUFFER_NUM,                            // Indicator data buffer number
+   IND_DATA_PROP_IND_ID,                                    // Indicator ID
+   IND_DATA_PROP_IND_HANDLE,                                // Indicator handle
+  }; 
+#define IND_DATA_PROP_INTEGER_TOTAL (6)                     // Total number of indicator data integer properties
+#define IND_DATA_PROP_INTEGER_SKIP  (0)                     // Number of indicator data properties not used in sorting
+//+------------------------------------------------------------------+
+//| Indicator data real properties                                   |
+//+------------------------------------------------------------------+
+enum ENUM_IND_DATA_PROP_DOUBLE
+  {
+//--- bar data
+   IND_DATA_PROP_BUFFER_VALUE = IND_DATA_PROP_INTEGER_TOTAL,// Indicator data value
+  }; 
+#define IND_DATA_PROP_DOUBLE_TOTAL  (1)                     // Total number of indicator data real properties
+#define IND_DATA_PROP_DOUBLE_SKIP   (0)                     // Number of indicator data properties not used in sorting
+//+------------------------------------------------------------------+
+//| Indicator data string properties                                 |
+//+------------------------------------------------------------------+
+enum ENUM_IND_DATA_PROP_STRING
+  {
+   IND_DATA_PROP_SYMBOL = (IND_DATA_PROP_INTEGER_TOTAL+IND_DATA_PROP_DOUBLE_TOTAL), // Indicator data symbol
+   IND_DATA_PROP_IND_NAME,                                  // Indicator name
+   IND_DATA_PROP_IND_SHORTNAME,                             // Indicator short name
+  };
+#define IND_DATA_PROP_STRING_TOTAL  (3)                     // Total number of string properties of indicator data
+//+------------------------------------------------------------------+
+//| Possible criteria for indicator data sorting                     |
+//+------------------------------------------------------------------+
+#define FIRST_IND_DATA_DBL_PROP          (IND_DATA_PROP_INTEGER_TOTAL-IND_DATA_PROP_INTEGER_SKIP)
+#define FIRST_IND_DATA_STR_PROP          (IND_DATA_PROP_INTEGER_TOTAL-IND_DATA_PROP_INTEGER_SKIP+IND_DATA_PROP_DOUBLE_TOTAL-IND_DATA_PROP_DOUBLE_SKIP)
+enum ENUM_SORT_IND_DATA_MODE
+  {
+   //--- Sort by integer properties
+    SORT_BY_IND_DATA_TIME = 0,                               // Sort by bar period start time of indicator data
+    SORT_BY_IND_DATA_PERIOD,                                 // Sort by indicator data period (timeframe)
+    SORT_BY_IND_DATA_INDICATOR_TYPE,                         // Sort by indicator type
+    SORT_BY_IND_DATA_IND_BUFFER_NUM,                         // Sort by indicator data buffer number
+    SORT_BY_IND_DATA_IND_ID,                                 // Sort by indicator ID
+    SORT_BY_IND_DATA_IND_HANDLE,                             // Sort by indicator handle
+   //--- Sort by real properties
+    SORT_BY_IND_DATA_BUFFER_VALUE = FIRST_IND_DATA_DBL_PROP, // Sort by indicator data value
+   //--- Sort by string properties
+    SORT_BY_IND_DATA_SYMBOL = FIRST_IND_DATA_STR_PROP,       // Sort by indicator data symbol
+    SORT_BY_IND_DATA_IND_NAME,                               // Sort by indicator name
+    SORT_BY_IND_DATA_IND_SHORTNAME,                          // Sort by indicator short name
+  };
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| Data for working with tick data                                  |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//| Integer tick properties                                          |
+//+------------------------------------------------------------------+
+enum ENUM_TICK_PROP_INTEGER
+  {
+   TICK_PROP_TIME_MSC = 0,                                  // Time of the last price update in milliseconds
+   TICK_PROP_TIME,                                          // Time of the last update
+   TICK_PROP_VOLUME,                                        // Volume for the current Last price
+   TICK_PROP_FLAGS,                                         // Tick flags
+  }; 
+#define TICK_PROP_INTEGER_TOTAL (4)                         // Total number of tick integer properties
+#define TICK_PROP_INTEGER_SKIP  (0)                         // Number of tick properties not used in sorting
+//+------------------------------------------------------------------+
+//| Real tick properties                                             |
+//+------------------------------------------------------------------+
+enum ENUM_TICK_PROP_DOUBLE
+  {
+   TICK_PROP_BID = TICK_PROP_INTEGER_TOTAL,                 // Tick Bid price
+   TICK_PROP_ASK,                                           // Tick Ask price
+   TICK_PROP_LAST,                                          // Current price of the last trade (Last)
+   TICK_PROP_VOLUME_REAL,                                   // Volume for the current Last price with greater accuracy
+   TICK_PROP_SPREAD,                                        // Tick spread (Ask - Bid)
+  }; 
+#define TICK_PROP_DOUBLE_TOTAL  (5)                         // Total number of real tick properties
+#define TICK_PROP_DOUBLE_SKIP   (0)                         // Number of tick properties not used in sorting
+//+------------------------------------------------------------------+
+//| String tick properties                                           |
+//+------------------------------------------------------------------+
+enum ENUM_TICK_PROP_STRING
+  {
+   TICK_PROP_SYMBOL = (TICK_PROP_INTEGER_TOTAL+TICK_PROP_DOUBLE_TOTAL), // Tick symbol
+  };
+#define TICK_PROP_STRING_TOTAL  (1)                         // Total number of string tick properties
+//+------------------------------------------------------------------+
+//| Possible tick sorting criteria                                   |
+//+------------------------------------------------------------------+
+#define FIRST_TICK_DBL_PROP          (TICK_PROP_INTEGER_TOTAL-TICK_PROP_INTEGER_SKIP)
+#define FIRST_TICK_STR_PROP          (TICK_PROP_INTEGER_TOTAL-TICK_PROP_INTEGER_SKIP+TICK_PROP_DOUBLE_TOTAL-TICK_PROP_DOUBLE_SKIP)
+enum ENUM_SORT_TICK_MODE
+  {
+//--- Sort by integer properties
+   SORT_BY_TICK_TIME_MSC = 0,                               // Sort by the time of the last price update in milliseconds
+   SORT_BY_TICK_TIME,                                       // Sort by the time of the last price update
+   SORT_BY_TICK_VOLUME,                                     // Sort by volume for the current Last price
+   SORT_BY_TICK_FLAGS,                                      // Sort by tick flags
+//--- Sort by real properties
+   SORT_BY_TICK_BID = FIRST_TICK_DBL_PROP,                  // Sort by tick Bid price
+   SORT_BY_TICK_ASK,                                        // Sort by tick Ask price
+   SORT_BY_TICK_LAST,                                       // Sort by current price of the last trade (Last)
+   SORT_BY_TICK_VOLUME_REAL,                                // Sort by volume for the current Last price with greater accuracy
+   SORT_BY_TICK_SPREAD,                                     // Sort by tick spread
+//--- Sort by string properties
+   SORT_BY_TICK_SYMBOL = FIRST_TICK_STR_PROP,               // Sort by tick symbol
+  };
+//+------------------------------------------------------------------+
 #endif // __TIMESERIES_DEFINES_MQH__

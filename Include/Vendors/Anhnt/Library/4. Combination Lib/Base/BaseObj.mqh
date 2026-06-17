@@ -9,7 +9,7 @@
 #define __CBASEOBJ_MQH__
  // TODO: review includes
   #include <Object.mqh>
-  #include "..\Defines\Defines.mqh"
+  #include "..\Defines\CommonDefines.mqh"
   #include "..\Notify\Message\Message.mqh"
   //#include "..\..\Services\DELib.mqh"
   #ifndef CBASEOBJ_MQH_DECLARATION

@@ -12,7 +12,7 @@
   //| Include files                                                    |
   //+------------------------------------------------------------------+
   #include <Arrays\ArrayObj.mqh>
-  #include "..\..\Defines\Defines.mqh"
+  #include "..\..\Defines\CommonDefines.mqh"
 
   #ifndef CCOMMON_SELECT_MQH_DECLARATION
   #define CCOMMON_SELECT_MQH_DECLARATION
