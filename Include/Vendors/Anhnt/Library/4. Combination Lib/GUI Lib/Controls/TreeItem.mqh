@@ -156,7 +156,9 @@ class CTreeItem : public CButton
    //+------------------------------------------------------------------+
    int CTreeItem::ArrowXGap(const int node_level)
      {
-      return((m_arrow_x_gap=(node_level>0)? (12*node_level)+5 : 5));
+      //return((m_arrow_x_gap=(node_level>0)? (12*node_level)+5 : 5));
+      //Fix here:  Old code has space for arrow at level 0. Now it has no space for arrow at level 0 
+        return((m_arrow_x_gap=(node_level>0)? (12*node_level)+5 : 0));
      }
    //+------------------------------------------------------------------+
    // | X Coordinate Update |

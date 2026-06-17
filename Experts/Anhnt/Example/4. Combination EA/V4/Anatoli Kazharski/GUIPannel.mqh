@@ -770,7 +770,6 @@
          ArrayResize(m_sym_tree_pos, mw_total);
          ArrayFill  (m_sym_tree_pos, old, mw_total - old, -1);
        }
-
       for(int i = 0; i < mw_total; i++)
        {
          string            sym_name = ::SymbolName(i, true);
@@ -784,11 +783,24 @@
             int sym_li = m_treeview_settings.ItemsTotal();
             m_sym_tree_pos[i] = sym_li;
             // AddTreeItem() auto-increments parent count + sets state when TF children are added
-            m_treeview_settings.AddTreeItem(
-             sym_li, -1, sym_name, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
-             i, 0, 0,
-             0, 0, false, true
-            );
+             m_treeview_settings.AddTreeItem(sym_li, 
+                                          -1, //prev_node_list_index
+                                          sym_name, 
+                                          IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
+                                          i, 
+                                          0, //node_level symnode = 0 Node level must be >=0
+                                          0,
+                                          0, 0, 
+                                          false,    //item_state, m_t_item_state[]=true
+                                          false      //is_folder m_t_is_folder[]=false
+                                          );
+            //CTreeView::AddTreeItem
+               //  AddTreeItem(const int list_index, const int prev_node_list_index,
+               //                 const string item_text, const uint path_bmp,
+               //                 const int item_index, const int node_level,
+               //                 const int prev_node_item_index, const int items_total,
+               //                 const int folders_total, const bool item_state,
+               //                 const bool is_folder)
            }
 
          int sym_li = m_sym_tree_pos[i];
@@ -811,7 +823,6 @@
             CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
             if(s == NULL) continue;
             string actual = TimeframeDescription(s.Timeframe());
-
             if(k < child_count)
              {
                // Slot exists — Bug B: update label if period changed
@@ -822,13 +833,13 @@
             else
              {
                // New slot — add TF node
-                m_treeview_settings.AddTreeItem(
-                  m_treeview_settings.ItemsTotal(), sym_li, actual,
-                  IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
-                  k, 1, i, 0, 0, 
-                  true, //item_state, m_t_item_state[];
-                  false //is_folder m_t_is_folder[]
-               );
+                m_treeview_settings.AddTreeItem(m_treeview_settings.ItemsTotal(), sym_li, 
+                                          actual,
+                                          IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
+                                          k, 1, i, 0, 0, 
+                                          true,   //item_state, m_t_item_state[]=true;
+                                          false   //is_folder m_t_is_folder[]=false
+                                       );
              }
            }                   
        }

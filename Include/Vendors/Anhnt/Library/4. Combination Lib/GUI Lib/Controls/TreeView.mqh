@@ -391,7 +391,16 @@
         m_items[i].Index(m_t_list_index[i]);
         m_items[i].XSize(m_treeview_width);
         m_items[i].YSize(m_item_y_size);
-        m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i])+17);
+        //Fix Icon Gap on Symbol node
+          //Old version
+           //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i])+17);
+           //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon ? 0 : 17));
+          //New version
+           bool no_icon = (m_t_path_bmp[i] == (uint)INT_MAX);
+           int icon_gap = m_items[i].ArrowXGap(m_t_node_level[i]);
+           if (!no_icon && m_t_node_level[i] > 0)
+                icon_gap += 17;
+           m_items[i].IconXGap(icon_gap); 
         m_items[i].IconYGap(2);
         m_items[i].IconFile(m_t_path_bmp[i]);
         m_items[i].IsHighlighted(m_lights_hover);
