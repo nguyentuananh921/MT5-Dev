@@ -64,9 +64,7 @@
       CTimeCounter               m_gui_timecounter;      //--- Time counters
       CKeys                      m_keys;                 //For Keyboard    
     // For trading bubble
-      CTradingLevelBubble        m_trading_bubble;
-    //for Tree view
-         void ApplyTreeHighlight(void); 
+      CTradingLevelBubble        m_trading_bubble;    
     // Control Elements     
       CWindow                    m_Mainwindow;
       CStatusBar                 m_status_bar;
@@ -99,7 +97,9 @@
         CTextLabel                 m_lbl_info_close;
         CTable                     m_tbl_info_pattern_table;    
     //Test Purpose
-      CTextLabel                   m_test_labels[TABS1_TOTAL];  
+      CTextLabel                   m_test_labels[TABS1_TOTAL];
+    //for Tree view
+         void ApplyTreeHighlight(void);   
     // For guard on GUI.
      bool                          m_gui_created;        // guard thay cho s_gui_ready trong EA     
    private: // Private methods
@@ -152,8 +152,9 @@
        //--- Trading event handler
          void OnTradeEvent(void);
        //For GUI
-        void Update(const bool redraw = false);                
-        void RefreshGUI(void); 
+        void UpdateGUI(const bool redraw = false);                
+        //void RefreshGUI(void);
+        void AddTreeViewTFNode(void); 
         CWindow *GetMainWindowPointer(void) { return &m_Mainwindow; }      
       //For Information windows
          void ShowInfoWindowAt(const int x, const int y,
@@ -210,13 +211,14 @@
          InitializeIndicatorTable();
          m_trading_bubble.MousePointer(m_mouse);
          m_trading_bubble.OnInitEvent();
-         Update(true);
+         UpdateGUI(true);
        }  
       else if(uninit_reason == REASON_CHARTCHANGE)
        {
-         m_trading_bubble.OnInitEvent();// TF change: canvas cleared by MT5, recreate  
+         m_trading_bubble.OnInitEvent();// TF change: canvas cleared by MT5, recreate         
+         AddTreeViewTFNode();  
+         UpdateGUI(true);
        }   
-      // TF change: CHARTEVENT_CHART_CHANGE → RefreshGUI() sẽ lo      
       return true;           
    };
   // OnEvent handler
@@ -226,37 +228,73 @@
     // Double-click on a tree item: fired by CTreeView after hit-test identifies the node.
     // lparam = CTreeView::Id() (non-zero, distinguishes from single-click which fires lparam=0)
     // dparam = list_index of the double-clicked item
-     if(id == CHARTEVENT_CUSTOM + ON_CHANGE_TREE_PATH &&
-        lparam == m_treeview_settings.Id())
-      {
-       int li = (int)dparam;
-       CTreeItem *item = m_treeview_settings.ItemPointer(li);
-       if(item != NULL)
-        {
-         int parent_pos = m_treeview_settings.ItemPrevNode(li);
-         if(parent_pos == -1)
-            ChartSetSymbolPeriod(0, item.LabelText(), _Period);
-         else
-          {
-           CTreeItem *parent = m_treeview_settings.ItemPointer(parent_pos);
-           if(parent != NULL)
-              ChartSetSymbolPeriod(0, parent.LabelText(),
-                                   TimestampByDescription(item.LabelText()));
-          }
-        }
-       return;
-      }
+    if(id == CHARTEVENT_CUSTOM + ON_CHANGE_TREE_PATH &&
+         lparam == m_treeview_settings.Id())
+     {
+      int li = (int)dparam;
+      // ADDED: guard against stale/out-of-range list_index from event queue.
+      // ItemPointer() clamps silently so item != NULL even for invalid li;
+      // this early return prevents navigating to the wrong node.
+      if(li < 0 || li >= m_treeview_settings.ItemsTotal()) return;
+      CTreeItem *item = m_treeview_settings.ItemPointer(li);
+      //Print Debug           
+         Print("My debug from CGUIPannel::OnEvent [OnEvent TREE_PATH] li=", li, " item=", (item != NULL ? "OK" : "NULL"),
+         " type=", (item != NULL ? (string)item.Type() : "N/A"),
+         " TI_HAS_ITEMS=", (string)TI_HAS_ITEMS,
+         " item_state=", (item != NULL ? (string)item.ItemState() : "N/A"),
+         " parent_pos=", m_treeview_settings.ItemPrevNode(li));  // safe: ItemPrevNode now has bounds check
+      //--------------------------------
+      if(item == NULL) return;
+      int parent_pos = m_treeview_settings.ItemPrevNode(li);
+      if(parent_pos == -1)  // Symbol node
+         {
+         if(item.Type() == TI_HAS_ITEMS) return;
+         ChartSetSymbolPeriod(0, item.LabelText(), _Period);
+         }
+      else // TF node → navigate to exact sym + tf
+         {
+         CTreeItem *parent = m_treeview_settings.ItemPointer(parent_pos);
+         if(parent != NULL)
+               ChartSetSymbolPeriod(0, parent.LabelText(),
+                                    TimestampByDescription(item.LabelText()));
+         }        
+      return;
+     } 
     //CHARTEVENT_CHART_CHANGE
      if(id == CHARTEVENT_CHART_CHANGE)
       {
-         RefreshGUI();
+       // Guard 1: rebuild tree only on symbol/TF change
+        static string          last_sym = "";
+        static ENUM_TIMEFRAMES last_tf  = PERIOD_CURRENT;
+        if(_Symbol != last_sym || _Period != last_tf)
+         {
+            last_sym = _Symbol;
+            last_tf  = _Period;
+            AddTreeViewTFNode();
+            ApplyTreeHighlight();
+         }
+       // Guard 2: rebuild indicator table only when indicator count changes
+         static int last_ind = -1;
+         int cur_ind = 0;
+         int wins = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
+         for(int w = 0; w < wins; w++)
+            cur_ind += ChartIndicatorsTotal(0, w);
+         if(cur_ind != last_ind)
+         {
+            last_ind = cur_ind;
+            InitializeIndicatorTable();
+         }
          return;
       }
     // For InfoWindow via Ctrl ──────────────────
       if(id == CHARTEVENT_MOUSE_MOVE || id == CHARTEVENT_MOUSE_WHEEL)
        {
+        // Bubble handles CHARTEVENT_CLICK here; drag/hover is self-managed via OnTickEvent polling
+         m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
+        
         int mx = (int)lparam;
         int my = (int)dparam;
+        
         if(!m_keys.KeyCtrlState())
          {
             HideInfoWindow();
@@ -284,8 +322,7 @@
          }
           return;
        }
-    // Bubble receives raw events first, regardless of control early-returns
-     m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
+    
     // Handle indicator table click (checkbox toggle)
      bool ind_header = ((id - CHARTEVENT_CUSTOM) == ON_SORT_DATA      && lparam == m_indicator_table.Id());
      bool ind_cell   = (id == (CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX) && lparam == m_indicator_table.Id());
@@ -449,7 +486,8 @@
   void CGUIPannel::OnDeinitEvent(const int reason)
    {
       m_trading_bubble.OnDeinitEvent();
-      CWndEvents::Destroy();
+      if(reason != REASON_CHARTCHANGE)
+         CWndEvents::Destroy();
    }
   //+------------------------------------------------------------------+
   //| Timer                                                            |
@@ -504,41 +542,18 @@
       //For InfoWindow
        HideInfoWindow();
       return true;
-    }
-  void CGUIPannel::RefreshGUI(void)
-   {
-      int prev_count = m_treeview_settings.ItemsTotal(); // capture BEFORE populate
-      PopulateSymbolTFTree();
-      if(m_treeview_settings.ItemsTotal() > prev_count)
-       {
-         int rebuild_from = prev_count;
-         for(int j = 0; j < prev_count; j++)
-          {
-            CTreeItem *ti = m_treeview_settings.ItemPointer(j);
-            if(ti == NULL || m_treeview_settings.ItemPrevNode(j) != -1) continue; // skip TF children
-            if(ti.Type() == TI_HAS_ITEMS) continue;  // already correct, skip to avoid duplicate AddImagesGroup            
-            CBarTimeSeriesDE *bts = m_timeseries.GetTimeseries(ti.LabelText());
-            if(bts != NULL && bts.GetListSeries() != NULL && bts.GetListSeries().Total() > 0)
-               rebuild_from = MathMin(rebuild_from, j);
-          }
-         m_treeview_settings.CreateItemsFrom(rebuild_from);
-       }
-      else
-         m_treeview_settings.Update(true);
-      ApplyTreeHighlight();
-      SetValuesToIndicatorTable();
-      m_chart.Redraw();
-   }  
+    }   
   //+------------------------------------------------------------------+
   //| Update GUI                                                       |
   //+------------------------------------------------------------------+
-  void CGUIPannel::Update(const bool redraw)
+  void CGUIPannel::UpdateGUI(const bool redraw)
    {
       // Treeview: new items → CreateItemsFrom, existing only → re-render
        m_treeview_settings.Update(true);
       // Tables: resize canvas + draw all rows
          m_pattern_table.Update(true);
          m_indicator_table.Update(true);
+         SetValuesToIndicatorTable();   
       if(redraw) m_chart.Redraw();
    }  
 //For Control
@@ -736,6 +751,13 @@
       CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_treeview_settings);      
       return true;
    }
+  //void CGUIPannel::RefreshGUI(void)
+  void CGUIPannel::AddTreeViewTFNode(void)
+   {      
+      PopulateSymbolTFTree();
+      ApplyTreeHighlight();      
+      m_chart.Redraw();
+   } 
   void CGUIPannel::PopulateSymbolTFTree(void)
    {
       if(m_timeseries == NULL) return;
@@ -761,16 +783,16 @@
            {
             int sym_li = m_treeview_settings.ItemsTotal();
             m_sym_tree_pos[i] = sym_li;
-            m_treeview_settings.AddItem(
-               sym_li, -1, sym_name, (uint)INT_MAX,
-               i, 0, 0,
-               tf_cnt, 0, tf_cnt > 0, true
+            // AddTreeItem() auto-increments parent count + sets state when TF children are added
+            m_treeview_settings.AddTreeItem(
+             sym_li, -1, sym_name, (uint)INT_MAX,
+             i, 0, 0,
+             0, 0, false, true
             );
            }
 
-          int sym_li = m_sym_tree_pos[i];
-          if(tf_cnt == 0) continue;   //No TF found on sym_li
-
+         int sym_li = m_sym_tree_pos[i];
+         if(tf_cnt == 0) continue;   //No TF found on sym_li
          // Step 2: Collect existing TF children of sym_li node
           int children[];
           ArrayResize(children, 0);
@@ -783,7 +805,6 @@
                children[sz] = j;
              }
           int child_count = ArraySize(children);
-
          // Step 3: Match bts[k] against children[k]
           for(int k = 0; k < tf_cnt; k++)
            {
@@ -801,19 +822,15 @@
             else
              {
                // New slot — add TF node
-                m_treeview_settings.AddItem(
+                m_treeview_settings.AddTreeItem(
                   m_treeview_settings.ItemsTotal(), sym_li, actual,
                   IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
-                  k, 1, i, 0, 0, false, false
+                  k, 1, i, 0, 0, 
+                  true, //item_state, m_t_item_state[];
+                  false //is_folder m_t_is_folder[]
                );
              }
-           }
-         // Update parent's items_total if new TF nodes were added
-         if(child_count < tf_cnt)
-           {
-             m_treeview_settings.SetItemsTotal(sym_li, tf_cnt);             
-             m_treeview_settings.SetItemState(sym_li, true);
-           }            
+           }                   
        }
    } 
    
@@ -823,38 +840,28 @@
       int    total    = m_treeview_settings.ItemsTotal();  // duyệt tất cả items
 
       for(int i = 0; i < total; i++)
-      {
+       {
          CTreeItem *item = m_treeview_settings.ItemPointer(i);
          if(item == NULL) continue;
 
-         if(m_treeview_settings.ItemPrevNode(i) == -1)   // sym node (node_level=0)
+         int parent_pos = m_treeview_settings.ItemPrevNode(i);
+
+         if(parent_pos == -1)  // sym node
           {
-            bool active = (item.LabelText() == _Symbol);
-            if(item.Type() == TI_HAS_ITEMS)  // sym WITH TF
-            {
-               uint img0 = active ? IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP
-                                 : IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP;
-               uint img1 = active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
-                                 : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP;
-               item.SetImage(1, 0, img0);
-               item.SetImage(1, 1, img1);
-            }
-          else // sym WITHOUT TF
-             {
-               item.IconFile(IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP);
-             }
+               bool active = (item.LabelText() == _Symbol);
+               item.IconFile(active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
+                                    : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
           }
-         else   // TF node (node_level=1, ArrowXGap=17)
-         {
-            // find parent sym directly via prev_node index
-            int        parent_pos  = m_treeview_settings.ItemPrevNode(i);
-            CTreeItem *parent_item = m_treeview_settings.ItemPointer(parent_pos);
-            bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
-            bool hl = (parent_is_active && item.LabelText() == chart_tf);
-            item.IconFile(hl ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
-                              : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
-         }
-      }      
+         else  // TF node
+          {
+               CTreeItem *parent_item = m_treeview_settings.ItemPointer(parent_pos);
+               bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
+               bool hl = (parent_is_active && item.LabelText() == chart_tf);
+               item.IconFile(hl ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
+                                 : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
+          }
+        }
+      m_treeview_settings.RedrawTreeList(); 
       m_treeview_settings.UpdateTreeList(true);
    }
  

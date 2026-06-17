@@ -4,10 +4,7 @@
 //|                                              http://www.mql5.com |
 //| Topic link https://www.mql5.com/en/articles/2539                 |
 //| Lib Link https://www.mql5.com/en/code/19703                      |
-//| Add By Anhnt: bool CreateItemsFrom(const int start_index);       |
-//| Add By Anhnt: void SetItemsTotal(const int index, const int total);|
 //| Add by Anhnt: int ItemPrevNode(int index)                        |
-//| Add by Anhnt: SetItemState(const int index, const bool state)    |
 //+------------------------------------------------------------------+
 //| Class for creating a tree list                                   |
 //+------------------------------------------------------------------+
@@ -180,7 +177,13 @@
                                      const uint path_bmp, const int item_index, const int node_number,
                                      const int item_number, const int items_total,
                                      const int folders_total, const bool item_state,
-                                     const bool is_folder = true);    
+                                     const bool is_folder = true);
+     void                        AddTreeItem(const int list_index, const int prev_node_list_index,
+                                    const string item_text, const uint path_bmp,
+                                    const int item_index, const int node_level,
+                                    const int prev_node_item_index, const int items_total,
+                                    const int folders_total, const bool item_state,
+                                    const bool is_folder);
     // --- Adds an element to the tab item array
      void                        AddToElementsArray(const int item_index, CElement &object);
     // --- Show elements of only the selected tab item
@@ -207,10 +210,10 @@
       void                        UpdateTreeList(const bool redraw = false);
       void                        UpdateContentList(void);
     // ---My Adding Method      
-      bool                        CreateItemsFrom(const int start_index);
-      void                        SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; }      
-      int                         ItemPrevNode(int index) const { return m_t_prev_node_list_index[index]; } 
-      void                        SetItemState(const int index, const bool state);     
+      int                         ItemPrevNode(int index) const;
+      // bool                        CreateItemsFrom(const int start_index);
+      // void                        SetItemsTotal(const int index, const int total) { m_t_items_total[index] = total; } 
+      // void                        SetItemState(const int index, const bool state);     
   };
 #endif // CTREEVIEW_MQH_DECLARATION
 #ifndef CTREEVIEW_MQH_IMPLEMENTATION
@@ -249,7 +252,8 @@
           return;
         }
       // --- We only come in if there is a list
-      if (m_t_items_total[m_selected_item_index] > 0) 
+      //if (m_t_items_total[m_selected_item_index] > 0)
+      if (m_selected_item_index >= 0 && m_t_items_total[m_selected_item_index] > 0) 
       {
         // --- Shift the content list if the scroll bar control is in action
         if (m_content_scrollv.ScrollBarControl()) 
@@ -294,14 +298,24 @@
     }
    if(id == CHARTEVENT_CUSTOM + ON_DOUBLE_CLICK)
     {
-      if(m_x_resize.IsVisible() || m_x_resize.State()) return;
+      static bool s_busy = false;   // ← thêm guard
+      if(s_busy) return;
+      s_busy = true;
+
+      //Debug
+        Print("My DebugCTreeView::OnEvent [TV ON_DOUBLE_CLICK] fired, mouse.Y=", m_mouse.Y());  // ← thêm dòng này
+      if(m_x_resize.IsVisible() || m_x_resize.State()) return;      
       int v = m_scrollv.CurrentPos();
       for(int r = 0; r < m_visible_items_total; r++)
        {
         if(v < 0 || v >= m_items_total) break;
         int li = m_td_list_index[v];
-        if(m_mouse.Y() >= m_items[li].Y() && m_mouse.Y() <  m_items[li].Y() + m_items[li].YSize())
+        if(m_mouse.Y() >= m_items[li].Y() && m_mouse.Y() < m_items[li].Y() + m_items[li].YSize()
+            && m_mouse.X() >= CElementBase::X() && m_mouse.X() < CElementBase::X() + m_treeview_width)
          {
+          //Debug
+            Print("My DebugCTreeView::OnEvent [TV ON_DOUBLE_CLICK] hit li=", li, " type=", m_items[li].Type(),
+                  " Y_item=", m_items[li].Y(), " Y_mouse=", m_mouse.Y());
           if(m_items[li].Type() == TI_HAS_ITEMS)
            {
             m_t_item_state[li] = !m_t_item_state[li];
@@ -316,6 +330,7 @@
             ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
            }
          ::EventChartCustom(m_chart_id, ON_CHANGE_TREE_PATH, CElementBase::Id(), li, "");
+         s_busy = false; //Release before return
           return;
          }
         v++;
@@ -409,6 +424,9 @@
     int items_total = ::ArraySize(m_items);
     for (int i = 0; i < items_total; i++) 
      {
+      // Skip already-initialized items
+      if(::CheckPointer(m_items[i].MainPointer()) != POINTER_INVALID)
+        { y = (i > 0) ? y + m_item_y_size : y; continue; }
       // --- Y coordinate calculation
       y = (i > 0) ? y + m_item_y_size : y;
       // --- Save the parent pointer
@@ -441,8 +459,12 @@
       if (!m_items[i].CreateTreeItem(x, y, type, m_t_list_index[i],
                                      m_t_node_level[i], m_t_item_text[i],
                                      m_t_item_state[i]))
-        return (false);
+        {
+          //Print("My Debug from CTreeView::CreateItemsFrom CreateTreeItem FAILED at i=", i);
+          return false;
+        }
       //Fixing Lib
+        //m_items[i].ItemState((int)m_t_item_state[i]);        
         m_items[i].Id(CElementBase::Id()); 
       // --- Add element to array
       CElement::AddToArray(m_items[i]);
@@ -658,7 +680,54 @@
      m_t_folders_total[array_size] = folders_total;
      m_t_item_state[array_size] = item_state;
      m_t_is_folder[array_size] = is_folder;
+    // Auto-update parent node's child count and expanded state
+     if(prev_node_list_index >= 0 && prev_node_list_index < array_size)
+      {
+        m_t_items_total[prev_node_list_index]++;
+        if(m_t_items_total[prev_node_list_index] == 1)
+            m_t_item_state[prev_node_list_index] = true;
+      }
+
    }
+
+ void CTreeView::AddTreeItem(const int list_index, const int prev_node_list_index,
+                            const string item_text, const uint path_bmp,
+                            const int item_index, const int node_level,
+                            const int prev_node_item_index, const int items_total,
+                            const int folders_total, const bool item_state,
+                            const bool is_folder)
+  {
+      // Step 1: fill data arrays (reuse existing logic)
+      AddItem(list_index, prev_node_list_index, item_text, path_bmp,
+              item_index, node_level, prev_node_item_index, items_total,
+              folders_total, item_state, is_folder);
+
+      // Step 2: if treeview already live, create graphic immediately
+      if(m_chart_id == 0) return;
+
+      int i = ::ArraySize(m_items) - 1;
+      int y = (i > 0) ? 1 + i * m_item_y_size : 1;
+
+      m_items[i].MainPointer(this);
+      m_items[i].NamePart("tree_item");
+      m_items[i].Index(m_t_list_index[i]);
+      m_items[i].XSize(m_treeview_width);
+      m_items[i].YSize(m_item_y_size);
+      bool no_icon = (m_t_path_bmp[i] == (uint)INT_MAX);
+      m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon ? 0 : 17));
+      m_items[i].IconYGap(2);
+      m_items[i].IconFile(m_t_path_bmp[i]);
+      m_items[i].IsHighlighted(m_lights_hover);
+
+      ENUM_TYPE_TREE_ITEM type = (m_t_items_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
+      m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;
+
+      m_items[i].CreateTreeItem(1, y, type, m_t_list_index[i],
+                                m_t_node_level[i], m_t_item_text[i], m_t_item_state[i]);
+      m_items[i].Id(CElementBase::Id());
+      CElement::AddToArray(m_items[i]);
+      FormTreeList();   // rebuild m_td_list_index 
+  }
  //+------------------------------------------------------------------+
  // | Adds an element to the array of the specified tab |
  //+------------------------------------------------------------------+
@@ -1900,56 +1969,11 @@
     }
     // --- Redraw element
     Draw();
-  }
- // --- My Adding Method
- // Creates chart objects only for items from start_index onwards
- bool CTreeView::CreateItemsFrom(const int start_index)
-   {
-      int x = 1;
-      int items_total = ::ArraySize(m_items);
-      for(int i = start_index; i < items_total; i++)
-      {
-         int y = 1 + i * m_item_y_size;
-         m_items[i].MainPointer(this);
-         m_items[i].NamePart("tree_item");         
-         m_items[i].Index(m_t_list_index[i]);
-         m_items[i].XSize(m_treeview_width);
-         m_items[i].YSize(m_item_y_size);
-          //Modify here to fix XGap
-            //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + 17);
-            bool no_icon2 = (m_t_path_bmp[i] == (uint)INT_MAX);
-            m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon2 ? 0 : 17));         
-         m_items[i].IconYGap(2);
-         m_items[i].IconFile(m_t_path_bmp[i]);
-         m_items[i].IsHighlighted(m_lights_hover);
-         ENUM_TYPE_TREE_ITEM type = (m_t_items_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
-         m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;
-         
-         if(!m_items[i].CreateTreeItem(x, y, type, m_t_list_index[i],
-                                       m_t_node_level[i], m_t_item_text[i],
-                                       m_t_item_state[i]))                                       
-            {
-              //For debug
-              Print("My Debug from CTreeView::CreateItemsFrom CreateTreeItem FAILED at i=", i);
-              return false;
-            }
-          //fixing
-            m_items[i].Id(CElementBase::Id());
-      }
-      SetNodeLevelBoundaries();
-      //SetRootItemsTotal();
-      //For debug
-        Print("My Debug from CTreeView::CreateItemsFrom After FormTreeList: td_list size=", ArraySize(m_td_list_index));
-      FormTreeList();
-      RedrawTreeList();
-      UpdateTreeList();
-      return true;
-   } 
- void CTreeView::SetItemState(const int index, const bool state)
-  {
-    if(index < 0 || index >= m_items_total) return;
-    m_t_item_state[index] = state;
-    m_items[index].ItemState((int)state);
+  } 
+ int CTreeView::ItemPrevNode(int index) const
+  { 
+    if(index < 0 || index >= ArraySize(m_t_prev_node_list_index)) return -1;
+    return m_t_prev_node_list_index[index]; 
   }
 //+------------------------------------------------------------------+
 #endif // CTREEVIEW_MQH_IMPLEMENTATION

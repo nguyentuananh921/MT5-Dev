@@ -56,6 +56,7 @@
         CAccountsCollection *GetAccounts(void);
        //For Symbols Information at tab Trade
         CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; };
+       
        //Note
         //bool RebuildSymbols(ENUM_SYMBOLS_MODE mode);
     };
@@ -129,6 +130,8 @@
         if(index == WRONG_VALUE) return NULL;
         return (CAccount*)m_accounts.GetList().At(index);
     }
+  
+
 
   //Rebuild symbols collection for Symbols Information at tab Trade according to 
   // the selected mode in the GUI and return true if it is successful, otherwise false

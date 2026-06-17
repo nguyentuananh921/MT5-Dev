@@ -56,16 +56,26 @@
         bool              IsEvent(void)      const { return m_is_event;   }
         ENUM_ENGINE_EVENT GetEventCode(void) const { return m_event_code; }
        //For Pointer
-        CAccount *GetCurrentAccount(void);
+        CAccount            *GetCurrentAccount(void);
         CAccountsCollection *GetAccounts(void) { return &m_accounts;}
-        CMarketCollection *GetMarketCollection(void) { return &m_market; }       
-        CSymbolsCollection *GetSymbolsCollection(void) { return &m_symbols; }
-        CTradingControl* GetTradingControl(void) { return &m_trading_control; }
+        CMarketCollection   *GetMarketCollection(void) { return &m_market; }       
+        CSymbolsCollection  *GetSymbolsCollection(void) { return &m_symbols; }
+        CTradingControl     *GetTradingControl(void) { return &m_trading_control; }
        //--- Return the list of market (1) positions, (2) pending orders and (3)
        // market orders
-        CArrayObj *GetListMarketPosition(void);
-        CArrayObj *GetListMarketPendings(void);
-        CArrayObj *GetListMarketOrders(void);
+        CArrayObj           *GetListMarketPosition(void);
+        CArrayObj           *GetListMarketPendings(void);
+        CArrayObj           *GetListMarketOrders(void);
+       //For Profit Calculation 
+        // Floating profit (current price)
+         double             SumFloatingProfit(CArrayObj *list);
+         double             CalcProfit(void);
+         double             CalcProfit(const string symbol);
+         double             CalcProfit(ENUM_POSITION_TYPE dir);
+         double             CalcProfit(const string symbol, ENUM_POSITION_TYPE dir);
+        // Hypothetical profit (at target price)
+         double             CalcProfitAt(const string symbol, double price);
+         double             CalcProfitAt(const string symbol, ENUM_POSITION_TYPE dir, double target_price);
        //Note
         //bool RebuildSymbols(ENUM_SYMBOLS_MODE mode);
     };
@@ -185,6 +195,77 @@
                                     ORDER_STATUS_MARKET_ORDER, EQUAL);
     return list;
    }
+   //For profit calculation
+   double CTradingEngine::SumFloatingProfit(CArrayObj *list)
+    {
+        if(list == NULL) return 0;
+        double total = 0;
+        for(int i = 0; i < list.Total(); i++)
+        {
+            CMarketPosition *pos = (CMarketPosition*)list.At(i);
+            if(pos != NULL) total += pos.Profit();
+        }
+        return total;
+    }
+   //+------------------------------------------------------------------+
+   double CTradingEngine::CalcProfit(void)
+    {
+        CArrayObj *list = m_market.GetList();
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+        return SumFloatingProfit(list);
+    }
+   //+------------------------------------------------------------------+
+   double CTradingEngine::CalcProfit(const string symbol)
+    {
+        CArrayObj *list = m_market.GetList();
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, symbol, EQUAL);
+        return SumFloatingProfit(list);
+    }
+   //+------------------------------------------------------------------+
+   double CTradingEngine::CalcProfit(ENUM_POSITION_TYPE dir)
+    {
+        CArrayObj *list = m_market.GetList();
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+        return SumFloatingProfit(list);
+    }
+   //+------------------------------------------------------------------+
+   double CTradingEngine::CalcProfit(const string symbol, ENUM_POSITION_TYPE dir)
+    {
+        CArrayObj *list = m_market.GetList();
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, symbol, EQUAL);
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+        return SumFloatingProfit(list);
+    }
+   //+------------------------------------------------------------------+
+   double CTradingEngine::CalcProfitAt(const string symbol, ENUM_POSITION_TYPE dir,
+                                        double target_price)
+    {
+        CArrayObj *list = m_market.GetList();
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, symbol, EQUAL);
+        list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+        if(list == NULL) return 0;
+        double total = 0;
+        for(int i = 0; i < list.Total(); i++)
+        {
+            CMarketPosition *pos = (CMarketPosition*)list.At(i);
+            if(pos == NULL) continue;
+            double p = 0;
+            if(OrderCalcProfit((ENUM_ORDER_TYPE)dir, symbol,
+                            pos.Volume(), pos.PriceOpen(), target_price, p))
+            total += p;
+        }
+        return total;
+    }
+   //+------------------------------------------------------------------+
+   double CTradingEngine::CalcProfitAt(const string symbol, double price)
+    {
+        return CalcProfitAt(symbol, POSITION_TYPE_BUY,  price)
+            + CalcProfitAt(symbol, POSITION_TYPE_SELL, price);
+    }
   //Rebuild symbols collection for Symbols Information at tab Trade according to 
   // the selected mode in the GUI and return true if it is successful, otherwise false
   // bool CTradingEngine::RebuildSymbols(ENUM_SYMBOLS_MODE mode)

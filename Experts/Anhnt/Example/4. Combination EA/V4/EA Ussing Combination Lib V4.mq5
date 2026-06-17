@@ -21,8 +21,7 @@
     CTimeSeriesEngine timeSeriesEngine;
 //For Candle Pattern Render
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
-    CPatternRenderer patternRenderer;
-    static bool s_need_tree_refresh = false;
+    CPatternRenderer patternRenderer;    
  //+------------------------------------------------------------------+
  //| Expert initialization function                                   |
  //+------------------------------------------------------------------+
@@ -33,48 +32,40 @@
       //--- Set the permissions to send cursor movement and mouse scroll events
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_MOVE, true);
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_WHEEL, true);
-      if(_UninitReason == REASON_CHARTCHANGE) 
-        s_need_tree_refresh = true;
-      //For Trading
-          tradingEngine.OnInitEvent();
+      //For trading
+        tradingEngine.OnInitEvent();
       // Init timeseries engine first
       //  First attach only: set symbols, init engine, scan, fill table, init renderer
-          timeSeriesEngine.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
-          timeSeriesEngine.OnInitEvent(Symbol(), Period());
-      //For GUI.Now set both pointers before GUI init              
+        timeSeriesEngine.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
+        timeSeriesEngine.OnInitEvent(Symbol(), Period());
+      //For GUI.Now set both pointers before GUI init 
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
         mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection());
         mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
         mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl()); 
-        // GUI init: m_symbols và m_timeseries đều đã có
-          mGUIPannel.OnInitEvent(_UninitReason);        
+        mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE 
       //For patternRenderer
         patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
         mGUIPannel.SetPatternRenderer(&patternRenderer);        
         CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
         if(plist != NULL) patternRenderer.Refresh(plist,true,true);
-      EventSetMillisecondTimer(16);    
-    return (INIT_SUCCEEDED);
+      EventSetMillisecondTimer(16); 
+      return (INIT_SUCCEEDED);
    }
-
  //+------------------------------------------------------------------+
  //| Expert deinitialization function                                 |
  //+------------------------------------------------------------------+
  void OnDeinit(const int reason)
-  {
-    //  mainProgram.OnDeinitEvent(reason);
+  {    
     //For Debug
-      Print(__FUNCTION__, "My Debug EA::OnDeinit reason=", reason,
-          " CHARTCHANGE=", REASON_CHARTCHANGE,
-          " RECOMPILE=", REASON_RECOMPILE);
+      // Print(__FUNCTION__, "My Debug EA::OnDeinit reason=", reason,
+      //     " CHARTCHANGE=", REASON_CHARTCHANGE,
+      //     " RECOMPILE=", REASON_RECOMPILE);
     //For GUIPannel And CPatternRenderer Skip destroy when TF Change
-    if(reason != REASON_CHARTCHANGE)
-    {
-        mGUIPannel.OnDeinitEvent(reason);          
-        CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-        patternRenderer.OnDeinitEvent(plist);
-    }     
+    mGUIPannel.OnDeinitEvent(reason);                          
+    CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+    patternRenderer.OnDeinitEvent(plist,reason); 
   }
  //+------------------------------------------------------------------+
  //| Expert tick function                                             |
@@ -92,18 +83,12 @@
           data_calc.rates_total   = ::Bars(Symbol(), PERIOD_CURRENT);
       }
     //--- sync ALL TFs + race condition fix (returns true if new scan happened)
-      bool any_new_bar = timeSeriesEngine.OnTickEvent(Symbol(), data_calc);
-      if(any_new_bar&& s_need_tree_refresh)
-        {
-          mGUIPannel.RefreshGUI();
-          s_need_tree_refresh = false;
-        }         
+      bool any_new_bar = timeSeriesEngine.OnTickEvent(Symbol(), data_calc);           
       if(any_new_bar)
         {
             CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
             if(plist != NULL) patternRenderer.UpdateNew(plist, true, false);
-        }         
-     //::ChartRedraw(ChartID());
+        } 
   }
 
  //+------------------------------------------------------------------+
@@ -112,13 +97,14 @@
  void OnTimer(void) 
   {
     mGUIPannel.OnTimerEvent();
+    timeSeriesEngine.OnTimerEvent();
   }
  //+------------------------------------------------------------------+
  //| Trade function                                                   |
  //+------------------------------------------------------------------+
  void OnTrade(void) 
   {
-    
+    tradingEngine.OnTickEvent();
   }
  //+------------------------------------------------------------------+
  //| ChartEvent function                                              |

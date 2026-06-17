@@ -114,7 +114,8 @@ class CMouseCombine
       m_x           = (int)lparam;
       m_y           = (int)dparam;
       m_state_flags = 0x0001;
-      CheckDoubleClick();
+      if(id == CHARTEVENT_OBJECT_CLICK)
+         CheckDoubleClick();
       return;
       }
   }
