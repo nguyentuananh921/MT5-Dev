@@ -1,16 +1,22 @@
 {
 	"folders": [
 		{
-			"path": "../../../../Include/Vendors/Artyom Trishkin/2. 14710 DoEasy-Service Functions"
+			"path": "../../Example/4. Combination EA"
+		},
+		{
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
+		},
+		{
+			"path": "../../../Artyom Trishkin/2. DoEasy. Service functions EA"
+		},
+		{
+			"path": "../../../Artyom Trishkin/4. 14862 Trailling Stop"
+		},
+		{
+			"path": "../../../../Include/Vendors/Anhnt/Library/2. DoEasy. Service functions Lib"
 		},
 		{
 			"path": "../../../../Logs"
-		},
-		{
-			"path": "../../Example/2. Trailling"
-		},
-		{
-			"path": "../../../Artyom Trishkin/2. DoEasy. Service functions"
 		}
 	],
 	"settings": {
@@ -19,7 +25,7 @@
 			"-std=c++17",
 			"-D__MQL__",
 			"-D__MQL5__",
-			"-includec:/Users/nguye/.antigravity/extensions/ngsoftware.mql-clangd-1.1.42-universal/files/mql_clangd_compat.h",
+			"-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.61-universal/files/mql_clangd_compat.h",
 			"-fms-extensions",
 			"-fms-compatibility",
 			"-ferror-limit=0",
