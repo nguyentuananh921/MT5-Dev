@@ -16,12 +16,11 @@
   CGUIPannel mGUIPannel;
   #include <..\Artyom Trishkin\TradingEngine.mqh>
   CTradingEngine tradingEngine;
-//For CBar Use InfoPannel Instead
   #include <..\Artyom Trishkin\TimeSeriesEngine.mqh>
     CTimeSeriesEngine timeSeriesEngine;
 //For Candle Pattern Render
-  #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
-    CPatternRenderer patternRenderer;    
+  // #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
+  //   CPatternRenderer patternRenderer;    
  //+------------------------------------------------------------------+
  //| Expert initialization function                                   |
  //+------------------------------------------------------------------+
@@ -42,15 +41,16 @@
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
         mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection());
-        mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
-        mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl()); 
+        //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
+        //mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
+        //mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl()); 
         
         mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE 
       //For patternRenderer
-        patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
-        mGUIPannel.SetPatternRenderer(&patternRenderer);        
-        CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-        if(plist != NULL) patternRenderer.Refresh(plist,true,true);
+        // patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
+        // mGUIPannel.SetPatternRenderer(&patternRenderer);        
+        // CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+        // if(plist != NULL) patternRenderer.Refresh(plist,true,true);
       EventSetMillisecondTimer(16); 
       return (INIT_SUCCEEDED);
    }
@@ -65,8 +65,8 @@
       //     " RECOMPILE=", REASON_RECOMPILE);
     //For GUIPannel And CPatternRenderer Skip destroy when TF Change
     mGUIPannel.OnDeinitEvent(reason);                          
-    CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-    patternRenderer.OnDeinitEvent(plist,reason); 
+    // CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+    // patternRenderer.OnDeinitEvent(plist,reason); 
   }
  //+------------------------------------------------------------------+
  //| Expert tick function                                             |
@@ -85,11 +85,11 @@
       }
     //--- sync ALL TFs + race condition fix (returns true if new scan happened)
       bool any_new_bar = timeSeriesEngine.OnTickEvent(Symbol(), data_calc);           
-      if(any_new_bar)
-        {
-            CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-            if(plist != NULL) patternRenderer.UpdateNew(plist, true, false);
-        } 
+      // if(any_new_bar)
+      //   {
+      //       CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+      //       if(plist != NULL) patternRenderer.UpdateNew(plist, true, false);
+      //   } 
   }
 
  //+------------------------------------------------------------------+
@@ -107,7 +107,7 @@
     
     ulong t2 = GetMicrosecondCount();
     
-    patternRenderer.OnTimerEvent();
+    //patternRenderer.OnTimerEvent();
     
     ulong t3 = GetMicrosecondCount();
     if(t3 - t0 > 2000)
@@ -135,8 +135,8 @@
      mGUIPannel.ChartEvent(id, lparam, dparam, sparam); 
     // For PatternRender
       // 2. Renderer after: plist already has new patterns if any were added
-      CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
-      patternRenderer.OnChartEvent(id, plist);        
+        // CArrayObj *plist = timeSeriesEngine.GetTimeSeriesCollection().GetListAllPatterns();
+        // patternRenderer.OnChartEvent(id, plist);        
   }
  //+------------------------------------------------------------------+
  //| Tester function                                                  |

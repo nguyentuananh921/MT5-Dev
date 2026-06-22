@@ -38,7 +38,11 @@
       "Bash(find / -name \"Element.mqh\" 2>/dev/null | head -10)",
       "Read(//d//**)",
       "Bash(find \"c:/Users/nguye\" -name \"TreeView.mqh\" 2>/dev/null)",
-      "Read(//c/Users/nguye/**)"
+      "Read(//c/Users/nguye/**)",
+      "mcp__plugin_claude-mem_mcp-search__search",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Experts\\\\Anhnt\\\\Example\\\\4. Combination EA\\\\V4\\\\Anatoli Kazharski\\\\GUIPannel.mqh', 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\GUI Lib\\\\Controls\\\\TreeView.mqh', 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\GUI Lib\\\\Controls\\\\TreeItem.mqh' | Select-Object FullName, LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Experts\\\\Anhnt\\\\Example\\\\4. Combination EA\\\\V4\\\\Anatoli Kazharski\\\\GUIPannel.mqh', 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\GUI Lib\\\\Controls\\\\TreeView.mqh', 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Include\\\\Vendors\\\\Anhnt\\\\Library\\\\4. Combination Lib\\\\GUI Lib\\\\Controls\\\\TreeItem.mqh' | Format-Table -AutoSize -Wrap | Out-String -Width 300\")",
+      "Bash(awk 'NR>=56890 && NR<=56930' \"c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Logs/20260620.log\")"
     ]
   }
 }

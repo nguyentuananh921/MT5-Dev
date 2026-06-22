@@ -9,7 +9,7 @@
 #include "Scrolls.mqh"
 #include "..\Keys.mqh"
 #include "..\Element.mqh"
-#include "..\TimeCounter.mqh"
+#include "..\..\Services\TimeCounter.mqh"
 #include <Charts\Chart.mqh>
 //+------------------------------------------------------------------+
 // | Class for creating a multiline text field |

@@ -339,10 +339,18 @@
   {
     m_x = CElement::CalculateX(x_gap);
     m_y = CElement::CalculateY(y_gap);
-    m_x_size = (m_x_size < 1 || m_auto_xresize_mode)
-                 ? m_main.X2() - CElementBase::X() - m_auto_xresize_right_offset
-                 : m_x_size;
-    m_y_size = m_item_y_size * m_visible_items_total + 2;
+    //Size of tree view
+      m_x_size = (m_x_size < 1 || m_auto_xresize_mode)
+                  ? m_main.X2() - CElementBase::X() - m_auto_xresize_right_offset
+                  : m_x_size;
+      // --- Fix m_auto_yresize_mode: fill remaining height instead of fixed VisibleItemsTotal rows
+      if(m_auto_yresize_mode)
+       {
+        m_y_size = m_main.Y2() - CElementBase::Y() - m_auto_yresize_bottom_offset;
+        m_visible_items_total = (m_y_size - 2) / m_item_y_size;   // derive rows from height, not the reverse
+       }
+      else
+        m_y_size = m_item_y_size * m_visible_items_total + 2;        
     // ---List width
     if (!m_show_item_content)
       m_treeview_width = m_x_size;
@@ -386,20 +394,21 @@
         y=(i>0)? y+m_item_y_size : y;
        // --- Save the parent pointer
          m_items[i].MainPointer(this);
+         //Fix here
+          m_items[i].Id(CElementBase::Id());
        // --- Properties
         m_items[i].NamePart("tree_item");
         m_items[i].Index(m_t_list_index[i]);
         m_items[i].XSize(m_treeview_width);
         m_items[i].YSize(m_item_y_size);
-        //Fix Icon Gap on Symbol node
+       //Fix Icon Gap on Symbol node
           //Old version
            //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i])+17);
            //m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon ? 0 : 17));
           //New version
            bool no_icon = (m_t_path_bmp[i] == (uint)INT_MAX);
            int icon_gap = m_items[i].ArrowXGap(m_t_node_level[i]);
-           if (!no_icon && m_t_node_level[i] > 0)
-                icon_gap += 17;
+            //if (!no_icon) icon_gap += 17;
            m_items[i].IconXGap(icon_gap); 
         m_items[i].IconYGap(2);
         m_items[i].IconFile(m_t_path_bmp[i]);
@@ -648,34 +657,53 @@
                             const bool is_folder)
   {
       // Step 1: fill data arrays (reuse existing logic)
-      AddItem(list_index, prev_node_list_index, item_text, path_bmp,
+       AddItem(list_index, prev_node_list_index, item_text, path_bmp,
               item_index, node_level, prev_node_item_index, items_total,
               folders_total, item_state, is_folder);
 
       // Step 2: if treeview already live, create graphic immediately
-      if(m_chart_id == 0) return;
+        if(m_chart_id == 0) return;
+        int newitemIndex = ::ArraySize(m_items) - 1;
+        int y = (newitemIndex > 0) ? 1 + newitemIndex * m_item_y_size : 1;
 
-      int i = ::ArraySize(m_items) - 1;
-      int y = (i > 0) ? 1 + i * m_item_y_size : 1;
+        m_items[newitemIndex].MainPointer(this);      
+        m_items[newitemIndex].NamePart("tree_item");
+        m_items[newitemIndex].Index(m_t_list_index[newitemIndex]);
+        m_items[newitemIndex].XSize(m_treeview_width);
+        m_items[newitemIndex].YSize(m_item_y_size);
+        bool no_icon = (m_t_path_bmp[newitemIndex] == (uint)INT_MAX);
+        //m_items[newitemIndex].IconXGap(m_items[newitemIndex].ArrowXGap(m_t_node_level[newitemIndex]) + (no_icon ? 0 : 17));
+        m_items[newitemIndex].IconXGap(m_items[newitemIndex].ArrowXGap(m_t_node_level[newitemIndex]));
+        m_items[newitemIndex].IconYGap(2);
+        m_items[newitemIndex].IconFile(m_t_path_bmp[newitemIndex]);
+        m_items[newitemIndex].IsHighlighted(m_lights_hover);
 
-      m_items[i].MainPointer(this);
-      m_items[i].NamePart("tree_item");
-      m_items[i].Index(m_t_list_index[i]);
-      m_items[i].XSize(m_treeview_width);
-      m_items[i].YSize(m_item_y_size);
-      bool no_icon = (m_t_path_bmp[i] == (uint)INT_MAX);
-      m_items[i].IconXGap(m_items[i].ArrowXGap(m_t_node_level[i]) + (no_icon ? 0 : 17));
-      m_items[i].IconYGap(2);
-      m_items[i].IconFile(m_t_path_bmp[i]);
-      m_items[i].IsHighlighted(m_lights_hover);
+        ENUM_TYPE_TREE_ITEM type = (m_t_items_total[newitemIndex] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
+        m_t_item_state[newitemIndex] = (type == TI_HAS_ITEMS) ? m_t_item_state[newitemIndex] : false;
 
-      ENUM_TYPE_TREE_ITEM type = (m_t_items_total[i] > 0) ? TI_HAS_ITEMS : TI_SIMPLE;
-      m_t_item_state[i] = (type == TI_HAS_ITEMS) ? m_t_item_state[i] : false;
-
-      m_items[i].CreateTreeItem(1, y, type, m_t_list_index[i],
-                                m_t_node_level[i], m_t_item_text[i], m_t_item_state[i]);
-      m_items[i].Id(CElementBase::Id());
-      CElement::AddToArray(m_items[i]);
+        m_items[newitemIndex].CreateTreeItem(1, y, type, m_t_list_index[newitemIndex],
+                                  m_t_node_level[newitemIndex], m_t_item_text[newitemIndex], m_t_item_state[newitemIndex]);
+        m_items[newitemIndex].Id(CElementBase::Id());
+        CElement::AddToArray(m_items[newitemIndex]);
+      //Step 3 Update Parrent node
+       if(prev_node_list_index >= 0 && prev_node_list_index < ArraySize(m_items) && m_t_items_total[prev_node_list_index] == 1)
+        {
+          CTreeItem *parent = GetPointer(m_items[prev_node_list_index]);
+          if(parent.ItemType() != TI_HAS_ITEMS)
+           {
+            parent.ItemType(TI_HAS_ITEMS);
+            parent.LabelXGap(parent.ArrowXGap(m_t_node_level[prev_node_list_index]) + 22);
+            parent.AddImagesGroup(parent.ArrowXGap(m_t_node_level[prev_node_list_index]), 2);
+            parent.AddImage(1, IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP);
+            parent.AddImage(1, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
+            parent.AddImage(1, IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP);   // 2
+            parent.AddImage(1, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);  // 3
+            parent.ChangeImage(1, 0);   // collapsed by default
+            parent.ItemState(false);
+            parent.Draw();
+            parent.CanvasPointer().Update(false);
+           }
+        }  
       FormTreeList();   // rebuild m_td_list_index 
   }
  //+------------------------------------------------------------------+
@@ -932,7 +960,7 @@
    // --- Get the index of the item in the general list
     int list_index = CElementBase::IndexFromObjectName(clicked_object);
    // --- Exit if this item is without a drop-down list
-    if (m_items[list_index].Type() != TI_HAS_ITEMS) return (false);
+    if (m_items[list_index].ItemType() != TI_HAS_ITEMS) return (false);
    // --- Get relative coordinates under the mouse cursor
     int x = m_mouse.RelativeX(m_canvas);
    // --- Exit if the click was not on the arrow
@@ -943,8 +971,7 @@
    // --- Highlight selected item
     m_items[list_index].ItemState(m_t_item_state[list_index]);
     m_items[list_index].IsPressed((list_index == m_selected_item_index) ? true
-                                                                      : false);
-    //m_items[list_index].Update(false);
+                                                                      : false);    
     m_items[list_index].Draw();
     m_items[list_index].CanvasPointer().Update(false);
    // --- Generate a tree list
@@ -965,86 +992,86 @@
  bool CTreeView::OnClickTreeItem(const string clicked_object, const int id,
                                 const int index) 
   {
-   // --- Exit if the scrollbar is in active mode
-    if (m_scrollv.State() || m_content_scrollv.State()) return (false);
-   // --- Exit if the object name is foreign
-    if (::StringFind(clicked_object, CElementBase::ProgramName() + "_tree_item_",
+    // --- Exit if the scrollbar is in active mode
+     if (m_scrollv.State() || m_content_scrollv.State()) return (false);
+    // --- Exit if the object name is foreign
+     if (::StringFind(clicked_object, CElementBase::ProgramName() + "_tree_item_",
                    0) < 0)
-     return (false);
-   // --- Exit if IDs do not match
-    if (id != CElementBase::Id()) return (false);
-   // --- Get the current position of the scroll bar slider
-    int v = m_scrollv.CurrentPos();
-   // --- Let's go through the list
-    for (int r = 0; r < m_visible_items_total; r++) 
-     {
-      // --- Check to prevent out of range
-       if (v >= 0 && v < m_items_total) 
-       {
-        // --- Get the general index of the item
-         int li = m_td_list_index[v];
-        // --- If this item is selected in the list
-         if (m_items[li].CanvasPointer().ChartObjectName() == clicked_object) 
-          {
-           // --- Exit if this item is already selected
-           if (li == m_selected_item_index) 
+      return (false);
+    // --- Exit if IDs do not match
+     if (id != CElementBase::Id()) return (false);
+    // --- Get the current position of the scroll bar slider
+     int v = m_scrollv.CurrentPos();
+    // --- Let's go through the list
+     for (int r = 0; r < m_visible_items_total; r++) 
+      {
+       // --- Check to prevent out of range
+        if (v >= 0 && v < m_items_total) 
+         {
+          // --- Get the general index of the item
+           int li = m_td_list_index[v];
+          // --- If this item is selected in the list
+           if (m_items[li].CanvasPointer().ChartObjectName() == clicked_object) 
             {
+             // --- Exit if this item is already selected
+             if (li == m_selected_item_index) 
+              {
+                m_items[li].IsPressed(true);
+                //m_items[li].Update(true);
+                m_items[li].Draw();
+                m_items[li].CanvasPointer().Update(false);
+                return (false);
+              }
+             // --- If tab item mode is enabled and content display mode is disabled,
+             // we will not highlight items without a list
+              if (m_tab_items_mode && !m_show_item_content) 
+               {
+                // --- If the current item does not contain a list, stop the loop
+                 if (m_t_items_total[li] > 0) 
+                  {
+                   m_items[li].IsPressed(false);
+                   //m_items[li].Update(true);
+                    m_items[li].Draw();
+                    m_items[li].CanvasPointer().Update(false);
+                    break;
+                  }
+               }
+             // --- Set the color to the previous selected item
+              m_items[m_selected_item_index].IsPressed(false);
+             //m_items[m_selected_item_index].Update(true);
+              m_items[m_selected_item_index].Draw();
+              m_items[m_selected_item_index].CanvasPointer().Update(false);
+             // --- Remember the index for the current one and change its color
+              m_selected_item_index = li;
               m_items[li].IsPressed(true);
               //m_items[li].Update(true);
               m_items[li].Draw();
               m_items[li].CanvasPointer().Update(false);
-              return (false);
+              break;
             }
-           // --- If tab item mode is enabled and content display mode is disabled,
-           // we will not highlight items without a list
-           if (m_tab_items_mode && !m_show_item_content) 
-            {
-              // --- If the current item does not contain a list, stop the loop
-              if (m_t_items_total[li] > 0) 
-               {
-                  m_items[li].IsPressed(false);
-                  //m_items[li].Update(true);
-                  m_items[li].Draw();
-                  m_items[li].CanvasPointer().Update(false);
-                  break;
-               }
-            }
-           // --- Set the color to the previous selected item
-            m_items[m_selected_item_index].IsPressed(false);
-           //m_items[m_selected_item_index].Update(true);
-           m_items[m_selected_item_index].Draw();
-           m_items[m_selected_item_index].CanvasPointer().Update(false);
-           // --- Remember the index for the current one and change its color
-            m_selected_item_index = li;
-            m_items[li].IsPressed(true);
-            //m_items[li].Update(true);
-            m_items[li].Draw();
-            m_items[li].CanvasPointer().Update(false);
-            break;
-          }
-        v++;
-       }
-     }
-   // --- Reset content area colors
-    if (m_selected_content_item_index >= 0) 
-     {
-      m_content_items[m_selected_content_item_index].IsPressed(false);
-      //m_content_items[m_selected_content_item_index].Update();
-      m_content_items[m_selected_content_item_index].Draw();
-      m_content_items[m_selected_content_item_index].CanvasPointer().Update(false);
-     }
-     // --- Reset selected item
+          v++;
+         }
+      }
+    // --- Reset content area colors
+     if (m_selected_content_item_index >= 0) 
+      {
+       m_content_items[m_selected_content_item_index].IsPressed(false);
+       //m_content_items[m_selected_content_item_index].Update();
+       m_content_items[m_selected_content_item_index].Draw();
+       m_content_items[m_selected_content_item_index].CanvasPointer().Update(false);
+      }
+    // --- Reset selected item
       m_selected_content_item_index = WRONG_VALUE;
-     // --- Update content list
-      FormContentList();
-      UpdateContentList();
-     // --- Calculate scrollbar slider position
+    // --- Update content list
+    FormContentList();
+    UpdateContentList();
+    // --- Calculate scrollbar slider position
       m_content_scrollv.MovingThumb(m_content_scrollv.CurrentPos());
-     // --- Show elements of the selected tab item
+    // --- Show elements of the selected tab item
       ShowTabElements();
-     // --- Send a message about selecting a new directory in the tree list
+    // --- Send a message about selecting a new directory in the tree list
       ::EventChartCustom(m_chart_id, ON_CHANGE_TREE_PATH, 0, 0, "");
-     // --- Send a message about the change in the graphical interface
+    // --- Send a message about the change in the graphical interface
       ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
       return (true);
   }
@@ -1055,31 +1082,31 @@
                                    const int index) 
   {
    // --- Quit if content area is disabled
-   if (!m_show_item_content) return (false);
+    if (!m_show_item_content) return (false);
    // --- Exit if the scrollbar is in active mode
-   if (m_scrollv.State() || m_content_scrollv.State()) return (false);
+    if (m_scrollv.State() || m_content_scrollv.State()) return (false);
    // --- Exit if the object name is foreign
-   if (::StringFind(clicked_object,
+    if (::StringFind(clicked_object,
                    CElementBase::ProgramName() + "_content_item_", 0) < 0)
-    return (false);
+      return (false);
    // --- Exit if IDs do not match
-   if (id != CElementBase::Id()) return (false);
-   // --- Get the number of items in the content list
-   int content_items_total = ::ArraySize(m_cd_list_index);
+    if (id != CElementBase::Id()) return (false);
+   // --- Get the number of items in the content list 
+    int content_items_total = ::ArraySize(m_cd_list_index);
    // --- Get the current position of the scroll bar slider
-   int v = m_content_scrollv.CurrentPos();
+    int v = m_content_scrollv.CurrentPos();
    // --- Let's go through the list
-   for (int r = 0; r < m_visible_items_total; r++) 
-    {
-     // --- Check to prevent out of range
-      if (v >= 0 && v < content_items_total) 
-       {
-        // --- Get the general index of the list
-         int li = m_cd_list_index[v];
-        // --- If this item is selected in the list
-         if (m_content_items[li].CanvasPointer().ChartObjectName() ==
-          clicked_object) 
-          {
+    for (int r = 0; r < m_visible_items_total; r++) 
+     {
+      // --- Check to prevent out of range
+       if (v >= 0 && v < content_items_total) 
+        {
+         // --- Get the general index of the list
+          int li = m_cd_list_index[v];
+         // --- If this item is selected in the list
+          if (m_content_items[li].CanvasPointer().ChartObjectName() ==
+           clicked_object) 
+           {
            // --- Set color to previous selected item
              if (m_selected_content_item_index >= 0) 
              {
@@ -1091,11 +1118,11 @@
              m_content_items[li].IsPressed(true);
              m_content_items[li].Update(true);
            }
-         v++;
-       }
-    }
+          v++;
+        }
+     }
    // --- Send a message about selecting a new directory in the tree list
-   ::EventChartCustom(m_chart_id, ON_CHANGE_TREE_PATH, 0, 0, "");
+     ::EventChartCustom(m_chart_id, ON_CHANGE_TREE_PATH, 0, 0, "");
    return (true);
   }
  //+------------------------------------------------------------------+
@@ -1704,6 +1731,9 @@
  //+------------------------------------------------------------------+
  void CTreeView::RedrawTreeList(void) 
   {
+    // --- Exit if element is hidden
+    if (!CElementBase::IsVisible())
+      return;
     // --- Hide list items
     int items_total = ::ArraySize(m_items);
      for (int i = 0; i < items_total; i++)

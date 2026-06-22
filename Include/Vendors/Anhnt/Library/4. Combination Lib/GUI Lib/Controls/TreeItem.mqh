@@ -20,7 +20,7 @@ class CTreeItem : public CButton
      int               m_node_level;      // ---Node level
      string            m_item_text;       // --- Item text displayed
      bool              m_item_state;      // --- State of the item list (opened/collapsed)
-   
+     bool              m_is_active;       //Add Properties to highlight node
    public:
                      CTreeItem(void);
                     ~CTreeItem(void);
@@ -34,10 +34,15 @@ class CTreeItem : public CButton
     // --- Draws a picture
      virtual void      DrawImage(void);                  
    public:
-    // --- (1) Item status (collapsed/expanded), (2) item type
+    // --- (1) Item status (collapsed/expanded), (2) item type, (3) item active
      void              ItemState(const int state);
-     bool              ItemState(void) const { return(m_item_state); }
-     ENUM_TYPE_TREE_ITEM Type(void)    const { return(m_item_type);  }
+     bool              ItemState(void) const { return(m_item_state); }     
+     void IsActive(const bool active) { m_is_active = active; }
+
+     //ENUM_TYPE_TREE_ITEM Type(void)    const { return(m_item_type);  }
+     ENUM_TYPE_TREE_ITEM  ItemType(void)    const { return(m_item_type);  }
+     void                 ItemType(const ENUM_TYPE_TREE_ITEM type) { m_item_type = type; }
+
      int NodeLevel(void) const { return m_node_level; }
     // --- Indent for arrow
      int               ArrowXGap(const int node_level);
@@ -92,13 +97,16 @@ class CTreeItem : public CButton
        if(!CElement::CheckMainPointer())
           return(false);
       // --- Initializing properties
-       InitializeProperties(x_gap,y_gap,type,list_index,node_level,text,item_state);
-      // --- Set images if the item has a drop-down list
+       InitializeProperties(x_gap,y_gap,type,list_index,node_level,text,item_state);       
+      // --- Set images if the item has a drop-down list      
       if(m_item_type==TI_HAS_ITEMS)
-        {
-         CElement::AddImagesGroup(m_arrow_x_gap,2);
-         CElement::AddImage(1, IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP);   // (uint)4
-         CElement::AddImage(1, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);  // (uint)10
+        {  
+           CElement::AddImagesGroup(m_arrow_x_gap,2);
+           CElement::AddImage(1, IMAGE_RESOURCE_BMP16_ARROWDOWN_BMP);   // (uint)4
+           CElement::AddImage(1, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);  // (uint)10
+          //Fix here to set Active Icon
+           CElement::AddImage(1, IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP);   // 2
+           CElement::AddImage(1, IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);  // 3
          // --- Select the appropriate image
          CButton::ChangeImage(1,(m_item_state)? 1 : 0);
         }
@@ -138,7 +146,7 @@ class CTreeItem : public CButton
        //Fix here old code
           //m_label_x_gap          =(m_label_x_gap!=WRONG_VALUE)? m_icon_x_gap+m_label_x_gap : m_icon_x_gap+22;
         //New version
-         m_label_x_gap = m_icon_x_gap + 22;
+         m_label_x_gap = (type == TI_HAS_ITEMS) ? (m_arrow_x_gap + 22) : (m_icon_x_gap + 22);
        m_label_y_gap          =4;
       // --- Indents from the extreme point
        CElementBase::XGap(x_gap);
@@ -203,7 +211,7 @@ class CTreeItem : public CButton
          CButton::DrawBackground();
       // --- Draw a picture
          if(m_item_type==TI_HAS_ITEMS)
-          {          
+          {                     
             m_images_group[0].m_selected_image = WRONG_VALUE;
             CTreeItem::DrawImage();
           }            
@@ -217,8 +225,10 @@ class CTreeItem : public CButton
    //+------------------------------------------------------------------+
    void CTreeItem::DrawImage(void)
      {
-      // --- Define the index
-         uint image_index=(m_item_state)? 0 : 1;
+      // --- Define the index 
+         //uint image_index=(m_item_state)? 0 : 1;
+      //Fix here Update to set Active Icon
+        uint image_index = (m_item_state ? 0 : 1) + (m_is_active ? 2 : 0);
       // --- Save index of selected image
          CElement::ChangeImage(1,image_index);
       // --- Draw a picture

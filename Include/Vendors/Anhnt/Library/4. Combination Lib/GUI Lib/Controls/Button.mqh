@@ -261,13 +261,9 @@
   //+------------------------------------------------------------------+
   void CButton::Draw(void) 
    {
-        // --- Draw background
-        DrawBackground();
-        // --- Draw a frame
-        DrawBorder();
-        // --- Draw a picture
-        DrawImage();
-        // --- Draw text
+        DrawBackground(); // --- Draw background
+        DrawBorder();     // --- Draw a frame
+        DrawImage();      // --- Draw a picture
         CElement::DrawText();
     }
   //+------------------------------------------------------------------+
@@ -293,24 +289,21 @@
   void CButton::DrawBorder(void) 
    {
         // --- Determine the color
-        uint clr = (m_is_pressed) ? m_border_color_pressed : m_border_color;
+          uint clr = (m_is_pressed) ? m_border_color_pressed : m_border_color;
         // --- If the element is not locked
-        if (!CElementBase::IsLocked()) {
+         if (!CElementBase::IsLocked()) 
+          {
             if (CElementBase::MouseFocus())
                 clr = (m_mouse.IsLeftBtn() || m_is_pressed) ? m_border_color_pressed
                                                                 : m_border_color_hover;
-        } else
+          } else
             clr = m_border_color_locked;
         // ---Coordinates
-        int x1 = 0, y1 = 0;
-        int x2 = (int)::ObjectGetInteger(m_chart_id, m_canvas.ChartObjectName(),
-                                        OBJPROP_XSIZE) -
-                1;
-        int y2 = (int)::ObjectGetInteger(m_chart_id, m_canvas.ChartObjectName(),
-                                        OBJPROP_YSIZE) -
-                1;
+         int x1 = 0, y1 = 0;
+         int x2 = (int)::ObjectGetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_XSIZE) - 1;
+         int y2 = (int)::ObjectGetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_YSIZE) - 1;
         // --- Draw a rectangle without fill
-        m_canvas.Rectangle(x1, y1, x2, y2, ::ColorToARGB(clr));
+         m_canvas.Rectangle(x1, y1, x2, y2, ::ColorToARGB(clr));
     }
   //+------------------------------------------------------------------+
   // | Draws a picture |
@@ -318,23 +311,25 @@
   void CButton::DrawImage(void) 
    {
         // --- Define the index
-        uint image_index = (!m_two_state) ? 0 : (m_is_pressed) ? 2
-                                                            : 0;
+         uint image_index = (!m_two_state) ? 0 : (m_is_pressed) ? 2 : 0;
         // --- If the element is not locked
-        if (!CElementBase::IsLocked()) {
-            if (!m_two_state)
-                image_index = 0;
-            else {
-                if (CElementBase::MouseFocus())
+         if (!CElementBase::IsLocked()) 
+          {
+            if (!m_two_state) image_index = 0;
+            else 
+            {
+                if (CElementBase::MouseFocus()) 
+                {
                     image_index = (m_mouse.IsLeftBtn() || m_is_pressed) ? 2 : 0;
+                }
             }
-        } else
-            image_index = (!m_two_state) ? 1 : (m_is_pressed) ? 3
-                                                            : 1;
+          } 
+        else 
+         image_index = (!m_two_state) ? 1 : (m_is_pressed) ? 3 : 1;
         // --- Save index of selected image
-        CElement::ChangeImage(0, image_index);
+         CElement::ChangeImage(0, image_index);
         // --- Draw a picture
-        CElement::DrawImage();
+         CElement::DrawImage();
     }
   //+------------------------------------------------------------------+
   // | Change the width along the right edge of the form |

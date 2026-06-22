@@ -9,6 +9,7 @@
    #include "..\..\Timeseries\Bars\Bar.mqh"
    #include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh"
    #include "..\..\Timeseries\Indicators\DataInd.mqh"
+   #include "..\..\Timeseries\Indicators\IndicatorDE.mqh"
 #ifndef CTIMESERIES_SELECT_MQH_DECLARATION
 #define CTIMESERIES_SELECT_MQH_DECLARATION
  //+------------------------------------------------------------------+

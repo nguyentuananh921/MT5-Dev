@@ -18,7 +18,7 @@
   #include "..\..\Trading\Symbols\Symbol.mqh"
   #include "..\..\Trading\PendRequest\PendRequest.mqh"
   #include "..\..\Trading\Book\MarketBookOrd.mqh"
-  #include "..\..\Trading\Events\Event.mqh"
+  #include "..\..\Trading\TradeEvent\TradeEvent.mqh"
 
   #ifndef CTRADINGSELECT_MQH_DECLARATION
   #define CTRADINGSELECT_MQH_DECLARATION
@@ -1102,7 +1102,7 @@
         int total=list_source.Total();
         for(int i=0; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             if(!obj.SupportProperty(property)) continue;
             long obj_prop=obj.GetProperty(property);
             if(CompareValues(obj_prop,value,mode)) list.Add(obj);
@@ -1122,7 +1122,7 @@
         TradingListStorage.Add(list);
         for(int i=0; i<list_source.Total(); i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             if(!obj.SupportProperty(property)) continue;
             double obj_prop=obj.GetProperty(property);
             if(CompareValues(obj_prop,value,mode)) list.Add(obj);
@@ -1142,7 +1142,7 @@
         TradingListStorage.Add(list);
         for(int i=0; i<list_source.Total(); i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             if(!obj.SupportProperty(property)) continue;
             string obj_prop=obj.GetProperty(property);
             if(CompareValues(obj_prop,value,mode)) list.Add(obj);
@@ -1157,12 +1157,12 @@
       {
         if(list_source==NULL) return WRONG_VALUE;
         int index=0;
-        CEvent *max_obj=NULL;
+        CTradeEvent *max_obj=NULL;
         int total=list_source.Total();
         if(total==0) return WRONG_VALUE;
         for(int i=1; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             long obj1_prop=obj.GetProperty(property);
             max_obj=list_source.At(index);
             long obj2_prop=max_obj.GetProperty(property);
@@ -1178,12 +1178,12 @@
       {
         if(list_source==NULL) return WRONG_VALUE;
         int index=0;
-        CEvent *max_obj=NULL;
+        CTradeEvent *max_obj=NULL;
         int total=list_source.Total();
         if(total==0) return WRONG_VALUE;
         for(int i=1; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             double obj1_prop=obj.GetProperty(property);
             max_obj=list_source.At(index);
             double obj2_prop=max_obj.GetProperty(property);
@@ -1199,12 +1199,12 @@
       {
         if(list_source==NULL) return WRONG_VALUE;
         int index=0;
-        CEvent *max_obj=NULL;
+        CTradeEvent *max_obj=NULL;
         int total=list_source.Total();
         if(total==0) return WRONG_VALUE;
         for(int i=1; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             string obj1_prop=obj.GetProperty(property);
             max_obj=list_source.At(index);
             string obj2_prop=max_obj.GetProperty(property);
@@ -1219,12 +1219,12 @@
     int CTradingSelect::FindEventMin(CArrayObj *list_source,ENUM_EVENT_PROP_INTEGER property)
       {
         int index=0;
-        CEvent *min_obj=NULL;
+        CTradeEvent *min_obj=NULL;
         int total=list_source.Total();
         if(total==0) return WRONG_VALUE;
         for(int i=1; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             long obj1_prop=obj.GetProperty(property);
             min_obj=list_source.At(index);
             long obj2_prop=min_obj.GetProperty(property);
@@ -1239,12 +1239,12 @@
     int CTradingSelect::FindEventMin(CArrayObj *list_source,ENUM_EVENT_PROP_DOUBLE property)
       {
         int index=0;
-        CEvent *min_obj=NULL;
+        CTradeEvent *min_obj=NULL;
         int total=list_source.Total();
         if(total== 0) return WRONG_VALUE;
         for(int i=1; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             double obj1_prop=obj.GetProperty(property);
             min_obj=list_source.At(index);
             double obj2_prop=min_obj.GetProperty(property);
@@ -1259,12 +1259,12 @@
     int CTradingSelect::FindEventMin(CArrayObj *list_source,ENUM_EVENT_PROP_STRING property)
       {
         int index=0;
-        CEvent *min_obj=NULL;
+        CTradeEvent *min_obj=NULL;
         int total=list_source.Total();
         if(total==0) return WRONG_VALUE;
         for(int i=1; i<total; i++)
           {
-            CEvent *obj=list_source.At(i);
+            CTradeEvent *obj=list_source.At(i);
             string obj1_prop=obj.GetProperty(property);
             min_obj=list_source.At(index);
             string obj2_prop=min_obj.GetProperty(property);

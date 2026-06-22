@@ -20,10 +20,9 @@
  #include <Arrays\ArrayObj.mqh> 
  #include "..\Bitmaps\GCnvPatternBitmap.mqh"
  #include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh" 
-
  #ifndef CPATTERNRENDERER_MQH_DECLARATION
  #define CPATTERNRENDERER_MQH_DECLARATION
-  class CPatternRenderer
+ class CPatternRenderer
    {
     private:
       long              m_chart_id;
@@ -33,17 +32,20 @@
       ENUM_TIMEFRAMES   m_period;
       datetime          m_prev_bar0;   // new-bar gate for UpdateNew
       int               m_prev_scale;  // track zoom change internally
+      CArrayObj         m_pending;     // patterns waiting for bitmap creation (non-owning pointers)
      //For filter on Chart
       bool m_show_bull[PATTERNS_TOTAL];  // initialized true
       bool m_show_bear[PATTERNS_TOTAL];  // initialized true
      //Private method
       // m_prev_scale changed: recreate bitmaps
       void              Redraw    (CArrayObj *plist, const bool redraw=true);   
-      bool              CreatePatternBitmap(CBarPattern *p);
-      
+      bool              CreatePatternBitmap(CBarPattern *p, const int scale, const int chart_h,
+                                            const double price_max, const double price_min);
+      void              QueuePending(CBarPattern *p);  // enqueue for later creation, skip if already queued
+
       void              GetVisibleTimeRange(datetime &t_from, datetime &t_to) const;
       void              CleanupChartObjects(void);   // remove stale "PR_" objects on deinit/init
-      
+
       void              Reposition(void)  { ::ChartRedraw(m_chart_id); }
       //void              SetPeriod (const ENUM_TIMEFRAMES tf); 
     public:
@@ -52,8 +54,10 @@
                                       const string symbol, 
                                       const ENUM_TIMEFRAMES period,
                                       const int reason = REASON_PROGRAM);
+                                      
         void              OnDeinitEvent(CArrayObj *plist = NULL,const int reason= REASON_PROGRAM);
         bool              OnChartEvent(const int id, CArrayObj *plist);        
+        void              OnTimerEvent(void);   // drain m_pending, budgeted per tick
      //
         void              Refresh   (CArrayObj *plist, const bool redraw=true);
       // show/hide/create per TF + coverage with filter   
@@ -68,9 +72,9 @@
         bool GetFilterBear(const ENUM_PATTERN_TYPE type) const;
    };
  #endif // CPATTERNRENDERER_MQH_DECLARATION
-
  #ifndef CPATTERNRENDERER_MQH_IMPLEMENTATION
  #define CPATTERNRENDERER_MQH_IMPLEMENTATION
+ #define PATTERN_RENDER_BUDGET_US 8000   // max us spent creating bitmaps per OnTimerEvent tick
   bool CPatternRenderer::OnInitEvent(const long chart_id, const int subwin,
                                       const string symbol, const ENUM_TIMEFRAMES period,const int reason)
    {
@@ -81,9 +85,11 @@
       m_period    = (period == PERIOD_CURRENT ? ::Period() : period);
       m_prev_bar0 = 0;
       m_prev_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE); // init scale     
+      m_pending.FreeMode(false);   // pointers owned by the pattern collection, not by us
       if(reason != REASON_CHARTCHANGE)
        {
             m_obj_id = 0;
+            m_pending.Clear();
             CleanupChartObjects();  // clean stale objects from previous session
             for(int i = 0; i < PATTERNS_TOTAL; i++)
              m_show_bull[i] = m_show_bear[i] = true;
@@ -91,33 +97,71 @@
       return true;
    }
   void CPatternRenderer::OnDeinitEvent(CArrayObj *plist,const int reason)
-    {
-        if(reason == REASON_CHARTCHANGE) return;  // keep bitmaps alive for no-flicker
-        if(plist != NULL)
-            for(int i = 0; i < plist.Total(); i++)
-            {
-                CBarPattern *p = plist.At(i);
-                if(p != NULL) p.ClearBitmap();
-            }
-        CleanupChartObjects();
-    }
-  bool CPatternRenderer::OnChartEvent(const int id, CArrayObj *plist)
-    {
-        if(id != CHARTEVENT_CHART_CHANGE) return false;
-        
-        ENUM_TIMEFRAMES curr_period = (ENUM_TIMEFRAMES)::ChartPeriod(0);
-        int curr_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);       
-        
-        if(curr_scale != m_prev_scale)
+   {
+    // Diagnostic: count patterns vs bitmaps for this chart's symbol/TF, plus real chart-object count
+    int pat_count = 0, bmp_count = 0;
+    if(plist != NULL)
+       for(int i = 0; i < plist.Total(); i++)
         {
-            m_prev_scale = curr_scale;
-            Redraw(plist, false);
-            return false;
-        }        
-        //Refresh(plist, false);
-        Refresh(plist, true, false);
-        return false;
-    }
+           CBarPattern *p = plist.At(i);
+           if(p == NULL) continue;
+           ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
+           if(tf != m_period || p.Symbol() != m_symbol) continue;
+           pat_count++;
+           if(p.HasBitmap()) bmp_count++;
+        }
+    ::Print("PERF CPatternRenderer::OnDeinitEvent reason=", reason,
+            " symbol=", m_symbol, " period=", EnumToString(m_period),
+            " plistTotal=", (plist == NULL ? 0 : plist.Total()),
+            " patterns=", pat_count, " bitmaps=", bmp_count,
+            " objBitmapTotal=", ::ObjectsTotal(m_chart_id, m_subwin, OBJ_BITMAP));
+
+    if(reason == REASON_CHARTCHANGE)
+     {
+        // Clear bitmaps only for the symbol/TF we're navigating away from —
+        // their pixel size is baked to the old chart state, must recreate on return anyway.
+        if(plist != NULL)
+           for(int i = 0; i < plist.Total(); i++)
+            {
+               CBarPattern *p = plist.At(i);
+               if(p == NULL || !p.HasBitmap()) continue;
+               ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
+               if(tf == m_period && p.Symbol() == m_symbol) p.ClearBitmap();
+            }
+        return;
+     }
+    m_pending.Clear();
+    if(plist != NULL)
+        for(int i = 0; i < plist.Total(); i++)
+        {
+            CBarPattern *p = plist.At(i);
+            if(p != NULL) p.ClearBitmap();
+        }
+    CleanupChartObjects();
+   }
+
+  bool CPatternRenderer::OnChartEvent(const int id, CArrayObj *plist)
+   {
+    if(id != CHARTEVENT_CHART_CHANGE) return false;
+    
+    ENUM_TIMEFRAMES curr_period = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+    int curr_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);       
+    
+    if(curr_scale != m_prev_scale)
+    {
+     m_prev_scale = curr_scale;
+     Redraw(plist, false);
+     return false;
+    }        
+    //Refresh(plist, false);
+    ulong t0 = ::GetMicrosecondCount();
+
+    Refresh(plist, true, false);
+    ulong t1 = ::GetMicrosecondCount();
+      if(t1 - t0 > 1000)
+          ::Print("PERF CPatternRenderer::OnChartEvent Refresh plist.Total()=", plist.Total(), " cost=", t1 - t0, "us");
+    return false;
+   }
   
   void CPatternRenderer::CleanupChartObjects(void)
     {
@@ -138,34 +182,96 @@
       if(t_to == 0)   t_to   = ::TimeCurrent();          // ← ADD này
       if(t_from == 0) t_from = t_to - (datetime)(first_vis * ::PeriodSeconds(m_period));
    }
+  void CPatternRenderer::QueuePending(CBarPattern *p)
+   {
+      for(int q = 0; q < m_pending.Total(); q++)
+          if(m_pending.At(q) == p) return;   // already queued
+      m_pending.Add(p);
+   }
+  //+------------------------------------------------------------------+
+  //| Drain pending bitmap-creation queue, budgeted per call.          |
+  //| Called from OnTimer() — spreads the cost across many ticks       |
+  //| instead of one synchronous burst that freezes the terminal.      |
+  //+------------------------------------------------------------------+
+  void CPatternRenderer::OnTimerEvent(void)
+   {
+      if(m_pending.Total() == 0) return;
+      ulong t0 = ::GetMicrosecondCount();
+      int    scale     = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);
+      int    chart_h   = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
+      double price_max = ::ChartGetDouble (m_chart_id, CHART_PRICE_MAX);
+      double price_min = ::ChartGetDouble (m_chart_id, CHART_PRICE_MIN);
+      datetime t_from, t_to;
+      GetVisibleTimeRange(t_from, t_to);   // re-check NOW — chart may have scrolled since queued
+      int created = 0;
+      int skipped = 0;
+      while(m_pending.Total() > 0)
+      {
+          int last = m_pending.Total() - 1;
+          CBarPattern *p = m_pending.At(last);
+          m_pending.Delete(last);
+          if(p != NULL && !p.HasBitmap())
+          {
+              int             n     = (int)p.GetProperty(PATTERN_PROP_CANDLES);
+              ENUM_TIMEFRAMES tf    = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
+              datetime        t_new = (datetime)p.GetProperty(PATTERN_PROP_TIME);
+              datetime        t_old = t_new - (datetime)((n - 1) * ::PeriodSeconds(tf));
 
+              if(t_new < t_from || t_old > t_to)
+                  skipped++;   // scrolled out of view while waiting in queue — re-queued by Refresh() if it comes back
+              else
+              {
+                  CreatePatternBitmap(p, scale, chart_h, price_max, price_min);
+                  created++;
+              }
+          }
+          if(::GetMicrosecondCount() - t0 >= PATTERN_RENDER_BUDGET_US) break;
+      }
+      if(created > 0) ::ChartRedraw(m_chart_id);
+      ulong us = ::GetMicrosecondCount() - t0;
+      if(us > 1000)
+         ::Print("PERF CPatternRenderer::OnTimerEvent us=", us, " created=", created, " skipped=", skipped, " pending=", m_pending.Total());
+   }
   //+------------------------------------------------------------------+
   //| Create CGCnvPatternBitmap, attach to pattern, draw, show.        |
   //+------------------------------------------------------------------+
-  bool CPatternRenderer::CreatePatternBitmap(CBarPattern *p)
+  bool CPatternRenderer::CreatePatternBitmap(CBarPattern *p, const int scale, const int chart_h,
+                                             const double price_max, const double price_min)
    {
-      if(p == NULL) return false;
-      int             n      = (int)p.GetProperty(PATTERN_PROP_CANDLES);
-      ENUM_TIMEFRAMES tf     = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-      int             tf_ps  = (int)::PeriodSeconds(tf);
-      datetime        t_new  = (datetime)p.GetProperty(PATTERN_PROP_TIME);
-      datetime        t_old  = t_new - (datetime)((n - 1) * tf_ps);   // oldest bar = anchor
-      double          p_high = p.MotherBarHigh();
-      double          p_low  = p.MotherBarLow();
-      ENUM_PATTERN_DIRECTION dir = (ENUM_PATTERN_DIRECTION)(long)p.GetProperty(PATTERN_PROP_DIRECTION);
+    if(p == NULL) return false;
+    ulong t0 = ::GetMicrosecondCount();
+    int             n      = (int)p.GetProperty(PATTERN_PROP_CANDLES);
+    ENUM_TIMEFRAMES tf     = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
+    int             tf_ps  = (int)::PeriodSeconds(tf);
+    datetime        t_new  = (datetime)p.GetProperty(PATTERN_PROP_TIME);
+    datetime        t_old  = t_new - (datetime)((n - 1) * tf_ps);   // oldest bar = anchor
+    double          p_high = p.MotherBarHigh();
+    double          p_low  = p.MotherBarLow();
+    ENUM_PATTERN_DIRECTION dir = (ENUM_PATTERN_DIRECTION)(long)p.GetProperty(PATTERN_PROP_DIRECTION);
 
-      string name = "PR_" + (string)t_new + "_" + (string)(m_obj_id);
-      CGCnvPatternBitmap *bmp = new CGCnvPatternBitmap(
-          m_chart_id, m_subwin, name, m_obj_id++,
-          t_old, p_high, p_low, dir, n);
-      if(bmp == NULL) return false;
-      ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_ANCHOR,  ANCHOR_CENTER);
-      ::ObjectSetString (m_chart_id, bmp.Name(), OBJPROP_TOOLTIP, "\n");
-      ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_BACK,    true);
-      bmp.DrawView();
-      bmp.Show();
-      p.AttachBitmap(bmp);
-      return true;
+    string name = "PR_" + (string)t_new + "_" + (string)(m_obj_id);
+    ulong t1 = ::GetMicrosecondCount();
+    CGCnvPatternBitmap *bmp = new CGCnvPatternBitmap(
+        m_chart_id, m_subwin, name, m_obj_id++,
+        t_old, p_high, p_low, dir, n,
+        scale, chart_h, price_max, price_min);
+    ulong t2 = ::GetMicrosecondCount();
+    if(bmp == NULL) return false;
+    ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_ANCHOR,  ANCHOR_CENTER);
+    ::ObjectSetString (m_chart_id, bmp.Name(), OBJPROP_TOOLTIP, "\n");
+    ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_BACK,    true);
+    ulong t3 = ::GetMicrosecondCount();
+    bmp.DrawView();
+    ulong t4 = ::GetMicrosecondCount();
+    bmp.Show();
+    ulong t5 = ::GetMicrosecondCount();
+    p.AttachBitmap(bmp);
+    ulong us = t5 - t0;
+    if(us > 1000)
+       ::Print("PERF CPatternRenderer::CreatePatternBitmap us=", us, " prep=", t1-t0,
+               " ctor=", t2-t1, " setprops=", t3-t2,
+               " drawview=", t4-t3, " show=", t5-t4);
+    return true;
    }
   //+------------------------------------------------------------------+
   //| Full pass: show/hide/create bitmaps for all patterns.            |
@@ -177,21 +283,21 @@
       if(plist == NULL || m_chart_id == 0) return;
       int total = plist.Total();
       if(total == 0) { if(redraw) ::ChartRedraw(m_chart_id); return; }
-     // Hide bitmaps from other timeframes — they stay in memory for no-flicker TF switching 
+     // Hide bitmaps from other symbols/timeframes — they stay in memory for no-flicker TF switching 
       for(int i = 0; i < total; i++)
-      {
+       {
           CBarPattern *p = plist.At(i);
           if(p == NULL || !p.HasBitmap()) continue;
           ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-          if(tf != m_period && p.GetBitmap().IsVisible())
+          if((tf != m_period || p.Symbol() != m_symbol) && p.GetBitmap().IsVisible())
               p.GetBitmap().Hide();
-      }
+       }
 
       datetime t_from, t_to;
       GetVisibleTimeRange(t_from, t_to);
 
-      datetime drawn_confirmation_bar[];   // t_new of bars that already have a bitmap
-      int      drawn_candle_count[];       // candle count of the pattern drawn at that bar
+      datetime drawn_confirmation_bar[];
+      int      drawn_candle_count[];
       int      n_drawn = 0;
 
       for(int pass = 3; pass >= 1; pass--)
@@ -204,7 +310,7 @@
               if(n != pass) continue;
 
               ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-              if(tf != m_period) continue;
+              if(tf != m_period || p.Symbol() != m_symbol) continue;
               int      tf_ps = (int)::PeriodSeconds(tf);
               datetime t_new = (datetime)p.GetProperty(PATTERN_PROP_TIME);
               datetime t_old = t_new - (datetime)((n - 1) * tf_ps);
@@ -215,7 +321,6 @@
                     continue;
                 }
 
-              // Hide if same confirmation bar already has higher-or-equal priority pattern
                 bool same_bar_higher_priority = false;
                 for(int j = 0; j < n_drawn; j++)
                     if(drawn_candle_count[j] >= pass && drawn_confirmation_bar[j] == t_new)
@@ -235,7 +340,7 @@
               if(p.HasBitmap())
                { if(!p.GetBitmap().IsVisible()) p.GetBitmap().Show(); }
               else
-                  CreatePatternBitmap(p);
+                  QueuePending(p);
           }
        }
       if(redraw) ::ChartRedraw(m_chart_id);
@@ -249,96 +354,102 @@
   //+------------------------------------------------------------------+
   void CPatternRenderer::Refresh(CArrayObj *plist, const bool apply_filter, const bool redraw)
    {
-      if(plist == NULL || m_chart_id == 0) return;
-      int total = plist.Total();
-      if(total == 0) { if(redraw) ::ChartRedraw(m_chart_id); return; }
+     if(plist == NULL || m_chart_id == 0) return;
+     int total = plist.Total();
+     if(total == 0) { if(redraw) ::ChartRedraw(m_chart_id); return; }
 
-      // Hide bitmaps from other timeframes (kept in memory for no-flicker TF switching)
-      for(int i = 0; i < total; i++)
-      {
-          CBarPattern *p = plist.At(i);
-          if(p == NULL || !p.HasBitmap()) continue;
-          ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-          if(tf != m_period && p.GetBitmap().IsVisible())
-              p.GetBitmap().Hide();
-      }
+     ulong t0 = ::GetMicrosecondCount();
 
-      datetime t_from, t_to;
-      GetVisibleTimeRange(t_from, t_to);
+     for(int i = 0; i < total; i++)
+     {
+         CBarPattern *p = plist.At(i);
+         if(p == NULL || !p.HasBitmap()) continue;
+         ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
+         if((tf != m_period || p.Symbol() != m_symbol) && p.GetBitmap().IsVisible())
+             p.GetBitmap().Hide();
+     }
+     ulong t1 = ::GetMicrosecondCount();
 
-      datetime drawn_confirmation_bar[];  // confirmation bar times already occupied
-      int      drawn_candle_count[];      // candle count of pattern occupying that bar
-      int      n_drawn = 0;
+     datetime t_from, t_to;
+     GetVisibleTimeRange(t_from, t_to);
+     ulong t2 = ::GetMicrosecondCount();
 
-      // Priority pass: 3-candle first, then 2, then 1
-      for(int pass = 3; pass >= 1; pass--)
-      {
-          for(int i = 0; i < total; i++)
-          {
-              CBarPattern *p = plist.At(i);
-              if(p == NULL) continue;
-              int n = (int)p.GetProperty(PATTERN_PROP_CANDLES);
-              if(n != pass) continue;
+     datetime drawn_confirmation_bar[];
+     int      drawn_candle_count[];
+     int      n_drawn = 0;
+     int      n_queued = 0;
 
-              ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-              if(tf != m_period) continue;
+     for(int pass = 3; pass >= 1; pass--)
+     {
+         for(int i = 0; i < total; i++)
+         {
+             CBarPattern *p = plist.At(i);
+             if(p == NULL) continue;
+             int n = (int)p.GetProperty(PATTERN_PROP_CANDLES);
+             if(n != pass) continue;
 
-              // --- Direction filter check (before coverage) ---
-              // A filtered pattern is hidden AND does NOT register as occupying its bar,
-              // so a lower-priority non-filtered pattern on the same bar can still show.
-              if(apply_filter)
-              {
-                  int fidx = TypeIndex(p.TypePattern());
-                  ENUM_PATTERN_DIRECTION dir = p.Direction();
-                  if(fidx >= 0 && fidx < PATTERNS_TOTAL)
-                      if((dir == PATTERN_DIRECTION_BULLISH && !m_show_bull[fidx]) ||
-                        (dir == PATTERN_DIRECTION_BEARISH && !m_show_bear[fidx]))
-                      {
-                          if(p.HasBitmap() && p.GetBitmap().IsVisible()) p.GetBitmap().Hide();
-                          continue;  // skip: does not count as covering the bar
-                      }
-              }
-              // -----------------------------------------------
+             ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
+             if(tf != m_period || p.Symbol() != m_symbol) continue;
 
-              int      tf_ps = (int)::PeriodSeconds(tf);
-              datetime t_new = (datetime)p.GetProperty(PATTERN_PROP_TIME);
-              datetime t_old = t_new - (datetime)((n - 1) * tf_ps);
+             if(apply_filter)
+             {
+                 int fidx = TypeIndex(p.TypePattern());
+                 ENUM_PATTERN_DIRECTION dir = p.Direction();
+                 if(fidx >= 0 && fidx < PATTERNS_TOTAL)
+                     if((dir == PATTERN_DIRECTION_BULLISH && !m_show_bull[fidx]) ||
+                       (dir == PATTERN_DIRECTION_BEARISH && !m_show_bear[fidx]))
+                     {
+                         if(p.HasBitmap() && p.GetBitmap().IsVisible()) p.GetBitmap().Hide();
+                         continue;
+                     }
+             }
 
-              // Hide if outside visible range
-              if(t_new < t_from || t_old > t_to)
-              {
-                  if(p.HasBitmap() && p.GetBitmap().IsVisible()) p.GetBitmap().Hide();
-                  continue;
-              }
+             int      tf_ps = (int)::PeriodSeconds(tf);
+             datetime t_new = (datetime)p.GetProperty(PATTERN_PROP_TIME);
+             datetime t_old = t_new - (datetime)((n - 1) * tf_ps);
 
-              // Hide if the same confirmation bar already has a higher-or-equal priority pattern
-              bool same_bar_higher_priority = false;
-              for(int j = 0; j < n_drawn; j++)
-                  if(drawn_candle_count[j] >= pass && drawn_confirmation_bar[j] == t_new)
-                  { same_bar_higher_priority = true; break; }
-              if(same_bar_higher_priority)
-              {
-                  if(p.HasBitmap() && p.GetBitmap().IsVisible()) p.GetBitmap().Hide();
-                  continue;
-              }
+             if(t_new < t_from || t_old > t_to)
+             {
+                 if(p.HasBitmap() && p.GetBitmap().IsVisible()) p.GetBitmap().Hide();
+                 continue;
+             }
 
-              // Register this bar as occupied by a pattern of candle count = pass
-              ::ArrayResize(drawn_confirmation_bar, n_drawn + 1);
-              ::ArrayResize(drawn_candle_count,     n_drawn + 1);
-              drawn_confirmation_bar[n_drawn] = t_new;
-              drawn_candle_count[n_drawn]     = n;
-              n_drawn++;
+             bool same_bar_higher_priority = false;
+             for(int j = 0; j < n_drawn; j++)
+                 if(drawn_candle_count[j] >= pass && drawn_confirmation_bar[j] == t_new)
+                 { same_bar_higher_priority = true; break; }
+             if(same_bar_higher_priority)
+             {
+                 if(p.HasBitmap() && p.GetBitmap().IsVisible()) p.GetBitmap().Hide();
+                 continue;
+             }
 
-              // Show existing bitmap or create a new one
-              if(p.HasBitmap())
-              { if(!p.GetBitmap().IsVisible()) p.GetBitmap().Show(); }
-              else
-                  CreatePatternBitmap(p);
-          }
-      }
+             ::ArrayResize(drawn_confirmation_bar, n_drawn + 1);
+             ::ArrayResize(drawn_candle_count,     n_drawn + 1);
+             drawn_confirmation_bar[n_drawn] = t_new;
+             drawn_candle_count[n_drawn]     = n;
+             n_drawn++;
 
-      if(redraw) ::ChartRedraw(m_chart_id);
+             if(p.HasBitmap())
+             { if(!p.GetBitmap().IsVisible()) p.GetBitmap().Show(); }
+             else
+             { QueuePending(p); n_queued++; }
+         }
+     }
+     ulong t3 = ::GetMicrosecondCount();
+
+     if(redraw) ::ChartRedraw(m_chart_id);
+     ulong t4 = ::GetMicrosecondCount();
+
+     ulong total_us = t4 - t0;
+     if(total_us > 1000)
+        ::Print("PERF CPatternRenderer::Refresh total=", total_us,
+                "us hideTF=", t1-t0, "us range=", t2-t1, "us mainLoop=", t3-t2,
+                "us chartRedraw=", t4-t3, "us n_drawn=", n_drawn,
+                " n_queued=", n_queued, " pending=", m_pending.Total(), " plist=", total);
    }
+
+
   //+------------------------------------------------------------------+
   //| Incremental update on new bar only.                              |
   //| Builds coverage from already-drawn patterns, then creates new    |
@@ -358,7 +469,6 @@
       datetime t_cutoff = ::iTime(m_symbol, m_period, 3);
       if(t_cutoff == 0) t_cutoff = t_to - (datetime)(3 * ::PeriodSeconds(m_period));
 
-      // Seed coverage from already-visible patterns
         datetime drawn_confirmation_bar[];
         int      drawn_candle_count[];
         int      n_drawn = 0;
@@ -368,7 +478,7 @@
           CBarPattern *p = plist.At(i);
           if(p == NULL || !p.HasBitmap() || !p.GetBitmap().IsVisible()) continue;
           ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-          if(tf != m_period) continue;
+          if(tf != m_period || p.Symbol() != m_symbol) continue;
           datetime t_n = (datetime)p.GetProperty(PATTERN_PROP_TIME);
           int      nc  = (int)p.GetProperty(PATTERN_PROP_CANDLES);
           ::ArrayResize(drawn_confirmation_bar, n_drawn + 1);
@@ -388,7 +498,7 @@
               if(n != pass) continue;
 
               ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-              if(tf != m_period) continue;
+              if(tf != m_period || p.Symbol() != m_symbol) continue;
               int      tf_ps = (int)::PeriodSeconds(tf);
               datetime t_new = (datetime)p.GetProperty(PATTERN_PROP_TIME);
               datetime t_old = t_new - (datetime)((n - 1) * tf_ps);
@@ -403,17 +513,16 @@
                   { same_bar_higher_priority = true; break; }
               if(same_bar_higher_priority) continue;
 
-              // Remove lower-priority bitmaps at the SAME confirmation bar
               for(int k = 0; k < total; k++)
               {
                   CBarPattern *pk = plist.At(k);
                   if(pk == NULL || !pk.HasBitmap()) continue;
                   ENUM_TIMEFRAMES tfk = (ENUM_TIMEFRAMES)(long)pk.GetProperty(PATTERN_PROP_PERIOD);
-                  if(tfk != m_period) continue;
+                  if(tfk != m_period || pk.Symbol() != m_symbol) continue;
                   int      nk  = (int)pk.GetProperty(PATTERN_PROP_CANDLES);
                   if(nk >= n)  continue;
                   datetime t_nk = (datetime)pk.GetProperty(PATTERN_PROP_TIME);
-                  if(t_nk == t_new)   // same confirmation bar, lower priority → replace
+                  if(t_nk == t_new)
                       pk.ClearBitmap();
               }
 
@@ -422,11 +531,12 @@
               drawn_confirmation_bar[n_drawn] = t_new;
               drawn_candle_count[n_drawn]     = n;
               n_drawn++;
-              CreatePatternBitmap(p);
+              QueuePending(p);
           }
       }
       if(redraw) ::ChartRedraw(m_chart_id);
    }
+
   //+------------------------------------------------------------------+
   //| Incremental update on new bar only — with direction filter.     |
   //| Same logic as UpdateNew(plist, redraw) but filtered patterns    |
@@ -446,7 +556,6 @@
       datetime t_cutoff = ::iTime(m_symbol, m_period, 3);
       if(t_cutoff == 0) t_cutoff = t_to - (datetime)(3 * ::PeriodSeconds(m_period));
 
-      // Seed coverage from already-visible non-filtered patterns
       datetime drawn_confirmation_bar[];
       int      drawn_candle_count[];
       int      n_drawn = 0;
@@ -456,9 +565,8 @@
           CBarPattern *p = plist.At(i);
           if(p == NULL || !p.HasBitmap() || !p.GetBitmap().IsVisible()) continue;
           ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-          if(tf != m_period) continue;
+          if(tf != m_period || p.Symbol() != m_symbol) continue;
 
-          // Don't count filtered patterns as occupying their bar
           if(apply_filter)
           {
               int fidx = TypeIndex(p.TypePattern());
@@ -488,9 +596,8 @@
               if(n != pass) continue;
 
               ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)(long)p.GetProperty(PATTERN_PROP_PERIOD);
-              if(tf != m_period) continue;
+              if(tf != m_period || p.Symbol() != m_symbol) continue;
 
-              // Filter check — filtered pattern skipped, does not occupy bar
               if(apply_filter)
               {
                   int fidx = TypeIndex(p.TypePattern());
@@ -515,13 +622,12 @@
                   { same_bar_higher_priority = true; break; }
               if(same_bar_higher_priority) continue;
 
-              // Replace lower-priority bitmaps at same confirmation bar
               for(int k = 0; k < total; k++)
               {
                   CBarPattern *pk = plist.At(k);
                   if(pk == NULL || !pk.HasBitmap()) continue;
                   ENUM_TIMEFRAMES tfk = (ENUM_TIMEFRAMES)(long)pk.GetProperty(PATTERN_PROP_PERIOD);
-                  if(tfk != m_period) continue;
+                  if(tfk != m_period || pk.Symbol() != m_symbol) continue;
                   int      nk   = (int)pk.GetProperty(PATTERN_PROP_CANDLES);
                   if(nk >= n)   continue;
                   datetime t_nk = (datetime)pk.GetProperty(PATTERN_PROP_TIME);
@@ -534,7 +640,7 @@
               drawn_confirmation_bar[n_drawn] = t_new;
               drawn_candle_count[n_drawn]     = n;
               n_drawn++;
-              CreatePatternBitmap(p);
+              QueuePending(p);
           }
       }
       if(redraw) ::ChartRedraw(m_chart_id);
@@ -586,3 +692,7 @@
    }
  #endif // CPATTERNRENDERER_MQH_IMPLEMENTATION
 #endif // __PATTERN_RENDERER_MQH__
+
+
+
+
