@@ -13,7 +13,7 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>  
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\MarketCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\HistoryCollection.mqh>
-  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\EventsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\TradeEventsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\TradingControl.mqh>
   //+------------------------------------------------------------------+
   //| Event codes                                                      |
@@ -38,7 +38,7 @@
         CSymbolsCollection       m_symbols;        //For sybols information at tab Trade
         CMarketCollection        m_market;         // Collection of market orders and deals
         CHistoryCollection       m_history;        // Collection of historical orders and deals
-        CEventsCollection        m_events;         // Collection of events
+        CTradeEventsCollection        m_events;         // Collection of events
         CTradingControl          m_trading_control;// Trading management object
         
         bool                     m_is_event;

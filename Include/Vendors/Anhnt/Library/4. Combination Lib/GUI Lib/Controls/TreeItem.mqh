@@ -20,7 +20,7 @@ class CTreeItem : public CButton
      int               m_node_level;      // ---Node level
      string            m_item_text;       // --- Item text displayed
      bool              m_item_state;      // --- State of the item list (opened/collapsed)
-     bool              m_is_active;       //Add Properties to highlight node
+     bool              m_is_active;       // Add Properties to highlight node
    public:
                      CTreeItem(void);
                     ~CTreeItem(void);

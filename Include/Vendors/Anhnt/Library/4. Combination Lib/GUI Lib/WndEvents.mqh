@@ -1791,9 +1791,12 @@
             dynamic_cast<CTable         *>(el) != NULL ||
             dynamic_cast<CTabs          *>(el) != NULL ||
             dynamic_cast<CTextBox       *>(el) != NULL ||
-            dynamic_cast<CFrame         *>(el) != NULL) {
-          CWndContainer::AddAutoYResizeElement(w, el);
-        }
+            dynamic_cast<CTreeView      *>(el) != NULL ||
+            dynamic_cast<CFrame         *>(el) != NULL) 
+            
+            {
+             CWndContainer::AddAutoYResizeElement(w, el);
+            }
       }
     }
    }

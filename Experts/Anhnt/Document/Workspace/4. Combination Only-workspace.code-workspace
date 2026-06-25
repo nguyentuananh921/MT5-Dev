@@ -17,6 +17,9 @@
 		},
 		{
 			"path": "../../../../Logs"
+		},
+		{
+			"path": "../../../../Indicators/Vendors/Anhnt/Custom Buildin"
 		}
 	],
 	"settings": {

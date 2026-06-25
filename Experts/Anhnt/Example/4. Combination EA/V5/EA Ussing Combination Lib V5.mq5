@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                           EA.mq5 |
+//|                                 EA Ussing Combination Lib V5.mq5 |
 //|                        Copyright 2018, MetaQuotes Software Corp. |
 //|EA Code Base on https://www.mql5.com/en/articles/4727             |
 //|Library base on Link https://www.mql5.com/en/code/19703           |

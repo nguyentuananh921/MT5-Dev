@@ -12,46 +12,40 @@
  class CButton : public CElement 
   {
     private:
-      //Private properties:
-        // --- Two-state button mode
-            bool m_two_state;
+      //Private properties:        
+        bool      m_two_state;        // --- Two-state button mode
       //Private methods:
-        void InitializeProperties(const string text, const int x_gap,
-                                const int y_gap);
-        bool CreateCanvas(void);    
+        void      InitializeProperties(const string text, const int x_gap,const int y_gap);
+        bool      CreateCanvas(void);    
        // --- Handling a button click
-        bool OnClickButton(const string pressed_object);
+        bool      OnClickButton(const string pressed_object);
        // --- Change the width along the right edge of the window
-        virtual void ChangeWidthByRightWindowSide(void);        
+        virtual void      ChangeWidthByRightWindowSide(void);        
     public:
         CButton(void);
         ~CButton(void);
       // --- Methods for creating a button
-            bool CreateButton(const string text, const int x_gap, const int y_gap);        
+        bool      CreateButton(const string text, const int x_gap, const int y_gap);        
       // --- (1) Setting the button mode, (2) button state (pressed/released)
-        bool    TwoState(void) const {return (m_two_state);}
-        void    TwoState(const bool flag) {m_two_state = flag;}
-        bool    IsPressed(void) const {return (m_is_pressed);}
-        void    IsPressed(const bool state);
+        bool      TwoState(void) const {return (m_two_state);}
+        void      TwoState(const bool flag) {m_two_state = flag;}
+        bool      IsPressed(void) const {return (m_is_pressed);}
+        void      IsPressed(const bool state);
       // --- Set shortcuts for the button in the pressed state (available/locked)
-        void    IconFilePressed(const string file_path);
-        void    IconFilePressedLocked(const string file_path);
-        void    IconFilePressed(const uint resource_index);
-        void    IconFilePressedLocked(const uint resource_index);
+        void      IconFilePressed(const string file_path);
+        void      IconFilePressedLocked(const string file_path);
+        void      IconFilePressed(const uint resource_index);
+        void      IconFilePressedLocked(const uint resource_index);
       // --- Resizing
-        void ChangeSize(const uint x_size, const uint y_size);    
+        void      ChangeSize(const uint x_size, const uint y_size);    
       // ---Graph event handler
         virtual void OnEvent(const int id, const long& lparam, const double& dparam, const string& sparam);
       // --- Draws an element
         virtual void Draw(void);
-    protected:
-      // --- Draws the background
-        virtual void DrawBackground(void);
-      // --- Draws a frame
-        virtual void DrawBorder(void);
-      // --- Draws a picture
-        virtual void DrawImage(void);
-    
+    protected:      
+        virtual void DrawBackground(void);// --- Draws the background      
+        virtual void DrawBorder(void);    // --- Draws a frame      
+        virtual void DrawImage(void);     // --- Draws a picture    
     };
  #ifndef CBUTTON_MQH_IMPLEMENTATION
  #define CBUTTON_MQH_IMPLEMENTATION
@@ -243,6 +237,11 @@
   //+------------------------------------------------------------------+
   bool CButton::OnClickButton(const string pressed_object) 
    {
+        //Debug 
+            // Print("My Debug CButton::OnClickButton ENTRY my_name=", m_canvas.ChartObjectName(), " pressed_object=", pressed_object, " id=", CElementBase::Id(), " idx=", CElementBase::Index());
+            // // --- Exit if (1) the object name is foreign or (2) the element is locked
+            // if (m_canvas.ChartObjectName() != pressed_object || CElementBase::IsLocked())
+            //     return (false);
         // --- Exit if (1) the object name is foreign or (2) the element is locked
         if (m_canvas.ChartObjectName() != pressed_object || CElementBase::IsLocked())
             return (false);
@@ -252,6 +251,7 @@
         // --- Redraw element
         Update(true);
         // --- We will send a message about this
+           //  Print("My Debug CButton::OnClickButton BTN raw click name=", m_canvas.ChartObjectName(), " id=", CElementBase::Id(), " idx=", CElementBase::Index());
         ::EventChartCustom(m_chart_id, ON_CLICK_BUTTON, CElementBase::Id(),
                         CElementBase::Index(), m_canvas.ChartObjectName());
         return (true);

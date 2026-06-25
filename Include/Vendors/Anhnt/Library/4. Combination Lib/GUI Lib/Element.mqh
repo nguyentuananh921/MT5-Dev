@@ -15,64 +15,60 @@
  class CElement : public CElementBase 
   {    
     protected:
-     //Protected properties
-      // --- Pointer to form
-         CWindow* m_wnd;
-      // --- Pointer to the main element
-         CElement* m_main;
-      // --- Canvas for drawing element, new in https://www.mql5.com/en/articles/3366
-         CRectCanvas m_canvas;
-      // --- Pointers to connected elements
-         CElement* m_elements[];
+     //Protected properties      
+      CWindow*     m_wnd;        // --- Pointer to form
+      CElement*    m_main;       // --- Pointer to the main element      
+      CRectCanvas  m_canvas;     // --- Canvas for drawing element, new in https://www.mql5.com/en/articles/3366
+      CElement*    m_elements[]; // --- Pointers to connected elements
       // ---Image groups
-         struct EImagesGroup 
-          {
-               // --- Image array
-               CImage m_image[];
-               // --- Label padding
-               int m_x_gap;
-               int m_y_gap;
-               // --- The image selected for display in the group
-               int m_selected_image;
-          };
-         EImagesGroup m_images_group[];
+       struct EImagesGroup 
+         {
+            // --- Image array
+            CImage m_image[];
+            // --- Label padding
+            int m_x_gap;
+            int m_y_gap;
+            // --- The image selected for display in the group
+            int m_selected_image;
+         };
+       EImagesGroup m_images_group[];
       // --- Label padding
-         int m_icon_x_gap;
-         int m_icon_y_gap;
+       int m_icon_x_gap;
+       int m_icon_y_gap;
       // ---Background color in different states
-         color m_back_color;
-         color m_back_color_hover;
-         color m_back_color_locked;
-         color m_back_color_pressed;
+       color m_back_color;
+       color m_back_color_hover;
+       color m_back_color_locked;
+       color m_back_color_pressed;
       // --- Frame color in different states
-         color m_border_color;
-         color m_border_color_hover;
-         color m_border_color_locked;
-         color m_border_color_pressed;
+       color m_border_color;
+       color m_border_color_hover;
+       color m_border_color_locked;
+       color m_border_color_pressed;
       // --- Text colors in different states
-         color m_label_color;
-         color m_label_color_hover;
-         color m_label_color_locked;
-         color m_label_color_pressed;
+       color m_label_color;
+       color m_label_color_hover;
+       color m_label_color_locked;
+       color m_label_color_pressed;
       // --- Description text
-         string m_label_text;
+       string m_label_text;
       // ---Text Label Indents
-         int m_label_x_gap;
-         int m_label_y_gap;
+       int m_label_x_gap;
+       int m_label_y_gap;
       // --- Font
-         string m_font;
-         int m_font_size;
+       string m_font;
+       int m_font_size;
       // --- Alpha channel value (element transparency), new in https://www.mql5.com/en/articles/3366
-         uchar m_alpha; 
+       uchar m_alpha; 
       // --- Tooltip text
-         string m_tooltip_text;
+       string m_tooltip_text;
       // ---Text alignment mode
-         bool m_is_center_text;
+       bool m_is_center_text;
       // ---Priority on left mouse button click
-         long m_zorder; 
+       long m_zorder; 
      //Protected methods
       // ---Creating a canvas for drawing
-        bool CreateCanvas(const string name, const int x, const int y,
+      bool CreateCanvas(const string name, const int x, const int y,
                         const int x_size, const int y_size, ENUM_COLOR_FORMAT clr_format = COLOR_FORMAT_ARGB_NORMALIZE);
       // --- Method for adding pointers to descendant elements to a common array
         void            AddToArray(CElement& object);
@@ -81,17 +77,17 @@
       // --- Checking for the presence of a pointer to the main element
         bool            CheckMainPointer(void);
       // --- Calculation of absolute coordinates
-        int             CalculateX(const int x_gap);
-        int             CalculateY(const int y_gap);
+       int             CalculateX(const int x_gap);
+       int             CalculateY(const int y_gap);
       // --- Calculation of relative coordinates from the extreme point of the form
-        int             CalculateXGap(const int x);
-        int             CalculateYGap(const int y);
+       int             CalculateXGap(const int x);
+       int             CalculateYGap(const int y);
       // --- Draws the background
-        virtual void    DrawBackground(void);
+       virtual void    DrawBackground(void);
       // --- Draws a frame
-        virtual void    DrawBorder(void);
+       virtual void    DrawBorder(void);
       // --- Draws a picture
-        virtual void    DrawImage(void);
+       virtual void    DrawImage(void);
       // --- Draws text
         virtual void    DrawText(void);
     public:
@@ -584,6 +580,8 @@ string CElement::IconFilePressedLocked(bool resource_index_mode = false)
 //+------------------------------------------------------------------+
 void CElement::Update(const bool redraw = false) 
  {
+  //Debug
+    // Print("My Debug CElement::Update  obj=", m_canvas.ChartObjectName(), "  redraw=", redraw);
   // --- With element redrawing
     if (redraw) 
      {

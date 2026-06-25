@@ -115,18 +115,13 @@
     // --- List offset
     void                        ShiftTreeList(void);
     void                        ShiftContentList(void);
-    // --- Fast forward list
-    void                        FastSwitching(void);
-    // --- Controls the width of lists
-    void                        ResizeListArea(void);
-    // --- Readiness check for changing list widths
-    void                        CheckXResizePointer(const int x, const int y);
-    // --- Checking for exceeding restrictions
-    bool                        CheckOutOfArea(const int x, const int y);
-    // ---Updating the width of list items
-    void                        UpdateXSize(const int x);
-    // --- Adds an item to the list in the content area
-    void                        AddDisplayedTreeItem(const int list_index);
+
+    void                        FastSwitching(void);   // --- Fast forward list    
+    void                        ResizeListArea(void);  // --- Controls the width of lists     
+    void                        CheckXResizePointer(const int x, const int y); // --- Readiness check for changing list widths    
+    bool                        CheckOutOfArea(const int x, const int y);      // --- Checking for exceeding restrictions    
+    void                        UpdateXSize(const int x); // ---Updating the width of list items    
+    void                        AddDisplayedTreeItem(const int list_index); // --- Adds an item to the list in the content area    
     // --- Generates (1) a tree list and (2) a content list
      void                        FormTreeList(void);
      void                        FormContentList(void);   
@@ -136,6 +131,7 @@
      virtual void                DrawResizeBorder(void);
     // --- Change the width along the right edge of the window
      virtual void                ChangeWidthByRightWindowSide(void);
+     virtual void                ChangeHeightByBottomWindowSide(void);
    public:
                                   CTreeView(void);
                                   ~CTreeView(void);
@@ -937,13 +933,10 @@
  // | Draws an element |
  //+------------------------------------------------------------------+
  void CTreeView::Draw(void) 
-  {
-    // --- Draw background
-      DrawBackground();
-    // --- Draw a frame
-      DrawBorder();
-    // --- Draw the border of the areas
-      DrawResizeBorder();
+  {    
+      DrawBackground();  // --- Draw background    
+      DrawBorder();      // --- Draw a frame    
+      DrawResizeBorder();// --- Draw the border of the areas
   }
  //+------------------------------------------------------------------+
  //| Clicking the button to collapse/expand the item list |
@@ -1195,7 +1188,7 @@
     if (!CElementBase::IsVisible())
       return;
    // --- Hide all items in the tree list
-    int items_total = ItemsTotal();
+    int items_total = ItemsTotal();   
     for (int i = 0; i < items_total; i++)
       m_items[i].Hide();
    // --- Get the number of displayed items in the list
@@ -1223,7 +1216,7 @@
         m_items[li].UpdateX(x);
         m_items[li].UpdateY(y);
         // --- Show item
-        m_items[li].Show();
+        m_items[li].Show();        
         v++;
       }
     }
@@ -1430,13 +1423,13 @@
          if (m_x_resize.State()) 
           {
            // --- Deactivate pointer
-           m_x_resize.State(false);
+            m_x_resize.State(false);
            // --- Correction of the width of list items
-           RedrawTreeList();
-           RedrawContentList();
-           UpdateTreeList();
-           UpdateContentList();
-           ChartRedraw(m_chart_id);
+            RedrawTreeList();
+            RedrawContentList();
+            UpdateTreeList();
+            UpdateContentList();
+            ChartRedraw(m_chart_id);
            // --- Send a message to determine available elements
             ::EventChartCustom(m_chart_id, ON_SET_AVAILABLE, CElementBase::Id(), 1,
                               "");
@@ -1539,10 +1532,10 @@
  void CTreeView::AddDisplayedTreeItem(const int list_index)
   {
     // --- Increase the size of the arrays by one element
-    int array_size = ::ArraySize(m_td_list_index);
-    ::ArrayResize(m_td_list_index, array_size + 1);
+     int array_size = ::ArraySize(m_td_list_index);
+     ::ArrayResize(m_td_list_index, array_size + 1);
     // --- Save the values ​​of the passed parameters
-    m_td_list_index[array_size] = list_index;
+     m_td_list_index[array_size] = list_index;
   }
  //+------------------------------------------------------------------+
  // | Generates a tree list |
@@ -1555,7 +1548,7 @@
       int l_items_total[];          // number of points in a node
       int l_folders_total[];        // number of folders in a node
     // --- Set the initial size of the arrays
-     int begin_size = m_max_node_level + 2;
+      int begin_size = m_max_node_level + 2;
       ::ArrayResize(l_prev_node_list_index, begin_size);
       ::ArrayResize(l_item_index, begin_size);
       ::ArrayResize(l_items_total, begin_size);
@@ -1573,8 +1566,8 @@
       bool end_list = false;
     // --- We collect the displayed items into an array. The loop will run until:
     // 1: node counter is not greater than the maximum;
-    // 2: did not reach the last item (after checking all the items included in
-    // it); 3: The user did not uninstall the program.
+    // 2: did not reach the last item (after checking all the items included in it); 
+    // 3: The user did not uninstall the program.
       int items_total = ::ArraySize(m_items);
       for (int nl = m_min_node_level; nl <= m_max_node_level && !end_list; nl++) 
        {
@@ -1582,57 +1575,57 @@
          {
           // --- If the "Show folders only" mode is enabled
            if (m_file_navigator_mode == FN_ONLY_FOLDERS) 
-           {
+            {
              // --- If it is a file, go to the next step
              if (!m_t_is_folder[i])
                continue;
-           }
+            }
           // --- If (1) this is not our node or (2) the sequence of local item
           // indices is not respected, let's move on to the next one
-          if (nl != m_t_node_level[i] || m_t_item_index[i] <= l_item_index[nl])
+           if (nl != m_t_node_level[i] || m_t_item_index[i] <= l_item_index[nl])
             continue;
           // --- Let's move on to the next point if (1) is not currently in the root
           // directory and (2) the total index of the list of the previous node is
           // not equal to the same one in memory
-          if (nl > m_min_node_level &&
-            m_t_prev_node_list_index[i] != l_prev_node_list_index[nl])
-            continue;
+           if (nl > m_min_node_level &&
+             m_t_prev_node_list_index[i] != l_prev_node_list_index[nl])
+             continue;
           // --- Remember the local index of the item if the next one is not less
           // than the size of the local list
            if (m_t_item_index[i] + 1 >= l_items_total[nl])
              ii = m_t_item_index[i];
           // --- If the list of the current item is expanded
-          if (m_t_item_state[i]) 
-           {
-            // --- Add an item to the array of displayed items in the tree list
-            AddDisplayedTreeItem(i);
-            // --- Let's remember the current values ​​and move on to the next node
+           if (m_t_item_state[i]) 
+            {
+             // --- Add an item to the array of displayed items in the tree list
+              AddDisplayedTreeItem(i);
+             // --- Let's remember the current values ​​and move on to the next node
               int n = nl + 1;
               l_prev_node_list_index[n] = m_t_list_index[i];
               l_item_index[nl] = m_t_item_index[i];
               l_items_total[n] = m_t_items_total[i];
               l_folders_total[n] = m_t_folders_total[i];
-            // --- Reset the counter of local item indexes
-            ii = 0;
-            // --- Let's move on to the next node
-            break;
-           }
-         // --- Add an item to the array of displayed items in the tree list
-          AddDisplayedTreeItem(i);
-         // --- Increase the counter of local item indexes
-          ii++;
-         // --- If you have reached the last item in the root directory
-          if (nl == m_min_node_level && ii >= m_root_items_total) 
-          {
-          // --- Set the flag and end the current loop
-            end_list = true;
-            break;
-          }
-         // --- If you have not yet reached the last item in the root directory
-          else if (nl > m_min_node_level) 
-          {
-            // --- Get the number of points in the current node
-            int total = (m_file_navigator_mode == FN_ONLY_FOLDERS)
+             // --- Reset the counter of local item indexes
+              ii = 0;
+             // --- Let's move on to the next node
+              break;
+            }
+          // --- Add an item to the array of displayed items in the tree list
+            AddDisplayedTreeItem(i);
+          // --- Increase the counter of local item indexes
+            ii++;
+          // --- If you have reached the last item in the root directory
+            if (nl == m_min_node_level && ii >= m_root_items_total) 
+             {
+             // --- Set the flag and end the current loop
+               end_list = true;
+               break;
+             }
+          // --- If you have not yet reached the last item in the root directory
+            else if (nl > m_min_node_level) 
+             {
+              // --- Get the number of points in the current node
+              int total = (m_file_navigator_mode == FN_ONLY_FOLDERS)
                           ? l_folders_total[nl]
                           : l_items_total[nl];
             // --- If this is not the last local index of the item, move on to the next one
@@ -1642,12 +1635,12 @@
             // you need to return to the previous node and continue from the point where you stopped
             while (true) 
             {
-            // --- Reset the values of the current node in the arrays listed below
+             // --- Reset the values of the current node in the arrays listed below
               l_prev_node_list_index[nl] = -1;
               l_item_index[nl] = -1;
               l_items_total[nl] = -1;
-            // --- Decrease the node counter until equality in the number of items
-            // in local lists is maintained or did not reach the root directory
+             // --- Decrease the node counter until equality in the number of items
+             // in local lists is maintained or did not reach the root directory
               if (l_item_index[nl - 1] + 1 >= l_items_total[nl - 1]) {
                 if (nl - 1 == m_min_node_level)
                   break;
@@ -1655,17 +1648,17 @@
                 nl--;
                 continue;
               }
-            //---
-            break;
+             //---
+              break;
             }
           // --- Let's go to the previous node
-          nl = nl - 2;
+           nl = nl - 2;
           // --- Reset the counter of local indexes of points and move on to the next node
-          ii = 0;
-          break;
-          }
+            ii = 0;
+            break;
+            }
+         }
        }
-    }
     // --- List redrawing
     RedrawTreeList();
   }
@@ -1676,53 +1669,57 @@
   {
     if(!m_show_item_content) return;
     // --- Index of the selected item
-    int li = m_selected_item_index;
+     int li = m_selected_item_index;
     // --- Free the content list arrays
       ::ArrayFree(m_cd_item_text);
       ::ArrayFree(m_cd_list_index);
       ::ArrayFree(m_cd_tree_list_index);
     // --- Let's create a list of contents
-    int items_total = ::ArraySize(m_items);
-    for (int i = 0; i < items_total; i++) {
-      // --- If (1) node levels and (2) local item indices match, as well as
-      // (3) index of the previous node with the index of the selected item
-      if (m_t_node_level[i] == m_t_node_level[li] + 1 &&
+     int items_total = ::ArraySize(m_items);
+     for (int i = 0; i < items_total; i++) 
+      {
+       // --- If (1) node levels and (2) local item indices match, as well as
+       // (3) index of the previous node with the index of the selected item
+        if (m_t_node_level[i] == m_t_node_level[li] + 1 &&
           m_t_prev_node_item_index[i] == m_t_item_index[li] &&
-          m_t_prev_node_list_index[i] == li) {
-        // --- Increase the arrays of displayed content list items
-          int size = ::ArraySize(m_cd_list_index);
-          int new_size = size + 1;
-          ::ArrayResize(m_cd_item_text, new_size);
-          ::ArrayResize(m_cd_list_index, new_size);
-          ::ArrayResize(m_cd_tree_list_index, new_size);
-        // --- Let's save the text of the item and the general index of the tree
-        // list in arrays
-          m_cd_item_text[size] = m_t_item_text[i];
-          m_cd_tree_list_index[size] = m_t_list_index[i];
+          m_t_prev_node_list_index[i] == li) 
+         {
+          // --- Increase the arrays of displayed content list items
+           int size = ::ArraySize(m_cd_list_index);
+           int new_size = size + 1;
+           ::ArrayResize(m_cd_item_text, new_size);
+           ::ArrayResize(m_cd_list_index, new_size);
+           ::ArrayResize(m_cd_tree_list_index, new_size);
+          // --- Let's save the text of the item and the general index of the tree
+          // list in arrays
+           m_cd_item_text[size] = m_t_item_text[i];
+           m_cd_tree_list_index[size] = m_t_list_index[i];
+          }
       }
-    }
-    // --- If in the end the list is not empty, fill the array of general indexes
-    // of the content list
-    int cd_items_total = ::ArraySize(m_cd_list_index);
-    if (cd_items_total > 0) {
-      // --- Point counter
-      int c = 0;
-      // --- Let's go through the list
-      int c_items_total = ::ArraySize(m_c_list_index);
-      for (int i = 0; i < c_items_total; i++) {
-        // --- If the description and general indexes of the tree list items match
-        if (m_c_item_text[i] == m_cd_item_text[c] &&
-            m_c_tree_list_index[i] == m_cd_tree_list_index[c]) {
-          // --- Let's save the general index of the content list and move on to
-          // the next one
-          m_cd_list_index[c] = m_c_list_index[i];
-          c++;
-          // --- Exit the loop if the end of the displayed list is reached
-          if (c >= cd_items_total)
-            break;
-        }
+    // --- If in the end the list is not empty, fill the array of general indexes of the content list
+     int cd_items_total = ::ArraySize(m_cd_list_index);
+     if (cd_items_total > 0) 
+      {
+       // --- Point counter
+        int c = 0;
+       // --- Let's go through the list
+        int c_items_total = ::ArraySize(m_c_list_index);
+        for (int i = 0; i < c_items_total; i++) 
+         {
+          // --- If the description and general indexes of the tree list items match
+           if (m_c_item_text[i] == m_cd_item_text[c] &&
+            m_c_tree_list_index[i] == m_cd_tree_list_index[c]) 
+            {
+             // --- Let's save the general index of the content list and move on to
+             // the next one
+              m_cd_list_index[c] = m_c_list_index[i];
+              c++;
+             // --- Exit the loop if the end of the displayed list is reached
+              if (c >= cd_items_total)
+                break;
+            }
+         }
       }
-    }
     // --- List redrawing
     RedrawContentList();
   }
@@ -1732,16 +1729,16 @@
  void CTreeView::RedrawTreeList(void) 
   {
     // --- Exit if element is hidden
-    if (!CElementBase::IsVisible())
-      return;
+     if (!CElementBase::IsVisible())
+       return;
     // --- Hide list items
-    int items_total = ::ArraySize(m_items);
+     int items_total = ::ArraySize(m_items);
      for (int i = 0; i < items_total; i++)
-      m_items[i].Hide();
+       m_items[i].Hide();
     // --- Hide scrollbar
-     m_scrollv.Hide();
+      m_scrollv.Hide();
     // --- Y coordinate of the first item in the tree list
-    int y = 1;
+     int y = 1;
     // --- Get the number of points
      m_items_total = ::ArraySize(m_td_list_index);
     // --- Adjust scrollbar sizes
@@ -1753,24 +1750,28 @@
      if (m_show_item_content)
       w = (m_scrollv.IsScroll()) ? m_treeview_width - m_scrollv.ScrollWidth() - 2
                                 : m_treeview_width - 1;
-    else
+     else
       w = (m_scrollv.IsScroll()) ? m_treeview_width - m_scrollv.ScrollWidth() - 3
                                 : m_treeview_width - 2;
     // --- Set new values
-    for (int i = 0; i < m_items_total; i++) {
+    for (int i = 0; i < m_items_total; i++) 
+     {
       // --- Calculate the Y coordinate for each point
-      y = (i > 0) ? y + m_item_y_size : y;
+       y = (i > 0) ? y + m_item_y_size : y;
       // --- Get the general index of the item in the list
-      int li = m_td_list_index[i];
+       int li = m_td_list_index[i];
       // --- Update coordinates and size
-      m_items[li].UpdateY(y);
-      m_items[li].UpdateWidth(w);
-    }
+        m_items[li].UpdateY(y);
+        m_items[li].UpdateWidth(w);
+     }
+    //Fixing Hide. Add here
+     // --- Redraw and push each item's bitmap (UpdateWidth() above blanked it via Resize())
+       //UpdateTreeList();
     // --- Show list items
-    for (int i = 0; i < items_total; i++)
+     for (int i = 0; i < items_total; i++)
       m_items[i].Show();
     // --- Update coordinates and list size
-    ShiftTreeList();
+     ShiftTreeList();
   }
  //+------------------------------------------------------------------+
  // | Redrawing the contents list |
@@ -1905,51 +1906,78 @@
     m_canvas.XSize(x_size);
     m_canvas.Resize(x_size, y_size);
     // ---If without content list
-    if (!m_show_item_content) {
-      // --- Calculate and set the width for items in the list
-      w = (m_scrollv.IsScroll())
+    if (!m_show_item_content) 
+     {
+       // --- Calculate and set the width for items in the list
+        w = (m_scrollv.IsScroll())
               ? CElementBase::XSize() - m_scrollv.ScrollWidth() - 3
               : CElementBase::XSize() - 2;
-      //---
-      int v = (m_scrollv.IsScroll()) ? m_scrollv.CurrentPos() : 0;
-      // --- Get the number of displayed items in the content list
-      int total = ::ArraySize(m_td_list_index);
-      for (int r = 0; r < m_visible_items_total; r++) {
-        // --- Check to prevent out of range
-        if (v >= 0 && v < total) {
+       //---
+        int v = (m_scrollv.IsScroll()) ? m_scrollv.CurrentPos() : 0;
+       // --- Get the number of displayed items in the content list
+        int total = ::ArraySize(m_td_list_index);
+        for (int r = 0; r < m_visible_items_total; r++) 
+        {
+          // --- Check to prevent out of range
+          if (v >= 0 && v < total) 
+         {
           // --- Get the general index of the tree list item
           int li = m_td_list_index[v];
           // --- Set coordinates and width
           m_items[li].UpdateWidth(w);
           m_items[li].Draw();
           v++;
+         }
         }
       }
-    }
     // ---If there is a content list
-    else {
+    else 
+     {
       w = (m_content_scrollv.IsScroll())
               ? m_x_size - m_treeview_width - m_content_scrollv.ScrollWidth() - 2
               : m_x_size - m_treeview_width - 2;
       //---
-      int v = (m_content_scrollv.IsScroll()) ? m_content_scrollv.CurrentPos() : 0;
+       int v = (m_content_scrollv.IsScroll()) ? m_content_scrollv.CurrentPos() : 0;
       // --- Get the number of displayed items in the content list
-      int total = ::ArraySize(m_cd_list_index);
-      for (int r = 0; r < m_visible_items_total; r++) {
-        // --- Check to prevent out of range
-        if (v >= 0 && v < total) {
-          // --- Get the general index of the tree list item
-          int li = m_cd_list_index[v];
-          // --- Set coordinates and width
-          m_content_items[li].UpdateWidth(w);
-          m_content_items[li].Draw();
-          v++;
+       int total = ::ArraySize(m_cd_list_index);
+       for (int r = 0; r < m_visible_items_total; r++) 
+        {
+         // --- Check to prevent out of range
+         if (v >= 0 && v < total) 
+          {
+           // --- Get the general index of the tree list item
+            int li = m_cd_list_index[v];
+           // --- Set coordinates and width
+            m_content_items[li].UpdateWidth(w);
+            m_content_items[li].Draw();
+            v++;
+          }
         }
-      }
-    }
+     }
     // --- Redraw element
     Draw();
+    //Add here to fix 
+       m_canvas.Update(true); 
   } 
+ void CTreeView::ChangeHeightByBottomWindowSide(void)
+  {
+    if(m_anchor_bottom_window_side) return;
+    int y_size = m_main.Y2() - CElementBase::Y() - m_auto_yresize_bottom_offset;
+    if(y_size == m_y_size) return;     
+    CElementBase::YSize(y_size);
+    m_canvas.YSize(y_size);
+    m_canvas.Resize(m_x_size, y_size);
+    // Recompute visible rows for the new height, same formula as InitializeProperties
+     m_visible_items_total = (y_size - 2) / m_item_y_size;
+     m_scrollv.Reinit(m_items_total, m_visible_items_total);
+     if(m_show_item_content)
+        m_content_scrollv.Reinit(::ArraySize(m_content_items), m_visible_items_total);
+    //Original 
+      FormTreeList();
+      FormContentList();
+      Draw();          
+      Moving();          
+  }
  int CTreeView::ItemPrevNode(int index) const
   { 
     if(index < 0 || index >= ArraySize(m_t_prev_node_list_index)) return -1;

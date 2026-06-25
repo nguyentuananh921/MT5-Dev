@@ -50,9 +50,21 @@
   enum ENUM_TAB_INFO
    {
       TAB_INFO_PATTERNS   = 0,   // Candle pattern confluence
-      TAB_INFO_INDICATORS = 1,   // Indicator values (future)
+      TAB_INFO_INDICATORS = 1,   // Indicator values (future)      
       TAB_INFO_TOTAL
    };  
+   enum ENUM_TAB_SETTING_INFO
+    {
+      TAB_SETTING_CONFIG =0,   //To Config indicator.
+      TAB_SETTING_INFO   =1,   //To Show how many indicator in timeseries ans set show or hide base on template
+      TAB_SETTING_TOTAL
+    }
+   enum ENUM_TAB_CONFIG_DETAIL
+    {
+      TAB_CONFIG_DETAIL_PARAMS = 0,   // Form Parameter + Add
+      TAB_CONFIG_DETAIL_INFO,         // Mô tả/info indicator đang chọn
+      TAB_CONFIG_DETAIL_TOTAL
+    };
  class CGUIPannel : public CWndEvents
   {
    private: 
@@ -72,9 +84,18 @@
       CStatusBar                 m_status_bar;
       CTabs                      m_tabs_main;
       //For CTreeView left pannel on tab Setting of m_tabs_main
-       CTreeView                  m_treeview_settings;       
-       // Symbol node registry — written once at first build (watermark == 0)
-         int                        m_sym_tree_pos[];        //To save symbol node list_index            
+       CTreeView                  m_treeview_settings;
+       int                        m_sym_tree_pos[];        //To save symbol node list_index  
+      //      
+       CTreeView                  m_treeview_indicator;       
+       int         m_group_tree_pos[4];
+       struct SIndicatorCatalogItem
+         {
+            ENUM_INDICATOR        type;
+            ENUM_INDICATOR_GROUP  group;
+            string                name;
+         };
+                   
       //For Pattern
          // ENUM_PATTERN_TYPE          m_pattern_types[];
          string                     m_pattern_display_names[];
@@ -117,7 +138,7 @@
          bool UpdateStatusBar(void);
      //For m_treeview_settings Setting Tab TAB_TAB_TRADE_SETTINGS at m_tabs_main
        //Left TreeView at Pannel        
-        bool CreateTreeView_Settings(void);               
+        bool CreateTreeView_Settings(const int x_gap, const int y_gap);               
         void PopulateSymbolTFTree(void);        
        // For right panel Settings — [Pattern][Indicator] tabs
         //bool CreateSettingsRightTabs(const int x, const int y);        
@@ -141,7 +162,7 @@
          //                      const datetime T);
      //Calculation for Control
       double DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0);
-   public: // Public methods
+   public: 
       // lifecycle method
        CGUIPannel(void);
        ~CGUIPannel(void);
@@ -232,12 +253,12 @@
          if(li < 0 || li >= m_treeview_settings.ItemsTotal()) return;
          CTreeItem *item = m_treeview_settings.ItemPointer(li);
          //Print Debug            
-            Print("My debug from CGUIPannel::OnEvent [ON_CLICK_BUTTON] ", " lparam = ",lparam," dparam= ",sparam," sparam= ",sparam,"\n",
-            "li= ",li, " item=", (item != NULL ? "OK" : "NULL"),
-            " item nodelevel = ",string(item.NodeLevel()),
-            " Itemtype= ", (item != NULL ? (string)item.ItemType() : "N/A"),
-            " TI_HAS_ITEMS= ", (string)TI_HAS_ITEMS," item_state= ", (item != NULL ? (string)item.ItemState() : "N/A"),
-            " parent_pos= ", m_treeview_settings.ItemPrevNode(li));  // safe: ItemPrevNode now has bounds check
+            // Print("My debug from CGUIPannel::OnEvent [ON_CLICK_BUTTON] ", " lparam = ",lparam," dparam= ",sparam," sparam= ",sparam,"\n",
+            // "li= ",li, " item=", (item != NULL ? "OK" : "NULL"),
+            // " item nodelevel = ",string(item.NodeLevel()),
+            // " Itemtype= ", (item != NULL ? (string)item.ItemType() : "N/A"),
+            // " TI_HAS_ITEMS= ", (string)TI_HAS_ITEMS," item_state= ", (item != NULL ? (string)item.ItemState() : "N/A"),
+            // " parent_pos= ", m_treeview_settings.ItemPrevNode(li));  // safe: ItemPrevNode now has bounds check
          //--------------------------------
          if(item == NULL) return;
          int parent_pos = m_treeview_settings.ItemPrevNode(li);
@@ -247,13 +268,13 @@
               ChartSetSymbolPeriod(0, item.LabelText(), _Period);
           }
          else // TF node → navigate to exact sym + tf
-            {
-               CTreeItem *parent = m_treeview_settings.ItemPointer(parent_pos);
-               if(parent != NULL)
-                {                  
-                  ChartSetSymbolPeriod(0,parent.LabelText(),TimestampByDescription(item.LabelText()));
-                }                  
-            }        
+          {  
+            CTreeItem *parent = m_treeview_settings.ItemPointer(parent_pos);
+            if(parent != NULL)
+             {                  
+               ChartSetSymbolPeriod(0,parent.LabelText(),TimestampByDescription(item.LabelText()));
+             }                  
+          }        
          return;
          }
     //CHARTEVENT_CHART_CHANGE
@@ -329,7 +350,7 @@
             Print(__FUNCTION__, " > Failed to create Status Bar!");
             return (false);
          }      
-       if (!CreateTab_Main(3, 43))
+       if (!CreateTab_Main(115, 43))
          {
             //Print(__FUNCTION__, " > Failed to create Tabs1!");
             return (false);
@@ -337,7 +358,7 @@
       //Create control in each tab
        //For Settings Tab at m_tabs_main 
          PopulateSymbolTFTree();
-         if(!CreateTreeView_Settings()) return false;         
+         if(!CreateTreeView_Settings(10,22)) return false;         
          ApplyTreeHighlight();         
          // if(!CreateSettingsRightTabs(205, 25)) return false;
          // if(!CreatePatternConfigTable(5, 5)) return false;
@@ -544,25 +565,27 @@
    }
  //Add Control at Setting Tab at m_tabs_main
  //For treeview
-  bool CGUIPannel::CreateTreeView_Settings(void)
+  bool CGUIPannel::CreateTreeView_Settings(const int x_gap, const int y_gap)
    { 
-      m_treeview_settings.MainPointer(m_tabs_main);
+      //m_treeview_settings.MainPointer(m_tabs_main);
+      m_treeview_settings.MainPointer(m_Mainwindow);
       m_treeview_settings.AutoXResizeMode(false);  // fixed width
-      m_treeview_settings.XSize(200);              // tree chiếm 200px bên trái
+      m_treeview_settings.XSize(100);              // tree chiếm 100px bên trái
       m_treeview_settings.AutoYResizeMode(true);
       m_treeview_settings.VisibleItemsTotal(15);
       m_treeview_settings.LightsHover(true);
-      if(!m_treeview_settings.CreateTreeView(10, 10)) return false;
-      m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_treeview_settings);
+      m_treeview_settings.AutoYResizeBottomOffset(25);
+      if(!m_treeview_settings.CreateTreeView(x_gap, y_gap)) return false;
+      //m_tabs_main.AddToElementsArray(TAB_TAB_TRADE_SETTINGS, m_treeview_settings);
       CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_treeview_settings);      
       return true;
    }  
   void CGUIPannel::PopulateSymbolTFTree(void)
    {
       //=== DEBUG: trang thai luc vao ham ===
-         Print("My Debug PopulateSymbolTFTree ENTER  m_timeseries=", (m_timeseries == NULL ? "NULL" : "OK"),
-               "  mw_total=", ::SymbolsTotal(true),
-               "  ItemsTotal_before=", m_treeview_settings.ItemsTotal());
+         // Print("My Debug PopulateSymbolTFTree ENTER  m_timeseries=", (m_timeseries == NULL ? "NULL" : "OK"),
+         //       "  mw_total=", ::SymbolsTotal(true),
+         //       "  ItemsTotal_before=", m_treeview_settings.ItemsTotal());
 
 
       if(m_timeseries == NULL) return;
@@ -579,8 +602,8 @@
        {
          string            sym_name = ::SymbolName(i, true);
          //=== DEBUG: xem i <-> sym_name co on dinh giua cac lan goi khong ===
-            Print("My Debug CGUIPannel::PopulateSymbolTFTree FOR LOOP i=", i, " sym_name=", sym_name,
-                  " m_sym_tree_pos[i]=", m_sym_tree_pos[i]);
+            // Print("My Debug CGUIPannel::PopulateSymbolTFTree FOR LOOP i=", i, " sym_name=", sym_name,
+            //       " m_sym_tree_pos[i]=", m_sym_tree_pos[i]);
 
          CBarTimeSeriesDE *bts      = m_timeseries.GetTimeseries(sym_name);
          CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
@@ -602,8 +625,8 @@
                                           0, 0, 
                                           false,    //item_state, m_t_item_state[]=true
                                           false      //is_folder m_t_is_folder[]=false
-                                          );            
-           }
+                                          );             
+           }            
          int sym_li = m_sym_tree_pos[i];
          if(tf_cnt == 0) continue;   //No TF found on sym_li
          // Step 2: Collect existing TF children of sym_li node
@@ -642,23 +665,27 @@
                                           true,   //item_state, m_t_item_state[]=true;
                                           false   //is_folder m_t_is_folder[]=false
                                        );
+               //Register new CTreeItem  
+                CTreeItem *new_item = m_treeview_settings.ItemPointer(m_treeview_settings.ItemsTotal() - 1);
+                if(new_item != NULL)
+                  CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), *new_item);
              }
            }   
            
-         //=== DEBUG: dump TOAN BO item sau khi populate xong ===
-          int dbg_total = m_treeview_settings.ItemsTotal();
-            Print("My Debug PopulateSymbolTFTree EXIT  ItemsTotal_after=", dbg_total);
-            for(int k = 0; k < dbg_total; k++)
-               {
-               CTreeItem *dbg_it = m_treeview_settings.ItemPointer(k);
-               if(dbg_it == NULL) continue;
-               Print("My Debug CGUIPannel::PopulateSymbolTFTree idx=", k,
-                     " text=", dbg_it.LabelText(),
-                     " nodeLevel=", dbg_it.NodeLevel(),
-                     " prevNode=", m_treeview_settings.ItemPrevNode(k),
-                     " arrowXGap=", dbg_it.ArrowXGap(),
-                     " iconXGap=", dbg_it.IconXGap());
-               }
+         // //=== DEBUG: dump TOAN BO item sau khi populate xong ===
+            //  int dbg_total = m_treeview_settings.ItemsTotal();
+            //    Print("My Debug PopulateSymbolTFTree EXIT  ItemsTotal_after=", dbg_total);
+            //    for(int k = 0; k < dbg_total; k++)
+            //       {
+            //       CTreeItem *dbg_it = m_treeview_settings.ItemPointer(k);
+            //       if(dbg_it == NULL) continue;
+            //       Print("My Debug CGUIPannel::PopulateSymbolTFTree idx=", k,
+            //             " text=", dbg_it.LabelText(),
+            //             " nodeLevel=", dbg_it.NodeLevel(),
+            //             " prevNode=", m_treeview_settings.ItemPrevNode(k),
+            //             " arrowXGap=", dbg_it.ArrowXGap(),
+            //             " iconXGap=", dbg_it.IconXGap());
+            //       }
        }
    }
   
