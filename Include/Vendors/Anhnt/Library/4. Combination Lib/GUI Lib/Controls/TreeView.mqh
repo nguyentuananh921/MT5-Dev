@@ -197,6 +197,7 @@
      virtual void                Show(void);
      virtual void                Hide(void);
      virtual void                Delete(void);
+     virtual void                Moving(const bool only_visible = true);
     // --- Draws an element
      virtual void                Draw(void);
     // --- Redrawing lists
@@ -307,7 +308,7 @@
  bool CTreeView::CreateTreeView(const int x_gap, const int y_gap) 
   {
     // --- Quit if there is no pointer to the main element
-    if (!CElement::CheckMainPointer())
+     if (!CElement::CheckMainPointer())
       return (false);
     // --- Initializing properties
       InitializeProperties(x_gap, y_gap);
@@ -449,6 +450,17 @@
     // --- Creating a scrollbar
     if (!m_scrollv.CreateScroll(x, y, m_items_total, m_visible_items_total))
       return (false);
+    // Add Here to Fix Force initial paint only if the scrollbar actually decides it's needed;
+    // otherwise explicitly hide it (CreateCanvas() defaults to natively visible, nothing else hides an unneeded scrollbar)
+    if (m_scrollv.IsScroll())
+     {
+       m_scrollv.Draw();
+       m_scrollv.CElement::Update(true);
+     }
+    else
+     {
+       m_scrollv.Hide();
+     }
     // --- Add element to array
     CElement::AddToArray(m_scrollv);
     //---
@@ -858,14 +870,44 @@
  // | Shows element |
  //+------------------------------------------------------------------+
  void CTreeView::Show(void) 
-  {
-   // --- Exit if element is already visible
-   if (CElementBase::IsVisible())    return;
-   // --- Show element
+ {
+  //Debug
+   Print("My Debug CTreeView::Show CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
+  // --- Exit if element is already visible
+   if (CElementBase::IsVisible())    return;  
+  // Fix for ScrollV
+   m_scrollv.Reinit(m_items_total, m_visible_items_total);
+   m_scrollv.ChangeYSize(m_y_size - 2);
+  // --- Show element move after Fix for ScrollV block
    CElement::Show();
-   // --- Update list coordinates and sizes
+  // --- Update list coordinates and sizes
    ShiftTreeList();
    ShiftContentList();
+ }
+ void CTreeView::Moving(const bool only_visible)
+  {
+   CElement::Moving(only_visible);
+   // --- Re-layout visible items + scrollbar to match the freshly recalculated height
+   ShiftTreeList();
+   ShiftContentList();
+   //Debug
+    Print("My Debug CTreeView::Moving obj=", m_canvas.ChartObjectName(),
+          " IsVisible=", CElementBase::IsVisible(),
+          " ItemsTotal=", ItemsTotal(),
+          " VisibleItemsTotal=", m_visible_items_total,
+          " XSize=", CElementBase::XSize(), " YSize=", CElementBase::YSize());
+    if(ItemsTotal() > 0)
+     {
+      string item_obj = m_items[0].CanvasPointer().ChartObjectName();
+      Print("My Debug CTreeView::Moving item0 NATIVE obj=", item_obj,
+      " exists=", ObjectFind(0, item_obj),
+      " TIMEFRAMES=", ObjectGetInteger(0, item_obj, OBJPROP_TIMEFRAMES),
+      " X=", ObjectGetInteger(0, item_obj, OBJPROP_XDISTANCE),
+      " Y=", ObjectGetInteger(0, item_obj, OBJPROP_YDISTANCE),
+      " BACK=", ObjectGetInteger(0, item_obj, OBJPROP_BACK),
+      " ZORDER=", ObjectGetInteger(0, item_obj, OBJPROP_ZORDER),
+      " item0.IsVisible=", m_items[0].IsVisible());
+     }
   }
  //+------------------------------------------------------------------+
  // | Hides the element |
@@ -874,8 +916,9 @@
   {
    // --- Exit if element is already hidden
    if (!CElementBase::IsVisible()) return;
+   Print("My Debug CTreeView::Hide CALLED obj=", m_canvas.ChartObjectName());
    // --- Hide element
-   CElement::Hide();
+    CElement::Hide();
    // --- Hide tree list items
    int total = ::ArraySize(m_items);
    for (int i = 0; i < total; i++)
@@ -1213,8 +1256,12 @@
         // --- Get the general index of the tree list item
         int li = m_td_list_index[v];
         // --- Set coordinates and width
-        m_items[li].UpdateX(x);
-        m_items[li].UpdateY(y);
+         m_items[li].UpdateX(x);
+         m_items[li].UpdateY(y);
+        //Add here to fix
+         m_items[li].UpdateWidth(w); 
+         m_items[li].Draw();
+         m_items[li].CanvasPointer().Update(false);
         // --- Show item
         m_items[li].Show();        
         v++;
@@ -1961,22 +2008,23 @@
   } 
  void CTreeView::ChangeHeightByBottomWindowSide(void)
   {
-    if(m_anchor_bottom_window_side) return;
-    int y_size = m_main.Y2() - CElementBase::Y() - m_auto_yresize_bottom_offset;
-    if(y_size == m_y_size) return;     
-    CElementBase::YSize(y_size);
-    m_canvas.YSize(y_size);
-    m_canvas.Resize(m_x_size, y_size);
-    // Recompute visible rows for the new height, same formula as InitializeProperties
-     m_visible_items_total = (y_size - 2) / m_item_y_size;
-     m_scrollv.Reinit(m_items_total, m_visible_items_total);
-     if(m_show_item_content)
-        m_content_scrollv.Reinit(::ArraySize(m_content_items), m_visible_items_total);
-    //Original 
-      FormTreeList();
-      FormContentList();
-      Draw();          
-      Moving();          
+   if(m_anchor_bottom_window_side) return;
+   int y_size = m_main.Y2() - CElementBase::Y() - m_auto_yresize_bottom_offset;
+   if(y_size == m_y_size) return;     
+   CElementBase::YSize(y_size);
+   m_canvas.YSize(y_size);
+   m_canvas.Resize(m_x_size, y_size);
+   // Recompute visible rows for the new height, same formula as InitializeProperties
+    m_visible_items_total = (y_size - 2) / m_item_y_size;
+    m_scrollv.Reinit(m_items_total, m_visible_items_total);
+    m_scrollv.ChangeYSize(y_size - 2);   // --- let the scrollbar resize itself properly
+    if(m_show_item_content)
+      {
+       m_content_scrollv.Reinit(::ArraySize(m_content_items), m_visible_items_total);
+       m_content_scrollv.ChangeYSize(y_size - 2);
+      }   
+     Draw();          
+     Moving();          
   }
  int CTreeView::ItemPrevNode(int index) const
   { 

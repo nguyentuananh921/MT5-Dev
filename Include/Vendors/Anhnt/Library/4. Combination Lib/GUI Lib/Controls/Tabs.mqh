@@ -71,6 +71,7 @@
       // --- Management
          virtual void      Show(void);
          virtual void      Hide(void);
+         virtual void      Moving(const bool only_visible = true);
          virtual void      Delete(void);
       
          virtual void      Draw(void);            // --- Draws an element
@@ -79,7 +80,7 @@
  #endif // CTABS_MQH_DECLARATION
  #ifndef CTABS_MQH_IMPLEMENTATION
  #define CTABS_MQH_IMPLEMENTATION
- //+------------------------------------------------------------------+
+   //+------------------------------------------------------------------+
    //| Constructor                                                      |
    //+------------------------------------------------------------------+
    CTabs::CTabs(void) : m_tab_y_size(22),
@@ -135,11 +136,11 @@
           return;
         }
     }
-  //+------------------------------------------------------------------+
-  //| Create scroll buttons                                            |
-  //+------------------------------------------------------------------+
-  bool CTabs::CreateScrollButtons(void)
-   {
+   //+------------------------------------------------------------------+
+   //| Create scroll buttons                                            |
+   //+------------------------------------------------------------------+
+   bool CTabs::CreateScrollButtons(void)
+    {
      if(m_position_mode!=TABS_TOP && m_position_mode!=TABS_BOTTOM)
       return(true);
      //--- Use the same row as the tab header itself
@@ -203,38 +204,37 @@
        m_btn_scroll_left.Update(true);
        m_btn_scroll_right.Update(true);
       //Debug
-        Print("My Debug CTabs::UpdateScrollButtonsVisibility m_x_size=",m_x_size," IsTabsOverflow=",IsTabsOverflow(),
-        " left.X=",m_btn_scroll_left.X()," left.IsVisible=",m_btn_scroll_left.IsVisible(),
-        " right.X=",m_btn_scroll_right.X()," right.IsVisible=",m_btn_scroll_right.IsVisible(),
-        " panel.X=",CElementBase::X()," panel.X2=",CElementBase::X2(),
-        " canvas.X=",m_canvas.X()," canvas.XSize=",m_canvas.XSize());
+        // Print("My Debug CTabs::UpdateScrollButtonsVisibility m_x_size=",m_x_size," IsTabsOverflow=",IsTabsOverflow(),
+        // " left.X=",m_btn_scroll_left.X()," left.IsVisible=",m_btn_scroll_left.IsVisible(),
+        // " right.X=",m_btn_scroll_right.X()," right.IsVisible=",m_btn_scroll_right.IsVisible(),
+        // " panel.X=",CElementBase::X()," panel.X2=",CElementBase::X2(),
+        // " canvas.X=",m_canvas.X()," canvas.XSize=",m_canvas.XSize());
 
 
       return(true);
-   }
-  bool CTabs::IsTabsOverflow(void)
-   {
-    return(SumWidthTabs()>m_x_size);
-   }
-
-  void CTabs::UpdateScrollButtonsVisibility(void)
+    }
+   bool CTabs::IsTabsOverflow(void)
+    {
+     return(SumWidthTabs()>m_x_size);
+    }
+   void CTabs::UpdateScrollButtonsVisibility(void)
     {
      if(IsTabsOverflow())
-     {
-      int left_x_gap=m_x_size-30;
-      m_btn_scroll_left.XGap(left_x_gap);
-      m_btn_scroll_left.CanvasPointer().XGap(left_x_gap); // sync canvas gap, fix vi tri dung yen
-      m_btn_scroll_left.Moving();
+      {
+       int left_x_gap=m_x_size-30;
+       m_btn_scroll_left.XGap(left_x_gap);
+       m_btn_scroll_left.CanvasPointer().XGap(left_x_gap); // sync canvas gap, fix vi tri dung yen
+       m_btn_scroll_left.Moving();
 
-      int right_x_gap=m_x_size-15;
-      m_btn_scroll_right.XGap(right_x_gap);
-      m_btn_scroll_right.CanvasPointer().XGap(right_x_gap); // sync canvas gap, fix vi tri dung yen
-      m_btn_scroll_right.Moving();
+       int right_x_gap=m_x_size-15;
+       m_btn_scroll_right.XGap(right_x_gap);
+       m_btn_scroll_right.CanvasPointer().XGap(right_x_gap); // sync canvas gap, fix vi tri dung yen
+       m_btn_scroll_right.Moving();
 
-      m_btn_scroll_left.Show();
-      m_btn_scroll_right.Show();
-     }
-    else
+       m_btn_scroll_left.Show();
+       m_btn_scroll_right.Show();
+      }
+     else
       {
         m_btn_scroll_left.Hide();
         m_btn_scroll_right.Hide();
@@ -247,78 +247,78 @@
       " panel.X=",CElementBase::X()," panel.X2=",CElementBase::X2(),
       " canvas.X=",m_canvas.X()," canvas.XSize=",m_canvas.XSize());
     }
-  void CTabs::ShiftTabsHeader(void)
-   {
-    if(!IsTabsOverflow())
+   void CTabs::ShiftTabsHeader(void)
     {
+     if(!IsTabsOverflow())
+      {
+       int x=0;
+       for(int i=0;i<TabsTotal();i++)
+        {
+         CButton *btn=m_tabs.GetButtonPointer(i);
+         btn.XGap(x);
+         btn.CanvasPointer().XGap(x);   // sync canvas gap, fix Content khong di theo
+         btn.Show();
+         btn.Moving();
+         x+=btn.XSize()-1;
+        }
+       return;
+      }
+      int offset=0;
+      for(int i=0;i<m_scroll_first_visible;i++)
+      offset+=m_tabs.GetButtonPointer(i).XSize()-1;
       int x=0;
       for(int i=0;i<TabsTotal();i++)
-        {
+       {
         CButton *btn=m_tabs.GetButtonPointer(i);
-        btn.XGap(x);
-        btn.CanvasPointer().XGap(x);   // sync canvas gap, fix Content khong di theo
-        btn.Show();
+        int new_x=x-offset;
+        btn.XGap(new_x);
+        btn.CanvasPointer().XGap(new_x);   // sync canvas gap, fix Content khong di theo
         btn.Moving();
-        x+=btn.XSize()-1;
-        }
-      return;
+        //--- Leave room on the right for the 2 nav buttons (30px)
+         bool in_view=(new_x>=0 && new_x+btn.XSize()<=m_x_size-30);
+         if(in_view) btn.Show(); else btn.Hide();
+         x+=btn.XSize()-1;
+       }
     }
-    int offset=0;
-    for(int i=0;i<m_scroll_first_visible;i++)
-    offset+=m_tabs.GetButtonPointer(i).XSize()-1;
-    int x=0;
-    for(int i=0;i<TabsTotal();i++)
-    {
-      CButton *btn=m_tabs.GetButtonPointer(i);
-      int new_x=x-offset;
-      btn.XGap(new_x);
-      btn.CanvasPointer().XGap(new_x);   // sync canvas gap, fix Content khong di theo
-      btn.Moving();
-      //--- Leave room on the right for the 2 nav buttons (30px)
-      bool in_view=(new_x>=0 && new_x+btn.XSize()<=m_x_size-30);
-      if(in_view) btn.Show(); else btn.Hide();
-      x+=btn.XSize()-1;
-    }
-   }
 
-  bool CTabs::OnClickScrollLeft(const uint id,const uint idx)
-   {
-    if(id!=m_btn_scroll_left.Id() || idx!=m_btn_scroll_left.Index())
-      return(false);
-    if(m_scroll_first_visible>0)
-      m_scroll_first_visible--;
-    m_btn_scroll_left.IsPressed(false);
-    ShiftTabsHeader();
-    return(true);
-   }
-  bool CTabs::OnClickScrollRight(const uint id,const uint idx)
-   {
-    if(id!=m_btn_scroll_right.Id() || idx!=m_btn_scroll_right.Index())
-      return(false);
-    int offset=0;
-    for(int i=0;i<m_scroll_first_visible;i++)
-      offset+=m_tabs.GetButtonPointer(i).XSize()-1;
-    if(SumWidthTabs()-offset>m_x_size-30)
-      m_scroll_first_visible++;
-    m_btn_scroll_right.IsPressed(false);
-    ShiftTabsHeader();
-    return(true);
-   }
-  //+------------------------------------------------------------------+
-  //| Creates a "Tabs" element |
-  //+------------------------------------------------------------------+
-  bool CTabs::CreateTabs(const int x_gap,const int y_gap)
-   {
-    // --- Quit if there is no pointer to the main element
-    if(!CElement::CheckMainPointer())
-      return(false);
-    // --- If there are no tabs in the group, report it
-    if(TabsTotal()<1)
+   bool CTabs::OnClickScrollLeft(const uint id,const uint idx)
+    {
+     if(id!=m_btn_scroll_left.Id() || idx!=m_btn_scroll_left.Index())
+       return(false);
+     if(m_scroll_first_visible>0)
+       m_scroll_first_visible--;
+     m_btn_scroll_left.IsPressed(false);
+     ShiftTabsHeader();
+     return(true);
+    }
+   bool CTabs::OnClickScrollRight(const uint id,const uint idx)
+    {
+     if(id!=m_btn_scroll_right.Id() || idx!=m_btn_scroll_right.Index())
+       return(false);
+     int offset=0;
+     for(int i=0;i<m_scroll_first_visible;i++)
+       offset+=m_tabs.GetButtonPointer(i).XSize()-1;
+     if(SumWidthTabs()-offset>m_x_size-30)
+       m_scroll_first_visible++;
+     m_btn_scroll_right.IsPressed(false);
+     ShiftTabsHeader();
+     return(true);
+    }
+   //+------------------------------------------------------------------+
+   //| Creates a "Tabs" element |
+   //+------------------------------------------------------------------+
+   bool CTabs::CreateTabs(const int x_gap,const int y_gap)
+    {
+     // --- Quit if there is no pointer to the main element
+     if(!CElement::CheckMainPointer())
+       return(false);
+     // --- If there are no tabs in the group, report it
+     if(TabsTotal()<1)
       {
-        ::Print(__FUNCTION__," > The call to this method should be made "
-                  "when there is at least one tab in the group! Use the CTabs::AddTab() method");
-          return(false);
-        }
+       ::Print(__FUNCTION__," > The call to this method should be made "
+                "when there is at least one tab in the group! Use the CTabs::AddTab() method");
+       return(false);
+      }
       // --- Initializing properties
        InitializeProperties(x_gap,y_gap);
       // ---Creating an element
@@ -329,7 +329,7 @@
        if(!CreateScrollButtons())
           return(false);     
        return(true);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Initializing properties |
    //+------------------------------------------------------------------+
@@ -361,7 +361,7 @@
    // | Creates an object to draw |
    //+------------------------------------------------------------------+
    bool CTabs::CreateCanvas(void)
-     {
+    {
       // --- Formation of object name
         string name=CElementBase::ElementName("tabs");
       // ---Create an object
@@ -369,12 +369,12 @@
            return(false);
       //---
       return(true);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Creates a group of buttons |
    //+------------------------------------------------------------------+
    bool CTabs::CreateButtons(void)
-     {
+    {
         int x=0,y=0;
       // --- Get the number of tabs
         int tabs_total=TabsTotal();
@@ -434,20 +434,20 @@
       // --- Select button
        m_tabs.SelectButton(m_selected_tab);
       return(true);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Sets the height of the tabs |
    //+------------------------------------------------------------------+
    void CTabs::TabsYSize(const int y_size)
-     {
+    {
       m_tab_y_size=y_size;
       m_tabs.ButtonYSize(y_size);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Sets the tab text |
    //+------------------------------------------------------------------+
    void CTabs::Text(const uint index,const string text)
-     {
+    {
       // --- Get the number of tabs
        uint tabs_total=TabsTotal();
       // --- Quit if there are no tabs in the group
@@ -457,12 +457,12 @@
         uint correct_index=(index>=tabs_total)? tabs_total-1 : index;
       // --- Set text
         m_tabs.GetButtonPointer(correct_index).LabelText(text);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Highlights tab |
    //+------------------------------------------------------------------+
    void CTabs::SelectTab(const int index)
-     {
+    {
       // --- Get the number of tabs
        uint tabs_total=TabsTotal();
       for(uint i=0; i<tabs_total; i++)
@@ -478,12 +478,12 @@
         }
       // --- Show items in the selected tab only
        ShowTabElements();
-     }
+    }
    //+------------------------------------------------------------------+
    // | Adds a tab |
    //+------------------------------------------------------------------+
    void CTabs::AddTab(const string tab_text,const int tab_width)
-     {
+    {
       // --- Reserve quantity
        int reserve=10;
       // --- Set size of tab arrays
@@ -502,12 +502,12 @@
         }
       // --- Add a button to a group
        m_tabs.AddButton(x,y,tab_text,tab_width,m_back_color,m_back_color_hover,m_back_color_pressed);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Adds an element to the array of the specified tab |
    //+------------------------------------------------------------------+
    void CTabs::AddToElementsArray(const int tab_index,CElement &object)
-     {
+    {
       // --- Check for out of range
       int array_size=::ArraySize(m_tab);
       if(array_size<1 || tab_index<0 || tab_index>=array_size)
@@ -516,78 +516,111 @@
       int size=::ArraySize(m_tab[tab_index].elements);
       ::ArrayResize(m_tab[tab_index].elements,size+1);
       m_tab[tab_index].elements[size]=::GetPointer(object);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Shows items in the selected tab only |
    //+------------------------------------------------------------------+
    void CTabs::ShowTabElements(void)
-     {
-      // --- Quit if tabs are hidden
-      if(!CElementBase::IsVisible())
-         return;
-      // --- Checking the index of the selected tab
-      CheckTabIndex();
-      //---
-      uint tabs_total=TabsTotal();
-      for(uint i=0; i<tabs_total; i++)
-        {
-         // --- Get the number of elements attached to the tab
-          int tab_elements_total=::ArraySize(m_tab[i].elements);
-         // --- If this tab is selected
-          if(i==m_selected_tab)
-           {
-            // --- Show tab items
-            for(int j=0; j<tab_elements_total; j++)
-              {
-               // --- Show items
-               CElement *el=m_tab[i].elements[j];
-               el.Reset();
-               // --- If this element is 'Tabs', then show the elements open
-               CTabs *tb=dynamic_cast<CTabs*>(el);
-               if(tb!=NULL)
-                  tb.ShowTabElements();
-              }
-           }
-         // --- Hide elements of inactive tabs
-          else
-           {
-            for(int j=0; j<tab_elements_total; j++)
-               m_tab[i].elements[j].Hide();
-           }
-        }
-      // --- Send a message about this
-       ::EventChartCustom(m_chart_id,ON_CLICK_TAB,CElementBase::Id(),m_selected_tab,"");
-     }
+    {
+     if(!CElementBase::IsVisible())
+        return;
+     CheckTabIndex();
+     uint tabs_total=TabsTotal();
+     for(uint i=0; i<tabs_total; i++)
+      {
+        int tab_elements_total=::ArraySize(m_tab[i].elements);
+       // For active tab all child element witll be Visible
+        if(i==m_selected_tab)
+          {
+          for(int j=0; j<tab_elements_total; j++)
+            {
+              CElement *el=m_tab[i].elements[j];
+              Print("My Debug ShowTabElements RESET obj=", m_canvas.ChartObjectName(),
+                    " i=", i, " target=", el.CanvasPointer().ChartObjectName());
+              el.Reset();
+              CTabs *tb=dynamic_cast<CTabs*>(el);
+              if(tb!=NULL)
+                tb.ShowTabElements();
+            }
+          }
+       //For Deactive tab all child element witll be IsVisible
+        else
+         {
+          for(int j=0; j<tab_elements_total; j++)
+            {
+              Print("My Debug ShowTabElements HIDE obj=", m_canvas.ChartObjectName(),
+                    " i=", i, " target=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
+              m_tab[i].elements[j].CElementBase::IsVisible(true);
+              m_tab[i].elements[j].Hide();
+            }
+         }
+      }
+     ::EventChartCustom(m_chart_id,ON_CLICK_TAB,CElementBase::Id(),m_selected_tab,"");
+    }
    //+------------------------------------------------------------------+
    // | Show |
    //+------------------------------------------------------------------+
    void CTabs::Show(void)
      {
-      // --- Exit if element is already visible
-       if(CElementBase::IsVisible())
-         return;
-      // --- Visibility state
-       CElementBase::IsVisible(true);
-      // --- Update object position
-       Moving();
-      // --- Show items
-       int elements_total=ElementsTotal();
-       for(int i=0; i<elements_total; i++)
-         {
-          if(!m_elements[i].IsDropdown())
-             m_elements[i].Show();
-        }
-      // re-apply overflow cropping so any tab that doesn't fit gets hidden again.
-       if(m_position_mode==TABS_TOP || m_position_mode==TABS_BOTTOM)
+      //Debug        
+        Print("My Debug CTabs::Show CALLED obj=", m_canvas.ChartObjectName(),
+         " IsVisible_before=", CElementBase::IsVisible(), " selected_tab=", m_selected_tab);
+      // --- Run the canvas-level show only on the real hidden->visible transition
+      if(!CElementBase::IsVisible())
+        {
+         // --- Visibility state
+         CElementBase::IsVisible(true);
+         // --- Update object position
+         Moving();
+         // --- Show items
+         int elements_total = ElementsTotal();
+         for(int i = 0; i < elements_total; i++)
+           {
+            if(!m_elements[i].IsDropdown())
+               m_elements[i].Show();
+           }
+         // re-apply overflow cropping so any tab that doesn't fit gets hidden again.
+         if(m_position_mode == TABS_TOP || m_position_mode == TABS_BOTTOM)
             ShiftTabsHeader();
-      // --- Show object (must be on top of button group)
-       ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS);
+         // --- Show object (must be on top of button group)
+         ::ObjectSetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_TIMEFRAMES, OBJ_ALL_PERIODS);
+        }
+      // --- Always re-assert the currently selected sub-tab's own elements,
+      // since a parent's generic recursive Show() cascade doesn't know about sub-tab selection
+      ShowTabElements();
      }
+   void CTabs::Moving(const bool only_visible)
+    {
+    if(only_visible && !CElementBase::IsVisible())
+        return;
+    CElement::Moving(only_visible);
+    // --- Header layout/tab content only matter while THIS CTabs is actually visible right now —
+    // skip them when only repositioning a hidden element for later (only_visible=false bypass)
+    if(!CElementBase::IsVisible())
+        return;
+    if(m_position_mode == TABS_TOP || m_position_mode == TABS_BOTTOM)
+        ShiftTabsHeader();
+    uint tabs_total = TabsTotal();
+    for(uint i = 0; i < tabs_total; i++)
+      {
+        int tab_elements_total = ::ArraySize(m_tab[i].elements);
+        for(int j = 0; j < tab_elements_total; j++)
+         {
+          //Debug
+           Print("My Debug CTabs::Moving BEFORE tab elem Moving i=", i, " j=", j,
+            " obj=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
+          m_tab[i].elements[j].Moving(true);   // --- always respect each child's own visibility  
+         }
+          
+      }
+    }
    //+------------------------------------------------------------------+
    // | Hide |
    //+------------------------------------------------------------------+
    void CTabs::Hide(void)
      {
+      //Debug 
+       Print("My Debug CTabs::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
       // --- Exit if element is already hidden
       if(!CElementBase::IsVisible())
          return;
@@ -627,7 +660,7 @@
    // | Clicking on a tab in a group |
    //+------------------------------------------------------------------+
    bool CTabs::OnClickTab(const int id,const int index)
-     {
+    {
       // --- Exit if (1) IDs do not match or (2) element is locked
        if(id!=CElementBase::Id() || CElementBase::IsLocked())
          return(false);
@@ -645,12 +678,12 @@
       // --- Send a message about the change in the graphical interface
        ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0.0,"");
        return(true);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Total width of all tabs |
    //+------------------------------------------------------------------+
    int CTabs::SumWidthTabs(void)
-     {
+    {
       int width=0;
       // --- If tab positioning is on the right or left, return the width of the first tab
        if(m_position_mode==TABS_LEFT || m_position_mode==TABS_RIGHT)
@@ -664,65 +697,61 @@
       // --- Taking into account layering per pixel
        width=width-(tabs_total-1);
       return(width);
-     }
+    }
    //+------------------------------------------------------------------+
    // | Checking the index of the selected tab |
    //+------------------------------------------------------------------+
    void CTabs::CheckTabIndex(void)
-     {
+    {
       // --- Check for out of range
        int array_size=::ArraySize(m_tab);
        if(m_selected_tab<0)
          m_selected_tab=0;
        if(m_selected_tab>=array_size)
          m_selected_tab=array_size-1;
-     }
+    }
    //+------------------------------------------------------------------+
    // | Change the width along the right edge of the form |
    //+------------------------------------------------------------------+
    void CTabs::ChangeWidthByRightWindowSide(void)
     {
-     if(m_anchor_right_window_side)
+      if(m_anchor_right_window_side)
         return;
-     int x_size=m_main.X2()-m_canvas.X()-m_auto_xresize_right_offset;
-     if(x_size==m_x_size)
+      int x_size=m_main.X2()-m_canvas.X()-m_auto_xresize_right_offset;
+      if(x_size==m_x_size)
         return;
-     CElementBase::XSize(x_size);
-     m_canvas.XSize(x_size);
-     m_canvas.Resize(x_size,m_y_size);
-     // --- Re-evaluate the scrollbar against the new available width
-      if(m_position_mode==TABS_TOP || m_position_mode==TABS_BOTTOM)
+      CElementBase::XSize(x_size);
+      m_canvas.XSize(x_size);
+      m_canvas.Resize(x_size,m_y_size);
+      // --- Header layout / scroll buttons only matter while this CTabs is actually visible right now
+      if(CElementBase::IsVisible())
       {
-        UpdateScrollButtonsVisibility();
-        ShiftTabsHeader();
+        if(m_position_mode==TABS_TOP || m_position_mode==TABS_BOTTOM)
+        {
+          UpdateScrollButtonsVisibility();
+          ShiftTabsHeader();
+        }
       }
-     Draw();
-     Moving();
+      Draw();
+      Moving();
     }
    //+------------------------------------------------------------------+
    // | Change the height along the bottom edge of the window |
    //+------------------------------------------------------------------+
    void CTabs::ChangeHeightByBottomWindowSide(void)
-     {
-      // --- Exit if snap to bottom of window mode is enabled
-       if(m_anchor_bottom_window_side)
-         return;
-      // --- Dimensions
-       int y_size=0;
-      // --- Calculate and set a new size for the element's background
-      y_size=m_main.Y2()-m_canvas.Y()-m_auto_yresize_bottom_offset;
-      // --- Do not resize if less than the specified limit
-       if(y_size==m_y_size)
-         return;
-      //---
-       CElementBase::YSize(y_size);
-       m_canvas.YSize(y_size);
-       m_canvas.Resize(m_x_size,y_size);
-      // --- Redraw element
-       Draw();
-      // --- Update object position
-       Moving();
-     }
+    {
+     if(m_anchor_bottom_window_side)
+        return;
+     int y_size=0;
+     y_size=m_main.Y2()-m_canvas.Y()-m_auto_yresize_bottom_offset;
+     if(y_size==m_y_size)
+        return;
+     CElementBase::YSize(y_size);
+     m_canvas.YSize(y_size);
+     m_canvas.Resize(m_x_size,y_size);
+     Draw();
+     Moving();
+    }
    //+------------------------------------------------------------------+
    // | Draws an element |
    //+------------------------------------------------------------------+
@@ -739,7 +768,7 @@
    // | Draws a tab label |
    //+------------------------------------------------------------------+
    void CTabs::DrawPatch(void)
-     {
+    {
       // --- Coordinates
        int x1 =0,x2 =0;
        int y1 =0,y2 =0;
@@ -774,12 +803,12 @@
          clr=m_tabs.GetButtonPointer(m_selected_tab).BackColorLocked();
       // --- Draw a line
        m_canvas.Line(x1,y1,x2,y2,::ColorToARGB(clr,m_alpha));
-     }
+    }
    //+------------------------------------------------------------------+
    // | Item Update |
    //+------------------------------------------------------------------+
    void CTabs::Update(void)
-     {
+    {
       // --- Draw background
        CElement::Update(true);
       // --- Draw buttons
@@ -792,6 +821,6 @@
          m_btn_scroll_left.Update(true);
          m_btn_scroll_right.Update(true);
         }
-     }
+    }
  #endif // CTABS_MQH_IMPLEMENTATION
 #endif // CTABS_MQH

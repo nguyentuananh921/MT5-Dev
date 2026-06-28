@@ -165,9 +165,7 @@
       bool              AnchorRightWindowSide(void)               const { return(m_anchor_right_window_side);   }
       void              AnchorRightWindowSide(const bool flag)          { m_anchor_right_window_side=flag;      }
       bool              AnchorBottomWindowSide(void)              const { return(m_anchor_bottom_window_side);  }
-      void              AnchorBottomWindowSide(const bool flag)         { m_anchor_bottom_window_side=flag;     }
-    //---
-   public:
+      void              AnchorBottomWindowSide(const bool flag)         { m_anchor_bottom_window_side=flag;     }    
     // ---Graph event handler
       virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam) {}
     // --- Timer
@@ -192,7 +190,6 @@
       virtual void      ChangeWidthByRightWindowSide(void) {}
     // --- Change the height along the bottom edge of the window
       virtual void      ChangeHeightByBottomWindowSide(void) {}
-
     // --- Checking the location of the mouse cursor in the program subwindow
       bool              CheckSubwindowNumber(void);
     // --- Checking the position of the mouse cursor over an element
@@ -204,7 +201,7 @@
     // --- Getting ID from button name
       int               IdFromObjectName(const string object_name);
     // --- Getting index from menu item name
-    int               IndexFromObjectName(const string object_name);
+      int               IndexFromObjectName(const string object_name);
   };
  #ifndef CELEMENTBASE_MQH_IMPLEMENTATION
  #define CELEMENTBASE_MQH_IMPLEMENTATION
@@ -250,41 +247,40 @@
   //+------------------------------------------------------------------+
   CElementBase::~CElementBase(void)
    {
-   // ---Disconnect from schedule
-   m_chart.Detach();
+    // ---Disconnect from schedule
+     m_chart.Detach();
    }
   //+------------------------------------------------------------------+
   // | Returns the formed element name |
   //+------------------------------------------------------------------+
   string CElementBase::ElementName(const string name_part="")
    {
-   m_name_part=(m_name_part!="")? m_name_part : name_part;
-   // --- Formation of object name
-   string name="";
-   if(m_index==WRONG_VALUE)
-      name=m_program_name+"_"+m_name_part+"_"+(string)CElementBase::Id();
-   else
-      name=m_program_name+"_"+m_name_part+"_"+(string)CElementBase::Index()+"__"+(string)CElementBase::Id();
-   //---
-   return(name);
+     m_name_part=(m_name_part!="")? m_name_part : name_part;
+     // --- Formation of object name
+      string name="";
+      if(m_index==WRONG_VALUE)
+        name=m_program_name+"_"+m_name_part+"_"+(string)CElementBase::Id();
+      else
+        name=m_program_name+"_"+m_name_part+"_"+(string)CElementBase::Index()+"__"+(string)CElementBase::Id();     
+     return(name);
    }
   //+------------------------------------------------------------------+
   // | Returns the formed element name |
   //+------------------------------------------------------------------+
   bool CElementBase::CheckElementName(const string object_name)
    {
-   // --- If the click was not on this element
-   if(::StringFind(object_name,m_program_name+"_"+m_name_part+"_")<0)
-      return(false);
-   //---
-   return(true);
+     // --- If the click was not on this element
+      if(::StringFind(object_name,m_program_name+"_"+m_name_part+"_")<0)
+       return(false);
+      //---
+       return(true);
    }
   //+------------------------------------------------------------------+
   // | Checking the location of the mouse cursor in the program subwindow |
   //+------------------------------------------------------------------+
   bool CElementBase::CheckSubwindowNumber(void)
    {
-      //return(m_subwin==m_mouse.SubWindowNumber());
+     //return(m_subwin==m_mouse.SubWindowNumber());
       return(m_subwin==m_mouse.SubWin());
    }
   //+------------------------------------------------------------------+
@@ -292,38 +288,38 @@
   //+------------------------------------------------------------------+
   void CElementBase::CheckMouseFocus(void)
    {
-   m_mouse_focus=m_mouse.X()>X() && m_mouse.X()<=X2() && m_mouse.Y()>Y() && m_mouse.Y()<=Y2();
+    m_mouse_focus=m_mouse.X()>X() && m_mouse.X()<=X2() && m_mouse.Y()>Y() && m_mouse.Y()<=Y2();
    }
   //+------------------------------------------------------------------+
   // | Checking element boundary intersection |
   //+------------------------------------------------------------------+
   bool CElementBase::CheckCrossingBorder(void)
    {
-   // --- If this is the moment of crossing the boundaries of the element
-   if((MouseFocus() && !IsMouseFocus()) || (!MouseFocus() && IsMouseFocus()))
-      {
-      IsMouseFocus(MouseFocus());
-      // --- Message about intersection in element
-      if(MouseFocus())
-         ::EventChartCustom(m_chart_id,ON_MOUSE_FOCUS,m_id,m_index,m_class_name);
-      // --- Message about intersection from element
-      else
-         ::EventChartCustom(m_chart_id,ON_MOUSE_BLUR,m_id,m_index,m_class_name);
-      //---
-      return(true);
-      }
-   //---
-   return(false);
+     // --- If this is the moment of crossing the boundaries of the element
+      if((MouseFocus() && !IsMouseFocus()) || (!MouseFocus() && IsMouseFocus()))
+       {
+         IsMouseFocus(MouseFocus());
+        // --- Message about intersection in element
+         if(MouseFocus())
+           ::EventChartCustom(m_chart_id,ON_MOUSE_FOCUS,m_id,m_index,m_class_name);
+        // --- Message about intersection from element
+         else
+           ::EventChartCustom(m_chart_id,ON_MOUSE_BLUR,m_id,m_index,m_class_name);
+        //---
+         return(true);
+       }
+     //---
+      return(false);
    }
   //+------------------------------------------------------------------+
   // | Retrieves an identifier from an object name |
   //+------------------------------------------------------------------+
   int CElementBase::IdFromObjectName(const string object_name)
    {
-   // --- Get id from object name
-   int    length =::StringLen(object_name);
-   int    pos    =::StringFind(object_name,"__",0);
-   string id     =::StringSubstr(object_name,pos+2,length-1);
+     // --- Get id from object name
+      int    length =::StringLen(object_name);
+      int    pos    =::StringFind(object_name,"__",0);
+      string id     =::StringSubstr(object_name,pos+2,length-1);
    // --- Return item id
    return((int)id);
    }
@@ -347,7 +343,7 @@
          return(WRONG_VALUE);
       }
     // --- Return item index
-   return((int)result[array_size-2]);
+     return((int)result[array_size-2]);
    }
   //+------------------------------------------------------------------+
  #endif // CELEMENTBASE_MQH_IMPLEMENTATION

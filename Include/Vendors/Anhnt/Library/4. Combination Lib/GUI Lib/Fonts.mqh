@@ -11,16 +11,12 @@
 #define __FONTS_MQH__
 class CFonts
   {
-   private:
-    //Private properties:
-     // --- Font array
-      string            m_fonts[];
-     //Private methods:
-      // --- Initializing the font array
-      void              InitializeFontsArray(void);
+   private:  
+      string            m_fonts[]; // --- Font array
+      void              InitializeFontsArray(void); // --- Initializing the font array
    public:
                         CFonts(void);
-                     ~CFonts(void);
+                        ~CFonts(void);
     // --- Returns the number of fonts
       int               FontsTotal(void) const { return(::ArraySize(m_fonts)); }
     // --- Returns the font by index

@@ -11,13 +11,14 @@
 class CScroll;
 class CScrollV;
 class CScrollH;
-//+------------------------------------------------------------------+
-// | Base class for creating a scrollbar |
-//+------------------------------------------------------------------+
-class CScroll : public CElement
+#ifndef CCSCROLL_MQH_DECLARATION
+#define CCSCROLL_MQH_DECLARATION
+ //+------------------------------------------------------------------+
+ // | Base class for creating a scrollbar |
+ //+------------------------------------------------------------------+
+ class CScroll : public CElement
  {  
-  protected:
-  //Protected properties:
+  protected:  
    // --- Objects for creating a scrollbar
       CButton           m_button_inc;
       CButton           m_button_dec;
@@ -60,20 +61,20 @@ class CScroll : public CElement
    // --- To determine the area where the left mouse button is pressed
       ENUM_MOUSE_STATE  m_clamping_area_mouse;
   //Protected methods:
-      // --- Current slider color
+     // --- Current slider color
       uint              ThumbColorCurrent(void);
-      // --- Checking focus above the slider
+     // --- Checking focus above the slider
       bool              CheckThumbFocus(const int x,const int y);
-      // --- Defines the area where the left mouse button is pressed
+     // --- Defines the area where the left mouse button is pressed
       void              CheckMouseButtonState(void);
-      // --- Resetting variables
+     // --- Resetting variables
       void              ZeroThumbVariables(void);
-      // --- Calculate the length of the scrollbar slider
+     // --- Calculate the length of the scrollbar slider
       bool              CalculateThumbSize(void);
-      // --- Calculate scroll bar boundaries
+     // --- Calculate scroll bar boundaries
       void              CalculateThumbBoundaries(int &x1,int &y1,int &x2,int &y2);   
   private:
-   //Private methods:   
+    //Private methods:   
       void              InitializeProperties(const int x_gap,const int y_gap,
                                              const int items_total,const int visible_items_total);
       bool              CreateCanvas(void);
@@ -119,18 +120,19 @@ class CScroll : public CElement
    // --- The need to show a scroll bar
       bool              IsScroll(void) const { return(m_items_total>m_visible_items_total); };
    // --- Management
-   virtual void      Show(void);
-   virtual void      Hide(void);
-   virtual void      Delete(void);
-   // --- Draws an element
-   virtual void      Draw(void);
-  };
- #ifndef CSCROLLS_MQH_IMPLEMENTATION
- #define CSCROLLS_MQH_IMPLEMENTATION
-   //+------------------------------------------------------------------+
-   //| Constructor                                                      |
-   //+------------------------------------------------------------------+
-   CScroll::CScroll(void) : m_current_pos(0),
+      virtual void      Show(void);
+      virtual void      Hide(void);
+      virtual void      Delete(void);   
+      virtual void      Draw(void);  // --- Draws an element
+ };
+#endif // CCSCROLL_MQH_DECLARATION
+
+#ifndef CCSCROLL_MQH_IMPLEMENTATION
+#define CCSCROLL_MQH_IMPLEMENTATION
+  //+------------------------------------------------------------------+
+  //| Constructor                                                      |
+  //+------------------------------------------------------------------+
+  CScroll::CScroll(void) : m_current_pos(0),
                             m_area_width(15),
                             m_area_length(0),
                             m_inc_file(""),
@@ -153,44 +155,44 @@ class CScroll : public CElement
                             m_thumb_color_pressed(C'96,96,96')
      {
      }
-   //+------------------------------------------------------------------+
-   //| Destructor                                                       |
-   //+------------------------------------------------------------------+
-   CScroll::~CScroll(void)
+  //+------------------------------------------------------------------+
+  //| Destructor                                                       |
+  //+------------------------------------------------------------------+
+  CScroll::~CScroll(void)
      {
      }
-   //+------------------------------------------------------------------+
-   // | Creates a scroll bar |
-   //+------------------------------------------------------------------+
-   bool CScroll::CreateScroll(const int x_gap,const int y_gap,const int items_total,const int visible_items_total)
-     {
-   // --- Quit if there is no pointer to the main element
-      if(!CElement::CheckMainPointer())
-         return(false);
-   // --- Quit if an attempt is made to use the base scrollbar class
-      if(CElementBase::ClassName()=="")
+  //+------------------------------------------------------------------+
+  // | Creates a scroll bar |
+  //+------------------------------------------------------------------+
+  bool CScroll::CreateScroll(const int x_gap,const int y_gap,const int items_total,const int visible_items_total)
+   {
+      // --- Quit if there is no pointer to the main element
+       if(!CElement::CheckMainPointer())
+          return(false);
+      // --- Quit if an attempt is made to use the base scrollbar class
+       if(CElementBase::ClassName()=="")
         {
          ::Print(__FUNCTION__," > Используйте производные классы полосы прокрутки (CScrollV или CScrollH).");
          return(false);
         }
-   // --- Initializing properties
-      InitializeProperties(x_gap,y_gap,items_total,visible_items_total);
-   // ---Creating an element
-      if(!CreateCanvas())
+      // --- Initializing properties
+       InitializeProperties(x_gap,y_gap,items_total,visible_items_total);
+      // ---Creating an element
+       if(!CreateCanvas())
          return(false);
-      if(!CreateScrollButton(m_button_inc,0))
+       if(!CreateScrollButton(m_button_inc,0))
          return(false);
-      if(!CreateScrollButton(m_button_dec,1))
+       if(!CreateScrollButton(m_button_dec,1))
          return(false);
-   //---
+      //---
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Initializing properties |
-   //+------------------------------------------------------------------+
-   void CScroll::InitializeProperties(const int x_gap,const int y_gap,
+   }
+  //+------------------------------------------------------------------+
+  // | Initializing properties |
+  //+------------------------------------------------------------------+
+  void CScroll::InitializeProperties(const int x_gap,const int y_gap,
                                       const int items_total,const int visible_items_total)
-     {
+   {
       m_x                   =CElement::CalculateX(x_gap);
       m_y                   =CElement::CalculateY(y_gap);
       m_area_width          =(CElementBase::ClassName()=="CScrollV")? CElementBase::XSize() : CElementBase::YSize();
@@ -200,37 +202,37 @@ class CScroll : public CElement
       m_thumb_width         =m_area_width;
       m_thumb_steps_total   =(IsScroll())? m_items_total-m_visible_items_total : 1;
       m_back_color          =(m_back_color!=clrNONE)? m_back_color : C'240,240,240';
-   // --- Indents from the extreme point
+    // --- Indents from the extreme point
       CElementBase::XGap(x_gap);
       CElementBase::YGap(y_gap);
-   // --- Calculate the size of the scroll bar
+    // --- Calculate the size of the scroll bar
       CalculateThumbSize();
-     }
-   //+------------------------------------------------------------------+
-   // | Creates an object to draw |
-   //+------------------------------------------------------------------+
-   bool CScroll::CreateCanvas(void)
-     {
-   // --- Formation of object name
+   }
+  //+------------------------------------------------------------------+
+  // | Creates an object to draw |
+  //+------------------------------------------------------------------+
+  bool CScroll::CreateCanvas(void)
+   {
+     // --- Formation of object name
       string name=CElementBase::ElementName((CElementBase::ClassName()=="CScrollV")? "scrollv" : "scrollh");
-   // ---Create an object
+     // ---Create an object
       if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
          return(false);
-   //---
+     //---
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Creates a scroll switch up or left |
-   //+------------------------------------------------------------------+
-   bool CScroll::CreateScrollButton(CButton &button_obj,const int index)
-     {
-   // --- Save the pointer to the main element
+   }
+  //+------------------------------------------------------------------+
+  // | Creates a scroll switch up or left |
+  //+------------------------------------------------------------------+
+  bool CScroll::CreateScrollButton(CButton &button_obj,const int index)
+   {
+     // --- Save the pointer to the main element
       button_obj.MainPointer(this);
-   // --- Coordinates
+     // --- Coordinates
       int x=0,y=0;
-   // --- Files
+     // --- Files
       string file="",file_locked="",file_pressed="";
-   // --- Up or left button
+     // --- Up or left button
       if(index==0)
         {
          // --- Setting properties based on scroll type
@@ -249,10 +251,10 @@ class CScroll : public CElement
          // --- Element index
          button_obj.Index(m_index*2);
         }
-   // --- Down or Right button
+     // --- Down or Right button
       else
-        {
-         // --- Setting properties based on scroll type
+       {
+        // --- Setting properties based on scroll type
          if(CElementBase::ClassName()=="CScrollV")
            {
             x=0; y=m_thumb_width;
@@ -269,10 +271,10 @@ class CScroll : public CElement
             file_pressed=(m_dec_file_pressed=="")? (string)IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_WHITE_BMP : m_dec_file_pressed;
             button_obj.AnchorRightWindowSide(true);
            }
-         // --- Element index
+        // --- Element index
          button_obj.Index(m_index*2+1);
-        }
-   // --- Properties
+       }
+     // --- Properties
       button_obj.NamePart("scroll_button");
       button_obj.Alpha(m_alpha);
       button_obj.XSize(15);
@@ -293,21 +295,21 @@ class CScroll : public CElement
       button_obj.CElement::IconFilePressed((uint)file_pressed);
       button_obj.CElement::IconFilePressedLocked((uint)file_locked);
       button_obj.IsDropdown(CElementBase::IsDropdown());
-   // --- Let's create a control
+     // --- Let's create a control
       if(!button_obj.CreateButton("",x,y))
          return(false);
-   // --- Add element to array
+     // --- Add element to array
       CElement::AddToArray(button_obj);
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Current slider color |
-   //+------------------------------------------------------------------+
-   uint CScroll::ThumbColorCurrent(void)
-     {
-   // --- Define the color of the slider
+   }
+  //+------------------------------------------------------------------+
+  // | Current slider color |
+  //+------------------------------------------------------------------+
+  uint CScroll::ThumbColorCurrent(void)
+   {
+     // --- Define the color of the slider
       color clr=(m_scroll_state)? m_thumb_color_pressed : m_thumb_color;
-   // --- If the mouse cursor is in the scroll bar area
+     // --- If the mouse cursor is in the scroll bar area
       if(m_thumb_focus)
         {
          // --- If the left mouse button is released
@@ -317,22 +319,22 @@ class CScroll : public CElement
          else if(m_clamping_area_mouse==PRESSED_INSIDE)
             clr=m_thumb_color_pressed;
         }
-   // --- If the cursor is outside the scroll bar area
+     // --- If the cursor is outside the scroll bar area
       else
         {
          // --- Left mouse button released
          if(m_clamping_area_mouse==NOT_PRESSED)
             clr=m_thumb_color;
         }
-   //---
+     //---
       return(::ColorToARGB(clr,m_alpha));
-     }
-   //+------------------------------------------------------------------+
-   // | Checking focus above the slider |
-   //+------------------------------------------------------------------+
-   bool CScroll::CheckThumbFocus(const int x,const int y)
-     {
-   // --- Checking focus above the slider
+   }
+  //+------------------------------------------------------------------+
+  // | Checking focus above the slider |
+  //+------------------------------------------------------------------+
+  bool CScroll::CheckThumbFocus(const int x,const int y)
+   {
+     // --- Checking focus above the slider
       if(CElementBase::ClassName()=="CScrollV")
         {
          m_thumb_focus=(x>m_thumb_x && x<m_thumb_x+m_thumb_width && 
@@ -343,7 +345,7 @@ class CScroll : public CElement
          m_thumb_focus=(x>m_thumb_x && x<m_thumb_x+m_thumb_length && 
                         y>m_thumb_y && y<m_thumb_y+m_thumb_width);
         }
-   // --- If this is the moment of crossing the boundaries of the element
+     // --- If this is the moment of crossing the boundaries of the element
       if((m_thumb_focus && !m_is_crossing_thumb_border) || (!m_thumb_focus && m_is_crossing_thumb_border))
         {
          m_is_crossing_thumb_border=m_thumb_focus;
@@ -358,33 +360,33 @@ class CScroll : public CElement
            }
          return(true);
         }
-   //---
+     //---
       return(false);
-     }
-   //+------------------------------------------------------------------+
-   // | Defines the area where the left mouse button is pressed |
-   //+------------------------------------------------------------------+
-   void CScroll::CheckMouseButtonState(void)
-     {
-   // --- If the left mouse button is released
+   }
+  //+------------------------------------------------------------------+
+  // | Defines the area where the left mouse button is pressed |
+  //+------------------------------------------------------------------+
+  void CScroll::CheckMouseButtonState(void)
+   {
+     // --- If the left mouse button is released
       if(!m_mouse.IsLeftBtn())
         {
          // --- Let's reset the variables
          ZeroThumbVariables();
          return;
         }
-   // ---If the button is pressed
+     // ---If the button is pressed
       else
-        {
-         // --- Exit if the button is already pressed in any area
+       {
+        // --- Exit if the button is already pressed in any area
          if(m_clamping_area_mouse!=NOT_PRESSED)
             return;
-         // --- Outside the scrollbar slider area
+        // --- Outside the scrollbar slider area
          if(!m_thumb_focus)
             m_clamping_area_mouse=PRESSED_OUTSIDE;
-         // --- In the scroll bar slider area
+        // --- In the scroll bar slider area
          else
-           {
+          {
             m_scroll_state        =true;
             m_clamping_area_mouse =PRESSED_INSIDE;
             // --- Redraw element
@@ -397,21 +399,21 @@ class CScroll : public CElement
                // --- Send a message about the change in the graphical interface
                ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0,"");
               }
-           }
+          }
         }
-     }
-   //+------------------------------------------------------------------+
-   // | Resetting variables associated with slider movement |
-   //+------------------------------------------------------------------+
-   void CScroll::ZeroThumbVariables(void)
-     {
-   // --- Quit if there is no pointer to the main element
+   }
+  //+------------------------------------------------------------------+
+  // | Resetting variables associated with slider movement |
+  //+------------------------------------------------------------------+
+  void CScroll::ZeroThumbVariables(void)
+   {
+    // --- Quit if there is no pointer to the main element
       if(!CElement::CheckMainPointer())
          return;
-   // --- Exit if the button is already released
+    // --- Exit if the button is already released
       if(m_clamping_area_mouse==NOT_PRESSED)
          return;
-   // --- If the element is not a drop-down
+    // --- If the element is not a drop-down
       if(!CElementBase::IsDropdown() && m_clamping_area_mouse==PRESSED_INSIDE)
         {
          // --- Send a message to determine available elements
@@ -419,52 +421,52 @@ class CScroll : public CElement
          // --- Send a message about the change in the graphical interface
          ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0,"");
         }
-   // --- Reset variables
+    // --- Reset variables
       m_scroll_state        =false;
       m_thumb_size_fixing   =0;
       m_clamping_area_mouse =NOT_PRESSED;
-   // --- Redraw element
+    // --- Redraw element
       Update(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Changing the slider size according to new conditions |
-   //+------------------------------------------------------------------+
-   void CScroll::ChangeThumbSize(const int items_total,const int visible_items_total)
-     {
+   }
+  //+------------------------------------------------------------------+
+  // | Changing the slider size according to new conditions |
+  //+------------------------------------------------------------------+
+  void CScroll::ChangeThumbSize(const int items_total,const int visible_items_total)
+   {
       m_items_total         =items_total;
       m_visible_items_total =visible_items_total;
-   // --- Exit if the number of list elements is not greater than the number of visible parts of the list
+     // --- Exit if the number of list elements is not greater than the number of visible parts of the list
       if(!IsScroll())
          return;
-   // --- Get the number of steps for the slider
+     // --- Get the number of steps for the slider
       m_thumb_steps_total=items_total-visible_items_total;
-   // --- Get the scrollbar size
+     // --- Get the scrollbar size
       if(!CalculateThumbSize())
          return;
-     }
-   //+------------------------------------------------------------------+
-   // | Scrollbar size calculation |
-   //+------------------------------------------------------------------+
-   bool CScroll::CalculateThumbSize(void)
-     {
-   // --- Percentage difference between the total number of points and the visible one
+   }
+  //+------------------------------------------------------------------+
+  // | Scrollbar size calculation |
+  //+------------------------------------------------------------------+
+  bool CScroll::CalculateThumbSize(void)
+   {
+    // --- Percentage difference between the total number of points and the visible one
       double percentage_difference=1-(double)(m_items_total-m_visible_items_total)/m_items_total;
-   // --- Calculate the slider step size
+    // --- Calculate the slider step size
       uint bg_length=(m_class_name=="CScrollV")? m_y_size-(m_thumb_width*2) : m_x_size-(m_thumb_width*2);
       m_thumb_step_size=(double)(bg_length-(bg_length*percentage_difference))/m_thumb_steps_total;
-   // --- Calculate the size of the working area for moving the slider
+    // --- Calculate the size of the working area for moving the slider
       double work_area=m_thumb_step_size*m_thumb_steps_total;
-   // --- If the size of the work area is less than the size of the entire area, we will get the size of the slider, otherwise we will set the minimum size
+    // --- If the size of the work area is less than the size of the entire area, we will get the size of the slider, otherwise we will set the minimum size
       double thumb_size=(work_area<bg_length)? bg_length-work_area+m_thumb_step_size : m_thumb_min_length;
-   // --- Checking the size of the slider taking into account the type cast
+    // --- Checking the size of the slider taking into account the type cast
       m_thumb_length=((int)thumb_size<m_thumb_min_length)? m_thumb_min_length :(int)thumb_size;
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Calculating scrollbar slider boundaries |
-   //+------------------------------------------------------------------+
-   void CScroll::CalculateThumbBoundaries(int &x1,int &y1,int &x2,int &y2)
-     {
+   }
+  //+------------------------------------------------------------------+
+  // | Calculating scrollbar slider boundaries |
+  //+------------------------------------------------------------------+
+  void CScroll::CalculateThumbBoundaries(int &x1,int &y1,int &x2,int &y2)
+   {
       if(CElementBase::ClassName()=="CScrollV")
         {
          x1 =0;
@@ -479,148 +481,177 @@ class CScroll : public CElement
          x2 =x1+m_thumb_length;
          y2 =y1+m_thumb_width;
         }
-     }
-   //+------------------------------------------------------------------+
-   // | Initialization with new values ​​|
-   //+------------------------------------------------------------------+
-   void CScroll::Reinit(const int items_total,const int visible_items_total)
-     {
+   }
+  //+------------------------------------------------------------------+
+  // | Initialization with new values ​​|
+  //+------------------------------------------------------------------+
+  void CScroll::Reinit(const int items_total,const int visible_items_total)
+   {
       m_items_total         =(items_total>0)? items_total : 1;
       m_visible_items_total =(visible_items_total>items_total)? items_total : visible_items_total;
       m_thumb_steps_total   =m_items_total-m_visible_items_total+1;
-     }
-   //+------------------------------------------------------------------+
-   // | Shows element |
-   //+------------------------------------------------------------------+
-   void CScroll::Show(void)
-     {
-   // --- Exit if (1) the element is already visible or (2) it does not need to be shown
+   }
+  //+------------------------------------------------------------------+
+  // | Shows element |
+  //+------------------------------------------------------------------+
+  void CScroll::Show(void)
+   {
+    //Debug
+     Print("My Debug CScroll::Show CALLED obj=", m_canvas.ChartObjectName(),
+         " IsVisible=", CElementBase::IsVisible(),
+         " IsScroll=", IsScroll(),
+         " m_items_total=", m_items_total,
+         " m_visible_items_total=", m_visible_items_total);
+    // --- Exit if (1) the element is already visible or (2) it does not need to be shown
       if(CElementBase::IsVisible() || !IsScroll())
          return;
-   // --- Visibility state
+    // --- Visibility state
       CElementBase::IsVisible(true);
-   // --- Update object position
+    // --- Update object position
       Moving();
-   // --- Show objects
+    // --- Show objects
       ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS);
       m_button_inc.Show();
       m_button_dec.Show();
-     }
-   //+------------------------------------------------------------------+
-   // | Hides the element |
-   //+------------------------------------------------------------------+
-   void CScroll::Hide(void)
-     {
+    //Fix Add Here
+      Draw();
+      CElement::Update(true);
+      ::ObjectSetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_BACK, false);
+      ::ChartRedraw(m_chart_id);
+    //Debug native dump
+      string sobj = m_canvas.ChartObjectName();
+      Print("My Debug CScroll::Show AFTER NATIVE obj=", sobj,
+            " TIMEFRAMES=", ObjectGetInteger(0, sobj, OBJPROP_TIMEFRAMES),
+            " X=", ObjectGetInteger(0, sobj, OBJPROP_XDISTANCE),
+            " Y=", ObjectGetInteger(0, sobj, OBJPROP_YDISTANCE),
+            " XSIZE=", ObjectGetInteger(0, sobj, OBJPROP_XSIZE),
+            " YSIZE=", ObjectGetInteger(0, sobj, OBJPROP_YSIZE));
+   }
+  //+------------------------------------------------------------------+
+  // | Hides the element |
+  //+------------------------------------------------------------------+
+  void CScroll::Hide(void)
+   {
+    //Debug
+     Print("My Debug CScroll::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
       ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
       m_button_inc.Hide();
       m_button_dec.Hide();
-   // --- Visibility state
+    // --- Visibility state
       CElementBase::IsVisible(false);
-     }
-   //+------------------------------------------------------------------+
-   // | Removal |
-   //+------------------------------------------------------------------+
-   void CScroll::Delete(void)
-     {
-   // --- Deleting objects
+   }
+  //+------------------------------------------------------------------+
+  // | Removal |
+  //+------------------------------------------------------------------+
+  void CScroll::Delete(void)
+   {
+    // --- Deleting objects
       m_canvas.Destroy();
-   // --- Initializing variables to default values
+    // --- Initializing variables to default values
       m_thumb_x=0;
       m_thumb_y=0;
       CurrentPos(0);
       CElementBase::IsVisible(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Draws an element |
-   //+------------------------------------------------------------------+
-   void CScroll::Draw(void)
-     {
-   // --- Draw background
+   }
+  //+------------------------------------------------------------------+
+  // | Draws an element |
+  //+------------------------------------------------------------------+
+  void CScroll::Draw(void)
+   {
+    // --- Draw background
       CElement::DrawBackground();
-   // ---Draw slider
+    // ---Draw slider
       DrawThumb();
-     }
-   //+------------------------------------------------------------------+
-   // | Draws a scroll bar slider |
-   //+------------------------------------------------------------------+
-   void CScroll::DrawThumb(void)
-     {
-   // --- Coordinates
+   }
+  //+------------------------------------------------------------------+
+  //| Draws a scroll bar slider                                         |
+  //+------------------------------------------------------------------+
+  void CScroll::DrawThumb(void)
+   {
+    // --- Coordinates
       int x1=0,y1=0,x2=0,y2=0;
-   // --- Calculation of slider boundaries
+    // --- Calculation of slider boundaries
       CalculateThumbBoundaries(x1,y1,x2,y2);
-   // --- Save the coordinates of the slider (upper left corner)
+    // --- Save the coordinates of the slider (upper left corner)
       m_thumb_x=x1;
       m_thumb_y=y1;
-   // --- Draw a filled rectangle
+    // --- Draw a filled rectangle
       m_canvas.FillRectangle(x1,y1,x2-1,y2-1,ThumbColorCurrent());
-     }
-   //+------------------------------------------------------------------+
-   // | Class to control the vertical scrollbar |
-   //+------------------------------------------------------------------+
-   class CScrollV : public CScroll
-     {
-   public:
+   }
+#endif // CCSCROLL_MQH_IMPLEMENTATION
+
+#ifndef CCSCROLLV_MQH_DECLARATION
+#define CCSCROLLV_MQH_DECLARATION
+ //+------------------------------------------------------------------+
+ // | Class to control the vertical scrollbar |
+ //+------------------------------------------------------------------+
+ class CScrollV : public CScroll
+   {
+    public:
                         CScrollV(void);
                        ~CScrollV(void);
       // --- Slider control
-      bool              ScrollBarControl(void);
+       bool              ScrollBarControl(void);
       // --- Moves the slider to the specified position
-      void              MovingThumb(const int pos=WRONG_VALUE);
+       void              MovingThumb(const int pos=WRONG_VALUE);
       // --- Set new coordinate for scrollbar
-      void              XDistance(const int x);
+       void              XDistance(const int x);
       // --- Change scrollbar length
-      void              ChangeYSize(const int height);
+       void              ChangeYSize(const int height);
       // --- Handling clicks on scrollbar buttons
-      bool              OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE);
-      bool              OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE);
+       bool              OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE);
+       bool              OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE);
       //---
-   private:
+    private:
       // --- Process of moving the slider
-      bool              OnDragThumb(const int y);
+       bool              OnDragThumb(const int y);
       // ---Updating the slider position
-      void              UpdateThumb(const int new_y_point);
+       void              UpdateThumb(const int new_y_point);
       // --- Calculation of the Y coordinate of the slider
-      void              CalculateThumbY(void);
+       void              CalculateThumbY(void);
       // --- Adjusts the slider position number
-      void              CalculateThumbPos(void);
+       void              CalculateThumbPos(void);
       // --- Quick redraw of the scroll bar slider
-      void              RedrawThumb(const int y);
-     };
-   //+------------------------------------------------------------------+
-   //| Constructor                                                      |
-   //+------------------------------------------------------------------+
-   CScrollV::CScrollV(void)
-     {
-   // --- Save the element class name in the base class
+       void              RedrawThumb(const int y);
+   };
+#endif // CCSCROLLV_MQH_DECLARATION
+
+#ifndef CCSCROLLV_MQH_IMPLEMENTATION
+#define CCSCROLLV_MQH_IMPLEMENTATION
+ //+------------------------------------------------------------------+
+ //| Constructor                                                      |
+ //+------------------------------------------------------------------+
+ CScrollV::CScrollV(void)
+  {
+    // --- Save the element class name in the base class
       CElementBase::ClassName(CLASS_NAME);
-     }
-   //+------------------------------------------------------------------+
-   //| Destructor                                                       |
-   //+------------------------------------------------------------------+
-   CScrollV::~CScrollV(void)
-     {
-     }
-   //+------------------------------------------------------------------+
-   // | Slider control |
-   //+------------------------------------------------------------------+
-   bool CScrollV::ScrollBarControl(void)
-     {
-   // --- Exit if (1) there is no pointer to the main element or (2) the element is hidden
+  }
+ //+------------------------------------------------------------------+
+ //| Destructor                                                       |
+ //+------------------------------------------------------------------+
+ CScrollV::~CScrollV(void)
+  {
+  }
+ //+------------------------------------------------------------------+
+ //| Slider control |
+ //+------------------------------------------------------------------+
+ bool CScrollV::ScrollBarControl(void)
+  {
+    // --- Exit if (1) there is no pointer to the main element or (2) the element is hidden
       if(!CElement::CheckMainPointer() || !CElementBase::IsVisible())
          return(false);
-   // --- Exit if parent is disabled by another element
+    // --- Exit if parent is disabled by another element
       if(!m_main.CElementBase::IsAvailable())
          return(false);
-   // --- Checking focus above the slider
+    // --- Checking focus above the slider
       int x =m_mouse.RelativeX(m_canvas);
       int y =m_mouse.RelativeY(m_canvas);
       CheckThumbFocus(x,y);
-   // --- Let's check and remember the state of the mouse button
+    // --- Let's check and remember the state of the mouse button
       CScroll::CheckMouseButtonState();
-   // --- If control is transferred to the scroll bar, determine the position of the slider
+    // --- If control is transferred to the scroll bar, determine the position of the slider
       if(CScroll::State())
-        {
+       {
          // --- If the slider is moved
          if(OnDragThumb(y))
            {
@@ -628,97 +659,101 @@ class CScroll : public CElement
             CalculateThumbPos();
             return(true);
            }
-        }
+       }
    //---
       return(false);
-     }
-   //+------------------------------------------------------------------+
-   // | Moves the slider to the specified position |
-   //+------------------------------------------------------------------+
-   void CScrollV::MovingThumb(const int pos=WRONG_VALUE)
-     {
-   // --- Exit if scrollbar is not needed
+  }
+ //+------------------------------------------------------------------+
+ //| Moves the slider to the specified position |
+ //+------------------------------------------------------------------+
+ void CScrollV::MovingThumb(const int pos=WRONG_VALUE)
+  {
+    // --- Exit if scrollbar is not needed
       if(!IsScroll())
          return;
-   // --- To check the position of the slider
+    // --- To check the position of the slider
       uint check_pos=0;
-   // --- We will adjust the position if it leaves the range
+    // --- We will adjust the position if it leaves the range
       if(pos<0 || pos>m_items_total-m_visible_items_total)
          check_pos=m_items_total-m_visible_items_total;
       else
          check_pos=pos;
-   // --- Remember the position of the slider
+    // --- Remember the position of the slider
       CScroll::CurrentPos(check_pos);
-   // --- Calculate and set the Y coordinate of the scroll bar slider
+    // --- Calculate and set the Y coordinate of the scroll bar slider
       CalculateThumbY();
-     }
-   //+------------------------------------------------------------------+
-   // | Calculation and setting of the Y coordinate of the scroll bar slider |
-   //+------------------------------------------------------------------+
-   void CScrollV::CalculateThumbY(void)
-     {
-   // --- Quit if there is no pointer to the main element
+   }
+ //+------------------------------------------------------------------+
+ //| Calculation and setting of the Y coordinate of the scroll bar slider |
+ //+------------------------------------------------------------------+
+ void CScrollV::CalculateThumbY(void)
+  {
+    // --- Quit if there is no pointer to the main element
       if(!CElement::CheckMainPointer())
          return;
-   // --- Determine the current Y coordinate of the slider
+    // --- Determine the current Y coordinate of the slider
       int scroll_thumb_y=int(m_thumb_width+(CurrentPos()*m_thumb_step_size));
-   // --- If we go beyond the working area up
+    // --- If we go beyond the working area up
       if(scroll_thumb_y<=m_thumb_width)
          scroll_thumb_y=m_thumb_width;
-   // --- If we go beyond the working area down
+    // --- If we go beyond the working area down
       if(scroll_thumb_y+m_thumb_length>=m_y_size-m_thumb_width || 
          CScroll::CurrentPos()>=m_thumb_steps_total-1)
-        {
+       {
          scroll_thumb_y=int(m_y_size-m_thumb_width-m_thumb_length);
-        }
-   // --- Update the coordinate and offset along the Y axis
+       }
+    // --- Update the coordinate and offset along the Y axis
       m_thumb_y=scroll_thumb_y;
-     }
-   //+------------------------------------------------------------------+
-   // | Changing the X coordinate of an element |
-   //+------------------------------------------------------------------+
-   void CScrollV::XDistance(const int x)
-     {
-   // --- Quit if there is no pointer to the main element
+  }
+ //+------------------------------------------------------------------+
+ //| Changing the X coordinate of an element |
+ //+------------------------------------------------------------------+
+ void CScrollV::XDistance(const int x)
+  {
+    // --- Quit if there is no pointer to the main element
       if(!CElement::CheckMainPointer())
          return;
-   // --- Update the X coordinate of the element...
+    // --- Update the X coordinate of the element...
       CElementBase::X(CElement::CalculateX(x));
       CElementBase::XGap(x);
       m_canvas.X(x);
-   // --- Set the coordinate and offset
+    // --- Set the coordinate and offset
       ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_XDISTANCE,x);
       m_canvas.XGap(x);
-   // --- Move objects
+    // --- Move objects
       Moving();
-     }
-   //+------------------------------------------------------------------+
-   // | Change scrollbar length |
-   //+------------------------------------------------------------------+
-   void CScrollV::ChangeYSize(const int height)
-     {
-   // ---Coordinates and dimensions
-      int y=0,y_size=0;
-   // --- Change element and background width
+  }
+ //+------------------------------------------------------------------+
+ //| Change scrollbar length |
+ //+------------------------------------------------------------------+
+ void CScrollV::ChangeYSize(const int height)
+  {
+    // ---Coordinates and dimensions
+     int y=0,y_size=0;
+    // --- Change element and background width
       CElementBase::YSize(height);
       m_canvas.YSize(height);
       m_canvas.Resize(m_x_size,height);
-   // --- Adjust the position of the decrement button
+    // --- Adjust the position of the decrement button
       m_button_dec.Moving();
-   // --- Calculate and set the sizes of scrollbar objects
+      m_button_inc.Moving();
+    // --- Calculate and set the sizes of scrollbar objects
       CalculateThumbSize();
-   // ---Adjusting the slider position
+    // ---Adjusting the slider position
       if(m_thumb_y+m_thumb_length>=m_y_size-m_thumb_length || m_thumb_y<m_thumb_width)
         {
          CalculateThumbY();
          CalculateThumbPos();
         }
-     }
-   //+------------------------------------------------------------------+
-   // | Handling up/left button clicks |
-   //+------------------------------------------------------------------+
-   bool CScrollV::OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
-     {
+    // Fix Add here Repaint background + thumb onto the freshly-resized canvas, then push to chart
+      Draw();
+      CElement::Update(true);
+  }
+ //+------------------------------------------------------------------+
+ //| Handling up/left button clicks |
+ //+------------------------------------------------------------------+
+ bool CScrollV::OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
+  {
    // --- Check element identifier and index if there was an external call
       uint check_id    =(id!=WRONG_VALUE)? id : CElementBase::Id();
       uint check_index =(index!=WRONG_VALUE)? index : CElementBase::Index();
@@ -736,12 +771,12 @@ class CScroll : public CElement
    // --- Press the button
       m_button_inc.IsPressed(false);
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Handling down/right button clicks |
-   //+------------------------------------------------------------------+
-   bool CScrollV::OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
-     {
+  }
+ //+------------------------------------------------------------------+
+ //| Handling down/right button clicks |
+ //+------------------------------------------------------------------+
+ bool CScrollV::OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
+  {
    // --- Check element ID and index if there was an external call
       uint check_id    =(id!=WRONG_VALUE)? id : CElementBase::Id();
       uint check_index =(index!=WRONG_VALUE)? index : CElementBase::Index();
@@ -759,15 +794,15 @@ class CScroll : public CElement
    // --- Press the button
       m_button_dec.IsPressed(false);
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Moving the slider |
-   //+------------------------------------------------------------------+
-   bool CScrollV::OnDragThumb(const int y)
-     {
-   // --- To define a new Y coordinate
+  }
+ //+------------------------------------------------------------------+
+ //| Moving the slider |
+ //+------------------------------------------------------------------+
+ bool CScrollV::OnDragThumb(const int y)
+  {
+    // --- To define a new Y coordinate
       int new_y_point=0;
-   // --- If the scroll bar is inactive,...
+    // --- If the scroll bar is inactive,...
       if(!CScroll::State())
         {
          // --- ...reset auxiliary variables for moving the slider to zero
@@ -775,13 +810,13 @@ class CScroll : public CElement
          m_thumb_point_fixing =0;
          return(false);
         }
-   // --- If the fixation point is zero, then remember the current cursor coordinate
+    // --- If the fixation point is zero, then remember the current cursor coordinate
       if(m_thumb_point_fixing==0)
          m_thumb_point_fixing=y;
-   // --- If the distance value from the extreme point of the slider to the current cursor coordinate is zero, calculate it
+    // --- If the distance value from the extreme point of the slider to the current cursor coordinate is zero, calculate it
       if(m_thumb_size_fixing==0)
          m_thumb_size_fixing=m_thumb_y-y;
-   // --- If, while pressed, the threshold is passed down
+    // --- If, while pressed, the threshold is passed down
       if(y-m_thumb_point_fixing>0)
         {
          // --- Calculate the Y coordinate
@@ -790,7 +825,7 @@ class CScroll : public CElement
          UpdateThumb(new_y_point);
          return(true);
         }
-   // --- If, while pressed, the threshold is passed up
+    // --- If, while pressed, the threshold is passed up
       if(y-m_thumb_point_fixing<0)
         {
          // --- Calculate the Y coordinate
@@ -799,69 +834,73 @@ class CScroll : public CElement
          UpdateThumb(new_y_point);
          return(true);
         }
-   //---
+    //---
       return(false);
-     }
-   //+------------------------------------------------------------------+
-   // | Update slider position |
-   //+------------------------------------------------------------------+
-   void CScrollV::UpdateThumb(const int new_y_point)
-     {
+  }
+ //+------------------------------------------------------------------+
+ //| Update slider position |
+ //+------------------------------------------------------------------+
+ void CScrollV::UpdateThumb(const int new_y_point)
+  {
       int y=new_y_point;
-   // --- Resetting the fixation point
+    // --- Resetting the fixation point
       m_thumb_point_fixing=0;
-   // --- Checking for leaving the work area down and adjusting values
+    // --- Checking for leaving the work area down and adjusting values
       if(new_y_point>m_y_size-m_thumb_width-m_thumb_length)
         {
          y=m_y_size-m_thumb_width-m_thumb_length;
          CScroll::CurrentPos(int(m_thumb_steps_total-1));
         }
-   // --- Checking for upward exit from the work area and adjusting values
+    // --- Checking for upward exit from the work area and adjusting values
       if(new_y_point<=m_thumb_width)
         {
          y=m_thumb_width;
          CScroll::CurrentPos(0);
         }
-   // --- Current coordinates
+    // --- Current coordinates
       RedrawThumb(y);
-     }
-   //+------------------------------------------------------------------+
-   // | Adjusts the slider position number |
-   //+------------------------------------------------------------------+
-   void CScrollV::CalculateThumbPos(void)
-     {
-   // --- Exit if step is zero
+  }
+ //+------------------------------------------------------------------+
+ //| Adjusts the slider position number |
+ //+------------------------------------------------------------------+
+ void CScrollV::CalculateThumbPos(void)
+  {
+    // --- Exit if step is zero
       if(m_thumb_step_size==0)
          return;
-   // --- Adjusts the position number of the scroll bar
+    // --- Adjusts the position number of the scroll bar
       CScroll::CurrentPos(int((m_thumb_y-m_thumb_width+1)/m_thumb_step_size));
-   // --- Check for leaving the work area down/up
+    // --- Check for leaving the work area down/up
       if(m_thumb_y+m_thumb_length>=m_y_size-m_thumb_width)
          CScroll::CurrentPos(int(m_thumb_steps_total-1));
       if(m_thumb_y<=m_thumb_width)
          CScroll::CurrentPos(0);
-     }
-   //+------------------------------------------------------------------+
-   // | Quick redraw of the scroll bar slider |
-   //+------------------------------------------------------------------+
-   void CScrollV::RedrawThumb(const int y)
-     {
-   // --- Current coordinates
+  }
+ //+------------------------------------------------------------------+
+ //| Quick redraw of the scroll bar slider |
+ //+------------------------------------------------------------------+
+ void CScrollV::RedrawThumb(const int y)
+  {
+    // --- Current coordinates
       int x1=0,y1=0,x2=0,y2=0;
       CalculateThumbBoundaries(x1,y1,x2,y2);
-   // --- Erase the current position of the slider
+    // --- Erase the current position of the slider
       m_canvas.FillRectangle(x1,y1,x2-1,y2-1,m_back_color);
-   // --- Update coordinates
+    // --- Update coordinates
       m_thumb_y=y;
       y2=y+m_thumb_length;
-   // --- Draw new slider position
+    // --- Draw new slider position
       m_canvas.FillRectangle(x1,y1,x2-1,y2-1,m_thumb_color_pressed);
-     }
-   //+------------------------------------------------------------------+
-   // | Class for controlling horizontal scrollbar |
-   //+------------------------------------------------------------------+
-   class CScrollH : public CScroll
-     {
+  }
+#endif // CCSCROLLV_MQH_IMPLEMENTATION
+
+#ifndef CCSCROLLH_MQH_DECLARATION
+#define CCSCROLLH_MQH_DECLARATION
+ //+------------------------------------------------------------------+
+ // | Class for controlling horizontal scrollbar |
+ //+------------------------------------------------------------------+
+ class CScrollH : public CScroll
+  {
    public:
                         CScrollH(void);
                        ~CScrollH(void);
@@ -877,52 +916,51 @@ class CScroll : public CElement
       bool              OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE);
       bool              OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE);
       //---
-   private:
-      // --- Moving the slider
-      bool              OnDragThumb(const int x);
-      // ---Updating the slider position
-      void              UpdateThumb(const int new_x_point);
-      // --- Calculate the X coordinate of the slider
-      void              CalculateThumbX(void);
-      // --- Adjusts the slider position number
-      void              CalculateThumbPos(void);
-      // --- Quick redraw of the scroll bar slider
-      void              RedrawThumb(const int x);
-     };
-   //+------------------------------------------------------------------+
-   //| Constructor                                                      |
-   //+------------------------------------------------------------------+
-   CScrollH::CScrollH(void)
-     {
-   // --- Save the element class name in the base class
+   private:      
+      bool              OnDragThumb(const int x);           // --- Moving the slider      
+      void              UpdateThumb(const int new_x_point); // ---Updating the slider position
+      void              CalculateThumbX(void);              // --- Calculate the X coordinate of the slider
+      void              CalculateThumbPos(void);            // --- Adjusts the slider position number
+      void              RedrawThumb(const int x);           // --- Quick redraw of the scroll bar slider
+  };
+#endif // CCSCROLLH_MQH_DECLARATION
+
+#ifndef CCSCROLLH_MQH_IMPLEMENTATION
+#define CCSCROLLH_MQH_IMPLEMENTATION
+ //+------------------------------------------------------------------+
+ //| Constructor                                                      |
+ //+------------------------------------------------------------------+
+ CScrollH::CScrollH(void)
+  {
+    // --- Save the element class name in the base class
       CElementBase::ClassName(CLASS_NAME);
-     }
-   //+------------------------------------------------------------------+
-   //| Destructor                                                       |
-   //+------------------------------------------------------------------+
-   CScrollH::~CScrollH(void)
-     {
-     }
-   //+------------------------------------------------------------------+
-   // | Scroll control |
-   //+------------------------------------------------------------------+
-   bool CScrollH::ScrollBarControl(void)
-     {
-   // --- Exit if (1) there is no pointer to the main element or (2) the element is hidden
+  }
+ //+------------------------------------------------------------------+
+ //| Destructor                                                       |
+ //+------------------------------------------------------------------+
+ CScrollH::~CScrollH(void)
+  {
+  }
+ //+------------------------------------------------------------------+
+ //| Scroll control                                                   |
+ //+------------------------------------------------------------------+
+ bool CScrollH::ScrollBarControl(void)
+  {
+    // --- Exit if (1) there is no pointer to the main element or (2) the element is hidden
       if(!CElement::CheckMainPointer() || !CElementBase::IsVisible())
          return(false);
-   // --- Exit if parent is disabled by another element
+    // --- Exit if parent is disabled by another element
       if(!m_main.CElementBase::IsAvailable())
          return(false);
-   // --- Checking focus above the slider
+    // --- Checking focus above the slider
       int x=m_mouse.RelativeX(m_canvas);
       int y=m_mouse.RelativeY(m_canvas);
       CheckThumbFocus(x,y);
-   // --- Let's check and remember the state of the mouse button
+    // --- Let's check and remember the state of the mouse button
       CScroll::CheckMouseButtonState();
-   // --- If control is transferred to the scroll bar, determine the position of the slider
+    // --- If control is transferred to the scroll bar, determine the position of the slider
       if(CScroll::State())
-        {
+       {
          // --- If the slider is moved
          if(OnDragThumb(x))
            {
@@ -930,14 +968,14 @@ class CScroll : public CElement
             CalculateThumbPos();
             return(true);
            }
-        }
+       }
       return(false);
-     }
-   //+------------------------------------------------------------------+
-   // | Moves the slider to the specified position |
-   //+------------------------------------------------------------------+
-   void CScrollH::MovingThumb(const int pos=WRONG_VALUE)
-     {
+  }
+ //+------------------------------------------------------------------+
+ //| Moves the slider to the specified position |
+ //+------------------------------------------------------------------+
+ void CScrollH::MovingThumb(const int pos=WRONG_VALUE)
+  {
    // --- Exit if scrollbar is not needed
       if(!IsScroll())
          return;
@@ -952,12 +990,12 @@ class CScroll : public CElement
       CScroll::CurrentPos(check_pos);
    // --- Calculate and set the Y coordinate of the scroll bar slider
       CalculateThumbX();
-     }
-   //+------------------------------------------------------------------+
-   // | Calculation of the X coordinate of the slider |
-   //+------------------------------------------------------------------+
-   void CScrollH::CalculateThumbX(void)
-     {
+  }
+ //+------------------------------------------------------------------+
+ //| Calculation of the X coordinate of the slider |
+ //+------------------------------------------------------------------+
+ void CScrollH::CalculateThumbX(void)
+  {
    // --- Determine the current X coordinate of the slider
       double scroll_thumb_x=m_thumb_width+(CurrentPos()*m_thumb_step_size);
    // --- If we go beyond the working area to the left
@@ -973,12 +1011,12 @@ class CScroll : public CElement
         }
    // --- Update the coordinate and offset along the X axis
       m_thumb_x=(int)scroll_thumb_x;
-     }
-   //+------------------------------------------------------------------+
-   // | Changing the Y coordinate of an element |
-   //+------------------------------------------------------------------+
-   void CScrollH::YDistance(const int y)
-     {
+  }
+ //+------------------------------------------------------------------+
+ //| Changing the Y coordinate of an element |
+ //+------------------------------------------------------------------+
+ void CScrollH::YDistance(const int y)
+  {
    // --- Quit if there is no pointer to the main element
       if(!CElement::CheckMainPointer())
          return;
@@ -993,34 +1031,34 @@ class CScroll : public CElement
    // --- Update the indentation of all element objects
       int y_gap=CElement::CalculateYGap(y);
       m_canvas.YGap(CElement::CalculateYGap(y));
-     }
-   //+------------------------------------------------------------------+
-   // | Change scrollbar length |
-   //+------------------------------------------------------------------+
-   void CScrollH::ChangeXSize(const int width)
-     {
-   // ---Coordinates and dimensions
+  }
+  //+------------------------------------------------------------------+
+  // | Change scrollbar length |
+  //+------------------------------------------------------------------+
+  void CScrollH::ChangeXSize(const int width)
+   {
+    // ---Coordinates and dimensions
       int x=0,x_size=width-1;
-   // --- Change element and background width
+    // --- Change element and background width
       CElementBase::XSize(x_size);
       m_canvas.XSize(x_size);
       m_canvas.Resize(x_size,m_y_size);
-   // --- Adjust the position of the decrement button
+    // --- Adjust the position of the decrement button
       m_button_dec.Moving();
-   // --- Calculate and set the sizes of scrollbar objects
+    // --- Calculate and set the sizes of scrollbar objects
       CalculateThumbSize();
-   // ---Adjusting the slider position
+    // ---Adjusting the slider position
       if(m_thumb_x+m_thumb_length>=m_x_size-m_thumb_length || m_thumb_x<m_thumb_width)
         {
          CalculateThumbX();
          CalculateThumbPos();
         }
-     }
-   //+------------------------------------------------------------------+
-   // | Pressing the switch left |
-   //+------------------------------------------------------------------+
-   bool CScrollH::OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
-     {
+   }
+ //+------------------------------------------------------------------+
+ // | Pressing the switch left |
+ //+------------------------------------------------------------------+
+ bool CScrollH::OnClickScrollInc(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
+  {
    // --- Check element ID and index if there was an external call
       uint check_id    =(id!=WRONG_VALUE)? id : CElementBase::Id();
       uint check_index =(index!=WRONG_VALUE)? index : CElementBase::Index();
@@ -1038,12 +1076,12 @@ class CScroll : public CElement
    // --- Press the button
       m_button_inc.IsPressed(false);
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Pressing the switch to the right |
-   //+------------------------------------------------------------------+
-   bool CScrollH::OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
-     {
+  }
+ //+------------------------------------------------------------------+
+ // | Pressing the switch to the right |
+ //+------------------------------------------------------------------+
+ bool CScrollH::OnClickScrollDec(const int id=WRONG_VALUE,const int index=WRONG_VALUE)
+  {
    // --- Check element identifier and index if there was an external call
       uint check_id    =(id!=WRONG_VALUE)? id : CElementBase::Id();
       uint check_index =(index!=WRONG_VALUE)? index : CElementBase::Index();
@@ -1061,12 +1099,12 @@ class CScroll : public CElement
    // --- Press the button
       m_button_dec.IsPressed(false);
       return(true);
-     }
-   //+------------------------------------------------------------------+
-   // | Moving the slider |
-   //+------------------------------------------------------------------+
-   bool CScrollH::OnDragThumb(const int x)
-     {
+  }
+ //+------------------------------------------------------------------+
+ // | Moving the slider |
+ //+------------------------------------------------------------------+
+ bool CScrollH::OnDragThumb(const int x)
+  {
    // --- To define a new X coordinate
       int new_x_point=0;
    // --- If the scroll bar is inactive,...
@@ -1103,12 +1141,12 @@ class CScroll : public CElement
         }
    //---
       return(false);
-     }
-   //+------------------------------------------------------------------+
-   // | Update scrollbar position |
-   //+------------------------------------------------------------------+
-   void CScrollH::UpdateThumb(const int new_x_point)
-     {
+  }
+ //+------------------------------------------------------------------+
+ // | Update scrollbar position |
+ //+------------------------------------------------------------------+
+ void CScrollH::UpdateThumb(const int new_x_point)
+  {
       int x=new_x_point;
    // --- Resetting the fixation point
       CScroll::m_thumb_point_fixing=0;
@@ -1126,12 +1164,12 @@ class CScroll : public CElement
         }
    // --- Current coordinates
       RedrawThumb(x);
-     }
-   //+------------------------------------------------------------------+
-   // | Adjusts the slider position number |
-   //+------------------------------------------------------------------+
-   void CScrollH::CalculateThumbPos(void)
-     {
+  }
+ //+------------------------------------------------------------------+
+ // | Adjusts the slider position number |
+ //+------------------------------------------------------------------+
+ void CScrollH::CalculateThumbPos(void)
+  {
    // --- Exit if step is zero
       if(CScroll::m_thumb_step_size==0)
          return;
@@ -1143,12 +1181,12 @@ class CScroll : public CElement
          CScroll::CurrentPos(int(m_thumb_steps_total-1));
       if(m_thumb_x<m_thumb_width)
          CScroll::CurrentPos(0);
-     }
-   //+------------------------------------------------------------------+
-   // | Quick redraw of the scroll bar slider |
-   //+------------------------------------------------------------------+
-   void CScrollH::RedrawThumb(const int x)
-     {
+  }
+ //+------------------------------------------------------------------+
+ // | Quick redraw of the scroll bar slider |
+ //+------------------------------------------------------------------+
+ void CScrollH::RedrawThumb(const int x)
+  {
    // --- Current coordinates
       int x1=0,y1=0,x2=0,y2=0;
       CalculateThumbBoundaries(x1,y1,x2,y2);
@@ -1159,7 +1197,6 @@ class CScroll : public CElement
       x2=x+m_thumb_length;
    // --- Draw new slider position
       m_canvas.FillRectangle(x1,y1,x2-1,y2-1,m_thumb_color_pressed);
-     }
-   //+------------------------------------------------------------------+
- #endif // CSCROLLS_MQH_IMPLEMENTATION
+  }
+#endif // CCSCROLLH_MQH_IMPLEMENTATION
 #endif // __SCROLLS_MQH__

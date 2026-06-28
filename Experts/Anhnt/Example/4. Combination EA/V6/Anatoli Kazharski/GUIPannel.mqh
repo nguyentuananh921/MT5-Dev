@@ -19,6 +19,8 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Trading\TradingLevelBubble.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\Keys.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\Controls\SplitContainer.mqh>
+ // For loading indicator config from a JSON file at startup (EA-local, not part of the shared Library)
+  #include "IndicatorConfigLoader.mqh"
 
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
@@ -138,6 +140,7 @@
         void                          ApplyHighlightSymbolTFTree(void);
        //Indicator TreeView m_treeview_indicator.
          void                          GetIndicatorCatalog(SIndicatorCatalogItem &out[]);
+         bool                          ApplyIndicatorToAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);
          void                          AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[]);
          void                          PopulateIndicatorTree(void);
          bool                          CreateTreeView_Indicator(const int x_gap, const int y_gap);
@@ -162,6 +165,7 @@
                                       CGUIPannel(void);
                                       ~CGUIPannel(void);
        bool                           OnInitEvent(const int uninit_reason = REASON_PROGRAM);
+       int                            LoadIndicatorsFromJson(const string filename);
        void                           OnDeinitEvent(const int reason);
        void                           OnTimerEvent(void);
        void                           OnTickEvent(void);
@@ -943,10 +947,14 @@
        }
       AddIndicatorInstance(m_current_param_type_li, m_current_param_type, params);
     }
-  void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
+  // --- GUI-independent core: applies one indicator type+params to every
+  // --- Market Watch symbol x every timeframe series already tracked.
+  // --- Shared by the GUI "Add" button (AddIndicatorInstance) and by
+  // --- LoadIndicatorsFromJson, which may run before the GUI/TreeView exists.
+  bool CGUIPannel::ApplyIndicatorToAllSeries(const ENUM_INDICATOR type, MqlParam &params[])
    {
-     //Debug 
-       Print("My Debug CGUIPannel::AddIndicatorInstance ENTER type=", EnumToString(type), " m_bar_timeseries=", (m_bar_timeseries==NULL?"NULL":"OK"), " m_indicators_timeseries=", (m_indicators_timeseries==NULL?"NULL":"OK"));
+     //Debug
+       Print("My Debug CGUIPannel::ApplyIndicatorToAllSeries ENTER type=", EnumToString(type), " m_bar_timeseries=", (m_bar_timeseries==NULL?"NULL":"OK"), " m_indicators_timeseries=", (m_indicators_timeseries==NULL?"NULL":"OK"));
      int mw_total = ::SymbolsTotal(true);
      bool created_any = false;
 
@@ -956,21 +964,25 @@
          CBarTimeSeriesDE *bts  = m_bar_timeseries.GetTimeseries(sym_name);
          CArrayObj        *list = (bts != NULL) ? bts.GetListSeries() : NULL;
          int tf_cnt = (list != NULL) ? list.Total() : 0;
-         //Debug 
-          Print("My Debug CGUIPannel::AddIndicatorInstance sym=", sym_name, " bts=", (bts==NULL?"NULL":"OK"), " tf_cnt=", tf_cnt);
+         //Debug
+          Print("My Debug CGUIPannel::ApplyIndicatorToAllSeries sym=", sym_name, " bts=", (bts==NULL?"NULL":"OK"), " tf_cnt=", tf_cnt);
          if(tf_cnt == 0) continue;
          for(int k = 0; k < tf_cnt; k++)
           {
             CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
             if(s == NULL) continue;
             CIndicatorDE *indicator = m_indicators_timeseries.CreateIndicator(type, params, sym_name, s.Timeframe());
-             Print("My Debug CGUIPannel::AddIndicatorInstance CreateIndicator sym=", sym_name, " tf=", EnumToString(s.Timeframe()), " result=", (indicator==NULL?"NULL":"OK"));
+             Print("My Debug CGUIPannel::ApplyIndicatorToAllSeries CreateIndicator sym=", sym_name, " tf=", EnumToString(s.Timeframe()), " result=", (indicator==NULL?"NULL":"OK"));
             if(indicator != NULL) created_any = true;
           }
        }
-      //Debug 
-         Print("My Debug CGUIPannel::AddIndicatorInstance created_any=", created_any);
-      if(!created_any) return;
+      //Debug
+         Print("My Debug CGUIPannel::ApplyIndicatorToAllSeries created_any=", created_any);
+      return created_any;
+   }
+  void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
+   {
+      if(!ApplyIndicatorToAllSeries(type, params)) return;
       CTreeItem *type_item = m_treeview_indicator.ItemPointer(type_li);
       if(type_item != NULL) type_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);
       int group_li = m_treeview_indicator.ItemPrevNode(type_li);
@@ -979,7 +991,75 @@
 
       SetValuesToIndicatorTable();
       //m_chart.Redraw();
-   }  
+   }
+  // --- Loads indicator configs from MQL5\Files\<filename> and applies each one
+  // --- to every Market Watch symbol x timeframe, same as a GUI "Add" click.
+  // --- Safe to call before the GUI/TreeView is built (uses ApplyIndicatorToAllSeries,
+  // --- not AddIndicatorInstance, so it never touches m_treeview_indicator).
+  // --- Returns the number of indicator entries successfully applied, or -1 on file error.
+  int CGUIPannel::LoadIndicatorsFromJson(const string filename)
+   {
+      SJsonIndicatorEntry entries[];
+      if(!ParseIndicatorConfigFile(filename, entries))
+        {
+         Print("CGUIPannel::LoadIndicatorsFromJson > failed to read/parse ", filename);
+         return -1;
+        }
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+
+      int applied = 0;
+      int entries_total = ArraySize(entries);
+      for(int e = 0; e < entries_total; e++)
+        {
+         bool type_found = false;
+         ENUM_INDICATOR type = IND_CUSTOM;
+         for(int c = 0; c < ArraySize(catalog); c++)
+           {
+            if(catalog[c].name == entries[e].type)
+              {
+               type = catalog[c].type;
+               type_found = true;
+               break;
+              }
+           }
+         if(!type_found)
+           {
+            Print("CGUIPannel::LoadIndicatorsFromJson > unknown indicator type \"", entries[e].type, "\", skipped");
+            continue;
+           }
+
+         SIndicatorParam schema[];
+         int total = GetIndicatorParamSchema(type, schema);
+         if(total == 0)
+           {
+            Print("CGUIPannel::LoadIndicatorsFromJson > \"", entries[e].type, "\" has no param schema yet, skipped");
+            continue;
+           }
+         if(ArraySize(entries[e].params) < total)
+           {
+            Print("CGUIPannel::LoadIndicatorsFromJson > \"", entries[e].type, "\" needs ", total,
+                  " params, got ", ArraySize(entries[e].params), ", skipped");
+            continue;
+           }
+
+         MqlParam params[];
+         ArrayResize(params, total);
+         for(int i = 0; i < total; i++)
+           {
+            params[i].type = schema[i].data_type;
+            if(schema[i].data_type == TYPE_DOUBLE)
+               params[i].double_value = entries[e].params[i];
+            else
+               params[i].integer_value = (long)entries[e].params[i];
+           }
+
+         if(ApplyIndicatorToAllSeries(type, params))
+            applied++;
+        }
+      Print("CGUIPannel::LoadIndicatorsFromJson > applied ", applied, "/", entries_total, " indicator(s) from ", filename);
+      return applied;
+   }
   void CGUIPannel::PopulateIndicatorTree(void)
    {
       string group_names[4] = {"Trend", "Oscillator", "Volumes", "Arrows"};

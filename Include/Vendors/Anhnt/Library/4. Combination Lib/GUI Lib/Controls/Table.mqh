@@ -795,13 +795,13 @@
       ::ResetLastError();
       if(!m_table.CreateBitmapLabel(m_chart_id,m_subwin,name,x,y,m_table_x_size,m_header_y_size,COLOR_FORMAT_ARGB_NORMALIZE))
         {
-         ::Print(__FUNCTION__," > Не удалось создать холст для рисования таблицы: ",::GetLastError());
+         ::Print(__FUNCTION__," > Failed to create a canvas for drawing the table: ",::GetLastError());
          return(false);
         }
     // --- Get a pointer to the base class
       if(!m_table.Attach(m_chart_id,name,COLOR_FORMAT_ARGB_NORMALIZE))
         {
-         ::Print(__FUNCTION__," > Не удалось присоединить холст для рисования к графику: ",::GetLastError());
+         ::Print(__FUNCTION__," > Failed to attach canvas for drawing to the chart: ",::GetLastError());
          return(false);
         }
     // --- Properties

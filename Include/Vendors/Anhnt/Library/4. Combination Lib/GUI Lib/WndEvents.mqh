@@ -85,81 +85,47 @@
         // ---Updating the position of elements
          void              Moving(void);
         //---
-    protected:
-        // --- Hiding all elements
-         void              Hide(void);
-        // --- Show elements of the specified window
-         void              Show(const uint window_index);
-        // --- Restoring left-click priorities
-         void              SetZorders(void);
-        // --- Redrawing elements
-         void              Update(const bool redraw = false);
-        // --- Moves tooltips to the top layer
-         void              ResetTooltips(void);
-        // --- Shows items in selected tabs only
-         void              ShowTabElements(const uint window_index);
-        // --- Sets the accessibility status of elements
-         void              SetAvailable(const uint window_index, const bool state);
-        // --- Forms an array of elements with a timer
-         void              FormTimerElementsArray(void);
-        // --- Forms an array of available elements
-         void              FormAvailableElementsArray(void);
-        // --- Forms an array of elements with auto-resize (X)
-         void              FormAutoXResizeElementsArray(void);
-        // --- Forms an array of elements with auto-resize (Y)
-         void              FormAutoYResizeElementsArray(void);
+    protected:        
+         void              Hide(void);                          // --- Hiding all elements
+         void              Show(const uint window_index);       // --- Show elements of the specified window
+         void              SetZorders(void);                    // --- Restoring left-click priorities
+         void              Update(const bool redraw = false);   // --- Redrawing elements
+         void              ResetTooltips(void);                 // --- Moves tooltips to the top layer
+         void              ShowTabElements(const uint window_index); // --- Shows items in selected tabs only
+         void              SetAvailable(const uint window_index, const bool state); // --- Sets the accessibility status of elements
+         void              FormTimerElementsArray(void);        // --- Forms an array of elements with a timer
+         void              FormAvailableElementsArray(void);    // --- Forms an array of available elements
+         void              FormAutoXResizeElementsArray(void);  // --- Forms an array of elements with auto-resize (X)
+         void              FormAutoYResizeElementsArray(void);  // --- Forms an array of elements with auto-resize (Y)
         //---
-    private:
-      // --- Form drag and drop completed
-      bool              OnWindowEndDrag(void);
-      // --- Collapse/expand form
-      bool              OnWindowCollapse(void);
-      bool              OnWindowExpand(void);
-      // --- Handling window resizing
-      bool              OnWindowChangeXSize(void);
-      bool              OnWindowChangeYSize(void);
-      // --- Enable/disable tooltips
-      bool              OnWindowTooltips(void);
-      // --- Hiding all context menus from the initiator item
-      bool              OnHideBackContextMenus(void);
-      // --- Hiding all context menus
-      bool              OnHideContextMenus(void);
-      // --- Opening a dialog box
-      bool              OnOpenDialogBox(void);
-      // ---Close the dialog box
-      bool              OnCloseDialogBox(void);
-      // --- Determine available elements
-      bool              OnSetAvailable(void);
-      // --- Defining blocked elements
-      bool              OnSetLocked(void);
-      // --- Changes in GUI
-      bool              OnChangeGUI(void);
+    private:    
+      bool              OnWindowEndDrag(void);          // --- Form drag and drop completed
+      bool              OnWindowCollapse(void);         // --- Collapse/expand form
+      bool              OnWindowExpand(void);           // --- Collapse/expand form
+      bool              OnWindowChangeXSize(void);      // --- Handling window resizing
+      bool              OnWindowChangeYSize(void);      // --- Handling window resizing
+      bool              OnWindowTooltips(void);         // --- Enable/disable tooltips
+      bool              OnHideBackContextMenus(void);   // --- Hiding all context menus from the initiator item
+      bool              OnHideContextMenus(void);       // --- Hiding all context menus
+      bool              OnOpenDialogBox(void);          // --- Opening a dialog box
+      bool              OnCloseDialogBox(void);         // --- Close the dialog box
+      bool              OnSetAvailable(void);           // --- Determine available elements
+      bool              OnSetLocked(void);              // --- Defining blocked elements
+      bool              OnChangeGUI(void);              // --- Changes in GUI
       //---
     private:
-      // --- Returns the index of the activated window
-       int               ActivatedWindowIndex(void);
-      // --- Returns the index of the activated main menu
-       int               ActivatedMenuBarIndex(void);
-      // --- Returns the index of the activated menu item
-       int               ActivatedMenuItemIndex(void);
-      // --- Returns the index of the activated double button
-       int               ActivatedSplitButtonIndex(void);
-      // --- Returns the index of the activated combo box
-       int               ActivatedComboBoxIndex(void);
-      // --- Returns the index of the activated dropdown calendar
-       int               ActivatedDropCalendarIndex(void);
-      // --- Returns the index of the activated scrollbar
-       int               ActivatedScrollIndex(void);
-      // --- Returns the index of the activated table
-       int               ActivatedTableIndex(void);
-      // --- Returns the index of the activated slider
-       int               ActivatedSliderIndex(void);
-      // --- Returns the index of the activated tree list
-       int               ActivatedTreeViewIndex(void);
-      // --- Returns the index of the activated standard chart
-       int               ActivatedSubChartIndex(void);
-      // --- Checks and makes the context menu available
-       void              CheckContextMenu(CMenuItem &object);
+       int               ActivatedWindowIndex(void);       // --- Returns the index of the activated window
+       int               ActivatedMenuBarIndex(void);      // --- Returns the index of the activated main menu
+       int               ActivatedMenuItemIndex(void);     // --- Returns the index of the activated menu item
+       int               ActivatedSplitButtonIndex(void);  // --- Returns the index of the activated double button
+       int               ActivatedComboBoxIndex(void);     // --- Returns the index of the activated combo box
+       int               ActivatedDropCalendarIndex(void); // --- Returns the index of the activated dropdown calendar
+       int               ActivatedScrollIndex(void);       // --- Returns the index of the activated scrollbar
+       int               ActivatedTableIndex(void);        // --- Returns the index of the activated table
+       int               ActivatedSliderIndex(void);       // --- Returns the index of the activated slider
+       int               ActivatedTreeViewIndex(void);     // --- Returns the index of the activated tree list
+       int               ActivatedSubChartIndex(void);     // --- Returns the index of the activated standard chart
+       void              CheckContextMenu(CMenuItem &object); // --- Checks and makes the context menu available
    };
  #ifndef CWNDEVENTS_MQH_IMPLEMENTATION
  #define CWNDEVENTS_MQH_IMPLEMENTATION
@@ -185,7 +151,7 @@
   //| Destructor                                                       |
   //+------------------------------------------------------------------+
   CWndEvents::~CWndEvents(void) 
-  {
+   {
       // --- Quit if this is not real time
         if(::MQLInfoInteger(MQL_TESTER))
           return;
@@ -204,7 +170,7 @@
         DeleteExpertSubwindow();
       // --- Erase comment
         ::Comment("");
-  }
+   }
   //+------------------------------------------------------------------+
   // | Kernel initialization |
   //+------------------------------------------------------------------+
@@ -229,10 +195,10 @@
   //+------------------------------------------------------------------+
   void CWndEvents::InitChartEventsParams(const int id, const long lparam, const double dparam, const string sparam) 
    {
-    m_id     = id;
-    m_lparam = lparam;
-    m_dparam = dparam;
-    m_sparam = sparam;
+     m_id     = id;
+     m_lparam = lparam;
+     m_dparam = dparam;
+     m_sparam = sparam;
     // --- Get mouse parameters
      m_mouse.OnEvent(id, lparam, dparam, sparam);
    }
@@ -956,6 +922,8 @@
     // --- If the change signal in the GUI
       if(m_id != CHARTEVENT_CUSTOM + ON_CHANGE_GUI)
         return(false);
+    //Debug
+      Print("My Debug CWndEvents::OnChangeGUI ON_CHANGE_GUI handler CALLED, about to Redraw");
     // --- Let's create an array of visible and accessible elements
       FormAvailableElementsArray();
     // ---Move tooltips to top layer
@@ -1504,17 +1472,15 @@
    {
     // --- Exit if there are no windows yet
       int windows_total = CWndContainer::WindowsTotal();
-      if(windows_total < 1) {
-        return;
-      }
-    // --- Show a comment informing the user
-      ::Comment("Update. Please wait...");
+      if(windows_total < 1) return;
+    // --- Show a comment informing the user 
+      ::Comment("Update. Please wait...");   
     // --- Hide elements
-      Hide();
+      Hide(); 
     // --- Draw elements
-      Update(true);
+      Update(true); 
     // --- Show elements of the activated window
-      Show(m_active_window_index);
+      Show(m_active_window_index); 
     // --- Let's create an array of elements with a timer
       FormTimerElementsArray();
     // --- Let's create an array of visible and accessible elements
@@ -1527,9 +1493,8 @@
     // --- Clear comment
       ::Comment("");
     // --- Send the GUI creation completion event
-      ::EventChartCustom(m_chart_id, ON_END_CREATE_GUI, 0, 0.0, "");
-      
-      //CWndEvents::PrintContainer();
+      ::EventChartCustom(m_chart_id, ON_END_CREATE_GUI, 0, 0.0, "");      
+    //CWndEvents::PrintContainer();
    }
   //+------------------------------------------------------------------+
   //| Moving elements                                                  |
@@ -1537,11 +1502,12 @@
   void CWndEvents::Moving(void) 
    {
     // --- Update element position
-    int main_total = MainElementsTotal(m_active_window_index);
-    for(int e = 0; e < main_total; e++) {
-      CElement *el = m_wnd[m_active_window_index].m_main_elements[e];
-      el.Moving(false);
-    }
+     int main_total = MainElementsTotal(m_active_window_index);
+     for(int e = 0; e < main_total; e++) 
+      {
+        CElement *el = m_wnd[m_active_window_index].m_main_elements[e];
+        el.Moving(false);
+      }
    }
   //+------------------------------------------------------------------+
   //| Hiding elements                                                  |
@@ -1549,14 +1515,16 @@
   void CWndEvents::Hide(void) 
    {
     int windows_total = CWndContainer::WindowsTotal();
-    for(int w = 0; w < windows_total; w++) {
+    for(int w = 0; w < windows_total; w++) 
+     {
       m_windows[w].Hide();
       int main_total = MainElementsTotal(w);
-      for(int e = 0; e < main_total; e++) {
+      for(int e = 0; e < main_total; e++) 
+       {
         CElement *el = m_wnd[w].m_main_elements[e];
         el.Hide();
-      }
-    }
+       }
+     }
    }
   //+------------------------------------------------------------------+
   //| Show elements of the specified window                            |
@@ -1564,19 +1532,21 @@
   void CWndEvents::Show(const uint window_index) 
    {
     // --- Show elements of the specified window
-    m_windows[window_index].Show();
+     m_windows[window_index].Show();
     // --- If the window is not minimized
-    if(!m_windows[window_index].IsMinimized()) {
+    if(!m_windows[window_index].IsMinimized()) 
+     {
       int main_total = MainElementsTotal(window_index);
-      for(int e = 0; e < main_total; e++) {
+      for(int e = 0; e < main_total; e++) 
+       {
         CElement *el = m_wnd[window_index].m_main_elements[e];
         // --- Show an element if it is (1) not a dropdown and (2) its main element is not a tab
         if(!el.IsDropdown() && dynamic_cast<CTabs*>(el.MainPointer()) == NULL)
           el.Show();
-      }
+       }
       // --- Show items in selected tabs only
       ShowTabElements(window_index);
-    }
+     }
    }
   //+------------------------------------------------------------------+
   // | Restoring left-click priorities |
@@ -1585,16 +1555,18 @@
   void CWndEvents::SetZorders(void) 
    {
     int elements_total = CWndContainer::ElementsTotal(m_active_window_index);
-    for(int e = 0; e < elements_total; e++) {
+    for(int e = 0; e < elements_total; e++) 
+     {
       CElement *el = m_wnd[m_active_window_index].m_elements[e];
       //---
       if(el.ClassName() != "CGraph")
         el.SetZorders();
-      else {
+      else 
+       {
         CGraph *graph = dynamic_cast<CGraph*>(el);
         graph.SetZorders();
-      }
-    }
+       }
+     }
    }
   //+------------------------------------------------------------------+
   // | Redrawing elements |
@@ -1602,14 +1574,16 @@
   void CWndEvents::Update(const bool redraw = false) 
    {
     int windows_total = CWndContainer::WindowsTotal();
-    for(int w = 0; w < windows_total; w++) {
+    for(int w = 0; w < windows_total; w++) 
+     {
       // --- Redrawing elements
       int elements_total = CWndContainer::ElementsTotal(w);
-      for(int e = 0; e < elements_total; e++) {
+      for(int e = 0; e < elements_total; e++) 
+       {
         CElement *el = m_wnd[w].m_elements[e];
         el.Update(redraw);
-      }
-    }
+       }
+     }
    }
   //+------------------------------------------------------------------+
   //| Moves tooltips to the top layer                                  |
@@ -1618,11 +1592,12 @@
    {
     // ---Move tooltips to top layer
     int window_total = CWndContainer::WindowsTotal();
-    for(int w = 0; w < window_total; w++) {
+    for(int w = 0; w < window_total; w++) 
+     {
       int tooltips_total = CWndContainer::ElementsTotal(w, E_TOOLTIP);
       for(int t = 0; t < tooltips_total; t++)
         m_wnd[w].m_tooltips[t].Reset();
-    }
+     }
    }
   //+------------------------------------------------------------------+
   //| Sets the availability state of elements                          |
@@ -1633,15 +1608,16 @@
       int main_total = MainElementsTotal(window_index);
     // --- If you need to make elements inaccessible
     if(!state) 
-    {
+     {
       m_windows[window_index].IsAvailable(state);
-      for(int e = 0; e < main_total; e++) {
+      for(int e = 0; e < main_total; e++) 
+       {
         CElement *el = m_wnd[window_index].m_main_elements[e];
         el.IsAvailable(state);
-      }
-    } 
+       }
+     } 
     else 
-    {
+     {
       m_windows[window_index].IsAvailable(state);
       for(int e = 0; e < main_total; e++) 
        {
@@ -1663,7 +1639,7 @@
         // --- Make element available
         el.IsAvailable(state);
        }
-    }
+     }
    }
   //+------------------------------------------------------------------+
   //| Shows items in selected tabs only                                |
@@ -1672,14 +1648,15 @@
    {
     // --- Simple Tabs
       int tabs_total = CWndContainer::ElementsTotal(window_index, E_TABS);
-      for(int t = 0; t < tabs_total; t++) {
+      for(int t = 0; t < tabs_total; t++) 
+       {
         CTabs *el = m_wnd[window_index].m_tabs[t];
         if(el.IsVisible())
           el.ShowTabElements();
-      }
+       }
     // --- Tree List Tabs
-    int treeview_total = CWndContainer::ElementsTotal(window_index, E_TREE_VIEW);
-    for(int tv = 0; tv < treeview_total; tv++)
+     int treeview_total = CWndContainer::ElementsTotal(window_index, E_TREE_VIEW);
+     for(int tv = 0; tv < treeview_total; tv++)
       m_wnd[window_index].m_treeview_lists[tv].ShowTabElements();
    }
   //+------------------------------------------------------------------+
@@ -1688,9 +1665,11 @@
   void CWndEvents::FormTimerElementsArray(void) 
    {
     int windows_total = CWndContainer::WindowsTotal();
-    for(int w = 0; w < windows_total; w++) {
+    for(int w = 0; w < windows_total; w++) 
+     {
       int elements_total = CWndContainer::ElementsTotal(w);
-      for(int e = 0; e < elements_total; e++) {
+      for(int e = 0; e < elements_total; e++) 
+       {
         CElement *el = m_wnd[w].m_elements[e];
         //---
         if(dynamic_cast<CCalendar    *>(el) != NULL ||
@@ -1699,11 +1678,12 @@
             dynamic_cast<CTable       *>(el) != NULL ||
             dynamic_cast<CTextBox     *>(el) != NULL ||
             dynamic_cast<CTextEdit    *>(el) != NULL ||
-            dynamic_cast<CTreeView    *>(el) != NULL) {
+            dynamic_cast<CTreeView    *>(el) != NULL) 
+        {
           CWndContainer::AddTimerElement(w, el);
         }
-      }
-    }
+       }
+     }
    }
   //+------------------------------------------------------------------+
   //| Forms an array of available elements                             |
@@ -1724,7 +1704,7 @@
       if(!el.IsVisible() || !el.CElementBase::IsAvailable() || el.CElementBase::IsLocked())
         continue;
       // --- Exclude elements that do not require processing on mouse over
-      if(dynamic_cast<CButtonsGroup   *>(el) == NULL &&
+       if(dynamic_cast<CButtonsGroup   *>(el) == NULL &&
           dynamic_cast<CFileNavigator  *>(el) == NULL &&
           dynamic_cast<CPicture        *>(el) == NULL &&
           dynamic_cast<CPicturesSlider *>(el) == NULL &&
@@ -1732,10 +1712,11 @@
           dynamic_cast<CSeparateLine   *>(el) == NULL &&
           dynamic_cast<CStatusBar      *>(el) == NULL &&
           dynamic_cast<CTabs           *>(el) == NULL &&
-          dynamic_cast<CTextLabel      *>(el) == NULL) {
-        AddAvailableElement(awi, el);
-        //Print(__FUNCTION__," > class: ",el.ClassName(),"; id: ",el.Id());
-      }
+          dynamic_cast<CTextLabel      *>(el) == NULL) 
+        {
+          AddAvailableElement(awi, el);
+          //Print(__FUNCTION__," > class: ",el.ClassName(),"; id: ",el.Id());
+        }
      }
    }
   //+------------------------------------------------------------------+
@@ -1744,9 +1725,11 @@
   void CWndEvents::FormAutoXResizeElementsArray(void) 
    {
     int windows_total = CWndContainer::WindowsTotal();
-    for(int w = 0; w < windows_total; w++) {
+    for(int w = 0; w < windows_total; w++) 
+     {
       int elements_total = CWndContainer::ElementsTotal(w);
-      for(int e = 0; e < elements_total; e++) {
+      for(int e = 0; e < elements_total; e++) 
+       {
         CElement *el = m_wnd[w].m_elements[e];
         // --- We add only those that have auto-resize mode enabled
         if(!el.AutoXResizeMode())
@@ -1765,11 +1748,13 @@
             dynamic_cast<CTextBox       *>(el) != NULL ||
             dynamic_cast<CTextEdit      *>(el) != NULL ||
             dynamic_cast<CTreeView      *>(el) != NULL ||
-            dynamic_cast<CFrame         *>(el) != NULL) {
-          CWndContainer::AddAutoXResizeElement(w, el);
-        }
-      }
-    }
+            dynamic_cast<CSplitContainer*>(el) != NULL ||
+            dynamic_cast<CFrame         *>(el) != NULL) 
+            {
+             CWndContainer::AddAutoXResizeElement(w, el);
+            }
+       }
+     }
    }
   //+------------------------------------------------------------------+
   // | Forms an array of elements with auto-resize (Y) |
@@ -1777,9 +1762,11 @@
   void CWndEvents::FormAutoYResizeElementsArray(void) 
    {
     int windows_total = CWndContainer::WindowsTotal();
-    for(int w = 0; w < windows_total; w++) {
+    for(int w = 0; w < windows_total; w++) 
+     {
       int elements_total = CWndContainer::ElementsTotal(w);
-      for(int e = 0; e < elements_total; e++) {
+      for(int e = 0; e < elements_total; e++) 
+       {
         CElement *el = m_wnd[w].m_elements[e];
         // --- We add only those that have auto-resize mode enabled
         if(!el.AutoYResizeMode())
@@ -1792,13 +1779,14 @@
             dynamic_cast<CTabs          *>(el) != NULL ||
             dynamic_cast<CTextBox       *>(el) != NULL ||
             dynamic_cast<CTreeView      *>(el) != NULL ||
+            dynamic_cast<CSplitContainer*>(el) != NULL ||
             dynamic_cast<CFrame         *>(el) != NULL) 
             
             {
              CWndContainer::AddAutoYResizeElement(w, el);
             }
-      }
-    }
+       }
+     }
    }
   //+------------------------------------------------------------------+
   // | Sets the chart state |
@@ -1806,11 +1794,12 @@
   void CWndEvents::SetChartState(void) 
    {
       int awi = m_active_window_index;
-    // --- To determine the event when control should be disabled
+     // --- To determine the event when control should be disabled
       bool condition = false;
-    // --- Let's check the windows
+     // --- Let's check the windows
       int windows_total = CWndContainer::WindowsTotal();
-      for(int i = 0; i < windows_total; i++) {
+      for(int i = 0; i < windows_total; i++) 
+       {
         // ---Go to next if this form is hidden
         if(!m_windows[i].IsVisible())
           continue;
@@ -1819,59 +1808,70 @@
         // --- If there is a focus, note it
         if(m_windows[i].MouseFocus())
           condition = true;
-      }
-      
-    // --- Let's check the focus of the drop-down lists
-      if(!condition) {
+       }
+      // --- Let's check the focus of the drop-down lists
+      if(!condition) 
+       {
         // --- Get the total number of drop-down lists
         int drop_lists_total = CWndContainer::ElementsTotal(awi, E_DROP_LIST);
-        for(int i = 0; i < drop_lists_total; i++) {
+        for(int i = 0; i < drop_lists_total; i++) 
+         {
           // --- Get a pointer to the drop-down list
           CListView *lv = m_wnd[awi].m_drop_lists[i];
           // --- If the list is activated (open)
-          if(lv.IsVisible()) {
+          if(lv.IsVisible()) 
+           {
             // --- Let's check the focus of the list and the state of its scrollbar
-            if(m_wnd[awi].m_drop_lists[i].MouseFocus() || lv.ScrollState()) {
+            if(m_wnd[awi].m_drop_lists[i].MouseFocus() || lv.ScrollState()) 
+             {
               condition = true;
               break;
-            }
-          }
-        }
+             }
+           }
+         }
       }
-    // --- Let's check the focus of the drop-down calendars
-      if(!condition) {
+     // --- Let's check the focus of the drop-down calendars
+      if(!condition) 
+       {
         int drop_calendars_total = CWndContainer::ElementsTotal(awi, E_DROP_CALENDAR);
-        for(int i = 0; i < drop_calendars_total; i++) {
-          if(m_wnd[awi].m_drop_calendars[i].GetCalendarPointer().MouseFocus()) {
+        for(int i = 0; i < drop_calendars_total; i++) 
+         {
+          if(m_wnd[awi].m_drop_calendars[i].GetCalendarPointer().MouseFocus()) 
+           {
             condition = true;
             break;
-          }
-        }
-      }
-    // --- Let's check the focus of the context menus
-      if(!condition) {
+           }
+         }
+       }
+     // --- Let's check the focus of the context menus
+      if(!condition) 
+       {
         // --- Get the total number of drop-down context menus
         int context_menus_total = CWndContainer::ElementsTotal(awi, E_CONTEXT_MENU);
-        for(int i = 0; i < context_menus_total; i++) {
+        for(int i = 0; i < context_menus_total; i++) 
+         {
           // --- If focus is on the context menu
-          if(m_wnd[awi].m_context_menus[i].MouseFocus()) {
+          if(m_wnd[awi].m_context_menus[i].MouseFocus()) 
+           {
             condition = true;
             break;
-          }
-        }
-      }
-    // --- Check the status of the scroll bars
-      if(!condition) {
+           }
+         }
+       }
+     // --- Check the status of the scroll bars
+      if(!condition) 
+       {
         int scrolls_total = CWndContainer::ElementsTotal(awi, E_SCROLL);
-        for(int i = 0; i < scrolls_total; i++) {
-          if(((CScroll*)m_wnd[awi].m_scrolls[i]).State()) {
+        for(int i = 0; i < scrolls_total; i++) 
+         {
+          if(((CScroll*)m_wnd[awi].m_scrolls[i]).State()) 
+           {
             condition = true;
             break;
-          }
-        }
-      }
-      
-    // --- Set the chart state in all forms
+           }
+         }
+       }
+     // --- Set the chart state in all forms
       for(int i = 0; i < windows_total; i++)
         m_windows[i].CustomEventChartState(condition);
    }
