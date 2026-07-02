@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "PowerShell(*)",
+      "Read(*)",
+      "Grep(*)",
+      "Glob(*)",
+      "mcp__plugin_claude-mem_mcp-search__search"
+    ]
+  }
+}

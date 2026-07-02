@@ -923,7 +923,7 @@
       if(m_id != CHARTEVENT_CUSTOM + ON_CHANGE_GUI)
         return(false);
     //Debug
-      Print("My Debug CWndEvents::OnChangeGUI ON_CHANGE_GUI handler CALLED, about to Redraw");
+      //Print("My Debug CWndEvents::OnChangeGUI ON_CHANGE_GUI handler CALLED, about to Redraw");
     // --- Let's create an array of visible and accessible elements
       FormAvailableElementsArray();
     // ---Move tooltips to top layer

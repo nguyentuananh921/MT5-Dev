@@ -580,9 +580,7 @@
    uint array_size = ::ArraySize(m_items);
    // --- If there is not a single item in the context menu, report it
    if (array_size < 1) 
-    {
-      //::Print(__FUNCTION__, " > Вызов этого метода нужно осуществлять, "
-      //                      "когда в контекстном меню есть хотя бы один пункт!");
+    {      
       ::Print(__FUNCTION__, " > You should call this method when there is at least one item in the context menu!");
     }
    // --- Adjustment in case of leaving the range
@@ -598,9 +596,7 @@
    uint array_size = ::ArraySize(m_content_items);
    // --- If there is not a single item in the context menu, report it
    if (array_size < 1) 
-    {
-     // ::Print(__FUNCTION__, " > Вызов этого метода нужно осуществлять, "
-     //                       "когда в контекстном меню есть хотя бы один пункт!");
+    {     
      ::Print(__FUNCTION__, " > You should call this method when there is at least one item in the context menu!");
     }
    // --- Adjustment in case of leaving the range
@@ -654,7 +650,6 @@
         if(m_t_items_total[prev_node_list_index] == 1)
             m_t_item_state[prev_node_list_index] = true;
       }
-
    }
  //New method to Add a TreeItem to TreeView
  void CTreeView::AddTreeItem(const int list_index, const int prev_node_list_index,
@@ -871,8 +866,8 @@
  //+------------------------------------------------------------------+
  void CTreeView::Show(void) 
  {
-  //Debug
-   Print("My Debug CTreeView::Show CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
+  // //Debug
+  //  Print("My Debug CTreeView::Show CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
   // --- Exit if element is already visible
    if (CElementBase::IsVisible())    return;  
   // Fix for ScrollV
@@ -888,26 +883,26 @@
   {
    CElement::Moving(only_visible);
    // --- Re-layout visible items + scrollbar to match the freshly recalculated height
-   ShiftTreeList();
-   ShiftContentList();
+    ShiftTreeList();
+    ShiftContentList();
    //Debug
-    Print("My Debug CTreeView::Moving obj=", m_canvas.ChartObjectName(),
-          " IsVisible=", CElementBase::IsVisible(),
-          " ItemsTotal=", ItemsTotal(),
-          " VisibleItemsTotal=", m_visible_items_total,
-          " XSize=", CElementBase::XSize(), " YSize=", CElementBase::YSize());
-    if(ItemsTotal() > 0)
-     {
-      string item_obj = m_items[0].CanvasPointer().ChartObjectName();
-      Print("My Debug CTreeView::Moving item0 NATIVE obj=", item_obj,
-      " exists=", ObjectFind(0, item_obj),
-      " TIMEFRAMES=", ObjectGetInteger(0, item_obj, OBJPROP_TIMEFRAMES),
-      " X=", ObjectGetInteger(0, item_obj, OBJPROP_XDISTANCE),
-      " Y=", ObjectGetInteger(0, item_obj, OBJPROP_YDISTANCE),
-      " BACK=", ObjectGetInteger(0, item_obj, OBJPROP_BACK),
-      " ZORDER=", ObjectGetInteger(0, item_obj, OBJPROP_ZORDER),
-      " item0.IsVisible=", m_items[0].IsVisible());
-     }
+    // Print("My Debug CTreeView::Moving obj=", m_canvas.ChartObjectName(),
+    //       " IsVisible=", CElementBase::IsVisible(),
+    //       " ItemsTotal=", ItemsTotal(),
+    //       " VisibleItemsTotal=", m_visible_items_total,
+    //       " XSize=", CElementBase::XSize(), " YSize=", CElementBase::YSize());
+    // if(ItemsTotal() > 0)
+    //  {
+    //   string item_obj = m_items[0].CanvasPointer().ChartObjectName();
+    //   Print("My Debug CTreeView::Moving item0 NATIVE obj=", item_obj,
+    //   " exists=", ObjectFind(0, item_obj),
+    //   " TIMEFRAMES=", ObjectGetInteger(0, item_obj, OBJPROP_TIMEFRAMES),
+    //   " X=", ObjectGetInteger(0, item_obj, OBJPROP_XDISTANCE),
+    //   " Y=", ObjectGetInteger(0, item_obj, OBJPROP_YDISTANCE),
+    //   " BACK=", ObjectGetInteger(0, item_obj, OBJPROP_BACK),
+    //   " ZORDER=", ObjectGetInteger(0, item_obj, OBJPROP_ZORDER),
+    //   " item0.IsVisible=", m_items[0].IsVisible());
+    //  }
   }
  //+------------------------------------------------------------------+
  // | Hides the element |
@@ -916,7 +911,7 @@
   {
    // --- Exit if element is already hidden
    if (!CElementBase::IsVisible()) return;
-   Print("My Debug CTreeView::Hide CALLED obj=", m_canvas.ChartObjectName());
+   //Print("My Debug CTreeView::Hide CALLED obj=", m_canvas.ChartObjectName());
    // --- Hide element
     CElement::Hide();
    // --- Hide tree list items
@@ -1565,12 +1560,12 @@
       }
     }
     // ---Draw border
-    m_canvas.LineVertical(m_treeview_width, y1, y2,
+     m_canvas.LineVertical(m_treeview_width, y1, y2,
                           ::ColorToARGB(m_border_color));
     // --- Calculate and set the coordinates for the scroll bar of the tree list
-    m_scrollv.XDistance(m_treeview_width - 15);
+     m_scrollv.XDistance(m_treeview_width - 15);
     // --- Update element
-    m_canvas.Update();
+     m_canvas.Update();
   }
  //+------------------------------------------------------------------+
  // | Adds an item to the array of displayed items |
@@ -1830,43 +1825,46 @@
     if (!m_show_item_content || m_tab_items_mode)
       return;
     // --- Number of list items
-    int content_items_total = ::ArraySize(m_content_items);
+     int content_items_total = ::ArraySize(m_content_items);
     // --- If the element is not hidden, hide the list items
-    if (CElementBase::IsVisible()) {
-      for (int i = 0; i < content_items_total; i++)
-        m_content_items[i].Hide();
-      // --- Hide scrollbar
-      m_content_scrollv.Hide();
-    }
+     if (CElementBase::IsVisible()) 
+      {
+       for (int i = 0; i < content_items_total; i++)
+         m_content_items[i].Hide();
+       // --- Hide scrollbar
+        m_content_scrollv.Hide();
+      }
     // --- Y coordinate of the first item in the tree list
     int y = 1;
     // --- Get the number of points
     int items_total = ::ArraySize(m_cd_list_index);
     // --- Adjust scrollbar sizes
-    m_content_scrollv.Reinit(items_total, m_visible_items_total);
-    m_content_scrollv.ChangeYSize(m_y_size - 2);
-    m_content_scrollv.Update(true);
+     m_content_scrollv.Reinit(items_total, m_visible_items_total);
+     m_content_scrollv.ChangeYSize(m_y_size - 2);
+     m_content_scrollv.Update(true);
     // --- Calculation of the width of tree list items
-    int w = (m_content_scrollv.IsScroll())
+     int w = (m_content_scrollv.IsScroll())
                 ? m_x_size - m_treeview_width - m_scrollv.ScrollWidth() - 3
                 : m_x_size - m_treeview_width - 2;
     // --- Set new values
-    for (int i = 0; i < items_total; i++) {
-      // --- Calculate the Y coordinate for each point
-      y = (i > 0) ? y + m_item_y_size : y;
-      // --- Get the general index of the item in the list
-      int li = m_cd_list_index[i];
-      // --- Update coordinates and size
-      m_content_items[li].UpdateY(y);
-      m_content_items[li].UpdateWidth(w);
-    }
+     for (int i = 0; i < items_total; i++) 
+      {
+       // --- Calculate the Y coordinate for each point
+        y = (i > 0) ? y + m_item_y_size : y;
+       // --- Get the general index of the item in the list
+        int li = m_cd_list_index[i];
+       // --- Update coordinates and size
+        m_content_items[li].UpdateY(y);
+        m_content_items[li].UpdateWidth(w);
+      }
     // --- If the element is not hidden, show list items
-    if (CElementBase::IsVisible()) {
+    if (CElementBase::IsVisible())
+     {
       for (int i = 0; i < content_items_total; i++)
         m_content_items[i].Show();
-    }
+     }
     // --- Update coordinates and list size
-    ShiftContentList();
+     ShiftContentList();
   }
  //+------------------------------------------------------------------+
  // | Updates the list |
@@ -1893,11 +1891,12 @@
     if(!m_show_item_content) return;
     int items_total = ::ArraySize(m_cd_list_index);
     int content_size = ::ArraySize(m_content_items);
-    for (int i = 0; i < items_total; i++) {
+    for (int i = 0; i < items_total; i++) 
+     {
       int li = m_cd_list_index[i];
       if(li < 0 || li >= content_size) continue;
       m_content_items[li].Update(true);
-    }
+     }
   }
  //+------------------------------------------------------------------+
  //| Checking the index of the selected item to see if it is out of range |
@@ -1913,11 +1912,12 @@
     // --- Check for out of range
     int array_size = ::ArraySize(m_items);
     if (array_size < 1 || m_selected_item_index < 0 ||
-        m_selected_item_index >= array_size) {
-      // --- The first item in the list will be highlighted
-      m_selected_item_index = 0;
-      return;
-    }
+        m_selected_item_index >= array_size) 
+        {
+          // --- The first item in the list will be highlighted
+           m_selected_item_index = 0;
+           return;
+        }
   }
  //+------------------------------------------------------------------+
  //| Draws a border between areas                                     |
@@ -1925,13 +1925,13 @@
  void CTreeView::DrawResizeBorder(void) 
   {
     // --- Exit if mode is disabled
-    if (!m_show_item_content)
-      return;
+     if (!m_show_item_content)
+       return;
     // --- Coordinates
-    int x = m_treeview_width;
-    int y1 = 0, y2 = m_y_size;
+     int x = m_treeview_width;
+     int y1 = 0, y2 = m_y_size;
     // --- Draw a line
-    m_canvas.LineVertical(x, y1, y2, ::ColorToARGB(m_border_color));
+     m_canvas.LineVertical(x, y1, y2, ::ColorToARGB(m_border_color));
   }
  //+------------------------------------------------------------------+
  // | Change the width along the right edge of the form |
@@ -1939,21 +1939,21 @@
  void CTreeView::ChangeWidthByRightWindowSide(void) 
   {
     // --- Exit if the mode of fixing to the right edge of the form is enabled
-    if (m_anchor_right_window_side)
+     if (m_anchor_right_window_side)
       return;
     // --- Coordinates and width
-    int x = 0, w = 0;
+     int x = 0, w = 0;
     // --- Dimensions
-    int x_size = m_main.X2() - CElementBase::X() - m_auto_xresize_right_offset;
-    int y_size = (m_auto_yresize_mode) ? m_main.Y2() - CElementBase::Y() -
+     int x_size = m_main.X2() - CElementBase::X() - m_auto_xresize_right_offset;
+     int y_size = (m_auto_yresize_mode) ? m_main.Y2() - CElementBase::Y() -
                                             m_auto_yresize_bottom_offset
                                       : m_y_size;
     // --- Set new size
-    CElementBase::XSize(x_size);
-    m_canvas.XSize(x_size);
-    m_canvas.Resize(x_size, y_size);
+     CElementBase::XSize(x_size);
+     m_canvas.XSize(x_size);
+     m_canvas.Resize(x_size, y_size);
     // ---If without content list
-    if (!m_show_item_content) 
+     if (!m_show_item_content) 
      {
        // --- Calculate and set the width for items in the list
         w = (m_scrollv.IsScroll())

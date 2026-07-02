@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
-//|                                               TimeseriesDefines.mqh
-//|  Extracted from Artyom Trishkin's DoEasy Defines.mqh            |
+//|                                             TimeseriesDefines.mqh
+//|  Extracted from Artyom Trishkin's DoEasy Defines.mqh             |
 //+------------------------------------------------------------------+
 #ifndef __TIMESERIES_DEFINES_MQH__
 #define __TIMESERIES_DEFINES_MQH__

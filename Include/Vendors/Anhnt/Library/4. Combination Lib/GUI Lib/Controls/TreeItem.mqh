@@ -11,7 +11,9 @@
 //+------------------------------------------------------------------+
 // | Class for creating a tree list item |
 //+------------------------------------------------------------------+
-class CTreeItem : public CButton
+ #ifndef CTREEITEM_MQH_DECLARATION
+ #define CTREEITEM_MQH_DECLARATION
+ class CTreeItem : public CButton
   {
    private:
      int               m_arrow_x_gap;     // ---Indentation for the arrow (indicating the presence of a list)
@@ -55,7 +57,8 @@ class CTreeItem : public CButton
      virtual void      OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
     // --- Draws an element
      virtual void      Draw(void); 
-   };
+  };
+ #endif // CTREEITEM_MQH_DECLARATION
  #ifndef CTREEITEM_MQH_IMPLEMENTATION
  #define CTREEITEM_MQH_IMPLEMENTATION
    //+------------------------------------------------------------------+

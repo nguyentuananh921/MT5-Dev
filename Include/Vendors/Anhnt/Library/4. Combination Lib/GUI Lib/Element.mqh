@@ -601,36 +601,6 @@ void CElement::Moving(const bool only_visible = true)
     if (only_visible)
         if (!CElementBase::IsVisible())
             return;
-  //Add here to fix Resize parent element will resize child element
-    // // --- Recalculate size for auto-resize elements (parent may have been resized since creation)
-    //   if (m_auto_xresize_mode) 
-    //    {
-    //       int new_xsize = m_main.X2() - CElementBase::X() - m_auto_xresize_right_offset;
-    //       //Debug
-    //         Print("My Debug CElement::Moving auto_x obj=", m_canvas.ChartObjectName(),
-    //           " main_X2=", m_main.X2(), " X=", CElementBase::X(),
-    //           " offset=", m_auto_xresize_right_offset,
-    //           " old_xsize=", m_x_size, " new_xsize=", new_xsize);
-    //       if (new_xsize > 0 && new_xsize != m_x_size) 
-    //        {
-    //           CElementBase::XSize(new_xsize);
-    //           m_canvas.Resize(new_xsize, m_canvas.YSize());
-    //        }
-    //    }
-    //   if (m_auto_yresize_mode) 
-    //    {
-    //       int new_ysize = m_main.Y2() - CElementBase::Y() - m_auto_yresize_bottom_offset;
-    //       //Debug
-    //         Print("My Debug CElement::Moving auto_y obj=", m_canvas.ChartObjectName(),
-    //           " main_Y2=", m_main.Y2(), " Y=", CElementBase::Y(),
-    //           " offset=", m_auto_yresize_bottom_offset,
-    //           " old_ysize=", m_y_size, " new_ysize=", new_ysize);
-    //       if (new_ysize > 0 && new_ysize != m_y_size) 
-    //        {
-    //           CElementBase::YSize(new_ysize);
-    //           m_canvas.Resize(m_canvas.XSize(), new_ysize);
-    //        }
-    //    }
   // --- If the anchor is on the right
     if (m_anchor_right_window_side) 
      {

@@ -59,6 +59,13 @@ bool CSplitContainer::CreateSplitContainer(const int x_gap, const int y_gap)
    if(!m_separator.CreateSeparateLine(m_split_x, 0, 4, m_y_size))
       return (false);
    CElement::AddToArray(m_separator);
+   // --- m_separator is never registered via CWndContainer::AddToElementsArray
+   // --- (only added to this container's own internal m_elements[] above), so
+   // --- the framework's top-level CWndEvents::Update() draw cascade never
+   // --- reaches it. Without this explicit call, CSeparateLine::Draw() (which
+   // --- paints the dark/light two-tone line) never runs, so its bitmap stays
+   // --- blank forever even though its on-chart position is correct.
+   m_separator.Update(true);
    // --- Resize pointer (con trỏ kéo, giống CTreeView::m_x_resize)
     m_x_resize.Type(MP_X_RESIZE);
     m_x_resize.MainPointer(::GetPointer(this));    
@@ -102,37 +109,48 @@ void CSplitContainer::Draw(void)
 void CSplitContainer::RepositionPanels(void)
   {
    //Debug
-    Print("My Debug CSplitContainer::RepositionPanels BEFORE separator.Moving obj=", m_separator.CanvasPointer().ChartObjectName());
+    //Print("My Debug CSplitContainer::RepositionPanels BEFORE separator.Moving obj=", m_separator.CanvasPointer().ChartObjectName());
    // --- Reposition the separator object itself
    m_separator.XGap(m_split_x);
    m_separator.CanvasPointer().XGap(m_split_x);
    m_separator.Moving();
-   m_separator.CanvasPointer().Update(true); 
+   // --- CanvasPointer().Update(true) only re-uploads whatever is ALREADY in the
+   // --- bitmap - it never calls Draw(). Use the element-level Update(true) so the
+   // --- two-tone line actually gets (re)painted, not just repositioned.
+   m_separator.Update(true);
    ::ObjectSetInteger(m_chart_id, m_separator.CanvasPointer().ChartObjectName(), OBJPROP_BACK, false);
    if(m_panel1 != NULL)
      {
       m_panel1.XGap(0);
       m_panel1.CanvasPointer().XGap(0);
       m_panel1.XSize(m_split_x);
+      // --- XSize() above only updates the logical field - it never touches the
+      // --- canvas bitmap (confirmed in ElementBase.mqh). Without an explicit
+      // --- Resize() here, panel1's bitmap stays at its original creation-time
+      // --- size and visually covers/hides the separator.
+      m_panel1.CanvasPointer().XSize(m_split_x);
+      m_panel1.CanvasPointer().Resize(m_split_x, m_panel1.CanvasPointer().YSize());
       //Debug
-       Print("My Debug CSplitContainer::RepositionPanels BEFORE panel1.Moving obj=", m_panel1.CanvasPointer().ChartObjectName());
-      m_panel1.Moving();      
+        //  Print("My Debug CSplitContainer::RepositionPanels BEFORE panel1.Moving obj=", m_panel1.CanvasPointer().ChartObjectName());
+      m_panel1.Moving();
+      m_panel1.Draw();
+      m_panel1.CanvasPointer().Update(true);
      }
    if(m_panel2 != NULL)
      {
       m_panel2.XGap(m_split_x + 4);
       m_panel2.CanvasPointer().XGap(m_split_x + 4);
       //Debug
-       Print("My Debug CSplitContainer::RepositionPanels BEFORE panel2.Moving obj=", m_panel2.CanvasPointer().ChartObjectName());
+       //Print("My Debug CSplitContainer::RepositionPanels BEFORE panel2.Moving obj=", m_panel2.CanvasPointer().ChartObjectName());
       m_panel2.Moving();
       m_panel2.ChangeWidthByRightWindowSide();
      }
-    ::ChartRedraw(m_chart_id); 
+    ::ChartRedraw(m_chart_id);
     //Debug native check - xác nhận object THẬT trên chart có đổi X hay không
-     Print("My Debug CSplitContainer::RepositionPanels NATIVE-CHECK m_split_x=", m_split_x,
-           " IsVisible=", m_separator.IsVisible(),
-           " canvas.X()=", m_separator.CanvasPointer().X(),
-           " OBJPROP_XDISTANCE=", ::ObjectGetInteger(m_chart_id, m_separator.CanvasPointer().ChartObjectName(), OBJPROP_XDISTANCE));
+    //  Print("My Debug CSplitContainer::RepositionPanels NATIVE-CHECK m_split_x=", m_split_x,
+    //        " IsVisible=", m_separator.IsVisible(),
+    //        " canvas.X()=", m_separator.CanvasPointer().X(),
+    //        " OBJPROP_XDISTANCE=", ::ObjectGetInteger(m_chart_id, m_separator.CanvasPointer().ChartObjectName(), OBJPROP_XDISTANCE));
   }
 //+------------------------------------------------------------------+
 // | Kéo-dịch: theo đúng pattern CheckXResizePointer của CTreeView     |
@@ -142,9 +160,7 @@ void CSplitContainer::OnEvent(const int id, const long &lparam, const double &dp
    if(id == CHARTEVENT_MOUSE_MOVE)
      {
       int x = m_mouse.RelativeX(m_canvas);
-      int y = m_mouse.RelativeY(m_canvas);
-      //Debug
-        Print("My Debug CSplitContainer::OnEvent MOUSE_MOVE x=", x, " y=", y, " m_split_x=", m_split_x);
+      int y = m_mouse.RelativeY(m_canvas);      
       CheckXResizePointer(x, y);
       if(!m_x_resize.State())
          return;

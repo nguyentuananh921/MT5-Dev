@@ -41,11 +41,12 @@
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
         mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection());
+        mGUIPannel.SetTimeSeriesEngine(&timeSeriesEngine);   // Tang 2 forwards "Add" clicks to Tang 1
         //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         //mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
         //mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl());
-      //Load indicator startup config from MQL5\Files\indicators_config.json
-        mGUIPannel.LoadIndicatorsFromJson("indicators_config.json");
+      //EA orchestrates Tang 1: load indicator startup template from MQL5\Files\indicators_config.json
+        timeSeriesEngine.LoadIndicatorsFromJson("indicators_config.json");
 
         mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE
       //For patternRenderer

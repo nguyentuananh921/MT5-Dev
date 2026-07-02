@@ -391,9 +391,9 @@
       CWndEvents::CompletedGUI();
        
       //Debug
-         Print("My Debug CreateGUIPannel END m_split_container.IsVisible=", m_split_container.IsVisible(),
-         " m_config_detail_tabs.IsVisible=", m_tabs_indicator_config.IsVisible(),
-         " m_tabs_main.SelectedTab=", m_tabs_main.SelectedTab());
+        //  Print("My Debug CreateGUIPannel END m_split_container.IsVisible=", m_split_container.IsVisible(),
+        //  " m_config_detail_tabs.IsVisible=", m_tabs_indicator_config.IsVisible(),
+        //  " m_tabs_main.SelectedTab=", m_tabs_main.SelectedTab());
       return true;
    }   
   //+------------------------------------------------------------------+

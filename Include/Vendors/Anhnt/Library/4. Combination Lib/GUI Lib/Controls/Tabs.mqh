@@ -240,12 +240,12 @@
         m_btn_scroll_right.Hide();
         m_scroll_first_visible=0;
       }
-     //Debug
-      Print("My Debug CTabs::UpdateScrollButtonsVisibility m_x_size=",m_x_size," IsTabsOverflow=",IsTabsOverflow(),
-      " left.X=",m_btn_scroll_left.X()," left.IsVisible=",m_btn_scroll_left.IsVisible(),
-      " right.X=",m_btn_scroll_right.X()," right.IsVisible=",m_btn_scroll_right.IsVisible(),
-      " panel.X=",CElementBase::X()," panel.X2=",CElementBase::X2(),
-      " canvas.X=",m_canvas.X()," canvas.XSize=",m_canvas.XSize());
+    //  //Debug
+    //   Print("My Debug CTabs::UpdateScrollButtonsVisibility m_x_size=",m_x_size," IsTabsOverflow=",IsTabsOverflow(),
+    //   " left.X=",m_btn_scroll_left.X()," left.IsVisible=",m_btn_scroll_left.IsVisible(),
+    //   " right.X=",m_btn_scroll_right.X()," right.IsVisible=",m_btn_scroll_right.IsVisible(),
+    //   " panel.X=",CElementBase::X()," panel.X2=",CElementBase::X2(),
+    //   " canvas.X=",m_canvas.X()," canvas.XSize=",m_canvas.XSize());
     }
    void CTabs::ShiftTabsHeader(void)
     {
@@ -535,8 +535,8 @@
           for(int j=0; j<tab_elements_total; j++)
             {
               CElement *el=m_tab[i].elements[j];
-              Print("My Debug ShowTabElements RESET obj=", m_canvas.ChartObjectName(),
-                    " i=", i, " target=", el.CanvasPointer().ChartObjectName());
+              // Print("My Debug ShowTabElements RESET obj=", m_canvas.ChartObjectName(),
+              //       " i=", i, " target=", el.CanvasPointer().ChartObjectName());
               el.Reset();
               CTabs *tb=dynamic_cast<CTabs*>(el);
               if(tb!=NULL)
@@ -548,8 +548,8 @@
          {
           for(int j=0; j<tab_elements_total; j++)
             {
-              Print("My Debug ShowTabElements HIDE obj=", m_canvas.ChartObjectName(),
-                    " i=", i, " target=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
+              // Print("My Debug ShowTabElements HIDE obj=", m_canvas.ChartObjectName(),
+              //       " i=", i, " target=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
               m_tab[i].elements[j].CElementBase::IsVisible(true);
               m_tab[i].elements[j].Hide();
             }
@@ -563,8 +563,8 @@
    void CTabs::Show(void)
      {
       //Debug        
-        Print("My Debug CTabs::Show CALLED obj=", m_canvas.ChartObjectName(),
-         " IsVisible_before=", CElementBase::IsVisible(), " selected_tab=", m_selected_tab);
+        // Print("My Debug CTabs::Show CALLED obj=", m_canvas.ChartObjectName(),
+        //  " IsVisible_before=", CElementBase::IsVisible(), " selected_tab=", m_selected_tab);
       // --- Run the canvas-level show only on the real hidden->visible transition
       if(!CElementBase::IsVisible())
         {
@@ -607,8 +607,8 @@
         for(int j = 0; j < tab_elements_total; j++)
          {
           //Debug
-           Print("My Debug CTabs::Moving BEFORE tab elem Moving i=", i, " j=", j,
-            " obj=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
+          //  Print("My Debug CTabs::Moving BEFORE tab elem Moving i=", i, " j=", j,
+          //   " obj=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
           m_tab[i].elements[j].Moving(true);   // --- always respect each child's own visibility  
          }
           
@@ -620,7 +620,7 @@
    void CTabs::Hide(void)
      {
       //Debug 
-       Print("My Debug CTabs::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
+      //  Print("My Debug CTabs::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
       // --- Exit if element is already hidden
       if(!CElementBase::IsVisible())
          return;

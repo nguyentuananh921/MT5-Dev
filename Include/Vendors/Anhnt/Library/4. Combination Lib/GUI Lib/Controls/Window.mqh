@@ -1359,7 +1359,7 @@ class CWindow : public CElement
     // --- If the index is received, mark the clicked area
     if(index!=WRONG_VALUE)
         m_clamping_area_mouse=PRESSED_INSIDE_BORDER;
-    // --- Return area index
+    // --- Return area index    
     return(index);
    }
   //+------------------------------------------------------------------+

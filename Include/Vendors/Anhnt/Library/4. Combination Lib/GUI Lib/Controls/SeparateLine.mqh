@@ -11,31 +11,23 @@
 //+------------------------------------------------------------------+
 class CSeparateLine : public CElement
   {
-private:
-   // --- Properties
-   ENUM_TYPE_SEP_LINE m_type_sep_line;   
-   color             m_dark_color;
-   color             m_light_color;
-   //---
-public:
-                     CSeparateLine(void);
-                    ~CSeparateLine(void);
-   // ---Creating a dividing line
-   bool              CreateSeparateLine(const int x_gap,const int y_gap,const int x_size,const int y_size);
-   //---
-private:
-   // --- Creates a canvas for drawing a dividing line
-   bool              CreateSepLine(void);
-   //---
-public:
-   // --- (1) Line type, (2) line colors
-   void              TypeSepLine(const ENUM_TYPE_SEP_LINE type) { m_type_sep_line=type; }
-   void              DarkColor(const color clr)                 { m_dark_color=clr;     }
-   void              LightColor(const color clr)                { m_light_color=clr;    }
-   //---
-public:
-   // --- Draws an element
-   virtual void      Draw(void);
+   private:    
+     ENUM_TYPE_SEP_LINE m_type_sep_line;   
+     color             m_dark_color;
+     color             m_light_color;
+     // --- Creates a canvas for drawing a dividing line
+      bool              CreateSepLine(void);  
+   public:
+                        CSeparateLine(void);
+                        ~CSeparateLine(void);
+    // ---Creating a dividing line
+     bool              CreateSeparateLine(const int x_gap,const int y_gap,const int x_size,const int y_size);
+    // --- (1) Line type, (2) line colors
+     void              TypeSepLine(const ENUM_TYPE_SEP_LINE type) { m_type_sep_line=type; }
+     void              DarkColor(const color clr)                 { m_dark_color=clr;     }
+     void              LightColor(const color clr)                { m_light_color=clr;    }
+    // --- Draws an element
+     virtual void      Draw(void); 
   };
  #ifndef CSEPARATELINE_MQH_IMPLEMENTATION
  #define CSEPARATELINE_MQH_IMPLEMENTATION

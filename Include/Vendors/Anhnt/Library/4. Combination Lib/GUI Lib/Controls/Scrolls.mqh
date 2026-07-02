@@ -497,11 +497,11 @@ class CScrollH;
   void CScroll::Show(void)
    {
     //Debug
-     Print("My Debug CScroll::Show CALLED obj=", m_canvas.ChartObjectName(),
-         " IsVisible=", CElementBase::IsVisible(),
-         " IsScroll=", IsScroll(),
-         " m_items_total=", m_items_total,
-         " m_visible_items_total=", m_visible_items_total);
+   //   Print("My Debug CScroll::Show CALLED obj=", m_canvas.ChartObjectName(),
+   //       " IsVisible=", CElementBase::IsVisible(),
+   //       " IsScroll=", IsScroll(),
+   //       " m_items_total=", m_items_total,
+   //       " m_visible_items_total=", m_visible_items_total);
     // --- Exit if (1) the element is already visible or (2) it does not need to be shown
       if(CElementBase::IsVisible() || !IsScroll())
          return;
@@ -519,13 +519,13 @@ class CScrollH;
       ::ObjectSetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_BACK, false);
       ::ChartRedraw(m_chart_id);
     //Debug native dump
-      string sobj = m_canvas.ChartObjectName();
-      Print("My Debug CScroll::Show AFTER NATIVE obj=", sobj,
-            " TIMEFRAMES=", ObjectGetInteger(0, sobj, OBJPROP_TIMEFRAMES),
-            " X=", ObjectGetInteger(0, sobj, OBJPROP_XDISTANCE),
-            " Y=", ObjectGetInteger(0, sobj, OBJPROP_YDISTANCE),
-            " XSIZE=", ObjectGetInteger(0, sobj, OBJPROP_XSIZE),
-            " YSIZE=", ObjectGetInteger(0, sobj, OBJPROP_YSIZE));
+      // string sobj = m_canvas.ChartObjectName();
+      // Print("My Debug CScroll::Show AFTER NATIVE obj=", sobj,
+      //       " TIMEFRAMES=", ObjectGetInteger(0, sobj, OBJPROP_TIMEFRAMES),
+      //       " X=", ObjectGetInteger(0, sobj, OBJPROP_XDISTANCE),
+      //       " Y=", ObjectGetInteger(0, sobj, OBJPROP_YDISTANCE),
+      //       " XSIZE=", ObjectGetInteger(0, sobj, OBJPROP_XSIZE),
+      //       " YSIZE=", ObjectGetInteger(0, sobj, OBJPROP_YSIZE));
    }
   //+------------------------------------------------------------------+
   // | Hides the element |
@@ -533,8 +533,8 @@ class CScrollH;
   void CScroll::Hide(void)
    {
     //Debug
-     Print("My Debug CScroll::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
-      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
+   //   Print("My Debug CScroll::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
+   //    ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
       m_button_inc.Hide();
       m_button_dec.Hide();
     // --- Visibility state
