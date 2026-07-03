@@ -130,7 +130,7 @@
       CIndicatorsCollection      *m_indicators_timeseries;  // CTimeSeriesEngine owns
       CTimeSeriesEngine          *m_time_series_engine;     // EA owns - Tang 1 entry point for AddIndicatorInstance
       CTickSeriesCollection      *m_tick_series;            // Collection of tick series
-      CIndicatorDE               *m_indicator_table_ptrs[]; // per-row PureData record, for the upcoming Show/Hide+Delete handlers      
+      CIndicatorDE               *m_table_indicator_ptrs[]; // per-row PureData record, for the upcoming Show/Hide+Delete handlers      
       CTimeCounter               m_gui_timecounter;         //--- Time counters
       CKeys                      m_keys;                    //For Keyboard    
      // For trading bubble
@@ -146,7 +146,7 @@
       //For control at Setting tab on m_tabs_main       
        //For Indicator TreeViews at      
         CTreeView                 m_treeview_indicator;
-        string                    m_indicator_table_names[];
+        string                    m_table_indicator_names[];
         int                       m_group_tree_pos[];
         int                       m_type_node_li[];      // list_index của từng node Type (level 1)
         ENUM_INDICATOR            m_type_node_value[];   // ENUM_INDICATOR tương ứng
@@ -156,10 +156,12 @@
          CTextEdit            m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
          CComboBox            m_param_combo[INDICATOR_PARAM_SLOTS_MAX];    // enum-like params (Method, Applied Price, ...)
          CButton              m_btn_add_indicator;
+         CButton              m_btn_save_indicator;
          ENUM_INDICATOR       m_current_param_type;     // which type the form is currently showing
          int                  m_current_param_type_li;  // its tree list_index (for tree-node insertion later)        
-        // --- Indicator Info table: port of V4 m_indicator_table
-         CTable               m_indicator_table;
+        // --- Indicator Info table: port of V4 m_table_indicator
+         //CTable               m_table_indicator;
+         CTable               m_table_indicator;
 
        // SIndicatorCatalogItem now lives in Artyom Trishkin\IndicatorCatalog.mqh (Tang 1 metadata)
       //For Indicator Config
@@ -191,7 +193,10 @@
          //bool                          CreateConfigDetailTabs(const int x_gap, const int y_gap);
          bool                          CreateAddIndicatorParaInfor(const int x_gap, const int y_gap);
          void                          ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li);
+         void                          HideParamSlots(void);
          void                          OnClickAddIndicator(void);
+         void                          OnClickSaveIndicators(void);
+         void                          SyncIndicatorTreeIcons(void);
          bool                          CreateIndicatorTable(const int x, const int y);
          void                          SetValuesToIndicatorTable(void);
        //Helper
@@ -279,10 +284,46 @@
     }   
    return true;           
    };
+  // Hides all param-form slots. Called after any ShowTabElements() that overrides our Hide().
+  void CGUIPannel::HideParamSlots(void)
+   {
+    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
+     {
+      m_param_labels[i].Hide();
+      m_param_edits[i].Hide();
+      m_param_combo[i].Hide();
+     }
+     //m_btn_add_indicator.Hide();
+   }
   // OnEvent handler
   void CGUIPannel::OnEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
    {
+    // --- Re-hide param slots after CTabs::ShowTabElements() shows them on tab switch.
+    //     ShowTabElements() runs inside CTabs::OnEvent() (before our OnEvent is called),
+    //     so by this point the slots are already visible — we undo that.
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main.Id())
+      {
+       HideParamSlots();
+       return;
+      }
+    // --- Same issue on window expand: OnWindowExpand() calls ShowTabElements() before
+    //     our OnEvent runs. Re-hide to keep param slots invisible until tree node clicked.
+     if(id == CHARTEVENT_CUSTOM + ON_WINDOW_EXPAND && lparam == m_window_main.Id())
+      {
+       HideParamSlots();
+       return;
+      }
+    // --- On window collapse: library OnWindowCollapse() may skip elements with Id()==0
+    //     (e.g. dynamic TreeItems). Explicitly hide both treeviews so their items
+    //     cascade-hide, eliminating gray canvas artifacts on the chart.
+     if(id == CHARTEVENT_CUSTOM + ON_WINDOW_COLLAPSE && lparam == m_window_main.Id())
+      {
+       m_treeview_indicator.Hide();
+       m_treeview_SymbolTF.Hide();
+       HideParamSlots();
+       return;
+      }
     //Handle Indicator TreeView Click
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_treeview_indicator.Id())
       {
@@ -304,16 +345,22 @@
          OnClickAddIndicator();
          return;
       }
-    //Handle m_indicator_table event
+    //Handle Save Indicator config to JSON
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
+      {
+         OnClickSaveIndicators();
+         return;
+      }
+    //Handle m_table_indicator event
      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-        && lparam == m_indicator_table.Id())
+        && lparam == m_table_indicator.Id())
       {
          string parts[];
          if(StringSplit(sparam, '_', parts) != 2) return;
          int col = (int)StringToInteger(parts[0]);
          int row = (int)StringToInteger(parts[1]);
-         if(row < 0 || row >= ArraySize(m_indicator_table_names)) return;
-         string sname = m_indicator_table_names[row];
+         if(row < 0 || row >= ArraySize(m_table_indicator_names)) return;
+         string sname = m_table_indicator_names[row];
 
          // --- col 0 = Tang 1 (remove template from PureData), col 4 = Tang 3
          // --- (show/hide on chart). Buy/Sell unchanged at 2/3.
@@ -454,12 +501,7 @@
       // --- which CComboBox's click-open mechanism depends on. Hiding before CompletedGUI
       // --- would exclude them permanently even after Show() - confirmed by reading
       // --- FormAvailableElementsArray()'s IsVisible() filter.
-      for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-        {
-         m_param_labels[i].Hide();
-         m_param_edits[i].Hide();
-         m_param_combo[i].Hide();
-        }
+      HideParamSlots();
        
       //Debug
         //  Print("My Debug CreateGUIPannel END m_split_container.IsVisible=", m_split_container.IsVisible(),
@@ -472,12 +514,10 @@
   //+------------------------------------------------------------------+
   void CGUIPannel::UpdateGUI(const bool redraw)
    {
-      // Treeview: new items → CreateItemsFrom, existing only → re-render
-       m_treeview_SymbolTF.Update(true);
-      // Tables: resize canvas + draw all rows
-         //m_pattern_table.Update(true);
-         m_indicator_table.Update(true);
-         SetValuesToIndicatorTable();
+      m_treeview_SymbolTF.Update(true);
+      m_table_indicator.Update(true);
+      SetValuesToIndicatorTable();
+      SyncIndicatorTreeIcons();
       if(redraw) m_chart.Redraw();
    }  
  //For Control Create GUI controls  
@@ -664,42 +704,42 @@
        return true;
      }    
    // =====================================================================
-   // --- Info tab: port of V4 m_indicator_table, same 5-column layout
+   // --- Info tab: port of V4 m_table_indicator, same 5-column layout
    // =====================================================================
    bool CGUIPannel::CreateIndicatorTable(const int x, const int y)
     {
-      m_indicator_table.MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_indicator_table);
-      m_indicator_table.AutoXResizeMode(true);
-      m_indicator_table.AutoXResizeRightOffset(3);
-      m_indicator_table.AutoYResizeMode(true);
-      m_indicator_table.AutoYResizeBottomOffset(3);
-      m_indicator_table.ShowHeaders(true);
-      m_indicator_table.SelectableRow(true);
-      m_indicator_table.LightsHover(true);
-      m_indicator_table.IsSortMode(true);
+      m_table_indicator.MainPointer(m_tabs_main);
+      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_table_indicator);
+      m_table_indicator.AutoXResizeMode(true);
+      m_table_indicator.AutoXResizeRightOffset(3);
+      m_table_indicator.AutoYResizeMode(true);
+      m_table_indicator.AutoYResizeBottomOffset(3);
+      m_table_indicator.ShowHeaders(true);
+      m_table_indicator.SelectableRow(true);
+      m_table_indicator.LightsHover(true);
+      m_table_indicator.IsSortMode(true);
       // --- 5 columns: col 0 merges the old icon-only "show on T3" column with the
       // --- "Indicator" text column (CTCell renders image+text independently, click
       // --- detection is scoped to the image's own pixel width - see Table.mqh
       // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Delete shift down by 1.
-       m_indicator_table.TableSize(5, 20);
+       m_table_indicator.TableSize(5, 20);
        int widths[5]    = {160, 70, 40, 40, 40};
        int img_x_off[5] = {3,   0,  10, 10, 10};
        int img_y_off[5] = {3,   0,  3,  3,  3};
        ENUM_ALIGN_MODE align[5] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
-       m_indicator_table.ColumnsWidth(widths);
-       m_indicator_table.ImageXOffset(img_x_off);
-       m_indicator_table.ImageYOffset(img_y_off);
-       m_indicator_table.TextAlign(align);
+       m_table_indicator.ColumnsWidth(widths);
+       m_table_indicator.ImageXOffset(img_x_off);
+       m_table_indicator.ImageYOffset(img_y_off);
+       m_table_indicator.TextAlign(align);
 
-       if(!m_indicator_table.CreateTable(x, y)) return false;
-       m_indicator_table.SetHeaderText(0, "Indicator");
-       m_indicator_table.SetHeaderText(1, "Group");
-       m_indicator_table.SetHeaderText(2, "Buy");
-       m_indicator_table.SetHeaderText(3, "Sell");
-       m_indicator_table.SetHeaderText(4, "Show");
+       if(!m_table_indicator.CreateTable(x, y)) return false;
+       m_table_indicator.SetHeaderText(0, "Indicator");
+       m_table_indicator.SetHeaderText(1, "Group");
+       m_table_indicator.SetHeaderText(2, "Buy");
+       m_table_indicator.SetHeaderText(3, "Sell");
+       m_table_indicator.SetHeaderText(4, "Show");
 
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_indicator_table);
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
      return true;
     }
    void CGUIPannel::SetValuesToIndicatorTable(void)
@@ -719,10 +759,10 @@
    
       if(list == NULL || list.Total() == 0)
         {
-          m_indicator_table.DeleteAllRows();
-          ArrayResize(m_indicator_table_names, 0);
-          ArrayResize(m_indicator_table_ptrs, 0);
-          m_indicator_table.Update(true);
+          m_table_indicator.DeleteAllRows();
+          ArrayResize(m_table_indicator_names, 0);
+          ArrayResize(m_table_indicator_ptrs, 0);
+          m_table_indicator.Update(true);
           return;
         }
       SIndicatorCatalogItem catalog[];
@@ -782,12 +822,12 @@
         }
       if(count == 0) return;
 
-      m_indicator_table.DeleteAllRows();
+      m_table_indicator.DeleteAllRows();
       for(int i = 0; i < count - 1; i++)
-         m_indicator_table.AddRow(i);
+         m_table_indicator.AddRow(i);
 
-      ArrayResize(m_indicator_table_names, count);
-      ArrayResize(m_indicator_table_ptrs, count);
+      ArrayResize(m_table_indicator_names, count);
+      ArrayResize(m_table_indicator_ptrs, count);
       // --- Col 0: Play/Stop icon merged with the Indicator label text - this is
       // --- the Tang 1 control (click = remove this whole template from PureData).
       // --- CTCell draws image+text independently, and click detection is scoped
@@ -803,31 +843,31 @@
          // --- Col 0 (Layer 1): one-shot button, not a toggle - every visible row
          // --- already exists in PureData by definition, so it always shows the
          // --- "exists" (green) icon; clicking removes the template.
-          m_indicator_table.CellType(0, row, CELL_BUTTON);
-          m_indicator_table.SetImages(0, row, t1_icon);
-          m_indicator_table.ChangeImage(0, row, 0);
-          m_indicator_table.SetValue(0, row, "        " + labels[row]);   // leading spaces clear the icon
+          m_table_indicator.CellType(0, row, CELL_BUTTON);
+          m_table_indicator.SetImages(0, row, t1_icon);
+          m_table_indicator.ChangeImage(0, row, 0);
+          m_table_indicator.SetValue(0, row, "        " + labels[row]);   // leading spaces clear the icon
 
           string gname = (groups[row] >= 0 && groups[row] < 4) ? group_names[groups[row]] : "Other";
-          m_indicator_table.SetValue(1, row, "  " + gname);
+          m_table_indicator.SetValue(1, row, "  " + gname);
 
          // --- Buy / Sell checkboxes: only meaningful when this indicator has a Signal
-          m_indicator_table.CellType(2, row, CELL_CHECKBOX);
-          m_indicator_table.SetImages(2, row, chk);
-          m_indicator_table.ChangeImage(2, row, has_signal[row] ? 1 : 1);   // default unchecked
-          m_indicator_table.CellType(3, row, CELL_CHECKBOX);
-          m_indicator_table.SetImages(3, row, chk);
-          m_indicator_table.ChangeImage(3, row, has_signal[row] ? 1 : 1);   // default unchecked
+          m_table_indicator.CellType(2, row, CELL_CHECKBOX);
+          m_table_indicator.SetImages(2, row, chk);
+          m_table_indicator.ChangeImage(2, row, has_signal[row] ? 1 : 1);   // default unchecked
+          m_table_indicator.CellType(3, row, CELL_CHECKBOX);
+          m_table_indicator.SetImages(3, row, chk);
+          m_table_indicator.ChangeImage(3, row, has_signal[row] ? 1 : 1);   // default unchecked
 
          // --- Col 4 (Layer 3): real checkbox - tick = shown on chart right now.
-          m_indicator_table.CellType(4, row, CELL_CHECKBOX);
-          m_indicator_table.SetImages(4, row, show_on_chart);
-          m_indicator_table.ChangeImage(4, row, line_states[row]);
+          m_table_indicator.CellType(4, row, CELL_CHECKBOX);
+          m_table_indicator.SetImages(4, row, show_on_chart);
+          m_table_indicator.ChangeImage(4, row, line_states[row]);
 
-          m_indicator_table_names[row] = ptrs[row].ShortName();
-          m_indicator_table_ptrs[row]  = ptrs[row];
+          m_table_indicator_names[row] = ptrs[row].ShortName();
+          m_table_indicator_ptrs[row]  = ptrs[row];
         }
-      m_indicator_table.Update(true);
+      m_table_indicator.Update(true);
     }
   //For Symbol TF treeview
    bool CGUIPannel::CreateTreeView_SymbolTF(const int x_gap, const int y_gap)
@@ -995,7 +1035,7 @@
     }
   // --- GUI "Add" button: indicator creation itself now lives in CTimeSeriesEngine
   // --- (Tang 1, PureData) - GUIPannel only forwards the call, then updates its own
-  // --- display state (TreeView icon + m_indicator_table), which is its Tang 2 job.
+  // --- display state (TreeView icon + m_table_indicator), which is its Tang 2 job.
   void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
    {
       if(m_time_series_engine == NULL) return;
@@ -1329,7 +1369,8 @@
       m_btn_add_indicator.MainPointer(m_tabs_main);
       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_btn_add_indicator);
       m_btn_add_indicator.AutoXResizeMode(false);
-      m_btn_add_indicator.XSize(70);
+      m_btn_add_indicator.XSize(80);
+      m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);
       m_btn_add_indicator.BackColor(clrDodgerBlue);
       m_btn_add_indicator.BackColorHover(clrRoyalBlue);
       m_btn_add_indicator.BackColorPressed(clrBlue);
@@ -1338,12 +1379,27 @@
       bool created = m_btn_add_indicator.CreateButton("Add", x_gap, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
    if(!created) return false;
    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_add_indicator);
+   //For Button Save
+      m_btn_save_indicator.MainPointer(m_tabs_main);
+      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_btn_save_indicator);
+      m_btn_save_indicator.AutoXResizeMode(false);
+      m_btn_save_indicator.XSize(80);
+      m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
+      m_btn_save_indicator.BackColor(clrForestGreen);
+      m_btn_save_indicator.BackColorHover(clrGreen);
+      m_btn_save_indicator.BackColorPressed(clrDarkGreen);
+      m_btn_save_indicator.LabelColor(clrWhite);
+      m_btn_save_indicator.BorderColor(clrGreen);
+      bool created_save = m_btn_save_indicator.CreateButton("Save", x_gap + 85, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
+   if(!created_save) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_indicator);
    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
      {
       m_param_labels[i].Update(true);
       m_param_edits[i].Update(true);
      }
    m_btn_add_indicator.Update(true);
+   m_btn_save_indicator.Update(true);
    return true;
   }
  // =====================================================================
@@ -1476,11 +1532,11 @@
    // --- with different params can share the same native chart-assigned name.
    void CGUIPannel::OnClickShowLine(const string sname, const int row)
     {
-      if(row < 0 || row >= ArraySize(m_indicator_table_ptrs)) return;
-      CIndicatorDE *ind = m_indicator_table_ptrs[row];
+      if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
+      CIndicatorDE *ind = m_table_indicator_ptrs[row];
       if(ind == NULL) return;
 
-      int new_state = (int)m_indicator_table.SelectedImageIndex(4, row);
+      int new_state = (int)m_table_indicator.SelectedImageIndex(4, row);
       int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
 
       if(new_state == 1)   // Hide: remove from chart, PureData/handle stay intact
@@ -1508,8 +1564,8 @@
    // --- EA restart - is still open, deferred from the earlier discussion).
    void CGUIPannel::OnClickRemoveIndicator(const string sname, const int row)
     {
-      if(row < 0 || row >= ArraySize(m_indicator_table_ptrs)) return;
-      CIndicatorDE *ref = m_indicator_table_ptrs[row];
+      if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
+      CIndicatorDE *ref = m_table_indicator_ptrs[row];
       if(ref == NULL || m_indicators_timeseries == NULL) return;
 
       CArrayObj *list = m_indicators_timeseries.GetList();
@@ -1560,6 +1616,87 @@
     }
  
  //Calculatioon for display in Control
-  
+
+  void CGUIPannel::OnClickSaveIndicators(void)
+   {
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+      int total = ArraySize(m_table_indicator_ptrs);
+      string json = "[\n";
+      int saved = 0;
+      for(int i = 0; i < total; i++)
+        {
+         CIndicatorDE *ind = m_table_indicator_ptrs[i];
+         if(ind == NULL) continue;
+         string cat_name = "";
+         for(int c = 0; c < ArraySize(catalog); c++)
+            if(catalog[c].type == ind.TypeIndicator()) { cat_name = catalog[c].name; break; }
+         if(cat_name == "") continue;
+         MqlParam params[];
+         ind.GetMqlParams(params);
+         if(saved > 0) json += ",\n";
+         saved++;
+         json += "  { \"type\": \"" + cat_name + "\", \"params\": [";
+         for(int p = 0; p < ArraySize(params); p++)
+           {
+            if(p > 0) json += ", ";
+            if(params[p].type == TYPE_DOUBLE)
+               json += DoubleToString(params[p].double_value, 8);
+            else
+               json += IntegerToString((int)params[p].integer_value);
+           }
+         json += "] }";
+        }
+      json += "\n]";
+      int fh = FileOpen("indicators_config.json", FILE_WRITE | FILE_TXT | FILE_ANSI);
+      if(fh == INVALID_HANDLE)
+        {
+         Print("ERROR: Cannot open indicators_config.json for writing, err=", GetLastError());
+         return;
+        }
+      FileWriteString(fh, json);
+      FileClose(fh);
+      Print("Saved ", saved, " indicator(s) to indicators_config.json");
+   }
+  void CGUIPannel::SyncIndicatorTreeIcons(void)
+   {
+      if(m_indicators_timeseries == NULL) return;
+      CArrayObj *all = m_indicators_timeseries.GetList();
+      if(all == NULL) return;
+      ENUM_INDICATOR applied[];
+      int applied_count = 0;
+      for(int i = 0; i < all.Total(); i++)
+        {
+         CIndicatorDE *ind = all.At(i);
+         if(ind == NULL) continue;
+         ENUM_INDICATOR t = ind.TypeIndicator();
+         bool found = false;
+         for(int j = 0; j < applied_count; j++)
+            if(applied[j] == t) { found = true; break; }
+         if(!found)
+           {
+            ArrayResize(applied, applied_count + 1);
+            applied[applied_count++] = t;
+           }
+        }
+      for(int i = 0; i < ArraySize(m_type_node_li); i++)
+        {
+         bool active = false;
+         for(int j = 0; j < applied_count; j++)
+            if(applied[j] == m_type_node_value[i]) { active = true; break; }
+         CTreeItem *type_item = m_treeview_indicator.ItemPointer(m_type_node_li[i]);
+         if(type_item != NULL)
+            type_item.IconFile(active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
+         if(active)
+           {
+            int group_li = m_treeview_indicator.ItemPrevNode(m_type_node_li[i]);
+            CTreeItem *group_item = m_treeview_indicator.ItemPointer(group_li);
+            if(group_item != NULL)
+               group_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);
+           }
+        }
+      m_treeview_indicator.Update(true);
+   }
+
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__

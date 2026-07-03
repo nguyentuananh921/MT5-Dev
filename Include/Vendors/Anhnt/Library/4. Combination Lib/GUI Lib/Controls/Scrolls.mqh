@@ -534,7 +534,7 @@ class CScrollH;
    {
     //Debug
    //   Print("My Debug CScroll::Hide CALLED obj=", m_canvas.ChartObjectName(), " IsVisible_before=", CElementBase::IsVisible());
-   //    ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
+      ::ObjectSetInteger(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TIMEFRAMES,OBJ_NO_PERIODS);
       m_button_inc.Hide();
       m_button_dec.Hide();
     // --- Visibility state
@@ -961,12 +961,12 @@ class CScrollH;
     // --- If control is transferred to the scroll bar, determine the position of the slider
       if(CScroll::State())
        {
-         // --- If the slider is moved
+        // --- If the slider is moved
          if(OnDragThumb(x))
            {
             // --- Changes the slider position number
-            CalculateThumbPos();
-            return(true);
+             CalculateThumbPos();
+             return(true);
            }
        }
       return(false);
