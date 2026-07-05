@@ -4,7 +4,7 @@
 //| Supports only the one shape this EA needs:                       |
 //|   [ { "type": "<catalog name>", "params": [ <number>, ... ] }, ]|
 //| "//" starts a line comment - non-standard JSON, but this file    |
-//| is our own format (used only by LoadIndicatorsFromJson), not     |
+//| is our own format (used only by LoadIndicatorFromJSON), not      |
 //| meant to be read by other JSON tools.                            |
 //+------------------------------------------------------------------+
 #ifndef __INDICATORCONFIGLOADER_MQH__

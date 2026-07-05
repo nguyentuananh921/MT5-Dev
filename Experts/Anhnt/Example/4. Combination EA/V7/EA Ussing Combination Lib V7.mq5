@@ -45,9 +45,6 @@
         //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         //mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
         //mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl());
-      //EA orchestrates Tang 1: load indicator startup template from MQL5\Files\indicators_config.json
-        timeSeriesEngine.LoadIndicatorsFromJson("indicators_config.json");
-
         mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE
       //For patternRenderer
         // patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
@@ -113,8 +110,8 @@
     //patternRenderer.OnTimerEvent();
     
     ulong t3 = GetMicrosecondCount();
-    if(t3 - t0 > 2000)
-       Print("PERF EA OnTimer total=", t3 - t0, "us GUIPannel= ", t1 - t0, "us TimeSeriesEngine= ", t2 - t1, "us PatternRenderer= ", t3 - t2, "us");
+    // if(t3 - t0 > 2000)
+    //    Print("PERF EA OnTimer total=", t3 - t0, "us GUIPannel= ", t1 - t0, "us TimeSeriesEngine= ", t2 - t1, "us PatternRenderer= ", t3 - t2, "us");
   }
  //+------------------------------------------------------------------+
  //| Trade function                                                   |

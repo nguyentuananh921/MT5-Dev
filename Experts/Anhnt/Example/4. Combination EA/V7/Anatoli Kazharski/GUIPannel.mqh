@@ -124,15 +124,15 @@
     private: 
      //PUre Data Layer 1
      // Private Pointer variables    
-      CSymbolsCollection         *m_symbols;                //Trading owns
-      CBarTimeSeriesCollection   *m_bar_timeseries;         //CBarTimeSeriesCollection owns      
-      CBarPatternsControl        *m_pattern_cfg;            // borrowed from EA
-      CIndicatorsCollection      *m_indicators_timeseries;  // CTimeSeriesEngine owns
-      CTimeSeriesEngine          *m_time_series_engine;     // EA owns - Tang 1 entry point for AddIndicatorInstance
-      CTickSeriesCollection      *m_tick_series;            // Collection of tick series
-      CIndicatorDE               *m_table_indicator_ptrs[]; // per-row PureData record, for the upcoming Show/Hide+Delete handlers      
-      CTimeCounter               m_gui_timecounter;         //--- Time counters
-      CKeys                      m_keys;                    //For Keyboard    
+      CSymbolsCollection         *m_symbol_collection;                //Trading owns
+      CBarTimeSeriesCollection   *m_BarTimeSeriesCollection;          //CBarTimeSeriesCollection owns      
+      CBarPatternsControl        *m_pattern_cfg;                      // borrowed from EA
+      CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
+      CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
+      CTickSeriesCollection      *m_tick_series;                      // Collection of tick series
+      CIndicatorDE               *m_table_indicator_ptrs[];           // per-row PureData record, for the upcoming Show/Hide+Delete handlers      
+      CTimeCounter               m_gui_timecounter;                   //--- Time counters
+      CKeys                      m_keys;                              //For Keyboard    
      // For trading bubble
      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
      // CTradingLevelBubble        m_trading_bubble;    
@@ -162,6 +162,12 @@
         // --- Indicator Info table: port of V4 m_table_indicator
          //CTable               m_table_indicator;
          CTable               m_table_indicator;
+         CTable               m_table_indicator_SymbolTFValue;
+         // per-row dirty-check cache for Trade tab table
+         string               m_trade_cache_val[];
+         int                  m_trade_cache_sig_icon[];
+         int                  m_trade_cache_dir_icon[];
+         int                  m_trade_table_row_count;
 
        // SIndicatorCatalogItem now lives in Artyom Trishkin\IndicatorCatalog.mqh (Tang 1 metadata)
       //For Indicator Config
@@ -183,22 +189,23 @@
      //For TreeView
        // Symbol TF TreeView m_treeview_SymbolTF        
         bool                          CreateTreeView_SymbolTF(const int x_gap, const int y_gap);               
-        void                          PopulateSymbolTFTree(void);       
-        void                          ApplyHighlightSymbolTFTree(void);
-       //Indicator TreeView m_treeview_indicator.
-         void                          AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[]);
-         void                          PopulateIndicatorTree(void);
-         bool                          CreateTreeView_Indicator(const int x_gap, const int y_gap);
-         //bool                          Create_SplitContainer(const int x_gap, const int y_gap);
-         //bool                          CreateConfigDetailTabs(const int x_gap, const int y_gap);
-         bool                          CreateAddIndicatorParaInfor(const int x_gap, const int y_gap);
+        void                          PopulateSymbolTFTree(void);
+        void                          SynSymbolTFTreeViewIcons(void);
+       //Indicator TreeView m_treeview_indicator.         
+         bool                         CreateTreeView_Indicator(const int x_gap, const int y_gap);
+         void                         PopulateIndicatorTree(void);
+         void                         SyncIndicatorTreeViewIcons(void);
+         void                         AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[]);         
+         bool                         CreateAddIndicatorParaInfor(const int x_gap, const int y_gap);
          void                          ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li);
          void                          HideParamSlots(void);
          void                          OnClickAddIndicator(void);
          void                          OnClickSaveIndicators(void);
-         void                          SyncIndicatorTreeIcons(void);
+         
          bool                          CreateIndicatorTable(const int x, const int y);
          void                          SetValuesToIndicatorTable(void);
+         bool                          CreateIndicatorSymbolTFTable(const int x, const int y);
+         void                          SetValuesToIndicatorSymbolTFTable(void);
        //Helper
         static void                   SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw);
         int                           GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[]); 
@@ -224,10 +231,10 @@
         void                           UpdateGUI(const bool redraw = false);        
         CWindow *                      GetMainWindowPointer(void) { return &m_window_main; }
       //For Pointer      
-        void                           SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbols = symbols; }      
-        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_bar_timeseries = ts; } 
+        void                           SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbol_collection = symbols; }      
+        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts; } 
         void                           SetPatternsControl(CBarPatternsControl* ctrl) { m_pattern_cfg = ctrl; } 
-        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_indicators_timeseries = ind; }
+        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind; }
         void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_time_series_engine = engine; }
       //Temporary remove due to change
         //void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
@@ -242,9 +249,10 @@
   CGUIPannel::CGUIPannel(void)
    {
     //--- Setting parameters for the time counters
-      m_gui_timecounter.SetParameters(16, 500);           
+      m_gui_timecounter.SetParameters(16, 500);
       //m_renderer = NULL;
-      m_indicators_timeseries = NULL;
+      m_IndicatorsCollection  = NULL;
+      m_trade_table_row_count  = 0;
       //m_tick_series = NULL;
       m_gui_created     = false;      
    } 
@@ -379,30 +387,30 @@
          // ItemPointer() clamps silently so item != NULL even for invalid li;
          // this early return prevents navigating to the wrong node.
          if(li < 0 || li >= m_treeview_SymbolTF.ItemsTotal()) return;
-         CTreeItem *item = m_treeview_SymbolTF.ItemPointer(li);
-         //Print Debug            
-            // Print("My debug from CGUIPannel::OnEvent [ON_CLICK_BUTTON] ", " lparam = ",lparam," dparam= ",sparam," sparam= ",sparam,"\n",
-            // "li= ",li, " item=", (item != NULL ? "OK" : "NULL"),
-            // " item nodelevel = ",string(item.NodeLevel()),
-            // " Itemtype= ", (item != NULL ? (string)item.ItemType() : "N/A"),
-            // " TI_HAS_ITEMS= ", (string)TI_HAS_ITEMS," item_state= ", (item != NULL ? (string)item.ItemState() : "N/A"),
-            // " parent_pos= ", m_treeview_settings.ItemPrevNode(li));  // safe: ItemPrevNode now has bounds check
+         CTreeItem *item = m_treeview_SymbolTF.ItemPointer(li);         
          //--------------------------------
          if(item == NULL) return;
          int parent_pos = m_treeview_SymbolTF.ItemPrevNode(li);
          if(parent_pos == -1)  // Symbol node
           {
-            if(item.ItemType() == TI_SIMPLE) //No TF Found                        
+            if(item.ItemType() == TI_SIMPLE) //No TF Found
+            {              
               ChartSetSymbolPeriod(0, item.LabelText(), _Period);
+            } 
           }
          else // TF node → navigate to exact sym + tf
-          {  
+          {
             CTreeItem *parent = m_treeview_SymbolTF.ItemPointer(parent_pos);
             if(parent != NULL)
-             {                  
-               ChartSetSymbolPeriod(0,parent.LabelText(),TimestampByDescription(item.LabelText()));
-             }                  
-          }        
+             {
+               ENUM_TIMEFRAMES target_tf = TimestampByDescription(item.LabelText());
+               Print("My Debug CGUIPannel::OnEvent TF-node click symbol=", parent.LabelText(),
+                     " label=", item.LabelText(), " target_tf=", EnumToString(target_tf),
+                     " current_sym=", _Symbol, " current_tf=", EnumToString(_Period));
+               bool ok = ChartSetSymbolPeriod(0,parent.LabelText(),target_tf);
+               Print("My Debug CGUIPannel::OnEvent ChartSetSymbolPeriod returned=", ok);
+             }
+          }
          return;
          }
     //CHARTEVENT_CHART_CHANGE
@@ -416,7 +424,7 @@
             last_sym = _Symbol;
             last_tf  = _Period;            
             PopulateSymbolTFTree();               
-            ApplyHighlightSymbolTFTree();
+            SynSymbolTFTreeViewIcons();
             m_chart.Redraw();
          }  
       }          
@@ -452,9 +460,11 @@
 
       //m_trading_bubble.OnPoll();
       
+      SetValuesToIndicatorSymbolTFTable();
+
       ulong t2 = ::GetMicrosecondCount();
-      if(t2 - t0 > 1000)
-       Print("PERF CGUIPannel::OnTimerEvent CWndEvents::OnTimerEvent= ", t1 - t0, " us CTradingLevelBubble::OnPoll= ", t2 - t1, " us");
+      // if(t2 - t0 > 1000)
+      //  Print("PERF CGUIPannel::OnTimerEvent CWndEvents::OnTimerEvent= ", t1 - t0, " us CTradingLevelBubble::OnPoll= ", t2 - t1, " us");
    }
   //+------------------------------------------------------------------+
   //| Trade operation event                                            |
@@ -485,7 +495,7 @@
          }
         PopulateSymbolTFTree();
         if(!CreateTreeView_SymbolTF(10,22)) return false;  
-        ApplyHighlightSymbolTFTree(); 
+        SynSymbolTFTreeViewIcons(); 
       //Create control in each tab
        //For Settings Tab at m_tabs_main       
         PopulateIndicatorTree();
@@ -494,6 +504,8 @@
         //if(!CreateConfigDetailTabs(5, 5)) return false;
         if(!CreateAddIndicatorParaInfor(PARAM_FORM_X, PARAM_FORM_Y)) return false;
         if(!CreateIndicatorTable(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
+       //For Trade Tab at m_tabs_main
+        if(!CreateIndicatorSymbolTFTable(0, 0)) return false;
       //m_tabs_main.ShowTabElements(); //Need verify
       CWndEvents::CompletedGUI();
       // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
@@ -517,7 +529,8 @@
       m_treeview_SymbolTF.Update(true);
       m_table_indicator.Update(true);
       SetValuesToIndicatorTable();
-      SyncIndicatorTreeIcons();
+      SetValuesToIndicatorSymbolTFTable();
+      SyncIndicatorTreeViewIcons();
       if(redraw) m_chart.Redraw();
    }  
  //For Control Create GUI controls  
@@ -745,13 +758,13 @@
    void CGUIPannel::SetValuesToIndicatorTable(void)
     {
       //Debug
-       //Print("My Debug SetValuesToIndicatorTable ENTER m_indicators_timeseries=", (m_indicators_timeseries==NULL?"NULL":"OK"));
-      if(m_indicators_timeseries == NULL) return;
+       //Print("My Debug SetValuesToIndicatorTable ENTER m_IndicatorsCollection=", (m_IndicatorsCollection==NULL?"NULL":"OK"));
+      if(m_IndicatorsCollection == NULL) return;
       string sym = ::Symbol();
       ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
       //Print("My Debug SetValuesToIndicatorTable sym=", sym, " tf=", EnumToString(tf));
 
-      CArrayObj *list = m_indicators_timeseries.GetListIndBySymbol(sym);
+      CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
       //Print("My Debug SetValuesToIndicatorTable GetListIndBySymbol total=", (list==NULL?-1:list.Total()));
 
       list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
@@ -760,6 +773,7 @@
       if(list == NULL || list.Total() == 0)
         {
           m_table_indicator.DeleteAllRows();
+          m_table_indicator.AddRow(0);   // safety row: Library bug — DeleteAllRows does not reset m_item_index_focus
           ArrayResize(m_table_indicator_names, 0);
           ArrayResize(m_table_indicator_ptrs, 0);
           m_table_indicator.Update(true);
@@ -823,7 +837,7 @@
       if(count == 0) return;
 
       m_table_indicator.DeleteAllRows();
-      for(int i = 0; i < count - 1; i++)
+      for(int i = 0; i < count-1; i++)   // +1 extra row: guards stale m_item_index_focus (Library bug in DeleteAllRows)
          m_table_indicator.AddRow(i);
 
       ArrayResize(m_table_indicator_names, count);
@@ -834,9 +848,9 @@
       // --- to the image's own pixel width (Table.mqh CheckPressedButton), so
       // --- clicking the label text won't trigger it.
        uint t1_icon[] = {IMAGE_RESOURCE_BMP16_START_BMP, IMAGE_RESOURCE_BMP16_STOP_BMP};
-       uint chk[]   = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP};
+       uint chk[]   = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
       // --- Col 4: Layer 3 control (tick/untick = ChartIndicatorAdd/Delete) - a real checkbox.
-       uint show_on_chart[] = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP};
+       uint show_on_chart[] = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
        string group_names[] = {"Trend", "Oscillator", "Volumes", "Arrows"};
        for(int row = 0; row < count; row++)
         {
@@ -885,7 +899,7 @@
     }  
    void CGUIPannel::PopulateSymbolTFTree(void)
     {      
-      if(m_bar_timeseries == NULL) return;
+      if(m_BarTimeSeriesCollection == NULL) return;
       int mw_total = ::SymbolsTotal(true);
 
       // Grow registry if MarketWatch expanded
@@ -898,7 +912,7 @@
        for(int i = 0; i < mw_total; i++)
         {
           string            sym_name = ::SymbolName(i, true);
-          CBarTimeSeriesDE *bts      = m_bar_timeseries.GetTimeseries(sym_name);
+          CBarTimeSeriesDE *bts      = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
           CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
           int               tf_cnt   = (list != NULL) ? list.Total() : 0;
           // Step 1: Ensure sym node exists
@@ -965,7 +979,7 @@
             }          
         }
     }  
-   void CGUIPannel::ApplyHighlightSymbolTFTree(void)
+   void CGUIPannel::SynSymbolTFTreeViewIcons(void)
     {
       string chart_tf = TimeframeDescription(_Period);
       int    total    = m_treeview_SymbolTF.ItemsTotal();  // duyệt tất cả items
@@ -1039,14 +1053,9 @@
   void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
    {
       if(m_time_series_engine == NULL) return;
-      if(!m_time_series_engine.ApplyIndicatorToAllSeries(type, params)) return;
-      CTreeItem *type_item = m_treeview_indicator.ItemPointer(type_li);
-      if(type_item != NULL) type_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);
-      int group_li = m_treeview_indicator.ItemPrevNode(type_li);
-      CTreeItem *group_item = m_treeview_indicator.ItemPointer(group_li);
-      if(group_item != NULL) group_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);
-      SetValuesToIndicatorTable();
-      //m_chart.Redraw();
+      if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
+      SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
+      SetValuesToIndicatorTable();      
    }
   void CGUIPannel::PopulateIndicatorTree(void)
    {
@@ -1566,9 +1575,9 @@
     {
       if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
       CIndicatorDE *ref = m_table_indicator_ptrs[row];
-      if(ref == NULL || m_indicators_timeseries == NULL) return;
+      if(ref == NULL || m_IndicatorsCollection == NULL) return;
 
-      CArrayObj *list = m_indicators_timeseries.GetList();
+      CArrayObj *list = m_IndicatorsCollection.GetList();
       if(list == NULL) return;
       int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
 
@@ -1619,49 +1628,13 @@
 
   void CGUIPannel::OnClickSaveIndicators(void)
    {
-      SIndicatorCatalogItem catalog[];
-      GetIndicatorCatalog(catalog);
-      int total = ArraySize(m_table_indicator_ptrs);
-      string json = "[\n";
-      int saved = 0;
-      for(int i = 0; i < total; i++)
-        {
-         CIndicatorDE *ind = m_table_indicator_ptrs[i];
-         if(ind == NULL) continue;
-         string cat_name = "";
-         for(int c = 0; c < ArraySize(catalog); c++)
-            if(catalog[c].type == ind.TypeIndicator()) { cat_name = catalog[c].name; break; }
-         if(cat_name == "") continue;
-         MqlParam params[];
-         ind.GetMqlParams(params);
-         if(saved > 0) json += ",\n";
-         saved++;
-         json += "  { \"type\": \"" + cat_name + "\", \"params\": [";
-         for(int p = 0; p < ArraySize(params); p++)
-           {
-            if(p > 0) json += ", ";
-            if(params[p].type == TYPE_DOUBLE)
-               json += DoubleToString(params[p].double_value, 8);
-            else
-               json += IntegerToString((int)params[p].integer_value);
-           }
-         json += "] }";
-        }
-      json += "\n]";
-      int fh = FileOpen("indicators_config.json", FILE_WRITE | FILE_TXT | FILE_ANSI);
-      if(fh == INVALID_HANDLE)
-        {
-         Print("ERROR: Cannot open indicators_config.json for writing, err=", GetLastError());
-         return;
-        }
-      FileWriteString(fh, json);
-      FileClose(fh);
-      Print("Saved ", saved, " indicator(s) to indicators_config.json");
+      if(m_time_series_engine == NULL) return;
+      m_time_series_engine.SaveIndicatorToJSON("indicators_config.json");
    }
-  void CGUIPannel::SyncIndicatorTreeIcons(void)
+  void CGUIPannel::SyncIndicatorTreeViewIcons(void)
    {
-      if(m_indicators_timeseries == NULL) return;
-      CArrayObj *all = m_indicators_timeseries.GetList();
+      if(m_IndicatorsCollection == NULL) return;
+      CArrayObj *all = m_IndicatorsCollection.GetList();
       if(all == NULL) return;
       ENUM_INDICATOR applied[];
       int applied_count = 0;
@@ -1697,6 +1670,221 @@
         }
       m_treeview_indicator.Update(true);
    }
+
+//+------------------------------------------------------------------+
+//| Create Trade tab table: Symbol / TF / Indicator / Value / Buy / Sell / Trailing
+//+------------------------------------------------------------------+
+bool CGUIPannel::CreateIndicatorSymbolTFTable(const int x, const int y)
+  {
+   m_table_indicator_SymbolTFValue.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADE, m_table_indicator_SymbolTFValue);
+   m_table_indicator_SymbolTFValue.AutoXResizeMode(true);
+   m_table_indicator_SymbolTFValue.AutoXResizeRightOffset(3);
+   m_table_indicator_SymbolTFValue.AutoYResizeMode(true);
+   m_table_indicator_SymbolTFValue.AutoYResizeBottomOffset(3);
+   m_table_indicator_SymbolTFValue.ShowHeaders(true);
+   m_table_indicator_SymbolTFValue.SelectableRow(true);
+   m_table_indicator_SymbolTFValue.LightsHover(true);
+   m_table_indicator_SymbolTFValue.IsSortMode(true);
+
+   // 7 cols: Symbol | TF(+signal icon) | Indicator(+dir icon) | Value | Buy | Sell | Trailing
+   // Col 1 (TF): signal icon = trend direction; TextXOffset=22 clears 16px icon at x=3
+   // Col 2 (Indicator): dir icon = value slope (v0 vs v1); same TextXOffset=22
+   // Col 3 (Value): no icon, ALIGN_RIGHT, colored text only
+   m_table_indicator_SymbolTFValue.TableSize(7, 20);
+   int widths[7]    = {90,  60, 130, 90, 40, 40, 55};
+   int img_x_off[7] = { 3,   3,   3,  0, 10, 10, 10};
+   int img_y_off[7] = { 0,   3,   3,  0,  3,  3,  3};
+   int txt_x_off[7] = { 5,  22,  22,  5,  5,  5,  5};
+   ENUM_ALIGN_MODE al[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT,
+                             ALIGN_RIGHT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+   m_table_indicator_SymbolTFValue.ColumnsWidth(widths);
+   m_table_indicator_SymbolTFValue.ImageXOffset(img_x_off);
+   m_table_indicator_SymbolTFValue.ImageYOffset(img_y_off);
+   m_table_indicator_SymbolTFValue.TextXOffset(txt_x_off);
+   m_table_indicator_SymbolTFValue.TextAlign(al);
+
+   if(!m_table_indicator_SymbolTFValue.CreateTable(x, y)) return false;
+
+   m_table_indicator_SymbolTFValue.SetHeaderText(0, "Symbol");
+   m_table_indicator_SymbolTFValue.SetHeaderText(1, "TF");
+   m_table_indicator_SymbolTFValue.SetHeaderText(2, "Indicator");
+   m_table_indicator_SymbolTFValue.SetHeaderText(3, "Value");
+   m_table_indicator_SymbolTFValue.SetHeaderText(4, "Buy");
+   m_table_indicator_SymbolTFValue.SetHeaderText(5, "Sell");
+   m_table_indicator_SymbolTFValue.SetHeaderText(6, "Trailing");
+
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator_SymbolTFValue);
+   return true;
+  }
+//+------------------------------------------------------------------+
+//| Populate / refresh the Trade tab table (no-flicker per-cell)     |
+//+------------------------------------------------------------------+
+void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
+  {
+   if(m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL) return;
+
+   // --- Collect every indicator by walking m_BarTimeSeriesCollection (reliable: symbol -> TF series
+   // structure, never observed to drift), then pulling each series' own indicator set from
+   // m_IndicatorsCollection. All_syms[] is taken from the CBarSeriesDE object itself, not from
+   // ind.Symbol() - keeps the two collections' data consistent with each other rather than
+   // trusting the indicator's own copy of a value that (elsewhere, before a fix) was seen to drift.
+   CIndicatorDE *all_inds[];
+   string        all_syms[];
+   int           count = 0;
+
+   CArrayObj *sym_containers = m_BarTimeSeriesCollection.GetList();
+   int sym_total = (sym_containers != NULL) ? sym_containers.Total() : 0;
+   for(int si = 0; si < sym_total; si++)
+     {
+      CBarTimeSeriesDE *bts = sym_containers.At(si);
+      if(bts == NULL) continue;
+      CArrayObj *series_list = bts.GetListSeries();
+      int series_total = (series_list != NULL) ? series_list.Total() : 0;
+      for(int ti = 0; ti < series_total; ti++)
+        {
+         CBarSeriesDE *bs = series_list.At(ti);
+         if(bs == NULL) continue;
+         CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(bs.Symbol());
+         ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, bs.Timeframe(), EQUAL);
+         int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+         for(int ii = 0; ii < ind_total; ii++)
+           {
+            CIndicatorDE *ind = ind_list.At(ii);
+            if(ind == NULL) continue;
+            ::ArrayResize(all_inds, count + 1);
+            ::ArrayResize(all_syms, count + 1);
+            all_inds[count] = ind;
+            all_syms[count] = bs.Symbol();
+            count++;
+           }
+        }
+     }
+
+   // --- Full rebuild when row count changes
+   if(count != m_trade_table_row_count)
+     {
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+
+      uint chk[]     = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG,
+                        IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
+      uint sig_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG,
+                        IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
+                        IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
+      uint val_img[] = {IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG,
+                        IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG,
+                        IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
+
+      m_table_indicator_SymbolTFValue.DeleteAllRows();
+      ::ArrayResize(m_trade_cache_val,      count);
+      ::ArrayResize(m_trade_cache_sig_icon, count);
+      ::ArrayResize(m_trade_cache_dir_icon, count);
+      ::ArrayInitialize(m_trade_cache_sig_icon, -1);
+      ::ArrayInitialize(m_trade_cache_dir_icon, -1);
+      for(int i = 0; i < count; i++) m_trade_cache_val[i] = "";
+
+      for(int i = 0; i < count - 1; i++)
+         m_table_indicator_SymbolTFValue.AddRow(i);
+
+      for(int row = 0; row < count; row++)
+        {
+         CIndicatorDE *ind = all_inds[row];
+         // Col 0: Symbol
+          m_table_indicator_SymbolTFValue.SetValue(0, row, all_syms[row]);
+         // Col 1: signal icon (trend) + TF text — TextXOffset=22 clears icon
+         m_table_indicator_SymbolTFValue.SetImages(1, row, sig_img);
+         m_table_indicator_SymbolTFValue.ChangeImage(1, row, 2);
+         m_table_indicator_SymbolTFValue.SetValue(1, row, TimeframeDescription(ind.Timeframe()));
+         // Col 2: signal icon + Indicator name — TextXOffset=22 pushes name past 16px icon
+          string short_name = "";
+         for(int c = 0; c < ::ArraySize(catalog); c++)
+            if(catalog[c].type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
+         if(short_name == "") short_name = ind.GetTypeDescription();
+         MqlParam mql_params[];
+         ind.GetMqlParams(mql_params);
+         string pvalues = "";
+         for(int p = 0; p < ::ArraySize(mql_params); p++)
+           {
+            if(p > 0) pvalues += ", ";
+            pvalues += (mql_params[p].type == TYPE_DOUBLE)
+                       ? ::DoubleToString(mql_params[p].double_value, 2)
+                       : ::IntegerToString((int)mql_params[p].integer_value);
+           }
+         string ind_label = short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
+         m_table_indicator_SymbolTFValue.SetImages(2, row, val_img);
+         m_table_indicator_SymbolTFValue.ChangeImage(2, row, 2);
+         m_table_indicator_SymbolTFValue.SetValue(2, row, ind_label);
+         // Col 3: Value — ALIGN_RIGHT, no icon; direction shown by text color (red/green/gray)
+         m_table_indicator_SymbolTFValue.SetValue(3, row, "--");
+         // Cols 4-6: checkboxes
+         m_table_indicator_SymbolTFValue.CellType(4, row, CELL_CHECKBOX);
+         m_table_indicator_SymbolTFValue.SetImages(4, row, chk);
+         m_table_indicator_SymbolTFValue.ChangeImage(4, row, 1);
+         m_table_indicator_SymbolTFValue.CellType(5, row, CELL_CHECKBOX);
+         m_table_indicator_SymbolTFValue.SetImages(5, row, chk);
+         m_table_indicator_SymbolTFValue.ChangeImage(5, row, 1);
+         m_table_indicator_SymbolTFValue.CellType(6, row, CELL_CHECKBOX);
+         m_table_indicator_SymbolTFValue.SetImages(6, row, chk);
+         m_table_indicator_SymbolTFValue.ChangeImage(6, row, 1);
+        }
+
+      m_trade_table_row_count = count;
+      m_table_indicator_SymbolTFValue.Update(true);
+      return;
+     }
+
+   // --- Per-cell dirty update: only Value text + icons change in real-time
+   bool any_changed = false;
+   for(int row = 0; row < count; row++)
+     {
+      CIndicatorDE *ind = all_inds[row];
+      double v0 = ind.GetDataBuffer(0, 0); // current bar (realtime via CopyBuffer)
+      double v1 = ind.GetDataBuffer(0, 1); // previous bar (direction comparison)
+
+      // Value direction: index 0=up 1=down 2=flat
+      int dir_icon = 2;
+      if(v0 != EMPTY_VALUE && v1 != EMPTY_VALUE)
+         dir_icon = (v0 > v1) ? 0 : (v0 < v1) ? 1 : 2;
+      color txt_clr = (dir_icon == 0) ? C'0,160,0' :    // rising  → green text
+                      (dir_icon == 1) ? C'200,0,0' :    // falling → red text
+                                        clrGray;         // flat    → gray text
+
+      // Col 2 (Indicator): dir icon = value slope (v0 vs v1)
+      if(dir_icon != m_trade_cache_dir_icon[row])
+        {
+         m_trade_cache_dir_icon[row] = dir_icon;
+         m_table_indicator_SymbolTFValue.ChangeImage(2, row, dir_icon);
+         m_table_indicator_SymbolTFValue.BackColor(2, row, clrWhite, true);
+         any_changed = true;
+        }
+      // Col 3 (Value): ALIGN_RIGHT, colored text only — redraw via TextColor(true)
+      string val_str     = (v0 == EMPTY_VALUE) ? "--" : ::DoubleToString(v0, 5);
+      bool   val_changed = (val_str != m_trade_cache_val[row]);
+      if(val_changed || dir_icon != m_trade_cache_sig_icon[row])  // recolor on direction change too
+        {
+         if(val_changed)
+           {
+            m_trade_cache_val[row] = val_str;
+            m_table_indicator_SymbolTFValue.SetValue(3, row, val_str);
+           }
+         m_table_indicator_SymbolTFValue.TextColor(3, row, txt_clr, true);
+         any_changed = true;
+        }
+      // Col 1 (TF): signal icon = trend direction (placeholder = dir_icon until CSignalBase wired)
+      int sig_icon = dir_icon;
+      if(sig_icon != m_trade_cache_sig_icon[row])
+        {
+         m_trade_cache_sig_icon[row] = sig_icon;
+         m_table_indicator_SymbolTFValue.ChangeImage(1, row, sig_icon);
+         m_table_indicator_SymbolTFValue.BackColor(1, row, clrWhite, true);
+         any_changed = true;
+        }
+     }
+   if(any_changed)
+      m_table_indicator_SymbolTFValue.Update(false);
+  }
+
 
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__

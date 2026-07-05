@@ -36,7 +36,7 @@
      private:
        //CollCollection
         CAccountsCollection      m_accounts;       // Account collection
-        CSymbolsCollection       m_symbols;        //For sybols information at tab Trade
+        CSymbolsCollection       m_symbol_collection;        //For sybols information at tab Trade
         CMarketCollection        m_market;         // Collection of market orders and deals
         CHistoryCollection       m_history;        // Collection of historical orders and deals
         CTradeEventsCollection   m_trade_events;   // Collection of events
@@ -72,7 +72,7 @@
         CAccount            *GetCurrentAccount(void);
         CAccountsCollection *GetAccounts(void) { return &m_accounts;}
         CMarketCollection   *GetMarketCollection(void) { return &m_market; }       
-        CSymbolsCollection  *GetSymbolsCollection(void) { return &m_symbols; }
+        CSymbolsCollection  *GetSymbolsCollection(void) { return &m_symbol_collection; }
         CTradingControl     *GetTradingControl(void) { return &m_trading_control; }
        //--- Return the list of market (1) positions, (2) pending orders and (3)
        // market orders
@@ -171,7 +171,7 @@
     {
       if (this.IsTester())
         return;
-      this.m_symbols.MarketWatchEventsControl();
+      this.m_symbol_collection.MarketWatchEventsControl();
     }
   //+------------------------------------------------------------------+
   //| Initialize collections and setup control thresholds             |
@@ -197,9 +197,9 @@
         // Symbols — init with current chart symbol
         m_market.Refresh();
         m_history.Refresh();
-        if(!m_symbols.CreateSymbolsList(true)) // true = MarketWatch
+        if(!m_symbol_collection.CreateSymbolsList(true)) // true = MarketWatch
             return false;        
-        m_trading_control.OnInit(GetCurrentAccount(), &m_symbols, &m_market, &m_history, &m_trade_events);
+        m_trading_control.OnInit(GetCurrentAccount(), &m_symbol_collection, &m_market, &m_history, &m_trade_events);
         return true;  
       
     }
@@ -219,13 +219,13 @@
             m_event_code = ENGINE_EVENT_ACCOUNT;
           }
       //For Symbols Information at tab Trade, only update symbols collection when there is an event in symbols, no need to update every tick
-        m_symbols.RefreshAndEventsControl();
-        if(m_symbols.IsEvent())
+        m_symbol_collection.RefreshAndEventsControl();
+        if(m_symbol_collection.IsEvent())
           {
             m_is_event   = true;
             m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_SYMBOL);
           }
-        if(m_symbols.ModeSymbolsList() == SYMBOLS_MODE_MARKET_WATCH)
+        if(m_symbol_collection.ModeSymbolsList() == SYMBOLS_MODE_MARKET_WATCH)
             this.MarketWatchEventsControl();
       //For Order and deal
        this.TradeEventsControl();
@@ -352,7 +352,7 @@
   //     {
   //       string syms[1] = { ::Symbol() };
   //       m_symbols_rebuild_count = 1;
-  //       return m_symbols.SetUsedSymbols(syms);
+  //       return m_symbol_collection.SetUsedSymbols(syms);
   //     }
   //   if(mode == SYMBOLS_MODE_DEFINES)
   //     {
@@ -371,21 +371,21 @@
   //       m_symbols_rebuild_count = ::ArraySize(syms);
   //       if(m_symbols_rebuild_count == 0)
   //           return true;  // no positions, skip rebuild
-  //       return m_symbols.SetUsedSymbols(syms);
+  //       return m_symbol_collection.SetUsedSymbols(syms);
   //     }
   //   if(mode == SYMBOLS_MODE_MARKET_WATCH)
   //     {
   //       string clear[1] = { ::Symbol() };
-  //       m_symbols.SetUsedSymbols(clear);  // force clear collection
-  //       bool res = m_symbols.CreateSymbolsList(true);
-  //       m_symbols_rebuild_count = m_symbols.GetSymbolsCollectionTotal();
+  //       m_symbol_collection.SetUsedSymbols(clear);  // force clear collection
+  //       bool res = m_symbol_collection.CreateSymbolsList(true);
+  //       m_symbols_rebuild_count = m_symbol_collection.GetSymbolsCollectionTotal();
   //       return res;
   //     }
   //   // SYMBOLS_MODE_ALL
   //     string clear[1] = { ::Symbol() };
-  //     m_symbols.SetUsedSymbols(clear);  // force clear collection
-  //     bool res = m_symbols.CreateSymbolsList(false);
-  //     m_symbols_rebuild_count = m_symbols.GetSymbolsCollectionTotal();
+  //     m_symbol_collection.SetUsedSymbols(clear);  // force clear collection
+  //     bool res = m_symbol_collection.CreateSymbolsList(false);
+  //     m_symbols_rebuild_count = m_symbol_collection.GetSymbolsCollectionTotal();
   //   return res;
   // }
 

@@ -6,7 +6,17 @@
       "Read(*)",
       "Grep(*)",
       "Glob(*)",
-      "mcp__plugin_claude-mem_mcp-search__search"
+      "mcp__plugin_claude-mem_mcp-search__search",
+      "mcp__plugin_claude-mem_mcp-search__timeline",
+      "mcp__plugin_claude-mem_mcp-search__get_observations"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\nguye\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\MQL5\\Experts\\Anhnt\\Example\\4. Combination EA\\V7\\Anatoli Kazharski",
+      "D:\\MT5-Dev\\Experts\\Anhnt\\Example\\4. Combination EA\\V7\\Anatoli Kazharski",
+      "c:\\Users\\nguye\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\MQL5\\Experts\\Anhnt\\Example\\4. Combination EA\\V7\\Artyom Trishkin",
+      "D:\\MT5-Dev\\Experts\\Anhnt\\Example\\4. Combination EA\\V7\\Artyom Trishkin",
+      "c:\\Users\\nguye\\AppData\\Roaming\\MetaQuotes\\Terminal\\D0E8209F77C8CF37AD8BF550E51FF075\\MQL5\\Experts\\Anhnt\\Example\\4. Combination EA\\V7",
+      "D:\\MT5-Dev\\Experts\\Anhnt\\Example\\4. Combination EA\\V7"
     ]
   }
 }
