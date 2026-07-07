@@ -35,7 +35,7 @@ public:
    void             SetBuffers(int main_buf, int signal_buf);
    void             SetGate(double overbought, double oversold);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -70,20 +70,16 @@ void CSignalTwoLineCross::SetGate(double overbought, double oversold)
   }
 
 //+------------------------------------------------------------------+
-//| Detect crossover and apply optional OB/OS gate                  |
+//| Detect crossover and apply optional OB/OS gate - pure math      |
 //+------------------------------------------------------------------+
-void CSignalTwoLineCross::Update(int bar)
+double CSignalTwoLineCross::ComputeAt(int bar) const
   {
    double m1 = Buf(m_buf_main,   bar);
    double s1 = Buf(m_buf_signal, bar);
    double m2 = Buf(m_buf_main,   bar + 1);
    double s2 = Buf(m_buf_signal, bar + 1);
    if(m1 == EMPTY_VALUE || s1 == EMPTY_VALUE ||
-      m2 == EMPTY_VALUE || s2 == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+      m2 == EMPTY_VALUE || s2 == EMPTY_VALUE) return EMPTY_VALUE;
    bool buy_cross  = (m1 > s1 && m2 <= s2);
    bool sell_cross = (m1 < s1 && m2 >= s2);
    bool gate_on    = (m_overbought > 0.0 || m_oversold > 0.0);
@@ -92,12 +88,9 @@ void CSignalTwoLineCross::Update(int bar)
       if(buy_cross  && m1 > m_oversold)    buy_cross  = false;
       if(sell_cross && m1 < m_overbought)  sell_cross = false;
      }
-   if(buy_cross)
-      SetAt(bar, SIGNAL_BUY);
-   else if(sell_cross)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(buy_cross)  return SIGNAL_BUF_BUY;
+   if(sell_cross) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_CROSSOVER_MQH__

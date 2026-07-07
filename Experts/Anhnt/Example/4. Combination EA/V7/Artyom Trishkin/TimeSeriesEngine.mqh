@@ -16,6 +16,7 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BookSeriesCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\TickSeriesCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Services\TimeCounter.mqh>
  // Tang 1 (PureData) indicator metadata + JSON template loader - EA-local, not part of the shared Library
   #include "IndicatorCatalog.mqh"
@@ -30,6 +31,7 @@
       CIndicatorsCollection     m_IndicatorsCollection; //Indicator collection
       CMBookSeriesCollection    m_MBookSeriesCollection;           // Collection of DOM series
       //CTickSeriesCollection     m_tick_series;         // Collection of tick series
+      CSignalsCollection        m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
       CBarPatternsControl       m_pattern_cfg;           // Pattern registry (applied to new TF series)
       SDataCalculate            m_last_data_calc;
       CTimeCounter              m_bg_counter;
@@ -37,6 +39,10 @@
       CSymbolsCollection        *m_symbol_collection;               // Symbol collection
     //For indicator
       int                       LoadIndicatorFromJSON(const string filename);
+    //For Signal - freeze bar 1 of any (symbol,TF) that just got a SERIES_EVENTS_NEW_BAR event
+    //this refresh cycle, read back from m_BarTimeSeriesCollection's own event list (never call
+    //CBarSeriesDE::IsNewBar() directly here - that call is owned/consumed by the bar series itself)
+      void                      ProcessNewBarSignalEvents(void);
     public:
     //CTimeSeriesEngine Lifecycle
         bool  OnTimerEvent(void);
@@ -49,6 +55,7 @@
           void                        SetSymbolsCollection(CSymbolsCollection *symbols)   { m_symbol_collection = symbols; }
           CIndicatorsCollection       *GetIndicatorsCollection()                          { return &this.m_IndicatorsCollection; }
           CMBookSeriesCollection      *GetBookSeries()                                    { return &this.m_MBookSeriesCollection; }
+          CSignalsCollection          *GetSignalsCollection()                              { return &this.m_SignalsCollection; }
           //CTickSeriesCollection       *GetTickSeries()                                    { return &this.m_tick_series; }
     // Tang 1: JSON template <-> indicator series
         void                        AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe);
@@ -74,19 +81,16 @@
  //Life cycle management
   bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period)
    {
-      Print("My Debug CTimeSeriesEngine::OnInitEvent ENTER symbol=", symbol, " period=", EnumToString(period));
       if(m_symbol_collection == NULL) return false;
       // Step 1: build collection (first init only)
        if(this.m_BarTimeSeriesCollection.GetList().Total() == 0)
          this.m_BarTimeSeriesCollection.CreateCollection(m_symbol_collection.GetList());
       // Step 2: guard — series already exists (CHARTCHANGE same TF)
        bool already_available = this.m_BarTimeSeriesCollection.IsAvailable(symbol, period);
-       Print("My Debug CTimeSeriesEngine::OnInitEvent IsAvailable(", symbol, ",", EnumToString(period), ")=", already_available);
        if(already_available)
            return true;
       // Step 3: create the current chart's series
        bool created = this.m_BarTimeSeriesCollection.CreateSeries(symbol, period);
-       Print("My Debug CTimeSeriesEngine::OnInitEvent CreateSeries=", created);
        if(!created) return false;
       // DOM setup
         if(this.m_MBookSeriesCollection.DataTotal() == 0)
@@ -96,10 +100,7 @@
       // Step 4: load indicators — AFTER CreateSeries, so series exists for Apply to find
       // Guard: only on first startup (no indicators yet). Skip on CHARTCHANGE re-init.
         CArrayObj * ind_list = m_IndicatorsCollection.GetList();
-        int ind_total = (ind_list != NULL) ? ind_list.Total() : 0; 
-        //Debug  
-         Print("My Debug CTimeSeriesEngine::OnInitEvent ind_list.Total()=", ind_total,
-              " branch=", (ind_total == 0 ? "LoadIndicatorFromJSON" : "AddAllIndicatorsToNewSeries"));     
+        int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
         if(ind_total == 0)
           LoadIndicatorFromJSON("indicators_config.json");                   
         else
@@ -122,8 +123,6 @@
 
     // Step 1: Ensure series exists
     bool is_new_series = !this.m_BarTimeSeriesCollection.IsAvailable(sym, curr);
-    Print("My Debug CTimeSeriesEngine::OnChartEvent CHARTEVENT_CHART_CHANGE BEGIN sym=", sym,
-          " tf=", EnumToString(curr), " is_new_series=", is_new_series);
     if(is_new_series)
       {
         this.m_BarTimeSeriesCollection.CreateSeries(sym, curr);
@@ -148,34 +147,31 @@
      this.m_MBookSeriesCollection.Refresh(symbol, (long)::TimeCurrent() * 1000); // DOM snapshot for current symbol only
     //this.m_tick_series.Refresh(symbol);
      m_IndicatorsCollection.SeriesRefreshBySymbol(symbol);
+     m_SignalsCollection.RefreshCurrentBar(symbol); // current chart symbol only - stays live every tick, not just every timer tick
+     ProcessNewBarSignalEvents(); // freeze bar 1 for any (symbol,TF) whose bar just closed this tick
      return this.m_BarTimeSeriesCollection.IsEvent();           // true if any TF has a new bar
+   }
+  void CTimeSeriesEngine::ProcessNewBarSignalEvents(void)
+   {
+    CArrayObj *events = m_BarTimeSeriesCollection.GetListEvents();
+    if(events == NULL) return;
+    int total = events.Total();
+    for(int i = 0; i < total; i++)
+      {
+       CEventBaseObj *ev = events.At(i);
+       if(ev == NULL || ev.ID() != SERIES_EVENTS_NEW_BAR) continue;
+       m_SignalsCollection.FreezeClosedBar(ev.SParam(), (ENUM_TIMEFRAMES)(int)ev.DParam());
+      }
    }
   bool CTimeSeriesEngine::OnTimerEvent(void)
    {
-    // SENSOR: detect any silent mutation of indicator Symbol property outside the known creation path.
-     static string last_seen[10];
-     static bool   sensor_init = false;
-     CArrayObj *sensor_list = m_IndicatorsCollection.GetList();
-     if(sensor_list != NULL)
-      {
-       int sensor_total = sensor_list.Total();
-       if(!sensor_init) { for(int fi = 0; fi < 10; fi++) last_seen[fi] = ""; sensor_init = true; }
-       for(int si = 0; si < sensor_total && si < 10; si++)
-        {
-         CIndicatorDE *sdbg = sensor_list.At(si);
-         if(sdbg == NULL) continue;
-         string cur_sym = sdbg.Symbol();
-         if(last_seen[si] != "" && last_seen[si] != cur_sym)
-           Print("My Debug SENSOR: all[", si, "] Symbol changed from '", last_seen[si], "' to '", cur_sym,
-                 "' Handle=", sdbg.Handle(), " at OnTimerEvent, current chart Symbol()=", ::Symbol());
-         last_seen[si] = cur_sym;
-        }
-      }
+    m_SignalsCollection.RefreshCurrentBar(); // recompute bar 0 for every tracked signal - "current direction" must never be stale
 
     if(!this.m_bg_counter.CheckTimeCounter()) return false;
 
     ulong t0 = ::GetMicrosecondCount();
     this.m_BarTimeSeriesCollection.RefreshAllExceptCurrent(this.m_last_data_calc);
+    ProcessNewBarSignalEvents(); // freeze bar 1 for any (symbol,TF), other than the chart's own, whose bar just closed
 
     ulong t1 = ::GetMicrosecondCount();
     m_IndicatorsCollection.SeriesRefreshAllExceptSymbol(::Symbol());
@@ -219,7 +215,7 @@
           CIndicatorDE *indicator = m_IndicatorsCollection.CreateIndicator(type, params, s.Symbol(), s.Timeframe());
           if(indicator == NULL) continue;
           int handle = m_IndicatorsCollection.AddIndicatorToList(indicator, WRONG_VALUE, buffers_total);
-          if(handle != INVALID_HANDLE) created_any = true;
+          if(handle != INVALID_HANDLE) { created_any = true; m_SignalsCollection.GetOrCreateSignal(indicator); }
          }
       }
     return created_any;
@@ -309,41 +305,22 @@
       // observed to drift; CIndicatorDE::Symbol() has, whenever it was fed a string sourced
       // from that raw call chain instead of a stable object's own accessor.
        CBarSeriesDE *target_series = m_BarTimeSeriesCollection.GetSeries(symbol, timeframe);
-       if(target_series == NULL)
-        {
-         Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries EXIT - no CBarSeriesDE for symbol=", symbol, " timeframe=", EnumToString(timeframe));
-         return;
-        }
+       if(target_series == NULL) return;
        string safe_symbol = target_series.Symbol();
-      Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries ENTER symbol=", safe_symbol, " timeframe=", EnumToString(timeframe));
       CArrayObj *all = m_IndicatorsCollection.GetList();
       if(all == NULL || all.Total() == 0)
-       {
-         Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries EXIT - m_IndicatorsCollection empty");
          return; // nothing in PureData yet - LoadIndicatorsFromJson seeds it first
-       }
-      Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries FULL DUMP all.Total()=", all.Total());
-      for(int dd = 0; dd < all.Total(); dd++)
-       {
-        CIndicatorDE *dbg = all.At(dd);
-        if(dbg == NULL) { Print("My Debug   all[", dd, "] = NULL"); continue; }
-        Print("My Debug   all[", dd, "] Symbol=", dbg.Symbol(), " Timeframe=", EnumToString(dbg.Timeframe()),
-              " ShortName=", dbg.ShortName(), " TypeIndicator=", EnumToString(dbg.TypeIndicator()),
-              " Handle=", dbg.Handle());
-       }
+
       // Pick the first entry as the reference: guaranteed to be a different (sym, tf)
       // because (symbol, timeframe) is freshly created and has no entries here yet.
        CIndicatorDE *ref_entry = all.At(0);
        if(ref_entry == NULL) return;
        string          ref_sym = ref_entry.Symbol();
        ENUM_TIMEFRAMES ref_tf  = ref_entry.Timeframe();
-       Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries ref_sym=", ref_sym, " ref_tf=", EnumToString(ref_tf));
 
       // Retrieve the complete indicator set for the reference (sym, tf) - this list IS the template.
        CArrayObj *templates = m_IndicatorsCollection.GetListIndBySymbol(ref_sym);
        templates = CTimeseriesSelect::ByIndicatorProperty(templates, INDICATOR_PROP_TIMEFRAME, ref_tf, EQUAL);
-       int templates_total = (templates != NULL) ? templates.Total() : 0;
-       Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries templates.Total()=", templates_total);
        if(templates == NULL || templates.Total() == 0) return;
 
       // NOTE: no "does it already exist" guard here on purpose. The caller (OnInitEvent /
@@ -363,20 +340,12 @@
           MqlParam       params[];
           tmpl.GetMqlParams(params);
 
-         Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries about to CreateIndicator with symbol param=", safe_symbol, " (fn arg) type=", EnumToString(ind_type));
          CIndicatorDE * new_ind = m_IndicatorsCollection.CreateIndicator(ind_type, params, safe_symbol, target_series.Timeframe());
          if(new_ind == NULL) { failed_create++; continue; }
-         Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries right after CreateIndicator: new_ind.Symbol()=", new_ind.Symbol(),
-               " new_ind.ShortName()=", new_ind.ShortName(), " new_ind.Timeframe()=", EnumToString(new_ind.Timeframe()),
-               " Handle=", new_ind.Handle());
          int add_result = m_IndicatorsCollection.AddIndicatorToList(new_ind, WRONG_VALUE, tmpl.BuffersTotal());
-         Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries after AddIndicatorToList: new_ind.Symbol()=", new_ind.Symbol(),
-               " handle=", add_result);
+         if(add_result != INVALID_HANDLE) m_SignalsCollection.GetOrCreateSignal(new_ind);
          created_count++;
         }
-      Print("My Debug CTimeSeriesEngine::AddAllIndicatorsToNewSeries EXIT symbol=", symbol,
-            " timeframe=", EnumToString(timeframe), " created=", created_count,
-            " failed_create=", failed_create);
    }
  //+------------------------------------------------------------------+
  //| Tang 1: save current live indicator template to JSON file.       |
@@ -438,201 +407,6 @@
       FileClose(fh);
       Print("CTimeSeriesEngine::SaveIndicatorToJSON > saved ", saved, " indicator(s) to ", filename);
       return true;
-   }
- //For pattern
-
- // Register all 25 pattern types into engine-level registry (m_pattern_cfg).
- // Must be called once before SeriesApplyPatternRegistry.
-    //  void CTimeSeriesEngine::RegisterAllPatterns()
-    //    {
-    //      MqlParam p[];
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_HAMMER,               p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_HANGING_MAN,          p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_INVERTED_HAMMER,      p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_SHOOTING_STAR,        p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_DOJI,                 p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_DRAGONFLY_DOJI,       p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_GRAVESTONE_DOJI,      p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_HARAMI,               p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_HARAMI_CROSS,         p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_ENGULFING,            p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_TWEEZER,              p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_PIERCING_LINE,        p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_DARK_CLOUD_COVER,     p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_RAILS,                p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_MORNING_STAR,         p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_MORNING_DOJI_STAR,    p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_EVENING_STAR,         p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_EVENING_DOJI_STAR,    p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_THREE_WHITE_SOLDIERS, p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_THREE_BLACK_CROWS,    p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_THREE_STARS,          p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_THREE_INSIDE_UP,      p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_THREE_INSIDE_DOWN,    p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_ABANDONED_BABY,       p, true);
-    //      this.m_pattern_cfg.SetUsedPattern(PATTERN_TYPE_PIVOT_POINT_REVERSAL, p, true);
-    //    }
-    //   // Push engine-level registry to each series-level ctrl, then trigger full scan.
-    //   // Populates m_list_all_patterns with CBarPattern objects for all bars.
-    //   bool CTimeSeriesEngine::SeriesApplyPatternRegistry(const string symbol, const ENUM_TIMEFRAMES timeframe)
-    //    {
-    //     CBarTimeSeriesDE *bartimeseries  = this.m_BarTimeSeriesCollection.GetTimeseries(symbol);
-    //     CBarSeriesDE     *barseries = NULL;
-    //     if(bartimeseries != NULL)
-    //     {
-    //         CArrayObj *barserieslist = bartimeseries.GetListSeries();
-    //         for(int i = 0; i < barserieslist.Total(); i++)
-    //         {
-    //             CBarSeriesDE *s = barserieslist.At(i);
-    //             if(s != NULL && s.Timeframe() == timeframe)
-    //             { barseries = s; break; }
-    //         }
-    //     }
-    //     CBarPatternsControl *ctrl = (barseries  != NULL ? barseries.GetPatternsCtrlObj()     : NULL);
-    //     if(ctrl == NULL) return false;
-    //     CArrayObj *reg = m_pattern_cfg.GetListControls();
-    //     for(int i = 0; i < reg.Total(); i++)
-    //       {
-    //         CBarPatternControl *c = reg.At(i);
-    //         if(c != NULL)
-    //           ctrl.SetUsedPattern(c.TypePattern(), c.PatternParams, true);
-    //       }
-    //     ctrl.RefreshAll();
-    //     return true;
-    //    }
-    //  //For Pattern Refresh
-    //   bool CTimeSeriesEngine::SeriesRefreshPatterns(const string symbol, const ENUM_TIMEFRAMES timeframe)
-    //    {
-    //        CBarTimeSeriesDE *ts = this.m_BarTimeSeriesCollection.GetTimeseries(symbol);
-    //        if(ts == NULL) return false;
-    //        CBarSeriesDE *series = ts.GetSeries(timeframe);
-    //        if(series == NULL) return false;
-    //        CBarPatternsControl *ctrl = series.GetPatternsCtrlObj();
-    //        if(ctrl == NULL) return false;
-    //        ctrl.RefreshAll();
-    //        return true;
-    //    }
-    //   void CTimeSeriesEngine::SeriesRefreshAllPatterns(void)
-    //     {
-    //        CArrayObj *list = this.m_BarTimeSeriesCollection.GetList();
-    //        if(list == NULL) return;
-    //        for(int i = 0; i < list.Total(); i++)
-    //        {
-    //        CBarTimeSeriesDE *ts = list.At(i);
-    //        if(ts == NULL) continue;
-    //        CArrayObj *series_list = ts.GetListSeries();
-    //        if(series_list == NULL) continue;
-    //        for(int j = 0; j < series_list.Total(); j++)
-    //        {
-    //               CBarSeriesDE *series = series_list.At(j);
-    //               if(series == NULL) continue;
-    //               CBarPatternsControl *ctrl = series.GetPatternsCtrlObj();
-    //               if(ctrl != NULL) ctrl.RefreshAll();
-    //        }
-    //        }
-    //     }
-  // //+------------------------------------------------------------------+
-  // //| Scan indicators currently attached to chart_id=0 and replicate   |
-  // //| each one (PureData) across every (symbol, timeframe) series that |
-  // //| exists in m_BarTimeSeriesCollection - regardless of which chart is active.|
-  // //| Show/Hide on chart is a separate, display-only concern.          |
-  // //+------------------------------------------------------------------+
-  // void CTimeSeriesEngine::ScanAndApplyIndicators(void)
-  //  {
-  //     CArrayObj *sym_list = m_symbol_collection.GetList();
-  //     if(sym_list == NULL) return;
-  //     {
-  //        int subwin_count = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
-  //        int chart_non_custom_count = 0;
-  //        for(int subwin = 0; subwin < subwin_count; subwin++)
-  //        {
-  //           int inds_in_subwin = ChartIndicatorsTotal(0, subwin);
-  //           for(int ind_idx = 0; ind_idx < inds_in_subwin; ind_idx++)
-  //           {
-  //              string ind_name = ChartIndicatorName(0, subwin, ind_idx);
-  //              if(ind_name == "") continue;
-  //              int ind_handle = (int)ChartIndicatorGet(0, subwin, ind_name);
-  //              if(ind_handle == INVALID_HANDLE) continue;
-  //              ENUM_INDICATOR ind_enum_type; MqlParam ind_params[];
-  //              if(IndicatorParameters(ind_handle, ind_enum_type, ind_params) > 0 &&
-  //                 ind_enum_type != IND_CUSTOM) chart_non_custom_count++;
-  //           }
-  //        }
-  //        if(chart_non_custom_count == 0) return; // no non-custom indicators on chart
-
-  //        int total_series_count = 0;
-  //        for(int sym_idx = 0; sym_idx < sym_list.Total(); sym_idx++)
-  //        {
-  //           CSymbol *sym_item = sym_list.At(sym_idx);
-  //           CBarTimeSeriesDE *sym_bts = m_BarTimeSeriesCollection.GetTimeseries(sym_item != NULL ? sym_item.Name() : "");
-  //           if(sym_bts != NULL && sym_bts.GetListSeries() != NULL)
-  //              total_series_count += sym_bts.GetListSeries().Total();
-  //        }
-  //        if(chart_non_custom_count > 0 && total_series_count > 0 &&
-  //           m_IndicatorsCollection.GetList().Total() == chart_non_custom_count * total_series_count)
-  //           return; // all combinations already registered - nothing to do
-  //     }
-  //     int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
-  //     for(int sub = 0; sub < subwindows; sub++)
-  //      {
-  //        int total = ChartIndicatorsTotal(0, sub);
-  //        for(int i = 0; i < total; i++)
-  //         {
-  //           string name = ChartIndicatorName(0, sub, i);
-  //           if(name == "") continue;
-
-  //           int handle = (int)ChartIndicatorGet(0, sub, name);
-  //           if(handle == INVALID_HANDLE) continue;
-
-  //           ENUM_INDICATOR ind_type;
-  //           MqlParam       params[];
-  //           int ip = IndicatorParameters(handle, ind_type, params);
-  //           if(ip <= 0)           continue;
-  //           if(ind_type == IND_CUSTOM) continue;
-
-  //           for(int s = 0; s < sym_list.Total(); s++)
-  //            {
-  //              CSymbol *sym_obj = sym_list.At(s);
-  //              if(sym_obj == NULL) continue;
-
-  //              CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym_obj.Name());
-  //              if(bts == NULL) continue;
-  //              CArrayObj *series_list = bts.GetListSeries();
-  //              if(series_list == NULL) continue;
-
-  //              CArrayObj *by_sym      = m_IndicatorsCollection.GetListIndBySymbol(sym_obj.Name());
-  //              CArrayObj *by_sym_type = CTimeseriesSelect::ByIndicatorProperty(by_sym, INDICATOR_PROP_TYPE, ind_type, EQUAL);
-
-  //              for(int j = 0; j < series_list.Total(); j++)
-  //               {
-  //                 CBarSeriesDE *ser = series_list.At(j);
-  //                 if(ser == NULL) continue;
-  //                 ENUM_TIMEFRAMES target_tf = ser.Timeframe();
-
-  //                 CArrayObj *candidates = CTimeseriesSelect::ByIndicatorProperty(by_sym_type, INDICATOR_PROP_TIMEFRAME, target_tf, EQUAL);
-
-  //                 bool exists = false;
-  //                 if(candidates != NULL)
-  //                    for(int k = 0; k < candidates.Total(); k++)
-  //                    {
-  //                       CIndicatorDE *existing = candidates.At(k);
-  //                       if(existing != NULL && existing.ShortName() == name)
-  //                          { exists = true; break; }
-  //                    }
-  //                 if(exists) continue;
-
-  //                 CIndicatorDE *new_ind = m_IndicatorsCollection.CreateIndicator(ind_type, params, sym_obj.Name(), target_tf);
-  //                 if(new_ind != NULL)
-  //                 {
-  //                    new_ind.SetShortName(name);
-  //                    m_IndicatorsCollection.GetList().Add(new_ind);
-  //                 }
-  //               }
-  //            }
-  //         }
-  //      }
-  //     Print("MyDebug CTimeSeriesEngine::ScanAndApplyIndicators END: Total IndicatorDE Objects list.Total()=",
-  //           m_IndicatorsCollection.GetList().Total());
-  //  }
+   } 
 #endif // CTIMESERIESENGINE_MQH_IMPLEMENTATION
 #endif // CTIMESERIESENGINE_MQH

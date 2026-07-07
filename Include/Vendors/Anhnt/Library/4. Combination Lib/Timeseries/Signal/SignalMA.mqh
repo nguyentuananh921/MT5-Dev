@@ -16,7 +16,7 @@ public:
                     CSignalMA(void);
    virtual          ~CSignalMA(void);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -30,23 +30,16 @@ CSignalMA::~CSignalMA(void)
   }
 
 //+------------------------------------------------------------------+
-//| Compute slope signal at bar and store in buffer                 |
+//| Compute slope signal at bar - pure math, no storage              |
 //+------------------------------------------------------------------+
-void CSignalMA::Update(int bar)
+double CSignalMA::ComputeAt(int bar) const
   {
    double v1 = Buf(0, bar);
    double v2 = Buf(0, bar + 1);
-   if(v1 == EMPTY_VALUE || v2 == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(v1 > v2)
-      SetAt(bar, SIGNAL_BUY);
-   else if(v1 < v2)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(v1 == EMPTY_VALUE || v2 == EMPTY_VALUE) return EMPTY_VALUE;
+   if(v1 > v2) return SIGNAL_BUF_BUY;
+   if(v1 < v2) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_MA_MQH__

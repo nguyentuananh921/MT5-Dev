@@ -23,7 +23,7 @@ public:
                     CSignalMACDLineCross(void);
    virtual          ~CSignalMACDLineCross(void);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -37,24 +37,17 @@ CSignalMACDLineCross::~CSignalMACDLineCross(void)
   }
 
 //+------------------------------------------------------------------+
-void CSignalMACDLineCross::Update(int bar)
+double CSignalMACDLineCross::ComputeAt(int bar) const
   {
    double macd1 = Buf(0, bar);
    double sig1  = Buf(1, bar);
    double macd2 = Buf(0, bar + 1);
    double sig2  = Buf(1, bar + 1);
    if(macd1 == EMPTY_VALUE || sig1 == EMPTY_VALUE ||
-      macd2 == EMPTY_VALUE || sig2 == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(macd1 > sig1 && macd2 <= sig2)
-      SetAt(bar, SIGNAL_BUY);
-   else if(macd1 < sig1 && macd2 >= sig2)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+      macd2 == EMPTY_VALUE || sig2 == EMPTY_VALUE) return EMPTY_VALUE;
+   if(macd1 > sig1 && macd2 <= sig2) return SIGNAL_BUF_BUY;
+   if(macd1 < sig1 && macd2 >= sig2) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 //+------------------------------------------------------------------+
@@ -66,7 +59,7 @@ public:
                     CSignalMACDZeroCross(void);
    virtual          ~CSignalMACDZeroCross(void);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -80,21 +73,14 @@ CSignalMACDZeroCross::~CSignalMACDZeroCross(void)
   }
 
 //+------------------------------------------------------------------+
-void CSignalMACDZeroCross::Update(int bar)
+double CSignalMACDZeroCross::ComputeAt(int bar) const
   {
    double v1 = Buf(0, bar);
    double v2 = Buf(0, bar + 1);
-   if(v1 == EMPTY_VALUE || v2 == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(v1 > 0.0 && v2 <= 0.0)
-      SetAt(bar, SIGNAL_BUY);
-   else if(v1 < 0.0 && v2 >= 0.0)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(v1 == EMPTY_VALUE || v2 == EMPTY_VALUE) return EMPTY_VALUE;
+   if(v1 > 0.0 && v2 <= 0.0) return SIGNAL_BUF_BUY;
+   if(v1 < 0.0 && v2 >= 0.0) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_MACD_MQH__

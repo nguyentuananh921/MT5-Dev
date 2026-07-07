@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                      MenuBar.mqh |
-//|                        Copyright 2015, MetaQuotes Software Corp. |
-//|Lib Link https://www.mql5.com/en/code/19703                       |
+//|                        Copyright 2018, MetaQuotes Software Corp. |
+//|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 //| Class for creating the main menu                                 |

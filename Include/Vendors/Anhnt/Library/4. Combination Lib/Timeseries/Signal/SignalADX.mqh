@@ -22,7 +22,7 @@ public:
 
    void             SetMinStrength(double min_adx);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -45,7 +45,7 @@ void CSignalADX::SetMinStrength(double min_adx)
 //+------------------------------------------------------------------+
 //| Detect DI+/DI- crossover; gate by ADX strength if configured   |
 //+------------------------------------------------------------------+
-void CSignalADX::Update(int bar)
+double CSignalADX::ComputeAt(int bar) const
   {
    double adx  = Buf(0, bar);
    double diP1 = Buf(1, bar);
@@ -53,22 +53,11 @@ void CSignalADX::Update(int bar)
    double diP2 = Buf(1, bar + 1);
    double diM2 = Buf(2, bar + 1);
    if(adx  == EMPTY_VALUE || diP1 == EMPTY_VALUE ||
-      diM1 == EMPTY_VALUE || diP2 == EMPTY_VALUE || diM2 == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(m_min_adx > 0.0 && adx < m_min_adx)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(diP1 > diM1 && diP2 <= diM2)
-      SetAt(bar, SIGNAL_BUY);
-   else if(diP1 < diM1 && diP2 >= diM2)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+      diM1 == EMPTY_VALUE || diP2 == EMPTY_VALUE || diM2 == EMPTY_VALUE) return EMPTY_VALUE;
+   if(m_min_adx > 0.0 && adx < m_min_adx) return EMPTY_VALUE;
+   if(diP1 > diM1 && diP2 <= diM2) return SIGNAL_BUF_BUY;
+   if(diP1 < diM1 && diP2 >= diM2) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_ADX_MQH__

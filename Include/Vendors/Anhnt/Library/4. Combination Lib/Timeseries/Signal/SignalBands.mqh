@@ -22,7 +22,7 @@ public:
                     CSignalBollinger(void);
    virtual          ~CSignalBollinger(void);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -36,32 +36,17 @@ CSignalBollinger::~CSignalBollinger(void)
   }
 
 //+------------------------------------------------------------------+
-void CSignalBollinger::Update(int bar)
+double CSignalBollinger::ComputeAt(int bar) const
   {
-   if(m_ind == NULL)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+   if(m_indicator == NULL) return EMPTY_VALUE;
    double upper = Buf(0, bar);
    double lower = Buf(1, bar);
-   if(upper == EMPTY_VALUE || lower == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+   if(upper == EMPTY_VALUE || lower == EMPTY_VALUE) return EMPTY_VALUE;
    double close[1];
-   if(::CopyClose(m_ind.Symbol(), m_ind.Timeframe(), bar, 1, close) != 1)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(close[0] < lower)
-      SetAt(bar, SIGNAL_BUY);
-   else if(close[0] > upper)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(::CopyClose(m_indicator.Symbol(), m_indicator.Timeframe(), bar, 1, close) != 1) return EMPTY_VALUE;
+   if(close[0] < lower) return SIGNAL_BUF_BUY;
+   if(close[0] > upper) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 //+------------------------------------------------------------------+
@@ -73,7 +58,7 @@ public:
                     CSignalEnvelopes(void);
    virtual          ~CSignalEnvelopes(void);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -87,32 +72,17 @@ CSignalEnvelopes::~CSignalEnvelopes(void)
   }
 
 //+------------------------------------------------------------------+
-void CSignalEnvelopes::Update(int bar)
+double CSignalEnvelopes::ComputeAt(int bar) const
   {
-   if(m_ind == NULL)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+   if(m_indicator == NULL) return EMPTY_VALUE;
    double upper = Buf(0, bar);
    double lower = Buf(1, bar);
-   if(upper == EMPTY_VALUE || lower == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+   if(upper == EMPTY_VALUE || lower == EMPTY_VALUE) return EMPTY_VALUE;
    double close[1];
-   if(::CopyClose(m_ind.Symbol(), m_ind.Timeframe(), bar, 1, close) != 1)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(close[0] < lower)
-      SetAt(bar, SIGNAL_BUY);
-   else if(close[0] > upper)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(::CopyClose(m_indicator.Symbol(), m_indicator.Timeframe(), bar, 1, close) != 1) return EMPTY_VALUE;
+   if(close[0] < lower) return SIGNAL_BUF_BUY;
+   if(close[0] > upper) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_BANDS_MQH__

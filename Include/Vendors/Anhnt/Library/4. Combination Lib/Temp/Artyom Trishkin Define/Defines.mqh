@@ -20,7 +20,7 @@
   //+------------------------------------------------------------------+
   //| Resources                                                        |
   //+------------------------------------------------------------------+
-  //#define PATH_TO_EVENT_CTRL_IND         "Indicators\\Vendors\\Artyom Trishkin\\DoEasy\\EventControl.ex5"
+  #define PATH_TO_EVENT_CTRL_IND         "Indicators\\Vendors\\Artyom Trishkin\\DoEasy\\EventControl.ex5"
   //\\Vendors\\Artyom Trishkin\\DoEasy
   //+------------------------------------------------------------------+
 

@@ -23,7 +23,7 @@ public:
 
    void             SetZeroLevel(double level);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -44,23 +44,16 @@ void CSignalZeroCross::SetZeroLevel(double level)
   }
 
 //+------------------------------------------------------------------+
-//| Detect cross of zero_level between bar and bar+1                |
+//| Detect cross of zero_level between bar and bar+1 - pure math    |
 //+------------------------------------------------------------------+
-void CSignalZeroCross::Update(int bar)
+double CSignalZeroCross::ComputeAt(int bar) const
   {
    double v1 = Buf(0, bar);
    double v2 = Buf(0, bar + 1);
-   if(v1 == EMPTY_VALUE || v2 == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(v1 > m_zero_level && v2 <= m_zero_level)
-      SetAt(bar, SIGNAL_BUY);
-   else if(v1 < m_zero_level && v2 >= m_zero_level)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(v1 == EMPTY_VALUE || v2 == EMPTY_VALUE) return EMPTY_VALUE;
+   if(v1 > m_zero_level && v2 <= m_zero_level) return SIGNAL_BUF_BUY;
+   if(v1 < m_zero_level && v2 >= m_zero_level) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_ZEROCROSS_MQH__

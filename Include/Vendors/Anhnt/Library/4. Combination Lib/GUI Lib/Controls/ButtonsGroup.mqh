@@ -5,6 +5,7 @@
 //+------------------------------------------------------------------+
 #ifndef __BUTTONSGROUP_MQH__
 #define __BUTTONSGROUP_MQH__
+#include "..\..\Defines\ImageDataDefine.mqh"
 #include "..\Element.mqh"
 #include "Button.mqh"
 //+------------------------------------------------------------------+

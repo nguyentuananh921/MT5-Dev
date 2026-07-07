@@ -15,7 +15,7 @@ public:
                     CSignalSAR(void);
    virtual          ~CSignalSAR(void);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -29,33 +29,18 @@ CSignalSAR::~CSignalSAR(void)
   }
 
 //+------------------------------------------------------------------+
-//| Compare SAR to close at bar and store in buffer                 |
+//| Compare SAR to close at bar - pure math, no storage             |
 //+------------------------------------------------------------------+
-void CSignalSAR::Update(int bar)
+double CSignalSAR::ComputeAt(int bar) const
   {
-   if(m_ind == NULL)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+   if(m_indicator == NULL) return EMPTY_VALUE;
    double sar = Buf(0, bar);
-   if(sar == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
+   if(sar == EMPTY_VALUE) return EMPTY_VALUE;
    double close[1];
-   if(::CopyClose(m_ind.Symbol(), m_ind.Timeframe(), bar, 1, close) != 1)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(sar < close[0])
-      SetAt(bar, SIGNAL_BUY);
-   else if(sar > close[0])
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(::CopyClose(m_indicator.Symbol(), m_indicator.Timeframe(), bar, 1, close) != 1) return EMPTY_VALUE;
+   if(sar < close[0]) return SIGNAL_BUF_BUY;
+   if(sar > close[0]) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_SAR_MQH__

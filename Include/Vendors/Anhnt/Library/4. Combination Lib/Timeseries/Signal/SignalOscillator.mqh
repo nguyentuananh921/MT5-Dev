@@ -29,7 +29,7 @@ public:
 
    void             SetThresholds(double overbought, double oversold);
 
-   virtual void     Update(int bar = 1);
+   virtual double   ComputeAt(int bar) const;
   };
 
 //+------------------------------------------------------------------+
@@ -52,22 +52,15 @@ void CSignalOscillator::SetThresholds(double overbought, double oversold)
   }
 
 //+------------------------------------------------------------------+
-//| Compare value to thresholds and store result in buffer          |
+//| Compare value to thresholds - pure math, no storage              |
 //+------------------------------------------------------------------+
-void CSignalOscillator::Update(int bar)
+double CSignalOscillator::ComputeAt(int bar) const
   {
    double v = Buf(0, bar);
-   if(v == EMPTY_VALUE)
-     {
-      SetAt(bar, SIGNAL_NONE);
-      return;
-     }
-   if(v < m_oversold)
-      SetAt(bar, SIGNAL_BUY);
-   else if(v > m_overbought)
-      SetAt(bar, SIGNAL_SELL);
-   else
-      SetAt(bar, SIGNAL_NONE);
+   if(v == EMPTY_VALUE) return EMPTY_VALUE;
+   if(v < m_oversold) return SIGNAL_BUF_BUY;
+   if(v > m_overbought) return SIGNAL_BUF_SELL;
+   return EMPTY_VALUE;
   }
 
 #endif // __SIGNAL_OSCILLATOR_MQH__

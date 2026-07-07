@@ -43,6 +43,7 @@
    #include "Controls\TreeItem.mqh"
    #include "Controls\TreeView.mqh"
    #include "Controls\Window.mqh"
+   #include "Controls\SplitContainer.mqh"
  // --- Reserve size of arrays
  #define RESERVE_SIZE_ARRAY 1000
  class CWndContainer
