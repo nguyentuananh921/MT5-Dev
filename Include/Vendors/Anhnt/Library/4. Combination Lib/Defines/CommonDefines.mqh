@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                               CommonDefines.mqh
-//|  Extracted from Artyom Trishkin's DoEasy Defines.mqh            |
+//|  Extracted from Artyom Trishkin's DoEasy Defines.mqh             |
+//|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #ifndef __COMMON_DEFINES_MQH__
 #define __COMMON_DEFINES_MQH__
@@ -95,7 +96,7 @@
  //--- Collection list IDs
   #define COLLECTION_HISTORY_ID          (0x777A)                   // Historical collection list ID
   #define COLLECTION_MARKET_ID           (0x777B)                   // Market collection list ID
-  #define COLLECTION_EVENTS_ID           (0x777C)                   // Event collection list ID
+  #define COLLECTION_TRADE_EVENTS_ID     (0x777C)                   // Event collection list ID
   #define COLLECTION_ACCOUNT_ID          (0x777D)                   // Account collection list ID
   #define COLLECTION_SYMBOLS_ID          (0x777E)                   // Symbol collection list ID
   #define COLLECTION_SERIES_ID           (0x777F)                   // Timeseries collection list ID

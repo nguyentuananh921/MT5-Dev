@@ -1,6 +1,8 @@
 //+------------------------------------------------------------------+
-//|                                              CommonSelect.mqh     |
+//|                                              CommonSelect.mqh    |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
+//| Extracted from Artyom Trishkin's DoEasy Select.mqh              |
+//| Topic link: https://www.mql5.com/en/articles/5687                 |
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
 #ifndef __COMMON_SELECT_MQH__
@@ -55,5 +57,4 @@
       }
     //+------------------------------------------------------------------+
   #endif // CCOMMON_SELECT_MQH_IMPLEMENTATION
-
 #endif // __COMMON_SELECT_MQH__

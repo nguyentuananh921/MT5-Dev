@@ -2,3 +2,5 @@ Claude Mem
 Get-shit-done
 
 https://github.com/gsd-build/get-shit-done
+
+https://github.com/amazingloft999-droid/mattpocock-skills

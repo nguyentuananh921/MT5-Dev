@@ -28,15 +28,15 @@
     private:
      //Owns
       CBarTimeSeriesCollection  m_BarTimeSeriesCollection;        // BarTimeseries collection
-      CIndicatorsCollection     m_IndicatorsCollection; //Indicator collection
-      CMBookSeriesCollection    m_MBookSeriesCollection;           // Collection of DOM series
+      CIndicatorsCollection     m_IndicatorsCollection;           //Indicator collection
+      CMBookSeriesCollection    m_MBookSeriesCollection;          // Collection of DOM series
       //CTickSeriesCollection     m_tick_series;         // Collection of tick series
       CSignalsCollection        m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
       CBarPatternsControl       m_pattern_cfg;           // Pattern registry (applied to new TF series)
       SDataCalculate            m_last_data_calc;
       CTimeCounter              m_bg_counter;
     //Borrow      
-      CSymbolsCollection        *m_symbol_collection;               // Symbol collection
+      CSymbolsCollection        *m_symbol_collection;    // Symbol collection
     //For indicator
       int                       LoadIndicatorFromJSON(const string filename);
     //For Signal - freeze bar 1 of any (symbol,TF) that just got a SERIES_EVENTS_NEW_BAR event

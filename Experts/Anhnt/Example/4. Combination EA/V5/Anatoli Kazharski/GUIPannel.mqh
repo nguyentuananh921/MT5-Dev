@@ -150,7 +150,7 @@
          bool                          CreateIndicatorTable(const int x, const int y);
          void                          SetValuesToIndicatorTable(void);
          
-       //-------
+       //Event handler
         void                          OnClickShowLine(const string sname, const int row);
         void                          OnClickToggleBuySignal(const string sname, const int row);
         void                          OnClickToggleSellSignal(const string sname, const int row);
@@ -609,40 +609,40 @@
     // =====================================================================
     // --- Create Panel2 container + both sub-tabs, called from CreateTreeView_Indicator()
     // =====================================================================
-    bool CGUIPannel::CreateConfigDetailTabs(const int x_gap, const int y_gap)
-      {
-       // --- Panel2 m_split_container container for m_tabs_indicator_config tab_Settings
-        m_tabs_indicator_config.MainPointer(m_split_container);
-        m_tabs_indicator_config.IsCenterText(true);
-        m_tabs_indicator_config.PositionMode(TABS_TOP);
-        m_tabs_indicator_config.AutoXResizeMode(true);
-        m_tabs_indicator_config.AutoYResizeMode(true);
-        m_tabs_indicator_config.AddTab("Params", 70);
-        m_tabs_indicator_config.AddTab("Info", 70);
-       // --- Tạo thẳng ở đúng vị trí Panel2 (sau splitter), không tạo ở x_gap rồi dịch lại sau
-        if(!m_tabs_indicator_config.CreateTabs(m_split_container.SplitX() + 4, y_gap)) return false;
-        CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_tabs_indicator_config);
-        m_split_container.SetPanel2(m_tabs_indicator_config);
-        if(!CreateParamsTab(5, 5)) return false;
-        if(!CreateIndicatorTable(5, 5)) return false;
-        m_tabs_indicator_config.CElementBase::IsVisible(true);
-        m_tabs_indicator_config.ShowTabElements();
-       //Debug 
-        Print("My Debug CGUIPannel::CreateConfigDetailTabs AFTER ShowTabElements btn IsVisible=", m_btn_add_indicator.IsVisible(),
-          " selected_tab=", m_tabs_indicator_config.SelectedTab());
-          string btn_obj = m_btn_add_indicator.CanvasPointer().ChartObjectName();
-        Print("My Debug CGUIPannel::CreateConfigDetailTabs btn NATIVE obj=", btn_obj,
-            " exists_subwin=", ObjectFind(0, btn_obj),
-            " X=", ObjectGetInteger(0, btn_obj, OBJPROP_XDISTANCE),
-            " Y=", ObjectGetInteger(0, btn_obj, OBJPROP_YDISTANCE),
-            " XSIZE=", ObjectGetInteger(0, btn_obj, OBJPROP_XSIZE),
-            " YSIZE=", ObjectGetInteger(0, btn_obj, OBJPROP_YSIZE),
-            " TIMEFRAMES=", ObjectGetInteger(0, btn_obj, OBJPROP_TIMEFRAMES),
-            " ZORDER=", ObjectGetInteger(0, btn_obj, OBJPROP_ZORDER),
-            " HIDDEN=", ObjectGetInteger(0, btn_obj, OBJPROP_HIDDEN),
-            " BACK=", ObjectGetInteger(0, btn_obj, OBJPROP_BACK));
-       return true;
-      }
+      // bool CGUIPannel::CreateConfigDetailTabs(const int x_gap, const int y_gap)
+      //   {
+      //    // --- Panel2 m_split_container container for m_tabs_indicator_config tab_Settings
+      //     m_tabs_indicator_config.MainPointer(m_split_container);
+      //     m_tabs_indicator_config.IsCenterText(true);
+      //     m_tabs_indicator_config.PositionMode(TABS_TOP);
+      //     m_tabs_indicator_config.AutoXResizeMode(true);
+      //     m_tabs_indicator_config.AutoYResizeMode(true);
+      //     m_tabs_indicator_config.AddTab("Params", 70);
+      //     m_tabs_indicator_config.AddTab("Info", 70);
+      //    // --- Tạo thẳng ở đúng vị trí Panel2 (sau splitter), không tạo ở x_gap rồi dịch lại sau
+      //     if(!m_tabs_indicator_config.CreateTabs(m_split_container.SplitX() + 4, y_gap)) return false;
+      //     CWndContainer::AddToElementsArray(WindowIdx(m_Mainwindow), m_tabs_indicator_config);
+      //     m_split_container.SetPanel2(m_tabs_indicator_config);
+      //     if(!CreateParamsTab(5, 5)) return false;
+      //     if(!CreateIndicatorTable(5, 5)) return false;
+      //     m_tabs_indicator_config.CElementBase::IsVisible(true);
+      //     m_tabs_indicator_config.ShowTabElements();
+      //    //Debug 
+      //     Print("My Debug CGUIPannel::CreateConfigDetailTabs AFTER ShowTabElements btn IsVisible=", m_btn_add_indicator.IsVisible(),
+      //       " selected_tab=", m_tabs_indicator_config.SelectedTab());
+      //       string btn_obj = m_btn_add_indicator.CanvasPointer().ChartObjectName();
+      //     Print("My Debug CGUIPannel::CreateConfigDetailTabs btn NATIVE obj=", btn_obj,
+      //         " exists_subwin=", ObjectFind(0, btn_obj),
+      //         " X=", ObjectGetInteger(0, btn_obj, OBJPROP_XDISTANCE),
+      //         " Y=", ObjectGetInteger(0, btn_obj, OBJPROP_YDISTANCE),
+      //         " XSIZE=", ObjectGetInteger(0, btn_obj, OBJPROP_XSIZE),
+      //         " YSIZE=", ObjectGetInteger(0, btn_obj, OBJPROP_YSIZE),
+      //         " TIMEFRAMES=", ObjectGetInteger(0, btn_obj, OBJPROP_TIMEFRAMES),
+      //         " ZORDER=", ObjectGetInteger(0, btn_obj, OBJPROP_ZORDER),
+      //         " HIDDEN=", ObjectGetInteger(0, btn_obj, OBJPROP_HIDDEN),
+      //         " BACK=", ObjectGetInteger(0, btn_obj, OBJPROP_BACK));
+      //    return true;
+      //   }
     // =====================================================================
     // --- Info tab: port of V4 m_indicator_table, same 5-column layout
     // =====================================================================

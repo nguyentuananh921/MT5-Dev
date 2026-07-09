@@ -1,7 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                                   GUIDefines.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//| Merged from: Defines.mqh, Enums.mqh, ControlsDefines.mqh        |
+//|Lib Link https://www.mql5.com/en/code/19703                       |
+//| Merged from: Defines.mqh, Enums.mqh, ControlsDefines.mqh         |
+
 //+------------------------------------------------------------------+
 #ifndef __GUIDEFINES_MQH__
 #define __GUIDEFINES_MQH__

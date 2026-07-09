@@ -42,7 +42,7 @@
         else
            break;
        }
-    return pos;
+     return pos;
     }
   //--- read a "quoted string" starting at the opening quote, return pos after closing quote
   int IndicatorConfig_ReadString(const string &s, int pos, string &out)

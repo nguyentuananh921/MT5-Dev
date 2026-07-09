@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                              ChartSelect.mqh     |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
+//|  Extracted from Artyom Trishkin's DoEasy Select.mqh              |
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+

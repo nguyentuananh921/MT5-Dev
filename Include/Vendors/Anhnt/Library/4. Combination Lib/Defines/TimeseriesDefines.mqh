@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                             TimeseriesDefines.mqh
 //|  Extracted from Artyom Trishkin's DoEasy Defines.mqh             |
+//|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #ifndef __TIMESERIES_DEFINES_MQH__
 #define __TIMESERIES_DEFINES_MQH__

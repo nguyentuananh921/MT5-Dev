@@ -1,14 +1,14 @@
 //+------------------------------------------------------------------+
 //|                                              TradingSelect.mqh   |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
+//|  Extracted from Artyom Trishkin's DoEasy Select.mqh              |
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
-#ifndef __TRADING_SELECT_MQH__
-#define __TRADING_SELECT_MQH__
-
 #property copyright "Copyright 2020, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
+#ifndef __TRADING_SELECT_MQH__
+#define __TRADING_SELECT_MQH__
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+

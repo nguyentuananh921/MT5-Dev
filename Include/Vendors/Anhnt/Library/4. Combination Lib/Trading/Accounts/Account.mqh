@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                      Account.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
+//|Topic link: https://www.mql5.com/en/articles/7258                 |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #ifndef __ACCOUNT_MQH__

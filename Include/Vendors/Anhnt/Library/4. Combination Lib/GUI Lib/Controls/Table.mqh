@@ -27,7 +27,7 @@
         CPointer          m_column_resize;
       // --- Table cell properties
       struct CTCell
-      {
+       {
         ENUM_TYPE_CELL    m_type;           // Cell type
         CImage            m_images[];       // Image array
         int               m_selected_image; // Index of the selected (displayed) picture
@@ -38,10 +38,10 @@
         color             m_text_color;     // Text color
         color             m_back_color;     // Background color
         uint              m_digits;         // Number of decimal places
-      };
+       };
       // --- Array of rows and table column properties
       struct CTOptions
-      {
+       {
         int               m_x;              // X-coordinate of the left edge of the column
         int               m_x2;             // X-coordinate of the right edge of the column
         int               m_width;          // Column width
@@ -52,14 +52,14 @@
         int               m_image_y_offset; // Indent of the image from the Y-edge of the cell
         string            m_header_text;    // Column header text
         CTCell            m_rows[];         // Array of table rows
-      };
+       };
       CTOptions         m_columns[];
       // --- Array of table row properties
       struct CTRowOptions
-      {
+       {
         int               m_y;  // Y-coordinate of the top edge of the string
         int               m_y2; // Y-coordinate of the bottom edge of the line
-      };
+       };
       CTRowOptions      m_rows[];
       // --- Number of rows and columns
         uint              m_rows_total;
@@ -1010,7 +1010,7 @@
   // | Creates a cursor pointer for changing column widths |
   //+------------------------------------------------------------------+
   bool CTable::CreateColumnResizePointer(void)
-    {
+   {
     // --- Exit if column width change mode is disabled
       if(!m_column_resize_mode)
         {
@@ -1030,7 +1030,7 @@
          return(false);
     //---
       return(true);
-    }
+   }
   //+------------------------------------------------------------------+
   // | Returns the number of visible rows |
   //+------------------------------------------------------------------+
@@ -1452,16 +1452,16 @@
   //+------------------------------------------------------------------+
   void CTable::SetImages(const uint column_index,const uint row_index,const string &bmp_file_path[])
    {
-   // --- Check for out of range
+     // --- Check for out of range
       if(!CheckOutOfRange(column_index,row_index))
          return;
-   // --- Exit if a zero-size array is passed
+     // --- Exit if a zero-size array is passed
       int total=0;
       if((total=::ArraySize(bmp_file_path))<1)
          return;
-   // --- Set new size to arrays
+     // --- Set new size to arrays
       ::ArrayResize(m_columns[column_index].m_rows[row_index].m_images,total);
-   //---
+     //---
       for(int i=0; i<total; i++)
          {
          // --- By default, the first image of the array is selected
@@ -1956,12 +1956,12 @@
     // --- If (1) row selection mode is enabled and (2) the element in the cell is not engaged
       if(m_selectable_row && !is_cell_element)
          {
-         OnSelectRow(r);
-         // --- Change color
-         RedrawRow(true);
-         m_table.Update();
+          OnSelectRow(r);
+          // --- Change color
+           RedrawRow(true);
+           m_table.Update();
          // --- We will send a message about this
-         ::EventChartCustom(m_chart_id,ON_CLICK_LIST_ITEM,CElementBase::Id(),m_selected_item,string(c)+"_"+string(r));
+           ::EventChartCustom(m_chart_id,ON_CLICK_LIST_ITEM,CElementBase::Id(),m_selected_item,string(c)+"_"+string(r));
          }
     //---
       return(true);
@@ -2177,8 +2177,8 @@
     // --- Exit if there are no pictures in the cell
       if(ImagesTotal(column_index,row_index)<2)
          {
-         ::Print(__FUNCTION__," > Установите минимум две картинки для ячейки-чекбокса!");
-         return(false);
+          ::Print(__FUNCTION__," > Установите минимум две картинки для ячейки-чекбокса!");
+          return(false);
          }
     // --- Get relative coordinates under the mouse cursor
       int x=m_mouse.RelativeX(m_table);
@@ -3111,14 +3111,14 @@
       VisibleTableIndexes();
     // --- Looking for focus
       for(uint i=m_visible_table_from_index; i<m_visible_table_to_index; i++)
-         {
+       {
          // --- If the line focus has changed
          if(y>m_rows[i].m_y && y<=m_rows[i].m_y2)
             {
             item_index_focus=(int)i;
             break;
             }
-         }
+       }
     // --- Return the index of the row in focus
       return(item_index_focus);
    }

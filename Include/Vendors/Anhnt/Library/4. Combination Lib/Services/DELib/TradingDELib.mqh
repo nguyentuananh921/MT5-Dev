@@ -1,13 +1,14 @@
 //+------------------------------------------------------------------+
 //|                                              TradingDELib.mqh    |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
-//| Lib https://www.mql5.com/en/articles/14710                       |
+//|  Extracted from Artyom Trishkin's DoEasy DELib.mqh            |
+//|Topic link: https://www.mql5.com/en/articles/5654                 |
+//|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
-#ifndef __TRADING_DELIB_MQH__
-#define __TRADING_DELIB_MQH__
-
 #property copyright "Copyright 2020, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
+#ifndef __TRADING_DELIB_MQH__
+#define __TRADING_DELIB_MQH__
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+
@@ -241,25 +242,26 @@ string OrderTypeDescription(const ENUM_ORDER_TYPE type, bool as_order=true, bool
         (
           !prefix_for_market_order ? "" :
           #ifdef __MQL5__   CMessage::Text(MSG_ORD_MARKET)
-          #else /*(MQL4)*/ (as_order ? CMessage::Text(MSG_ORD_MARKET) : CMessage::Text(MSG_ORD_POSITION)) #endif
+          #else /*(MQL4)*/ (as_order ? CMessage::Text(MSG_ORD_MARKET) : CMessage::Text(MSG_ORD_POSITION)) 
+          #endif
         );
     return
         (
-          type==ORDER_TYPE_BUY_LIMIT               ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Buy Limit"               :
-          type==ORDER_TYPE_BUY_STOP                ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Buy Stop"                 :
-          type==ORDER_TYPE_SELL_LIMIT              ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Sell Limit"               :
-          type==ORDER_TYPE_SELL_STOP               ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Sell Stop"                :
+           type==ORDER_TYPE_BUY_LIMIT               ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Buy Limit"               :
+           type==ORDER_TYPE_BUY_STOP                ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Buy Stop"                 :
+           type==ORDER_TYPE_SELL_LIMIT              ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Sell Limit"               :
+           type==ORDER_TYPE_SELL_STOP               ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Sell Stop"                :
           #ifdef __MQL5__
-          type==ORDER_TYPE_BUY_STOP_LIMIT          ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Buy Stop Limit"           :
-          type==ORDER_TYPE_SELL_STOP_LIMIT         ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Sell Stop Limit"          :
-          type==ORDER_TYPE_CLOSE_BY               ? CMessage::Text(MSG_ORD_CLOSE_BY)                                             :
+           type==ORDER_TYPE_BUY_STOP_LIMIT          ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Buy Stop Limit"           :
+           type==ORDER_TYPE_SELL_STOP_LIMIT         ? (descr ? CMessage::Text(MSG_ORD_PENDING) : "")+"  Sell Stop Limit"          :
+           type==ORDER_TYPE_CLOSE_BY               ? CMessage::Text(MSG_ORD_CLOSE_BY)                                             :
           #else
-          type==ORDER_TYPE_BALANCE               ? CMessage::Text(MSG_LIB_PROP_BALANCE)                                          :
-          type==ORDER_TYPE_CREDIT                ? CMessage::Text(MSG_LIB_PROP_CREDIT)                                           :
+           type==ORDER_TYPE_BALANCE               ? CMessage::Text(MSG_LIB_PROP_BALANCE)                                          :
+           type==ORDER_TYPE_CREDIT                ? CMessage::Text(MSG_LIB_PROP_CREDIT)                                           :
           #endif
-          type==ORDER_TYPE_BUY                   ? pref+"  Buy"                                                                  :
-          type==ORDER_TYPE_SELL                  ? pref+"  Sell"                                                                 :
-          CMessage::Text(MSG_ORD_UNKNOWN_TYPE)
+           type==ORDER_TYPE_BUY                   ? pref+"  Buy"                                                                  :
+           type==ORDER_TYPE_SELL                  ? pref+"  Sell"                                                                 :
+           CMessage::Text(MSG_ORD_UNKNOWN_TYPE)
         );
   }
 //+------------------------------------------------------------------+

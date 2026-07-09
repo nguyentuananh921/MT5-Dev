@@ -35,11 +35,11 @@
     {
      private:
        //CollCollection
-        CAccountsCollection      m_accounts;       // Account collection
-        CSymbolsCollection       m_symbol_collection;        //For sybols information at tab Trade
-        CMarketCollection        m_market;         // Collection of market orders and deals
-        CHistoryCollection       m_history;        // Collection of historical orders and deals
-        CTradeEventsCollection   m_trade_events;   // Collection of events
+        CAccountsCollection      m_accounts;            // Account collection
+        CSymbolsCollection       m_symbol_collection;   //For sybols information at tab Trade
+        CMarketCollection        m_market;              // Collection of market orders and deals
+        CHistoryCollection       m_history_collection;  // Collection of historical orders and deals
+        CTradeEventsCollection   m_trade_events;        // Collection of events
 
         bool                     m_is_market_trade_event;  // Account trading event flag
         bool                     m_is_history_trade_event; // Account history trading event flag
