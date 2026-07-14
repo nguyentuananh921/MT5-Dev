@@ -1247,6 +1247,11 @@
          ::ArrayResize(m_rows,m_rows_total);
          ::ArrayResize(m_columns[i].m_rows,m_rows_total);
         }
+    //Modify Library note Add here to fix 
+    // --- Reset hover/focus row indices - the rows just shrank and these may point past the
+    //     new row count; next mouse move re-detects the hovered row via CheckRowFocus()
+      m_item_index_focus      =WRONG_VALUE;
+      m_prev_item_index_focus =WRONG_VALUE;
     // --- Calculate and set new table dimensions
       RecalculateAndResizeTable(redraw);
    }
@@ -1257,6 +1262,10 @@
    {
     // --- Set dimension
       TableSize(m_columns_total,1,false);
+    //Modify Library note Add here to fix
+    // --- Reset hover/focus row indices - same reason as in DeleteRow
+      m_item_index_focus      =WRONG_VALUE;
+      m_prev_item_index_focus =WRONG_VALUE;
     // --- Clear cells
       for(uint i=0; i<m_columns_total; i++)
         {
@@ -2771,23 +2780,27 @@
     // --- Selected image in the cell and its dimensions
       int  selected_image =m_columns[column_index].m_rows[row_index].m_selected_image;
       uint image_height   =m_columns[column_index].m_rows[row_index].m_images[selected_image].Height();
-      uint image_width    =m_columns[column_index].m_rows[row_index].m_images[selected_image].Width();
+      uint image_width    =m_columns[column_index].m_rows[row_index].m_images[selected_image].Width(); 
     // --- Draw
       for(uint ly=0,i=0; ly<image_height; ly++)
          {
          for(uint lx=0; lx<image_width; lx++,i++)
-            {
+          {
             // ---If there is no color, move to the next pixel
-            if(m_columns[column_index].m_rows[row_index].m_images[selected_image].Data(i)<1)
+             if(m_columns[column_index].m_rows[row_index].m_images[selected_image].Data(i)<1)
                continue;
             // --- Get the color of the bottom layer (cell background) and the color of the specified pixel in the image
-            uint background  =(row_index==m_selected_item)? m_selected_row_color : m_canvas.PixelGet(x+lx,y+ly);
-            uint pixel_color =m_columns[column_index].m_rows[row_index].m_images[selected_image].Data(i);
+              //Original 
+                //uint background  =(row_index==m_selected_item)? m_selected_row_color : m_canvas.PixelGet(x+lx,y+ly);
+              //New ver
+                uint background  =(row_index==m_selected_item)? m_selected_row_color : m_table.PixelGet(x+lx,y+ly);
+
+             uint pixel_color =m_columns[column_index].m_rows[row_index].m_images[selected_image].Data(i);
             // --- Mix colors
-            uint foreground=::ColorToARGB(m_clr.BlendColors(background,pixel_color));
+             uint foreground=::ColorToARGB(m_clr.BlendColors(background,pixel_color));
             // --- Drawing a pixel of the layered image
             m_table.PixelSet(x+lx,y+ly,foreground);
-            }
+           }
          }
    }
    //+------------------------------------------------------------------+

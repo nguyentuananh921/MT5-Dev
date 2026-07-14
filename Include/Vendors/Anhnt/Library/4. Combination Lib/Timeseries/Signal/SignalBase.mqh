@@ -27,7 +27,11 @@
 #endif
 
 //+------------------------------------------------------------------+
-class CSignalBase
+// CBaseObj-derived like every other PureData object (CIndicatorDE, CBar, CSymbol...):
+// lives inside CListObj collections, and each concrete subclass sets this.m_type to its
+// own OBJECT_DE_TYPE_SIGNAL_* id in its constructor (CommonDefines object type list).
+// CSignalsCollection stores and OWNS the instances in its CListObj m_list.
+class CSignalBase : public CBaseObj
   {
    protected:
      // BORROWED - CIndicatorsCollection owns the CIndicatorDE. CSignalsCollection guarantees

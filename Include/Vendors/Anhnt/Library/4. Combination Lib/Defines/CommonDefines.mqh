@@ -1,11 +1,10 @@
 //+------------------------------------------------------------------+
-//|                                               CommonDefines.mqh
+//|                                               CommonDefines.mqh  |
 //|  Extracted from Artyom Trishkin's DoEasy Defines.mqh             |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #ifndef __COMMON_DEFINES_MQH__
 #define __COMMON_DEFINES_MQH__
-
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+
@@ -22,7 +21,6 @@
   #define PATH_TO_EVENT_CTRL_IND         "Indicators\\Vendors\\Artyom Trishkin\\DoEasy\\EventControl.ex5"
   //\\Vendors\\Artyom Trishkin\\DoEasy
   //+------------------------------------------------------------------+
-
   //| Macro substitutions                                              |
   //+------------------------------------------------------------------+
   //--- Describe the function with the error line number
@@ -58,41 +56,41 @@
    #define COLLECTION_ACC_COUNTER_STEP    (16)                       // Account timer counter increment
    #define COLLECTION_ACC_COUNTER_ID      (2)                        // Account timer counter ID
   //--- Symbol collection timer 1 parameters
-  #define COLLECTION_SYM_PAUSE1          (100)                      // Pause of the symbol collection timer 1 in milliseconds (for scanning market watch symbols)
-  #define COLLECTION_SYM_COUNTER_STEP1   (16)                       // Increment of the symbol timer 1 counter
-  #define COLLECTION_SYM_COUNTER_ID1     (3)                        // Symbol timer 1 counter ID
- //--- Symbol collection timer 2 parameters
-  #define COLLECTION_SYM_PAUSE2          (300)                      // Pause of the symbol collection timer 2 in milliseconds (for events of the market watch symbol list)
-  #define COLLECTION_SYM_COUNTER_STEP2   (16)                       // Increment of the symbol timer 2 counter
-  #define COLLECTION_SYM_COUNTER_ID2     (4)                        // Symbol timer 2 counter ID
- //--- Trading class timer parameters
-  #define COLLECTION_REQ_PAUSE           (300)                      // Trading class timer pause in milliseconds
-  #define COLLECTION_REQ_COUNTER_STEP    (16)                       // Trading class timer counter increment
-  #define COLLECTION_REQ_COUNTER_ID      (5)                        // Trading class timer counter ID
+   #define COLLECTION_SYM_PAUSE1          (100)                      // Pause of the symbol collection timer 1 in milliseconds (for scanning market watch symbols)
+   #define COLLECTION_SYM_COUNTER_STEP1   (16)                       // Increment of the symbol timer 1 counter
+   #define COLLECTION_SYM_COUNTER_ID1     (3)                        // Symbol timer 1 counter ID
+  //--- Symbol collection timer 2 parameters
+   #define COLLECTION_SYM_PAUSE2          (300)                      // Pause of the symbol collection timer 2 in milliseconds (for events of the market watch symbol list)
+   #define COLLECTION_SYM_COUNTER_STEP2   (16)                       // Increment of the symbol timer 2 counter
+   #define COLLECTION_SYM_COUNTER_ID2     (4)                        // Symbol timer 2 counter ID
+  //--- Trading class timer parameters
+   #define COLLECTION_REQ_PAUSE           (300)                      // Trading class timer pause in milliseconds
+   #define COLLECTION_REQ_COUNTER_STEP    (16)                       // Trading class timer counter increment
+   #define COLLECTION_REQ_COUNTER_ID      (5)                        // Trading class timer counter ID
  //--- Parameters of the timeseries collection timer
-  #define COLLECTION_TS_PAUSE            (64)                       // Timeseries collection timer pause in milliseconds
-  #define COLLECTION_TS_COUNTER_STEP     (16)                       // Account timer counter increment
-  #define COLLECTION_TS_COUNTER_ID       (6)                        // Timeseries timer counter ID
+   #define COLLECTION_TS_PAUSE            (64)                       // Timeseries collection timer pause in milliseconds
+   #define COLLECTION_TS_COUNTER_STEP     (16)                       // Account timer counter increment
+   #define COLLECTION_TS_COUNTER_ID       (6)                        // Timeseries timer counter ID
  //--- Parameters of the timer of indicator data timeseries collection
-  #define COLLECTION_IND_TS_PAUSE        (64)                       // Pause of the timer of indicator data timeseries collection in milliseconds
-  #define COLLECTION_IND_TS_COUNTER_STEP (16)                       // Increment of indicator data timeseries timer counter
-  #define COLLECTION_IND_TS_COUNTER_ID   (7)                        // ID of indicator data timeseries timer counter
+   #define COLLECTION_IND_TS_PAUSE        (64)                       // Pause of the timer of indicator data timeseries collection in milliseconds
+   #define COLLECTION_IND_TS_COUNTER_STEP (16)                       // Increment of indicator data timeseries timer counter
+   #define COLLECTION_IND_TS_COUNTER_ID   (7)                        // ID of indicator data timeseries timer counter
  //--- Parameters of the tick series collection timer
-  #define COLLECTION_TICKS_PAUSE         (64)                       // Tick series collection timer pause in milliseconds
-  #define COLLECTION_TICKS_COUNTER_STEP  (16)                       // Tick series timer counter increment step
-  #define COLLECTION_TICKS_COUNTER_ID    (8)                        // Tick series timer counter ID
+   #define COLLECTION_TICKS_PAUSE         (64)                       // Tick series collection timer pause in milliseconds
+   #define COLLECTION_TICKS_COUNTER_STEP  (16)                       // Tick series timer counter increment step
+   #define COLLECTION_TICKS_COUNTER_ID    (8)                        // Tick series timer counter ID
  //--- Parameters of the chart collection timer
-  #define COLLECTION_CHARTS_PAUSE        (500)                      // Chart collection timer pause in milliseconds
-  #define COLLECTION_CHARTS_COUNTER_STEP (16)                       // Chart timer counter increment
-  #define COLLECTION_CHARTS_COUNTER_ID   (9)                        // Chart timer counter ID
+   #define COLLECTION_CHARTS_PAUSE        (500)                      // Chart collection timer pause in milliseconds
+   #define COLLECTION_CHARTS_COUNTER_STEP (16)                       // Chart timer counter increment step
+   #define COLLECTION_CHARTS_COUNTER_ID   (9)                        // Chart timer counter ID
  //--- Parameters of the graphical objects collection timer
-  #define COLLECTION_GRAPH_OBJ_PAUSE        (250)                   // Graphical objects collection timer pause in milliseconds
-  #define COLLECTION_GRAPH_OBJ_COUNTER_STEP (16)                    // Graphical objects timer counter increment
-  #define COLLECTION_GRAPH_OBJ_COUNTER_ID   (10)                    // Graphical objects timer counter ID
+   #define COLLECTION_GRAPH_OBJ_PAUSE        (250)                   // Graphical objects collection timer pause in milliseconds
+   #define COLLECTION_GRAPH_OBJ_COUNTER_STEP (16)                    // Graphical objects timer counter increment
+   #define COLLECTION_GRAPH_OBJ_COUNTER_ID   (10)                    // Graphical objects timer counter ID
  //--- Parameters of the timer for the collection of graphical elements on canvas
-  #define COLLECTION_GRAPH_ELM_PAUSE        (16)                    // Graphical elements collection timer pause in milliseconds
-  #define COLLECTION_GRAPH_ELM_COUNTER_STEP (16)                    // Graphical elements timer counter increment
-  #define COLLECTION_GRAPH_ELM_COUNTER_ID   (11)                    // Graphical elements timer counter ID
+   #define COLLECTION_GRAPH_ELM_PAUSE        (16)                    // Graphical elements collection timer pause in milliseconds
+   #define COLLECTION_GRAPH_ELM_COUNTER_STEP (16)                    // Graphical elements timer counter increment step
+   #define COLLECTION_GRAPH_ELM_COUNTER_ID   (11)                    // Graphical elements timer counter ID
  //--- Collection list IDs
   #define COLLECTION_HISTORY_ID          (0x777A)                   // Historical collection list ID
   #define COLLECTION_MARKET_ID           (0x777B)                   // Market collection list ID
@@ -110,7 +108,8 @@
   #define COLLECTION_CHARTS_ID           (0x7787)                   // Chart collection list ID
   #define COLLECTION_CHART_WND_ID        (0x7788)                   // Chart window list ID
   #define COLLECTION_GRAPH_OBJ_ID        (0x7789)                   // Graphical object collection list ID
-  #define COLLECTION_ID_LIST_END         (COLLECTION_GRAPH_OBJ_ID)  // End of collection ID list
+  #define COLLECTION_SIGNALS_ID          (0x778A)                   // Indicator signals collection list ID
+  #define COLLECTION_ID_LIST_END         (COLLECTION_SIGNALS_ID)    // End of collection ID list
  //--- Pending request type IDs
   #define PENDING_REQUEST_ID_TYPE_ERR    (1)                        // Type of a pending request created based on the server return code
   #define PENDING_REQUEST_ID_TYPE_REQ    (2)                        // Type of a pending request created by request
@@ -161,7 +160,7 @@
   #define CLR_DEF_CONTROL_STD_BACK_COLOR                (C'0xF0,0xF0,0xF0')  // Standard controls background color
   #define CLR_DEF_CONTROL_STD_MOUSE_DOWN                (C'0xC0,0xDC,0xF3')  // Color of standard control background when clicking on the control
   #define CLR_DEF_CONTROL_STD_MOUSE_OVER                (C'0xD8,0xE6,0xF2')  // Color of standard controls background when hovering the mouse over the control
-  #define CLR_DEF_CONTROL_STD_OPACITY                   (255)                // Opacity of standard controls background color 
+  #define CLR_DEF_CONTROL_STD_OPACITY                   (255)                // Opacity of standard controls background color
   #define CLR_DEF_CONTROL_STD_BACK_COLOR_ON             (C'0xC9,0xDE,0xD0')  // Background color of standard controls which are on
   #define CLR_DEF_CONTROL_STD_BACK_DOWN_ON              (C'0xA6,0xC8,0xB0')  // Color of standard control background when clicking on the control when it is on
   #define CLR_DEF_CONTROL_STD_BACK_OVER_ON              (C'0xB8,0xD3,0xC0')  // Color of standard control background when hovering the mouse over the control when it is on
@@ -275,203 +274,201 @@
     OBJECT_DE_TYPE_GWF_COMMON,                                     // WinForms standard control object type
     OBJECT_DE_TYPE_GWF_HELPER,                                     // WinForms auxiliary control object type
    //--- Animation
-   OBJECT_DE_TYPE_GFRAME,                                         // "Single animation frame" object type
-   OBJECT_DE_TYPE_GFRAME_TEXT,                                    // "Single text animation frame" object type
-   OBJECT_DE_TYPE_GFRAME_QUAD,                                    // "Single rectangular animation frame" object type
-   OBJECT_DE_TYPE_GFRAME_GEOMETRY,                                // "Single geometric animation frame" object type
-   OBJECT_DE_TYPE_GANIMATIONS,                                    // "Animations" object type
-  //--- Managing graphical objects
-   OBJECT_DE_TYPE_GELEMENT_CONTROL,                               // "Managing graphical objects" object type
-  //--- Standard graphical objects
-   OBJECT_DE_TYPE_GSTD_OBJ,                                       // "Standard graphical object" object type
-   OBJECT_DE_TYPE_GSTD_VLINE              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_VLINE,            // "Vertical line" object type
-   OBJECT_DE_TYPE_GSTD_HLINE              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_HLINE,            // "Horizontal line" object type
-   OBJECT_DE_TYPE_GSTD_TREND              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TREND,            // "Trend line" object type
-   OBJECT_DE_TYPE_GSTD_TRENDBYANGLE       =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TRENDBYANGLE,     // "Trend line by angle" object type
-   OBJECT_DE_TYPE_GSTD_CYCLES             =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_CYCLES,           // "Cyclic lines" object type
-   OBJECT_DE_TYPE_GSTD_ARROWED_LINE       =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROWED_LINE,     // "Arrowed line" object type
-   OBJECT_DE_TYPE_GSTD_CHANNEL            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_CHANNEL,          // "Equidistant channel" object type
-   OBJECT_DE_TYPE_GSTD_STDDEVCHANNEL      =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_STDDEVCHANNEL,    // "Standard deviation channel" object type
-   OBJECT_DE_TYPE_GSTD_REGRESSION         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_REGRESSION,       // "Linear regression channel" object type
-   OBJECT_DE_TYPE_GSTD_PITCHFORK          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_PITCHFORK,        // "Andrews' pitchfork" object type
-   OBJECT_DE_TYPE_GSTD_GANNLINE           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_GANNLINE,         // "Gann line" object type
-   OBJECT_DE_TYPE_GSTD_GANNFAN            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_GANNFAN,          // "Gann fan" object type
-   OBJECT_DE_TYPE_GSTD_GANNGRID           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_GANNGRID,         // "Gann grid" object type
-   OBJECT_DE_TYPE_GSTD_FIBO               =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBO,             // "Fibo levels" object type
-   OBJECT_DE_TYPE_GSTD_FIBOTIMES          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOTIMES,        // "Fibo time zones" object type
-   OBJECT_DE_TYPE_GSTD_FIBOFAN            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOFAN,          // "Fibo fan" object type
-   OBJECT_DE_TYPE_GSTD_FIBOARC            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOARC,          // "Fibo arcs" object type
-   OBJECT_DE_TYPE_GSTD_FIBOCHANNEL        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOCHANNEL,      // "Fibo channel" object type
-   OBJECT_DE_TYPE_GSTD_EXPANSION          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_EXPANSION,        // "Fibo expansion" object type
-   OBJECT_DE_TYPE_GSTD_ELLIOTWAVE5        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ELLIOTWAVE5,      // "Elliott 5 waves" object type
-   OBJECT_DE_TYPE_GSTD_ELLIOTWAVE3        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ELLIOTWAVE3,      // "Elliott 3 waves" object type
-   OBJECT_DE_TYPE_GSTD_RECTANGLE          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_RECTANGLE,        // "Rectangle" object type
-   OBJECT_DE_TYPE_GSTD_TRIANGLE           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TRIANGLE,         // "Triangle" object type
-   OBJECT_DE_TYPE_GSTD_ELLIPSE            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ELLIPSE,          // "Ellipse" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_THUMB_UP     =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_THUMB_UP,   // "Thumb up" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_THUMB_DOWN   =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_THUMB_DOWN, // "Thumb down" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_UP           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_UP,         // "Arrow up" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_DOWN         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_DOWN,       // "Arrow down" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_STOP         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_STOP,       // "Stop sign" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_CHECK        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_CHECK,      // "Check mark" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_LEFT_PRICE   =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_LEFT_PRICE, // "Left price label" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_RIGHT_PRICE  =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_RIGHT_PRICE,// "Right price label" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_BUY          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_BUY,        // "Buy" object type
-   OBJECT_DE_TYPE_GSTD_ARROW_SELL         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_SELL,       // "Sell" object type
-   OBJECT_DE_TYPE_GSTD_ARROW              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW,            // "Arrow" object type
-   OBJECT_DE_TYPE_GSTD_TEXT               =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TEXT,             // "Text" object type
-   OBJECT_DE_TYPE_GSTD_LABEL              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_LABEL,            // "Text label" object type
-   OBJECT_DE_TYPE_GSTD_BUTTON             =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_BUTTON,           // "Button" object type
-   OBJECT_DE_TYPE_GSTD_CHART              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_CHART,            // "Chart" object type
-   OBJECT_DE_TYPE_GSTD_BITMAP             =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_BITMAP,           // "Bitmap" object type
-   OBJECT_DE_TYPE_GSTD_BITMAP_LABEL       =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_BITMAP_LABEL,     // "Bitmap label" object type
-   OBJECT_DE_TYPE_GSTD_EDIT               =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_EDIT,             // "Edit" object type
-   OBJECT_DE_TYPE_GSTD_EVENT              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_EVENT,            // "Event object which corresponds to an event in Economic Calendar" object type
-   OBJECT_DE_TYPE_GSTD_RECTANGLE_LABEL    =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_RECTANGLE_LABEL,  // "Event object which corresponds to an event in Economic Calendar" object type   
-  //--- Objects
-   OBJECT_DE_TYPE_BASE  =  OBJECT_DE_TYPE_GSTD_RECTANGLE_LABEL+1, // Base object for all library objects
-   OBJECT_DE_TYPE_BASE_EXT,                                       // Extended base object for all library objects
-   
-   OBJECT_DE_TYPE_ACCOUNT,                                        // "Account" object type
-   OBJECT_DE_TYPE_BOOK_ORDER,                                     // "Book order" object type
-   OBJECT_DE_TYPE_BOOK_BUY,                                       // "Book buy order" object type
-   OBJECT_DE_TYPE_BOOK_BUY_MARKET,                                // "Book buy order at market price" object type
-   OBJECT_DE_TYPE_BOOK_SELL,                                      // "Book sell order" object type
-   OBJECT_DE_TYPE_BOOK_SELL_MARKET,                               // "Book sell order at market price" object type
-   OBJECT_DE_TYPE_BOOK_SNAPSHOT,                                  // "Book snapshot" object type
-   OBJECT_DE_TYPE_BOOK_SERIES,                                    // "Book snapshot series" object type
-   
-   OBJECT_DE_TYPE_CHART,                                          // "Chart" object type
-   OBJECT_DE_TYPE_CHART_WND,                                      // "Chart window" object type
-   OBJECT_DE_TYPE_CHART_WND_IND,                                  // "Chart window indicator" object type
-   
-   OBJECT_DE_TYPE_EVENT,                                          // "Event" object type
-   OBJECT_DE_TYPE_EVENT_BALANCE,                                  // "Balance operation event" object type
-   OBJECT_DE_TYPE_EVENT_MODIFY,                                   // "Pending order/position modification event" object type
-   OBJECT_DE_TYPE_EVENT_ORDER_PLASED,                             // "Placing a pending order event" object type
-   OBJECT_DE_TYPE_EVENT_ORDER_REMOVED,                            // "Pending order removal event" object type
-   OBJECT_DE_TYPE_EVENT_POSITION_CLOSE,                           // "Position closure event" object type
-   OBJECT_DE_TYPE_EVENT_POSITION_OPEN,                            // "Position opening event" object type
-   
-   OBJECT_DE_TYPE_IND_BUFFER,                                     // "Indicator buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_ARROW,                               // "Arrow rendering buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_BAR,                                 // "Bar buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_CALCULATE,                           // "Calculated buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_CANDLE,                              // "Candle buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_FILLING,                             // "Filling buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_HISTOGRAMM,                          // "Histogram buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_HISTOGRAMM2,                         // "Histogram 2 buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_LINE,                                // "Line buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_SECTION,                             // "Section buffer" object type
-   OBJECT_DE_TYPE_IND_BUFFER_ZIGZAG,                              // "Zigzag buffer" object type
-   OBJECT_DE_TYPE_INDICATOR,                                      // "Indicator" object type
-   OBJECT_DE_TYPE_IND_DATA,                                       // "Indicator data" object type
-   OBJECT_DE_TYPE_IND_DATA_LIST,                                  // "Indicator data list" object type
-   
-   OBJECT_DE_TYPE_IND_AC,                                         // "Accelerator Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_AD,                                         // "Accumulation/Distribution indicator" object type
-   OBJECT_DE_TYPE_IND_ADX,                                        // "Average Directional Index indicator" object type
-   OBJECT_DE_TYPE_IND_ADXW,                                       // "ADX indicator by Welles Wilder" object type
-   OBJECT_DE_TYPE_IND_ALLIGATOR,                                  // "Alligator indicator" object type
-   OBJECT_DE_TYPE_IND_AMA,                                        // "Adaptive Moving Average indicator" object type
-   OBJECT_DE_TYPE_IND_AO,                                         // "Awesome Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_ATR,                                        // "Average True Range" object type
-   OBJECT_DE_TYPE_IND_BANDS,                                      // "Bollinger Bands® indicator" object type
-   OBJECT_DE_TYPE_IND_BEARS,                                      // "Bears Power indicator" object type
-   OBJECT_DE_TYPE_IND_BULLS,                                      // "Bulls Power indicator" object type
-   OBJECT_DE_TYPE_IND_BWMFI,                                      // "Market Facilitation Index indicator" object type
-   OBJECT_DE_TYPE_IND_CCI,                                        // "Commodity Channel Index indicator" object type
-   OBJECT_DE_TYPE_IND_CHAIKIN,                                    // "Chaikin Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_CUSTOM,                                     // "Custom indicator" object type
-   OBJECT_DE_TYPE_IND_DEMA,                                       // "Double Exponential Moving Average indicator" object type
-   OBJECT_DE_TYPE_IND_DEMARKER,                                   // "DeMarker indicator" object type
-   OBJECT_DE_TYPE_IND_ENVELOPES,                                  // "Envelopes indicator" object type
-   OBJECT_DE_TYPE_IND_FORCE,                                      // "Force Index indicator" object type
-   OBJECT_DE_TYPE_IND_FRACTALS,                                   // "Fractals indicator" object type
-   OBJECT_DE_TYPE_IND_FRAMA,                                      // "Fractal Adaptive Moving Average indicator" object type
-   OBJECT_DE_TYPE_IND_GATOR,                                      // "Gator Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_ICHIMOKU,                                   // "Ichimoku Kinko Hyo indicator" object type
-   OBJECT_DE_TYPE_IND_MA,                                         // "Moving Average indicator" object type
-   OBJECT_DE_TYPE_IND_MACD,                                       // "Moving Average Convergence/Divergence indicator" object type
-   OBJECT_DE_TYPE_IND_MFI,                                        // "Money Flow Index indicator" object type
-   OBJECT_DE_TYPE_IND_MOMENTUM,                                   // "Momentum indicator" object type
-   OBJECT_DE_TYPE_IND_OBV,                                        // "On Balance Volume indicator" object type
-   OBJECT_DE_TYPE_IND_OSMA,                                       // "Moving Average of Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_RSI,                                        // "Relative Strength Index indicator" object type
-   OBJECT_DE_TYPE_IND_RVI,                                        // "Relative Vigor Index indicator" object type
-   OBJECT_DE_TYPE_IND_SAR,                                        // "Parabolic SAR indicator" object type
-   OBJECT_DE_TYPE_IND_STDEV,                                      // "Standard Deviation indicator" object type
-   OBJECT_DE_TYPE_IND_STOCH,                                      // "Stochastic Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_TEMA,                                       // "Triple Exponential Moving Average indicator" object
-   OBJECT_DE_TYPE_IND_TRIX,                                       // "Triple Exponential Moving Averages Oscillator indicator" object type
-   OBJECT_DE_TYPE_IND_VIDYA,                                      // "Variable Index Dynamic Average indicator" object type
-   OBJECT_DE_TYPE_IND_VOLUMES,                                    // "Volumes indicator" object type
-   OBJECT_DE_TYPE_IND_WPR,                                        // "Williams' Percent Range indicator" object type
-   
-   OBJECT_DE_TYPE_MQL5_SIGNAL,                                    // "mql5 signal" object type
-   
-   OBJECT_DE_TYPE_ORDER_DEAL_POSITION,                            // "Order/Deal/Position" object type
-   OBJECT_DE_TYPE_HISTORY_BALANCE,                                // "Historical balance operation" object type
-   OBJECT_DE_TYPE_HISTORY_DEAL,                                   // "Historical deal" object type
-   OBJECT_DE_TYPE_HISTORY_ORDER_MARKET,                           // "Historical market order" object type
-   OBJECT_DE_TYPE_HISTORY_ORDER_PENDING,                          // "Historical removed pending order" object type
-   OBJECT_DE_TYPE_MARKET_ORDER,                                   // "Market order" object type
-   OBJECT_DE_TYPE_MARKET_PENDING,                                 // "Pending order" object type
-   OBJECT_DE_TYPE_MARKET_POSITION,                                // "Market position" object type
-   
-   OBJECT_DE_TYPE_PENDING_REQUEST,                                // "Pending trading request" object type
-   OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_OPEN,                  // "Pending request to open a position" object type
-   OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_CLOSE,                 // "Pending request to close a position" object type
-   OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_SLTP,                  // "Pending request to modify position stop orders" object type
-   OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_PLACE,                    // "Pending request to place a pending order" object type
-   OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_REMOVE,                   // "Pending request to delete a pending order" object type
-   OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_MODIFY,                   // "Pending request to modify pending order parameters" object type
-   
-   OBJECT_DE_TYPE_SERIES_BAR,                                     // "Bar" object type
-   OBJECT_DE_TYPE_SERIES_PERIOD,                                  // "Period timeseries" object type
-   OBJECT_DE_TYPE_SERIES_SYMBOL,                                  // "Symbol timeseries" object type
-   
-   OBJECT_DE_TYPE_SERIES_PATTERN,                                 // "Pattern" object type
-   OBJECT_DE_TYPE_SERIES_PATTERN_CONTROL,                         // "Pattern management" object type
-   OBJECT_DE_TYPE_SERIES_PATTERNS_CONTROLLERS,                    // "Patterns management" object type
-   
-   OBJECT_DE_TYPE_SYMBOL,                                         // "Symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_BONDS,                                   // "Bond symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_CFD,                                     // "CFD (contract for difference) symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_COLLATERAL,                              // "Non-tradable asset symbol" object type" object type
-   OBJECT_DE_TYPE_SYMBOL_COMMODITY,                               // "Commodity symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_COMMON,                                  // "Common group symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_CRYPTO,                                  // "Cryptocurrency symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_CUSTOM,                                  // "Custom symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_EXCHANGE,                                // "Exchange symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_FUTURES,                                 // "Futures symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_FX,                                      // "Forex symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_FX_EXOTIC,                               // "Exotic Forex symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_FX_MAJOR,                                // "Major Forex symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_FX_MINOR,                                // "Minor Forex symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_FX_RUB,                                  // "RUB Forex symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_INDEX,                                   // "Index symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_INDICATIVE,                              // "Indicative symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_METALL,                                  // "Metal symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_OPTION,                                  // "Option symbol" object type
-   OBJECT_DE_TYPE_SYMBOL_STOCKS,                                  // "Stock symbol" object type
-   
-   OBJECT_DE_TYPE_TICK,                                           // "Tick" object type
-   OBJECT_DE_TYPE_NEW_TICK,                                       // "New tick" object type
-   OBJECT_DE_TYPE_TICKSERIES,                                     // "Tick data series" object type
-   
-   OBJECT_DE_TYPE_TRADE,                                          // "Trading object" object type
-   
-   OBJECT_DE_TYPE_LONG,                                           // "Long type data" object type
-   OBJECT_DE_TYPE_DOUBLE,                                         // "Double type data" object type
-   OBJECT_DE_TYPE_STRING,                                         // "String type data" object type
-   OBJECT_DE_TYPE_OBJECT,                                         // "Object type data" object type
+    OBJECT_DE_TYPE_GFRAME,                                         // "Single animation frame" object type
+    OBJECT_DE_TYPE_GFRAME_TEXT,                                    // "Single text animation frame" object type
+    OBJECT_DE_TYPE_GFRAME_QUAD,                                    // "Single rectangular animation frame" object type
+    OBJECT_DE_TYPE_GFRAME_GEOMETRY,                                // "Single geometric animation frame" object type
+    OBJECT_DE_TYPE_GANIMATIONS,                                    // "Animations" object type
+   //--- Managing graphical objects
+    OBJECT_DE_TYPE_GELEMENT_CONTROL,                               // "Managing graphical objects" object type
+   //--- Standard graphical objects
+    OBJECT_DE_TYPE_GSTD_OBJ,                                       // "Standard graphical object" object type
+    OBJECT_DE_TYPE_GSTD_VLINE              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_VLINE,            // "Vertical line" object type
+    OBJECT_DE_TYPE_GSTD_HLINE              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_HLINE,            // "Horizontal line" object type
+    OBJECT_DE_TYPE_GSTD_TREND              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TREND,            // "Trend line" object type
+    OBJECT_DE_TYPE_GSTD_TRENDBYANGLE       =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TRENDBYANGLE,     // "Trend line by angle" object type
+    OBJECT_DE_TYPE_GSTD_CYCLES             =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_CYCLES,           // "Cyclic lines" object type
+    OBJECT_DE_TYPE_GSTD_ARROWED_LINE       =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROWED_LINE,     // "Arrowed line" object type
+    OBJECT_DE_TYPE_GSTD_CHANNEL            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_CHANNEL,          // "Equidistant channel" object type
+    OBJECT_DE_TYPE_GSTD_STDDEVCHANNEL      =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_STDDEVCHANNEL,    // "Standard deviation channel" object type
+    OBJECT_DE_TYPE_GSTD_REGRESSION         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_REGRESSION,       // "Linear regression channel" object type
+    OBJECT_DE_TYPE_GSTD_PITCHFORK          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_PITCHFORK,        // "Andrews' pitchfork" object type
+    OBJECT_DE_TYPE_GSTD_GANNLINE           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_GANNLINE,         // "Gann line" object type
+    OBJECT_DE_TYPE_GSTD_GANNFAN            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_GANNFAN,          // "Gann fan" object type
+    OBJECT_DE_TYPE_GSTD_GANNGRID           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_GANNGRID,         // "Gann grid" object type
+    OBJECT_DE_TYPE_GSTD_FIBO               =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBO,             // "Fibo levels" object type
+    OBJECT_DE_TYPE_GSTD_FIBOTIMES          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOTIMES,        // "Fibo time zones" object type
+    OBJECT_DE_TYPE_GSTD_FIBOFAN            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOFAN,          // "Fibo fan" object type
+    OBJECT_DE_TYPE_GSTD_FIBOARC            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOARC,          // "Fibo arcs" object type
+    OBJECT_DE_TYPE_GSTD_FIBOCHANNEL        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_FIBOCHANNEL,      // "Fibo channel" object type
+    OBJECT_DE_TYPE_GSTD_EXPANSION          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_EXPANSION,        // "Fibo expansion" object type
+    OBJECT_DE_TYPE_GSTD_ELLIOTWAVE5        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ELLIOTWAVE5,      // "Elliott 5 waves" object type
+    OBJECT_DE_TYPE_GSTD_ELLIOTWAVE3        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ELLIOTWAVE3,      // "Elliott 3 waves" object type
+    OBJECT_DE_TYPE_GSTD_RECTANGLE          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_RECTANGLE,        // "Rectangle" object type
+    OBJECT_DE_TYPE_GSTD_TRIANGLE           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TRIANGLE,         // "Triangle" object type
+    OBJECT_DE_TYPE_GSTD_ELLIPSE            =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ELLIPSE,          // "Ellipse" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_THUMB_UP     =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_THUMB_UP,   // "Thumb up" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_THUMB_DOWN   =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_THUMB_DOWN, // "Thumb down" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_UP           =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_UP,         // "Arrow up" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_DOWN         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_DOWN,       // "Arrow down" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_STOP         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_STOP,       // "Stop sign" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_CHECK        =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_CHECK,      // "Check mark" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_LEFT_PRICE   =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_LEFT_PRICE, // "Left price label" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_RIGHT_PRICE  =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_RIGHT_PRICE,// "Right price label" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_BUY          =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_BUY,        // "Buy" object type
+    OBJECT_DE_TYPE_GSTD_ARROW_SELL         =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW_SELL,       // "Sell" object type
+    OBJECT_DE_TYPE_GSTD_ARROW              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_ARROW,            // "Arrow" object type
+    OBJECT_DE_TYPE_GSTD_TEXT               =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TEXT,             // "Text" object type
+    OBJECT_DE_TYPE_GSTD_LABEL              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_LABEL,            // "Text label" object type
+    OBJECT_DE_TYPE_GSTD_BUTTON             =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_BUTTON,           // "Button" object type
+    OBJECT_DE_TYPE_GSTD_CHART              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_CHART,            // "Chart" object type
+    OBJECT_DE_TYPE_GSTD_BITMAP             =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_BITMAP,           // "Bitmap" object type
+    OBJECT_DE_TYPE_GSTD_BITMAP_LABEL       =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_BITMAP_LABEL,     // "Bitmap label" object type
+    OBJECT_DE_TYPE_GSTD_EDIT               =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_EDIT,             // "Edit" object type
+    OBJECT_DE_TYPE_GSTD_EVENT              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_EVENT,            // "Event object which corresponds to an event in Economic Calendar" object type
+    OBJECT_DE_TYPE_GSTD_RECTANGLE_LABEL    =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_RECTANGLE_LABEL,  // "Event object which corresponds to an event in Economic Calendar" object type   
+    
+   //--- Objects
+    OBJECT_DE_TYPE_BASE  =  OBJECT_DE_TYPE_GSTD_RECTANGLE_LABEL+1, // Base object for all library objects
+    OBJECT_DE_TYPE_BASE_EXT,                                       // Extended base object for all library objects 
+    OBJECT_DE_TYPE_ACCOUNT,                                        // "Account" object type
+    OBJECT_DE_TYPE_BOOK_ORDER,                                     // "Book order" object type
+    OBJECT_DE_TYPE_BOOK_BUY,                                       // "Book buy order" object type
+    OBJECT_DE_TYPE_BOOK_BUY_MARKET,                                // "Book buy order at market price" object type
+    OBJECT_DE_TYPE_BOOK_SELL,                                      // "Book sell order" object type
+    OBJECT_DE_TYPE_BOOK_SELL_MARKET,                               // "Book sell order at market price" object type
+    OBJECT_DE_TYPE_BOOK_SNAPSHOT,                                  // "Book snapshot" object type
+    OBJECT_DE_TYPE_BOOK_SERIES,                                    // "Book snapshot series" object type
+    OBJECT_DE_TYPE_CHART,                                          // "Chart" object type
+    OBJECT_DE_TYPE_CHART_WND,                                      // "Chart window" object type
+    OBJECT_DE_TYPE_CHART_WND_IND,                                  // "Chart window indicator" object type
+    OBJECT_DE_TYPE_EVENT,                                          // "Event" object type
+    OBJECT_DE_TYPE_EVENT_BALANCE,                                  // "Balance operation event" object type
+    OBJECT_DE_TYPE_EVENT_MODIFY,                                   // "Pending order/position modification event" object type
+    OBJECT_DE_TYPE_EVENT_ORDER_PLASED,                             // "Placing a pending order event" object type
+    OBJECT_DE_TYPE_EVENT_ORDER_REMOVED,                            // "Pending order removal event" object type
+    OBJECT_DE_TYPE_EVENT_POSITION_CLOSE,                           // "Position closure event" object type
+    OBJECT_DE_TYPE_EVENT_POSITION_OPEN,                            // "Position opening event" object type
+    OBJECT_DE_TYPE_EVENT_POSITION_REOPEN,                        // "Position reopening event" object type
+    OBJECT_DE_TYPE_IND_BUFFER,                                     // "Indicator buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_ARROW,                               // "Arrow rendering buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_BAR,                                 // "Bar buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_CALCULATE,                           // "Calculated buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_CANDLE,                              // "Candle buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_FILLING,                             // "Filling buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_HISTOGRAMM,                          // "Histogram buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_HISTOGRAMM2,                         // "Histogram 2 buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_LINE,                                // "Line buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_SECTION,                             // "Section buffer" object type
+    OBJECT_DE_TYPE_IND_BUFFER_ZIGZAG,                              // "Zigzag buffer" object type
+    OBJECT_DE_TYPE_INDICATOR,                                      // "Indicator" object type
+    OBJECT_DE_TYPE_IND_DATA,                                       // "Indicator data" object type
+    OBJECT_DE_TYPE_IND_DATA_LIST,                                  // "Indicator data list" object type
+    OBJECT_DE_TYPE_IND_AC,                                         // "Accelerator Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_AD,                                         // "Accumulation/Distribution indicator" object type
+    OBJECT_DE_TYPE_IND_ADX,                                        // "Average Directional Index indicator" object type
+    OBJECT_DE_TYPE_IND_ADXW,                                       // "ADX indicator by Welles Wilder" object type
+    OBJECT_DE_TYPE_IND_ALLIGATOR,                                  // "Alligator indicator" object type
+    OBJECT_DE_TYPE_IND_AMA,                                        // "Adaptive Moving Average indicator" object type
+    OBJECT_DE_TYPE_IND_AO,                                         // "Awesome Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_ATR,                                        // "Average True Range" object type
+    OBJECT_DE_TYPE_IND_BANDS,                                      // "Bollinger Bands® indicator" object type
+    OBJECT_DE_TYPE_IND_BEARS,                                      // "Bears Power indicator" object type
+    OBJECT_DE_TYPE_IND_BULLS,                                      // "Bulls Power indicator" object type
+    OBJECT_DE_TYPE_IND_BWMFI,                                      // "Market Facilitation Index indicator" object type
+    OBJECT_DE_TYPE_IND_CCI,                                        // "Commodity Channel Index indicator" object type
+    OBJECT_DE_TYPE_IND_CHAIKIN,                                    // "Chaikin Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_CUSTOM,                                     // "Custom indicator" object type
+    OBJECT_DE_TYPE_IND_DEMA,                                       // "Double Exponential Moving Average indicator" object type
+    OBJECT_DE_TYPE_IND_DEMARKER,                                   // "DeMarker indicator" object type
+    OBJECT_DE_TYPE_IND_ENVELOPES,                                  // "Envelopes indicator" object type
+    OBJECT_DE_TYPE_IND_FORCE,                                      // "Force Index indicator" object type
+    OBJECT_DE_TYPE_IND_FRACTALS,                                   // "Fractals indicator" object type
+    OBJECT_DE_TYPE_IND_FRAMA,                                      // "Fractal Adaptive Moving Average indicator" object type
+    OBJECT_DE_TYPE_IND_GATOR,                                      // "Gator Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_ICHIMOKU,                                   // "Ichimoku Kinko Hyo indicator" object type
+    OBJECT_DE_TYPE_IND_MA,                                         // "Moving Average indicator" object type
+    OBJECT_DE_TYPE_IND_MACD,                                       // "Moving Average Convergence/Divergence indicator" object type
+    OBJECT_DE_TYPE_IND_MFI,                                        // "Money Flow Index indicator" object type
+    OBJECT_DE_TYPE_IND_MOMENTUM,                                   // "Momentum indicator" object type
+    OBJECT_DE_TYPE_IND_OBV,                                        // "On Balance Volume indicator" object type
+    OBJECT_DE_TYPE_IND_OSMA,                                       // "Moving Average of Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_RSI,                                        // "Relative Strength Index indicator" object type
+    OBJECT_DE_TYPE_IND_RVI,                                        // "Relative Vigor Index indicator" object type
+    OBJECT_DE_TYPE_IND_SAR,                                        // "Parabolic SAR indicator" object type
+    OBJECT_DE_TYPE_IND_STDEV,                                      // "Standard Deviation indicator" object type
+    OBJECT_DE_TYPE_IND_STOCH,                                      // "Stochastic Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_TEMA,                                       // "Triple Exponential Moving Average indicator" object
+    OBJECT_DE_TYPE_IND_TRIX,                                       // "Triple Exponential Moving Averages Oscillator indicator" object type
+    OBJECT_DE_TYPE_IND_VIDYA,                                      // "Variable Index Dynamic Average indicator" object type
+    OBJECT_DE_TYPE_IND_VOLUMES,                                    // "Volumes indicator" object type
+    OBJECT_DE_TYPE_IND_WPR,                                        // "Williams' Percent Range indicator" object type
+    OBJECT_DE_TYPE_MQL5_SIGNAL,                                    // "mql5 signal" object type
+    OBJECT_DE_TYPE_ORDER_DEAL_POSITION,                            // "Order/Deal/Position" object type
+    OBJECT_DE_TYPE_HISTORY_BALANCE,                                // "Historical balance operation" object type
+    OBJECT_DE_TYPE_HISTORY_DEAL,                                   // "Historical deal" object type
+    OBJECT_DE_TYPE_HISTORY_ORDER_MARKET,                           // "Historical market order" object type
+    OBJECT_DE_TYPE_HISTORY_ORDER_PENDING,                          // "Historical removed pending order" object type
+    OBJECT_DE_TYPE_MARKET_ORDER,                                   // "Market order" object type
+    OBJECT_DE_TYPE_MARKET_PENDING,                                 // "Pending order" object type
+    OBJECT_DE_TYPE_MARKET_POSITION,                                // "Market position" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST,                                // "Pending trading request" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_OPEN,                  // "Pending request to open a position" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_CLOSE,                 // "Pending request to close a position" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_SLTP,                  // "Pending request to modify position stop orders" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_PLACE,                    // "Pending request to place a pending order" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_REMOVE,                   // "Pending request to delete a pending order" object type
+    OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_MODIFY,                   // "Pending request to modify pending order parameters" object type
+    OBJECT_DE_TYPE_SERIES_BAR,                                     // "Bar" object type
+    OBJECT_DE_TYPE_SERIES_PERIOD,                                  // "Period timeseries" object type
+    OBJECT_DE_TYPE_SERIES_SYMBOL,                                  // "Symbol timeseries" object type
+    OBJECT_DE_TYPE_SERIES_PATTERN,                                 // "Pattern" object type
+    OBJECT_DE_TYPE_SERIES_PATTERN_CONTROL,                         // "Pattern management" object type
+    OBJECT_DE_TYPE_SERIES_PATTERNS_CONTROLLERS,                    // "Patterns management" object type
+    OBJECT_DE_TYPE_SYMBOL,                                         // "Symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_BONDS,                                   // "Bond symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_CFD,                                     // "CFD (contract for difference) symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_COLLATERAL,                              // "Non-tradable asset symbol" object type" object type
+    OBJECT_DE_TYPE_SYMBOL_COMMODITY,                               // "Commodity symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_COMMON,                                  // "Common group symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_CRYPTO,                                  // "Cryptocurrency symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_CUSTOM,                                  // "Custom symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_EXCHANGE,                                // "Exchange symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_FUTURES,                                 // "Futures symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_FX,                                      // "Forex symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_FX_EXOTIC,                               // "Exotic Forex symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_FX_MAJOR,                                // "Major Forex symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_FX_MINOR,                                // "Minor Forex symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_FX_RUB,                                  // "RUB Forex symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_INDEX,                                   // "Index symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_INDICATIVE,                              // "Indicative symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_METALL,                                  // "Metal symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_OPTION,                                  // "Option symbol" object type
+    OBJECT_DE_TYPE_SYMBOL_STOCKS,                                  // "Stock symbol" object type
+    OBJECT_DE_TYPE_TICK,                                           // "Tick" object type
+    OBJECT_DE_TYPE_NEW_TICK,                                       // "New tick" object type
+    OBJECT_DE_TYPE_TICKSERIES,                                     // "Tick data series" object type
+    OBJECT_DE_TYPE_TRADE,                                          // "Trading object" object type
+    OBJECT_DE_TYPE_LONG,                                           // "Long type data" object type
+    OBJECT_DE_TYPE_DOUBLE,                                         // "Double type data" object type
+    OBJECT_DE_TYPE_STRING,                                         // "String type data" object type
+    OBJECT_DE_TYPE_OBJECT,                                         // "Object type data" object type
+    OBJECT_DE_TYPE_SIGNAL_SAR,                                     // "SAR signal" object type
+    OBJECT_DE_TYPE_SIGNAL_MA,                                      // "MA slope signal" object type
+    OBJECT_DE_TYPE_SIGNAL_OSCILLATOR,                              // "Oscillator OB/OS signal" object type
+    OBJECT_DE_TYPE_SIGNAL_ZEROCROSS,                               // "Zero-line cross signal" object type
+    OBJECT_DE_TYPE_SIGNAL_MACD_LINECROSS,                          // "MACD line-cross signal" object type
+    OBJECT_DE_TYPE_SIGNAL_MACD_ZEROCROSS,                          // "MACD zero-cross signal" object type
+    OBJECT_DE_TYPE_SIGNAL_ADX,                                     // "ADX DI-cross signal" object type
+    OBJECT_DE_TYPE_SIGNAL_BOLLINGER,                               // "Bollinger bands signal" object type
+    OBJECT_DE_TYPE_SIGNAL_ENVELOPES,                               // "Envelopes signal" object type
+    OBJECT_DE_TYPE_SIGNAL_TWOLINECROSS,                            // "Two-line cross signal" object type
+    OBJECT_DE_TYPE_TRADING_LEVEL_BUBBLE,                           // "Trading level bubble (SL/TP drag overlay)" object type
   };
-
-//+------------------------------------------------------------------+
-//| Search and sorting data                                          |
-//+------------------------------------------------------------------+
-enum ENUM_COMPARER_TYPE
+ //+------------------------------------------------------------------+
+ //| Search and sorting data                                          |
+ //+------------------------------------------------------------------+
+ enum ENUM_COMPARER_TYPE
   {
    EQUAL,                                                   // Equal
    MORE,                                                    // More
@@ -480,27 +477,27 @@ enum ENUM_COMPARER_TYPE
    EQUAL_OR_MORE,                                           // Equal or more
    EQUAL_OR_LESS                                            // Equal or less
   };
-//+------------------------------------------------------------------+
-//| Possible options of selecting by time                            |
-//+------------------------------------------------------------------+
-enum ENUM_SELECT_BY_TIME
+ //+------------------------------------------------------------------+
+ //| Possible options of selecting by time                            |
+ //+------------------------------------------------------------------+
+ enum ENUM_SELECT_BY_TIME
   {
    SELECT_BY_TIME_OPEN,                                     // By open time (in milliseconds)
    SELECT_BY_TIME_CLOSE,                                    // By close time (in milliseconds)
   };
-//+------------------------------------------------------------------+
-//|  Logging level                                                   |
-//+------------------------------------------------------------------+
-enum ENUM_LOG_LEVEL
+ //+------------------------------------------------------------------+
+ //|  Logging level                                                   |
+ //+------------------------------------------------------------------+
+ enum ENUM_LOG_LEVEL
   {
    LOG_LEVEL_NO_MSG,                                        // Logging disabled
    LOG_LEVEL_ERROR_MSG,                                     // Errors only
    LOG_LEVEL_ALL_MSG                                        // Full logging
   };
-//+------------------------------------------------------------------+
-//| Possible event reasons of the object library base object         |
-//+------------------------------------------------------------------+
-enum ENUM_BASE_EVENT_REASON
+ //+------------------------------------------------------------------+
+ //| Possible event reasons of the object library base object         |
+ //+------------------------------------------------------------------+
+ enum ENUM_BASE_EVENT_REASON
   {
    BASE_EVENT_REASON_INC,                                   // Increase in the object property value
    BASE_EVENT_REASON_DEC,                                   // Decrease in the object property value
@@ -508,10 +505,10 @@ enum ENUM_BASE_EVENT_REASON
    BASE_EVENT_REASON_LESS_THEN,                             // Object property value is less than the control value
    BASE_EVENT_REASON_EQUALS                                 // Object property value is equal to the control value
   };
-//+------------------------------------------------------------------+
-//| List of flags of possible order and position change options      |
-//+------------------------------------------------------------------+
-enum ENUM_CHANGE_TYPE_FLAGS
+ //+------------------------------------------------------------------+
+ //| List of flags of possible order and position change options      |
+ //+------------------------------------------------------------------+
+ enum ENUM_CHANGE_TYPE_FLAGS
   {
    CHANGE_TYPE_FLAG_NO_CHANGE    =  0x0,                    // No changes
    CHANGE_TYPE_FLAG_TYPE         =  0x1,                    // Order type change
@@ -520,10 +517,10 @@ enum ENUM_CHANGE_TYPE_FLAGS
    CHANGE_TYPE_FLAG_TAKE         =  0x8,                    // TakeProfit change
    CHANGE_TYPE_FLAG_ORDER        =  0x10                    // Order properties change flag
   };
-//+------------------------------------------------------------------+
-//| Possible order and position change options                       |
-//+------------------------------------------------------------------+
-enum ENUM_CHANGE_TYPE
+ //+------------------------------------------------------------------+
+ //| Possible order and position change options                       |
+ //+------------------------------------------------------------------+
+ enum ENUM_CHANGE_TYPE
   {
    CHANGE_TYPE_NO_CHANGE,                                   // No changes
    CHANGE_TYPE_ORDER_TYPE,                                  // Order type change
@@ -538,5 +535,4 @@ enum ENUM_CHANGE_TYPE
    CHANGE_TYPE_POSITION_STOP_LOSS,                          // Change position's StopLoss
    CHANGE_TYPE_POSITION_TAKE_PROFIT,                        // Change position's TakeProfit
   };
-
 #endif // __COMMON_DEFINES_MQH__

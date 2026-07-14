@@ -31,244 +31,230 @@
 //+------------------------------------------------------------------+
 class CTrading : public CBaseObjExt
   {
-protected:
-   CAccount            *m_account;                       // Pointer to the current account object
-   CSymbolsCollection  *m_symbol_collection;             // Pointer to the symbol collection list
-   CMarketCollection   *m_market;                        // Pointer to the list of the collection of market orders and positions
-   CHistoryCollection  *m_history;                       // Pointer to the list of the collection of historical orders and deals
-   //CTradeEventsCollection   *m_events;                        // Pointer to the event collection list
-   CTradeEventsCollection   *m_trade_event_collection;                        // Pointer to the event collection list
-   CArrayObj            m_list_request;                  // List of pending requests
-   uchar                m_total_try;                     // Number of trading attempts
-   MqlTradeRequest      m_request;                       // Trading request structure
-   ENUM_TRADE_REQUEST_ERR_FLAGS m_error_reason_flags;    // Flags of error source in a trading method
-   
-//--- Add the error code to the list
-   bool                 AddErrorCodeToList(const int error_code);
-//--- Look for the first free pending request ID
-   int                  GetFreeID(void);
-//--- Return the flag of a market order/position with a pending request ID
-   bool                 IsPresentOrderByID(const uchar id);
-//--- Return an order object by ticket
-   COrder              *GetOrderObjByTicket(const ulong ticket);
-//--- Return the symbol object by (1) position, (2) order ticket
-   CSymbol             *GetSymbolObjByPosition(const ulong ticket,const string source_method);
-   CSymbol             *GetSymbolObjByOrder(const ulong ticket,const string source_method);
-//--- Return a symbol trading object by (1) position, (2) order ticket, (3) symbol name
-   CTradeObj           *GetTradeObjByPosition(const ulong ticket,const string source_method);
-   CTradeObj           *GetTradeObjByOrder(const ulong ticket,const string source_method);
-   CTradeObj           *GetTradeObjBySymbol(const string symbol,const string source_method);
-//--- Check the presence of a (1) position, (2) order by ticket
-   bool                 CheckPositionAvailablity(const ulong ticket,const string source_method);
-   bool                 CheckOrderAvailablity(const ulong ticket,const string source_method);
-   
-private:
-   CArrayInt            m_list_errors;                   // Error list
-   bool                 m_is_trade_disable;              // Flag disabling trading
-   ENUM_ERROR_HANDLING_BEHAVIOR m_err_handling_behavior; // Behavior when handling error
-   
-//--- Return the number of (1) all positions, (2) buy, (3) sell positions
-   int                  PositionsTotalAll(void)          const;
-   int                  PositionsTotalLong(void)         const;
-   int                  PositionsTotalShort(void)        const;
-//--- Return the number of (1) all pending orders, (2) buy, (3) sell pending orders
-   int                  OrdersTotalAll(void)             const;
-   int                  OrdersTotalLong(void)            const;
-   int                  OrdersTotalShort(void)           const;
-//--- Return the total volume of (1) buy, (2) sell positions
-   double               PositionsTotalVolumeLong(void)   const;
-   double               PositionsTotalVolumeShort(void)  const;
-//--- Return the total volume of (1) buy, (2) sell orders
-   double               OrdersTotalVolumeLong(void)      const;
-   double               OrdersTotalVolumeShort(void)     const;
-//--- Return the order direction by an operation type
-   ENUM_ORDER_TYPE      DirectionByActionType(const ENUM_ACTION_TYPE action)  const;
-//--- Set the desired sound for a trading object
-   void                 SetSoundByMode(const ENUM_MODE_SET_SOUND mode,const ENUM_ORDER_TYPE action,const string sound,CTradeObj *trade_obj);
+   protected:
+      CAccount                *m_account;                       // Pointer to the current account object
+      CSymbolsCollection      *m_symbol_collection;             // Pointer to the symbol collection list
+      CMarketCollection       *m_market;                        // Pointer to the list of the collection of market orders and positions
+      CHistoryCollection      *m_history_collection;            // Pointer to the list of the collection of historical orders and deals   
+      CTradeEventsCollection  *m_trade_event_collection;        // Pointer to the event collection list
+      CArrayObj               m_list_request;                   // List of pending requests
+      uchar                   m_total_try;                      // Number of trading attempts
+      MqlTradeRequest         m_request;                        // Trading request structure
+      ENUM_TRADE_REQUEST_ERR_FLAGS m_error_reason_flags;        // Flags of error source in a trading method
+   //--- Add the error code to the list
+      bool                    AddErrorCodeToList(const int error_code);
+   //--- Look for the first free pending request ID
+      int                     GetFreeID(void);
+   //--- Return the flag of a market order/position with a pending request ID
+      bool                    IsPresentOrderByID(const uchar id);
+   //--- Return an order object by ticket
+      COrder                 *GetOrderObjByTicket(const ulong ticket);
+   //--- Return the symbol object by (1) position, (2) order ticket
+      CSymbol                *GetSymbolObjByPosition(const ulong ticket,const string source_method);
+      CSymbol                *GetSymbolObjByOrder(const ulong ticket,const string source_method);
+   //--- Return a symbol trading object by (1) position, (2) order ticket, (3) symbol name
+      CTradeObj              *GetTradeObjByPosition(const ulong ticket,const string source_method);
+      CTradeObj              *GetTradeObjByOrder(const ulong ticket,const string source_method);
+      CTradeObj              *GetTradeObjBySymbol(const string symbol,const string source_method);
+   //--- Check the presence of a (1) position, (2) order by ticket
+      bool                    CheckPositionAvailablity(const ulong ticket,const string source_method);
+      bool                    CheckOrderAvailablity(const ulong ticket,const string source_method);
+   private:
+      CArrayInt               m_list_errors;                   // Error list
+      bool                    m_is_trade_disable;              // Flag disabling trading
+      ENUM_ERROR_HANDLING_BEHAVIOR m_err_handling_behavior; // Behavior when handling error
+   //--- Return the number of (1) all positions, (2) buy, (3) sell positions
+      int                     PositionsTotalAll(void)          const;
+      int                     PositionsTotalLong(void)         const;
+      int                     PositionsTotalShort(void)        const;
+   //--- Return the number of (1) all pending orders, (2) buy, (3) sell pending orders
+      int                     OrdersTotalAll(void)             const;
+      int                     OrdersTotalLong(void)            const;
+      int                     OrdersTotalShort(void)           const;
+   //--- Return the total volume of (1) buy, (2) sell positions
+      double                  PositionsTotalVolumeLong(void)   const;
+      double                  PositionsTotalVolumeShort(void)  const;
+   //--- Return the total volume of (1) buy, (2) sell orders
+      double                  OrdersTotalVolumeLong(void)      const;
+      double                  OrdersTotalVolumeShort(void)     const;
+   //--- Return the order direction by an operation type
+      ENUM_ORDER_TYPE         DirectionByActionType(const ENUM_ACTION_TYPE action)  const;
+   //--- Set the desired sound for a trading object
+      void                    SetSoundByMode(const ENUM_MODE_SET_SOUND mode,const ENUM_ORDER_TYPE action,const string sound,CTradeObj *trade_obj);
 
-protected:
-//--- Set trading request prices
-   template <typename PR,typename SL,typename TP,typename PL> 
-   bool                 SetPrices(const ENUM_ORDER_TYPE action,const PR price,const SL sl,const TP tp,const PL limit,const string source_method,CSymbol *symbol_obj);
+   protected:
+   //--- Set trading request prices
+      template <typename PR,typename SL,typename TP,typename PL> 
+      bool                 SetPrices(const ENUM_ORDER_TYPE action,const PR price,const SL sl,const TP tp,const PL limit,const string source_method,CSymbol *symbol_obj);
 
-private:
-//--- Return the flag checking the permission to trade by (1) StopLoss, (2) TakeProfit distance, (3) order placement level by a StopLevel-based price
-   bool                 CheckStopLossByStopLevel(const ENUM_ORDER_TYPE order_type,const double price,const double sl,const CSymbol *symbol_obj);
-   bool                 CheckTakeProfitByStopLevel(const ENUM_ORDER_TYPE order_type,const double price,const double tp,const CSymbol *symbol_obj);
-   bool                 CheckPriceByStopLevel(const ENUM_ORDER_TYPE order_type,const double price,const CSymbol *symbol_obj,const double limit=0);
-//--- Return the flag checking if a distance from a price to (1) StopLoss, (2) TakeProfit, (3) order placement level by FreezeLevel is acceptable
-   bool                 CheckStopLossByFreezeLevel(const ENUM_ORDER_TYPE order_type,const double sl,const CSymbol *symbol_obj);
-   bool                 CheckTakeProfitByFreezeLevel(const ENUM_ORDER_TYPE order_type,const double tp,const CSymbol *symbol_obj);
-   bool                 CheckPriceByFreezeLevel(const ENUM_ORDER_TYPE order_type,const double price,const CSymbol *symbol_obj);
-//--- Return the flag presence in the trading event error reason
-   bool                 IsPresentErrorFlag(const int code)     const { return (this.m_error_reason_flags & code)==code;                               }
-//--- Return the error code in the list
-   bool                 IsPresentErorCode(const int code)            { this.m_list_errors.Sort(); return this.m_list_errors.Search(code)>WRONG_VALUE; }
-//--- Set/return the error handling action
-   void                 SetErrorHandlingBehavior(const ENUM_ERROR_HANDLING_BEHAVIOR behavior) { this.m_err_handling_behavior=behavior;                }
-   ENUM_ERROR_HANDLING_BEHAVIOR  ErrorHandlingBehavior(void)   const { return this.m_err_handling_behavior;                                           }
+   private:
+   //--- Return the flag checking the permission to trade by (1) StopLoss, (2) TakeProfit distance, (3) order placement level by a StopLevel-based price
+      bool                 CheckStopLossByStopLevel(const ENUM_ORDER_TYPE order_type,const double price,const double sl,const CSymbol *symbol_obj);
+      bool                 CheckTakeProfitByStopLevel(const ENUM_ORDER_TYPE order_type,const double price,const double tp,const CSymbol *symbol_obj);
+      bool                 CheckPriceByStopLevel(const ENUM_ORDER_TYPE order_type,const double price,const CSymbol *symbol_obj,const double limit=0);
+   //--- Return the flag checking if a distance from a price to (1) StopLoss, (2) TakeProfit, (3) order placement level by FreezeLevel is acceptable
+      bool                 CheckStopLossByFreezeLevel(const ENUM_ORDER_TYPE order_type,const double sl,const CSymbol *symbol_obj);
+      bool                 CheckTakeProfitByFreezeLevel(const ENUM_ORDER_TYPE order_type,const double tp,const CSymbol *symbol_obj);
+      bool                 CheckPriceByFreezeLevel(const ENUM_ORDER_TYPE order_type,const double price,const CSymbol *symbol_obj);
+   //--- Return the flag presence in the trading event error reason
+      bool                 IsPresentErrorFlag(const int code)     const { return (this.m_error_reason_flags & code)==code;                               }
+   //--- Return the error code in the list
+      bool                 IsPresentErorCode(const int code)            { this.m_list_errors.Sort(); return this.m_list_errors.Search(code)>WRONG_VALUE; }
+   //--- Set/return the error handling action
+      void                 SetErrorHandlingBehavior(const ENUM_ERROR_HANDLING_BEHAVIOR behavior) { this.m_err_handling_behavior=behavior;                }
+      ENUM_ERROR_HANDLING_BEHAVIOR  ErrorHandlingBehavior(void)   const { return this.m_err_handling_behavior;                                           }
 
-//--- Check trading limitations
-   bool                 CheckTradeConstraints(const double volume,
-                                              const ENUM_ACTION_TYPE action,
-                                              const CSymbol *symbol_obj,
-                                              const string source_method,
-                                              double sl=0,
-                                              double tp=0);
-//--- Check if the funds are sufficient
-   bool                 CheckMoneyFree(const double volume,
-                                       const double price,
-                                       const ENUM_ORDER_TYPE order_type,
-                                       const CSymbol *symbol_obj,
-                                       const string source_method);
-//--- Check parameter values by StopLevel and FreezeLevel
-   bool                 CheckLevels(const ENUM_ACTION_TYPE action,
-                                       const ENUM_ORDER_TYPE order_type,
-                                       double price,
-                                       double limit,
-                                       double sl,
-                                       double tp,
-                                       const CSymbol *symbol_obj,
-                                       const string source_method);
-//--- Return the correct (1) StopLoss, (2) TakeProfit and (3) order placement price
-   double               CorrectStopLoss(const ENUM_ORDER_TYPE order_type,
-                                       const double price_set,
-                                       const double stop_loss,
-                                       const CSymbol *symbol_obj,
-                                       const uint spread_multiplier=1);
-   double               CorrectTakeProfit(const ENUM_ORDER_TYPE order_type,
-                                       const double price_set,
-                                       const double take_profit,
-                                       const CSymbol *symbol_obj,
-                                       const uint spread_multiplier=1);
-   double               CorrectPricePending(const ENUM_ORDER_TYPE order_type,
-                                       const double price_set,
-                                       const double price,
-                                       const CSymbol *symbol_obj,
-                                       const uint spread_multiplier=1);
-//--- Return the volume, at which it is possible to open a position
-   double               CorrectVolume(const double price,
-                                       const ENUM_ORDER_TYPE order_type,
-                                       CSymbol *symbol_obj,
-                                       const string source_method);
+   //--- Check trading limitations
+      bool                 CheckTradeConstraints(const double volume,
+                                                const ENUM_ACTION_TYPE action,
+                                                const CSymbol *symbol_obj,
+                                                const string source_method,
+                                                double sl=0,
+                                                double tp=0);
+   //--- Check if the funds are sufficient
+      bool                 CheckMoneyFree(const double volume,
+                                          const double price,
+                                          const ENUM_ORDER_TYPE order_type,
+                                          const CSymbol *symbol_obj,
+                                          const string source_method);
+   //--- Check parameter values by StopLevel and FreezeLevel
+      bool                 CheckLevels(const ENUM_ACTION_TYPE action,
+                                          const ENUM_ORDER_TYPE order_type,
+                                          double price,
+                                          double limit,
+                                          double sl,
+                                          double tp,
+                                          const CSymbol *symbol_obj,
+                                          const string source_method);
+   //--- Return the correct (1) StopLoss, (2) TakeProfit and (3) order placement price
+      double               CorrectStopLoss(const ENUM_ORDER_TYPE order_type,
+                                          const double price_set,
+                                          const double stop_loss,
+                                          const CSymbol *symbol_obj,
+                                          const uint spread_multiplier=1);
+      double               CorrectTakeProfit(const ENUM_ORDER_TYPE order_type,
+                                          const double price_set,
+                                          const double take_profit,
+                                          const CSymbol *symbol_obj,
+                                          const uint spread_multiplier=1);
+      double               CorrectPricePending(const ENUM_ORDER_TYPE order_type,
+                                          const double price_set,
+                                          const double price,
+                                          const CSymbol *symbol_obj,
+                                          const uint spread_multiplier=1);
+   //--- Return the volume, at which it is possible to open a position
+      double               CorrectVolume(const double price,
+                                          const ENUM_ORDER_TYPE order_type,
+                                          CSymbol *symbol_obj,
+                                          const string source_method);
 
-//--- Return the error handling method
-   ENUM_ERROR_CODE_PROCESSING_METHOD   ResultProccessingMethod(const uint result_code);
-//--- Correct errors
-   ENUM_ERROR_CODE_PROCESSING_METHOD   RequestErrorsCorrecting(MqlTradeRequest &request,const ENUM_ORDER_TYPE order_type,const uint spread_multiplier,CSymbol *symbol_obj,CTradeObj *trade_obj);
-   
-protected:
-//--- (1) Open a position, (2) place a pending order
-   template<typename SL,typename TP> 
-   bool                 OpenPosition(const ENUM_POSITION_TYPE type,
-                                    const double volume,
-                                    const string symbol,
-                                    const ulong magic=ULONG_MAX,
-                                    const SL sl=0,
-                                    const TP tp=0,
-                                    const string comment=NULL,
-                                    const ulong deviation=ULONG_MAX,
-                                    const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-   template<typename PR,typename PL,typename SL,typename TP>
-   bool                 PlaceOrder( const ENUM_ORDER_TYPE order_type,
-                                    const double volume,
-                                    const string symbol,
-                                    const PR price,
-                                    const PL price_limit=0,
-                                    const SL sl=0,
-                                    const TP tp=0,
-                                    const ulong magic=ULONG_MAX,
-                                    const string comment=NULL,
-                                    const datetime expiration=0,
-                                    const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                    const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-                                    
-private:                                    
-//--- Return the request object index in the list by (1) ID,
-//--- (2) order ticket, (3) position ticket in the request
-   int                  GetIndexPendingRequestByID(const uchar id);
-   int                  GetIndexPendingRequestByOrder(const ulong ticket);
-   int                  GetIndexPendingRequestByPosition(const ulong ticket);
+   //--- Return the error handling method
+      ENUM_ERROR_CODE_PROCESSING_METHOD   ResultProccessingMethod(const uint result_code);
+   //--- Correct errors
+      ENUM_ERROR_CODE_PROCESSING_METHOD   RequestErrorsCorrecting(MqlTradeRequest &request,const ENUM_ORDER_TYPE order_type,const uint spread_multiplier,CSymbol *symbol_obj,CTradeObj *trade_obj);
+      
+   protected:
+   //--- (1) Open a position, (2) place a pending order
+      template<typename SL,typename TP> 
+      bool                 OpenPosition(const ENUM_POSITION_TYPE type,
+                                       const double volume,
+                                       const string symbol,
+                                       const ulong magic=ULONG_MAX,
+                                       const SL sl=0,
+                                       const TP tp=0,
+                                       const string comment=NULL,
+                                       const ulong deviation=ULONG_MAX,
+                                       const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+      template<typename PR,typename PL,typename SL,typename TP>
+      bool                 PlaceOrder( const ENUM_ORDER_TYPE order_type,
+                                       const double volume,
+                                       const string symbol,
+                                       const PR price,
+                                       const PL price_limit=0,
+                                       const SL sl=0,
+                                       const TP tp=0,
+                                       const ulong magic=ULONG_MAX,
+                                       const string comment=NULL,
+                                       const datetime expiration=0,
+                                       const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                       const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+                                       
+   private:                                    
+   //--- Return the request object index in the list by (1) ID,
+   //--- (2) order ticket, (3) position ticket in the request
+      int                  GetIndexPendingRequestByID(const uchar id);
+      int                  GetIndexPendingRequestByOrder(const ulong ticket);
+      int                  GetIndexPendingRequestByPosition(const ulong ticket);
 
-public:
-//--- Return itself
-   CTrading            *GetObject(void)    { return &this;   }
-//--- Constructor
-                        CTrading();
-//--- Timer
-   virtual void         OnTimer(void);
-//--- Get the pointers to the lists (make sure to call the method in program's OnInit() since the symbol collection list is created there)
-   void                 OnInit(CAccount *account,CSymbolsCollection *symbols,CMarketCollection *market,CHistoryCollection *history,CTradeEventsCollection *events)
-                          {
-                           this.m_account=account;
-                           this.m_symbol_collection=symbols;
-                           this.m_market=market;
-                           this.m_history=history;
-                           this.m_trade_event_collection=events;
-                          }
-//--- Return the list of (1) errors and (2) pending requests
-   CArrayInt           *GetListErrors(void)                             { return &this.m_list_errors;                }
-   CArrayObj           *GetListRequests(void)                           { return &this.m_list_request;               }
-//--- Set the number of trading attempts
-   void                 SetTotalTry(const uchar number)                 { this.m_total_try=number;                   }
-//--- Check limitations and errors
-   ENUM_ERROR_CODE_PROCESSING_METHOD CheckErrors(const double volume,
-                                                 const double price,
-                                                 const ENUM_ACTION_TYPE action,
-                                                 const ENUM_ORDER_TYPE order_type,
-                                                 CSymbol *symbol_obj,
-                                                 CTradeObj *trade_obj,
-                                                 const string source_method,
-                                                 const double limit=0,
-                                                 double sl=0,
-                                                 double tp=0,
-                                                 ulong ticket=0);
+   public:
+   //--- Return itself
+      CTrading            *GetObject(void)    { return &this;   }
+   //--- Constructor
+                           CTrading();
+   //--- Timer
+      virtual void         OnTimer(void);
+   //--- Get the pointers to the lists (make sure to call the method in program's OnInit() since the symbol collection list is created there)
+      void                 OnInit(CAccount *account,CSymbolsCollection *symbols,CMarketCollection *market,CHistoryCollection *history,CTradeEventsCollection *events)
+                           {
+                              this.m_account=account;
+                              this.m_symbol_collection=symbols;
+                              this.m_market=market;
+                              this.m_history_collection=history;
+                              this.m_trade_event_collection=events;
+                           }
+   //--- Return the list of (1) errors and (2) pending requests
+      CArrayInt           *GetListErrors(void)                             { return &this.m_list_errors;                }
+      CArrayObj           *GetListRequests(void)                           { return &this.m_list_request;               }
+   //--- Set the number of trading attempts
+      void                 SetTotalTry(const uchar number)                 { this.m_total_try=number;                   }
+   //--- Check limitations and errors
+      ENUM_ERROR_CODE_PROCESSING_METHOD CheckErrors(const double volume,
+                                                   const double price,
+                                                   const ENUM_ACTION_TYPE action,
+                                                   const ENUM_ORDER_TYPE order_type,
+                                                   CSymbol *symbol_obj,
+                                                   CTradeObj *trade_obj,
+                                                   const string source_method,
+                                                   const double limit=0,
+                                                   double sl=0,
+                                                   double tp=0,
+                                                   ulong ticket=0);
 
-//--- Set the following for symbol trading objects:
-//--- (1) correct filling policy, (2) filling policy,
-//--- (3) correct order expiration type, (4) order expiration type,
-//--- (5) magic number, (6) comment, (7) slippage, (8) volume, (9) order expiration date,
-//--- (10) the flag of asynchronous sending of a trading request, (11) logging level, (12) spread multiplier
-   void                 SetCorrectTypeFilling(const ENUM_ORDER_TYPE_FILLING type=ORDER_FILLING_FOK,const string symbol=NULL);
-   void                 SetTypeFilling(const ENUM_ORDER_TYPE_FILLING type=ORDER_FILLING_FOK,const string symbol=NULL);
-   void                 SetCorrectTypeExpiration(const ENUM_ORDER_TYPE_TIME type=ORDER_TIME_GTC,const string symbol=NULL);
-   void                 SetTypeExpiration(const ENUM_ORDER_TYPE_TIME type=ORDER_TIME_GTC,const string symbol=NULL);
-   void                 SetMagic(const ulong magic,const string symbol=NULL);
-   void                 SetComment(const string comment,const string symbol=NULL);
-   void                 SetDeviation(const ulong deviation,const string symbol=NULL);
-   void                 SetVolume(const double volume=0,const string symbol=NULL);
-   void                 SetExpiration(const datetime expiration=0,const string symbol=NULL);
-   void                 SetAsyncMode(const bool mode=false,const string symbol=NULL);
-   void                 SetLogLevel(const ENUM_LOG_LEVEL log_level=LOG_LEVEL_ERROR_MSG,const string symbol=NULL);
-   void                 SetSpreadMultiplier(const uint value=1,const string symbol=NULL);
+   //--- Set the following for symbol trading objects:
+   //--- (1) correct filling policy, (2) filling policy,
+   //--- (3) correct order expiration type, (4) order expiration type,
+   //--- (5) magic number, (6) comment, (7) slippage, (8) volume, (9) order expiration date,
+   //--- (10) the flag of asynchronous sending of a trading request, (11) logging level, (12) spread multiplier
+      void                 SetCorrectTypeFilling(const ENUM_ORDER_TYPE_FILLING type=ORDER_FILLING_FOK,const string symbol=NULL);
+      void                 SetTypeFilling(const ENUM_ORDER_TYPE_FILLING type=ORDER_FILLING_FOK,const string symbol=NULL);
+      void                 SetCorrectTypeExpiration(const ENUM_ORDER_TYPE_TIME type=ORDER_TIME_GTC,const string symbol=NULL);
+      void                 SetTypeExpiration(const ENUM_ORDER_TYPE_TIME type=ORDER_TIME_GTC,const string symbol=NULL);
+      void                 SetMagic(const ulong magic,const string symbol=NULL);
+      void                 SetComment(const string comment,const string symbol=NULL);
+      void                 SetDeviation(const ulong deviation,const string symbol=NULL);
+      void                 SetVolume(const double volume=0,const string symbol=NULL);
+      void                 SetExpiration(const datetime expiration=0,const string symbol=NULL);
+      void                 SetAsyncMode(const bool mode=false,const string symbol=NULL);
+      void                 SetLogLevel(const ENUM_LOG_LEVEL log_level=LOG_LEVEL_ERROR_MSG,const string symbol=NULL);
+      void                 SetSpreadMultiplier(const uint value=1,const string symbol=NULL);
 
-//--- Set standard sounds (1 symbol=NULL) for trading objects of all symbols, (2 symbol!=NULL) for a symbol trading object
-   void                 SetSoundsStandard(const string symbol=NULL);
-//--- Set a sound for a specified order/position type and symbol
-//--- 'mode' specifies an event a sound is set for
-//--- (symbol=NULL) for trading objects of all symbols,
-//--- (symbol!=NULL) for a trading object of a specified symbol
-   void                 SetSound(const ENUM_MODE_SET_SOUND mode,const ENUM_ORDER_TYPE action,const string sound,const string symbol=NULL);
-//--- Set the flag enabling sounds
-   void                 SetUseSounds(const bool flag);
+   //--- Set standard sounds (1 symbol=NULL) for trading objects of all symbols, (2 symbol!=NULL) for a symbol trading object
+      void                 SetSoundsStandard(const string symbol=NULL);
+   //--- Set a sound for a specified order/position type and symbol
+   //--- 'mode' specifies an event a sound is set for
+   //--- (symbol=NULL) for trading objects of all symbols,
+   //--- (symbol!=NULL) for a trading object of a specified symbol
+      void                 SetSound(const ENUM_MODE_SET_SOUND mode,const ENUM_ORDER_TYPE action,const string sound,const string symbol=NULL);
+   //--- Set the flag enabling sounds
+      void                 SetUseSounds(const bool flag);
 
-//--- Set/return the flag enabling trading
-   void                 SetTradingDisableFlag(const bool flag)             { this.m_is_trade_disable=flag;  }
-   bool                 IsTradingDisable(void)                       const { return this.m_is_trade_disable;}
+   //--- Set/return the flag enabling trading
+      void                 SetTradingDisableFlag(const bool flag)             { this.m_is_trade_disable=flag;  }
+      bool                 IsTradingDisable(void)                       const { return this.m_is_trade_disable;}
 
-//--- Open (1) Buy, (2) Sell position
-   template<typename SL,typename TP> 
-   bool                 OpenBuy(const double volume,
-                                const string symbol,
-                                const ulong magic=ULONG_MAX,
-                                const SL sl=0,
-                                const TP tp=0,
-                                const string comment=NULL,
-                                const ulong deviation=ULONG_MAX,
-                                const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-   
-   template<typename SL,typename TP> 
-   bool                 OpenSell(const double volume,
+   //--- Open (1) Buy, (2) Sell position
+      template<typename SL,typename TP> 
+      bool                 OpenBuy(const double volume,
                                  const string symbol,
                                  const ulong magic=ULONG_MAX,
                                  const SL sl=0,
@@ -276,113 +262,123 @@ public:
                                  const string comment=NULL,
                                  const ulong deviation=ULONG_MAX,
                                  const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+      
+      template<typename SL,typename TP> 
+      bool                 OpenSell(const double volume,
+                                    const string symbol,
+                                    const ulong magic=ULONG_MAX,
+                                    const SL sl=0,
+                                    const TP tp=0,
+                                    const string comment=NULL,
+                                    const ulong deviation=ULONG_MAX,
+                                    const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
 
-//--- Modify a position
-   template<typename SL,typename TP> 
-   bool                 ModifyPosition(const ulong ticket,const SL sl=WRONG_VALUE,const TP tp=WRONG_VALUE);
+   //--- Modify a position
+      template<typename SL,typename TP> 
+      bool                 ModifyPosition(const ulong ticket,const SL sl=WRONG_VALUE,const TP tp=WRONG_VALUE);
 
-//--- Close a position (1) fully, (2) partially, (3) by an opposite one
-   bool                 ClosePosition(const ulong ticket,const double volume=WRONG_VALUE,const string comment=NULL,const ulong deviation=ULONG_MAX);
-   bool                 ClosePositionPartially(const ulong ticket,const double volume,const string comment=NULL,const ulong deviation=ULONG_MAX);
-   bool                 ClosePositionBy(const ulong ticket,const ulong ticket_by);
+   //--- Close a position (1) fully, (2) partially, (3) by an opposite one
+      bool                 ClosePosition(const ulong ticket,const double volume=WRONG_VALUE,const string comment=NULL,const ulong deviation=ULONG_MAX);
+      bool                 ClosePositionPartially(const ulong ticket,const double volume,const string comment=NULL,const ulong deviation=ULONG_MAX);
+      bool                 ClosePositionBy(const ulong ticket,const ulong ticket_by);
 
-//--- Set (1) BuyStop, (2) BuyLimit, (3) BuyStopLimit pending order
-   template<typename PR,typename SL,typename TP>
-   bool                 PlaceBuyStop(const double volume,
-                                           const string symbol,
-                                           const PR price,
-                                           const SL sl=0,
-                                           const TP tp=0,
-                                           const ulong magic=ULONG_MAX,
-                                           const string comment=NULL,
-                                           const datetime expiration=0,
-                                           const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                           const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-   template<typename PR,typename SL,typename TP>
-   bool                 PlaceBuyLimit(const double volume,
-                                           const string symbol,
-                                           const PR price,
-                                           const SL sl=0,
-                                           const TP tp=0,
-                                           const ulong magic=ULONG_MAX,
-                                           const string comment=NULL,
-                                           const datetime expiration=0,
-                                           const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                           const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-   template<typename PS,typename PL,typename SL,typename TP>
-   bool                 PlaceBuyStopLimit(const double volume,
-                                           const string symbol,
-                                           const PS price_stop,
-                                           const PL price_limit,
-                                           const SL sl=0,
-                                           const TP tp=0,
-                                           const ulong magic=ULONG_MAX,
-                                           const string comment=NULL,
-                                           const datetime expiration=0,
-                                           const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                           const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+   //--- Set (1) BuyStop, (2) BuyLimit, (3) BuyStopLimit pending order
+      template<typename PR,typename SL,typename TP>
+      bool                 PlaceBuyStop(const double volume,
+                                             const string symbol,
+                                             const PR price,
+                                             const SL sl=0,
+                                             const TP tp=0,
+                                             const ulong magic=ULONG_MAX,
+                                             const string comment=NULL,
+                                             const datetime expiration=0,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+      template<typename PR,typename SL,typename TP>
+      bool                 PlaceBuyLimit(const double volume,
+                                             const string symbol,
+                                             const PR price,
+                                             const SL sl=0,
+                                             const TP tp=0,
+                                             const ulong magic=ULONG_MAX,
+                                             const string comment=NULL,
+                                             const datetime expiration=0,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+      template<typename PS,typename PL,typename SL,typename TP>
+      bool                 PlaceBuyStopLimit(const double volume,
+                                             const string symbol,
+                                             const PS price_stop,
+                                             const PL price_limit,
+                                             const SL sl=0,
+                                             const TP tp=0,
+                                             const ulong magic=ULONG_MAX,
+                                             const string comment=NULL,
+                                             const datetime expiration=0,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
 
-//--- Set (1) SellStop, (2) SellLimit, (3) SellStopLimit pending order
-   template<typename PR,typename SL,typename TP>
-   bool                 PlaceSellStop(const double volume,
-                                           const string symbol,
-                                           const PR price,
-                                           const SL sl=0,
-                                           const TP tp=0,
-                                           const ulong magic=ULONG_MAX,
-                                           const string comment=NULL,
-                                           const datetime expiration=0,
-                                           const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                           const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-   template<typename PR,typename SL,typename TP>
-   bool                 PlaceSellLimit(const double volume,
-                                           const string symbol,
-                                           const PR price,
-                                           const SL sl=0,
-                                           const TP tp=0,
-                                           const ulong magic=ULONG_MAX,
-                                           const string comment=NULL,
-                                           const datetime expiration=0,
-                                           const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                           const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-   template<typename PS,typename PL,typename SL,typename TP>
-   bool                 PlaceSellStopLimit(const double volume,
-                                           const string symbol,
-                                           const PS price_stop,
-                                           const PL price_limit,
-                                           const SL sl=0,
-                                           const TP tp=0,
-                                           const ulong magic=ULONG_MAX,
-                                           const string comment=NULL,
-                                           const datetime expiration=0,
-                                           const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                           const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-//--- Modify a pending order
-   template<typename PR,typename PL,typename SL,typename TP>
-   bool                 ModifyOrder(const ulong ticket,
-                                          const PR price=WRONG_VALUE,
-                                          const SL sl=WRONG_VALUE,
-                                          const TP tp=WRONG_VALUE,
-                                          const PL limit=WRONG_VALUE,
-                                          datetime expiration=WRONG_VALUE,
-                                          const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                          const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-//--- Remove a pending order
-   bool                 DeleteOrder(const ulong ticket);
-//--- Create a pending request
-   bool                 CreatePendingRequest(const ENUM_PEND_REQ_STATUS status,
-                                             const uchar id,
-                                             const uchar attempts,
-                                             const ulong wait,
-                                             const MqlTradeRequest &request,
-                                             const int retcode,
-                                             CSymbol *symbol_obj,
-                                             COrder *order);
+   //--- Set (1) SellStop, (2) SellLimit, (3) SellStopLimit pending order
+      template<typename PR,typename SL,typename TP>
+      bool                 PlaceSellStop(const double volume,
+                                             const string symbol,
+                                             const PR price,
+                                             const SL sl=0,
+                                             const TP tp=0,
+                                             const ulong magic=ULONG_MAX,
+                                             const string comment=NULL,
+                                             const datetime expiration=0,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+      template<typename PR,typename SL,typename TP>
+      bool                 PlaceSellLimit(const double volume,
+                                             const string symbol,
+                                             const PR price,
+                                             const SL sl=0,
+                                             const TP tp=0,
+                                             const ulong magic=ULONG_MAX,
+                                             const string comment=NULL,
+                                             const datetime expiration=0,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+      template<typename PS,typename PL,typename SL,typename TP>
+      bool                 PlaceSellStopLimit(const double volume,
+                                             const string symbol,
+                                             const PS price_stop,
+                                             const PL price_limit,
+                                             const SL sl=0,
+                                             const TP tp=0,
+                                             const ulong magic=ULONG_MAX,
+                                             const string comment=NULL,
+                                             const datetime expiration=0,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+   //--- Modify a pending order
+      template<typename PR,typename PL,typename SL,typename TP>
+      bool                 ModifyOrder(const ulong ticket,
+                                             const PR price=WRONG_VALUE,
+                                             const SL sl=WRONG_VALUE,
+                                             const TP tp=WRONG_VALUE,
+                                             const PL limit=WRONG_VALUE,
+                                             datetime expiration=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                             const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+   //--- Remove a pending order
+      bool                 DeleteOrder(const ulong ticket);
+   //--- Create a pending request
+      bool                 CreatePendingRequest(const ENUM_PEND_REQ_STATUS status,
+                                                const uchar id,
+                                                const uchar attempts,
+                                                const ulong wait,
+                                                const MqlTradeRequest &request,
+                                                const int retcode,
+                                                CSymbol *symbol_obj,
+                                                COrder *order);
 
-//--- Return (1) the pointer to the request object by its ID in the list,
-//--- (2) the logging level of a symbol trading object
-   CPendRequest        *GetPendRequestByID(const uchar id);
-   ENUM_LOG_LEVEL       GetTradeObjLogLevel(const string symbol_name);
+   //--- Return (1) the pointer to the request object by its ID in the list,
+   //--- (2) the logging level of a symbol trading object
+      CPendRequest        *GetPendRequestByID(const uchar id);
+      ENUM_LOG_LEVEL       GetTradeObjLogLevel(const string symbol_name);
 
   };
  #endif // CTRADING_MQH_DECLARATION
@@ -416,162 +412,162 @@ ENUM_ERROR_CODE_PROCESSING_METHOD CTrading::ResultProccessingMethod(const uint r
   {
    switch(result_code)
      {
-   #ifdef __MQL4__
-      //--- Malfunctional trade operation
-      case 9   :
-      //--- Account disabled
-      case 64  :
-      //--- Invalid account number
-      case 65  :  return ERROR_CODE_PROCESSING_METHOD_DISABLE;
-      
-      //--- No error but result is unknown
-      case 1   :
-      //--- General error
-      case 2   :
-      //--- Old client terminal version
-      case 5   :
-      //--- Not enough rights
-      case 7   :
-      //--- Market closed
-      case 132 :
-      //--- Trading disabled
-      case 133 :
-      //--- Order is locked and being processed
-      case 139 :
-      //--- Buy only
-      case 140 :
-      //--- The number of open and pending orders has reached the limit set by the broker
-      case 148 :
-      //--- Attempt to open an opposite order if hedging is disabled
-      case 149 :
-      //--- Attempt to close a position on a symbol contradicts the FIFO rule
-      case 150 :  return ERROR_CODE_PROCESSING_METHOD_EXIT;
-      
-      //--- Invalid trading request parameters
-      case 3   :
-      //--- Invalid price
-      case 129 :
-      //--- Invalid stop levels
-      case 130 :
-      //--- Invalid volume
-      case 131 :
-      //--- Not enough money to perform the operation
-      case 134 :
-      //--- Expirations are denied by broker
-      case 147 :  return ERROR_CODE_PROCESSING_METHOD_CORRECT;
-      
-      //--- Trade server is busy
-      case 4   :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
-      //--- No connection to the trade server
-      case 6   :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)20000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 20 seconds
-      //--- Too frequent requests
-      case 8   :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
-      //--- No price
-      case 136 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
-      //--- Broker is busy
-      case 137 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)15000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 15 seconds
-      //--- Too many requests
-      case 141 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
-      //--- Modification denied because the order is too close to market
-      case 145 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
-      //--- Trade context is busy
-      case 146 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
-      
-      //--- Trade timeout
-      case 128 :
-      //--- Price has changed
-      case 135 :
-      //--- New prices
-      case 138 :  return ERROR_CODE_PROCESSING_METHOD_REFRESH;
+      #ifdef __MQL4__
+         //--- Malfunctional trade operation
+         case 9   :
+         //--- Account disabled
+         case 64  :
+         //--- Invalid account number
+         case 65  :  return ERROR_CODE_PROCESSING_METHOD_DISABLE;
+         
+         //--- No error but result is unknown
+         case 1   :
+         //--- General error
+         case 2   :
+         //--- Old client terminal version
+         case 5   :
+         //--- Not enough rights
+         case 7   :
+         //--- Market closed
+         case 132 :
+         //--- Trading disabled
+         case 133 :
+         //--- Order is locked and being processed
+         case 139 :
+         //--- Buy only
+         case 140 :
+         //--- The number of open and pending orders has reached the limit set by the broker
+         case 148 :
+         //--- Attempt to open an opposite order if hedging is disabled
+         case 149 :
+         //--- Attempt to close a position on a symbol contradicts the FIFO rule
+         case 150 :  return ERROR_CODE_PROCESSING_METHOD_EXIT;
+         
+         //--- Invalid trading request parameters
+         case 3   :
+         //--- Invalid price
+         case 129 :
+         //--- Invalid stop levels
+         case 130 :
+         //--- Invalid volume
+         case 131 :
+         //--- Not enough money to perform the operation
+         case 134 :
+         //--- Expirations are denied by broker
+         case 147 :  return ERROR_CODE_PROCESSING_METHOD_CORRECT;
+         
+         //--- Trade server is busy
+         case 4   :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
+         //--- No connection to the trade server
+         case 6   :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)20000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 20 seconds
+         //--- Too frequent requests
+         case 8   :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
+         //--- No price
+         case 136 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
+         //--- Broker is busy
+         case 137 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)15000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 15 seconds
+         //--- Too many requests
+         case 141 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
+         //--- Modification denied because the order is too close to market
+         case 145 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
+         //--- Trade context is busy
+         case 146 :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
+         
+         //--- Trade timeout
+         case 128 :
+         //--- Price has changed
+         case 135 :
+         //--- New prices
+         case 138 :  return ERROR_CODE_PROCESSING_METHOD_REFRESH;
 
-   //--- MQL5
-   #else
-      //--- Auto trading disabled by the server
-      case 10026  :  return ERROR_CODE_PROCESSING_METHOD_DISABLE;
-      
-      //--- Request canceled by a trader
-      case 10007  :
-      //--- Request handling error
-      case 10011  :
-      //--- Request expired
-      case 10012  :
-      //--- Trading disabled
-      case 10017 :
-      //--- Market closed
-      case 10018  :
-      //--- Order status changed
-      case 10023  :
-      //--- Request unchanged
-      case 10025  :
-      //--- Request blocked for handling
-      case 10028  :
-      //--- Transaction is allowed for live accounts only
-      case 10032  :
-      //--- The maximum number of pending orders is reached
-      case 10033  :
-      //--- Reached the maximum order and position volume for this symbol
-      case 10034  :
-      //--- Invalid or prohibited order type
-      case 10035  :
-      //--- Position with the specified ID already closed
-      case 10036  :
-      //--- A close order is already present for a specified position
-      case 10039  :
-      //--- The maximum number of open positions is reached
-      case 10040  :
-      //--- Request to activate a pending order is rejected, the order is canceled
-      case 10041  :
-      //--- Request is rejected, because the rule "Only long positions are allowed" is set for the symbol
-      case 10042  :
-      //--- Request is rejected, because the rule "Only short positions are allowed" is set for the symbol
-      case 10043  :
-      //--- Request is rejected, because the rule "Only closing of existing positions is allowed" is set for the symbol
-      case 10044  :
-      //--- Request is rejected, because the rule "Only closing of existing positions by FIFO rule is allowed" is set for the symbol
-      case 10045  :  return ERROR_CODE_PROCESSING_METHOD_EXIT;
+      //--- MQL5
+      #else
+         //--- Auto trading disabled by the server
+         case 10026  :  return ERROR_CODE_PROCESSING_METHOD_DISABLE;
+         
+         //--- Request canceled by a trader
+         case 10007  :
+         //--- Request handling error
+         case 10011  :
+         //--- Request expired
+         case 10012  :
+         //--- Trading disabled
+         case 10017 :
+         //--- Market closed
+         case 10018  :
+         //--- Order status changed
+         case 10023  :
+         //--- Request unchanged
+         case 10025  :
+         //--- Request blocked for handling
+         case 10028  :
+         //--- Transaction is allowed for live accounts only
+         case 10032  :
+         //--- The maximum number of pending orders is reached
+         case 10033  :
+         //--- Reached the maximum order and position volume for this symbol
+         case 10034  :
+         //--- Invalid or prohibited order type
+         case 10035  :
+         //--- Position with the specified ID already closed
+         case 10036  :
+         //--- A close order is already present for a specified position
+         case 10039  :
+         //--- The maximum number of open positions is reached
+         case 10040  :
+         //--- Request to activate a pending order is rejected, the order is canceled
+         case 10041  :
+         //--- Request is rejected, because the rule "Only long positions are allowed" is set for the symbol
+         case 10042  :
+         //--- Request is rejected, because the rule "Only short positions are allowed" is set for the symbol
+         case 10043  :
+         //--- Request is rejected, because the rule "Only closing of existing positions is allowed" is set for the symbol
+         case 10044  :
+         //--- Request is rejected, because the rule "Only closing of existing positions by FIFO rule is allowed" is set for the symbol
+         case 10045  :  return ERROR_CODE_PROCESSING_METHOD_EXIT;
 
-      //--- Requote
-      case 10004  :
-      //--- Prices changed
-      case 10020  :  return ERROR_CODE_PROCESSING_METHOD_REFRESH;
+         //--- Requote
+         case 10004  :
+         //--- Prices changed
+         case 10020  :  return ERROR_CODE_PROCESSING_METHOD_REFRESH;
 
-      //--- Invalid request
-      case 10013  :
-      //--- Invalid request volume
-      case 10014  :
-      //--- Invalid request price
-      case 10015  :
-      //--- Invalid request stop levels
-      case 10016  :
-      //--- Insufficient funds for request execution
-      case 10019  :
-      //--- Invalid order expiration in a request
-      case 10022  :
-      //--- The specified type of order execution by residue is not supported
-      case 10030  :
-      //--- Closed volume exceeds the current position volume
-      case 10038  :  return ERROR_CODE_PROCESSING_METHOD_CORRECT;
+         //--- Invalid request
+         case 10013  :
+         //--- Invalid request volume
+         case 10014  :
+         //--- Invalid request price
+         case 10015  :
+         //--- Invalid request stop levels
+         case 10016  :
+         //--- Insufficient funds for request execution
+         case 10019  :
+         //--- Invalid order expiration in a request
+         case 10022  :
+         //--- The specified type of order execution by residue is not supported
+         case 10030  :
+         //--- Closed volume exceeds the current position volume
+         case 10038  :  return ERROR_CODE_PROCESSING_METHOD_CORRECT;
 
-      //--- Request rejected
-      case 10006  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)15000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 15 seconds
-      //--- No quotes to handle the request
-      case 10021  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
-      //--- Too frequent requests
-      case 10024  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
-      //--- Auto trading disabled by the client terminal
-      case 10027  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)20000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 20 seconds
-      //--- An order or a position is frozen
-      case 10029  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
-      //--- No connection to the trade server
-      case 10031  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)20000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 20 seconds
+         //--- Request rejected
+         case 10006  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)15000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 15 seconds
+         //--- No quotes to handle the request
+         case 10021  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)5000;    // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 5 seconds
+         //--- Too frequent requests
+         case 10024  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
+         //--- Auto trading disabled by the client terminal
+         case 10027  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)20000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 20 seconds
+         //--- An order or a position is frozen
+         case 10029  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)10000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 10 seconds
+         //--- No connection to the trade server
+         case 10031  :  return (ENUM_ERROR_CODE_PROCESSING_METHOD)20000;   // ERROR_CODE_PROCESSING_METHOD_WAIT; Wait 20 seconds
 
-      //--- Order placed
-      case 10008  :
-      //--- Request executed
-      case 10009  :
-      //--- Request executed partially
-      case 10010  :
-   #endif 
+         //--- Order placed
+         case 10008  :
+         //--- Request executed
+         case 10009  :
+         //--- Request executed partially
+         case 10010  :
+      #endif 
       //--- "OK"
       default:
         break;

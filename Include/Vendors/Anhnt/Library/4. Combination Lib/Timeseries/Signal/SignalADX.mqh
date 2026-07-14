@@ -29,6 +29,7 @@ public:
 CSignalADX::CSignalADX(double min_adx)
    : m_min_adx(min_adx)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_ADX;
   }
 
 //+------------------------------------------------------------------+

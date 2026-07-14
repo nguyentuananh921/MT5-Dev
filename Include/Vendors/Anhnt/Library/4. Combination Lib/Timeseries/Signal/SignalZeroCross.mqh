@@ -30,6 +30,7 @@ public:
 CSignalZeroCross::CSignalZeroCross(double zero_level)
    : m_zero_level(zero_level)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_ZEROCROSS;
   }
 
 //+------------------------------------------------------------------+

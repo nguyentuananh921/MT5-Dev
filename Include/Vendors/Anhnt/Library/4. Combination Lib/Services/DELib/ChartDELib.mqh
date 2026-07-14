@@ -13,7 +13,7 @@
   //+------------------------------------------------------------------+
   //| Include files                                                    |
   //+------------------------------------------------------------------+
-  #include "..\..\Defines\Defines.mqh"
+  #include "..\..\Defines\ChartDefines.mqh"
   #include "..\..\Notify\Message\Message.mqh"
   #include "..\InputData\CommonInpData.mqh"
   #include "CommonDELib.mqh"

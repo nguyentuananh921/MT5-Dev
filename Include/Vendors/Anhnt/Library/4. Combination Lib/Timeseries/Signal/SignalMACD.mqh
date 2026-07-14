@@ -29,6 +29,7 @@ public:
 //+------------------------------------------------------------------+
 CSignalMACDLineCross::CSignalMACDLineCross(void)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_MACD_LINECROSS;
   }
 
 //+------------------------------------------------------------------+
@@ -65,6 +66,7 @@ public:
 //+------------------------------------------------------------------+
 CSignalMACDZeroCross::CSignalMACDZeroCross(void)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_MACD_ZEROCROSS;
   }
 
 //+------------------------------------------------------------------+

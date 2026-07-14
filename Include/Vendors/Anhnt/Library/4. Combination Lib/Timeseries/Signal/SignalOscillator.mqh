@@ -37,6 +37,7 @@ CSignalOscillator::CSignalOscillator(double overbought, double oversold)
    : m_overbought(overbought),
      m_oversold(oversold)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_OSCILLATOR;
   }
 
 //+------------------------------------------------------------------+

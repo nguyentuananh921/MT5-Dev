@@ -26,6 +26,8 @@
  // so CFrame/CElement/CElementBase are fully resolved first (MQL5 compiles as one flat unit,
  // so include order matters here).
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\GraphElementsCollection.mqh>
+ // Layer-3 observer: charts/windows/indicators state + CHART_OBJ_EVENT_* events (no WForms deps)
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\ChartObjCollection.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
@@ -71,6 +73,16 @@
       TAB_CONFIG_DETAIL_PARAMS = 0,   // Form Parameter + Add
       TAB_CONFIG_DETAIL_INFO,         // Mô tả/info indicator đang chọn
       TAB_CONFIG_DETAIL_TOTAL
+    };
+   enum ENUM_CHECKBOX_STATE
+   {
+    CHECKBOX_STATE_ON  = 0,
+    CHECKBOX_STATE_OFF = 1,
+   };
+   enum ENUM_INDICATOR_SHOW_STATE
+    {
+      INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
+      INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
     };
   // =====================================================================
   // --- Layer 2 (GUI) layout descriptor - decided BEFORE CreateAddIndicatorParaInfor/
@@ -122,26 +134,31 @@
   // --- Indicator table: below Add button with 10px gap; width auto-fills m_tabs_main via AutoXResizeMode.
    #define INDICATOR_TABLE_X         PARAM_FORM_X
    #define INDICATOR_TABLE_Y         (PARAM_FORM_Y + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10 + ADD_BTN_H + 10)
-
+   
+  //For Indicator table field show in m_table_indicator and m_table_indicator_SymbolTFValue
+   #define INDICATOR_PARATEXT_WIDTH 180 //Include name + Icon
   class CGUIPannel : public CWndEvents
    {
     private: 
      //PUre Data Layer 1
      // Private Pointer variables    
-      CSymbolsCollection         *m_symbol_collection;                //Trading owns
+      CSymbolsCollection         *m_symbol_collection;                //CTradingEngine owns
       CBarTimeSeriesCollection   *m_BarTimeSeriesCollection;          //CBarTimeSeriesCollection owns      
       CBarPatternsControl        *m_pattern_cfg;                      // borrowed from EA
       CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
       CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
       CTickSeriesCollection      *m_tick_series;                      // Collection of tick series
+      
       CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
       int                        m_pending_remove_row;                // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
+      
       CTimeCounter               m_gui_timecounter;                   //--- Time counters
       CKeys                      m_keys;                              //For Keyboard    
      // For trading bubble
      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
-     // CTradingLevelBubble        m_trading_bubble;    
-     // Control Elements 
+      CTradingLevelBubble        m_trading_bubble;                    // OWNED - lazy-init: OnInitEvent() only called once HasAnyLevel() is true
+      bool                       m_bubble_created;                    // guard, like m_gui_created
+     // Control Elements
        CWindow                    m_window_main;
        CStatusBar                 m_status_bar;    
        CTabs                      m_tabs_main;       
@@ -172,6 +189,8 @@
          int                  m_trade_cache_sig_icon[];
          int                  m_trade_cache_dir_icon[];
          int                  m_trade_table_row_count;
+         // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
+         int                  m_settings_cache_state[];
 
        // --- Signal arrows/thumbs on the chart (current chart symbol+period only - other symbols
        // in the table have no chart of their own to draw on). Watermark tracked per (symbol,TF)
@@ -181,6 +200,12 @@
         string                    m_signal_arrows_key[];
         datetime                  m_signal_arrows_last_time[];
 
+       // --- Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
+       // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
+       // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
+       // --- indicator BY HAND on the chart. Styling (colors) is out of scope by design - MT5
+       // --- has no API to restyle an indicator instance that is already attached to a chart.
+        CChartObjCollection       m_chart_obj_collection;
       // SIndicatorCatalogItem now lives in Artyom Trishkin\IndicatorCatalog.mqh (Tang 1 metadata)      
        // --- Params tab controls (generic fixed-slot form, max 4 params/indicator)
      // For guard on GUI.
@@ -207,26 +232,37 @@
          void                         SyncIndicatorTreeViewIcons(void);
          void                         AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[]);         
          bool                         CreateAddIndicatorParaInfor(const int x_gap, const int y_gap);
-         void                          ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li);
-         void                          HideParamSlots(void);
-         void                          OnClickAddIndicator(void);
-         void                          OnClickSaveIndicators(void);
-         
-         bool                          CreateIndicatorTable(const int x, const int y);
-         void                          SetValuesToIndicatorTable(void);
-         bool                          CreateIndicatorSymbolTFTable(const int x, const int y);
-         void                          SetValuesToIndicatorSymbolTFTable(void);
-         string                        BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
-         void                          DrawSignalArrows(void);
-         int                           SignalArrowsFindOrAddKey(const string key);
+       //Handler for TreeView m_treeview_indicator.
+         void                         ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li);
+         void                         HideParamSlots(void);
+         void                         OnClickAddIndicator(void);
+         void                         OnClickSaveIndicators(void);
+       //For Indicator Table m_table_indicator   
+         bool                         CreateIndicatorTable(const int x, const int y);         
+         void                         RefreshIndicatorTable(void);         
+         void                         RefreshIndicatorTableShowColumn(void);
+         void                         SetIndicatorTableRow(const int row, CIndicatorDE *indicator);         
+         bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);         
+         bool                         LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator);
+         CIndicatorDE                 *OwnedInstanceOfLine(const int line_handle);
+         void                         ImportForeignChartIndicators(void);        
+       //For Indicator Symbol TF Table m_table_indicator_SymbolTFValue
+         bool                         CreateIndicatorSymbolTFTable(const int x, const int y);
+         void                         SetValuesToIndicatorSymbolTFTable(void);
+         string                       BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
+         void                         DrawSignalArrows(void);
+         int                          SignalArrowsFindOrAddKey(const string key);
+         void                         ResetSignalArrows(void);
+         void                         PurgeSignalArrowObjects(const string sym, const ENUM_TIMEFRAMES tf);
        //Helper
         static void                   SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw);
         int                           GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[]); 
-       //Event Handler
-        void                          OnClickShowLine(const string sname, const int row);
+       //Event Handler for m_table_indicator
+        void                          OnClickToggleShowIndicatorOnChart(const string sname, const int row);
         void                          OnClickToggleBuySignal(const string sname, const int row);
         void                          OnClickToggleSellSignal(const string sname, const int row);
         void                          OnClickRemoveIndicator(const string sname, const int row);  
+        void                          HandleChartIndicatorChange(void);
      //Calculation for Control
       double                          DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0);
     public: 
@@ -252,8 +288,8 @@
       //Temporary remove due to change
         //void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
         //void  SetTickSeriesCollection(CTickSeriesCollection *ticks) { m_tick_series = ticks; }
-        //void  SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
-        //void  SetTradingControl(CTradingControl *trading_control) { m_trading_bubble.SetTradingControl(trading_control); }   
+        void  SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
+        void  SetTradingControl(CTradingControl *trading_control) { m_trading_bubble.SetTradingControl(trading_control); }
    };
 #endif // CGUIPANNEL_MQH_DECLARATION
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION
@@ -269,7 +305,8 @@
       m_pending_remove_row     = -1;
       //m_tick_series = NULL;
       m_gui_created     = false;
-   } 
+      m_bubble_created  = false;
+   }
   CGUIPannel::~CGUIPannel(void)
    {
    }
@@ -297,14 +334,30 @@
     if(!m_gui_created)
      {
       if(!CreateGUIPannel()) return false;
-      m_gui_created = true;         
+      m_gui_created = true;
+      // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
+      // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
+      m_chart_obj_collection.CreateCollection();
       UpdateGUI(true);
-    }  
+      // Startup reconcile: adopt any indicator the user attached while the EA was off.
+      // MUST run AFTER UpdateGUI - m_IndicatorsCollection.TemplateExists() needs the collection
+      // already populated; running before it re-imported
+      // every JSON template as a duplicate (and AddIndicatorToList deleting those duplicates
+      // was the source of the dangling-pointer crash in SignalsCollection).
+       ImportForeignChartIndicators();
+      // Debug helper (kept available, call disabled after the 4807 hunt closed): dump the
+      // instance->handle map right after startup
+      //m_time_series_engine.PrintIndicatorsInventory();
+    }
    else if(uninit_reason == REASON_CHARTCHANGE)
-    {      
-      UpdateGUI(true);
-    }   
-   return true;           
+    {
+      // No manual redraw here (2026-07-14) - MT5 already redraws the chart natively on
+      // symbol/TF change, and CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE (OnEvent) does the
+      // same content refresh moments later. Two ChartRedraw() calls back-to-back was
+      // the m_window_main flicker on every TF switch.
+      UpdateGUI(false);
+    }
+   return true;
    };
   // Hides all param-form slots. Called after any ShowTabElements() that overrides our Hide().
   void CGUIPannel::HideParamSlots(void)
@@ -314,8 +367,7 @@
       m_param_labels[i].Hide();
       m_param_edits[i].Hide();
       m_param_combo[i].Hide();
-     }
-     //m_btn_add_indicator.Hide();
+     }     
    }
   // OnEvent handler
   void CGUIPannel::OnEvent(const int id, const long &lparam,
@@ -391,11 +443,46 @@
          if(col == 0)        m_pending_remove_row = row;
          else if(col == 2)    OnClickToggleBuySignal(sname, row);
          else if(col == 3)    OnClickToggleSellSignal(sname, row);
-         else if(col == 4)    OnClickShowLine(sname, row);     // toggle ChartIndicatorAdd/Delete
+         //else if(col == 4)    OnClickShowLine(sname, row);     // toggle ChartIndicatorAdd/Delete
+         else if(col == 4)    OnClickToggleShowIndicatorOnChart(sname, row);     // toggle ChartIndicatorAdd/Delete
          return;
       }  
-    //Handle Symbol TF TreeView Click     
-     //ON_CLICK_BUTTON 
+    //--- Layer 3 -> Layer 2 state sync: an indicator was added/removed/param-changed on some
+    //--- chart window (possibly BY HAND on the chart) - re-truth the "Show" column. Events
+    //--- come from m_chart_obj_collection.Refresh() polled in OnTimerEvent.
+     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_ADD ||
+        id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_DEL ||
+        id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_CHANGE)
+      {
+         // A NEW indicator on the chart may be one Layer 1 doesn't know yet (added by hand) -
+         // import it as a template first (idempotent), THEN re-truth the "Show" column.
+         if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_ADD)
+            ImportForeignChartIndicators();
+         // A param edit made ON THE CHART replaces the matching Layer 1 template (Layer 3
+         // leads, Layer 1+2 follow). A DEL stays visibility-only: Layer 1 keeps the
+         // template, only the "Show" checkbox unticks.
+         if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_CHANGE)
+            HandleChartIndicatorChange();
+         RefreshIndicatorTableShowColumn();
+         return;
+      }
+    //--- Layer 3 -> Layer 2: symbol/TF actually changed on this chart (CChartObjCollection,
+    //--- same poll/diff pattern as IND_ADD/DEL/CHANGE above) - single place that rebuilds the
+    //--- SymbolTF tree + indicator table on a real change. Replaces the old CHARTEVENT_CHART_CHANGE
+    //--- handler, which duplicated this same refresh AND called ChartRedraw() a second time right
+    //--- after OnInitEvent's REASON_CHARTCHANGE already did - that double-redraw was the
+    //--- m_window_main flicker on every TF/symbol switch (fixed 2026-07-14).
+     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_CHANGE ||
+        id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_TF_CHANGE ||
+        id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE)
+      {
+         PopulateSymbolTFTree();
+         SynSymbolTFTreeViewIcons();
+         UpdateGUI(false);   // dirty-check refresh only - no manual redraw, MT5 already redraws natively on chart change
+         return;
+      }
+    //Handle Symbol TF TreeView Click
+     //ON_CLICK_BUTTON
       if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON  && lparam == m_treeview_SymbolTF.Id())
        {
          int li = (int)dparam;
@@ -425,21 +512,15 @@
           }
          return;
          }
-    //CHARTEVENT_CHART_CHANGE
-     if(id == CHARTEVENT_CHART_CHANGE)
-      {       
-       // Guard 1: rebuild tree only on symbol/TF change
-        static string          last_sym = "";
-        static ENUM_TIMEFRAMES last_tf  = PERIOD_CURRENT;
-        if(_Symbol != last_sym || _Period != last_tf)
-         {
-            last_sym = _Symbol;
-            last_tf  = _Period;            
-            PopulateSymbolTFTree();               
-            SynSymbolTFTreeViewIcons();
-            m_chart.Redraw();
-         }  
-      }          
+    // --- CHARTEVENT_CHART_CHANGE: symbol/TF tree rebuild moved to CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE
+    // --- above (2026-07-14) - this native event still fires on every scroll/zoom too, so it was never
+    // --- a reliable "did symbol/TF really change" signal on its own; the CChartObjCollection event is.
+    // --- Trading bubble: forward whatever wasn't already claimed above
+    // --- (CHARTEVENT_MOUSE_MOVE for drag, CHARTEVENT_CLICK for the X button,
+    // --- CHARTEVENT_CUSTOM trade events from CTradeEventsCollection, and
+    // --- CHARTEVENT_CHART_CHANGE for redraw-on-zoom/scroll).
+     if(m_bubble_created)
+        m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
    }
   void CGUIPannel::OnTickEvent(void)
    {
@@ -450,7 +531,7 @@
   //+------------------------------------------------------------------+
   void CGUIPannel::OnDeinitEvent(const int reason)
    {
-      //m_trading_bubble.OnDeinitEvent();
+      if(m_bubble_created) m_trading_bubble.OnDeinitEvent();
       if(reason != REASON_CHARTCHANGE)
          CWndEvents::Destroy();
    }
@@ -479,10 +560,13 @@
 
       ulong t1 = ::GetMicrosecondCount();
 
-      //m_trading_bubble.OnPoll();
-      
+      if(m_bubble_created) m_trading_bubble.OnPoll();
+
       SetValuesToIndicatorSymbolTFTable();
       DrawSignalArrows();
+      //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
+      //--- custom events (handled in OnEvent -> RefreshIndicatorTableShowStates)
+      m_chart_obj_collection.Refresh();
 
       ulong t2 = ::GetMicrosecondCount();
       // if(t2 - t0 > 1000)
@@ -492,7 +576,16 @@
   //| Trade operation event                                            |
   //+------------------------------------------------------------------+
   void CGUIPannel::OnTradeEvent(void)
-   {      
+   {
+      // --- Lazy-init the trading bubble: only pay for the full-screen canvas +
+      // --- hiding native SL/TP lines once there is an actual SL/TP to show on the
+      // --- CURRENT chart's symbol. Once created, left running (idle draws are
+      // --- cheap - Draw() itself no-ops via the unchanged-state check).
+      if(!m_bubble_created && m_trading_bubble.HasAnyLevel())
+        {
+         if(m_trading_bubble.OnInitEvent())
+            m_bubble_created = true;
+        }
    }
  //For GUIPannel
   bool CGUIPannel::CreateGUIPannel(void) 
@@ -528,6 +621,11 @@
         if(!CreateIndicatorTable(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
        //For Trade Tab at m_tabs_main
         if(!CreateIndicatorSymbolTFTable(0, 0)) return false;
+      // --- Trading bubble: just wire the mouse pointer now (cheap, no canvas yet) -
+      // --- OnInitEvent() itself is lazy, called from OnTradeEvent() only once
+      // --- HasAnyLevel() is true (avoid creating a full-screen canvas + hiding
+      // --- native SL/TP lines when there is nothing to show).
+        m_trading_bubble.MousePointer(m_mouse);
       //m_tabs_main.ShowTabElements(); //Need verify
       CWndEvents::CompletedGUI();
       // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
@@ -548,13 +646,16 @@
   //+------------------------------------------------------------------+
   void CGUIPannel::UpdateGUI(const bool redraw)
    {
-      m_treeview_SymbolTF.Update(true);
-      m_table_indicator.Update(true);
-      SetValuesToIndicatorTable();
+      // No unconditional full-canvas Update(true) here - repainting the whole treeview and
+      // the whole Settings table on every CHARTCHANGE was exactly the m_window_main blink.
+      // Each call below repaints only the cells/icons it actually changed (dirty-check),
+      // and PopulateSymbolTFTree (CHARTEVENT_CHART_CHANGE handler) already updates the tree
+      // when the symbol/TF really changed.
+      RefreshIndicatorTable();
       SetValuesToIndicatorSymbolTFTable();
       SyncIndicatorTreeViewIcons();
       if(redraw) m_chart.Redraw();
-   }  
+   }
  //For Control Create GUI controls  
   //For Main Window
   //+------------------------------------------------------------------+
@@ -737,169 +838,373 @@
 
        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_indicator);       
        return true;
-     }    
-   // =====================================================================
-   // --- Info tab: port of V4 m_table_indicator, same 5-column layout
-   // =====================================================================
-   bool CGUIPannel::CreateIndicatorTable(const int x, const int y)
-    {
-      m_table_indicator.MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_table_indicator);
-      m_table_indicator.AutoXResizeMode(true);
-      m_table_indicator.AutoXResizeRightOffset(3);
-      m_table_indicator.AutoYResizeMode(true);
-      m_table_indicator.AutoYResizeBottomOffset(3);
-      m_table_indicator.ShowHeaders(true);
-      m_table_indicator.SelectableRow(true);
-      m_table_indicator.LightsHover(true);
-      m_table_indicator.IsSortMode(true);
-      // --- 5 columns: col 0 merges the old icon-only "show on T3" column with the
-      // --- "Indicator" text column (CTCell renders image+text independently, click
-      // --- detection is scoped to the image's own pixel width - see Table.mqh
-      // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Delete shift down by 1.
-       m_table_indicator.TableSize(5, 20);
-       int widths[5]    = {160, 70, 40, 40, 40};
-       int img_x_off[5] = {3,   0,  10, 10, 10};
-       int img_y_off[5] = {3,   0,  3,  3,  3};
-       ENUM_ALIGN_MODE align[5] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
-       m_table_indicator.ColumnsWidth(widths);
-       m_table_indicator.ImageXOffset(img_x_off);
-       m_table_indicator.ImageYOffset(img_y_off);
-       m_table_indicator.TextAlign(align);
+     }
+   //For m_table_indicator in TAB_TAB_MAIN_SETTINGS    
+    // =====================================================================
+    // --- Info tab: port of V4 m_table_indicator, same 5-column layout
+    // =====================================================================
+    bool CGUIPannel::CreateIndicatorTable(const int x, const int y)
+     {
+       m_table_indicator.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_table_indicator);
+       //Resize Properties
+        m_table_indicator.AutoXResizeMode(true);
+        m_table_indicator.AutoXResizeRightOffset(3);
+        m_table_indicator.AutoYResizeMode(true);
+        m_table_indicator.AutoYResizeBottomOffset(3);
+       //Table Properties
+        m_table_indicator.ShowHeaders(true);
+        m_table_indicator.SelectableRow(true);
+        m_table_indicator.LightsHover(true);
+        m_table_indicator.IsSortMode(true);
+       // --- 5 columns: col 0 merges the old icon-only "show on T3" column with the
+       // --- "Indicator" text column (CTCell renders image+text independently, click
+       // --- detection is scoped to the image's own pixel width - see Table.mqh
+       // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Delete shift down by 1.
+        m_table_indicator.TableSize(5, 20);
+        int widths[5]    = {180, 70, 40, 40, 40};
+        int img_x_off[5] = {3,   0,  10, 10, 10};
+        int img_y_off[5] = {3,   0,  3,  3,  3};
+        ENUM_ALIGN_MODE align[5] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+        m_table_indicator.ColumnsWidth(widths);
+        m_table_indicator.ImageXOffset(img_x_off);
+        m_table_indicator.ImageYOffset(img_y_off);
+        m_table_indicator.TextAlign(align);
 
-       if(!m_table_indicator.CreateTable(x, y)) return false;
-       m_table_indicator.SetHeaderText(0, "Indicator");
-       m_table_indicator.SetHeaderText(1, "Group");
-      //Checkbox to show or hide on Layer 3 (Chart)
-       m_table_indicator.SetHeaderText(2, "Buy");
-       m_table_indicator.SetHeaderText(3, "Sell");
-       m_table_indicator.SetHeaderText(4, "Show");
+        if(!m_table_indicator.CreateTable(x, y)) return false;
+        //Set Header text
+          m_table_indicator.SetHeaderText(0, "Indicator");
+          m_table_indicator.SetHeaderText(1, "Group");
+        //Checkbox to show or hide on Layer 3 (Chart)
+          m_table_indicator.SetHeaderText(2, "Buy");
+          m_table_indicator.SetHeaderText(3, "Sell");
+          m_table_indicator.SetHeaderText(4, "Show");
 
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
-     return true;
-    }
-   //Ver 1
-   void CGUIPannel::SetValuesToIndicatorTable(void)
-    {      
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
+       return true;
+     }
+    //Ver 1
+    // --- Template view of Layer 1 (see README 5c): one row per template. The row set changes
+    // --- ONLY via LoadIndicatorFromJSON (initial build here), AddIndicatorInstance (appends its
+    // --- own row) and OnClickRemoveIndicator (DeleteRow) - so no dedup and no periodic rebuild.
+    // --- By the Layer-1 invariant every series carries the same template set, hence the current
+    // --- chart's (symbol,TF) instance list IS the template list, one instance per template.
+    void CGUIPannel::RefreshIndicatorTable(void)
+     {
       if(m_IndicatorsCollection == NULL) return;
-      //Get Current Symbol and TimeFrame on Chart
-       string sym = ::Symbol();
-       ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0); 
-      //Get Indicator template for Layer 1 PureData
-       CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);  
-       list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);   
-      if(list == NULL || list.Total() == 0)
-        {
-          m_table_indicator.DeleteAllRows();
-          m_table_indicator.AddRow(0);   // safety row: Library bug — DeleteAllRows does not reset m_item_index_focus
-          ArrayResize(m_table_indicator_names, 0);
-          ArrayResize(m_table_indicator_ptrs, 0);
-          m_table_indicator.Update(true);
-          return;
-        }
-      SIndicatorCatalogItem catalog[];
-      GetIndicatorCatalog(catalog);
-      string labels[]; int groups[]; int line_states[]; bool has_signal[];
-      CIndicatorDE *ptrs[];
-      int count = 0;
-      int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
-      for(int i = 0; i < list.Total(); i++)
-        {
-          CIndicatorDE *ind = list.At(i);
-          if(ind == NULL) continue;
-          // --- Dedup by full equality (type+params+...), not just ShortName() -
-          // --- two PSARs with different Step/Maximum must stay as separate rows.
-           bool dup = false;
-           for(int n = 0; n < count; n++)
-             if(ptrs[n].IsEqual(ind)) { dup = true; break; }
-           if(dup) continue;
-          // --- Compact label: catalog short name + raw param values (no Symbol/TF -
-          // --- that's already shown via the highlighted node in m_treeview_SymbolTF).
-           string short_name = "";
-           for(int c = 0; c < ArraySize(catalog); c++)
-            if(catalog[c].type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
-           if(short_name == "") short_name = ind.GetTypeDescription();
-          // --- Compact on purpose: full named/decoded text (FormatIndicatorLabel)
-          // --- was too long for the column and the table can't be resized to fit -
-          // --- reserved for a tooltip later, when CTable actually supports one.
-           MqlParam mql_params[];
-           ind.GetMqlParams(mql_params);
-           string values = "";
-           for(int p = 0; p < ArraySize(mql_params); p++)
-            {
-              if(p > 0) values += ", ";
-              values += (mql_params[p].type == TYPE_DOUBLE)
-                         ? DoubleToString(mql_params[p].double_value, 2)
-                         : IntegerToString((int)mql_params[p].integer_value);
-            }
-           string label = short_name + (values != "" ? "  (" + values + ")" : "");
+      string sym = ::Symbol();
+      ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
 
-           bool on_chart = false;
-           string sname = ind.ShortName();
-           for(int sub = 0; sub < subwindows && !on_chart; sub++)
-            for(int k = ChartIndicatorsTotal(0, sub) - 1; k >= 0; k--)
-              if(ChartIndicatorName(0, sub, k) == sname) { on_chart = true; break; }
-            ArrayResize(labels, count + 1);
-            ArrayResize(groups, count + 1);
-            ArrayResize(line_states, count + 1);
-            ArrayResize(has_signal, count + 1);
-            ArrayResize(ptrs, count + 1);
-            labels[count]      = label;
-            groups[count]      = (int)ind.Group();
-            line_states[count] = on_chart ? 0 : 1;   // 0=shown(checkbox img[0]) 1=hidden(img[1])
-            has_signal[count]  = ind.HasSignal();   // chỉ cho click Buy/Sell nếu loại này thực có Signal
-            ptrs[count]        = ind;
-            count++;
-        }
-      if(count == 0) return;
+      CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+      list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+      int count = (list == NULL) ? 0 : list.Total();
 
+      // --- Row set already matches the template count: re-point the BORROWED per-row
+      // --- pointers at the CURRENT chart's instances (they change on CHARTCHANGE) and
+      // --- dirty-refresh the per-chart "Show" column only - no structural change, no flicker.
+      if(count == ArraySize(m_table_indicator_ptrs) && count > 0)
+       {
+        SIndicatorCatalogItem catalog[];
+        GetIndicatorCatalog(catalog);
+        for(int i = 0; i < count; i++)
+          {
+            CIndicatorDE *indicator = list.At(i);
+            if(indicator == NULL) continue;
+            // --- Table may be sorted (IsSortMode) - Col 0's label text travels WITH its row
+            // --- through a sort, so match against it to find the CURRENT physical row
+            // --- instead of trusting collection order == row index.
+            string label = "        " + BuildIndicatorLabel(indicator, catalog);
+            int row = -1;
+            for(int r = 0; r < count; r++)
+              if(m_table_indicator.GetValue(0, r) == label) { row = r; break; }
+            if(row < 0) continue;
+            m_table_indicator_ptrs[row]  = indicator;
+            m_table_indicator_names[row] = indicator.ShortName();
+          }
+        RefreshIndicatorTableShowColumn();
+        return;
+       }
+      // --- Structural (re)build - initial fill after LoadIndicatorFromJSON, or safety on mismatch
+      if(count == 0)
+        {
+         if(ArraySize(m_table_indicator_ptrs) == 0) return; // already showing the empty state - leave the table alone
+         m_table_indicator.DeleteAllRows();
+         m_table_indicator.AddRow(0);   // safety row: Library bug - DeleteAllRows does not reset m_item_index_focus
+         ArrayResize(m_table_indicator_names, 0);
+         ArrayResize(m_table_indicator_ptrs, 0);
+         ArrayResize(m_settings_cache_state, 0);
+         m_table_indicator.Update(true);
+         return;
+        }
       m_table_indicator.DeleteAllRows();
-      for(int i = 0; i < count-1; i++)   // +1 extra row: guards stale m_item_index_focus (Library bug in DeleteAllRows)
-         m_table_indicator.AddRow(i);
-
+      // --- redraw=true on the LAST row only: AddRow() only recalculates the table's visible-area
+      // --- size (CTable::RecalculateAndResizeTable) when told to - skipping it on every row and
+      // --- doing it once at the end avoids the black/smeared row-overflow bug (README/BugNote
+      // --- 2026-07-14) without paying the recalculation cost on every single row.
+      for(int i = 0; i < count - 1; i++)   // DeleteAllRows leaves one physical row behind
+         m_table_indicator.AddRow(i, i == count - 2);
       ArrayResize(m_table_indicator_names, count);
       ArrayResize(m_table_indicator_ptrs, count);
-      // --- Col 0: red Close (delete) icon merged with the Indicator label text - this is
-      // --- the Tang 1 control (click = delete this template from PureData; its Signals
-      // --- are released first in OnClickRemoveIndicator). CTCell draws image+text
-      // --- independently, and click detection is scoped to the image's own pixel width
-      // --- (Table.mqh CheckPressedButton), so clicking the label text won't trigger it.
-       uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
-       uint chk[]   = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
-      // --- Col 4: Layer 3 control (tick/untick = ChartIndicatorAdd/Delete) - a real checkbox.
-       uint show_on_chart[] = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
-       string group_names[] = {"Trend", "Oscillator", "Volumes", "Arrows"};
-       for(int row = 0; row < count; row++)
-        {
-         // --- Col 0 (Layer 1): one-shot delete button, not a toggle - clicking the
-         // --- red Close icon deletes this template (Signal first, then Indicator).
-          m_table_indicator.CellType(0, row, CELL_BUTTON);
-          m_table_indicator.SetImages(0, row, delete_icon);
-          m_table_indicator.ChangeImage(0, row, 0);
-          m_table_indicator.SetValue(0, row, "        " + labels[row]);   // leading spaces clear the icon
-
-          string gname = (groups[row] >= 0 && groups[row] < 4) ? group_names[groups[row]] : "Other";
-          m_table_indicator.SetValue(1, row, "  " + gname);
-
-         // --- Buy / Sell checkboxes: only meaningful when this indicator has a Signal
-          m_table_indicator.CellType(2, row, CELL_CHECKBOX);
-          m_table_indicator.SetImages(2, row, chk);
-          m_table_indicator.ChangeImage(2, row, has_signal[row] ? 1 : 1);   // default unchecked
-          m_table_indicator.CellType(3, row, CELL_CHECKBOX);
-          m_table_indicator.SetImages(3, row, chk);
-          m_table_indicator.ChangeImage(3, row, has_signal[row] ? 1 : 1);   // default unchecked
-
-         // --- Col 4 (Layer 3): real checkbox - tick = shown on chart right now.
-          m_table_indicator.CellType(4, row, CELL_CHECKBOX);
-          m_table_indicator.SetImages(4, row, show_on_chart);
-          m_table_indicator.ChangeImage(4, row, line_states[row]);
-
-          m_table_indicator_names[row] = ptrs[row].ShortName();
-          m_table_indicator_ptrs[row]  = ptrs[row];
-        }
+      ArrayResize(m_settings_cache_state, count);
+      for(int row = 0; row < count; row++)
+         SetIndicatorTableRow(row, list.At(row));
       m_table_indicator.Update(true);
+     }
+    // --- Fill every cell of one template row + the parallel arrays (names/ptrs/state cache)
+    void CGUIPannel::SetIndicatorTableRow(const int row, CIndicatorDE *indicator)
+     {
+      if(indicator == NULL) return;
+      uint delete_icon[]   = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
+      uint chk[]           = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
+      uint show_on_chart[] = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
+      string group_names[] = {"Trend", "Oscillator", "Volumes", "Arrows"};
+
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+      string label = BuildIndicatorLabel(indicator, catalog);
+
+      // --- Col 0: red Close (delete) icon + label - click detection covers the icon only
+      // --- (Table.mqh CheckPressedButton scopes it to the image pixel width)
+      m_table_indicator.CellType(0, row, CELL_BUTTON);
+      m_table_indicator.SetImages(0, row, delete_icon);
+      m_table_indicator.ChangeImage(0, row, 0);
+      m_table_indicator.SetValue(0, row, "        " + label);   // leading spaces clear the icon
+      // --- Col 1: group name
+       int group = (int)indicator.Group();
+       string gname = (group >= 0 && group < 4) ? group_names[group] : "Other";
+       m_table_indicator.SetValue(1, row, "  " + gname);
+      // --- Col 2/3: Buy / Sell signal filters (default OFF - arrows are opt-in per template;
+      // --- DrawSignalArrows reads these checkboxes live, toggles just reset the arrows)
+       m_table_indicator.CellType(2, row, CELL_CHECKBOX);
+       m_table_indicator.SetImages(2, row, chk);
+       m_table_indicator.ChangeImage(2, row, 1);
+       m_table_indicator.CellType(3, row, CELL_CHECKBOX);
+       m_table_indicator.SetImages(3, row, chk);
+       m_table_indicator.ChangeImage(3, row, 1);
+      // --- Col 4: "shown on the CURRENT chart" checkbox
+       int state = IsIndicatorShownOnChart(indicator) ? INDICATOR_SHOW_ON_CHART : INDICATOR_HIDE_ON_CHART;
+       m_table_indicator.CellType(4, row, CELL_CHECKBOX);
+       m_table_indicator.SetImages(4, row, show_on_chart);
+       m_table_indicator.ChangeImage(4, row, state);
+
+       m_table_indicator_names[row] = indicator.ShortName();
+       m_table_indicator_ptrs[row]  = indicator;   // BORROWED - CIndicatorsCollection owns it
+       m_settings_cache_state[row]  = state;
+     }
+    // --- True when the CURRENT chart displays this indicator instance. The Layer 3 mirror
+    // --- (CChartObjCollection -> CWndInd) stores the real slot handle, and MQL5 slots are
+    // --- program-wide: the line of an instance Layer 1 owns carries Layer 1's own handle
+    // --- number - the handle is the exact join key (names have different formats:
+    // --- chart line "SAR(0.05,0.2)" vs CIndicatorDE::ShortName "SAR(BTCUSDm,M1)").
+    bool CGUIPannel::IsIndicatorShownOnChart(CIndicatorDE *indicator)
+    {
+      if(indicator == NULL) return false;
+      CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+      if(chart == NULL) return false;
+      for(int win = 0; win < chart.WindowsTotal(); win++)
+        {
+          CChartWnd *wnd = chart.GetWindowByNum(win);
+          if(wnd == NULL) continue;
+          for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
+            {
+            CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
+            if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), indicator))
+              {
+                // --- DEBUG IsIndicatorShownOnChart - removed 2026-07-14, fired every row every tick
+                //::Print("DEBUG IsIndicatorShownOnChart indicator_handle=", indicator.Handle(),
+                //        " -> MATCHED line '", wnd_ind.Name(), "' handle=", wnd_ind.Handle());
+                return true;
+              }
+            }
+        }
+      return false;
     }
-   //
+    // --- Per-chart part of the Settings table (col 4 "Show") - dirty-check, no structural change
+    void CGUIPannel::RefreshIndicatorTableShowColumn(void)
+     {
+      bool any_changed = false;
+      for(int row = 0; row < ArraySize(m_table_indicator_ptrs); row++)
+        {
+         int state = IsIndicatorShownOnChart(m_table_indicator_ptrs[row]) ? INDICATOR_SHOW_ON_CHART : INDICATOR_HIDE_ON_CHART;
+         if(state == m_settings_cache_state[row]) continue;
+         m_settings_cache_state[row] = state;
+         m_table_indicator.ChangeImage(4, row, state);
+         m_table_indicator.BackColor(4, row, clrWhite, true);   // force this one cell to repaint
+         any_changed = true;
+        }
+      if(any_changed)
+         m_table_indicator.Update(false);
+     }
+    // =====================================================================
+    // --- "Add" button click handler — converts text fields to MqlParam[]
+    // =====================================================================
+    // --- Col 4 checkbox: Tang 2 controls Tang 3 only - never touches PureData.
+    // --- The table already auto-toggled the icon before sending this event, so
+    // --- SelectedImageIndex(4,row) tells us the state to APPLY (0=show, 1=hide).
+    // --- Matched by ind.Handle(), not by name - two instances of the same type
+    // --- with different params can share the same native chart-assigned name.
+    void CGUIPannel::OnClickToggleShowIndicatorOnChart(const string sname, const int row)
+     {
+      if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
+      CIndicatorDE *ind = m_table_indicator_ptrs[row];
+      if(ind == NULL) return;
+
+      int new_state = (int)m_table_indicator.SelectedImageIndex(4, row);
+      int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
+      if(new_state == INDICATOR_HIDE_ON_CHART)   // Hide: remove from chart, PureData/handle stay intact
+        {
+         // Find this instance's line(s) through the Layer 3 mirror - handle is the join
+         // key (program-wide slot), no Get/Release needed in the GUI at all
+         CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+         if(chart != NULL)
+            for(int win = chart.WindowsTotal() - 1; win >= 0; win--)
+              {
+               CChartWnd *wnd = chart.GetWindowByNum(win);
+               if(wnd == NULL) continue;
+               for(int i = wnd.IndicatorsTotal() - 1; i >= 0; i--)
+                 {
+                  CWndInd *wnd_ind = wnd.GetIndicatorByIndex(i);
+                  if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), ind))
+                     ChartIndicatorDelete(0, win, wnd_ind.Name());
+                 }
+              }
+        }
+      else // Show: re-attach using the stored handle
+        {
+         int sub_window = (ind.Group() == INDICATOR_GROUP_TREND) ? 0 : subwindows;
+         ChartIndicatorAdd(0, sub_window, ind.Handle());
+        }
+      ChartRedraw();
+     }
+    // --- Col 2/3 checkboxes: per-template Buy/Sell signal filters. The table already
+    // --- flipped the checkbox image before this handler fires; DrawSignalArrows reads the
+    // --- checkbox states live, so all a toggle needs is a clean redraw of the arrows.
+    void CGUIPannel::OnClickToggleBuySignal(const string sname, const int row) { ResetSignalArrows(); }
+    void CGUIPannel::OnClickToggleSellSignal(const string sname, const int row) { ResetSignalArrows(); }
+    // --- Wipe this chart's signal arrows and rewind the watermark: the next timer tick
+    // --- redraws the whole history from scratch under the CURRENT Buy/Sell filters
+    void CGUIPannel::ResetSignalArrows(void)
+     {
+      string sym = ::Symbol();
+      ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+      int wm_idx = SignalArrowsFindOrAddKey(sym + "|" + EnumToString(tf));
+      m_signal_arrows_last_time[wm_idx] = 0;
+      PurgeSignalArrowObjects(sym, tf);
+      ::ChartRedraw(m_chart_id);
+     }
+    // --- Delete every signal-arrow object of (sym, tf) from BOTH the chart and
+    // --- CGraphElementsCollection's registry. A raw ObjectsDeleteAll leaves the registry
+    // --- stale, and the collection then refuses to re-create the same names forever
+    // --- ("Such a graphic object already exists" - its pre-create check is list-based).
+    void CGUIPannel::PurgeSignalArrowObjects(const string sym, const ENUM_TIMEFRAMES tf)
+     {
+      string prefix = ::MQLInfoString(MQL_PROGRAM_NAME) + "_sig_" + sym + "_" + EnumToString(tf) + "_";
+      // 1) Deregister first: GetListGraphObj() hands out the LIVE registry list
+      //    (DeleteGraphObjFromList is private), and its FreeMode delete frees the
+      //    collection-owned CGStdGraphObj records
+      CArrayObj *registry = m_graph_elements.GetListGraphObj();
+      if(registry != NULL)
+         for(int r = registry.Total() - 1; r >= 0; r--)
+           {
+            CGStdGraphObj *obj = registry.At(r);
+            if(obj != NULL && obj.ChartID() == m_chart_id && ::StringFind(obj.Name(), prefix) == 0)
+               registry.Delete(r);
+           }
+      // 2) Then the chart objects themselves - also covers leftovers from a previous
+      //    EA run that this instance never registered
+      for(int i = ::ObjectsTotal(m_chart_id) - 1; i >= 0; i--)
+        {
+         string obj_name = ::ObjectName(m_chart_id, i);
+         if(::StringFind(obj_name, prefix) == 0)
+            ::ObjectDelete(m_chart_id, obj_name);
+        }
+     }
+    // --- Col 0 button: Tang 1 control - removes this whole template (same type+params,
+    // --- regardless of symbol/timeframe) from PureData. Does NOT touch the JSON file
+    // --- yet (that part - persisting the removal so it doesn't come back on next
+    // --- EA restart - is still open, deferred from the earlier discussion).
+    void CGUIPannel::OnClickRemoveIndicator(const string sname, const int row)
+     {
+      if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
+      // ref_indicator is BORROWED (CIndicatorsCollection owns it) - it lives inside the
+      // same list the loop below deletes from, so it may dangle partway through.
+       CIndicatorDE *ref_indicator = m_table_indicator_ptrs[row];
+       if(ref_indicator == NULL || m_IndicatorsCollection == NULL || m_time_series_engine == NULL) return;
+      //--- Audit line: template removals are destructive and reachable from several paths
+      //--- (X icon, HandleChartIndicatorChange) - always log who goes and from which row
+       ::Print(__FUNCTION__, " > row=", row, " '", m_table_indicator_names[row],
+              "' ref handle=", ref_indicator.Handle());
+
+       CArrayObj *list = m_IndicatorsCollection.GetList();
+       if(list == NULL) return;
+      // --- Capture ref_indicator's type/params into plain local values NOW, before the
+      // --- loop deletes it (it matches its own template) - never dereference it after.
+       ENUM_INDICATOR ref_type = ref_indicator.TypeIndicator();
+       MqlParam ref_params[];
+       ref_indicator.GetMqlParams(ref_params);
+       for(int i = list.Total() - 1; i >= 0; i--)
+        {
+         // indicator is BORROWED (CIndicatorsCollection owns it via 'list' FreeMode)
+         CIndicatorDE *indicator = list.At(i);
+         if(indicator == NULL || indicator.TypeIndicator() != ref_type) continue;
+
+         // --- Same template = same type + same params, regardless of symbol/TF
+         MqlParam params[];
+         indicator.GetMqlParams(params);
+         if(!IsEqualMqlParamArrays(params, ref_params)) continue;
+
+         // --- Release the Signal FIRST: CSignalsCollection borrows this indicator's
+         // --- pointer (m_indicator_list[] + the signal's own m_indicator), so deleting
+         // --- the indicator before its signal would leave both dangling.
+         m_time_series_engine.GetSignalsCollection().DeleteSignal(indicator);
+
+         // --- Detach from chart if currently shown (Layer 3 mirror, handle = join key).
+         // --- The slot itself dies exactly once, in ~CIndicatorDE via list.Delete below.
+         CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+         if(chart != NULL)
+            for(int win = chart.WindowsTotal() - 1; win >= 0; win--)
+              {
+               CChartWnd *wnd = chart.GetWindowByNum(win);
+               if(wnd == NULL) continue;
+               for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
+                 {
+                  CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
+                  if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), indicator))
+                     ChartIndicatorDelete(0, win, wnd_ind.Name());
+                 }
+              }
+         list.Delete(i);   // CArrayObj FreeMode -> ~CIndicatorDE -> IndicatorRelease(handle)
+        }
+      // --- Drop exactly this row (Library CTable::DeleteRow shifts the rest up) and keep
+      // --- the parallel arrays aligned. No DeleteAllRows here (README 5a/5c).
+       int rows_after = ArraySize(m_table_indicator_ptrs) - 1;
+       for(int r = row; r < rows_after; r++)
+        {
+         m_table_indicator_names[r] = m_table_indicator_names[r + 1];
+         m_table_indicator_ptrs[r]  = m_table_indicator_ptrs[r + 1];
+         m_settings_cache_state[r]  = m_settings_cache_state[r + 1];
+        }
+      ArrayResize(m_table_indicator_names, rows_after);
+      ArrayResize(m_table_indicator_ptrs,  rows_after);
+      ArrayResize(m_settings_cache_state,  rows_after);
+      if(rows_after == 0)
+        {
+         // CTable::DeleteRow never shrinks below one physical row, and SetImages rejects an
+         // empty array (no API to strip a cell's icons) - so add a freshly CellInitialize'd
+         // blank row first, then delete the old row 0 that still carries the delete/checkbox
+         // icons. The blank row shifts up and becomes the single empty survivor.
+         m_table_indicator.AddRow(1);
+         m_table_indicator.DeleteRow(0, true);
+         m_table_indicator.Update(true);
+        }
+      else
+         m_table_indicator.DeleteRow(row, true);
+
+      SetValuesToIndicatorSymbolTFTable();
+      SyncIndicatorTreeViewIcons();
+      ChartRedraw();
+     } 
+   
    //For Symbol TF treeview
    bool CGUIPannel::CreateTreeView_SymbolTF(const int x_gap, const int y_gap)
     {       
@@ -918,7 +1223,6 @@
     {      
       if(m_BarTimeSeriesCollection == NULL) return;
       int mw_total = ::SymbolsTotal(true);
-
       // Grow registry if MarketWatch expanded
        if(ArraySize(m_sym_tree_pos) < mw_total)
         {
@@ -1000,7 +1304,6 @@
     {
       string chart_tf = TimeframeDescription(_Period);
       int    total    = m_treeview_SymbolTF.ItemsTotal();  // duyệt tất cả items
-
       for(int i = 0; i < total; i++)
        {
          CTreeItem *item = m_treeview_SymbolTF.ItemPointer(i);
@@ -1048,8 +1351,21 @@
          params[i].type = schema[i].data_type;
          if(schema[i].choices != "")
            {
-            // --- Enum param: the selected dropdown INDEX IS the integer value
-             params[i].integer_value = (long)m_param_combo[i].GetListViewPointer().SelectedItemIndex();
+            // --- Enum param: read back the SELECTED TEXT, then let the Library's own
+            // --- Xxx-ByDescription() (CommonDELib.mqh) resolve it to the real MQL5
+            // --- enum value - no combo-row/native-value arithmetic anywhere.
+             string parts[];
+             int n = ::StringSplit(schema[i].choices, '|', parts);
+             int sel = (int)m_param_combo[i].GetListViewPointer().SelectedItemIndex();
+             string sel_text = (sel >= 0 && sel < n) ? parts[sel] : "";
+             if(schema[i].choices == PRICE_CHOICES)
+                params[i].integer_value = (long)AppliedPriceByDescription(sel_text);
+             else if(schema[i].choices == CALCULATION_METHOD_CHOICES)
+                params[i].integer_value = (long)AveragingMethodByDescription(sel_text);
+             else if(schema[i].choices == VOLUME_CHOICES)
+                params[i].integer_value = (long)AppliedVolumeByDescription(sel_text);
+             else if(schema[i].choices == STOCH_PRICE_CHOICES)
+                params[i].integer_value = (long)StochPriceByDescription(sel_text);
             }
          else if(schema[i].data_type == TYPE_DOUBLE)
            {
@@ -1067,10 +1383,171 @@
   // --- display state (TreeView icon + m_table_indicator), which is its Tang 2 job.
   void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
    {
-      if(m_time_series_engine == NULL) return;
+      if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL) return;
+      // --- Source-side duplicate guard (README 5c): the template set stays unique HERE,
+      // --- at the only place templates enter Layer 1 - not hidden later by a display dedup.
+      if(m_IndicatorsCollection.TemplateExists(type, params))
+        {
+         ::Print(__FUNCTION__, " > rejected: this template already exists");
+         return;
+        }
+
       if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
       SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
-      SetValuesToIndicatorTable();      
+
+      // --- Append exactly ONE row for the new template (README 5c - no rescan, no rebuild).
+      // --- The engine appends to the collection, so the new instance for the current chart
+      // --- is the LAST one in the (symbol,TF)-filtered list.
+      string sym = ::Symbol();
+      ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+      CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+      list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+      if(list == NULL || list.Total() == 0) return;
+      CIndicatorDE *indicator = list.At(list.Total() - 1);
+      int row = ArraySize(m_table_indicator_ptrs);
+      if(row > 0)                      // an empty table already owns one physical row - reuse it for row 0
+         m_table_indicator.AddRow(row, true);   // redraw=true - recalculate visible-area size, see
+                                                  // README/BugNote 2026-07-14 black/smeared overflow bug
+      ArrayResize(m_table_indicator_names, row + 1);
+      ArrayResize(m_table_indicator_ptrs,  row + 1);
+      ArrayResize(m_settings_cache_state,  row + 1);
+      SetIndicatorTableRow(row, indicator);
+      m_table_indicator.Update(true);
+   }  
+  // --- Does this Layer 3 line represent this Layer 1 instance?
+  // --- Fast path: shared slot - only lines WE attached (ChartIndicatorAdd with our own
+  // --- handle). A HAND-ADDED line is a SEPARATE terminal instance with its own slot
+  // --- (proven 18:58 log: line handle=17 vs owned=18 for identical SAR(0.05,0.20)),
+  // --- so fall back to the template identity: type+params via IndicatorParameters.
+  // --- The line's slot stays readable forever because nobody ever releases it.
+  bool CGUIPannel::LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator)
+  {
+    if(line_handle == INVALID_HANDLE || indicator == NULL) return false;
+    if(line_handle == indicator.Handle())
+      {
+        // --- DEBUG LineRepresentsIndicator FAST-MATCH - removed 2026-07-14, fired every row every tick
+        //::Print("DEBUG CGUIPannel::LineRepresentsIndicator FAST-MATCH line_handle=", line_handle,
+        //        " own_handle=", indicator.Handle());
+        return true;
+      }
+    ENUM_INDICATOR type;
+    MqlParam params[];
+    if(IndicatorParameters(line_handle, type, params) < 0) return false;
+    if(type != indicator.TypeIndicator()) return false;
+    MqlParam own_params[];
+    indicator.GetMqlParams(own_params);
+    bool eq = IsEqualMqlParamArrays(own_params, params);
+    return eq;
+  }
+  // --- Resolve a Layer 3 line to the Layer 1 instance (current symbol/TF) it represents,
+  // --- or NULL when the line is foreign. Same fast/slow paths as LineRepresentsIndicator.
+  CIndicatorDE *CGUIPannel::OwnedInstanceOfLine(const int line_handle)
+   {
+      if(line_handle == INVALID_HANDLE || m_time_series_engine == NULL) return NULL;
+      CIndicatorDE *owned = m_time_series_engine.GetIndicatorByHandle(line_handle);
+      if(owned != NULL) return owned;
+      for(int row = 0; row < ArraySize(m_table_indicator_ptrs); row++)
+         if(LineRepresentsIndicator(line_handle, m_table_indicator_ptrs[row]))
+            return m_table_indicator_ptrs[row];
+      return NULL;
+   }
+  // --- Layer 3 -> Layer 1 import (README: 3-layer sync): an indicator is present on the MAIN
+  // --- chart that Layer 1 does not know yet (added BY HAND on the chart). Rebuild its
+  // --- type+params via IndicatorParameters() and feed it through the SAME entry point as the
+  // --- GUI "Add" button (AddIndicatorInstance), so the duplicate guard, the engine creation
+  // --- across ALL series (+Signals via GetOrCreateSignal) and the template-row append all
+  // --- behave identically. Idempotent: our own ChartIndicatorAdd (Show checkbox) also fires
+  // --- IND_ADD, but TemplateExists() filters it out here without log spam.
+  void CGUIPannel::ImportForeignChartIndicators(void)
+   {
+      if(m_time_series_engine == NULL) return;
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+      // Layer 3 topology comes from CChartObjCollection (the one chart observer),
+      // not from raw built-in scans - README: 3-layer sync.
+      CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+      if(chart == NULL) return;
+      for(int win = 0; win < chart.WindowsTotal(); win++)
+        {
+         CChartWnd *wnd = chart.GetWindowByNum(win);
+         if(wnd == NULL) continue;
+         for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
+           {
+            CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
+            if(wnd_ind == NULL) continue;
+            string name = wnd_ind.Name();
+            // The mirror's handle is the join key: same program-wide slot number as the
+            // owned instance when the line belongs to Layer 1. Never released anywhere
+            // in the GUI - the sole IndicatorRelease site is ~CIndicatorDE.
+            int handle = wnd_ind.Handle();
+            if(handle == INVALID_HANDLE) continue;
+            if(m_time_series_engine.GetIndicatorByHandle(handle) != NULL)
+               continue;   // Layer 1 owns it already: nothing to import
+            ENUM_INDICATOR type;
+            MqlParam params[];
+            int params_total = IndicatorParameters(handle, type, params);
+            // Only types Layer 1 knows how to create (present in the catalog)
+            bool supported = false;
+            for(int c = 0; c < ArraySize(catalog); c++)
+               if(catalog[c].type == type) { supported = true; break; }
+            if(params_total < 0 || !supported || m_IndicatorsCollection.TemplateExists(type, params))
+               continue;
+            ::Print(__FUNCTION__, " > importing hand-added indicator '", name, "' into Layer 1");
+            // Adopt: AddIndicatorInstance -> IndicatorCreate returns this very slot and
+            // Layer 1 becomes its owner (released exactly once, in ~CIndicatorDE).
+            AddIndicatorInstance(-1, type, params);
+           }
+        }
+   }
+  // --- Layer 3 -> Layer 1 sync for a param edit made ON THE CHART (README: 3-layer sync).
+  // --- Trishkin's change-check kept a COPY of the old mirror entry (old name+handle) in
+  // --- m_list_ind_param and updated the live mirror entry in place with the new name+handle
+  // --- at the same window/index. So: old handle -> the exact Layer 1 template to replace;
+  // --- the live mirror entry at the same index -> the new params.
+  void CGUIPannel::HandleChartIndicatorChange(void)
+   {
+      if(m_time_series_engine == NULL) return;
+      CWndInd *old_ind = m_chart_obj_collection.GetLastChangedIndicator();
+      //--- Every exit path reports itself: chart edits are rare, user-driven events and
+      //--- each outcome (replace/skip/fail) is worth an audit line in the log
+      if(old_ind == NULL) { ::Print(__FUNCTION__, " > no changed-indicator record"); return; }
+      ::Print(__FUNCTION__, " > chart edit detected: old '", old_ind.Name(), "' handle=", old_ind.Handle(),
+              " win=", old_ind.WindowNum(), " index=", old_ind.Index());
+      // A hand-added line is a SEPARATE terminal instance - OwnedInstanceOfLine falls back
+      // to type+params matching. Truly foreign lines (no matching template) are skipped:
+      // the ADD/import path picks the new line up by itself.
+      CIndicatorDE *owned = OwnedInstanceOfLine(old_ind.Handle());
+      if(owned == NULL) { ::Print(__FUNCTION__, " > line matches no Layer 1 template - skip"); return; }
+      CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+      if(chart == NULL) { ::Print(__FUNCTION__, " > no CChartObj for this chart"); return; }
+      CChartWnd *wnd = chart.GetWindowByNum(old_ind.WindowNum());
+      if(wnd == NULL) { ::Print(__FUNCTION__, " > no CChartWnd num=", old_ind.WindowNum()); return; }
+      CWndInd *new_ind = NULL;
+      for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
+        {
+         CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
+         if(wnd_ind != NULL && wnd_ind.Index() == old_ind.Index()) { new_ind = wnd_ind; break; }
+        }
+      if(new_ind == NULL || new_ind.Handle() == INVALID_HANDLE)
+        { ::Print(__FUNCTION__, " > no mirror entry at window index ", old_ind.Index()); return; }
+      ENUM_INDICATOR type;
+      MqlParam params[];
+      if(IndicatorParameters(new_ind.Handle(), type, params) < 0)
+        { ::Print(__FUNCTION__, " > IndicatorParameters failed, err ", GetLastError()); return; }
+      // Find the table row of the owned template (its current-symbol/TF instance is the
+      // very object GetIndicatorByHandle returned, because the edit happened on THIS chart)
+      int row = -1;
+      for(int r = 0; r < ArraySize(m_table_indicator_ptrs); r++)
+         if(m_table_indicator_ptrs[r] == owned) { row = r; break; }
+      ::Print(__FUNCTION__, " > chart edit: replacing template '", old_ind.Name(),
+              "' with '", new_ind.Name(), "'");
+      // Replace = remove the old template across ALL series + add the new one across ALL
+      // series (CIndicatorDE cannot change params in place - its handle is bound to the
+      // old instance). One row out, one row in - the table keeps its size.
+      // NOTE: owned is DEAD after OnClickRemoveIndicator (collection FreeMode deletes it).
+      if(row >= 0)
+         OnClickRemoveIndicator(m_table_indicator_names[row], row);
+      AddIndicatorInstance(-1, type, params);
    }
   void CGUIPannel::PopulateIndicatorTree(void)
    {
@@ -1389,11 +1866,11 @@
       m_btn_add_indicator.AutoXResizeMode(false);
       m_btn_add_indicator.XSize(80);
       m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);
-      m_btn_add_indicator.BackColor(clrDodgerBlue);
-      m_btn_add_indicator.BackColorHover(clrRoyalBlue);
-      m_btn_add_indicator.BackColorPressed(clrBlue);
-      m_btn_add_indicator.LabelColor(clrWhite);
-      m_btn_add_indicator.BorderColor(clrBlue);
+        // m_btn_add_indicator.BackColor(clrDodgerBlue);
+        // m_btn_add_indicator.BackColorHover(clrRoyalBlue);
+        // m_btn_add_indicator.BackColorPressed(clrBlue);
+        // m_btn_add_indicator.LabelColor(clrWhite);
+        // m_btn_add_indicator.BorderColor(clrBlue);
       bool created = m_btn_add_indicator.CreateButton("Add", x_gap, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
    if(!created) return false;
    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_add_indicator);
@@ -1403,11 +1880,11 @@
       m_btn_save_indicator.AutoXResizeMode(false);
       m_btn_save_indicator.XSize(80);
       m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
-      m_btn_save_indicator.BackColor(clrForestGreen);
-      m_btn_save_indicator.BackColorHover(clrGreen);
-      m_btn_save_indicator.BackColorPressed(clrDarkGreen);
-      m_btn_save_indicator.LabelColor(clrWhite);
-      m_btn_save_indicator.BorderColor(clrGreen);
+        // m_btn_save_indicator.BackColor(clrForestGreen);
+        // m_btn_save_indicator.BackColorHover(clrGreen);
+        // m_btn_save_indicator.BackColorPressed(clrDarkGreen);
+        // m_btn_save_indicator.LabelColor(clrWhite);
+        // m_btn_save_indicator.BorderColor(clrGreen);
       bool created_save = m_btn_save_indicator.CreateButton("Save", x_gap + 85, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
    if(!created_save) return false;
    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_indicator);
@@ -1539,114 +2016,12 @@
      }
    
   }
-// =====================================================================
-// --- "Add" button click handler — converts text fields to MqlParam[]
-// =====================================================================
-   // --- Col 4 checkbox: Tang 2 controls Tang 3 only - never touches PureData.
-   // --- The table already auto-toggled the icon before sending this event, so
-   // --- SelectedImageIndex(4,row) tells us the state to APPLY (0=show, 1=hide).
-   // --- Matched by ind.Handle(), not by name - two instances of the same type
-   // --- with different params can share the same native chart-assigned name.
-   void CGUIPannel::OnClickShowLine(const string sname, const int row)
-    {
-      if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
-      CIndicatorDE *ind = m_table_indicator_ptrs[row];
-      if(ind == NULL) return;
-
-      int new_state = (int)m_table_indicator.SelectedImageIndex(4, row);
-      int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
-
-      if(new_state == 1)   // Hide: remove from chart, PureData/handle stay intact
-        {
-         for(int sub = subwindows - 1; sub >= 0; sub--)
-            for(int i = ChartIndicatorsTotal(0, sub) - 1; i >= 0; i--)
-              {
-               string name = ChartIndicatorName(0, sub, i);
-               if((int)ChartIndicatorGet(0, sub, name) == ind.Handle())
-                  ChartIndicatorDelete(0, sub, name);
-              }
-        }
-      else                 // Show: re-attach using the stored handle
-        {
-         int sub_window = (ind.Group() == INDICATOR_GROUP_TREND) ? 0 : subwindows;
-         ChartIndicatorAdd(0, sub_window, ind.Handle());
-        }
-      ChartRedraw();
-    }
-   void CGUIPannel::OnClickToggleBuySignal(const string sname, const int row) { Print("TODO OnClickToggleBuySignal: ", sname); }
-   void CGUIPannel::OnClickToggleSellSignal(const string sname, const int row) { Print("TODO OnClickToggleSellSignal: ", sname); }
-   // --- Col 0 button: Tang 1 control - removes this whole template (same type+params,
-   // --- regardless of symbol/timeframe) from PureData. Does NOT touch the JSON file
-   // --- yet (that part - persisting the removal so it doesn't come back on next
-   // --- EA restart - is still open, deferred from the earlier discussion).
-   void CGUIPannel::OnClickRemoveIndicator(const string sname, const int row)
-    {
-      if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
-      // ref_indicator is BORROWED (CIndicatorsCollection owns it) - it lives inside the
-      // same list the loop below deletes from, so it may dangle partway through.
-      CIndicatorDE *ref_indicator = m_table_indicator_ptrs[row];
-      if(ref_indicator == NULL || m_IndicatorsCollection == NULL || m_time_series_engine == NULL) return;
-
-      CArrayObj *list = m_IndicatorsCollection.GetList();
-      if(list == NULL) return;
-      int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
-
-      // --- Capture ref_indicator's type/params into plain local values NOW, before the
-      // --- loop deletes it (it matches its own template) - never dereference it after.
-      ENUM_INDICATOR ref_type = ref_indicator.TypeIndicator();
-      MqlParam ref_params[];
-      ref_indicator.GetMqlParams(ref_params);
-
-      for(int i = list.Total() - 1; i >= 0; i--)
-        {
-         // indicator is BORROWED (CIndicatorsCollection owns it via 'list' FreeMode)
-         CIndicatorDE *indicator = list.At(i);
-         if(indicator == NULL || indicator.TypeIndicator() != ref_type) continue;
-
-         // --- Same template = same type + same params, regardless of symbol/TF
-         MqlParam params[];
-         indicator.GetMqlParams(params);
-         if(ArraySize(params) != ArraySize(ref_params)) continue;
-         bool same = true;
-         for(int p = 0; p < ArraySize(params) && same; p++)
-           {
-            if(params[p].type != ref_params[p].type) { same = false; break; }
-            if(params[p].type == TYPE_DOUBLE)
-               same = (params[p].double_value == ref_params[p].double_value);
-            else
-               same = (params[p].integer_value == ref_params[p].integer_value);
-           }
-         if(!same) continue;
-
-         // --- Release the Signal FIRST: CSignalsCollection borrows this indicator's
-         // --- pointer (m_indicator_list[] + the signal's own m_indicator), so deleting
-         // --- the indicator before its signal would leave both dangling.
-         m_time_series_engine.GetSignalsCollection().DeleteSignal(indicator);
-
-         // --- Detach from chart if currently shown, then release the handle
-         for(int sub = subwindows - 1; sub >= 0; sub--)
-            for(int k = ChartIndicatorsTotal(0, sub) - 1; k >= 0; k--)
-              {
-               string name = ChartIndicatorName(0, sub, k);
-               if((int)ChartIndicatorGet(0, sub, name) == indicator.Handle())
-                  ChartIndicatorDelete(0, sub, name);
-              }
-         list.Delete(i);   // CArrayObj FreeMode -> ~CIndicatorDE -> IndicatorRelease(handle)
-        }
-
-      SetValuesToIndicatorTable();
-      SetValuesToIndicatorSymbolTFTable();
-      SyncIndicatorTreeViewIcons();
-      ChartRedraw();
-    } 
-   void CGUIPannel::OnClickSaveIndicators(void)
+void CGUIPannel::OnClickSaveIndicators(void)
     {
       if(m_time_series_engine == NULL) return;
       m_time_series_engine.SaveIndicatorToJSON("indicators_config.json");
     }
- //Calculatioon for display in Control
-
-  
+ //Calculatioon for display in Control  
   void CGUIPannel::SyncIndicatorTreeViewIcons(void)
    {
       if(m_IndicatorsCollection == NULL) return;
@@ -1708,7 +2083,7 @@ bool CGUIPannel::CreateIndicatorSymbolTFTable(const int x, const int y)
    // Col 2 (Indicator): dir icon = value slope (v0 vs v1); same TextXOffset=22
    // Col 3 (Value): no icon, ALIGN_RIGHT, colored text only
     m_table_indicator_SymbolTFValue.TableSize(7, 20);
-    int widths[7]    = {90,  60, 130, 90, 40, 40, 55};
+    int widths[7]    = {90,  60, INDICATOR_PARATEXT_WIDTH, 90, 40, 40, 55};
     int img_x_off[7] = { 3,   3,   3,  0, 10, 10, 10};
     int img_y_off[7] = { 0,   3,   3,  0,  3,  3,  3};
     int txt_x_off[7] = { 5,  22,  22,  5,  5,  5,  5};
@@ -1744,15 +2119,34 @@ string CGUIPannel::BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem 
    for(int c = 0; c < ::ArraySize(catalog); c++)
       if(catalog[c].type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
    if(short_name == "") short_name = ind.GetTypeDescription();
+
+   // --- Same schema the Add form uses (README: Tang 1 metadata). schema[i].choices
+   // marks an enum-like param (Method, Applied Price, ...) - stored integer_value is
+   // always the REAL MQL5 enum value (never a bare combo index), so decode it back to
+   // text via the matching CommonDELib.mqh XxxDescription() - dispatched by comparing
+   // choices against the 4 known constants, no separate "kind" needed.
+   SIndicatorParam schema[];
+   GetIndicatorParamSchema(ind.TypeIndicator(), schema);
+
    MqlParam mql_params[];
    ind.GetMqlParams(mql_params);
    string pvalues = "";
-   for(int p = 0; p < ::ArraySize(mql_params); p++)
+   for(int i = 0; i < ::ArraySize(mql_params); i++)
      {
-      if(p > 0) pvalues += ", ";
-      pvalues += (mql_params[p].type == TYPE_DOUBLE)
-                 ? ::DoubleToString(mql_params[p].double_value, 2)
-                 : ::IntegerToString((int)mql_params[p].integer_value);
+      if(i > 0) pvalues += ", ";
+      string choices = (i < ::ArraySize(schema)) ? schema[i].choices : "";
+      if(choices == PRICE_CHOICES)
+         pvalues += AppliedPriceDescription((ENUM_APPLIED_PRICE)mql_params[i].integer_value);
+      else if(choices == CALCULATION_METHOD_CHOICES)
+         pvalues += AveragingMethodDescription((ENUM_MA_METHOD)mql_params[i].integer_value);
+      else if(choices == VOLUME_CHOICES)
+         pvalues += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)mql_params[i].integer_value);
+      else if(choices == STOCH_PRICE_CHOICES)
+         pvalues += StochPriceDescription((ENUM_STO_PRICE)mql_params[i].integer_value);
+      else if(mql_params[i].type == TYPE_DOUBLE)
+         pvalues += ::DoubleToString(mql_params[i].double_value, 2);
+      else
+         pvalues += ::IntegerToString((int)mql_params[i].integer_value);
      }
    return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
   }
@@ -1803,6 +2197,26 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
    SIndicatorCatalogItem catalog[];
    GetIndicatorCatalog(catalog);
 
+   // --- All templates gone: purge the table down to ONE truly blank physical row.
+   // --- DeleteAllRows only clears text - the surviving row would keep its icons
+   // --- (SetImages rejects an empty array), so swap in a freshly CellInitialize'd
+   // --- row via AddRow(1) + DeleteRow(0), same trick as m_table_indicator.
+   if(count == 0)
+     {
+      if(m_trade_table_row_count != 0)
+        {
+         m_table_indicator_SymbolTFValue.DeleteAllRows();
+         m_table_indicator_SymbolTFValue.AddRow(1);
+         m_table_indicator_SymbolTFValue.DeleteRow(0, true);
+         ::ArrayResize(m_trade_cache_val,      0);
+         ::ArrayResize(m_trade_cache_sig_icon, 0);
+         ::ArrayResize(m_trade_cache_dir_icon, 0);
+         m_trade_table_row_count = 0;
+         m_table_indicator_SymbolTFValue.Update(true);
+        }
+      return;
+     }
+
    // --- Full rebuild when row count changes
    if(count != m_trade_table_row_count)
      {
@@ -1823,9 +2237,10 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
       ::ArrayInitialize(m_trade_cache_dir_icon, -1);
       for(int i = 0; i < count; i++) m_trade_cache_val[i] = "";
 
+      // --- redraw=true on the LAST row only, same reasoning as RefreshIndicatorTable - see
+      // --- README/BugNote 2026-07-14 black/smeared row-overflow bug.
       for(int i = 0; i < count - 1; i++)
-         m_table_indicator_SymbolTFValue.AddRow(i);
-
+         m_table_indicator_SymbolTFValue.AddRow(i, i == count - 2);
       for(int row = 0; row < count; row++)
         {
          CIndicatorDE *ind = all_inds[row];
@@ -1988,6 +2403,17 @@ void CGUIPannel::DrawSignalArrows(void)
      {
       CIndicatorDE *ind = ind_list.At(i);
       if(ind == NULL) continue;
+      // Col 2/3 checkboxes are the per-template opt-in: image 0 = ticked. Rows hold the
+      // very same current-symbol/TF instances this loop iterates, so pointer match works.
+      bool buy_on = false, sell_on = false;
+      for(int row = 0; row < ArraySize(m_table_indicator_ptrs); row++)
+         if(m_table_indicator_ptrs[row] == ind)
+           {
+            buy_on  = ((int)m_table_indicator.SelectedImageIndex(2, row) == 0);
+            sell_on = ((int)m_table_indicator.SelectedImageIndex(3, row) == 0);
+            break;
+           }
+      if(!buy_on && !sell_on) continue;   // nothing requested: don't even create the signal
       // signal is BORROWED - CSignalsCollection owns it
       CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
       if(signal == NULL) continue;
@@ -1998,6 +2424,8 @@ void CGUIPannel::DrawSignalArrows(void)
          if(t <= last_time) continue; // already drawn in a prior call
          ENUM_SIGNAL_DIR dir = signal.HistoryDir(h);
          if(dir == SIGNAL_NONE) continue;
+         if(dir == SIGNAL_BUY  && !buy_on)  continue;
+         if(dir == SIGNAL_SELL && !sell_on) continue;
          int bi = -1;
          for(int b = 0; b < ::ArraySize(bucket_time); b++)
             if(bucket_time[b] == t) { bi = b; break; }
@@ -2013,18 +2441,35 @@ void CGUIPannel::DrawSignalArrows(void)
         }
      }
 
+   // Fresh watermark (first run after start/restart or after a Buy/Sell toggle): wipe any
+   // leftover arrows of this sym|TF first, so the set on chart always equals exactly what
+   // the current filters say (also purges the price~0 corpses of README 5b).
+   if(last_time == 0 && ::ArraySize(bucket_time) > 0)
+      PurgeSignalArrowObjects(sym, tf);
+
    double pad = ::SymbolInfoDouble(sym, SYMBOL_POINT) * 50;
    datetime newest = last_time;
+   datetime failed_oldest = 0;
    for(int b = 0; b < ::ArraySize(bucket_time); b++)
      {
       int total    = bucket_buy[b] + bucket_sell[b];
       bool net_buy = bucket_buy[b] >= bucket_sell[b];
+      // README 5b fix: only draw when the bar data is truly ready - a failed shift or an
+      // empty CopyLow/High used to produce an arrow at price~0, parked forever below the
+      // viewport because the watermark advanced anyway.
       int shift    = ::iBarShift(sym, tf, bucket_time[b], true);
       double lo[1] = {0}, hi[1] = {0};
-      if(shift >= 0)
+      bool data_ok = (shift >= 0 &&
+                      ::CopyLow(sym, tf, shift, 1, lo)  == 1 &&
+                      ::CopyHigh(sym, tf, shift, 1, hi) == 1 &&
+                      lo[0] > 0.0);
+      if(!data_ok)
         {
-         ::CopyLow(sym, tf, shift, 1, lo);
-         ::CopyHigh(sym, tf, shift, 1, hi);
+         // Remember the OLDEST failed bar: the watermark must stay below it so the next
+         // timer tick retries this signal instead of losing it forever
+         if(failed_oldest == 0 || bucket_time[b] < failed_oldest)
+            failed_oldest = bucket_time[b];
+         continue;
         }
       double price = net_buy ? (lo[0] - pad) : (hi[0] + pad);
       string name  = "sig_" + sym + "_" + EnumToString(tf) + "_" + (string)(long)bucket_time[b];
@@ -2052,6 +2497,10 @@ void CGUIPannel::DrawSignalArrows(void)
         }
       if(bucket_time[b] > newest) newest = bucket_time[b];
      }
+   // Watermark never crosses an undrawn signal: cap it just below the oldest failure.
+   // Re-visiting already-drawn newer arrows next tick is cheap (the ObjectFind check).
+   if(failed_oldest > 0 && failed_oldest - 1 < newest)
+      newest = failed_oldest - 1;
    m_signal_arrows_last_time[wm_idx] = newest;
   }
 

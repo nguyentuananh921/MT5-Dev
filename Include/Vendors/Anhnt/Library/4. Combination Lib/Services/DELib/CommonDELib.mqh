@@ -314,6 +314,72 @@ string StochPriceDescription(const ENUM_STO_PRICE price)
     return StringSubstr(EnumToString(price),4);
   }
 //+------------------------------------------------------------------+
+//| Return ENUM_APPLIED_PRICE from its description (mirrors           |
+//| TimestampByDescription) - unrecognized text falls back to Close.  |
+//+------------------------------------------------------------------+
+ENUM_APPLIED_PRICE AppliedPriceByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          d=="CLOSE"                ? PRICE_CLOSE    :
+          d=="OPEN"                 ? PRICE_OPEN     :
+          d=="HIGH"                 ? PRICE_HIGH     :
+          d=="LOW"                  ? PRICE_LOW      :
+          d=="MEDIAN"               ? PRICE_MEDIAN   :
+          d=="TYPICAL"              ? PRICE_TYPICAL  :
+          (d=="WEIGHTED" || d=="WCLOSE") ? PRICE_WEIGHTED : // "WClose" = this EA's own short label
+          PRICE_CLOSE
+        );
+  }
+//+------------------------------------------------------------------+
+//| Return ENUM_MA_METHOD from its description                       |
+//+------------------------------------------------------------------+
+ENUM_MA_METHOD AveragingMethodByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          d=="SMA"  ? MODE_SMA  :
+          d=="EMA"  ? MODE_EMA  :
+          d=="SMMA" ? MODE_SMMA :
+          d=="LWMA" ? MODE_LWMA :
+          MODE_SMA
+        );
+  }
+//+------------------------------------------------------------------+
+//| Return ENUM_APPLIED_VOLUME from its description                  |
+//+------------------------------------------------------------------+
+ENUM_APPLIED_VOLUME AppliedVolumeByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          d=="TICK" ? VOLUME_TICK :
+          d=="REAL" ? VOLUME_REAL :
+          VOLUME_TICK
+        );
+  }
+//+------------------------------------------------------------------+
+//| Return ENUM_STO_PRICE from its description - accepts both the raw |
+//| EnumToString style ("LOWHIGH") and this EA's own combo label      |
+//| style ("Low/High") so either source parses correctly.             |
+//+------------------------------------------------------------------+
+ENUM_STO_PRICE StochPriceByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          (d=="LOWHIGH"    || d=="LOW/HIGH")    ? STO_LOWHIGH    :
+          (d=="CLOSECLOSE" || d=="CLOSE/CLOSE") ? STO_CLOSECLOSE :
+          STO_LOWHIGH
+        );
+  }
+//+------------------------------------------------------------------+
 //| Return the description of parameter MqlParam array              |
 //+------------------------------------------------------------------+
 string MqlParameterDescription(const MqlParam &mql_param)

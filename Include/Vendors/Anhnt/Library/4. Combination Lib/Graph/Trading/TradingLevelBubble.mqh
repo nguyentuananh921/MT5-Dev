@@ -13,6 +13,7 @@
  #include "..\..\Collections\MarketCollection.mqh"   // CMarketCollection + CMarketPosition + CTradingSelect
  #include "..\..\Trading\TradingControl.mqh"         // CTradingControl
  #include "..\..\Services\MouseCombine.mqh"
+ #include "..\GBase\GBaseObj.mqh"                    // CGBaseObj - shared Layer-3 graphic-object identity (name/chart_id/species)
  //+------------------------------------------------------------------+
  //| Bubble type: which SL/TP level this bubble represents            |
  //+------------------------------------------------------------------+
@@ -56,7 +57,12 @@
  //+------------------------------------------------------------------+
 #ifndef CTRADING_LEVEL_BUBBLE_DECLARATION
 #define CTRADING_LEVEL_BUBBLE_DECLARATION
- class CTradingLevelBubble
+ // --- Inherits CGBaseObj purely for Layer-3 graphic-object identity (name/chart_id/
+ // --- Belong/Species/Type) - same base CGStdGraphObj/CGStdBitmapLabelObj use. Drawing
+ // --- itself stays on CCanvas (own hitbox/drag state) - no existing base in either
+ // --- Trishkin's or Kazharski's hierarchy offers free-form pixel drawing, so that part
+ // --- remains this class's own responsibility (see README/BugNote discussion 2026-07-13).
+ class CTradingLevelBubble : public CGBaseObj
   {
    private:
     CCanvas            m_canvas;
@@ -92,19 +98,26 @@
      int               PriceToY(double price);
     void               ResolveOverlap(int &ya, int &yb, bool a_dragged, bool b_dragged);
 
-public:
-    CTradingLevelBubble(void);
-   ~CTradingLevelBubble(void);
-
-    bool OnInitEvent(void);
-    void OnDeinitEvent(void);
+   public:
+     CTradingLevelBubble(void);
+     ~CTradingLevelBubble(void);
+    bool      OnInitEvent(void);
+    void      OnDeinitEvent(void);
     //void OnTickEvent(void);
-    void OnPoll(void);
-    void OnChartEvent(const int id, const long &lparam,
+    void      OnPoll(void);
+    void      OnChartEvent(const int id, const long &lparam,
                       const double &dparam, const string &sparam);
-    bool IsDragging(void) const { return m_is_dragging; }
-    void Draw(void);
-
+    bool      IsDragging(void) const { return m_is_dragging; }
+    void      Draw(void);
+    // --- Cheap check for the owner (CGUIPannel) to decide WHEN to lazily call
+    // --- OnInitEvent() (canvas creation) - true as soon as any position on the
+    // --- current chart's symbol has an SL or TP set, i.e. exactly the condition
+    // --- under which Draw() would first paint something real.
+     bool     HasAnyLevel(void)
+     {
+      return GetSL(POSITION_TYPE_BUY) > 0 || GetTP(POSITION_TYPE_BUY) > 0 ||
+             GetSL(POSITION_TYPE_SELL) > 0 || GetTP(POSITION_TYPE_SELL) > 0;
+     }
     //For pointer
      void MousePointer(CMouseCombine &object)                 { m_mouse = GetPointer(object);        }
      void SetMarketCollection(CMarketCollection *market)      { m_market = market;                   }
@@ -116,7 +129,6 @@ public:
 
 #ifndef CTRADING_LEVEL_BUBBLE_IMPLEMENTATION
 #define CTRADING_LEVEL_BUBBLE_IMPLEMENTATION 
-
  CTradingLevelBubble::CTradingLevelBubble(void)
     : m_need_resize(true),
       m_need_redraw(true),
@@ -134,6 +146,14 @@ public:
         m_hitbox[i].active  = false;
         m_dragbox[i].active = false;
     }
+    // --- CGBaseObj identity: not a native named object (no ObjectCreate behind it
+    // --- beyond the CCanvas bitmap label), but still gets a name/chart_id/species so
+    // --- it classifies as a proper Layer-3 graphic object like CGStdGraphObj does.
+     this.SetName(::MQLInfoString(MQL_PROGRAM_NAME) + "_TradingLevelBubble");
+     this.SetChartID(::ChartID());
+     this.SetBelong(GRAPH_OBJ_BELONG_PROGRAM);
+     this.SetSpecies(GRAPH_OBJ_SPECIES_GRAPHICAL);
+     this.m_type = OBJECT_DE_TYPE_TRADING_LEVEL_BUBBLE;
   }
  CTradingLevelBubble::~CTradingLevelBubble(void) {}
 
@@ -182,7 +202,6 @@ public:
      }
    // While dragging, OnChartEvent(MOUSE_MOVE) already redraws each frame
     if(m_is_dragging) return;
-
    // Canvas resize check  
     static uint last_resize_ms = 0;
     uint now_rc = GetTickCount();

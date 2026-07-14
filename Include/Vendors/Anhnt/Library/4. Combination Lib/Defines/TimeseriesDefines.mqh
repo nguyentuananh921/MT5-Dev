@@ -6,23 +6,23 @@
 #ifndef __TIMESERIES_DEFINES_MQH__
 #define __TIMESERIES_DEFINES_MQH__
 #include "EventDefines.mqh"
+//+------------------------------------------------------------------+
 //| Info for working with serial data                                |
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//| Bar type (candle body)                                           |
-//+------------------------------------------------------------------+
-enum ENUM_BAR_BODY_TYPE
+//+------------------------------------------------------------------+ 
+ //| Bar type (candle body)                                           |
+ //+------------------------------------------------------------------+
+ enum ENUM_BAR_BODY_TYPE
   {
    BAR_BODY_TYPE_BULLISH,                                   // Bullish bar
    BAR_BODY_TYPE_BEARISH,                                   // Bearish bar
    BAR_BODY_TYPE_NULL,                                      // Zero bar
    BAR_BODY_TYPE_CANDLE_ZERO_BODY,                          // Candle with a zero body
   };
-//+------------------------------------------------------------------+
-//| Bar integer properties                                           |
-//+------------------------------------------------------------------+
-enum ENUM_BAR_PROP_INTEGER
-    {
+ //+------------------------------------------------------------------+
+ //| Bar integer properties                                           |
+ //+------------------------------------------------------------------+
+ enum ENUM_BAR_PROP_INTEGER
+  {
     BAR_PROP_TIME = 0,                                       // Bar period start time
     BAR_PROP_TYPE,                                           // Bar type (from the ENUM_BAR_BODY_TYPE enumeration)
     BAR_PROP_PERIOD,                                         // Bar period (timeframe)
@@ -38,12 +38,12 @@ enum ENUM_BAR_PROP_INTEGER
     BAR_PROP_TIME_MINUTE,                                    // Bar minute
     BAR_PROP_PATTERNS_TYPE,                                  // Pattern types on the bar (pattern flags from the ENUM_PATTERN_TYPE enumeration)
   }; 
-#define BAR_PROP_INTEGER_TOTAL (14)                         // Total number of integer bar properties
-#define BAR_PROP_INTEGER_SKIP  (0)                          // Number of bar properties not used in sorting
-//+------------------------------------------------------------------+
-//| Real bar properties                                              |
-//+------------------------------------------------------------------+
-enum ENUM_BAR_PROP_DOUBLE
+ #define BAR_PROP_INTEGER_TOTAL (14)                         // Total number of integer bar properties
+ #define BAR_PROP_INTEGER_SKIP  (0)                          // Number of bar properties not used in sorting
+ //+------------------------------------------------------------------+
+ //| Real bar properties                                              |
+ //+------------------------------------------------------------------+
+ enum ENUM_BAR_PROP_DOUBLE
   {
     //--- bar data
       BAR_PROP_OPEN = BAR_PROP_INTEGER_TOTAL,                  // Bar open price
@@ -62,24 +62,24 @@ enum ENUM_BAR_PROP_DOUBLE
       BAR_PROP_RATIO_UPPER_SHADOW_TO_CANDLE_SIZE,              // Percentage ratio of the upper shadow size to the candle size
       BAR_PROP_RATIO_LOWER_SHADOW_TO_CANDLE_SIZE,              // Percentage ratio of the lower shadow size to the candle size
   }; 
-#define BAR_PROP_DOUBLE_TOTAL  (13)                         // Total number of real bar properties
-#define BAR_PROP_DOUBLE_SKIP   (0)                          // Number of bar properties not used in sorting
-//+------------------------------------------------------------------+
-//| Bar string properties                                            |
-//+------------------------------------------------------------------+
-enum ENUM_BAR_PROP_STRING
+ #define BAR_PROP_DOUBLE_TOTAL  (13)                         // Total number of real bar properties
+ #define BAR_PROP_DOUBLE_SKIP   (0)                          // Number of bar properties not used in sorting
+ //+------------------------------------------------------------------+
+ //| Bar string properties                                            |
+ //+------------------------------------------------------------------+
+ enum ENUM_BAR_PROP_STRING
   {
    BAR_PROP_SYMBOL = (BAR_PROP_INTEGER_TOTAL+BAR_PROP_DOUBLE_TOTAL), // Bar symbol
   };
-#define BAR_PROP_STRING_TOTAL  (1)                          // Total number of string bar properties
-//+------------------------------------------------------------------+
-//| Possible bar sorting criteria                                    |
-//+------------------------------------------------------------------+
-#define FIRST_BAR_DBL_PROP          (BAR_PROP_INTEGER_TOTAL-BAR_PROP_INTEGER_SKIP)
-#define FIRST_BAR_STR_PROP          (BAR_PROP_INTEGER_TOTAL-BAR_PROP_INTEGER_SKIP+BAR_PROP_DOUBLE_TOTAL-BAR_PROP_DOUBLE_SKIP)
-enum ENUM_SORT_BAR_MODE
- {
-  //--- Sort by integer properties
+ #define BAR_PROP_STRING_TOTAL  (1)                          // Total number of string bar properties
+ //+------------------------------------------------------------------+
+ //| Possible bar sorting criteria                                    |
+ //+------------------------------------------------------------------+
+ #define FIRST_BAR_DBL_PROP          (BAR_PROP_INTEGER_TOTAL-BAR_PROP_INTEGER_SKIP)
+ #define FIRST_BAR_STR_PROP          (BAR_PROP_INTEGER_TOTAL-BAR_PROP_INTEGER_SKIP+BAR_PROP_DOUBLE_TOTAL-BAR_PROP_DOUBLE_SKIP)
+ enum ENUM_SORT_BAR_MODE  
+  {
+   //--- Sort by integer properties
     SORT_BY_BAR_TIME = 0,                                    // Sort by bar period start time
     SORT_BY_BAR_TYPE,                                        // Sort by bar type (from the ENUM_BAR_BODY_TYPE enumeration)
     SORT_BY_BAR_PERIOD,                                      // Sort by bar period (timeframe)
@@ -94,7 +94,7 @@ enum ENUM_SORT_BAR_MODE
     SORT_BY_BAR_TIME_HOUR,                                   // Sort by a bar hour
     SORT_BY_BAR_TIME_MINUTE,                                 // Sort by a bar minute
     SORT_BY_BAR_PATTERN_TYPE,                                // Sort by pattern types on the bar (pattern flags from the ENUM_PATTERN_TYPE enumeration)
-  //--- Sort by real properties
+   //--- Sort by real properties
     SORT_BY_BAR_OPEN = FIRST_BAR_DBL_PROP,                   // Sort by bar open price
     SORT_BY_BAR_HIGH,                                        // Sort by the highest price for the bar period
     SORT_BY_BAR_LOW,                                         // Sort by the lowest price for the bar period
@@ -105,33 +105,32 @@ enum ENUM_SORT_BAR_MODE
     SORT_BY_BAR_CANDLE_BODY_BOTTOM,                          // Sort by a candle body bottom
     SORT_BY_BAR_CANDLE_SIZE_SHADOW_UP,                       // Sort by candle upper wick size
     SORT_BY_BAR_CANDLE_SIZE_SHADOW_DOWN,                     // Sort by candle lower wick size
-  //--- Sort by string properties
+   //--- Sort by string properties
     SORT_BY_BAR_SYMBOL = FIRST_BAR_STR_PROP,                 // Sort by a bar symbol
- };
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//| Abstract pattern status                                          |
-//+------------------------------------------------------------------+
-enum ENUM_PATTERN_STATUS
+  };
+ //+------------------------------------------------------------------+
+ //| Abstract pattern status                                          |
+ //+------------------------------------------------------------------+
+ enum ENUM_PATTERN_STATUS
   {
    PATTERN_STATUS_JC,                                       // Candles
    PATTERN_STATUS_PA,                                       // Price Action formations
   };
-//+------------------------------------------------------------------+
-//| Pattern type by direction (buy/sell)                             |
-//+------------------------------------------------------------------+
-enum ENUM_PATTERN_DIRECTION
+ //+------------------------------------------------------------------+
+ //| Pattern type by direction (buy/sell)                             |
+ //+------------------------------------------------------------------+
+ enum ENUM_PATTERN_DIRECTION
   {
    PATTERN_DIRECTION_BULLISH,                               // Buy pattern
    PATTERN_DIRECTION_BEARISH,                               // Sell pattern
    PATTERN_DIRECTION_BOTH,                                  // Bidirectional pattern
   };
-//+------------------------------------------------------------------+
-//| Pattern type                                                     |
-//+------------------------------------------------------------------+
-enum ENUM_PATTERN_TYPE
- {
-  //--- Candle formations
+ //+------------------------------------------------------------------+
+ //| Pattern type                                                     |
+ //+------------------------------------------------------------------+
+ enum ENUM_PATTERN_TYPE
+  {
+   //--- Candle formations
     PATTERN_TYPE_NONE                =  0x0,                 // None
     //Single Candlestick Patterns
       PATTERN_TYPE_SHOOTING_STAR       =  0x80,                // Shooting Star
@@ -159,7 +158,7 @@ enum ENUM_PATTERN_TYPE
       PATTERN_TYPE_ABANDONED_BABY      =  0x80000,             // Abandoned Baby      
       PATTERN_TYPE_THREE_INSIDE_UP     =  0x2000000,           // Three Inside Up
       PATTERN_TYPE_THREE_INSIDE_DOWN   =  0x4000000,           // Three Inside Down 
-  //--- Price Action    
+   //--- Price Action    
     //Single Price Action Candlestick Patterns
       PATTERN_TYPE_PIN_BAR             =  0x800000,            // Price Action Pin Bar
     //Double Price Action Candlestick Patterns
@@ -169,12 +168,12 @@ enum ENUM_PATTERN_TYPE
     //Triple PA (3 candles)
       PATTERN_TYPE_PIVOT_POINT_REVERSAL= 0x100000
    
- };
-#define PATTERNS_TOTAL              (29)                    // Total number of patterns (including the missing one)
-//+------------------------------------------------------------------+
-//| Pattern integer properties                                       |
-//+------------------------------------------------------------------+
-enum ENUM_PATTERN_PROP_INTEGER
+  };
+ #define PATTERNS_TOTAL              (29)                    // Total number of patterns (including the missing one)
+ //+------------------------------------------------------------------+
+ //| Pattern integer properties                                       |
+ //+------------------------------------------------------------------+
+ enum ENUM_PATTERN_PROP_INTEGER
   {
    PATTERN_PROP_CODE = 0,                                   // Unique pattern code (time + type + status + direction + timeframe + symbol)
    PATTERN_PROP_CTRL_OBJ_ID,                                // Pattern control object ID
@@ -187,45 +186,45 @@ enum ENUM_PATTERN_PROP_INTEGER
    PATTERN_PROP_PERIOD,                                     // Pattern period (timeframe)
    PATTERN_PROP_CANDLES,                                    // Number of candles that make up the pattern
   }; 
-#define PATTERN_PROP_INTEGER_TOTAL (10)                     // Total number of integer pattern properties
-#define PATTERN_PROP_INTEGER_SKIP  (0)                      // Number of pattern properties not used in sorting
-//+------------------------------------------------------------------+
-//| Pattern real properties                                          |
-//+------------------------------------------------------------------+
-enum ENUM_PATTERN_PROP_DOUBLE
+ #define PATTERN_PROP_INTEGER_TOTAL (10)                     // Total number of integer pattern properties
+ #define PATTERN_PROP_INTEGER_SKIP  (0)                      // Number of pattern properties not used in sorting
+ //+------------------------------------------------------------------+
+ //| Pattern real properties                                          |
+ //+------------------------------------------------------------------+
+ enum ENUM_PATTERN_PROP_DOUBLE
   {
-//--- bar data
-   PATTERN_PROP_BAR_PRICE_OPEN = PATTERN_PROP_INTEGER_TOTAL,// Pattern defining bar Open price
-   PATTERN_PROP_BAR_PRICE_HIGH,                             // Pattern defining bar High price
-   PATTERN_PROP_BAR_PRICE_LOW,                              // Pattern defining bar Low price
-   PATTERN_PROP_BAR_PRICE_CLOSE,                            // Pattern defining bar Close price
-   PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE,                  // Percentage ratio of the candle body to the full size of the candle
-   PATTERN_PROP_RATIO_UPPER_SHADOW_TO_CANDLE_SIZE,          // Percentage ratio of the upper shadow size to the candle size
-   PATTERN_PROP_RATIO_LOWER_SHADOW_TO_CANDLE_SIZE,          // Percentage ratio of the lower shadow size to the candle size
-   PATTERN_PROP_RATIO_CANDLE_SIZES,                         // Ratio of pattern candle sizes
+   //--- bar data
+    PATTERN_PROP_BAR_PRICE_OPEN = PATTERN_PROP_INTEGER_TOTAL,// Pattern defining bar Open price
+    PATTERN_PROP_BAR_PRICE_HIGH,                             // Pattern defining bar High price
+    PATTERN_PROP_BAR_PRICE_LOW,                              // Pattern defining bar Low price
+    PATTERN_PROP_BAR_PRICE_CLOSE,                            // Pattern defining bar Close price
+    PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE,                  // Percentage ratio of the candle body to the full size of the candle
+    PATTERN_PROP_RATIO_UPPER_SHADOW_TO_CANDLE_SIZE,          // Percentage ratio of the upper shadow size to the candle size
+    PATTERN_PROP_RATIO_LOWER_SHADOW_TO_CANDLE_SIZE,          // Percentage ratio of the lower shadow size to the candle size
+    PATTERN_PROP_RATIO_CANDLE_SIZES,                         // Ratio of pattern candle sizes
    
-   PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE_CRITERION,           // Defined criterion of the ratio of the candle body to the full candle size in %
-   PATTERN_PROP_RATIO_LARGER_SHADOW_TO_CANDLE_SIZE_CRITERION,  // Defined criterion of the ratio of the maximum shadow to the candle size in %
-   PATTERN_PROP_RATIO_SMALLER_SHADOW_TO_CANDLE_SIZE_CRITERION, // Defined criterion of the ratio of the minimum shadow to the candle size in %
-   PATTERN_PROP_RATIO_CANDLE_SIZES_CRITERION,               // Defined criterion for the ratio of pattern candle sizes
+    PATTERN_PROP_RATIO_BODY_TO_CANDLE_SIZE_CRITERION,        // Defined criterion of the ratio of the candle body to the full candle size in %
+    PATTERN_PROP_RATIO_LARGER_SHADOW_TO_CANDLE_SIZE_CRITERION,// Defined criterion of the ratio of the maximum shadow to the candle size in %
+    PATTERN_PROP_RATIO_SMALLER_SHADOW_TO_CANDLE_SIZE_CRITERION,// Defined criterion of the ratio of the minimum shadow to the candle size in %
+    PATTERN_PROP_RATIO_CANDLE_SIZES_CRITERION,               // Defined criterion for the ratio of pattern candle sizes
   }; 
-#define PATTERN_PROP_DOUBLE_TOTAL   (12)                    // Total number of real pattern properties
-#define PATTERN_PROP_DOUBLE_SKIP    (0)                     // Number of pattern properties not used in sorting
-//+------------------------------------------------------------------+
-//| Pattern string properties                                        |
-//+------------------------------------------------------------------+
-enum ENUM_PATTERN_PROP_STRING
+ #define PATTERN_PROP_DOUBLE_TOTAL   (12)                    // Total number of real pattern properties
+ #define PATTERN_PROP_DOUBLE_SKIP    (0)                     // Number of pattern properties not used in sorting
+ //+------------------------------------------------------------------+
+ //| Pattern string properties                                        |
+ //+------------------------------------------------------------------+
+ enum ENUM_PATTERN_PROP_STRING
   {
    PATTERN_PROP_SYMBOL = (PATTERN_PROP_INTEGER_TOTAL+PATTERN_PROP_DOUBLE_TOTAL),  // Pattern symbol
    PATTERN_PROP_NAME,                                       // Pattern name
   };
-#define PATTERN_PROP_STRING_TOTAL   (2)                     // Total number of pattern string properties
-//+------------------------------------------------------------------+
-//| Possible pattern sorting criteria                                |
-//+------------------------------------------------------------------+
-#define FIRST_PATTERN_DBL_PROP      (PATTERN_PROP_INTEGER_TOTAL-PATTERN_PROP_INTEGER_SKIP)
-#define FIRST_PATTERN_STR_PROP      (PATTERN_PROP_INTEGER_TOTAL-PATTERN_PROP_INTEGER_SKIP+PATTERN_PROP_DOUBLE_TOTAL-PATTERN_PROP_DOUBLE_SKIP)
-enum ENUM_SORT_PATTERN_MODE
+ #define PATTERN_PROP_STRING_TOTAL   (2)                     // Total number of pattern string properties
+ //+------------------------------------------------------------------+
+ //| Possible pattern sorting criteria                                |
+ //+------------------------------------------------------------------+
+ #define FIRST_PATTERN_DBL_PROP      (PATTERN_PROP_INTEGER_TOTAL-PATTERN_PROP_INTEGER_SKIP)
+ #define FIRST_PATTERN_STR_PROP      (PATTERN_PROP_INTEGER_TOTAL-PATTERN_PROP_INTEGER_SKIP+PATTERN_PROP_DOUBLE_TOTAL-PATTERN_PROP_DOUBLE_SKIP)
+ enum ENUM_SORT_PATTERN_MODE
   {
     //--- Sort by integer properties
       SORT_BY_PATTERN_CODE = 0,                                // Sort by unique pattern code (time + type + status + direction + timeframe)
@@ -255,14 +254,13 @@ enum ENUM_SORT_PATTERN_MODE
       SORT_BY_PATTERN_SYMBOL = FIRST_BAR_STR_PROP,             // Sort by a pattern symbol
       SORT_BY_PATTERN_NAME,                                    // Sort by pattern name
   };
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//| Data for working with indicator buffers                          |
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//| Abstract buffer status (by drawing style)                        |
-//+------------------------------------------------------------------+
-enum ENUM_BUFFER_STATUS
+ //+------------------------------------------------------------------+
+ //| Data for working with indicator buffers                          |
+ //+------------------------------------------------------------------+
+ //+------------------------------------------------------------------+
+ //| Abstract buffer status (by drawing style)                        |
+ //+------------------------------------------------------------------+
+ enum ENUM_BUFFER_STATUS
   {
    BUFFER_STATUS_NONE,                                      // No drawing
    BUFFER_STATUS_FILLING,                                   // Color filling between two levels (MQL5)
@@ -275,18 +273,18 @@ enum ENUM_BUFFER_STATUS
    BUFFER_STATUS_BARS,                                      // Display as bars (MQL5)
    BUFFER_STATUS_CANDLES,                                   // Display as candles (MQL5)
   };
-//+------------------------------------------------------------------+
-//| Buffer type                                                      |
-//+------------------------------------------------------------------+
-enum ENUM_BUFFER_TYPE
+ //+------------------------------------------------------------------+
+ //| Buffer type                                                      |
+ //+------------------------------------------------------------------+
+ enum ENUM_BUFFER_TYPE
   {
    BUFFER_TYPE_CALCULATE,                                   // Calculated buffer
    BUFFER_TYPE_DATA,                                        // Colored data buffer
   };
-//+------------------------------------------------------------------+
-//| Values of indicator lines in enumeration                         |
-//+------------------------------------------------------------------+
-enum ENUM_INDICATOR_LINE_MODE
+ //+------------------------------------------------------------------+
+ //| Values of indicator lines in enumeration                         |
+ //+------------------------------------------------------------------+
+ enum ENUM_INDICATOR_LINE_MODE
   {
    INDICATOR_LINE_MODE_MAIN         =  0,                   // Main line
    INDICATOR_LINE_MODE_SIGNAL       =  1,                   // Signal line
@@ -305,10 +303,10 @@ enum ENUM_INDICATOR_LINE_MODE
    INDICATOR_LINE_MODE_CHIKOU_SPAN  =  4,                   // Chikou Span line
    INDICATOR_LINE_MODE_ADDITIONAL   =  5,                   // Additional line
   };
-//+------------------------------------------------------------------+
-//| Enumeration of indicator lines                                   |
-//+------------------------------------------------------------------+
-enum ENUM_INDICATOR_LINE
+ //+------------------------------------------------------------------+
+ //| Enumeration of indicator lines                                   |
+ //+------------------------------------------------------------------+
+ enum ENUM_INDICATOR_LINE
   {
    INDICATOR_LINE_MAIN,                                     // Main line
    INDICATOR_LINE_SIGNAL,                                   // Signal line
@@ -327,10 +325,10 @@ enum ENUM_INDICATOR_LINE
    INDICATOR_LINE_CHIKOU_SPAN,                              // Chikou Span line
    INDICATOR_LINE_ADDITIONAL,                               // Additional line
   };
-//+------------------------------------------------------------------+
-//| Buffer integer properties                                        |
-//+------------------------------------------------------------------+
-enum ENUM_BUFFER_PROP_INTEGER
+ //+------------------------------------------------------------------+
+ //| Buffer integer properties                                        |
+ //+------------------------------------------------------------------+
+ enum ENUM_BUFFER_PROP_INTEGER
   {
    BUFFER_PROP_INDEX_PLOT = 0,                              // Plotted buffer serial number
    BUFFER_PROP_STATUS,                                      // Buffer status (by drawing style) from the ENUM_BUFFER_STATUS enumeration
@@ -358,34 +356,34 @@ enum ENUM_BUFFER_PROP_INTEGER
    BUFFER_PROP_NUM_DATAS,                                   // Number of data buffers
    BUFFER_PROP_INDEX_COLOR,                                 // Color buffer index
   }; 
-#define BUFFER_PROP_INTEGER_TOTAL (25)                      // Total number of integer bar properties
-#define BUFFER_PROP_INTEGER_SKIP  (2)                       // Number of buffer properties not used in sorting
-//+------------------------------------------------------------------+
-//| Buffer real properties                                           |
-//+------------------------------------------------------------------+
-enum ENUM_BUFFER_PROP_DOUBLE
+ #define BUFFER_PROP_INTEGER_TOTAL (25)                      // Total number of integer bar properties
+ #define BUFFER_PROP_INTEGER_SKIP  (2)                       // Number of buffer properties not used in sorting
+ //+------------------------------------------------------------------+
+ //| Buffer real properties                                           |
+ //+------------------------------------------------------------------+
+ enum ENUM_BUFFER_PROP_DOUBLE
   {
    BUFFER_PROP_EMPTY_VALUE = BUFFER_PROP_INTEGER_TOTAL,     // Empty value for plotting where nothing will be drawn
   }; 
-#define BUFFER_PROP_DOUBLE_TOTAL  (1)                       // Total number of real buffer properties
-#define BUFFER_PROP_DOUBLE_SKIP   (0)                       // Number of buffer properties not used in sorting
-//+------------------------------------------------------------------+
-//| Buffer string properties                                         |
-//+------------------------------------------------------------------+
-enum ENUM_BUFFER_PROP_STRING
+ #define BUFFER_PROP_DOUBLE_TOTAL  (1)                       // Total number of real buffer properties
+ #define BUFFER_PROP_DOUBLE_SKIP   (0)                       // Number of buffer properties not used in sorting
+ //+------------------------------------------------------------------+
+ //| Buffer string properties                                         |
+ //+------------------------------------------------------------------+
+ enum ENUM_BUFFER_PROP_STRING
   {
    BUFFER_PROP_SYMBOL = (BUFFER_PROP_INTEGER_TOTAL+BUFFER_PROP_DOUBLE_TOTAL), // Buffer symbol
    BUFFER_PROP_LABEL,                                       // Name of the graphical indicator series displayed in DataWindow
    BUFFER_PROP_IND_NAME,                                    // Name of an indicator using a buffer
    BUFFER_PROP_IND_NAME_SHORT,                              // Short name of an indicator using a buffer
   };
-#define BUFFER_PROP_STRING_TOTAL  (4)                       // Total number of string buffer properties
-//+------------------------------------------------------------------+
-//| Possible buffer sorting criteria                                 |
-//+------------------------------------------------------------------+
-#define FIRST_BUFFER_DBL_PROP          (BUFFER_PROP_INTEGER_TOTAL-BUFFER_PROP_INTEGER_SKIP)
-#define FIRST_BUFFER_STR_PROP          (BUFFER_PROP_INTEGER_TOTAL-BUFFER_PROP_INTEGER_SKIP+BUFFER_PROP_DOUBLE_TOTAL-BUFFER_PROP_DOUBLE_SKIP)
-enum ENUM_SORT_BUFFER_MODE
+ #define BUFFER_PROP_STRING_TOTAL  (4)                       // Total number of string buffer properties
+ //+------------------------------------------------------------------+
+ //| Possible buffer sorting criteria                                 |
+ //+------------------------------------------------------------------+
+ #define FIRST_BUFFER_DBL_PROP          (BUFFER_PROP_INTEGER_TOTAL-BUFFER_PROP_INTEGER_SKIP)
+ #define FIRST_BUFFER_STR_PROP          (BUFFER_PROP_INTEGER_TOTAL-BUFFER_PROP_INTEGER_SKIP+BUFFER_PROP_DOUBLE_TOTAL-BUFFER_PROP_DOUBLE_SKIP)
+ enum ENUM_SORT_BUFFER_MODE
   {
    //--- Sort by integer properties
     SORT_BY_BUFFER_INDEX_PLOT = 0,                           // Sort by the plotted buffer serial number
@@ -397,32 +395,32 @@ enum ENUM_SORT_BUFFER_MODE
     SORT_BY_BUFFER_ARROW_CODE,                               // Sort by the arrow code for DRAW_ARROW style
     SORT_BY_BUFFER_ARROW_SHIFT,                              // Sort by the vertical shift of the arrows for DRAW_ARROW style
     SORT_BY_BUFFER_LINE_STYLE,                               // Sort by the line style
-   SORT_BY_BUFFER_LINE_WIDTH,                               // Sort by the line width
-   SORT_BY_BUFFER_DRAW_BEGIN,                               // Sort by the number of initial bars that are not drawn and values in DataWindow
-   SORT_BY_BUFFER_SHOW_DATA,                                // Sort by the flag of displaying construction values in DataWindow
-   SORT_BY_BUFFER_SHIFT,                                    // Sort by the indicator graphical construction shift by time axis in bars
-   SORT_BY_BUFFER_COLOR_INDEXES,                            // Sort by a number of attempts
-   SORT_BY_BUFFER_COLOR,                                    // Sort by the drawing color
-   SORT_BY_BUFFER_INDEX_BASE,                               // Sort by the basic data buffer index
-   SORT_BY_BUFFER_INDEX_NEXT_BASE,                          // Sort by the index of the array to be assigned as the next indicator buffer
-   SORT_BY_BUFFER_INDEX_NEXT_PLOT,                          // Sort by the index of the next drawn buffer
-   SORT_BY_BUFFER_ID,                                       // Sort by ID of multiple buffers of a single indicator
-   SORT_BY_BUFFER_IND_LINE_MODE,                            // Sort by the indicator line
-   SORT_BY_BUFFER_IND_HANDLE,                               // Sort by handle of an indicator using a buffer
-   SORT_BY_BUFFER_IND_TYPE,                                 // Sort by type of an indicator using a buffer
-   SORT_BY_BUFFER_IND_LINE_ADDITIONAL_NUM,                  // Sort by number of additional indicator line
-//--- Sort by real properties
-   SORT_BY_BUFFER_EMPTY_VALUE = FIRST_BUFFER_DBL_PROP,      // Sort by the empty value for plotting where nothing will be drawn
-//--- Sort by string properties
-   SORT_BY_BUFFER_SYMBOL = FIRST_BUFFER_STR_PROP,           // Sort by the buffer symbol
-   SORT_BY_BUFFER_LABEL,                                    // Sort by the name of the graphical indicator series displayed in DataWindow
-   SORT_BY_BUFFER_IND_NAME,                                 // Sort by name of an indicator using a buffer
-   SORT_BY_BUFFER_IND_NAME_SHORT,                           // Sort by a short name of an indicator using a buffer
+    SORT_BY_BUFFER_LINE_WIDTH,                               // Sort by the line width
+    SORT_BY_BUFFER_DRAW_BEGIN,                               // Sort by the number of initial bars that are not drawn and values in DataWindow
+    SORT_BY_BUFFER_SHOW_DATA,                                // Sort by the flag of displaying construction values in DataWindow
+    SORT_BY_BUFFER_SHIFT,                                    // Sort by the indicator graphical construction shift by time axis in bars
+    SORT_BY_BUFFER_COLOR_INDEXES,                            // Sort by a number of attempts
+    SORT_BY_BUFFER_COLOR,                                    // Sort by the drawing color
+    SORT_BY_BUFFER_INDEX_BASE,                               // Sort by the basic data buffer index
+    SORT_BY_BUFFER_INDEX_NEXT_BASE,                          // Sort by the index of the array to be assigned as the next indicator buffer
+    SORT_BY_BUFFER_INDEX_NEXT_PLOT,                          // Sort by the index of the next drawn buffer
+    SORT_BY_BUFFER_ID,                                       // Sort by ID of multiple buffers of a single indicator
+    SORT_BY_BUFFER_IND_LINE_MODE,                            // Sort by the indicator line
+    SORT_BY_BUFFER_IND_HANDLE,                               // Sort by handle of an indicator using a buffer
+    SORT_BY_BUFFER_IND_TYPE,                                 // Sort by type of an indicator using a buffer
+    SORT_BY_BUFFER_IND_LINE_ADDITIONAL_NUM,                  // Sort by number of additional indicator line
+    //--- Sort by real properties
+     SORT_BY_BUFFER_EMPTY_VALUE = FIRST_BUFFER_DBL_PROP,      // Sort by the empty value for plotting where nothing will be drawn
+    //--- Sort by string properties
+     SORT_BY_BUFFER_SYMBOL = FIRST_BUFFER_STR_PROP,           // Sort by the buffer symbol
+     SORT_BY_BUFFER_LABEL,                                    // Sort by the name of the graphical indicator series displayed in DataWindow
+     SORT_BY_BUFFER_IND_NAME,                                 // Sort by name of an indicator using a buffer
+     SORT_BY_BUFFER_IND_NAME_SHORT,                           // Sort by a short name of an indicator using a buffer
   };
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 //| Data for working with indicators                                 |
-//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+ 
 //+------------------------------------------------------------------+
 //| Abstract indicator status                                        |
 //+------------------------------------------------------------------+

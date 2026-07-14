@@ -1,41 +1,50 @@
 //+------------------------------------------------------------------+
 //|                                           SignalsCollection.mqh  |
 //| Owns exactly one CSignalBase-derived object per CIndicatorDE     |
-//| that supports a signal (1-1, mirrors how CBarSeriesDE owns its   |
-//| own m_patterns_control). Reuses the existing CSignalXXX classes  |
-//| from Timeseries/Signal as-is - this file only manages their      |
-//| lifecycle/lookup, it does not duplicate their calculation logic. |
+//| that supports a signal (1-1). Reuses the existing CSignalXXX     |
+//| classes from Timeseries/Signal as-is - this file only manages    |
+//| their lifecycle/lookup, it does not duplicate calculation logic. |
+//|                                                                  |
+//| DoEasy-aligned (README 5d note): derives CBaseObj, stores the    |
+//| signals in a CListObj tagged with COLLECTION_SIGNALS_ID so any   |
+//| receiver of GetList() can verify the list identity via Type().   |
 //|                                                                  |
 //| Pointer ownership:                                                |
-//|  - m_signal_list[]    : OWNED here - created in GetOrCreateSignal,|
-//|                         deleted in DeleteSignal / destructor.     |
-//|  - m_indicator_list[] : BORROWED - CIndicatorsCollection owns the |
-//|                         CIndicatorDE objects. Whoever deletes an  |
-//|                         indicator there MUST call DeleteSignal()  |
-//|                         here FIRST, or m_indicator_list[] and the |
-//|                         signal's own m_indicator turn dangling.   |
+//|  - m_list (CSignalBase*)      : OWNED here - created in           |
+//|    GetOrCreateSignal, freed by CListObj (FreeMode) in            |
+//|    DeleteSignal / collection destruction.                         |
+//|  - CSignalBase::m_indicator   : BORROWED - CIndicatorsCollection  |
+//|    owns the CIndicatorDE objects. Whoever deletes an indicator    |
+//|    there MUST call DeleteSignal() here FIRST, or the signal's     |
+//|    m_indicator turns dangling.                                    |
 //+------------------------------------------------------------------+
 #ifndef CSIGNALSCOLLECTION_MQH
 #define CSIGNALSCOLLECTION_MQH
 
+#include "ListObj.mqh"
+#include "..\Base\BaseObj.mqh"
 #include "..\Timeseries\Signal\SignalSAR.mqh"
 #include "..\Timeseries\Signal\SignalMA.mqh"
+#include "..\Timeseries\Signal\SignalOscillator.mqh"
+#include "..\Timeseries\Signal\SignalCrossover.mqh"
+#include "..\Timeseries\Signal\SignalBands.mqh"
 
 #ifndef CSIGNALSCOLLECTION_MQH_DECLARATION
 #define CSIGNALSCOLLECTION_MQH_DECLARATION
- class CSignalsCollection
+ class CSignalsCollection : public CBaseObj
   {
     private:
-     // parallel arrays: m_indicator_list[i]'s signal lives in m_signal_list[i]
-      CIndicatorDE *m_indicator_list[];   // BORROWED - owned by CIndicatorsCollection
-      CSignalBase  *m_signal_list[];      // OWNED here - deleted in DeleteSignal/destructor
+      CListObj      m_list;                                   // OWNED signals (FreeMode deletes on removal)
       int           FindIndex(CIndicatorDE *indicator);
     public:
-                    ~CSignalsCollection(void);
+                    CSignalsCollection(void);
+     // Return the signal collection list "as is" (list Type() == COLLECTION_SIGNALS_ID)
+      CArrayObj    *GetList(void)             { return &this.m_list;         }
+      int           DataTotal(void)     const { return this.m_list.Total();  }
      // Returns the existing signal for this indicator, or creates+registers one if the
      // indicator's type is supported. Returns NULL for types with no signal defined yet.
       CSignalBase  *GetOrCreateSignal(CIndicatorDE *indicator);
-     // Deletes the signal bound to this indicator (if any) and unregisters the pair.
+     // Deletes the signal bound to this indicator (if any) and unregisters it.
      // MUST be called BEFORE the indicator itself is deleted from CIndicatorsCollection.
       void          DeleteSignal(CIndicatorDE *indicator);
      // Recompute bar 0 (the still-forming current bar) for every tracked signal - call this
@@ -55,30 +64,41 @@
 
 #ifndef CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
 #define CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
-  CSignalsCollection::~CSignalsCollection(void)
+  CSignalsCollection::CSignalsCollection(void)
    {
-    int total = ArraySize(m_signal_list);
-    for(int i = 0; i < total; i++)
-      if(m_signal_list[i] != NULL) delete m_signal_list[i];
+    // DoEasy collection convention: tag both the collection object and its list with the
+    // collection ID so consumers can verify what they received (CommonDefines "Collection list IDs")
+    this.m_type = COLLECTION_SIGNALS_ID;
+    this.m_list.Clear();
+    this.m_list.Sort();
+    this.m_list.Type(COLLECTION_SIGNALS_ID);
    }
   int CSignalsCollection::FindIndex(CIndicatorDE *indicator)
    {
-    int total = ArraySize(m_indicator_list);
+    int total = m_list.Total();
     for(int i = 0; i < total; i++)
-      if(m_indicator_list[i] == indicator) return i;
+      {
+       CSignalBase *signal = m_list.At(i);
+       if(signal != NULL && signal.GetIndicator() == indicator) return i;
+      }
     return -1;
    }
   CSignalBase *CSignalsCollection::GetOrCreateSignal(CIndicatorDE *indicator)
    {
     if(indicator == NULL) return NULL;
     int idx = FindIndex(indicator);
-    if(idx >= 0) return m_signal_list[idx];
+    if(idx >= 0) return m_list.At(idx);
 
     CSignalBase *signal = NULL;
     switch(indicator.TypeIndicator())
       {
-       case IND_SAR: signal = new CSignalSAR(); break;
-       case IND_MA:  signal = new CSignalMA();  break;
+       // First-draft rules (user-approved defaults, refine per type later - README 5f):
+       case IND_SAR:   signal = new CSignalSAR();                  break; // price side flips vs SAR dots
+       case IND_MA:    signal = new CSignalMA();                   break; // slope of buffer 0
+       case IND_AMA:   signal = new CSignalMA();                   break; // MA-family: slope of buffer 0
+       case IND_RSI:   signal = new CSignalOscillator(70.0, 30.0); break; // OB/OS thresholds
+       case IND_MACD:  signal = new CSignalTwoLineCross(0, 1);     break; // main(0) crosses signal(1)
+       case IND_BANDS: signal = new CSignalBollinger();            break; // close leaves upper/lower band
        default: return NULL; // not wired yet - table falls back to its own placeholder
       }
     if(signal == NULL) return NULL;
@@ -88,49 +108,51 @@
     int bars_avail = (int)::Bars(indicator.Symbol(), indicator.Timeframe());
     signal.SyncHistory(bars_avail > 500 ? 500 : bars_avail);
 
-    int total = ArraySize(m_indicator_list);
-    ArrayResize(m_indicator_list, total + 1);
-    ArrayResize(m_signal_list, total + 1);
-    m_indicator_list[total] = indicator;
-    m_signal_list[total]    = signal;
+    if(!m_list.Add(signal))
+      {
+       delete signal;  // failed to register - do not leak the owned object
+       return NULL;
+      }
     return signal;
    }
   void CSignalsCollection::DeleteSignal(CIndicatorDE *indicator)
    {
     int idx = FindIndex(indicator);
-    if(idx < 0) return; // this indicator never had a signal - nothing to release
-    if(m_signal_list[idx] != NULL)
-       delete m_signal_list[idx]; // owned here
-    // compact both parallel arrays - keep them index-aligned
-    int total = ArraySize(m_indicator_list);
-    for(int i = idx; i < total - 1; i++)
-      {
-       m_indicator_list[i] = m_indicator_list[i + 1];
-       m_signal_list[i]    = m_signal_list[i + 1];
-      }
-    ArrayResize(m_indicator_list, total - 1);
-    ArrayResize(m_signal_list, total - 1);
+    if(idx < 0) return;          // this indicator never had a signal - nothing to release
+    m_list.Delete(idx);          // CListObj FreeMode -> deletes the OWNED signal object
    }
   void CSignalsCollection::RefreshCurrentBar(void)
    {
-    int total = ArraySize(m_signal_list);
+    int total = m_list.Total();
     for(int i = 0; i < total; i++)
-      if(m_signal_list[i] != NULL) m_signal_list[i].RefreshCurrent();
+      {
+       CSignalBase *signal = m_list.At(i);
+       if(signal != NULL) signal.RefreshCurrent();
+      }
    }
   void CSignalsCollection::RefreshCurrentBar(const string symbol)
    {
-    int total = ArraySize(m_signal_list);
+    int total = m_list.Total();
     for(int i = 0; i < total; i++)
-      if(m_signal_list[i] != NULL && m_indicator_list[i] != NULL && m_indicator_list[i].Symbol() == symbol)
-         m_signal_list[i].RefreshCurrent();
+      {
+       CSignalBase *signal = m_list.At(i);
+       if(signal == NULL) continue;
+       CIndicatorDE *indicator = signal.GetIndicator();  // BORROWED
+       if(indicator != NULL && indicator.Symbol() == symbol)
+          signal.RefreshCurrent();
+      }
    }
   void CSignalsCollection::FreezeClosedBar(const string symbol, const ENUM_TIMEFRAMES tf)
    {
-    int total = ArraySize(m_signal_list);
+    int total = m_list.Total();
     for(int i = 0; i < total; i++)
-      if(m_signal_list[i] != NULL && m_indicator_list[i] != NULL &&
-         m_indicator_list[i].Symbol() == symbol && m_indicator_list[i].Timeframe() == tf)
-         m_signal_list[i].CommitClosedBar();
+      {
+       CSignalBase *signal = m_list.At(i);
+       if(signal == NULL) continue;
+       CIndicatorDE *indicator = signal.GetIndicator();  // BORROWED
+       if(indicator != NULL && indicator.Symbol() == symbol && indicator.Timeframe() == tf)
+          signal.CommitClosedBar();
+      }
    }
 #endif // CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
 

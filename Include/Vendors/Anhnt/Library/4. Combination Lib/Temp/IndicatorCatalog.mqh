@@ -22,12 +22,24 @@ struct SIndicatorParam
    string        default_value; // shown pre-filled in the edit box (or selected by index in choices)
    string        choices;       // "|"-separated option text, e.g. "Close|Open|High" - empty = plain numeric edit box
   };
+// --- Enum-like params are never stored as a bare 0-based combo index - the value
+// --- stored/passed to IndicatorCreate() is always the REAL MQL5 enum value
+// --- (ENUM_APPLIED_PRICE, ENUM_MA_METHOD, ENUM_APPLIED_VOLUME, ENUM_STO_PRICE),
+// --- converted via the CommonDELib.mqh Xxx(By)Description() pairs below - dispatched
+// --- by comparing schema[i].choices against these same 4 constants (no separate
+// --- "kind" enum needed - the choices string already uniquely IDs which family).
+// --- This is what fixed the Applied Price off-by-one bug (ENUM_APPLIED_PRICE
+// --- starts at 1, not 0 - see BugNote.md 2026-07-13): storing the row index
+// --- directly used to silently create the WRONG applied price for every choice
+// --- except "Close" (which only "worked" by MQL5's own invalid-value fallback).
 
 // Shared enum-like option lists, reused across many indicator types below.
-#define PRICE_CHOICES  "Close|Open|High|Low|Median|Typical|WClose"
-#define METHOD_CHOICES "SMA|EMA|SMMA|LWMA"
-#define VOLUME_CHOICES "Tick|Real"
-#define STOCH_PRICE_CHOICES "Low/High|Close/Close"
+
+//#define PRICE_CHOICES  "Close|Open|High|Low|Median|Typical|WClose"
+//#define STOCH_PRICE_CHOICES "Low/High|Close/Close"
+// #define METHOD_CHOICES "SMA|EMA|SMMA|LWMA"
+// #define VOLUME_CHOICES "Tick|Real"
+
 void GetIndicatorCatalog(SIndicatorCatalogItem &out[])
   {
    SIndicatorCatalogItem list[] =
@@ -131,7 +143,9 @@ int GetIndicatorParamSchema(const ENUM_INDICATOR type, SIndicatorParam &out[])
       out[i].choices = "";
      }
    // --- I = plain numeric field (text edit box). E = enum field (combo box;
-   // --- dv is the DEFAULT SELECTED INDEX into ch, not a raw number to type).
+   // --- dv is the DEFAULT SELECTED ROW in ch, purely a UI preselect concern -
+   // --- unrelated to what value actually gets stored, see the note above
+   // --- SIndicatorParam for how enum-choice values are resolved).
    #define I(idx,nm,tp,dv)     out[idx].name=nm; out[idx].data_type=tp;      out[idx].default_value=dv;
    #define E(idx,nm,dv,ch)     out[idx].name=nm; out[idx].data_type=TYPE_INT; out[idx].default_value=dv; out[idx].choices=ch;
    switch(type)

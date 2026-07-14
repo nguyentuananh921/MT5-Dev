@@ -28,6 +28,7 @@ public:
 //+------------------------------------------------------------------+
 CSignalBollinger::CSignalBollinger(void)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_BOLLINGER;
   }
 
 //+------------------------------------------------------------------+
@@ -64,6 +65,7 @@ public:
 //+------------------------------------------------------------------+
 CSignalEnvelopes::CSignalEnvelopes(void)
   {
+   this.m_type=OBJECT_DE_TYPE_SIGNAL_ENVELOPES;
   }
 
 //+------------------------------------------------------------------+

@@ -28,7 +28,7 @@
    };
  // Status bar items
  #define STATUS_LABELS_TOTAL 4
-   enum ENUM_STATUS_BAR_ITEM
+  enum ENUM_STATUS_BAR_ITEM
    {
       STATUS_BAR_HELP = 0,
       STATUS_BAR_DEPOSIT_LOAD,
