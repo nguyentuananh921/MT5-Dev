@@ -40,10 +40,28 @@
       // symbol with no DOM support on this server would retry (and fail) forever on every new TF
       // switch without this - see DOM setup in OnInitEvent.
       string                    m_dom_attempted[];
-    //Borrow      
+      // --- Symbol/TF Buy/Sell cached from the last LoadConfigurationFromJSON() call - GUIPannel
+      // --- reads these via GetLoadedSymbolTFSettings() to seed m_table_indicator_SymbolTFSeting's
+      // --- checkboxes right after it builds the rows from m_BarTimeSeriesCollection.
+      string                    m_loaded_sf_symbols[];
+      string                    m_loaded_sf_tfs[];
+      bool                      m_loaded_sf_buy[];
+      bool                      m_loaded_sf_sell[];
+      // --- Indicator template Buy/Sell cached from the last LoadConfigurationFromJSON() call -
+      // --- GUIPannel reads these via GetLoadedTemplateSettings() to seed m_table_indicator's
+      // --- checkboxes right after RefreshIndicatorTable() rebuilds m_table_indicator_ptrs[].
+      // --- Matched by (type, params-as-text) - templates have no symbol/TF identity of their
+      // --- own (README: every symbol/TF carries the same template set).
+      string                    m_loaded_tmpl_type[];
+      string                    m_loaded_tmpl_params_key[];
+      bool                      m_loaded_tmpl_buy[];
+      bool                      m_loaded_tmpl_sell[];
+      bool                      m_loaded_tmpl_sound[];   // per-template alert-sound opt-in (2026-07-17)
+      bool                      m_loaded_tmpl_message[]; // per-template Journal-message opt-in
+    //Borrow
       CSymbolsCollection        *m_symbol_collection;    // Symbol collection
     //For indicator
-      int                       LoadIndicatorFromJSON(const string filename);
+      int                       LoadConfigurationFromJSON(const string filename);
     //For Signal - freeze bar 1 of any (symbol,TF) that just got a SERIES_EVENTS_NEW_BAR event
     //this refresh cycle, read back from m_BarTimeSeriesCollection's own event list (never call
     //CBarSeriesDE::IsNewBar() directly here - that call is owned/consumed by the bar series itself)
@@ -75,7 +93,13 @@
     // Tang 1: JSON template <-> indicator series
         void                        AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe);
         bool                        AddNewIndicatorToAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);
-        bool                        SaveIndicatorToJSON(const string filename);
+        bool                        SaveConfigurationToJSON(const string filename, const string &sf_symbols[], const string &sf_tfs[], const bool &sf_buy[], const bool &sf_sell[],
+                                                             CIndicatorDE *&tmpl_ptrs[], const bool &tmpl_buy[], const bool &tmpl_sell[],
+                                                             const bool &tmpl_sound[], const bool &tmpl_message[]);
+        void                        GetLoadedSymbolTFSettings(string &symbols[], string &tfs[], bool &buys[], bool &sells[]);
+        void                        GetLoadedTemplateSettings(string &types[], string &param_keys[], bool &buys[], bool &sells[],
+                                                                bool &sounds[], bool &messages[]);
+        bool                        RemoveSymbolTFFromConfigJSON(const string filename, const string symbol, const string tf_text);
     // Pattern
         // void  RegisterAllPatterns(void);
         // void  RegisterPattern(const ENUM_PATTERN_TYPE type, MqlParam &param[])
@@ -132,15 +156,15 @@
         CArrayObj * ind_list = m_IndicatorsCollection.GetList();
         int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
         if(ind_total == 0)
-          LoadIndicatorFromJSON("indicators_config.json");                   
+          LoadConfigurationFromJSON("Config_Setting.json");
         else
-          AddAllIndicatorsToNewSeries(symbol, period);      // subsequent new series via CHARTCHANGE   
+          AddAllIndicatorsToNewSeries(symbol, period);      // subsequent new series via CHARTCHANGE
         return true;
-        
+
       //For Pattern
         // RegisterAllPatterns();
         // SeriesApplyPatternRegistry(symbol, period);
-      //For Indicator - LoadIndicatorFromJSON already called in the Total()==0 block above.
+      //For Indicator - LoadConfigurationFromJSON already called in the Total()==0 block above.
       //AddAllIndicatorsToNewSeries wired into OnChartEvent's is_new_series branch.
         // ScanAndApplyIndicators();
    }
@@ -274,14 +298,49 @@
  //| explicitly by the EA's OnInit - the EA orchestrates when/whether  |
  //| to (re)load, this engine only knows how to do it.                 |
  //+------------------------------------------------------------------+
-  int CTimeSeriesEngine::LoadIndicatorFromJSON(const string filename)
+  int CTimeSeriesEngine::LoadConfigurationFromJSON(const string filename)
    {
       SJsonIndicatorEntry entries[];
       SJsonSymbolTF       symbols_tf[];
       if(!ParseIndicatorConfigFile(filename, entries, symbols_tf))
         {
-         Print("CTimeSeriesEngine::LoadIndicatorFromJSON > failed to read/parse ", filename);
+         Print("CTimeSeriesEngine::LoadConfigurationFromJSON > failed to read/parse ", filename);
          return -1;
+        }
+      // --- Cache Symbol/TF Buy/Sell for GUIPannel's GetLoadedSymbolTFSettings() - it seeds
+      // --- m_table_indicator_SymbolTFSeting's checkboxes right after building the rows.
+      int sf_total = ArraySize(symbols_tf);
+      ArrayResize(m_loaded_sf_symbols, sf_total);
+      ArrayResize(m_loaded_sf_tfs, sf_total);
+      ArrayResize(m_loaded_sf_buy, sf_total);
+      ArrayResize(m_loaded_sf_sell, sf_total);
+      for(int s = 0; s < sf_total; s++)
+        {
+         m_loaded_sf_symbols[s] = symbols_tf[s].symbol;
+         m_loaded_sf_tfs[s]     = symbols_tf[s].tf;
+         m_loaded_sf_buy[s]     = symbols_tf[s].buy;
+         m_loaded_sf_sell[s]    = symbols_tf[s].sell;
+        }
+      // --- Cache Indicator template Buy/Sell for GetLoadedTemplateSettings() - matched by
+      // --- (type, params-as-text) since templates have no symbol/TF identity of their own.
+      int tmpl_total = ArraySize(entries);
+      ArrayResize(m_loaded_tmpl_type, tmpl_total);
+      ArrayResize(m_loaded_tmpl_params_key, tmpl_total);
+      ArrayResize(m_loaded_tmpl_buy, tmpl_total);
+      ArrayResize(m_loaded_tmpl_sell, tmpl_total);
+      ArrayResize(m_loaded_tmpl_sound, tmpl_total);
+      ArrayResize(m_loaded_tmpl_message, tmpl_total);
+      for(int e = 0; e < tmpl_total; e++)
+        {
+         string params_key = "";
+         for(int p = 0; p < ArraySize(entries[e].params); p++)
+            params_key += (p > 0 ? "," : "") + entries[e].params[p];
+         m_loaded_tmpl_type[e]       = entries[e].type;
+         m_loaded_tmpl_params_key[e] = params_key;
+         m_loaded_tmpl_buy[e]        = entries[e].buy;
+         m_loaded_tmpl_sell[e]       = entries[e].sell;
+         m_loaded_tmpl_sound[e]      = entries[e].sound;
+         m_loaded_tmpl_message[e]    = entries[e].message;
         }
       // --- Recreate every saved (symbol,TF) series FIRST, so the template loop below
       // --- (AddNewIndicatorToAllSeries, which only reaches series that already exist)
@@ -315,7 +374,7 @@
            }
          if(!type_found)
            {
-            Print("CTimeSeriesEngine::LoadIndicatorFromJSON > unknown indicator type \"", entries[e].type, "\", skipped");
+            Print("CTimeSeriesEngine::LoadConfigurationFromJSON > unknown indicator type \"", entries[e].type, "\", skipped");
             continue;
            }
 
@@ -323,12 +382,12 @@
          int total = GetIndicatorParamSchema(type, schema);
          if(total == 0)
            {
-            Print("CTimeSeriesEngine::LoadIndicatorFromJSON > \"", entries[e].type, "\" has no param schema yet, skipped");
+            Print("CTimeSeriesEngine::LoadConfigurationFromJSON > \"", entries[e].type, "\" has no param schema yet, skipped");
             continue;
            }
          if(ArraySize(entries[e].params) < total)
            {
-            Print("CTimeSeriesEngine::LoadIndicatorFromJSON > \"", entries[e].type, "\" needs ", total,
+            Print("CTimeSeriesEngine::LoadConfigurationFromJSON > \"", entries[e].type, "\" needs ", total,
                   " params, got ", ArraySize(entries[e].params), ", skipped");
             continue;
            }
@@ -343,7 +402,7 @@
             if(schema[i].choices != "")
               {
                // --- Enum-like param: raw is the choice TEXT (e.g. "EMA") saved by
-               // --- SaveIndicatorToJSON - the matching CommonDELib.mqh XxxByDescription()
+               // --- SaveConfigurationToJSON - the matching CommonDELib.mqh XxxByDescription()
                // --- resolves it straight to the real MQL5 enum value, dispatched by
                // --- comparing schema[i].choices against the 4 known constants.
                if(schema[i].choices == PRICE_CHOICES)
@@ -366,9 +425,107 @@
          if(AddNewIndicatorToAllSeries(type, params))
             applied++;
         }
-      Print("CTimeSeriesEngine::LoadIndicatorFromJSON > applied ", applied, "/", entries_total,
+      Print("CTimeSeriesEngine::LoadConfigurationFromJSON > applied ", applied, "/", entries_total,
             " indicator(s), recreated ", series_created, "/", ArraySize(symbols_tf), " symbol/TF series from ", filename);
       return applied;
+   }
+ //+------------------------------------------------------------------+
+ //| Copies out the Symbol/TF Buy/Sell cached by the last              |
+ //| LoadConfigurationFromJSON() call - GUIPannel calls this once,      |
+ //| right after building m_table_indicator_SymbolTFSeting's rows, to   |
+ //| seed its Buy/Sell checkboxes from the loaded JSON.                 |
+ //+------------------------------------------------------------------+
+  void CTimeSeriesEngine::GetLoadedSymbolTFSettings(string &symbols[], string &tfs[], bool &buys[], bool &sells[])
+   {
+      ArrayCopy(symbols, m_loaded_sf_symbols);
+      ArrayCopy(tfs, m_loaded_sf_tfs);
+      ArrayCopy(buys, m_loaded_sf_buy);
+      ArrayCopy(sells, m_loaded_sf_sell);
+   }
+  void CTimeSeriesEngine::GetLoadedTemplateSettings(string &types[], string &param_keys[], bool &buys[], bool &sells[],
+                                                     bool &sounds[], bool &messages[])
+   {
+      ArrayCopy(types, m_loaded_tmpl_type);
+      ArrayCopy(param_keys, m_loaded_tmpl_params_key);
+      ArrayCopy(buys, m_loaded_tmpl_buy);
+      ArrayCopy(sells, m_loaded_tmpl_sell);
+      ArrayCopy(sounds, m_loaded_tmpl_sound);
+      ArrayCopy(messages, m_loaded_tmpl_message);
+   }
+ //+------------------------------------------------------------------+
+ //| Rewrites filename's "symbols_tf" array without the given          |
+ //| (symbol,tf) pair - "templates" is re-serialized unchanged from     |
+ //| the same parse. Called from the Symbol/TF setting table's delete   |
+ //| icon: this session's live BarSeriesDE/indicators/signals for that  |
+ //| pair keep running untouched (no Library removal method exists     |
+ //| yet) - it simply won't be recreated on the NEXT EA attach/restart, |
+ //| since it's gone from the saved config from this point on.         |
+ //+------------------------------------------------------------------+
+  bool CTimeSeriesEngine::RemoveSymbolTFFromConfigJSON(const string filename, const string symbol, const string tf_text)
+   {
+      SJsonIndicatorEntry entries[];
+      SJsonSymbolTF       symbols_tf[];
+      if(!ParseIndicatorConfigFile(filename, entries, symbols_tf))
+        {
+         Print("CTimeSeriesEngine::RemoveSymbolTFFromConfigJSON > failed to read/parse ", filename);
+         return false;
+        }
+
+      string json = "{\n \"symbols_tf\": [\n";
+      bool first = true;
+      for(int i = 0; i < ArraySize(symbols_tf); i++)
+        {
+         if(symbols_tf[i].symbol == symbol && symbols_tf[i].tf == tf_text)
+            continue;   // the pair being removed
+         if(!first) json += ",\n";
+         first = false;
+         json += "  { \"symbol\": \"" + symbols_tf[i].symbol + "\", \"tf\": \"" + symbols_tf[i].tf +
+                 "\", \"buy\": " + (symbols_tf[i].buy ? "true" : "false") +
+                 ", \"sell\": " + (symbols_tf[i].sell ? "true" : "false") + " }";
+        }
+      json += "\n ],\n \"templates\": [\n";
+
+      first = true;
+      for(int i = 0; i < ArraySize(entries); i++)
+        {
+         if(!first) json += ",\n";
+         first = false;
+         json += "  { \"type\": \"" + entries[i].type + "\", \"params\": [";
+         for(int p = 0; p < ArraySize(entries[i].params); p++)
+           {
+            if(p > 0) json += ", ";
+            string raw = entries[i].params[p];
+            // --- Re-quote unless every char is one IndicatorConfig_ReadRawNumber() would have
+            // --- consumed (digits/-/+/./e/E) - a bare number was never quoted in the original file.
+            bool is_number = (StringLen(raw) > 0);
+            for(int c = 0; c < StringLen(raw) && is_number; c++)
+              {
+               ushort ch = StringGetCharacter(raw, c);
+               is_number = ((ch >= '0' && ch <= '9') || ch == '-' || ch == '+' || ch == '.' || ch == 'e' || ch == 'E');
+              }
+            json += is_number ? raw : ("\"" + raw + "\"");
+           }
+         json += "] }";
+        }
+      json += "\n ]";
+      // --- Preserve "markers" (Layer-2 UI preference, written by CGUIPannel::SaveMarkerSettings
+      // --- into this SAME shared Config_Setting.json) - same reasoning as SaveConfigurationToJSON.
+      string existing = IndicatorConfig_ReadWholeFile(filename);
+      string markers_raw = IndicatorConfig_ExtractRawSection(existing, "markers");
+      if(markers_raw != "")
+         json += ",\n \"markers\": " + markers_raw;
+      json += "\n}";
+
+      int fh = FileOpen(filename, FILE_WRITE | FILE_TXT | FILE_ANSI);
+      if(fh == INVALID_HANDLE)
+        {
+         Print("CTimeSeriesEngine::RemoveSymbolTFFromConfigJSON > cannot open ", filename, " for writing, err=", GetLastError());
+         return false;
+        }
+      FileWriteString(fh, json);
+      FileClose(fh);
+      Print("CTimeSeriesEngine::RemoveSymbolTFFromConfigJSON > removed ", symbol, " ", tf_text, " from ", filename);
+      return true;
    }
  //+------------------------------------------------------------------+
  //| Tang 1: new Series created -> copy ALL indicators from template. |
@@ -440,26 +597,23 @@
  //| pairs have identical indicator sets, so all.At(0) is the source. |
  //| Called by Layer 2 (GUIPannel) when user clicks Save button.      |
  //+------------------------------------------------------------------+
-  bool CTimeSeriesEngine::SaveIndicatorToJSON(const string filename)
+  bool CTimeSeriesEngine::SaveConfigurationToJSON(const string filename, const string &sf_symbols[], const string &sf_tfs[], const bool &sf_buy[], const bool &sf_sell[],
+                                                   CIndicatorDE *&tmpl_ptrs[], const bool &tmpl_buy[], const bool &tmpl_sell[],
+                                                   const bool &tmpl_sound[], const bool &tmpl_message[])
    {
-      CArrayObj *all = m_IndicatorsCollection.GetList();
-      if(all == NULL || all.Total() == 0)
+      int tmpl_total = ArraySize(tmpl_ptrs);
+      if(tmpl_total == 0)
         {
-         Print("CTimeSeriesEngine::SaveIndicatorToJSON > no indicators in collection");
+         Print("CTimeSeriesEngine::SaveConfigurationToJSON > no indicators in collection");
          return false;
         }
-      CIndicatorDE *ref_entry = all.At(0);
-      if(ref_entry == NULL) return false;
-      string          ref_sym = ref_entry.Symbol();
-      ENUM_TIMEFRAMES ref_tf  = ref_entry.Timeframe();
-      CArrayObj *templates = m_IndicatorsCollection.GetListIndBySymbol(ref_sym);
-      templates = CTimeseriesSelect::ByIndicatorProperty(templates, INDICATOR_PROP_TIMEFRAME, ref_tf, EQUAL);
-      if(templates == NULL || templates.Total() == 0) return false;
       SIndicatorCatalogItem catalog[];
       GetIndicatorCatalog(catalog);
 
       // --- "symbols_tf": every (symbol,TF) series that currently exists in Layer 1 -
       // --- so next EA attach can recreate them without the user re-visiting each chart.
+      // --- buy/sell come from the GUI's Symbol TF setting table (sf_symbols/sf_tfs/sf_buy/
+      // --- sf_sell, matched by symbol+tf) - default false/false when a pair isn't found there.
       string json = "{\n \"symbols_tf\": [\n";
       int sym_saved = 0;
       CArrayObj *sym_containers = m_BarTimeSeriesCollection.GetList();
@@ -470,21 +624,43 @@
          if(bts == NULL) continue;
          CArrayObj *series_list = bts.GetListSeries();
          int series_total = (series_list != NULL) ? series_list.Total() : 0;
+         // --- Sort this symbol's timeframes ascending by IndexEnumTimeframe() (CommonDELib.mqh -
+         // --- M1..MN1 natural rank) before writing, instead of raw creation order.
+         int order[];
+         ArrayResize(order, series_total);
+         for(int ti = 0; ti < series_total; ti++)
+            order[ti] = ti;
+         for(int a = 0; a < series_total - 1; a++)
+            for(int b = a + 1; b < series_total; b++)
+              {
+               CBarSeriesDE *sa = series_list.At(order[a]);
+               CBarSeriesDE *sb = series_list.At(order[b]);
+               if(sa == NULL || sb == NULL) continue;
+               if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
+                 { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
+              }
          for(int ti = 0; ti < series_total; ti++)
            {
-            CBarSeriesDE *s = series_list.At(ti);
+            CBarSeriesDE *s = series_list.At(order[ti]);
             if(s == NULL) continue;
+            string tf_text = TimeframeDescription(s.Timeframe());
+            bool buy = false, sell = false;
+            for(int q = 0; q < ArraySize(sf_symbols); q++)
+              if(sf_symbols[q] == s.Symbol() && sf_tfs[q] == tf_text)
+                { buy = sf_buy[q]; sell = sf_sell[q]; break; }
             if(sym_saved > 0) json += ",\n";
             sym_saved++;
-            json += "  { \"symbol\": \"" + s.Symbol() + "\", \"tf\": \"" + TimeframeDescription(s.Timeframe()) + "\" }";
+            json += "  { \"symbol\": \"" + s.Symbol() + "\", \"tf\": \"" + tf_text +
+                    "\", \"buy\": " + (buy ? "true" : "false") +
+                    ", \"sell\": " + (sell ? "true" : "false") + " }";
            }
         }
       json += "\n ],\n \"templates\": [\n";
 
       int saved = 0;
-      for(int i = 0; i < templates.Total(); i++)
+      for(int i = 0; i < tmpl_total; i++)
         {
-         CIndicatorDE *ind = templates.At(i);
+         CIndicatorDE *ind = tmpl_ptrs[i];
          if(ind == NULL) continue;
          string cat_name = "";
          for(int c = 0; c < ArraySize(catalog); c++)
@@ -497,7 +673,14 @@
          ind.GetMqlParams(params);
          if(saved > 0) json += ",\n";
          saved++;
-         json += "  { \"type\": \"" + cat_name + "\", \"params\": [";
+         bool buy     = (i < ArraySize(tmpl_buy))     ? tmpl_buy[i]     : false;
+         bool sell    = (i < ArraySize(tmpl_sell))    ? tmpl_sell[i]    : false;
+         bool sound   = (i < ArraySize(tmpl_sound))   ? tmpl_sound[i]   : false;
+         bool message = (i < ArraySize(tmpl_message)) ? tmpl_message[i] : false;
+         json += "  { \"type\": \"" + cat_name + "\", \"buy\": " + (buy ? "true" : "false") +
+                 ", \"sell\": " + (sell ? "true" : "false") +
+                 ", \"sound\": " + (sound ? "true" : "false") +
+                 ", \"message\": " + (message ? "true" : "false") + ", \"params\": [";
          for(int p = 0; p < ArraySize(params); p++)
            {
             if(p > 0) json += ", ";
@@ -523,18 +706,27 @@
            }
          json += "] }";
         }
-      json += "\n ]\n}";
+      json += "\n ]";
+      // --- Preserve any "markers" section already in the file (Layer-2 UI preference, written
+      // --- by CGUIPannel::SaveMarkerSettings into this SAME shared Config_Setting.json) - this
+      // --- function only knows about symbols_tf/templates, so without this a Save here would
+      // --- silently wipe out the user's marker style/color settings.
+      string existing = IndicatorConfig_ReadWholeFile(filename);
+      string markers_raw = IndicatorConfig_ExtractRawSection(existing, "markers");
+      if(markers_raw != "")
+         json += ",\n \"markers\": " + markers_raw;
+      json += "\n}";
       int fh = FileOpen(filename, FILE_WRITE | FILE_TXT | FILE_ANSI);
       if(fh == INVALID_HANDLE)
         {
-         Print("CTimeSeriesEngine::SaveIndicatorToJSON > cannot open ", filename, " for writing, err=", GetLastError());
+         Print("CTimeSeriesEngine::SaveConfigurationToJSON > cannot open ", filename, " for writing, err=", GetLastError());
          return false;
         }
       FileWriteString(fh, json);
       FileClose(fh);
-      Print("CTimeSeriesEngine::SaveIndicatorToJSON > saved ", saved, " indicator(s), ", sym_saved, " symbol/TF series to ", filename);
+      Print("CTimeSeriesEngine::SaveConfigurationToJSON > saved ", saved, " indicator(s), ", sym_saved, " symbol/TF series to ", filename);
       return true;
-   } 
+   }
  //Temporary debug: dump every indicator instance with its handle - identifies which
  //object owns a handle reported broken by CSeriesDataInd::Refresh (err 4807 hunt)
  void CTimeSeriesEngine::PrintIndicatorsInventory(void)

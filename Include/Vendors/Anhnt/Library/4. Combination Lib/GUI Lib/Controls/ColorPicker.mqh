@@ -135,8 +135,8 @@ class CColorPicker : public CElement
                                       m_picked_color(clrCornflowerBlue),
                                       m_hover_color(clrRed)
      {
-   // --- Save the element class name in the base class
-      CElementBase::ClassName(CLASS_NAME);
+      // --- Save the element class name in the base class
+       CElementBase::ClassName(CLASS_NAME);
      }
    //+------------------------------------------------------------------+
    //| Destructor                                                       |
@@ -149,26 +149,26 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    void CColorPicker::OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
      {
-   // --- Handling the cursor movement event
-      if(id==CHARTEVENT_MOUSE_MOVE)
+      // --- Handling the cursor movement event
+       if(id==CHARTEVENT_MOUSE_MOVE)
         {
          // --- Getting color under the mouse cursor
-         if(OnHoverColor(m_mouse.X(),m_mouse.Y()))
+          if(OnHoverColor(m_mouse.X(),m_mouse.Y()))
             return;
          //---
          return;
         }
-   // --- Handling the event of pressing the left mouse button on an object
-      if(id==CHARTEVENT_OBJECT_CLICK)
+      // --- Handling the event of pressing the left mouse button on an object
+       if(id==CHARTEVENT_OBJECT_CLICK)
         {
          // --- If clicked on the palette
-         if(OnClickPalette(sparam))
+          if(OnClickPalette(sparam))
             return;
          //---
          return;
         }
-   // --- Processing the value entered into the input field
-      if(id==CHARTEVENT_CUSTOM+ON_END_EDIT)
+      // --- Processing the value entered into the input field
+       if(id==CHARTEVENT_CUSTOM+ON_END_EDIT)
         {
          // --- Checking the entry of a new value
          if(OnEndEdit((uint)lparam,(uint)dparam))
@@ -176,20 +176,20 @@ class CColorPicker : public CElement
          //---
          return;
         }
-   // --- Handling clicks on an element
-      if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON)
+      // --- Handling clicks on an element
+       if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON)
         {
          // --- If you pressed the radio button
-         if(OnClickRadioButton((uint)lparam,(uint)dparam,sparam))
+          if(OnClickRadioButton((uint)lparam,(uint)dparam,sparam))
             return;
          // --- Checking the entry of a new value
-         if(OnEndEdit((uint)lparam,(uint)dparam,sparam))
+          if(OnEndEdit((uint)lparam,(uint)dparam,sparam))
             return;
          // --- If you clicked the "OK" button
-         if(OnClickButtonOK((uint)lparam,(uint)dparam,sparam))
+          if(OnClickButtonOK((uint)lparam,(uint)dparam,sparam))
             return;
          // --- If you pressed the "CANCEL" button
-         if(OnClickButtonCancel((uint)lparam,(uint)dparam,sparam))
+          if(OnClickButtonCancel((uint)lparam,(uint)dparam,sparam))
             return;
          //---
          return;
@@ -200,30 +200,30 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    void CColorPicker::OnEventTimer(void)
      {
-   // --- Fast forward values
-      FastSwitching();
+      // --- Fast forward values
+       FastSwitching();
      }
    //+------------------------------------------------------------------+
    // | Creates a Color Picker object |
    //+------------------------------------------------------------------+
    bool CColorPicker::CreateColorPicker(const int x_gap,const int y_gap)
      {
-   // --- Quit if there is no pointer to the main element
-      if(!CElement::CheckMainPointer())
+      // --- Quit if there is no pointer to the main element
+       if(!CElement::CheckMainPointer())
          return(false);
-   // ---Initializing properties
-      InitializeProperties(x_gap,y_gap);
-   // --- Let's create element objects
-      if(!CreateCanvas())
+      // ---Initializing properties
+       InitializeProperties(x_gap,y_gap);
+      // --- Let's create element objects
+       if(!CreateCanvas())
          return(false);
-      if(!CreateRadioButtons())
+       if(!CreateRadioButtons())
          return(false);
-      if(!CreateSpinEdits())
+         if(!CreateSpinEdits())
          return(false);
-      if(!CreateButtons())
+       if(!CreateButtons())
          return(false);
-   // --- Calculate the components of all color models and draw a palette relative to the selected radio button
-      SetComponents(m_radio_buttons.SelectedButtonIndex(),false);
+      // --- Calculate the components of all color models and draw a palette relative to the selected radio button
+       SetComponents(m_radio_buttons.SelectedButtonIndex(),false);
       return(true);
      }
    //+------------------------------------------------------------------+
@@ -235,18 +235,18 @@ class CColorPicker : public CElement
       m_y_size =266;
       m_x      =CElement::CalculateX(x_gap);
       m_y      =CElement::CalculateY(y_gap);
-   // --- Palette dimensions and coordinates
-      m_pallete_x_size =255.0;
-      m_pallete_y_size =255.0;
-      m_pallete_x1     =6;
-      m_pallete_y1     =5;
-      m_pallete_x2     =m_pallete_x1+(int)m_pallete_x_size;
-      m_pallete_y2     =m_pallete_y1+(int)m_pallete_y_size;
-   // ---Default background color
-      m_back_color=(m_back_color!=clrNONE)? m_back_color : m_main.BackColor();
-   // ---Default frame color
-      m_border_color=(m_border_color!=clrNONE)? m_border_color : m_main.BackColor();
-   // --- Indents from the extreme point
+      // --- Palette dimensions and coordinates
+       m_pallete_x_size =255.0;
+       m_pallete_y_size =255.0;
+       m_pallete_x1     =6;
+       m_pallete_y1     =5;
+       m_pallete_x2     =m_pallete_x1+(int)m_pallete_x_size;
+       m_pallete_y2     =m_pallete_y1+(int)m_pallete_y_size;
+      // ---Default background color
+       m_back_color=(m_back_color!=clrNONE)? m_back_color : m_main.BackColor();
+      // ---Default frame color
+       m_border_color=(m_border_color!=clrNONE)? m_border_color : m_main.BackColor();
+      // --- Indents from the extreme point
       CElementBase::XGap(x_gap);
       CElementBase::YGap(y_gap);
      }
@@ -255,12 +255,12 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    bool CColorPicker::CreateCanvas(void)
      {
-   // --- Formation of object name
-      string name=CElementBase::ElementName("color_picker");
-   // ---Create an object
-      if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
+      // --- Formation of object name
+       string name=CElementBase::ElementName("color_picker");
+      // ---Create an object
+       if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
          return(false);
-   //---
+      //---
       return(true);
      }
    //+------------------------------------------------------------------+
@@ -268,36 +268,36 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    bool CColorPicker::CreateRadioButtons(void)
      {
-   // --- ID of the last added element
-      CElementBase::LastId(m_main.LastId());
-   // --- Save a pointer to the parent element
-      m_radio_buttons.MainPointer(this);
-   // --- Coordinates
-      int x=266,y=35;
-   // --- Properties
-      int    buttons_x_offset[] ={0,0,0,0,0,0,0,0,0};
-      int    buttons_y_offset[] ={0,19,38,60,79,98,120,139,158};
-      string buttons_text[]     ={"H:","S:","L:","R:","G:","B:","L:","a:","b:"};
-      int    buttons_width[9];
-      ::ArrayInitialize(buttons_width,35);
-   // --- Properties
-      m_radio_buttons.NamePart("radio_button");
-      m_radio_buttons.ButtonYSize(18);
-      m_radio_buttons.RadioButtonsMode(true);
-      m_radio_buttons.RadioButtonsStyle(true);
-      m_radio_buttons.IconYGap(4);
-      m_radio_buttons.LabelYGap(4);
-      m_radio_buttons.LabelColor(clrBlack);
-      m_radio_buttons.LabelColorLocked(clrSilver);
-   // --- Add radio buttons with the specified properties
-      for(int i=0; i<9; i++)
+      // --- ID of the last added element
+       CElementBase::LastId(m_main.LastId());
+      // --- Save a pointer to the parent element
+       m_radio_buttons.MainPointer(this);
+      // --- Coordinates
+       int x=266,y=35;
+      // --- Properties
+       int    buttons_x_offset[] ={0,0,0,0,0,0,0,0,0};
+       int    buttons_y_offset[] ={0,19,38,60,79,98,120,139,158};
+       string buttons_text[]     ={"H:","S:","L:","R:","G:","B:","L:","a:","b:"};
+       int    buttons_width[9];
+       ::ArrayInitialize(buttons_width,35);
+      // --- Properties
+       m_radio_buttons.NamePart("radio_button");
+       m_radio_buttons.ButtonYSize(18);
+       m_radio_buttons.RadioButtonsMode(true);
+       m_radio_buttons.RadioButtonsStyle(true);
+       m_radio_buttons.IconYGap(4);
+       m_radio_buttons.LabelYGap(4);
+       m_radio_buttons.LabelColor(clrBlack);
+       m_radio_buttons.LabelColorLocked(clrSilver);
+      // --- Add radio buttons with the specified properties
+       for(int i=0; i<9; i++)
          m_radio_buttons.AddButton(buttons_x_offset[i],buttons_y_offset[i],buttons_text[i],buttons_width[i]);
-   // --- Create a button group
-      if(!m_radio_buttons.CreateButtonsGroup(x,y))
+      // --- Create a button group
+       if(!m_radio_buttons.CreateButtonsGroup(x,y))
          return(false);
-   // --- Select the button in the group
-      m_radio_buttons.SelectButton(8);
-   // --- Add element to array
+      // --- Select the button in the group
+       m_radio_buttons.SelectButton(8);
+      // --- Add element to array
       CElement::AddToArray(m_radio_buttons);
       return(true);
      }
@@ -306,15 +306,15 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    bool CColorPicker::CreateSpinEdits(void)
      {
-   // --- Coordinates
-      int x=297;
-      int y[9]={36,55,74,96,115,134,156,175,194};
-   //---
-      int max[9]   ={360,100,100,255,255,255,100,127,127};
-      int min[9]   ={0,0,0,0,0,0,0,-128,-128};
-      int value[9] ={360,50,100,50,50,50,50,50,50};
-   //---
-      for(int i=0; i<9; i++)
+      // --- Coordinates
+       int x=297;
+       int y[9]={36,55,74,96,115,134,156,175,194};
+      //---
+       int max[9]   ={360,100,100,255,255,255,100,127,127};
+       int min[9]   ={0,0,0,0,0,0,0,-128,-128};
+       int value[9] ={360,50,100,50,50,50,50,50,50};
+      //---
+       for(int i=0; i<9; i++)
         {
          // --- Save a pointer to the parent element
          m_spin_edits[i].MainPointer(this);
@@ -340,7 +340,7 @@ class CColorPicker : public CElement
          // --- Add element to array
          CElement::AddToArray(m_spin_edits[i]);
         }
-   //---
+      //---
       return(true);
      }
    //+------------------------------------------------------------------+
@@ -369,7 +369,7 @@ class CColorPicker : public CElement
          // --- Add element to array
          CElement::AddToArray(m_buttons[i]);
         }
-   //---
+      //---
       return(true);
      }
    //+------------------------------------------------------------------+
@@ -377,10 +377,10 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    CTextEdit *CColorPicker::GetSpinEditPointer(const uint index)
      {
-      uint array_size=::ArraySize(m_spin_edits);
-   // --- Adjustment in case of leaving the range
-      uint i=(index>=array_size)? array_size-1 : index;
-   //---
+       uint array_size=::ArraySize(m_spin_edits);
+      // --- Adjustment in case of leaving the range
+       uint i=(index>=array_size)? array_size-1 : index;
+      //---
       return(::GetPointer(m_spin_edits[i]));
      }
    //+------------------------------------------------------------------+
@@ -388,11 +388,11 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    CButton *CColorPicker::GetButtonPointer(const uint index)
      {
-      uint array_size=::ArraySize(m_buttons);
-   // --- Adjustment in case of leaving the range
-      uint i=(index>=array_size)? array_size-1 : index;
-   // --- Return pointer
-      return(::GetPointer(m_buttons[index]));
+       uint array_size=::ArraySize(m_buttons);
+      // --- Adjustment in case of leaving the range
+       uint i=(index>=array_size)? array_size-1 : index;
+      // --- Return pointer
+       return(::GetPointer(m_buttons[index]));
      }
    //+------------------------------------------------------------------+
    // | Saves the pointer to the button that calls the color palette and |
@@ -400,83 +400,83 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    void CColorPicker::ColorButtonPointer(CColorButton &object)
      {
-   // --- Save pointer to button
-      m_color_button=::GetPointer(object);
-   // --- Set the color of the passed button to all palette markers
-      CurrentColor(object.CurrentColor());
-   // --- If the pointer to the window to which the palette is attached is valid
-      if(::CheckPointer(m_wnd)!=POINTER_INVALID)
-        {
+      // --- Save pointer to button
+       m_color_button=::GetPointer(object);
+      // --- Set the color of the passed button to all palette markers
+       CurrentColor(object.CurrentColor());
+      // --- If the pointer to the window to which the palette is attached is valid
+       if(::CheckPointer(m_wnd)!=POINTER_INVALID)
+         {
          // --- Open the window
          m_wnd.OpenWindow();
         }
-   // --- Reset button focus
-      object.MouseFocus(false);
-      object.Update(true);
-      object.GetButtonPointer().MouseFocus(false);
-      object.GetButtonPointer().Update(true);
+      // --- Reset button focus
+       object.MouseFocus(false);
+       object.Update(true);
+       object.GetButtonPointer().MouseFocus(false);
+       object.GetButtonPointer().Update(true);
      }
    //+------------------------------------------------------------------+
    // | Setting the current color |
    //+------------------------------------------------------------------+
    void CColorPicker::CurrentColor(const color clr)
      {
-      m_hover_color=clr;
-      DrawHoverSample();
-   //---
-      m_picked_color=clr;
-      DrawPickedSample();
-   //---
-      m_current_color=clr;
-      DrawCurrentSample();
+       m_hover_color=clr;
+       DrawHoverSample();
+      //---
+       m_picked_color=clr;
+       DrawPickedSample();
+      //---
+       m_current_color=clr;
+       DrawCurrentSample();
      }
    //+------------------------------------------------------------------+
    // | Getting color under the mouse cursor |
    //+------------------------------------------------------------------+
    bool CColorPicker::OnHoverColor(const int x,const int y)
      {
-   // --- Exit if focus is not on element
-      if(!CElementBase::MouseFocus())
+      // --- Exit if focus is not on element
+       if(!CElementBase::MouseFocus())
          return(false);
-   // --- Check focus on palette
-      m_canvas.MouseFocus(x>m_canvas.X()+m_pallete_x1 && x<m_canvas.X()+m_pallete_x2 && 
+      // --- Check focus on palette
+       m_canvas.MouseFocus(x>m_canvas.X()+m_pallete_x1 && x<m_canvas.X()+m_pallete_x2 && 
                           y>m_canvas.Y()+m_pallete_y1 && y<m_canvas.Y()+m_pallete_y2);
-   // --- Quit if the focus is not on the palette
-      if(!m_canvas.MouseFocus())
+      // --- Quit if the focus is not on the palette
+       if(!m_canvas.MouseFocus())
         {
          ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,"\n");
          return(false);
         }
-   // --- Define the color on the palette under the mouse cursor
-      int lx =x-m_canvas.X();
-      int ly =y-m_canvas.Y();
-      m_hover_color=(color)::ColorToARGB(m_canvas.PixelGet(lx,ly),0);
-   // --- Set the color and tooltip to the corresponding sample (marker)
-      DrawHoverSample();
-   // --- Set a tooltip for the palette
-      ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,::ColorToString(m_hover_color));
-   // --- Refresh canvas
-      m_canvas.Update();
-      return(true);
+      // --- Define the color on the palette under the mouse cursor
+       int lx =x-m_canvas.X();
+       int ly =y-m_canvas.Y();
+       m_hover_color=(color)::ColorToARGB(m_canvas.PixelGet(lx,ly),0);
+      // --- Set the color and tooltip to the corresponding sample (marker)
+       DrawHoverSample();
+      // --- Set a tooltip for the palette
+       ::ObjectSetString(m_chart_id,m_canvas.ChartObjectName(),OBJPROP_TOOLTIP,::ColorToString(m_hover_color));
+      // --- Refresh canvas
+       m_canvas.Update();
+       return(true);
      }
    //+------------------------------------------------------------------+
    // | Handling clicks on the color palette |
    //+------------------------------------------------------------------+
    bool CColorPicker::OnClickPalette(const string clicked_object)
      {
-   // --- Exit if object name does not match
-      if(clicked_object!=m_canvas.ChartObjectName())
+      // --- Exit if object name does not match
+       if(clicked_object!=m_canvas.ChartObjectName())
          return(false);
-   // --- Set the color and tooltip to the appropriate swatch
-      m_picked_color=m_hover_color;
-      DrawPickedSample();
-   // --- Calculate and set the color components relative to the selected radio button
-      SetComponents();
-   // --- Update input fields
-      for(int i=0; i<9; i++)
+      // --- Set the color and tooltip to the appropriate swatch
+       m_picked_color=m_hover_color;
+       DrawPickedSample();
+      // --- Calculate and set the color components relative to the selected radio button
+       SetComponents();
+      // --- Update input fields
+       for(int i=0; i<9; i++)
          m_spin_edits[i].GetTextBoxPointer().Update(true);
-   // --- Refresh canvas
-      m_canvas.Update();
+      // --- Refresh canvas
+       m_canvas.Update();
       return(true);
      }
    //+------------------------------------------------------------------+
@@ -484,56 +484,56 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    bool CColorPicker::OnClickRadioButton(const uint id,const uint index,const string pressed_object)
      {
-   // --- Exit if the press was not on the radio button
-      if(::StringFind(pressed_object,m_radio_buttons.NamePart())<0)
+      // --- Exit if the press was not on the radio button
+       if(::StringFind(pressed_object,m_radio_buttons.NamePart())<0)
          return(false);
-   // --- Exit if IDs do not match
-      if(id!=CElementBase::Id() || index==m_radio_buttons.SelectedButtonIndex())
+      // --- Exit if IDs do not match
+       if(id!=CElementBase::Id() || index==m_radio_buttons.SelectedButtonIndex())
          return(false);
-   // --- Update the palette with the latest changes
-      DrawPalette(index);
-   // --- Refresh canvas
-      m_canvas.Update();
-      return(true);
+      // --- Update the palette with the latest changes
+       DrawPalette(index);
+      // --- Refresh canvas
+       m_canvas.Update();
+       return(true);
      }
    //+------------------------------------------------------------------+
    // | Processing the entry of a new value into an input field |
    //+------------------------------------------------------------------+
    bool CColorPicker::OnEndEdit(const uint id,const uint index,const string pressed_object="")
      {
-   // --- Exit if the button was not pressed
-      if(pressed_object!="")
+      // --- Exit if the button was not pressed
+       if(pressed_object!="")
          if(::StringFind(pressed_object,"spin")<0)
             return(false);
-   // --- Exit if IDs do not match
-      if(id!=CElementBase::Id())
+      // --- Exit if IDs do not match
+       if(id!=CElementBase::Id())
          return(false);
-   // --- Calculate and set color components for all color models
-      SetComponents(index>>1,false);
-   // --- Update input fields
-      for(int i=0; i<9; i++)
+      // --- Calculate and set color components for all color models
+       SetComponents(index>>1,false);
+      // --- Update input fields
+       for(int i=0; i<9; i++)
          m_spin_edits[i].GetTextBoxPointer().Update(true);
-   // --- Refresh canvas
-      m_canvas.Update();
-      return(true);
+      // --- Refresh canvas
+       m_canvas.Update();
+       return(true);
      }
    //+------------------------------------------------------------------+
    // | Processing clicks on the 'OK' button |
    //+------------------------------------------------------------------+
    bool CColorPicker::OnClickButtonOK(const uint id,const uint index,const string pressed_object)
      {
-   // --- Exit if the button was not pressed
-      if(::StringFind(pressed_object,m_buttons[0].NamePart())<0)
+      // --- Exit if the button was not pressed
+       if(::StringFind(pressed_object,m_buttons[0].NamePart())<0)
          return(false);
-   // --- Exit if IDs do not match
-      if(id!=CElementBase::Id() || index!=m_buttons[0].Index())
+      // --- Exit if IDs do not match
+       if(id!=CElementBase::Id() || index!=m_buttons[0].Index())
          return(false);
-   // ---Save selected color
-      m_current_color=m_picked_color;
-      DrawCurrentSample();
-      m_canvas.Update();
-   // --- If there is a window button pointer to select a color
-      if(::CheckPointer(m_color_button)!=POINTER_INVALID)
+      // ---Save selected color
+       m_current_color=m_picked_color;
+       DrawCurrentSample();
+       m_canvas.Update();
+      // --- If there is a window button pointer to select a color
+       if(::CheckPointer(m_color_button)!=POINTER_INVALID)
         {
          // --- Set the button to the selected color
          m_color_button.CurrentColor(m_current_color);
@@ -547,14 +547,14 @@ class CColorPicker : public CElement
          // --- Reset the pointer
          m_color_button=NULL;
         }
-      else
+       else
         {
          // --- If there is no pointer and the window is a dialog,
          // display a message that there is no pointer to the button to call the element
          if(m_wnd.WindowType()==W_DIALOG)
             ::Print(__FUNCTION__," > Невалидный указатель вызывающего элемента (CColorButton).");
         }
-   //---
+      //---
       return(true);
      }
    //+------------------------------------------------------------------+
@@ -562,35 +562,35 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    bool CColorPicker::OnClickButtonCancel(const uint id,const uint index,const string pressed_object)
      {
-   // --- Exit if the button was not pressed
-      if(::StringFind(pressed_object,m_buttons[1].NamePart())<0)
+      // --- Exit if the button was not pressed
+       if(::StringFind(pressed_object,m_buttons[1].NamePart())<0)
          return(false);
-   // --- Exit if IDs do not match
-      if(id!=CElementBase::Id() || index!=m_buttons[1].Index())
+      // --- Exit if IDs do not match
+       if(id!=CElementBase::Id() || index!=m_buttons[1].Index())
          return(false);
-   // --- Close the window if it is dialog
-      if(m_wnd.WindowType()==W_DIALOG)
+      // --- Close the window if it is dialog
+       if(m_wnd.WindowType()==W_DIALOG)
          m_wnd.CloseDialogBox();
-   //---
-      return(true);
+      //---
+       return(true);
      }
    //+------------------------------------------------------------------+
    // | Draws an element |
    //+------------------------------------------------------------------+
    void CColorPicker::Draw(void)
      {
-   // --- Draw background
-      CElement::DrawBackground();
-   // --- Draw a frame
-      CElement::DrawBorder();
-   // --- Draw a frame of color markers
-      DrawSamplesBorder();
-   // --- Draw color markers
-      DrawCurrentSample();
-      DrawPickedSample();
-      DrawHoverSample();
-   // --- Calculate the components of all color models and
-   // draw a palette relative to the selected radio button
+      // --- Draw background
+       CElement::DrawBackground();
+      // --- Draw a frame
+       CElement::DrawBorder();
+      // --- Draw a frame of color markers
+       DrawSamplesBorder();
+      // --- Draw color markers
+       DrawCurrentSample();
+       DrawPickedSample();
+       DrawHoverSample();
+      // --- Calculate the components of all color models and
+      // draw a palette relative to the selected radio button
       SetComponents(m_radio_buttons.SelectedButtonIndex(),false);
      }
    //+------------------------------------------------------------------+
@@ -599,16 +599,16 @@ class CColorPicker : public CElement
    void CColorPicker::DrawSamplesBorder(void)
      {
       uint clr=::ColorToARGB(m_palette_border_color);
-   // --- Calculate the coordinates
-      int x1 =m_pallete_x1+(int)m_pallete_x_size+5;
-      int y1 =m_pallete_y1-1;
-      int x2 =x1+76;
-      int y2 =m_pallete_y1+25;
-   // --- Draw a frame
-      m_canvas.Line(x1,y1,x2,y1,clr);
-      m_canvas.Line(x1,y2,x2,y2,clr);
-      m_canvas.Line(x1,y1,x1,y2,clr);
-      m_canvas.Line(x2,y1,x2,y2,clr);
+      // --- Calculate the coordinates
+       int x1 =m_pallete_x1+(int)m_pallete_x_size+5;
+       int y1 =m_pallete_y1-1;
+       int x2 =x1+76;
+       int y2 =m_pallete_y1+25;
+      // --- Draw a frame
+       m_canvas.Line(x1,y1,x2,y1,clr);
+       m_canvas.Line(x1,y2,x2,y2,clr);
+       m_canvas.Line(x1,y1,x1,y2,clr);
+       m_canvas.Line(x2,y1,x2,y2,clr);
      }
    //+------------------------------------------------------------------+
    // | Draws a marker with the current color |
@@ -616,48 +616,48 @@ class CColorPicker : public CElement
    void CColorPicker::DrawCurrentSample(void)
      {
       uint clr=::ColorToARGB(m_current_color);
-   // --- Calculate the coordinates
-      int x1 =m_pallete_x1+(int)m_pallete_x_size+6;
-      int y1 =m_pallete_y1;
-      int x2 =x1+24;
-      int y2 =m_pallete_y1+24;
-   // ---Draw marker
-      m_canvas.FillRectangle(x1,y1,x2,y2,clr);
+      // --- Calculate the coordinates
+       int x1 =m_pallete_x1+(int)m_pallete_x_size+6;
+       int y1 =m_pallete_y1;
+       int x2 =x1+24;
+       int y2 =m_pallete_y1+24;
+      // ---Draw marker
+       m_canvas.FillRectangle(x1,y1,x2,y2,clr);
      }
    //+------------------------------------------------------------------+
    // | Draws a marker with the selected color |
    //+------------------------------------------------------------------+
    void CColorPicker::DrawPickedSample(void)
      {
-      uint clr=::ColorToARGB(m_picked_color);
-   // --- Calculate the coordinates
-      int x1 =m_pallete_x1+(int)m_pallete_x_size+6+25;
-      int y1 =m_pallete_y1;
-      int x2 =x1+24;
-      int y2 =m_pallete_y1+24;
-   // ---Draw marker
-      m_canvas.FillRectangle(x1,y1,x2,y2,clr);
+       uint clr=::ColorToARGB(m_picked_color);
+       // --- Calculate the coordinates
+        int x1 =m_pallete_x1+(int)m_pallete_x_size+6+25;
+        int y1 =m_pallete_y1;
+        int x2 =x1+24;
+        int y2 =m_pallete_y1+24;
+       // ---Draw marker
+        m_canvas.FillRectangle(x1,y1,x2,y2,clr);
      }
    //+------------------------------------------------------------------+
    // | Draws a marker with the specified color |
    //+------------------------------------------------------------------+
    void CColorPicker::DrawHoverSample(void)
      {
-      uint clr=::ColorToARGB(m_hover_color);
-   // --- Calculate the coordinates
-      int x1 =m_pallete_x1+(int)m_pallete_x_size+6+50;
-      int y1 =m_pallete_y1;
-      int x2 =x1+24;
-      int y2 =m_pallete_y1+24;
-   // ---Draw marker
-      m_canvas.FillRectangle(x1,y1,x2,y2,clr);
+       uint clr=::ColorToARGB(m_hover_color);
+       // --- Calculate the coordinates
+        int x1 =m_pallete_x1+(int)m_pallete_x_size+6+50;
+        int y1 =m_pallete_y1;
+        int x2 =x1+24;
+        int y2 =m_pallete_y1+24;
+       // ---Draw marker
+        m_canvas.FillRectangle(x1,y1,x2,y2,clr);
      }
    //+------------------------------------------------------------------+
    // | Draws a palette |
    //+------------------------------------------------------------------+
    void CColorPicker::DrawPalette(const int index)
      {
-      switch(index)
+       switch(index)
         {
          //--- HSL (0: H, 1: S, 2: L)
          case 0 : case 1 : case 2 :
@@ -678,18 +678,18 @@ class CColorPicker : public CElement
             break;
            }
         }
-   // --- Let's draw a frame for the palette
-      DrawPaletteBorder();
+      // --- Let's draw a frame for the palette
+       DrawPaletteBorder();
      }
    //+------------------------------------------------------------------+
    // | Draws HSL palette |
    //+------------------------------------------------------------------+
    void CColorPicker::DrawHSL(const int index)
      {
-      switch(index)
+       switch(index)
         {
          // --- Hue (H) - color tone in the range from 0 to 360
-         case 0 :
+          case 0 :
            {
             // --- Let's calculate the H-component
             m_hsl_h=(double)m_spin_edits[0].GetValue()/360.0;
@@ -712,10 +712,10 @@ class CColorPicker : public CElement
                   m_canvas.PixelSet(lx,ly,rgb_color);
                  }
               }
-            break;
+             break;
            }
          // --- Saturation (S) - saturation in the range from 0 to 100
-         case 1 :
+          case 1 :
            {
             // --- Let's calculate the S-component
             m_hsl_s=(double)m_spin_edits[1].GetValue()/100.0;
@@ -741,7 +741,7 @@ class CColorPicker : public CElement
             break;
            }
          // --- Lightness (L) - brightness in the range from 0 to 100
-         case 2 :
+          case 2 :
            {
             // --- Let's calculate the L-component
             m_hsl_l=(double)m_spin_edits[2].GetValue()/100.0;
@@ -773,20 +773,20 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    void CColorPicker::DrawRGB(const int index)
      {
-   // --- Steps along the X and Y axes to calculate RGB components
-      double rgb_x_step =255.0/m_pallete_x_size;
-      double rgb_y_step =255.0/m_pallete_y_size;
-   //---
-      switch(index)
+      // --- Steps along the X and Y axes to calculate RGB components
+       double rgb_x_step =255.0/m_pallete_x_size;
+       double rgb_y_step =255.0/m_pallete_y_size;
+      //---
+       switch(index)
         {
          // --- Red (R) - red. Color range from 0 to 255
-         case 3 :
+          case 3 :
            {
             // --- Get the current R-component and reset the B-component
-            m_rgb_r =(double)m_spin_edits[3].GetValue();
-            m_rgb_b =0;
+             m_rgb_r =(double)m_spin_edits[3].GetValue();
+             m_rgb_b =0;
             //---
-            for(int ly=m_pallete_y1; ly<m_pallete_y2; ly++)
+             for(int ly=m_pallete_y1; ly<m_pallete_y2; ly++)
               {
                // --- Calculate the B-component and reset the R-component
                m_rgb_g=0;
@@ -801,16 +801,16 @@ class CColorPicker : public CElement
                   m_canvas.PixelSet(lx,ly,rgb_color);
                  }
               }
-            break;
+             break;
            }
          // --- Green (G) - green. Color range from 0 to 255
-         case 4 :
+          case 4 :
            {
             // --- Get the current G-component and reset the B-component
-            m_rgb_g =(double)m_spin_edits[4].GetValue();
-            m_rgb_b =0;
+             m_rgb_g =(double)m_spin_edits[4].GetValue();
+             m_rgb_b =0;
             //---
-            for(int ly=m_pallete_y1; ly<m_pallete_y2; ly++)
+             for(int ly=m_pallete_y1; ly<m_pallete_y2; ly++)
               {
                // --- Calculate the B-component and reset the R-component
                m_rgb_r=0;
@@ -828,7 +828,7 @@ class CColorPicker : public CElement
             break;
            }
          // --- Blue (B) - blue. Color range from 0 to 255
-         case 5 :
+          case 5 :
            {
             // --- Get the current B-component and reset the G-component
             m_rgb_g =0;
@@ -859,8 +859,8 @@ class CColorPicker : public CElement
    void CColorPicker::DrawLab(const int index)
      {
       switch(index)
-        {
-         // --- Lightness (L) - brightness in the range from 0 to 100
+       {
+        // --- Lightness (L) - brightness in the range from 0 to 100
          case 6 :
            {
             // --- Get the current L-component
@@ -887,7 +887,7 @@ class CColorPicker : public CElement
               }
             break;
            }
-         // --- Chromatic component 'a' - range -128 (green) to 127 (magenta)
+        // --- Chromatic component 'a' - range -128 (green) to 127 (magenta)
          case 7 :
            {
             // --- Get the current a-component
@@ -914,7 +914,7 @@ class CColorPicker : public CElement
               }
             break;
            }
-         // --- Chromatic component 'b' - range -128 (blue) to 127 (yellow)
+        // --- Chromatic component 'b' - range -128 (blue) to 127 (yellow)
          case 8 :
            {
             // --- Get the current b-component
@@ -941,7 +941,7 @@ class CColorPicker : public CElement
               }
             break;
            }
-        }
+       }
      }
    //+------------------------------------------------------------------+
    // | Draws a palette frame |
@@ -949,24 +949,24 @@ class CColorPicker : public CElement
    void CColorPicker::DrawPaletteBorder(void)
      {
       uint clr=::ColorToARGB(m_palette_border_color);
-   // --- Palette size
-      int x1 =m_pallete_x1-1;
-      int y1 =m_pallete_y1-1;
-      int x2 =m_pallete_x1+(int)m_pallete_x_size;
-      int y2 =m_pallete_y1+(int)m_pallete_y_size;
-   // --- Draw a frame
-      m_canvas.Line(x1,y1,x2,y1,clr);
-      m_canvas.Line(x1,y2,x2,y2,clr);
-      m_canvas.Line(x2,y1,x2,y2,clr);
-      m_canvas.Line(x1,y1,x1,y2,clr);
+      // --- Palette size
+       int x1 =m_pallete_x1-1;
+       int y1 =m_pallete_y1-1;
+       int x2 =m_pallete_x1+(int)m_pallete_x_size;
+       int y2 =m_pallete_y1+(int)m_pallete_y_size;
+      // --- Draw a frame
+       m_canvas.Line(x1,y1,x2,y1,clr);
+       m_canvas.Line(x1,y2,x2,y2,clr);
+       m_canvas.Line(x2,y1,x2,y2,clr);
+       m_canvas.Line(x1,y1,x1,y2,clr);
      }
    //+------------------------------------------------------------------+
    // | Calculation and installation of color components |
    //+------------------------------------------------------------------+
    void CColorPicker::SetComponents(const int index=0,const bool fix_selected=true)
      {
-   // --- If you need to adjust the colors relative to the component selected by the radio button
-      if(fix_selected)
+      // --- If you need to adjust the colors relative to the component selected by the radio button
+       if(fix_selected)
         {
          // --- Let's decompose the selected color into RGB components
          m_rgb_r =m_clr.GetR(m_picked_color);
@@ -983,8 +983,8 @@ class CColorPicker : public CElement
          SetControls(m_radio_buttons.SelectedButtonIndex(),true);
          return;
         }
-   // --- Setting color model parameters
-      switch(index)
+      // --- Setting color model parameters
+       switch(index)
         {
          case 0 : case 1 : case 2 :
             SetHSL();
@@ -996,7 +996,7 @@ class CColorPicker : public CElement
             SetLab();
             break;
         }
-   // --- Draw a palette relative to the selected radio button
+      // --- Draw a palette relative to the selected radio button
       DrawPalette(m_radio_buttons.SelectedButtonIndex());
      }
    //+------------------------------------------------------------------+
@@ -1004,8 +1004,8 @@ class CColorPicker : public CElement
    //+------------------------------------------------------------------+
    void CColorPicker::SetControls(const int index,const bool fix_selected)
      {
-   // --- If you need to fix the value in the input field of the selected radio button
-      if(fix_selected)
+      // --- If you need to fix the value in the input field of the selected radio button
+       if(fix_selected)
         {
          // --- HSL Components
          if(index!=0)
@@ -1030,151 +1030,151 @@ class CColorPicker : public CElement
             m_spin_edits[8].SetValue(::DoubleToString(m_lab_b,0),false);
          return;
         }
-   // --- If you need to adjust the values ​​in the input fields of all color models
-      m_spin_edits[0].SetValue(::DoubleToString(m_hsl_h,0),false);
-      m_spin_edits[1].SetValue(::DoubleToString(m_hsl_s,0),false);
-      m_spin_edits[2].SetValue(::DoubleToString(m_hsl_l,0),false);
-   //---
-      m_spin_edits[3].SetValue(::DoubleToString(m_rgb_r,0),false);
-      m_spin_edits[4].SetValue(::DoubleToString(m_rgb_g,0),false);
-      m_spin_edits[5].SetValue(::DoubleToString(m_rgb_b,0),false);
-   //---
-      m_spin_edits[6].SetValue(::DoubleToString(m_lab_l,0),false);
-      m_spin_edits[7].SetValue(::DoubleToString(m_lab_a,0),false);
-      m_spin_edits[8].SetValue(::DoubleToString(m_lab_b,0),false);
+      // --- If you need to adjust the values ​​in the input fields of all color models
+       m_spin_edits[0].SetValue(::DoubleToString(m_hsl_h,0),false);
+       m_spin_edits[1].SetValue(::DoubleToString(m_hsl_s,0),false);
+       m_spin_edits[2].SetValue(::DoubleToString(m_hsl_l,0),false);
+      //---
+       m_spin_edits[3].SetValue(::DoubleToString(m_rgb_r,0),false);
+       m_spin_edits[4].SetValue(::DoubleToString(m_rgb_g,0),false);
+       m_spin_edits[5].SetValue(::DoubleToString(m_rgb_b,0),false);
+      //---
+       m_spin_edits[6].SetValue(::DoubleToString(m_lab_l,0),false);
+       m_spin_edits[7].SetValue(::DoubleToString(m_lab_a,0),false);
+       m_spin_edits[8].SetValue(::DoubleToString(m_lab_b,0),false);
      }
    //+------------------------------------------------------------------+
    // | Setting color model parameters relative to HSL |
    //+------------------------------------------------------------------+
    void CColorPicker::SetHSL(void)
      {
-   // --- Get the current values ​​of the HSL components
-      m_hsl_h =(double)m_spin_edits[0].GetValue();
-      m_hsl_s =(double)m_spin_edits[1].GetValue();
-      m_hsl_l =(double)m_spin_edits[2].GetValue();
-   // --- Convert HSL components to RGB components
-      m_clr.HSLtoRGB(m_hsl_h/360.0,m_hsl_s/100.0,m_hsl_l/100.0,m_rgb_r,m_rgb_g,m_rgb_b);
-   // --- Convert RGB components to Lab components
-      m_clr.RGBtoXYZ(m_rgb_r,m_rgb_g,m_rgb_b,m_xyz_x,m_xyz_y,m_xyz_z);
-      m_clr.XYZtoCIELab(m_xyz_x,m_xyz_y,m_xyz_z,m_lab_l,m_lab_a,m_lab_b);
-   // --- Setting current parameters in input fields
-      SetControls(0,false);
+      // --- Get the current values ​​of the HSL components
+       m_hsl_h =(double)m_spin_edits[0].GetValue();
+       m_hsl_s =(double)m_spin_edits[1].GetValue();
+       m_hsl_l =(double)m_spin_edits[2].GetValue();
+      // --- Convert HSL components to RGB components
+       m_clr.HSLtoRGB(m_hsl_h/360.0,m_hsl_s/100.0,m_hsl_l/100.0,m_rgb_r,m_rgb_g,m_rgb_b);
+      // --- Convert RGB components to Lab components
+       m_clr.RGBtoXYZ(m_rgb_r,m_rgb_g,m_rgb_b,m_xyz_x,m_xyz_y,m_xyz_z);
+       m_clr.XYZtoCIELab(m_xyz_x,m_xyz_y,m_xyz_z,m_lab_l,m_lab_a,m_lab_b);
+      // --- Setting current parameters in input fields
+       SetControls(0,false);
      }
    //+------------------------------------------------------------------+
    // | Setting color model parameters relative to RGB |
    //+------------------------------------------------------------------+
    void CColorPicker::SetRGB(void)
      {
-   // --- Get the current values ​​of the RGB components
-      m_rgb_r =(double)m_spin_edits[3].GetValue();
-      m_rgb_g =(double)m_spin_edits[4].GetValue();
-      m_rgb_b =(double)m_spin_edits[5].GetValue();
-   // --- Convert RGB components to HSL components
-      m_clr.RGBtoHSL(m_rgb_r,m_rgb_g,m_rgb_b,m_hsl_h,m_hsl_s,m_hsl_l);
-   // ---Adjustment of HSL components
-      AdjustmentComponentHSL();
-   // --- Convert RGB components to Lab components
-      m_clr.RGBtoXYZ(m_rgb_r,m_rgb_g,m_rgb_b,m_xyz_x,m_xyz_y,m_xyz_z);
-      m_clr.XYZtoCIELab(m_xyz_x,m_xyz_y,m_xyz_z,m_lab_l,m_lab_a,m_lab_b);
-   // --- Setting current parameters in input fields
-      SetControls(0,false);
+      // --- Get the current values ​​of the RGB components
+       m_rgb_r =(double)m_spin_edits[3].GetValue();
+       m_rgb_g =(double)m_spin_edits[4].GetValue();
+       m_rgb_b =(double)m_spin_edits[5].GetValue();
+      // --- Convert RGB components to HSL components
+       m_clr.RGBtoHSL(m_rgb_r,m_rgb_g,m_rgb_b,m_hsl_h,m_hsl_s,m_hsl_l);
+      // ---Adjustment of HSL components
+       AdjustmentComponentHSL();
+      // --- Convert RGB components to Lab components
+       m_clr.RGBtoXYZ(m_rgb_r,m_rgb_g,m_rgb_b,m_xyz_x,m_xyz_y,m_xyz_z);
+       m_clr.XYZtoCIELab(m_xyz_x,m_xyz_y,m_xyz_z,m_lab_l,m_lab_a,m_lab_b);
+      // --- Setting current parameters in input fields
+       SetControls(0,false);
      }
    //+------------------------------------------------------------------+
    // | Setting color model parameters relative to Lab |
    //+------------------------------------------------------------------+
    void CColorPicker::SetLab(void)
      {
-   // --- Get the current values ​​of the Lab components
-      m_lab_l =(double)m_spin_edits[6].GetValue();
-      m_lab_a =(double)m_spin_edits[7].GetValue();
-      m_lab_b =(double)m_spin_edits[8].GetValue();
-   // --- Convert Lab components to RGB components
-      m_clr.CIELabToXYZ(m_lab_l,m_lab_a,m_lab_b,m_xyz_x,m_xyz_y,m_xyz_z);
-      m_clr.XYZtoRGB(m_xyz_x,m_xyz_y,m_xyz_z,m_rgb_r,m_rgb_g,m_rgb_b);
-   // ---Adjusting RGB components
-      AdjustmentComponentRGB();
-   // --- Convert RGB components to HSL components
-      m_clr.RGBtoHSL(m_rgb_r,m_rgb_g,m_rgb_b,m_hsl_h,m_hsl_s,m_hsl_l);
-   // ---Adjustment of HSL components
-      AdjustmentComponentHSL();
-   // --- Setting current parameters in input fields
-      SetControls(0,false);
+      // --- Get the current values ​​of the Lab components
+       m_lab_l =(double)m_spin_edits[6].GetValue();
+       m_lab_a =(double)m_spin_edits[7].GetValue();
+       m_lab_b =(double)m_spin_edits[8].GetValue();
+      // --- Convert Lab components to RGB components
+       m_clr.CIELabToXYZ(m_lab_l,m_lab_a,m_lab_b,m_xyz_x,m_xyz_y,m_xyz_z);
+       m_clr.XYZtoRGB(m_xyz_x,m_xyz_y,m_xyz_z,m_rgb_r,m_rgb_g,m_rgb_b);
+      // ---Adjusting RGB components
+       AdjustmentComponentRGB();
+      // --- Convert RGB components to HSL components
+       m_clr.RGBtoHSL(m_rgb_r,m_rgb_g,m_rgb_b,m_hsl_h,m_hsl_s,m_hsl_l);
+      // ---Adjustment of HSL components
+       AdjustmentComponentHSL();
+      // --- Setting current parameters in input fields
+       SetControls(0,false);
      }
    //+------------------------------------------------------------------+
    // | Adjusting RGB components |
    //+------------------------------------------------------------------+
    void CColorPicker::AdjustmentComponentRGB(void)
      {
-      m_rgb_r=::fmin(::fmax(m_rgb_r,0),255);
-      m_rgb_g=::fmin(::fmax(m_rgb_g,0),255);
-      m_rgb_b=::fmin(::fmax(m_rgb_b,0),255);
+       m_rgb_r=::fmin(::fmax(m_rgb_r,0),255);
+       m_rgb_g=::fmin(::fmax(m_rgb_g,0),255);
+       m_rgb_b=::fmin(::fmax(m_rgb_b,0),255);
      }
    //+------------------------------------------------------------------+
    // | Adjustment of HSL components |
    //+------------------------------------------------------------------+
    void CColorPicker::AdjustmentComponentHSL(void)
      {
-      m_hsl_h*=360;
-      m_hsl_s*=100;
-      m_hsl_l*=100;
+       m_hsl_h*=360;
+       m_hsl_s*=100;
+       m_hsl_l*=100;
      }
    //+------------------------------------------------------------------+
    // | Fast scrolling through values ​​in an input field |
    //+------------------------------------------------------------------+
    void CColorPicker::FastSwitching(void)
      {
-   // --- Exit if there is no focus on the element
-      if(!CElementBase::MouseFocus())
+      // --- Exit if there is no focus on the element
+       if(!CElementBase::MouseFocus())
          return;
-   // --- Return the counter to its original value if the mouse button is released
-      if(!m_mouse.IsLeftBtn())
+      // --- Return the counter to its original value if the mouse button is released
+       if(!m_mouse.IsLeftBtn())
          m_timer_counter=SPIN_DELAY_MSC;
-   // --- If the mouse button is pressed
-      else
-        {
-         // --- Increase the counter by the set interval
-         m_timer_counter+=TIMER_STEP_MSC;
-         // --- Exit if less than zero
-         if(m_timer_counter<0)
+      // --- If the mouse button is pressed
+       else
+         {
+          // --- Increase the counter by the set interval
+           m_timer_counter+=TIMER_STEP_MSC;
+          // --- Exit if less than zero
+           if(m_timer_counter<0)
             return;
-         // --- Determination of the activated counter for the activated radio button
-         int index=WRONG_VALUE;
-         //---
-         for(int i=0; i<9; i++)
-           {
-            if(m_radio_buttons.SelectedButtonIndex()==i && 
+          // --- Determination of the activated counter for the activated radio button
+           int index=WRONG_VALUE;
+          //---
+           for(int i=0; i<9; i++)
+            {
+             if(m_radio_buttons.SelectedButtonIndex()==i && 
                (m_spin_edits[i].GetIncButtonPointer().MouseFocus() || m_spin_edits[i].GetDecButtonPointer().MouseFocus()))
               {
                index=i;
                break;
               }
-           }
-         // --- If there is, we will update the palette
-         if(index!=WRONG_VALUE)
-           {
-            DrawPalette(index);
-            // --- Refresh canvas
-            m_canvas.Update();
-           }
-         // --- Definition of activated counter
-         index=WRONG_VALUE;
-         //---
-         for(int i=0; i<9; i++)
+            }
+          // --- If there is, we will update the palette
+           if(index!=WRONG_VALUE)
+            {
+             DrawPalette(index);
+             // --- Refresh canvas
+             m_canvas.Update();
+            }
+          // --- Definition of activated counter
+           index=WRONG_VALUE;
+          //---
+           for(int i=0; i<9; i++)
            {
             if(m_spin_edits[i].GetIncButtonPointer().MouseFocus() || m_spin_edits[i].GetDecButtonPointer().MouseFocus())
               {
                index=i;
                break;
               }
-           }
-         // --- If there is, we will recalculate the components of all color models and update the palette
-         if(index!=WRONG_VALUE)
-           {
-            SetComponents(index,false);
+            }
+          // --- If there is, we will recalculate the components of all color models and update the palette
+           if(index!=WRONG_VALUE)
+            {
+             SetComponents(index,false);
             // --- Refresh canvas
-            m_canvas.Update();
-           }
-        }
+             m_canvas.Update();
+            }
+         }
      }
    //+------------------------------------------------------------------+
  #endif // CCOLORPICKER_MQH_IMPLEMENTATION

@@ -2792,7 +2792,7 @@
             // --- Get the color of the bottom layer (cell background) and the color of the specified pixel in the image
               //Original 
                 //uint background  =(row_index==m_selected_item)? m_selected_row_color : m_canvas.PixelGet(x+lx,y+ly);
-              //New ver
+              //New ver Fix ok
                 uint background  =(row_index==m_selected_item)? m_selected_row_color : m_table.PixelGet(x+lx,y+ly);
 
              uint pixel_color =m_columns[column_index].m_rows[row_index].m_images[selected_image].Data(i);

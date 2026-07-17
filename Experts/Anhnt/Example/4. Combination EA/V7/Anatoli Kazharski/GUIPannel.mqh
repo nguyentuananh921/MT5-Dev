@@ -22,12 +22,10 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\WndEvents.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\Keys.mqh>
   //#include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\Controls\SplitContainer.mqh>
- // Signal arrow drawing (Standard Graph Objects only) - included AFTER Kazharski's own GUI Lib
- // so CFrame/CElement/CElementBase are fully resolved first (MQL5 compiles as one flat unit,
- // so include order matters here).
-  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\GraphElementsCollection.mqh>
  // Layer-3 observer: charts/windows/indicators state + CHART_OBJ_EVENT_* events (no WForms deps)
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\ChartObjCollection.mqh>
+ // For CMessage::PlaySound/Out - per-indicator Sound/Message alerts (2026-07-17)
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Notify\Message\Message.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
@@ -41,9 +39,26 @@
       TAB_TAB_MAIN_POSITIONS,
       TAB_TAB_MAIN_HISTORY,
       TAB_TAB_MAIN_SETTINGS,
-      TAB_TAB_MAIN_EVENTS, //For Pattern Information
-      TABS1_TOTAL,          //Total Tab
+      TAB_TAB_MAIN_EVENTS, //For Pattern Information      
+      TAB_TAB_MAIN_TOTAL,
     };
+  enum ENUM_TAB_CONFIG
+   {
+    TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR =0,
+    TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,    
+    TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER,
+    TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL,
+   };
+  enum ENUM_CHECKBOX_STATE
+   {
+    CHECKBOX_STATE_ON  = 0,
+    CHECKBOX_STATE_OFF = 1,
+   };
+  enum ENUM_INDICATOR_SHOW_STATE
+   {
+    INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
+    INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
+   }; 
   // Status bar items
    #define STATUS_LABELS_TOTAL 4
    enum ENUM_STATUS_BAR_ITEM
@@ -56,34 +71,12 @@
   //+------------------------------------------------------------------+
   //| Tab indices                                                      |
   //+------------------------------------------------------------------+
-   enum ENUM_TAB_INFO
-    {
-      TAB_INFO_PATTERNS   = 0,   // Candle pattern confluence
-      TAB_INFO_INDICATORS = 1,   // Indicator values (future)      
-      TAB_INFO_TOTAL
-    };  
-   enum ENUM_TAB_SETTING_INFO
-    {
-      TAB_SETTING_CONFIG =0,   //To Config indicator.
-      TAB_SETTING_INFO   =1,   //To Show how many indicator in timeseries ans set show or hide base on template
-      TAB_SETTING_TOTAL
-    };
-   enum ENUM_TAB_CONFIG_DETAIL
-    {
-      TAB_CONFIG_DETAIL_PARAMS = 0,   // Form Parameter + Add
-      TAB_CONFIG_DETAIL_INFO,         // Mô tả/info indicator đang chọn
-      TAB_CONFIG_DETAIL_TOTAL
-    };
-   enum ENUM_CHECKBOX_STATE
-   {
-    CHECKBOX_STATE_ON  = 0,
-    CHECKBOX_STATE_OFF = 1,
-   };
-   enum ENUM_INDICATOR_SHOW_STATE
-    {
-      INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
-      INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
-    };
+    //  enum ENUM_TAB_INFO
+    //   {
+    //     TAB_INFO_PATTERNS   = 0,   // Candle pattern confluence
+    //     TAB_INFO_INDICATORS = 1,   // Indicator values (future)      
+    //     TAB_INFO_TOTAL
+    //   };  
   // =====================================================================
   // --- Layer 2 (GUI) layout descriptor - decided BEFORE CreateAddIndicatorParaInfor/
   // --- ShowIndicatorParameterForm ever runs, separate from Layer 1's
@@ -103,7 +96,6 @@
     };
   // --- ENUM_*_PARAM named slot indices live in IndicatorCatalog.mqh (Tang 1),
   // --- co-located with GetIndicatorParamSchema(). Pulled in via TimeSeriesEngine.mqh.
-
   // =====================================================================
   // --- Layout constants: all pixel dimensions defined here.
   // --- Change here; derived values update automatically.
@@ -118,6 +110,10 @@
    #define TABS_MAIN_X               115
    #define TABS_MAIN_Y               43
    #define TABS_WIDTH                (PANEL_WIDTH - TABS_MAIN_X - 3)
+  // --- Nested m_tabs_main_setting_config header (its own tab row draws ABOVE its
+  // --- canvas - offsetting its canvas down by the header height keeps that row
+  // --- clear of m_tabs_main's own tab headers instead of overlapping them).
+   #define TABS_CONFIG_HEADER_H      22
   // --- Indicator tree (Settings tab, left column)
    #define INDICATOR_TREE_WIDTH      150
   // --- Param form (right of indicator tree in Settings tab)
@@ -134,7 +130,30 @@
   // --- Indicator table: below Add button with 10px gap; width auto-fills m_tabs_main via AutoXResizeMode.
    #define INDICATOR_TABLE_X         PARAM_FORM_X
    #define INDICATOR_TABLE_Y         (PARAM_FORM_Y + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10 + ADD_BTN_H + 10)
-   
+  // --- Symbol/TF setting table (Symbol TF sub-tab): note row on top, save button below it,
+  // --- table below the button - same 10px gap convention as INDICATOR_TABLE_Y.
+   #define SYMBOLTF_NOTE_H           20
+   #define SYMBOLTF_BTN_Y            (SYMBOLTF_NOTE_H + 5)
+   #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + ADD_BTN_H + 10)
+  // --- Candle info popup (BugNote 7.2): Ctrl+hover shows m_table_candle_information_atBar -
+  // --- every tracked Indicator (current chart's symbol, every TF with a BarSeries) with its
+  // --- Signal direction at the hovered bar. Fixed at the chart's top-right corner - content
+  // --- only, no drag-to-follow-cursor (CWindow has no simple move-to-XY API, only manual
+  // --- drag state).
+   #define CANDLE_INFO_WINDOW_W      300
+   #define CANDLE_INFO_WINDOW_H      220
+   // --- Signal Markers bridge file header magic - MUST match SignalMarkers.mq5's own
+   // --- SIGNAL_BRIDGE_MAGIC exactly (Indicators\Vendors\Anhnt\Custom Buildin\SignalMarkers.mq5).
+   #define SIGNAL_BRIDGE_MAGIC       20260716
+   // --- How far INSIDE the popup's near edge the cursor sits when it appears - NOT a gap.
+   // --- BugNote 2026-07-16: a GAP between cursor and popup meant the mouse had to cross that
+   // --- stretch of raw chart to reach it, and on a zoomed-out TF that stretch covers OTHER
+   // --- candles, each flipping bar_time (and re-triggering RepositionCandleInfoWindow) along
+   // --- the way - the popup kept jumping just out of reach. Placing the cursor already INSIDE
+   // --- the popup's rect the instant it appears means MouseOverCandleInfoWindow() is true
+   // --- before the user moves at all - zero distance left to cross.
+   #define CANDLE_INFO_CURSOR_INSET  15
+
   //For Indicator table field show in m_table_indicator and m_table_indicator_SymbolTFValue
    #define INDICATOR_PARATEXT_WIDTH 180 //Include name + Icon
   class CGUIPannel : public CWndEvents
@@ -151,39 +170,124 @@
       
       CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
       int                        m_pending_remove_row;                // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
+      int                        m_pending_remove_row_symboltf;       // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
       
       CTimeCounter               m_gui_timecounter;                   //--- Time counters
       CKeys                      m_keys;                              //For Keyboard    
      // For trading bubble
      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
-      CTradingLevelBubble        m_trading_bubble;                    // OWNED - lazy-init: OnInitEvent() only called once HasAnyLevel() is true
-      bool                       m_bubble_created;                    // guard, like m_gui_created
+      CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
      // Control Elements
        CWindow                    m_window_main;
-       CStatusBar                 m_status_bar;    
-       CTabs                      m_tabs_main;       
-      //For CTreeView left pannel 
-       CTreeView                 m_treeview_SymbolTF;
-       int                       m_sym_tree_pos[];        //To save symbol node list_index  
-      //For control at Setting tab on m_tabs_main       
-       //For Indicator TreeViews at      
-        CTreeView                 m_treeview_indicator;
-        string                    m_table_indicator_names[];
-        int                       m_group_tree_pos[];
-        int                       m_type_node_li[];      // list_index của từng node Type (level 1)
-        ENUM_INDICATOR            m_type_node_value[];   // ENUM_INDICATOR tương ứng
-       //-----------
-        // --- INDICATOR_PARAM_SLOTS_MAX (8) matches the largest schema (Alligator/Gator)
-         CTextLabel           m_param_labels[INDICATOR_PARAM_SLOTS_MAX];
-         CTextEdit            m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
-         CComboBox            m_param_combo[INDICATOR_PARAM_SLOTS_MAX];    // enum-like params (Method, Applied Price, ...)
-         CButton              m_btn_add_indicator;                         //CButton to Add Indicator
-         CButton              m_btn_save_indicator;                        //CButton to Save Indicator to JSON
-         ENUM_INDICATOR       m_current_param_type;     // which type the form is currently showing
-         int                  m_current_param_type_li;  // its tree list_index (for tree-node insertion later)        
-        // --- Indicator Info table: port of V4 m_table_indicator         
-         CTable               m_table_indicator;
-         CTable               m_table_indicator_SymbolTFValue;
+      //Control at m_window_main       
+       //For CTreeView left pannel 
+        CTreeView                 m_treeview_SymbolTF;
+        int                       m_sym_tree_pos[];        //To save symbol node list_index
+       // Main Tab on Right
+        CTabs                      m_tabs_main;
+        //for control at TAB_TAB_MAIN_TRADE
+          CTable               m_table_indicator_SymbolTFValue;
+        //For Control at TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR 
+         CTabs                      m_tabs_main_setting_config;
+         //For TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR at m_tabs_main_setting_config
+          // Indicator TreeViews at the Left     
+           CTreeView                 m_treeview_indicator;
+           string                    m_table_indicator_names[];
+           int                       m_group_tree_pos[];
+           int                       m_type_node_li[];      // list_index của từng node Type (level 1)
+           ENUM_INDICATOR            m_type_node_value[];   // ENUM_INDICATOR tương ứng         
+          // For Indicator Add Form 
+          // --- INDICATOR_PARAM_SLOTS_MAX (8) matches the largest schema (Alligator/Gator)
+           CTextLabel           m_param_labels[INDICATOR_PARAM_SLOTS_MAX];
+           CTextEdit            m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
+           CComboBox            m_param_combo[INDICATOR_PARAM_SLOTS_MAX];    // enum-like params (Method, Applied Price, ...)
+           CButton              m_btn_add_indicator;                         //CButton to Add Indicator
+           CButton              m_btn_save_indicator;                        //CButton to Save Indicator to JSON
+           ENUM_INDICATOR       m_current_param_type;     // which type the form is currently showing
+           int                  m_current_param_type_li;  // its tree list_index (for tree-node insertion later)        
+          // --- Indicator Info table: port of V4 m_table_indicator         
+           CTable               m_table_indicator;
+         //for TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config
+          CTable               m_table_indicator_SymbolTFSeting;
+          CButton              m_btn_save_SymbolTF;
+          CTextLabel           m_label_symboltf_note;   // "takes effect after EA restart" note
+         //For TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER
+          // --- 4 independent shapes (each needs its OWN MT5 plot - PLOT_ARROW is a per-plot
+          // --- fixed property, not per-bar, so "Single" and "Multi" each need a Buy/Sell PAIR
+          // --- of shapes, not one shared shape re-colored - see SignalMarkers.mq5).
+           CComboBox            m_combo_shape_single_buy;
+           CComboBox            m_combo_shape_single_sell;
+           CComboBox            m_combo_shape_multi_buy;
+           CComboBox            m_combo_shape_multi_sell;
+          // --- 3 colors, independent of shape: Buy/Sell apply when a marker relates to this
+          // --- chart's own current Symbol+TF; Non-Related is used otherwise. Picked from a
+          // --- small fixed palette via ComboBox (CColorPicker is a fixed 348x266 full HSL/RGB
+          // --- dialog, no compact variant - not worth it for 3 preset-style picks).
+           CComboBox            m_combo_color_buy;
+           CComboBox            m_combo_color_sell;
+           CComboBox            m_combo_color_nonrelated;
+           CButton              m_btn_save_marker_settings;
+          // --- Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi
+          // --- Buy/Sell), index 0-2 of the color arrays = Buy/Sell/Non-Related. Preview labels
+          // --- render the ACTUAL Wingdings glyph (Font("Wingdings") + the raw char code) so the
+          // --- user sees the real shape, not just a number; color previews reuse CColorButton's
+          // --- own swatch rendering, just never wired to a click handler (display-only).
+           CTextLabel           m_label_other_caption[10];
+           CTextLabel           m_preview_shape[4];
+           CColorButton         m_preview_color[3];
+          // --- Current marker style/color state - loaded from Config_Setting.json's "markers" section at startup,
+          // --- fed to SignalMarkers.mq5 as iCustom inputs, updated by the Save button above.
+           int                  m_marker_single_buy_code;
+           int                  m_marker_single_sell_code;
+           int                  m_marker_multi_buy_code;
+           int                  m_marker_multi_sell_code;
+           color                m_marker_buy_color;
+           color                m_marker_sell_color;
+           color                m_marker_nonrelated_color;
+          // --- Buy/Sell alert sound files (2026-07-17) - CFileNavigator's tree+content-list
+          // --- popup turned out to have a real bug (splitter-drag state can get stuck, freezing
+          // --- the popup) and was overkill for "pick one file from one known folder" anyway.
+          // --- Simplified: m_marker_sound_folder is a user-editable path (relative to
+          // --- MQL5\Files\, persisted in JSON so it's never "lost" if changed) that gets scanned
+          // --- with plain FileFindFirst/FileFindNext into 2 comboboxes - no tree, no splitter,
+          // --- nothing to freeze. m_marker_buy_sound_file/m_marker_sell_sound_file now store just
+          // --- the FILENAME (not a full path) - portable if the folder itself ever moves, since
+          // --- the folder is tracked separately. Actually playing these on a live Signal is a
+          // --- separate, not-yet-wired step (per-indicator Sound checkbox in m_table_indicator
+          // --- already exists as UI-only).
+           string               m_marker_sound_folder;
+           string               m_marker_buy_sound_file;
+           string               m_marker_sell_sound_file;
+           CTextEdit            m_edit_sound_folder;
+           CButton              m_btn_refresh_sound_folder;
+           CComboBox            m_combo_buy_sound;
+           CComboBox            m_combo_sell_sound;
+          // --- Closed-bar path (CheckIndicatorAlerts): per-template (type_key/params_key, NOT
+          // --- per-row - row index isn't stable across a table rebuild) watermark of the newest
+          // --- committed HistoryTime() already written to Signal_Log.csv, persisted to
+          // --- Signal_Log_Watermark_<SYMBOL>_<TF>.json so a restart's SyncHistory backfill is
+          // --- logged (catch-up) without ever re-writing rows already on disk. Loaded lazily,
+          // --- once, on CheckIndicatorAlerts' first call.
+           string               m_wm_type[];
+           string               m_wm_params[];
+           datetime             m_wm_time[];
+           bool                 m_signal_log_watermarks_loaded;
+          // --- Live-bar path (CheckIndicatorAlerts): per-row (m_table_indicator_ptrs index - fine
+          // --- here, this array is transient/session-only, never persisted) last-seen
+          // --- GetCurrentSignal() direction for the still-forming bar 0. A still-forming bar can
+          // --- flip back and forth several times before it closes ("uốn lượn như rắn", Anhnt
+          // --- 2026-07-17) - each real change fires Sound+Message+CSV immediately with
+          // --- TimeCurrent(), unlike the closed-bar path which never sounds an alert (the chart
+          // --- Marker already shows closed-bar flips visually - Sound/Message is only for
+          // --- catching a live move before it commits).
+           ENUM_SIGNAL_DIR      m_live_signal_last_seen[];
+     //Information window at to display signal on chart
+       CWindow                    m_window_candle_infomation;
+       CTable                     m_table_candle_information_atBar;
+       datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden
+     //For status Bar 
+       CStatusBar                 m_status_bar;
+     //----------------
          // per-row dirty-check cache for Trade tab table
          string               m_trade_cache_val[];
          int                  m_trade_cache_sig_icon[];
@@ -192,13 +296,15 @@
          // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
          int                  m_settings_cache_state[];
 
-       // --- Signal arrows/thumbs on the chart (current chart symbol+period only - other symbols
-       // in the table have no chart of their own to draw on). Watermark tracked per (symbol,TF)
-       // key so switching the chart's own symbol/TF doesn't skip real new signals by comparing
-       // against an unrelated timeline's last-drawn time.
-        CGraphElementsCollection  m_graph_elements;
-        string                    m_signal_arrows_key[];
-        datetime                  m_signal_arrows_last_time[];
+       // --- Signal Markers bridge (BugNote 2026-07-16): a separate SignalMarkers.mq5
+       // --- indicator (DRAW_COLOR_ARROW buffers) renders the actual chart markers now -
+       // --- this EA only feeds it via a small binary file, one per symbol, containing every
+       // --- currently Buy/Sell-enabled indicator's flip history across every tracked TF of
+       // --- the CURRENT chart's own symbol. Watermark is a single (symbol, newest-seen-flip)
+       // --- pair, not an array, because this EA instance only ever cares about its own
+       // --- chart's current ::Symbol() (switching symbol resets it - see BuildAndWriteSignalBridge).
+        string                    m_signal_bridge_symbol;
+        datetime                  m_signal_bridge_last_time;
 
        // --- Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
        // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
@@ -216,8 +322,17 @@
      //--- Form
          int                           WindowIdx(CWindow &wnd);
          bool                          CreateMainWindow(const string text);
+     // For candle info popup (BugNote 7.2: Ctrl+hover -> Signal direction per indicator at that bar)
+         bool                          CreateWindowCandleInfo(void);
+         bool                          RefreshCandleInfoWindow(const datetime bar_time);
+         bool                          MouseOverCandleInfoWindow(void);
+         void                          RepositionCandleInfoWindow(const int cursor_x, const int cursor_y);
+         void                          ShowCandleInfoPopup(const int cursor_x, const int cursor_y);
+         void                          HideCandleInfoPopup(void);
      // For Main Tab
          bool                          CreateTab_Main(const int x_gap, const int y_gap);
+     // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS
+         bool                          CreateTabSettingConfig(const int x_gap, const int y_gap);
      //--- Status bar
          bool                          CreateStatusBar(const int x_gap, const int y_gap);
          bool                          UpdateStatusBar(void);
@@ -245,15 +360,58 @@
          bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);         
          bool                         LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator);
          CIndicatorDE                 *OwnedInstanceOfLine(const int line_handle);
-         void                         ImportForeignChartIndicators(void);        
+         void                         ImportForeignChartIndicators(void);
+         void                         BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key);
+         void                         ApplyLoadedIndicatorBuySell(void);
        //For Indicator Symbol TF Table m_table_indicator_SymbolTFValue
          bool                         CreateIndicatorSymbolTFTable(const int x, const int y);
          void                         SetValuesToIndicatorSymbolTFTable(void);
          string                       BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
-         void                         DrawSignalArrows(void);
-         int                          SignalArrowsFindOrAddKey(const string key);
-         void                         ResetSignalArrows(void);
-         void                         PurgeSignalArrowObjects(const string sym, const ENUM_TIMEFRAMES tf);
+         void                         BuildAndWriteSignalBridge(void);
+         bool                         TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
+         void                         WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count);
+         void                         ResetSignalBridge(void);
+         void                         PurgeSignalArrowObjects(const string sym, const string tf_string);
+       //For Symbol/TF Setting Table m_table_indicator_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
+         bool                         CreateTableSymbolTFSetting(const int x, const int y);
+         void                         PopulateTableSymbolTFSetting(void);
+         bool                         HasTableSymbolTFSettingRow(const string sym, const string tf_text);
+         void                         SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text);
+         bool                         IsCurrentChartSymbolTFRow(const string sym, const string tf_text);
+         void                         SyncTableSymbolTFSettingCurrentChartIcon(void);
+         void                         ApplyLoadedSymbolTFSettings(void);
+         void                         OnClickSaveSymbolTF(void);
+         void                         SaveGUIConfigToJSON(void);
+         void                         BuildSymbolTFBuySellArrays(string &symbols[], string &tfs[], bool &buys[], bool &sells[]);
+         void                         OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col);
+       //For TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER - marker shape/color settings for SignalMarkers.mq5
+         bool                         CreateTabSettingConfig_Marker(const int x, const int y);
+         bool                         CreateMarkerTabComboBox(CComboBox &combo, const int x, const int y, const int combo_w, string &labels[], const int selected_index);
+         bool                         CreateMarkerTabCaption(const int row, const string text, const int x, const int y);
+         bool                         CreateShapePreview(const int row, const int x, const int y, const int arrow_code);
+         bool                         CreateColorPreview(const int row, const int x, const int y, const color clr);
+         void                         UpdateShapePreview(const int row, const int arrow_code);
+         void                         UpdateColorPreview(const int row, const color clr);
+         void                         GetMarkerArrowCodeChoices(int &codes[], string &labels[]);
+         void                         GetMarkerColorChoices(color &colors[], string &labels[]);
+         void                         OnClickSaveMarkerSettings(void);
+         void                         LoadMarkerSettings(void);
+         void                         SaveMarkerSettings(void);
+         bool                         JsonIntValue(const string content, const string key, int &value);
+         bool                         JsonStringValue(const string content, const string key, string &value);
+         void                         EnsureMarkerIndicatorAttached(void);
+         void                         ReattachSignalMarkersIndicator(void);
+         void                         RemoveMarkerIndicator(void);
+       //For Buy/Sell alert sound file pickers (Marker tab) - plain combobox, folder scanned via FileFindFirst
+         void                         ScanSoundFolder(string &files[]);
+         void                         OnClickChangeSoundFolder(void);
+       //Per-indicator Sound/Message opt-in (m_table_indicator col 5/6) - fires on a genuinely NEW Signal
+         void                         CheckIndicatorAlerts(void);
+         void                         WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status);
+         datetime                     GetSignalLogWatermark(const string type_key, const string params_key);
+         void                         SetSignalLogWatermark(const string type_key, const string params_key, const datetime t);
+         void                         LoadSignalLogWatermarks(void);
+         void                         SaveSignalLogWatermarksToFile(void);
        //Helper
         static void                   SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw);
         int                           GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[]); 
@@ -265,7 +423,7 @@
         void                          HandleChartIndicatorChange(void);
      //Calculation for Control
       double                          DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0);
-    public: 
+    public:
       // lifecycle method
                                       CGUIPannel(void);
                                       ~CGUIPannel(void);
@@ -274,8 +432,6 @@
        void                           OnTimerEvent(void);
        void                           OnTickEvent(void);
        virtual void                   OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
-      //--- Trading event handler
-         void                         OnTradeEvent(void);
       //For GUI
         void                           UpdateGUI(const bool redraw = false);        
         CWindow *                      GetMainWindowPointer(void) { return &m_window_main; }
@@ -303,9 +459,10 @@
       m_IndicatorsCollection  = NULL;
       m_trade_table_row_count  = 0;
       m_pending_remove_row     = -1;
+      m_pending_remove_row_symboltf = -1;
+      m_candle_info_shown_bar  = 0;
       //m_tick_series = NULL;
       m_gui_created     = false;
-      m_bubble_created  = false;
    }
   CGUIPannel::~CGUIPannel(void)
    {
@@ -339,6 +496,10 @@
       // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
       m_chart_obj_collection.CreateCollection();
       UpdateGUI(true);
+      // --- Seed m_table_indicator's Buy/Sell checkboxes from indicators_config.json (same
+      // --- pattern as ApplyLoadedSymbolTFSettings for m_table_indicator_SymbolTFSeting) - MUST
+      // --- run after UpdateGUI() so m_table_indicator_ptrs[] is already built.
+      ApplyLoadedIndicatorBuySell();
       // Startup reconcile: adopt any indicator the user attached while the EA was off.
       // MUST run AFTER UpdateGUI - m_IndicatorsCollection.TemplateExists() needs the collection
       // already populated; running before it re-imported
@@ -348,6 +509,16 @@
       // Debug helper (kept available, call disabled after the 4807 hunt closed): dump the
       // instance->handle map right after startup
       //m_time_series_engine.PrintIndicatorsInventory();
+      // --- One-time retroactive purge (BugNote 2026-07-16, "2531 leftover Arrow objects after
+      // --- Remove from chart"): cleans up legacy CreateSignalBuy/Sell/CreateThumbUp/Down
+      // --- objects from sessions before OnDeinitEvent's own per-removal purge existed. Gated
+      // --- so it only ever runs once per terminal, not once per chart/attach.
+      if(!::GlobalVariableCheck("CombinationEA_SignalMarkersMigrated_v1"))
+        {
+         PurgeSignalArrowObjects(::Symbol(), EnumToString((ENUM_TIMEFRAMES)::Period()));
+         ::GlobalVariableSet("CombinationEA_SignalMarkersMigrated_v1", 1);
+        }
+      EnsureMarkerIndicatorAttached();
     }
    else if(uninit_reason == REASON_CHARTCHANGE)
     {
@@ -356,6 +527,13 @@
       // same content refresh moments later. Two ChartRedraw() calls back-to-back was
       // the m_window_main flicker on every TF switch.
       UpdateGUI(false);
+      // --- No explicit bubble lazy-init call needed here (2026-07-14, BugNote "ChartChange
+      // --- là mất") - CTradingLevelBubble now self-manages via EnsureCreated(), called from
+      // --- its own OnPoll()/OnChartEvent() every time either is invoked, so the very next
+      // --- OnEvent()/OnTimerEvent() call after this reinit already covers it.
+      // --- Defensive re-check (cheap, idempotent) - the indicator itself already survives a
+      // --- symbol/TF change on its own, this just covers the case where it got removed by hand.
+      EnsureMarkerIndicatorAttached();
     }
    return true;
    };
@@ -373,10 +551,86 @@
   void CGUIPannel::OnEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
    {
+    // --- Trading bubble FIRST, before any other GUI Lib control gets a chance at this
+    // --- event (2026-07-14, BugNote "khó di chuyển"/hard-to-drag): this used to be the
+    // --- LAST thing forwarded in this function, so CHARTEVENT_MOUSE_MOVE during a drag
+    // --- had to fall through every other branch below first. The bubble's own
+    // --- OnChartEvent() already no-ops for event types it doesn't care about, and now also
+    // --- self-manages its own lazy-init via EnsureCreated() (2026-07-14), so it's always
+    // --- safe to forward every event to it regardless of whether it's created yet.
+     m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
+    // --- Ctrl+hover candle info popup (BugNote 7.2, redesigned 2026-07-16). m_mouse is already
+    // --- refreshed for this event by CWndEvents::InitChartEventsParams() before OnEvent() is
+    // --- called, so X()/Y() here are current.
+    //
+    // --- Use case (Anhnt, 2026-07-16):
+    //  1. Ctrl+hover a candle with NO signal at all -> popup does not appear.
+    //  2. Ctrl+hover a candle WITH a signal -> popup appears; cursor is already inside its
+    //     rect the instant it appears (CANDLE_INFO_CURSOR_INSET), zero distance to cross.
+    //  3. Mouse moves further into the popup/table to drag the scrollbar - MouseOverCandle-
+    //     InfoWindow() being true is the ONLY thing keeping it open past this point; Ctrl no
+    //     longer matters once inside.
+    //  4. Mouse leaves the popup's rect -> it hides and native dispatch reverts to m_window_main.
+    //
+    // --- ShowCandleInfoPopup()/HideCandleInfoPopup() also swap m_active_window_index so
+    // --- CWndEvents::CheckElementsEvents() natively dispatches to the table (scrollbar
+    // --- included) while shown - see those methods for why m_window_main going quiet during
+    // --- that window isn't a real trade-off (mouse can't be on both at once).
+     if(id == CHARTEVENT_MOUSE_MOVE)
+      {
+       bool popup_shown = (m_candle_info_shown_bar != 0);
+       if(popup_shown && MouseOverCandleInfoWindow())
+         {
+          // --- Stay open, don't touch bar_time - let the table's native dispatch (now
+          // --- routed to it via m_active_window_index) handle the scrollbar/clicks.
+         }
+       else if(m_keys.KeyCtrlState())
+         {
+          datetime t; double price; int sub_window;
+          if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
+            {
+             string sym = ::Symbol();
+             ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+             int shift = ::iBarShift(sym, tf, t, false);
+             if(shift >= 0)
+               {
+                datetime bar_time = ::iTime(sym, tf, shift);
+                if(bar_time != m_candle_info_shown_bar)
+                  {
+                   bool has_signal = RefreshCandleInfoWindow(bar_time);
+                   if(has_signal)
+                     {
+                      m_candle_info_shown_bar = bar_time;
+                      ShowCandleInfoPopup(m_mouse.X(), m_mouse.Y());
+                     }
+                   else if(popup_shown)
+                     {
+                      HideCandleInfoPopup();
+                      m_candle_info_shown_bar = 0;
+                     }
+                  }
+               }
+            }
+         }
+        else if(popup_shown)
+         {
+          HideCandleInfoPopup();
+          m_candle_info_shown_bar = 0;
+         }
+      }
     // --- Re-hide param slots after CTabs::ShowTabElements() shows them on tab switch.
     //     ShowTabElements() runs inside CTabs::OnEvent() (before our OnEvent is called),
     //     so by this point the slots are already visible — we undo that.
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main.Id())
+      {
+       HideParamSlots();
+       return;
+      }
+    // --- Same issue on the NESTED m_tabs_main_setting_config (Indicator/Symbol TF sub-tabs) -
+    //     it's its own CTabs with its own ON_CLICK_TAB event, so switching between its 2 tabs
+    //     runs its own ShowTabElements() -> Reset() cascade, which force-shows m_param_labels/
+    //     m_param_edits/m_param_combo[] the same way the outer tab switch does.
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main_setting_config.Id())
       {
        HideParamSlots();
        return;
@@ -446,7 +700,101 @@
          //else if(col == 4)    OnClickShowLine(sname, row);     // toggle ChartIndicatorAdd/Delete
          else if(col == 4)    OnClickToggleShowIndicatorOnChart(sname, row);     // toggle ChartIndicatorAdd/Delete
          return;
-      }  
+      }
+    //Handle Save Symbol/TF config to JSON
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_SymbolTF.Id())
+      {
+         OnClickSaveSymbolTF();
+         return;
+      }
+    //Handle Save marker style/color settings
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.Id())
+      {
+         OnClickSaveMarkerSettings();
+         return;
+      }
+    //Handle "Refresh" next to the sound folder path - re-scans and re-populates both combos
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_refresh_sound_folder.Id())
+      {
+         OnClickChangeSoundFolder();
+         return;
+      }
+    //Handle Other tab combo selection - live-updates the preview immediately (BEFORE Save),
+    //so the user sees what they're about to pick, not just its number/name. Reads directly off
+    //the just-clicked combo's own SelectedItemIndex() - m_marker_* only changes on Save.
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
+      {
+       int codes[]; string shape_labels[];
+       GetMarkerArrowCodeChoices(codes, shape_labels);
+       int n_shapes = ArraySize(codes);
+       color mcolors[]; string color_labels[];
+       GetMarkerColorChoices(mcolors, color_labels);
+       int n_colors = ArraySize(mcolors);
+
+       if(lparam == m_combo_shape_single_buy.Id())
+         {
+          int sel = (int)m_combo_shape_single_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(0, codes[sel]);
+          return;
+         }
+       if(lparam == m_combo_shape_single_sell.Id())
+         {
+          int sel = (int)m_combo_shape_single_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(1, codes[sel]);
+          return;
+         }
+       if(lparam == m_combo_shape_multi_buy.Id())
+         {
+          int sel = (int)m_combo_shape_multi_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(2, codes[sel]);
+          return;
+         }
+       if(lparam == m_combo_shape_multi_sell.Id())
+         {
+          int sel = (int)m_combo_shape_multi_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(3, codes[sel]);
+          return;
+         }
+       if(lparam == m_combo_color_buy.Id())
+         {
+          int sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_colors) UpdateColorPreview(0, mcolors[sel]);
+          return;
+         }
+       if(lparam == m_combo_color_sell.Id())
+         {
+          int sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_colors) UpdateColorPreview(1, mcolors[sel]);
+          return;
+         }
+       if(lparam == m_combo_color_nonrelated.Id())
+         {
+          int sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_colors) UpdateColorPreview(2, mcolors[sel]);
+          return;
+         }
+      }
+    //Handle m_table_indicator_SymbolTFSeting event
+     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+        && lparam == m_table_indicator_SymbolTFSeting.Id())
+      {
+         string parts[];
+         if(StringSplit(sparam, '_', parts) != 2) return;
+         int col = (int)StringToInteger(parts[0]);
+         int row = (int)StringToInteger(parts[1]);
+         if(row < 0 || row >= (int)m_table_indicator_SymbolTFSeting.RowsTotal()) return;
+         string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row); StringTrimLeft(sym);
+         string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, row); StringTrimLeft(tf);
+
+         // --- Delete is DEFERRED to OnTimerEvent - same CTable crash reason as m_table_indicator's col 0.
+         // --- col 0 on the current-chart's own row shows the "start" icon (IsCurrentChartSymbolTFRow) -
+         // --- not deletable, ignore the click.
+         if(col == 0 && !IsCurrentChartSymbolTFRow(sym, tf))
+            m_pending_remove_row_symboltf = row;
+         else if(col == 2 || col == 3)
+            OnCheckTableSymbolTFSetting(sym, tf, row, col);
+         return;
+      }
     //--- Layer 3 -> Layer 2 state sync: an indicator was added/removed/param-changed on some
     //--- chart window (possibly BY HAND on the chart) - re-truth the "Show" column. Events
     //--- come from m_chart_obj_collection.Refresh() polled in OnTimerEvent.
@@ -478,6 +826,8 @@
       {
          PopulateSymbolTFTree();
          SynSymbolTFTreeViewIcons();
+         PopulateTableSymbolTFSetting();   // additive-only: picks up any newly tracked Symbol+TF pair
+         SyncTableSymbolTFSettingCurrentChartIcon();   // "current chart" row just moved
          UpdateGUI(false);   // dirty-check refresh only - no manual redraw, MT5 already redraws natively on chart change
          return;
       }
@@ -515,25 +865,37 @@
     // --- CHARTEVENT_CHART_CHANGE: symbol/TF tree rebuild moved to CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE
     // --- above (2026-07-14) - this native event still fires on every scroll/zoom too, so it was never
     // --- a reliable "did symbol/TF really change" signal on its own; the CChartObjCollection event is.
-    // --- Trading bubble: forward whatever wasn't already claimed above
-    // --- (CHARTEVENT_MOUSE_MOVE for drag, CHARTEVENT_CLICK for the X button,
-    // --- CHARTEVENT_CUSTOM trade events from CTradeEventsCollection, and
-    // --- CHARTEVENT_CHART_CHANGE for redraw-on-zoom/scroll).
-     if(m_bubble_created)
-        m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
    }
   void CGUIPannel::OnTickEvent(void)
    {
-      
+      // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value
+      // --- actually changed - same call site/pattern as V1's OnTickEvent. Positions/Symbol
+      // --- Info table updates that used to sit alongside this in V1 aren't ported yet
+      // --- (those tabs are still empty shells in V7).
+      if(UpdateStatusBar())
+         ::ChartRedraw();
    }
   //+------------------------------------------------------------------+
   //| Deinit                                                           |
   //+------------------------------------------------------------------+
   void CGUIPannel::OnDeinitEvent(const int reason)
    {
-      if(m_bubble_created) m_trading_bubble.OnDeinitEvent();
+      m_trading_bubble.OnDeinitEvent();
       if(reason != REASON_CHARTCHANGE)
+        {
          CWndEvents::Destroy();
+         // --- Legacy cleanup (BugNote 2026-07-16, "2531 leftover Arrow objects after Remove
+         // --- from chart"): the OLD graphic-object drawing path (CreateSignalBuy/Sell/
+         // --- CreateThumbUp/Down, now retired in favor of the SignalMarkers.mq5 indicator +
+         // --- bridge file) never purged its own objects on final removal. Purge this chart's
+         // --- own current (sym, tf) directly - the broader one-time sweep for OTHER (sym,tf)
+         // --- combos this chart visited in past sessions lives in OnInitEvent instead (gated
+         // --- by a GlobalVariable so it only ever runs once per terminal).
+         PurgeSignalArrowObjects(::Symbol(), EnumToString((ENUM_TIMEFRAMES)::Period()));
+         // --- ChartIndicatorAdd() makes SignalMarkers.mq5 an independent chart program - it
+         // --- keeps running/drawing even after this EA is gone unless explicitly detached here.
+         RemoveMarkerIndicator();
+        }
    }
   //+------------------------------------------------------------------+
   //| Timer                                                            |
@@ -552,6 +914,24 @@
          if(remove_row < ArraySize(m_table_indicator_names))
             OnClickRemoveIndicator(m_table_indicator_names[remove_row], remove_row);
         }
+      //--- Deferred delete for m_table_indicator_SymbolTFSeting - GUI-only removal (no Tang 1
+      //--- series is stopped yet, see PopulateTableSymbolTFSetting note)
+      if(m_pending_remove_row_symboltf >= 0)
+        {
+         int remove_row = m_pending_remove_row_symboltf;
+         m_pending_remove_row_symboltf = -1;
+         if(remove_row < (int)m_table_indicator_SymbolTFSeting.RowsTotal())
+           {
+            // --- Drop the pair from indicators_config.json BEFORE the row disappears - live
+            // --- Tang1 (BarSeriesDE/indicators/signals) keeps running this session (no Library
+            // --- removal method yet); it just won't be recreated on the next EA attach/restart.
+            string sym = m_table_indicator_SymbolTFSeting.GetValue(0, remove_row); StringTrimLeft(sym);
+            string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, remove_row); StringTrimLeft(tf);
+            if(m_time_series_engine != NULL)
+               m_time_series_engine.RemoveSymbolTFFromConfigJSON("Config_Setting.json", sym, tf);
+            m_table_indicator_SymbolTFSeting.DeleteRow(remove_row, true);
+           }
+        }
       //--- Handling the elements
 
       ulong t0 = ::GetMicrosecondCount();
@@ -560,10 +940,14 @@
 
       ulong t1 = ::GetMicrosecondCount();
 
-      if(m_bubble_created) m_trading_bubble.OnPoll();
+      // --- CTradingLevelBubble self-manages lazy-init via EnsureCreated(), called from the
+      // --- top of its own OnPoll() (2026-07-14) - GUIPannel no longer needs to track whether
+      // --- it's created or special-case the retry, just poll it unconditionally every tick.
+      m_trading_bubble.OnPoll();
 
       SetValuesToIndicatorSymbolTFTable();
-      DrawSignalArrows();
+      BuildAndWriteSignalBridge();
+      CheckIndicatorAlerts();
       //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
       //--- custom events (handled in OnEvent -> RefreshIndicatorTableShowStates)
       m_chart_obj_collection.Refresh();
@@ -571,21 +955,6 @@
       ulong t2 = ::GetMicrosecondCount();
       // if(t2 - t0 > 1000)
       //  Print("PERF CGUIPannel::OnTimerEvent CWndEvents::OnTimerEvent= ", t1 - t0, " us CTradingLevelBubble::OnPoll= ", t2 - t1, " us");
-   }
-  //+------------------------------------------------------------------+
-  //| Trade operation event                                            |
-  //+------------------------------------------------------------------+
-  void CGUIPannel::OnTradeEvent(void)
-   {
-      // --- Lazy-init the trading bubble: only pay for the full-screen canvas +
-      // --- hiding native SL/TP lines once there is an actual SL/TP to show on the
-      // --- CURRENT chart's symbol. Once created, left running (idle draws are
-      // --- cheap - Draw() itself no-ops via the unchanged-state check).
-      if(!m_bubble_created && m_trading_bubble.HasAnyLevel())
-        {
-         if(m_trading_bubble.OnInitEvent())
-            m_bubble_created = true;
-        }
    }
  //For GUIPannel
   bool CGUIPannel::CreateGUIPannel(void) 
@@ -598,6 +967,11 @@
             Print(__FUNCTION__, " > Failed to create panel!");
             return (false);
          }
+       if (!CreateWindowCandleInfo())
+         {
+            Print(__FUNCTION__, " > Failed to create candle info popup!");
+            return (false);
+         }
        if (!CreateStatusBar(1, 23))
          {
             Print(__FUNCTION__, " > Failed to create Status Bar!");
@@ -606,6 +980,11 @@
        if (!CreateTab_Main(TABS_MAIN_X, TABS_MAIN_Y))
          {
             //Print(__FUNCTION__, " > Failed to create Tabs1!");
+            return (false);
+         }
+       if (!CreateTabSettingConfig(0, TABS_CONFIG_HEADER_H))
+         {
+            Print(__FUNCTION__, " > Failed to create Settings config tabs!");
             return (false);
          }
         PopulateSymbolTFTree();
@@ -619,13 +998,20 @@
         //if(!CreateConfigDetailTabs(5, 5)) return false;
         if(!CreateAddIndicatorParaInfor(PARAM_FORM_X, PARAM_FORM_Y)) return false;
         if(!CreateIndicatorTable(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
+       //For Symbol TF sub-tab at m_tabs_main_setting_config
+        if(!CreateTableSymbolTFSetting(0, 22)) return false;
+        PopulateTableSymbolTFSetting();
+        ApplyLoadedSymbolTFSettings();   // seed Buy/Sell from indicators_config.json, once (see note)
+       //For Other sub-tab at m_tabs_main_setting_config (marker shape/color settings)
+        if(!CreateTabSettingConfig_Marker(0, 22)) return false;
        //For Trade Tab at m_tabs_main
         if(!CreateIndicatorSymbolTFTable(0, 0)) return false;
       // --- Trading bubble: just wire the mouse pointer now (cheap, no canvas yet) -
-      // --- OnInitEvent() itself is lazy, called from OnTradeEvent() only once
-      // --- HasAnyLevel() is true (avoid creating a full-screen canvas + hiding
-      // --- native SL/TP lines when there is nothing to show).
+      // --- it lazily creates its own canvas via EnsureCreated(), called from its own
+      // --- OnPoll()/OnChartEvent(), only once HasAnyLevel() is true (avoid creating a
+      // --- full-screen canvas + hiding native SL/TP lines when there is nothing to show).
         m_trading_bubble.MousePointer(m_mouse);
+        m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));
       //m_tabs_main.ShowTabElements(); //Need verify
       CWndEvents::CompletedGUI();
       // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
@@ -634,7 +1020,10 @@
       // --- would exclude them permanently even after Show() - confirmed by reading
       // --- FormAvailableElementsArray()'s IsVisible() filter.
       HideParamSlots();
-       
+      // --- Same reasoning as HideParamSlots above: hide only AFTER CompletedGUI so
+      // --- FormAvailableElementsArray() still registers its labels as available.
+      m_window_candle_infomation.Hide();
+
       //Debug
         //  Print("My Debug CreateGUIPannel END m_split_container.IsVisible=", m_split_container.IsVisible(),
         //  " m_config_detail_tabs.IsVisible=", m_tabs_indicator_config.IsVisible(),
@@ -684,8 +1073,299 @@
          m_window_main.GetCollapseButtonPointer().Tooltip("Collapse/Expand");
       //--- Create the form
          if (!m_window_main.CreateWindow(m_chart_id, m_subwin, caption_text, 1, 1))
-            return (false);      
+            return (false);
       return (true);
+    }
+  // For candle info popup (BugNote 7.2)
+   //+------------------------------------------------------------------+
+   //| True while the current mouse position is inside the candle info  |
+   //| popup's own screen rect - used to suspend the Ctrl+hover bar      |
+   //| re-derivation (see OnEvent) so scrolling/clicking the popup's own |
+   //| table doesn't fight with it.                                     |
+   //+------------------------------------------------------------------+
+   bool CGUIPannel::MouseOverCandleInfoWindow(void)
+    {
+     int x = m_window_candle_infomation.X();
+     int y = m_window_candle_infomation.Y();
+     return(m_mouse.X() >= x && m_mouse.X() <= x + m_window_candle_infomation.XSize() &&
+            m_mouse.Y() >= y && m_mouse.Y() <= y + m_window_candle_infomation.YSize());
+    }
+   //+------------------------------------------------------------------+
+   //| Snaps the popup so the cursor is ALREADY inside it the instant it |
+   //| appears (CANDLE_INFO_CURSOR_INSET, not a gap) - BugNote            |
+   //| 2026-07-16: first tried placing the popup NEAR the cursor with a  |
+   //| small gap, but on a zoomed-out TF that gap still covers OTHER      |
+   //| candles - crossing it to reach the popup flipped bar_time (and    |
+   //| re-triggered this same reposition) along the way, so the popup    |
+   //| kept jumping just out of reach. Zero distance to cross means      |
+   //| MouseOverCandleInfoWindow() is already true before any movement.  |
+   //| CWindow has no "MainPointer" parent, so its own Moving(x,y)       |
+   //| overload takes absolute coords directly - but it only updates    |
+   //| m_canvas, not the base m_x/m_y CElementBase stores (confirmed by  |
+   //| reading Window.mqh), so those must be set explicitly here or      |
+   //| MouseOverCandleInfoWindow()/future calls would read stale coords. |
+   //| The table needs NO manual repositioning: it was created via       |
+   //| MainPointer(m_window_candle_infomation), so CElement::Moving()    |
+   //| (its own, argument-less overload) re-derives its position from    |
+   //| m_main.X()/Y() - i.e. the window's now-updated position - on its  |
+   //| own.                                                              |
+   //+------------------------------------------------------------------+
+   void CGUIPannel::RepositionCandleInfoWindow(const int cursor_x, const int cursor_y)
+    {
+     int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
+     int chart_h = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
+
+     // --- Cursor sits INSET pixels inside the popup's LEFT edge (popup extends mostly to the
+     // --- right of the cursor) - flip so cursor sits INSET pixels inside the RIGHT edge
+     // --- instead if that would run off the chart's right edge (popup extends to the left).
+     // --- Either way the cursor is ALREADY inside the rect - see CANDLE_INFO_CURSOR_INSET.
+     int x = cursor_x - CANDLE_INFO_CURSOR_INSET;
+     if(x + CANDLE_INFO_WINDOW_W > chart_w)
+        x = cursor_x - CANDLE_INFO_WINDOW_W + CANDLE_INFO_CURSOR_INSET;
+     if(x < 0) x = 0;
+
+     // --- Same idea vertically - cursor INSET pixels inside the top edge, flipping to sit
+     // --- inside the bottom edge if that would run off the chart's bottom.
+     int y = cursor_y - CANDLE_INFO_CURSOR_INSET;
+     if(y + CANDLE_INFO_WINDOW_H > chart_h)
+        y = cursor_y - CANDLE_INFO_WINDOW_H + CANDLE_INFO_CURSOR_INSET;
+     if(y < 0) y = 0;
+
+     m_window_candle_infomation.X(x);
+     m_window_candle_infomation.Y(y);
+     m_window_candle_infomation.Moving(x, y);
+     m_table_candle_information_atBar.Moving();
+    }
+   //+------------------------------------------------------------------+
+   //| Shows the popup AND hands it native mouse/keyboard dispatch by    |
+   //| making it the active window (BugNote 2026-07-16). CWndEvents::    |
+   //| CheckElementsEvents() (WndEvents.mqh, protected - accessible from |
+   //| this subclass, no Library edit needed) only ever routes           |
+   //| CheckMouseFocus()/OnEvent() to m_active_window_index's elements,  |
+   //| so without this the popup's table (its scrollbar included) never |
+   //| receives a native event no matter how it's shown. m_window_main   |
+   //| going quiet while this is active is not a real trade-off here:    |
+   //| the ONLY thing that keeps this popup active is the cursor         |
+   //| physically sitting inside it (see MouseOverCandleInfoWindow), so   |
+   //| m_window_main can't be receiving meaningful mouse input at the    |
+   //| same moment anyway. CWndEvents::Show(window_index) (also          |
+   //| protected) cascades to m_main_elements - i.e. the table - on its   |
+   //| own, so no manual table.Show() call is needed here either.        |
+   //+------------------------------------------------------------------+
+   void CGUIPannel::ShowCandleInfoPopup(const int cursor_x, const int cursor_y)
+    {
+     RepositionCandleInfoWindow(cursor_x, cursor_y);
+     m_active_window_index = WindowIdx(m_window_candle_infomation);
+     Show(m_active_window_index);
+     FormAvailableElementsArray();
+    }
+   //+------------------------------------------------------------------+
+   //| Hides the popup and hands native dispatch back to m_window_main.  |
+   //+------------------------------------------------------------------+
+   void CGUIPannel::HideCandleInfoPopup(void)
+    {
+     m_window_candle_infomation.Hide();
+     m_table_candle_information_atBar.Hide();
+     m_active_window_index = WindowIdx(m_window_main);
+     FormAvailableElementsArray();
+    }
+   //+------------------------------------------------------------------+
+   //| Creates the Ctrl+hover "Signal at this bar" popup - fixed at the |
+   //| chart's top-right corner, content-only (no drag-to-follow-cursor;|
+   //| CWindow has no simple move-to-XY API for that, only manual drag  |
+   //| state gated behind IsMovable/mouse-button-held).                 |
+   //+------------------------------------------------------------------+
+   bool CGUIPannel::CreateWindowCandleInfo(void)
+    {
+      CWndContainer::AddWindow(m_window_candle_infomation);
+      int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
+      int x = chart_w - CANDLE_INFO_WINDOW_W - 10;
+      int y = 10;
+      m_window_candle_infomation.XSize(CANDLE_INFO_WINDOW_W);
+      m_window_candle_infomation.YSize(CANDLE_INFO_WINDOW_H);
+      m_window_candle_infomation.FontSize(9);
+      m_window_candle_infomation.IsMovable(false);
+      m_window_candle_infomation.ResizeMode(false);
+      m_window_candle_infomation.CloseButtonIsUsed(false);
+      m_window_candle_infomation.CollapseButtonIsUsed(false);
+      m_window_candle_infomation.TooltipsButtonIsUsed(false);
+      m_window_candle_infomation.FullscreenButtonIsUsed(false);
+      if(!m_window_candle_infomation.CreateWindow(m_chart_id, m_subwin, "Signals at Bar", x, y))
+         return (false);
+
+      // --- 3 cols: Time | Indicator (+ up/down signal icon) | TF. No Symbol column - this
+      // --- popup is always scoped to the CURRENT chart's own symbol. Time is needed because
+      // --- this popup spans EVERY tracked TF of the symbol, not just the hovered bar's own TF -
+      // --- a lower-TF indicator can flip at a time inside the hovered bar's span without
+      // --- landing exactly on its open time (see RefreshCandleInfoWindow).
+      m_table_candle_information_atBar.MainPointer(m_window_candle_infomation);
+      m_table_candle_information_atBar.AutoXResizeMode(true);
+      m_table_candle_information_atBar.AutoXResizeRightOffset(3);
+      m_table_candle_information_atBar.AutoYResizeMode(true);
+      m_table_candle_information_atBar.AutoYResizeBottomOffset(3);
+      m_table_candle_information_atBar.ShowHeaders(true);
+      m_table_candle_information_atBar.SelectableRow(true);
+      m_table_candle_information_atBar.LightsHover(true);
+      m_table_candle_information_atBar.TableSize(3, 10);
+      int widths[3]    = {55, 150, 45};
+      int img_x_off[3] = {0, 3, 0};
+      int img_y_off[3] = {0, 3, 0};
+      int txt_x_off[3] = {5, 22, 5};
+      ENUM_ALIGN_MODE al[3] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+      m_table_candle_information_atBar.ColumnsWidth(widths);
+      m_table_candle_information_atBar.ImageXOffset(img_x_off);
+      m_table_candle_information_atBar.ImageYOffset(img_y_off);
+      m_table_candle_information_atBar.TextXOffset(txt_x_off);
+      m_table_candle_information_atBar.TextAlign(al);
+
+      // --- y=WINDOW_CAPTION_HEIGHT, not 0 - CWindow's child coordinate space starts at the
+      // --- window's absolute top-left, INCLUDING the caption bar (same convention as every
+      // --- other table placed directly on a CWindow, e.g. CreateTableSymbolTFSetting(0,22));
+      // --- y=0 here made the table paint straight over the "Signals at Bar" title.
+      if(!m_table_candle_information_atBar.CreateTable(0, WINDOW_CAPTION_HEIGHT)) return (false);
+      m_table_candle_information_atBar.SetHeaderText(0, "Time");
+      m_table_candle_information_atBar.SetHeaderText(1, "Indicator");
+      m_table_candle_information_atBar.SetHeaderText(2, "TF");
+      // --- Collapse the TableSize() padding down to a single blank baseline row, same
+      // --- convention as CreateTableSymbolTFSetting.
+      m_table_candle_information_atBar.DeleteAllRows();
+
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_candle_infomation), m_table_candle_information_atBar);
+      return (true);
+    }
+   //+------------------------------------------------------------------+
+   //| Fills the popup with every (Indicator, TF, Time) flip that lands |
+   //| inside the hovered CURRENT-CHART bar's time SPAN [bar_time,      |
+   //| bar_time + PeriodSeconds()) - not just flips on the hovered bar's |
+   //| own TF. This popup spans EVERY TF tracked for the symbol, and a  |
+   //| lower-TF indicator can flip at a time that falls inside the      |
+   //| hovered bar's span without landing exactly on its open time, so  |
+   //| each qualifying flip becomes its OWN row (same indicator can     |
+   //| appear more than once if it flipped twice within the span).      |
+   //| Unlike BuildAndWriteSignalBridge/m_table_indicator_SymbolTFValue  |
+   //| show the PERSISTED state carried forward from the last flip),    |
+   //| this popup answers "what flipped DURING this bar" - anything     |
+   //| outside the span is left out entirely.                           |
+   //|                                                                    |
+   //| Returns true if the bar has at least one flip (i.e. the popup has |
+   //| something to show) - false means "nothing happened at this bar",  |
+   //| telling the caller NOT to show the popup for it at all.           |
+   //+------------------------------------------------------------------+
+   bool CGUIPannel::RefreshCandleInfoWindow(const datetime bar_time)
+    {
+      if(m_IndicatorsCollection == NULL || m_time_series_engine == NULL || m_BarTimeSeriesCollection == NULL)
+         return false;
+
+      datetime next_bar_time = bar_time + ::PeriodSeconds();
+
+      string sym = ::Symbol();
+      CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
+      CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
+      int series_total = (series_list != NULL) ? series_list.Total() : 0;
+
+      // --- Sort this symbol's TFs ascending by IndexEnumTimeframe() (CommonDELib.mqh - M1..MN1
+      // --- natural rank), same convention as CTimeSeriesEngine::SaveConfigurationToJSON.
+      int order[];
+      ArrayResize(order, series_total);
+      for(int ti = 0; ti < series_total; ti++)
+         order[ti] = ti;
+      for(int a = 0; a < series_total - 1; a++)
+         for(int b = a + 1; b < series_total; b++)
+           {
+            CBarSeriesDE *sa = series_list.At(order[a]);
+            CBarSeriesDE *sb = series_list.At(order[b]);
+            if(sa == NULL || sb == NULL) continue;
+            if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
+              { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
+           }
+
+      // --- Collect (Indicator, TF text, Dir, Time) rows - one per flip whose time falls
+      // --- inside [bar_time, next_bar_time). A signal with no flip in that span contributes
+      // --- nothing at all (not even its carried-over state).
+      CIndicatorDE   *row_ind[];
+      string          row_tf[];
+      ENUM_SIGNAL_DIR row_dir[];
+      datetime        row_time[];
+      int count = 0;
+      for(int ti = 0; ti < series_total; ti++)
+        {
+         CBarSeriesDE *s = series_list.At(order[ti]);
+         if(s == NULL) continue;
+         string tf_text = TimeframeDescription(s.Timeframe());
+         CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+         ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, s.Timeframe(), EQUAL);
+         int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+         for(int ii = 0; ii < ind_total; ii++)
+           {
+            CIndicatorDE *ind = ind_list.At(ii);
+            if(ind == NULL) continue;
+            // signal is BORROWED - CSignalsCollection owns it
+            CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+            if(signal == NULL) continue;
+            // --- history is oldest->newest; walk backward and stop once we're before the span -
+            // --- collect EVERY flip inside the span (usually 0 or 1, but never assume 1).
+            for(int h = signal.HistoryTotal() - 1; h >= 0; h--)
+              {
+               datetime ht = signal.HistoryTime(h);
+               if(ht >= next_bar_time) continue;
+               if(ht < bar_time) break;
+
+               ArrayResize(row_ind,  count + 1);
+               ArrayResize(row_tf,   count + 1);
+               ArrayResize(row_dir,  count + 1);
+               ArrayResize(row_time, count + 1);
+               row_ind[count]  = ind;
+               row_tf[count]   = tf_text;
+               row_dir[count]  = signal.HistoryDir(h);
+               row_time[count] = ht;
+               count++;
+              }
+           }
+        }
+
+      if(count == 0)
+        {
+         m_table_candle_information_atBar.DeleteAllRows();
+         m_table_candle_information_atBar.Update(true);
+         return false;
+        }
+
+      // --- Sort all collected rows ascending by time (stable-ish bubble sort - count is
+      // --- small, same style as the TF order[] sort above).
+      for(int a = 0; a < count - 1; a++)
+         for(int b = a + 1; b < count; b++)
+           if(row_time[b] < row_time[a])
+             {
+              CIndicatorDE   *ti_ = row_ind[a];  row_ind[a]  = row_ind[b];  row_ind[b]  = ti_;
+              string          tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
+              ENUM_SIGNAL_DIR d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
+              datetime        tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
+             }
+
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+      uint dir_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
+                        IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
+
+      m_table_candle_information_atBar.DeleteAllRows();
+      // --- redraw=true on the LAST row only - same black/smeared row-overflow reasoning as
+      // --- RefreshIndicatorTable (README/BugNote 2026-07-14).
+      for(int i = 0; i < count - 1; i++)
+         m_table_candle_information_atBar.AddRow(i, i == count - 2);
+
+      for(int row = 0; row < count; row++)
+        {
+         CIndicatorDE *ind = row_ind[row];
+         int img_idx = (row_dir[row] == SIGNAL_BUY) ? 0 : 1; // row_dir is never SIGNAL_NONE here
+
+         m_table_candle_information_atBar.SetImages(1, row, dir_img);
+         m_table_candle_information_atBar.ChangeImage(1, row, img_idx);
+         m_table_candle_information_atBar.SetValue(0, row, ::TimeToString(row_time[row], TIME_MINUTES));
+         m_table_candle_information_atBar.SetValue(1, row, BuildIndicatorLabel(ind, catalog));
+         m_table_candle_information_atBar.SetValue(2, row, row_tf[row]);
+        }
+      m_table_candle_information_atBar.Update(true);
+      return true;
     }
   // For Status Bar
    //+------------------------------------------------------------------+
@@ -725,10 +1405,12 @@
          profit_item.ChangeImage(0, 2); // default: gray
          profit_item.LabelXGap(14);     // shift text right for icon
       //--- Add the object to the common array of object groups      
-         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_status_bar);         
+         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_status_bar);
          return (true);
     }
-   // Update Status Bar
+   // Update Status Bar - ported from V1 (Anatoli Kazharski\GUIPannel.mqh); V7 kept the item
+   // creation/icons above but dropped both this function AND its OnTickEvent call site along
+   // the way - restored here, same call site as V1 (see OnTickEvent below).
    bool CGUIPannel::UpdateStatusBar(void)
     {
       static string s_deposit = "";
@@ -791,8 +1473,8 @@
    //+------------------------------------------------------------------+
    bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
     {      
-      string tabs_names[TABS1_TOTAL] = {"Account infor", "Symbol Info", "Trade", "Positions", "History", "Settings","Bar Events"};
-      string texts[TABS1_TOTAL] = 
+      string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Trade", "Positions", "History", "Settings","Bar Events"};
+      string texts[TAB_TAB_MAIN_TOTAL] = 
          {
          "[ Account Info Tab ]",
          "[ Symbol Info Tab ]",
@@ -812,20 +1494,46 @@
        m_tabs_main.AutoXResizeRightOffset(3);
        m_tabs_main.AutoYResizeBottomOffset(25);
       //--- Add tabs with the specified properties
-       for (int i = 0; i < TABS1_TOTAL; i++)
+       for (int i = 0; i < TAB_TAB_MAIN_TOTAL; i++)
          {
            m_tabs_main.AddTab(tabs_names[i], 100);            
          }
       //--- Create Tab before create other control element inside
        if (!m_tabs_main.CreateTabs(x_gap, y_gap))
-          return (false);      
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);      
+          return (false);
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);
       return (true);
-    }    
+    }
+   // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS
+   //+------------------------------------------------------------------+
+   //| Create a nested tab group for Settings tab config sections       |
+   //+------------------------------------------------------------------+
+    bool CGUIPannel::CreateTabSettingConfig(const int x_gap, const int y_gap)
+     {
+      string tabs_names[TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL] = {"Indicator", "Symbol TF", "Marker"};
+      //--- Store the pointer to the parent control - nested inside m_tabs_main's Settings tab
+       m_tabs_main_setting_config.MainPointer(m_tabs_main);
+      //--- Properties
+       m_tabs_main_setting_config.IsCenterText(true);
+       m_tabs_main_setting_config.PositionMode(TABS_TOP);
+       m_tabs_main_setting_config.AutoXResizeMode(true);
+       m_tabs_main_setting_config.AutoYResizeMode(true);
+       m_tabs_main_setting_config.AutoXResizeRightOffset(3);
+       m_tabs_main_setting_config.AutoYResizeBottomOffset(3);
+      //--- Add tabs with the specified properties
+       for(int i = 0; i < TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL; i++)
+          m_tabs_main_setting_config.AddTab(tabs_names[i], 100);
+      //--- Create Tab before create other control element inside
+       if(!m_tabs_main_setting_config.CreateTabs(x_gap, y_gap))
+          return (false);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_tabs_main_setting_config);
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main_setting_config);
+      return (true);
+     }
     // For TreeView Indicator TabSetting at m_tabs_main
     bool CGUIPannel::CreateTreeView_Indicator(const int x_gap, const int y_gap)
      {
-       m_treeview_indicator.MainPointer(m_tabs_main); 
+       m_treeview_indicator.MainPointer(m_tabs_main_setting_config);
        m_treeview_indicator.AutoXResizeMode(false);
        m_treeview_indicator.XSize(150);
        m_treeview_indicator.AutoYResizeMode(true);
@@ -834,7 +1542,7 @@
       //Create treeview
        if(!m_treeview_indicator.CreateTreeView(x_gap, y_gap)) return false;
 
-       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_treeview_indicator);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_treeview_indicator);
 
        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_indicator);       
        return true;
@@ -845,8 +1553,8 @@
     // =====================================================================
     bool CGUIPannel::CreateIndicatorTable(const int x, const int y)
      {
-       m_table_indicator.MainPointer(m_tabs_main);
-       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_table_indicator);
+       m_table_indicator.MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator);
        //Resize Properties
         m_table_indicator.AutoXResizeMode(true);
         m_table_indicator.AutoXResizeRightOffset(3);
@@ -857,15 +1565,18 @@
         m_table_indicator.SelectableRow(true);
         m_table_indicator.LightsHover(true);
         m_table_indicator.IsSortMode(true);
-       // --- 5 columns: col 0 merges the old icon-only "show on T3" column with the
+       // --- 7 columns: col 0 merges the old icon-only "show on T3" column with the
        // --- "Indicator" text column (CTCell renders image+text independently, click
        // --- detection is scoped to the image's own pixel width - see Table.mqh
-       // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Delete shift down by 1.
-        m_table_indicator.TableSize(5, 20);
-        int widths[5]    = {180, 70, 40, 40, 40};
-        int img_x_off[5] = {3,   0,  10, 10, 10};
-        int img_y_off[5] = {3,   0,  3,  3,  3};
-        ENUM_ALIGN_MODE align[5] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+       // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Show/Sound/Message shift
+       // --- down by 1. Sound/Message added 2026-07-17: per-template opt-in for a sound
+       // --- alert + Journal message when that template gets a new Signal - wiring TBD,
+       // --- this only adds the checkbox UI columns for now.
+        m_table_indicator.TableSize(7, 20);
+        int widths[7]    = {180, 70, 40, 40, 40, 40, 40};
+        int img_x_off[7] = {3,   0,  10, 10, 10, 10, 10};
+        int img_y_off[7] = {3,   0,  3,  3,  3,  3,  3};
+        ENUM_ALIGN_MODE align[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
         m_table_indicator.ColumnsWidth(widths);
         m_table_indicator.ImageXOffset(img_x_off);
         m_table_indicator.ImageYOffset(img_y_off);
@@ -879,13 +1590,1013 @@
           m_table_indicator.SetHeaderText(2, "Buy");
           m_table_indicator.SetHeaderText(3, "Sell");
           m_table_indicator.SetHeaderText(4, "Show");
+          m_table_indicator.SetHeaderText(5, "Sound");
+          m_table_indicator.SetHeaderText(6, "Message");
 
        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
        return true;
      }
+   //For m_table_indicator_SymbolTFSeting + m_btn_save_SymbolTF in TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF
+    // =====================================================================
+    // --- Symbol TF sub-tab: flat list of every Symbol+TF pair currently tracked by
+    // --- m_BarTimeSeriesCollection (same source as m_treeview_SymbolTF), each row with
+    // --- its own Buy/Sell checkboxes and a red delete icon. Save button writes the
+    // --- current Buy/Sell state to JSON.
+    // =====================================================================
+    bool CGUIPannel::CreateTableSymbolTFSetting(const int x, const int y)
+     {
+      //--- Note (own row, on top): Delete/Buy/Sell edits here only take effect in
+      //--- indicators_config.json - the running EA keeps today's live series/indicators
+      //--- until it's restarted. Colored to stand out from the Save button below it.
+       m_label_symboltf_note.MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_label_symboltf_note);
+       // --- CTextLabel::InitializeProperties defaults XSize to 100px when unset - too narrow for
+       // --- this sentence (and CTextLabel never checks AutoXResizeMode, unlike CTable/CTreeView),
+       // --- so XSize must be set explicitly, wide enough to clear the tab's own right edge.
+       m_label_symboltf_note.XSize(TABS_WIDTH - x - 5);
+       m_label_symboltf_note.Font("Calibri Bold");   // CElement::DrawText hardcodes FW_NORMAL - request a bold face by name instead
+       if(!m_label_symboltf_note.CreateTextLabel("Delete Symbol+TF here apply after the EA is restarted", x, y)) return false;
+       m_label_symboltf_note.LabelColor(clrDodgerBlue);
+       m_label_symboltf_note.Draw();
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_symboltf_note);
+
+      //--- Save button, same convention as m_btn_save_indicator
+       m_btn_save_SymbolTF.MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_btn_save_SymbolTF);
+       m_btn_save_SymbolTF.AutoXResizeMode(false);
+       m_btn_save_SymbolTF.XSize(80);
+       m_btn_save_SymbolTF.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
+       if(!m_btn_save_SymbolTF.CreateButton("Save", x, y + SYMBOLTF_BTN_Y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_SymbolTF);
+
+      //--- Table: col 0 merges the red delete icon with the Symbol label (same CTable
+      //--- click-detection trick as m_table_indicator col 0 - see Table.mqh CheckPressedButton).
+       m_table_indicator_SymbolTFSeting.MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_table_indicator_SymbolTFSeting);
+       m_table_indicator_SymbolTFSeting.AutoXResizeMode(true);
+       m_table_indicator_SymbolTFSeting.AutoXResizeRightOffset(3);
+       m_table_indicator_SymbolTFSeting.AutoYResizeMode(true);
+       m_table_indicator_SymbolTFSeting.AutoYResizeBottomOffset(3);
+       m_table_indicator_SymbolTFSeting.ShowHeaders(true);
+       m_table_indicator_SymbolTFSeting.SelectableRow(true);
+       m_table_indicator_SymbolTFSeting.LightsHover(true);
+       m_table_indicator_SymbolTFSeting.IsSortMode(true);
+       m_table_indicator_SymbolTFSeting.TableSize(4, 10);
+       int widths[4]    = {150, 70, 40, 40};
+       int img_x_off[4] = {3,   0,  10, 10};
+       int img_y_off[4] = {3,   0,  3,  3};
+       ENUM_ALIGN_MODE align[4] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+       m_table_indicator_SymbolTFSeting.ColumnsWidth(widths);
+       m_table_indicator_SymbolTFSeting.ImageXOffset(img_x_off);
+       m_table_indicator_SymbolTFSeting.ImageYOffset(img_y_off);
+       m_table_indicator_SymbolTFSeting.TextAlign(align);
+
+       if(!m_table_indicator_SymbolTFSeting.CreateTable(x, y + SYMBOLTF_TABLE_Y)) return false;
+       m_table_indicator_SymbolTFSeting.SetHeaderText(0, "Symbol");
+       m_table_indicator_SymbolTFSeting.SetHeaderText(1, "TF");
+       m_table_indicator_SymbolTFSeting.SetHeaderText(2, "Buy");
+       m_table_indicator_SymbolTFSeting.SetHeaderText(3, "Sell");
+      // --- Collapse the TableSize() padding down to a single blank baseline row -
+      // --- PopulateTableSymbolTFSetting() reuses that one row for its very first entry.
+       m_table_indicator_SymbolTFSeting.DeleteAllRows();
+
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator_SymbolTFSeting);
+       return true;
+     }
+    // --- Incremental sync with m_treeview_SymbolTF's own data source (m_BarTimeSeriesCollection) -
+    // --- called every time PopulateSymbolTFTree() runs (init + real symbol/TF change), same as the
+    // --- treeview. Purely ADDITIVE: only appends pairs not already present as a row - never
+    // --- DeleteAllRows()/rebuilds, so a user-deleted row stays deleted. Real "stop tracking" on
+    // --- delete is follow-up work once the Library gets a RemoveSeries()-style API (BugNote/2026-07-15).
+    void CGUIPannel::PopulateTableSymbolTFSetting(void)
+     {
+      if(m_BarTimeSeriesCollection == NULL) return;
+
+      int mw_total = ::SymbolsTotal(true);
+      for(int i = 0; i < mw_total; i++)
+        {
+         string sym_name = ::SymbolName(i, true);
+         CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
+         CArrayObj *list = (bts != NULL) ? bts.GetListSeries() : NULL;
+         int tf_cnt = (list != NULL) ? list.Total() : 0;
+         for(int k = 0; k < tf_cnt; k++)
+           {
+            CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
+            if(s == NULL) continue;
+            string tf_text = TimeframeDescription(s.Timeframe());
+            if(HasTableSymbolTFSettingRow(sym_name, tf_text)) continue;
+
+            int row = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+            string first_col0 = m_table_indicator_SymbolTFSeting.GetValue(0, 0);
+            StringTrimLeft(first_col0);
+            bool placeholder_only = (row == 1 && first_col0 == "");
+            if(placeholder_only)
+               row = 0;   // reuse the blank baseline row left by DeleteAllRows()
+            else
+               m_table_indicator_SymbolTFSeting.AddRow(row, false);
+            SetTableSymbolTFSettingRow(row, sym_name, tf_text);
+           }
+        }
+      m_table_indicator_SymbolTFSeting.Update(true);
+     }
+    // --- True when (sym, tf_text) already has a row (trimmed match against col0/col1 text)
+    bool CGUIPannel::HasTableSymbolTFSettingRow(const string sym, const string tf_text)
+     {
+      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+      for(int row = 0; row < rows; row++)
+        {
+         string s = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+         StringTrimLeft(s);
+         if(s != sym) continue;
+         string t = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+         StringTrimLeft(t);
+         if(t == tf_text) return true;
+        }
+      return false;
+     }
+    // --- Called ONCE right after the initial PopulateTableSymbolTFSetting() (see CreateGUIPannel) -
+    // --- pulls the Buy/Sell state CTimeSeriesEngine::LoadConfigurationFromJSON() cached while
+    // --- loading indicators_config.json and applies it to the matching rows, so a saved Buy/Sell
+    // --- setting survives an EA restart instead of resetting to OFF.
+    void CGUIPannel::ApplyLoadedSymbolTFSettings(void)
+     {
+      if(m_time_series_engine == NULL) return;
+      string symbols[], tfs[];
+      bool buys[], sells[];
+      m_time_series_engine.GetLoadedSymbolTFSettings(symbols, tfs, buys, sells);
+      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+      for(int i = 0; i < ArraySize(symbols); i++)
+        {
+         for(int row = 0; row < rows; row++)
+           {
+            string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+            StringTrimLeft(sym);
+            if(sym != symbols[i]) continue;
+            string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+            StringTrimLeft(tf);
+            if(tf != tfs[i]) continue;
+            m_table_indicator_SymbolTFSeting.ChangeImage(2, row, buys[i]  ? 0 : 1);
+            m_table_indicator_SymbolTFSeting.ChangeImage(3, row, sells[i] ? 0 : 1);
+            break;
+           }
+        }
+      m_table_indicator_SymbolTFSeting.Update(true);
+     }
+    // --- True for the ONE row matching this chart's own symbol/TF - CTimeSeriesEngine::OnInitEvent
+    // --- creates that series unconditionally and everything else (RefreshIndicatorTable,
+    // --- BuildAndWriteSignalBridge...) assumes it always exists, so that row must never be deletable.
+    bool CGUIPannel::IsCurrentChartSymbolTFRow(const string sym, const string tf_text)
+     {
+      return (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
+     }
+    // --- Re-evaluates col 0's icon (delete vs start) for every row - called after a real
+    // --- symbol/TF chart change, since which row counts as "current" just moved.
+    void CGUIPannel::SyncTableSymbolTFSettingCurrentChartIcon(void)
+     {
+      uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
+      uint start_icon[]  = {IMAGE_RESOURCE_BMP16_START_BMP};
+      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+      for(int row = 0; row < rows; row++)
+        {
+         string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+         StringTrimLeft(sym);
+         if(sym == "") continue;
+         string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+         StringTrimLeft(tf);
+         if(IsCurrentChartSymbolTFRow(sym, tf))
+            m_table_indicator_SymbolTFSeting.SetImages(0, row, start_icon);
+         else
+            m_table_indicator_SymbolTFSeting.SetImages(0, row, delete_icon);
+         m_table_indicator_SymbolTFSeting.ChangeImage(0, row, 0);
+        }
+      m_table_indicator_SymbolTFSeting.Update(true);
+     }
+    // --- Fill every cell of one Symbol+TF row - Buy/Sell default OFF (opt-in, same convention
+    // --- as m_table_indicator's col 2/3)
+    void CGUIPannel::SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text)
+     {
+      uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
+      uint start_icon[]  = {IMAGE_RESOURCE_BMP16_START_BMP};
+      uint chk[]         = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
+
+      // --- Col 0: Symbol label + icon - red Close (delete), EXCEPT the row matching the current
+      // --- chart's own symbol/TF, which gets the "start" icon and is not deletable (this EA
+      // --- instance depends on that series existing - see IsCurrentChartSymbolTFRow).
+       bool is_current = IsCurrentChartSymbolTFRow(sym, tf_text);
+       m_table_indicator_SymbolTFSeting.CellType(0, row, CELL_BUTTON);
+       if(is_current)
+          m_table_indicator_SymbolTFSeting.SetImages(0, row, start_icon);
+       else
+          m_table_indicator_SymbolTFSeting.SetImages(0, row, delete_icon);
+       m_table_indicator_SymbolTFSeting.ChangeImage(0, row, 0);
+       m_table_indicator_SymbolTFSeting.SetValue(0, row, "        " + sym);
+      // --- Col 1: TF
+       m_table_indicator_SymbolTFSeting.SetValue(1, row, "  " + tf_text);
+      // --- Col 2/3: Buy / Sell
+       m_table_indicator_SymbolTFSeting.CellType(2, row, CELL_CHECKBOX);
+       m_table_indicator_SymbolTFSeting.SetImages(2, row, chk);
+       m_table_indicator_SymbolTFSeting.ChangeImage(2, row, 1);
+       m_table_indicator_SymbolTFSeting.CellType(3, row, CELL_CHECKBOX);
+       m_table_indicator_SymbolTFSeting.SetImages(3, row, chk);
+       m_table_indicator_SymbolTFSeting.ChangeImage(3, row, 1);
+     }
+    // --- Save button click - both m_btn_save_indicator and m_btn_save_SymbolTF write the SAME
+    // --- indicators_config.json (single source of truth, no separate Buy/Sell file) - see
+    // --- SaveGUIConfigToJSON().
+    void CGUIPannel::OnClickSaveSymbolTF(void)
+     {
+      SaveGUIConfigToJSON();
+     }
+    // --- Shared by OnClickSaveIndicators() and OnClickSaveSymbolTF(): builds the Buy/Sell
+    // --- lookup arrays from m_table_indicator_SymbolTFSeting and hands them to
+    // --- CTimeSeriesEngine::SaveConfigurationToJSON, which merges them into each "symbols_tf"
+    // --- entry of indicators_config.json.
+    void CGUIPannel::SaveGUIConfigToJSON(void)
+     {
+      if(m_time_series_engine == NULL) return;
+      string symbols[], tfs[];
+      bool buys[], sells[];
+      BuildSymbolTFBuySellArrays(symbols, tfs, buys, sells);
+
+      // --- Templates: m_table_indicator_ptrs[] IS the current chart's template list (one row
+      // --- per template, RefreshIndicatorTable's own invariant) - read Buy/Sell/Sound/Message
+      // --- straight off it (col 2/3/5/6 - col 4 "Show" is chart-local, not saved here).
+      int tmpl_total = ArraySize(m_table_indicator_ptrs);
+      CIndicatorDE *tmpl_ptrs[];
+      bool tmpl_buy[], tmpl_sell[], tmpl_sound[], tmpl_message[];
+      ArrayResize(tmpl_ptrs,    tmpl_total);
+      ArrayResize(tmpl_buy,     tmpl_total);
+      ArrayResize(tmpl_sell,    tmpl_total);
+      ArrayResize(tmpl_sound,   tmpl_total);
+      ArrayResize(tmpl_message, tmpl_total);
+      for(int row = 0; row < tmpl_total; row++)
+        {
+         tmpl_ptrs[row]    = m_table_indicator_ptrs[row];
+         tmpl_buy[row]     = ((int)m_table_indicator.SelectedImageIndex(2, row) == 0);
+         tmpl_sell[row]    = ((int)m_table_indicator.SelectedImageIndex(3, row) == 0);
+         tmpl_sound[row]   = ((int)m_table_indicator.SelectedImageIndex(5, row) == 0);
+         tmpl_message[row] = ((int)m_table_indicator.SelectedImageIndex(6, row) == 0);
+        }
+
+      m_time_series_engine.SaveConfigurationToJSON("Config_Setting.json", symbols, tfs, buys, sells,
+                                                    tmpl_ptrs, tmpl_buy, tmpl_sell, tmpl_sound, tmpl_message);
+     }
+    // --- Buy/Sell lookup arrays for SaveGUIConfigToJSON, read off m_table_indicator_SymbolTFSeting's
+    // --- current checkbox state (col 2/3).
+    void CGUIPannel::BuildSymbolTFBuySellArrays(string &symbols[], string &tfs[], bool &buys[], bool &sells[])
+     {
+      ArrayResize(symbols, 0);
+      ArrayResize(tfs, 0);
+      ArrayResize(buys, 0);
+      ArrayResize(sells, 0);
+      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+      int total = 0;
+      for(int row = 0; row < rows; row++)
+        {
+         string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+         StringTrimLeft(sym);
+         if(sym == "") continue;
+         string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+         StringTrimLeft(tf);
+         ArrayResize(symbols, total + 1);
+         ArrayResize(tfs, total + 1);
+         ArrayResize(buys, total + 1);
+         ArrayResize(sells, total + 1);
+         symbols[total] = sym;
+         tfs[total]     = tf;
+         buys[total]    = (m_table_indicator_SymbolTFSeting.SelectedImageIndex(2, row) == 0);
+         sells[total]   = (m_table_indicator_SymbolTFSeting.SelectedImageIndex(3, row) == 0);
+         total++;
+        }
+     }
+    // --- Checkbox click stub (col 2 = Buy, col 3 = Sell) - the table already auto-toggled the
+    // --- icon before this event fires (see Table.mqh CheckPressedCheckBox), so no manual image
+    // --- flip needed here. Intentionally empty for now - no Tang 1 trading data model exists
+    // --- yet to apply this to (see PopulateTableSymbolTFSetting note); wire real behavior here
+    // --- once that's decided.
+    void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col)
+     {
+     }
+    // --- Fixed catalog of common Wingdings arrow codes offered in all 4 marker-shape combos.
+    // --- 67/68 (Thumb Up/Down) restore the original OBJ_ARROW_THUMB_UP/DOWN look this popup
+    // --- used before the DRAW_COLOR_ARROW redesign (Anhnt, 2026-07-17) - those were native
+    // --- chart OBJECT types back then; now they're just Wingdings glyph codes like any other
+    // --- shape choice here, rendered via the indicator's PLOT_ARROW, not a chart object.
+    void CGUIPannel::GetMarkerArrowCodeChoices(int &codes[], string &labels[])
+     {
+      int    c[] = {233, 234, 67, 68, 108, 109, 159, 161, 162, 217, 218};
+      string l[] = {"233 Arrow Up", "234 Arrow Down", "67 Thumb Up", "68 Thumb Down",
+                    "108 Circle", "109 Circle Filled",
+                    "159 Diamond", "161 Diamond Filled", "162 Star", "217 Chevron Up", "218 Chevron Down"};
+      ArrayCopy(codes,  c);
+      ArrayCopy(labels, l);
+     }
+    // --- Fixed color palette offered in all 3 marker-color combos - CColorPicker is a hard-
+    // --- coded 348x266 full HSL/RGB/Lab dialog (ColorPicker.mqh:234-235, no compact variant),
+    // --- not worth it for what's really just picking from a short list of common colors.
+    void CGUIPannel::GetMarkerColorChoices(color &colors[], string &labels[])
+     {
+      color  c[] = {clrLime, clrGreen, clrDodgerBlue, clrOrange, clrYellow,
+                    clrRed, clrCrimson, clrMagenta,
+                    clrGray, clrSilver, clrWhite, clrBlack};
+      string l[] = {"Lime", "Green", "Dodger Blue", "Orange", "Yellow",
+                    "Red", "Crimson", "Magenta",
+                    "Gray", "Silver", "White", "Black"};
+      ArrayCopy(colors, c);
+      ArrayCopy(labels, l);
+     }
+    // --- Shared recipe for every combobox on the Other tab (4 shape + 3 color) - same
+    // --- creation/population steps as m_param_combo[]'s own recipe, just factored out since
+    // --- 7 combos would otherwise repeat it verbatim.
+    bool CGUIPannel::CreateMarkerTabComboBox(CComboBox &combo, const int x, const int y, const int combo_w, string &labels[], const int selected_index)
+     {
+      combo.MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, combo);
+      int n = ArraySize(labels);
+      combo.XSize(combo_w);
+      combo.YSize(20);
+      combo.ItemsTotal(n);
+      // --- Default dropdown viewport is only 93px (~5 rows) - with 11-12 choices that forces
+      // --- a cramped scrollbar drag to reach the rest (Anhnt, 2026-07-17: "scrollbar khó kéo,
+      // --- chọn không được"). Size the list to show every item at once so no scrolling is
+      // --- ever needed - must be set BEFORE CreateComboBox() (CreateList() reads it once).
+      // --- Capped at 300px (Anhnt, 2026-07-17: a real Sounds folder can have 30-40+ files -
+      // --- letting the list grow to 18*n+4 uncapped ran the dropdown off the bottom of the
+      // --- screen, making everything past the visible part unreachable). Small catalogs
+      // --- (shape/color, 11-12 items = up to ~220px) still fit under the cap with no scrolling.
+      int list_h = 18 * n + 4;
+      if(list_h > 300) list_h = 300;
+      combo.GetListViewPointer().YSize(list_h);
+      combo.GetButtonPointer().XGap(1);
+      combo.GetButtonPointer().XSize(combo_w);
+      combo.GetButtonPointer().LabelYGap(4);
+      combo.GetButtonPointer().IconYGap(3);
+      if(!combo.CreateComboBox("", x, y)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), combo);
+
+      combo.GetListViewPointer().Rebuilding(n);
+      for(int i = 0; i < n; i++)
+         combo.SetValue(i, labels[i]);
+      combo.SelectItem(selected_index);
+      combo.GetListViewPointer().Update(true);
+      return true;
+     }
+    // --- Caption to the LEFT of a combo, e.g. "Single Buy:" - m_label_other_caption[row].
+    bool CGUIPannel::CreateMarkerTabCaption(const int row, const string text, const int x, const int y)
+     {
+      m_label_other_caption[row].MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_label_other_caption[row]);
+      m_label_other_caption[row].XSize(140);
+      if(!m_label_other_caption[row].CreateTextLabel(text, x, y)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_other_caption[row]);
+      return true;
+     }
+    // --- Preview to the RIGHT of a shape combo - renders the ACTUAL Wingdings glyph (not just
+    // --- its numeric code) so the user can see what the shape looks like before saving.
+    bool CGUIPannel::CreateShapePreview(const int row, const int x, const int y, const int arrow_code)
+     {
+      m_preview_shape[row].MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_shape[row]);
+      m_preview_shape[row].Font("Wingdings");
+      m_preview_shape[row].FontSize(16);
+      if(!m_preview_shape[row].CreateTextLabel(::ShortToString((ushort)arrow_code), x, y)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_shape[row]);
+      return true;
+     }
+    // --- Preview to the RIGHT of a color combo - reuses CColorButton's own swatch rendering
+    // --- (CurrentColor() builds a small bordered color icon) purely for DISPLAY - never wired
+    // --- to a click handler, so clicking it does nothing (no picker to open, see BugNote
+    // --- 2026-07-17: CColorPicker dropped in favor of these fixed-palette combos).
+    bool CGUIPannel::CreateColorPreview(const int row, const int x, const int y, const color clr)
+     {
+      m_preview_color[row].MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_color[row]);
+      m_preview_color[row].CurrentColor(clr);
+      if(!m_preview_color[row].CreateColorButton("", x, y)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_color[row]);
+      return true;
+     }
+    // --- Live-updates a shape preview as the user browses the combo, BEFORE clicking Save -
+    // --- called from OnEvent's ON_CLICK_COMBOBOX_ITEM handling, not from OnClickSaveMarkerSettings
+    // --- (which commits the choice to m_marker_* instead).
+    void CGUIPannel::UpdateShapePreview(const int row, const int arrow_code)
+     {
+      m_preview_shape[row].LabelText(::ShortToString((ushort)arrow_code));
+      m_preview_shape[row].Update(true);
+     }
+    void CGUIPannel::UpdateColorPreview(const int row, const color clr)
+     {
+      m_preview_color[row].CurrentColor(clr);
+      m_preview_color[row].Update(true);
+     }
+    // --- "Marker" sub-tab (TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER): 4 independent shape choices
+    // --- (Single Buy/Sell, Multi Buy/Sell - each needs its OWN plot/shape, see
+    // --- SignalMarkers.mq5's header comment) and 3 independent color choices (Buy/Sell when a
+    // --- marker relates to this chart's own Symbol+TF, Non-Related otherwise) - shape and
+    // --- color are orthogonal axes (Anhnt, 2026-07-17).
+    bool CGUIPannel::CreateTabSettingConfig_Marker(const int x, const int y)
+     {
+      LoadMarkerSettings(); // seed m_marker_* from Config_Setting.json's "markers" section before building defaults
+
+      int codes[]; string shape_labels[];
+      GetMarkerArrowCodeChoices(codes, shape_labels);
+      color mcolors[]; string color_labels[];
+      GetMarkerColorChoices(mcolors, color_labels);
+
+      // --- Anhnt 2026-07-17: captions were sitting flush against the tab's left edge while
+      // --- the combo/preview columns left a lot of empty space on the right - shift the
+      // --- whole row layout right by 20px.
+      const int base_x   = x + 20;
+      int combo_w   = 160;
+      int row_h     = 26;
+      int combo_x   = base_x + 110;
+      int preview_x = combo_x + combo_w + 10;
+
+      int n_shapes = ArraySize(codes);
+      int sel_single_buy = 0, sel_single_sell = 0, sel_multi_buy = 0, sel_multi_sell = 0;
+      for(int i = 0; i < n_shapes; i++)
+        {
+         if(codes[i] == m_marker_single_buy_code)  sel_single_buy  = i;
+         if(codes[i] == m_marker_single_sell_code) sel_single_sell = i;
+         if(codes[i] == m_marker_multi_buy_code)   sel_multi_buy   = i;
+         if(codes[i] == m_marker_multi_sell_code)  sel_multi_sell  = i;
+        }
+
+      string shape_captions[4] = {"Single Buy", "Single Sell", "Multi Buy", "Multi Sell"};
+      int    shape_codes[4]    = {m_marker_single_buy_code, m_marker_single_sell_code, m_marker_multi_buy_code, m_marker_multi_sell_code};
+
+      if(!CreateMarkerTabCaption(0, shape_captions[0], base_x, y))                                          return false;
+      if(!CreateMarkerTabComboBox(m_combo_shape_single_buy,  combo_x, y,             combo_w, shape_labels, sel_single_buy))  return false;
+      if(!CreateShapePreview(0, preview_x, y, shape_codes[0]))                                             return false;
+
+      if(!CreateMarkerTabCaption(1, shape_captions[1], base_x, y + row_h))                                   return false;
+      if(!CreateMarkerTabComboBox(m_combo_shape_single_sell, combo_x, y + row_h,     combo_w, shape_labels, sel_single_sell)) return false;
+      if(!CreateShapePreview(1, preview_x, y + row_h, shape_codes[1]))                                     return false;
+
+      if(!CreateMarkerTabCaption(2, shape_captions[2], base_x, y + row_h * 2))                               return false;
+      if(!CreateMarkerTabComboBox(m_combo_shape_multi_buy,   combo_x, y + row_h * 2, combo_w, shape_labels, sel_multi_buy))   return false;
+      if(!CreateShapePreview(2, preview_x, y + row_h * 2, shape_codes[2]))                                 return false;
+
+      if(!CreateMarkerTabCaption(3, shape_captions[3], base_x, y + row_h * 3))                               return false;
+      if(!CreateMarkerTabComboBox(m_combo_shape_multi_sell,  combo_x, y + row_h * 3, combo_w, shape_labels, sel_multi_sell))  return false;
+      if(!CreateShapePreview(3, preview_x, y + row_h * 3, shape_codes[3]))                                 return false;
+
+      int n_colors = ArraySize(mcolors);
+      int sel_buy = 0, sel_sell = 0, sel_nonrelated = 0;
+      for(int i = 0; i < n_colors; i++)
+        {
+         if(mcolors[i] == m_marker_buy_color)        sel_buy        = i;
+         if(mcolors[i] == m_marker_sell_color)       sel_sell       = i;
+         if(mcolors[i] == m_marker_nonrelated_color) sel_nonrelated = i;
+        }
+
+      int color_row0 = row_h * 4 + 10;
+
+      if(!CreateMarkerTabCaption(4, "Buy Color", base_x, y + color_row0))                                        return false;
+      if(!CreateMarkerTabComboBox(m_combo_color_buy,        combo_x, y + color_row0,           combo_w, color_labels, sel_buy))        return false;
+      if(!CreateColorPreview(0, preview_x, y + color_row0, m_marker_buy_color))                                return false;
+
+      if(!CreateMarkerTabCaption(5, "Sell Color", base_x, y + color_row0 + row_h))                               return false;
+      if(!CreateMarkerTabComboBox(m_combo_color_sell,       combo_x, y + color_row0 + row_h,   combo_w, color_labels, sel_sell))       return false;
+      if(!CreateColorPreview(1, preview_x, y + color_row0 + row_h, m_marker_sell_color))                       return false;
+
+      if(!CreateMarkerTabCaption(6, "Non-Related Color", base_x, y + color_row0 + row_h * 2))                    return false;
+      if(!CreateMarkerTabComboBox(m_combo_color_nonrelated, combo_x, y + color_row0 + row_h * 2, combo_w, color_labels, sel_nonrelated)) return false;
+      if(!CreateColorPreview(2, preview_x, y + color_row0 + row_h * 2, m_marker_nonrelated_color))             return false;
+
+      // --- Buy/Sell alert sound files (2026-07-17, simplified after CFileNavigator's splitter-
+      // --- drag froze the popup): m_marker_sound_folder is a user-editable path relative to
+      // --- MQL5\Files\ - persisted in JSON so it's never "lost" if changed. "Refresh" re-scans
+      // --- it with plain FileFindFirst/FileFindNext and repopulates both comboboxes below -
+      // --- no tree, no popup, nothing to freeze.
+      int sound_row0 = color_row0 + row_h * 3 + 10;
+      // --- Sound filenames (AUTO_TRADING_OFF_EN.wav etc.) run a lot longer than "233 Arrow Up"/
+      // --- "Lime" - widen just this section's field so names aren't clipped, and the
+      // --- Refresh/preview-x column lines up with the color swatches above (Anhnt, 2026-07-17).
+      int sound_combo_w = preview_x + 60 - combo_x;
+
+      if(!CreateMarkerTabCaption(7, "Sound Folder", base_x, y + sound_row0)) return false;
+      m_edit_sound_folder.MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_edit_sound_folder);
+      m_edit_sound_folder.XSize(sound_combo_w);
+      m_edit_sound_folder.GetTextBoxPointer().XGap(1);
+      if(!m_edit_sound_folder.CreateTextEdit(m_marker_sound_folder, combo_x, y + sound_row0)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_sound_folder);
+
+      m_btn_refresh_sound_folder.MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_refresh_sound_folder);
+      m_btn_refresh_sound_folder.AutoXResizeMode(false);
+      m_btn_refresh_sound_folder.XSize(80);
+      if(!m_btn_refresh_sound_folder.CreateButton("Refresh", combo_x + sound_combo_w + 10, y + sound_row0)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_refresh_sound_folder);
+
+      string files[];
+      ScanSoundFolder(files);
+      int n_files = ArraySize(files);
+      int sel_buy_sound = 0, sel_sell_sound = 0;
+      for(int i = 0; i < n_files; i++)
+        {
+         if(files[i] == m_marker_buy_sound_file)  sel_buy_sound  = i;
+         if(files[i] == m_marker_sell_sound_file) sel_sell_sound = i;
+        }
+
+      if(!CreateMarkerTabCaption(8, "Buy Sound", base_x, y + sound_row0 + row_h)) return false;
+      if(!CreateMarkerTabComboBox(m_combo_buy_sound, combo_x, y + sound_row0 + row_h, sound_combo_w, files, sel_buy_sound)) return false;
+
+      if(!CreateMarkerTabCaption(9, "Sell Sound", base_x, y + sound_row0 + row_h * 2)) return false;
+      if(!CreateMarkerTabComboBox(m_combo_sell_sound, combo_x, y + sound_row0 + row_h * 2, sound_combo_w, files, sel_sell_sound)) return false;
+
+      m_btn_save_marker_settings.MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_save_marker_settings);
+      m_btn_save_marker_settings.AutoXResizeMode(false);
+      m_btn_save_marker_settings.XSize(80);
+      m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
+      if(!m_btn_save_marker_settings.CreateButton("Save", base_x, y + sound_row0 + row_h * 3 + 10)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_marker_settings);
+
+      return true;
+     }
+    // --- Reads all 7 combos, persists to Config_Setting.json's "markers" section, and hot-swaps the running
+    // --- SignalMarkers.mq5 instance so the new look applies immediately.
+    void CGUIPannel::OnClickSaveMarkerSettings(void)
+     {
+      int codes[]; string shape_labels[];
+      GetMarkerArrowCodeChoices(codes, shape_labels);
+      int n_shapes = ArraySize(codes);
+
+      int sel;
+      sel = (int)m_combo_shape_single_buy.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_single_buy_code = codes[sel];
+      sel = (int)m_combo_shape_single_sell.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_single_sell_code = codes[sel];
+      sel = (int)m_combo_shape_multi_buy.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_multi_buy_code = codes[sel];
+      sel = (int)m_combo_shape_multi_sell.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_multi_sell_code = codes[sel];
+
+      color mcolors[]; string color_labels[];
+      GetMarkerColorChoices(mcolors, color_labels);
+      int n_colors = ArraySize(mcolors);
+
+      sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
+      sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
+      sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
+
+      m_marker_sound_folder = m_edit_sound_folder.GetValue();
+      string sound_val = m_combo_buy_sound.GetValue();
+      if(sound_val != "") m_marker_buy_sound_file = sound_val;
+      sound_val = m_combo_sell_sound.GetValue();
+      if(sound_val != "") m_marker_sell_sound_file = sound_val;
+
+      SaveMarkerSettings();
+      ReattachSignalMarkersIndicator();
+     }
+    // --- Loads the "markers" section of Config_Setting.json - the SAME single file
+    // --- CTimeSeriesEngine::SaveConfigurationToJSON/LoadConfigurationFromJSON already use for
+    // --- "symbols_tf"/"templates" (Anhnt, 2026-07-17: one file for everything, not scattered
+    // --- across separate files). Always sets sane defaults first so a missing/partial file
+    // --- (or a file that simply has no "markers" key yet) still leaves the EA in a working state.
+    void CGUIPannel::LoadMarkerSettings(void)
+     {
+      m_marker_single_buy_code  = 233;
+      m_marker_single_sell_code = 234;
+      m_marker_multi_buy_code   = 67;
+      m_marker_multi_sell_code  = 68;
+      m_marker_buy_color        = clrLime;
+      m_marker_sell_color       = clrRed;
+      m_marker_nonrelated_color = clrGray;
+      m_marker_buy_sound_file   = "";
+      m_marker_sell_sound_file  = "";
+      m_marker_sound_folder     = "Sounds";
+
+      string content = IndicatorConfig_ReadWholeFile("Config_Setting.json");
+      if(content == "") return;
+
+      int v;
+      if(JsonIntValue(content, "single_buy_arrow_code",  v)) m_marker_single_buy_code  = v;
+      if(JsonIntValue(content, "single_sell_arrow_code", v)) m_marker_single_sell_code = v;
+      if(JsonIntValue(content, "multi_buy_arrow_code",   v)) m_marker_multi_buy_code   = v;
+      if(JsonIntValue(content, "multi_sell_arrow_code",  v)) m_marker_multi_sell_code  = v;
+      if(JsonIntValue(content, "buy_color",        v)) m_marker_buy_color        = (color)v;
+      if(JsonIntValue(content, "sell_color",       v)) m_marker_sell_color       = (color)v;
+      if(JsonIntValue(content, "nonrelated_color", v)) m_marker_nonrelated_color = (color)v;
+      string sv;
+      if(JsonStringValue(content, "buy_sound_file",  sv)) m_marker_buy_sound_file  = sv;
+      if(JsonStringValue(content, "sell_sound_file", sv)) m_marker_sell_sound_file = sv;
+      if(JsonStringValue(content, "sound_folder",    sv)) m_marker_sound_folder    = sv;
+     }
+    // --- Rewrites Config_Setting.json with a fresh "markers" section, carrying "symbols_tf"/
+    // --- "templates" through UNCHANGED (raw text, not re-parsed/re-built) via
+    // --- IndicatorConfig_ExtractRawSection - this function only owns "markers", so it must
+    // --- never destroy the OTHER sections CTimeSeriesEngine owns, symmetric with how that
+    // --- engine's own writers now preserve "markers" when THEY rewrite this same file.
+    void CGUIPannel::SaveMarkerSettings(void)
+     {
+      string existing   = IndicatorConfig_ReadWholeFile("Config_Setting.json");
+      string symbols_tf = IndicatorConfig_ExtractRawSection(existing, "symbols_tf");
+      string templates   = IndicatorConfig_ExtractRawSection(existing, "templates");
+
+      string json = "{\n";
+      if(symbols_tf != "") json += " \"symbols_tf\": " + symbols_tf + ",\n";
+      if(templates  != "") json += " \"templates\": "  + templates  + ",\n";
+      string buy_sound_esc  = m_marker_buy_sound_file;
+      string sell_sound_esc = m_marker_sell_sound_file;
+      string sound_folder_esc = m_marker_sound_folder;
+      ::StringReplace(buy_sound_esc,  "\\", "\\\\");
+      ::StringReplace(sell_sound_esc, "\\", "\\\\");
+      ::StringReplace(sound_folder_esc, "\\", "\\\\");
+
+      json += " \"markers\": { \"single_buy_arrow_code\": "  + (string)m_marker_single_buy_code +
+              ", \"single_sell_arrow_code\": " + (string)m_marker_single_sell_code +
+              ", \"multi_buy_arrow_code\": "   + (string)m_marker_multi_buy_code +
+              ", \"multi_sell_arrow_code\": "  + (string)m_marker_multi_sell_code +
+              ", \"buy_color\": "        + (string)(int)m_marker_buy_color +
+              ", \"sell_color\": "       + (string)(int)m_marker_sell_color +
+              ", \"nonrelated_color\": " + (string)(int)m_marker_nonrelated_color +
+              ", \"buy_sound_file\": \""  + buy_sound_esc  + "\"" +
+              ", \"sell_sound_file\": \"" + sell_sound_esc + "\"" +
+              ", \"sound_folder\": \""    + sound_folder_esc + "\"" + " }\n}";
+
+      int fh = ::FileOpen("Config_Setting.json", FILE_TXT|FILE_WRITE|FILE_ANSI);
+      if(fh == INVALID_HANDLE) return;
+      ::FileWriteString(fh, json);
+      ::FileClose(fh);
+     }
+    // --- Minimal "find an int value after a JSON key" scan - Config_Setting.json's "markers" section is only ever
+    // --- machine-written by SaveMarkerSettings() above, so a full JSON parser is unwarranted.
+    bool CGUIPannel::JsonIntValue(const string content, const string key, int &value)
+     {
+      int pos = ::StringFind(content, "\"" + key + "\"");
+      if(pos < 0) return false;
+      int colon = ::StringFind(content, ":", pos);
+      if(colon < 0) return false;
+      int len = ::StringLen(content);
+      int i = colon + 1;
+      while(i < len && ::StringGetCharacter(content, i) == ' ') i++;
+      int start = i;
+      while(i < len)
+        {
+         ushort ch = ::StringGetCharacter(content, i);
+         if((ch < '0' || ch > '9') && ch != '-') break;
+         i++;
+        }
+      string num = ::StringSubstr(content, start, i - start);
+      if(num == "") return false;
+      value = (int)::StringToInteger(num);
+      return true;
+     }
+    // --- Same idea as JsonIntValue but for a quoted string value - backslashes in Windows
+    // --- paths are escaped ("\\") on write (SaveMarkerSettings) and un-escaped here on read.
+    bool CGUIPannel::JsonStringValue(const string content, const string key, string &value)
+     {
+      int pos = ::StringFind(content, "\"" + key + "\"");
+      if(pos < 0) return false;
+      int colon = ::StringFind(content, ":", pos);
+      if(colon < 0) return false;
+      int q1 = ::StringFind(content, "\"", colon + 1);
+      if(q1 < 0) return false;
+      int q2 = ::StringFind(content, "\"", q1 + 1);
+      if(q2 < 0) return false;
+      value = ::StringSubstr(content, q1 + 1, q2 - q1 - 1);
+      ::StringReplace(value, "\\\\", "\\");
+      return true;
+     }
+    // --- Attaches SignalMarkers.mq5 to this chart if not already running (checked by short
+    // --- name, set via IndicatorSetString(INDICATOR_SHORTNAME,...) in the indicator's own
+    // --- OnInit) - idempotent, safe to call defensively on every OnInitEvent branch, same
+    // --- style as CTradingLevelBubble::EnsureCreated() being polled unconditionally.
+    void CGUIPannel::EnsureMarkerIndicatorAttached(void)
+     {
+      int total = ::ChartIndicatorsTotal(m_chart_id, 0);
+      for(int i = 0; i < total; i++)
+         if(::StringFind(::ChartIndicatorName(m_chart_id, 0, i), "SignalMarkers") == 0)
+            return; // already attached
+
+      int h = ::iCustom(NULL, 0, "Vendors\\Anhnt\\Custom Buildin\\SignalMarkers",
+                         m_marker_single_buy_code, m_marker_single_sell_code,
+                         m_marker_multi_buy_code, m_marker_multi_sell_code,
+                         m_marker_buy_color, m_marker_sell_color, m_marker_nonrelated_color);
+      if(h == INVALID_HANDLE)
+        {
+         ::Print(__FUNCTION__, " > iCustom(SignalMarkers) failed, error ", ::GetLastError());
+         return;
+        }
+      if(!::ChartIndicatorAdd(m_chart_id, 0, h))
+         ::Print(__FUNCTION__, " > ChartIndicatorAdd(SignalMarkers) failed, error ", ::GetLastError());
+     }
+    // --- Detaches SignalMarkers.mq5 if attached - ChartIndicatorAdd() makes it an independent
+    // --- chart program, so removing THIS EA does NOT auto-detach it. Called from
+    // --- ReattachSignalMarkersIndicator() (style change) AND from OnDeinitEvent on final removal.
+    void CGUIPannel::RemoveMarkerIndicator(void)
+     {
+      int total = ::ChartIndicatorsTotal(m_chart_id, 0);
+      for(int i = total - 1; i >= 0; i--)
+        {
+         string name = ::ChartIndicatorName(m_chart_id, 0, i);
+         if(::StringFind(name, "SignalMarkers") == 0)
+            ::ChartIndicatorDelete(m_chart_id, 0, name);
+        }
+     }
+    // --- Detach + re-attach with the CURRENT m_marker_* values - MT5 has no live-input-update
+    // --- API for a running indicator, so a style change means recreate it.
+    void CGUIPannel::ReattachSignalMarkersIndicator(void)
+     {
+      RemoveMarkerIndicator();
+      EnsureMarkerIndicatorAttached();
+     }
+    // --- Lists every FILE (not subfolder) directly inside MQL5\Files\<m_marker_sound_folder>\ -
+    // --- plain FileFindFirst/FileFindNext, no tree/splitter/popup to freeze (2026-07-17,
+    // --- replaces the CFileNavigator attempt after its splitter-drag state got stuck).
+    void CGUIPannel::ScanSoundFolder(string &files[])
+     {
+      ::ArrayResize(files, 0);
+      string folder = m_marker_sound_folder;
+      if(folder == "") folder = "Sounds";
+      string search_path = folder + "\\*.*";
+      string name;
+      long h = ::FileFindFirst(search_path, name);
+      if(h == INVALID_HANDLE) return;
+      do
+        {
+         // --- MQL5's FileFindFirst/Next marks folders with a TRAILING BACKSLASH in the
+         // --- returned name (same convention CFileNavigator::IsFolder relies on) - skip those,
+         // --- keep only actual files.
+         if(::StringFind(name, "\\") < 0)
+           {
+            int n = ::ArraySize(files);
+            ::ArrayResize(files, n + 1);
+            files[n] = name;
+           }
+        }
+      while(::FileFindNext(h, name));
+      ::FileFindClose(h);
+     }
+    // --- "Refresh" button next to the sound-folder path: read the CURRENT text box value (the
+    // --- user may have just typed a new folder), re-scan it, and rebuild both combos in place.
+    void CGUIPannel::OnClickChangeSoundFolder(void)
+     {
+      m_marker_sound_folder = m_edit_sound_folder.GetValue();
+
+      string files[];
+      ScanSoundFolder(files);
+      int n_files = ArraySize(files);
+
+      // --- Rebuilding() only replaces the ITEM CONTENT - it does NOT resize the dropdown's own
+      // --- viewport (that's a one-time YSize() read at CreateComboBox() time, same trap as
+      // --- CreateMarkerTabComboBox's own comment) - without redoing it here, a folder that grows
+      // --- from a handful of files to 61 keeps the OLD tiny viewport, squeezing the scrollbar
+      // --- thumb down to almost nothing (Anhnt, 2026-07-17: exactly this happened on Refresh).
+      int list_h = 18 * n_files + 4;
+      if(list_h > 300) list_h = 300;
+      m_combo_buy_sound.GetListViewPointer().YSize(list_h);
+      m_combo_sell_sound.GetListViewPointer().YSize(list_h);
+
+      m_combo_buy_sound.GetListViewPointer().Rebuilding(n_files);
+      m_combo_sell_sound.GetListViewPointer().Rebuilding(n_files);
+      for(int i = 0; i < n_files; i++)
+        {
+         m_combo_buy_sound.SetValue(i, files[i]);
+         m_combo_sell_sound.SetValue(i, files[i]);
+        }
+      m_combo_buy_sound.SelectItem(0);
+      m_combo_sell_sound.SelectItem(0);
+      m_combo_buy_sound.GetListViewPointer().Update(true);
+      m_combo_sell_sound.GetListViewPointer().Update(true);
+     }
+    // --- Two independent paths (Anhnt, 2026-07-17 design discussion):
+    // --- CLOSED bar (HistoryTime/HistoryDir): never Sound/Message - the chart Marker already
+    // --- shows these visually. Only appended to Signal_Log.csv (status "Closed"), gated by a
+    // --- per-template watermark (m_wm_*, persisted to Signal_Log_Watermark_<SYMBOL>_<TF>.json)
+    // --- so a restart's SyncHistory backfill catches up the CSV without ever duplicating a row
+    // --- already on disk, and without ever making noise for old history.
+    // --- LIVE bar 0 (GetCurrentSignal): the still-forming bar can flip back and forth several
+    // --- times before it closes - each REAL change (vs m_live_signal_last_seen[row]) fires
+    // --- Sound+Message+CSV (status "Live") immediately with TimeCurrent(), since there's no
+    // --- fixed bar time yet. Runs every OnTimerEvent tick - cheap, no file I/O unless something
+    // --- actually changed.
+    void CGUIPannel::CheckIndicatorAlerts(void)
+     {
+      if(m_time_series_engine == NULL) return;
+      int rows = ArraySize(m_table_indicator_ptrs);
+      if(rows == 0) return;
+
+      if(!m_signal_log_watermarks_loaded)
+        {
+         LoadSignalLogWatermarks();
+         m_signal_log_watermarks_loaded = true;
+        }
+
+      int prev_size = ArraySize(m_live_signal_last_seen);
+      bool seeding = (prev_size != rows); // new rows just appeared - seed their baseline, don't fire
+      if(seeding)
+         ArrayResize(m_live_signal_last_seen, rows);
+
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+
+      for(int row = 0; row < rows; row++)
+        {
+         CIndicatorDE *ind = m_table_indicator_ptrs[row];
+         if(ind == NULL) continue;
+         CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+         if(signal == NULL) continue;
+
+         bool sound_on   = ((int)m_table_indicator.SelectedImageIndex(5, row) == 0);
+         bool message_on = ((int)m_table_indicator.SelectedImageIndex(6, row) == 0);
+         if(!sound_on && !message_on) continue;
+
+         string label   = BuildIndicatorLabel(ind, catalog);
+         string tf_text = TimeframeDescription(ind.Timeframe());
+         int digits = (int)::SymbolInfoInteger(ind.Symbol(), SYMBOL_DIGITS);
+
+         //--- Closed-bar path: log-only catch-up of every committed flip newer than the
+         //--- persisted per-template watermark - never Sound/Message.
+         string type_key, params_key;
+         BuildTemplateMatchKey(ind, catalog, type_key, params_key);
+         datetime wm = GetSignalLogWatermark(type_key, params_key);
+         int total = signal.HistoryTotal();
+         datetime newest_committed = wm;
+         for(int idx = 0; idx < total; idx++)
+           {
+            datetime t = signal.HistoryTime(idx);
+            if(t <= wm) continue;
+            ENUM_SIGNAL_DIR hdir = signal.HistoryDir(idx);
+            string dir_text = (hdir == SIGNAL_BUY) ? "Buy" : "Sell";
+            string time_text = ::TimeToString(t, TIME_DATE|TIME_MINUTES);
+            // --- Bar already closed - look up ITS OWN Close, not the current live price
+            // --- (Anhnt, 2026-07-17): map flip_time back to a shift via iBarShift.
+            int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
+            double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
+            string price_text = ::DoubleToString(price, digits);
+            WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed");
+            if(t > newest_committed) newest_committed = t;
+           }
+         if(newest_committed > wm)
+            SetSignalLogWatermark(type_key, params_key, newest_committed);
+
+         //--- Live bar-0 path: fire Sound+Message+CSV on every real direction change.
+         ENUM_SIGNAL_DIR live_dir = signal.GetCurrentSignal();
+         if(seeding)
+           {
+            m_live_signal_last_seen[row] = live_dir; // baseline only, never fires on first sight
+            continue;
+           }
+         if(live_dir == m_live_signal_last_seen[row]) continue;
+         m_live_signal_last_seen[row] = live_dir;
+         if(live_dir == SIGNAL_NONE) continue; // dropped to no-signal - not alert-worthy itself
+
+         bool is_buy = (live_dir == SIGNAL_BUY);
+         if(sound_on)
+           {
+            // --- Deliberately native ::PlaySound(), NOT CMessage::PlaySound() (Anhnt,
+            // --- 2026-07-17 - confirmed by reading Message.mqh): that wrapper unconditionally
+            // --- prepends "\Files\" to any filename that isn't one of its own built-in SND_*
+            // --- constants, no matter what we pass it - so it can NEVER reach a file sitting in
+            // --- MQL5\Sounds\ (only MQL5\Files\...\ - a different sandbox from FileFindFirst/
+            // --- FileOpen, which only reach MQL5\Files\ - see the Sound-picker combobox's own
+            // --- ScanSoundFolder). The chosen .wav needs to physically exist in MQL5\Sounds\
+            // --- (copied once, not auto-synced) - native ::PlaySound(bare filename) resolves
+            // --- against that folder directly, with no wrapper in the way.
+            string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
+            if(file != "")
+               ::PlaySound(file);
+           }
+         if(message_on)
+           {
+            // --- Same (Time, Indicator, TF) shape as m_table_candle_information_atBar's own
+            // --- columns (RefreshCandleInfoWindow) - keeps the two Signal-reporting surfaces
+            // --- reading the same way (Anhnt, 2026-07-17). Closed bars never reach this branch
+            // --- at all (log-only, see the loop above) - every message printed here IS a Live
+            // --- bar-0 event, tagged "(Live)" in the text itself for a quick visual cue in the
+            // --- Journal (Anhnt, 2026-07-17 - the CSV already had the Status column, but the
+            // --- Journal window itself gave no visual hint).
+            string dir_text  = is_buy ? "Buy" : "Sell";
+            string time_text = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
+            // --- Bar 0 hasn't closed yet - treat the CURRENT price as its "Close" (Anhnt, 2026-07-17).
+            double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
+            string price_text = ::DoubleToString(price, digits);
+            CMessage::Out(time_text + " " + label + " " + tf_text + " " + dir_text + " signal (Live)");
+            WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live");
+           }
+        }
+     }
+    // --- Appends one row to MQL5\Files\Signal_Log.csv (Excel-openable) - writes a leading
+    // --- "sep=;" line + header once, the very first time the file is empty/new, then appends
+    // --- after that. Delimiter is ';' (not ',') and the sep= line forces Excel to honor it
+    // --- regardless of the machine's own Regional Settings list separator (Anhnt, 2026-07-17 -
+    // --- opening the ','-delimited file directly in Excel dumped every field into one column).
+    // --- Opened with FILE_READ|FILE_WRITE (not bare FILE_WRITE, which truncates on every open)
+    // --- so existing history is never lost between EA restarts.
+    void CGUIPannel::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status)
+     {
+      int fh = ::FileOpen("Signal_Log.csv", FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
+      if(fh == INVALID_HANDLE) return;
+      bool is_new = (::FileSize(fh) == 0);
+      if(is_new)
+        {
+         ::FileWriteString(fh, "sep=;\n");
+         ::FileWrite(fh, "Time", "Symbol", "TF", "Indicator", "Signal", "Price", "Status");
+        }
+      else
+         ::FileSeek(fh, 0, SEEK_END);
+      ::FileWrite(fh, time_text, symbol, tf, indicator, direction, price_text, status);
+      ::FileClose(fh);
+     }
+    // --- Per-template watermark of the newest committed HistoryTime() already written to
+    // --- Signal_Log.csv - linear search is fine, template counts here are small (<50).
+    datetime CGUIPannel::GetSignalLogWatermark(const string type_key, const string params_key)
+     {
+      for(int i = 0; i < ArraySize(m_wm_type); i++)
+         if(m_wm_type[i] == type_key && m_wm_params[i] == params_key)
+            return m_wm_time[i];
+      return 0;
+     }
+    // --- Updates (or appends) one template's watermark and persists the whole small file right
+    // --- away - only called when a closed bar genuinely committed a new flip, so this is a rare
+    // --- event, not a per-tick cost.
+    void CGUIPannel::SetSignalLogWatermark(const string type_key, const string params_key, const datetime t)
+     {
+      for(int i = 0; i < ArraySize(m_wm_type); i++)
+         if(m_wm_type[i] == type_key && m_wm_params[i] == params_key)
+           {
+            m_wm_time[i] = t;
+            SaveSignalLogWatermarksToFile();
+            return;
+           }
+      int n = ArraySize(m_wm_type);
+      ArrayResize(m_wm_type,   n + 1);
+      ArrayResize(m_wm_params, n + 1);
+      ArrayResize(m_wm_time,   n + 1);
+      m_wm_type[n]   = type_key;
+      m_wm_params[n] = params_key;
+      m_wm_time[n]   = t;
+      SaveSignalLogWatermarksToFile();
+     }
+    // --- Dedicated small file, NOT Config_Setting.json - that file is already rewritten wholesale
+    // --- by several other writers (SaveMarkerSettings, CTimeSeriesEngine::SaveConfigurationToJSON)
+    // --- that don't know about this section and would silently drop it; a separate per-(symbol,TF)
+    // --- file avoids any multi-writer coordination. Reuses the existing JsonIntValue/JsonStringValue
+    // --- single-key scanners against each "{...}" object substring - no new parser needed.
+    void CGUIPannel::LoadSignalLogWatermarks(void)
+     {
+      string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+      string content = IndicatorConfig_ReadWholeFile(fname);
+      if(content == "") return;
+
+      int pos = ::StringFind(content, "\"watermarks\"");
+      if(pos < 0) return;
+      int arr_start = ::StringFind(content, "[", pos);
+      int arr_end   = ::StringFind(content, "]", arr_start);
+      if(arr_start < 0 || arr_end < 0) return;
+
+      int i = arr_start + 1;
+      while(i < arr_end)
+        {
+         int obj_start = ::StringFind(content, "{", i);
+         if(obj_start < 0 || obj_start > arr_end) break;
+         int obj_end = ::StringFind(content, "}", obj_start);
+         if(obj_end < 0 || obj_end > arr_end) break;
+         string obj = ::StringSubstr(content, obj_start, obj_end - obj_start + 1);
+
+         string type_key, params_key; int t;
+         if(JsonStringValue(obj, "type", type_key) && JsonStringValue(obj, "params", params_key) && JsonIntValue(obj, "time", t))
+           {
+            int n = ArraySize(m_wm_type);
+            ArrayResize(m_wm_type,   n + 1);
+            ArrayResize(m_wm_params, n + 1);
+            ArrayResize(m_wm_time,   n + 1);
+            m_wm_type[n]   = type_key;
+            m_wm_params[n] = params_key;
+            m_wm_time[n]   = (datetime)t;
+           }
+         i = obj_end + 1;
+        }
+     }
+    void CGUIPannel::SaveSignalLogWatermarksToFile(void)
+     {
+      string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+      string json = "{\n \"watermarks\": [\n";
+      int n = ArraySize(m_wm_type);
+      for(int i = 0; i < n; i++)
+        {
+         string type_esc = m_wm_type[i]; ::StringReplace(type_esc, "\\", "\\\\");
+         string params_esc = m_wm_params[i]; ::StringReplace(params_esc, "\\", "\\\\");
+         json += "  { \"type\": \"" + type_esc + "\", \"params\": \"" + params_esc + "\", \"time\": " + (string)(int)m_wm_time[i] + " }";
+         json += (i < n - 1) ? ",\n" : "\n";
+        }
+      json += " ]\n}";
+
+      int fh = ::FileOpen(fname, FILE_TXT|FILE_WRITE|FILE_ANSI);
+      if(fh == INVALID_HANDLE) return;
+      ::FileWriteString(fh, json);
+      ::FileClose(fh);
+     }
     //Ver 1
     // --- Template view of Layer 1 (see README 5c): one row per template. The row set changes
-    // --- ONLY via LoadIndicatorFromJSON (initial build here), AddIndicatorInstance (appends its
+    // --- ONLY via LoadConfigurationFromJSON (initial build here), AddIndicatorInstance (appends its
     // --- own row) and OnClickRemoveIndicator (DeleteRow) - so no dedup and no periodic rebuild.
     // --- By the Layer-1 invariant every series carries the same template set, hence the current
     // --- chart's (symbol,TF) instance list IS the template list, one instance per template.
@@ -924,7 +2635,7 @@
         RefreshIndicatorTableShowColumn();
         return;
        }
-      // --- Structural (re)build - initial fill after LoadIndicatorFromJSON, or safety on mismatch
+      // --- Structural (re)build - initial fill after LoadConfigurationFromJSON, or safety on mismatch
       if(count == 0)
         {
          if(ArraySize(m_table_indicator_ptrs) == 0) return; // already showing the empty state - leave the table alone
@@ -973,8 +2684,8 @@
        int group = (int)indicator.Group();
        string gname = (group >= 0 && group < 4) ? group_names[group] : "Other";
        m_table_indicator.SetValue(1, row, "  " + gname);
-      // --- Col 2/3: Buy / Sell signal filters (default OFF - arrows are opt-in per template;
-      // --- DrawSignalArrows reads these checkboxes live, toggles just reset the arrows)
+      // --- Col 2/3: Buy / Sell signal filters (default OFF - markers are opt-in per template;
+      // --- TemplateBuySellFor reads these checkboxes live, toggles rewrite the bridge file)
        m_table_indicator.CellType(2, row, CELL_CHECKBOX);
        m_table_indicator.SetImages(2, row, chk);
        m_table_indicator.ChangeImage(2, row, 1);
@@ -986,6 +2697,15 @@
        m_table_indicator.CellType(4, row, CELL_CHECKBOX);
        m_table_indicator.SetImages(4, row, show_on_chart);
        m_table_indicator.ChangeImage(4, row, state);
+      // --- Col 5/6: Sound / Message opt-in per template (default OFF, same pattern as
+      // --- Buy/Sell) - checkbox UI only for now, wiring to actually play/print on a new
+      // --- Signal is still TBD (2026-07-17).
+       m_table_indicator.CellType(5, row, CELL_CHECKBOX);
+       m_table_indicator.SetImages(5, row, chk);
+       m_table_indicator.ChangeImage(5, row, 1);
+       m_table_indicator.CellType(6, row, CELL_CHECKBOX);
+       m_table_indicator.SetImages(6, row, chk);
+       m_table_indicator.ChangeImage(6, row, 1);
 
        m_table_indicator_names[row] = indicator.ShortName();
        m_table_indicator_ptrs[row]  = indicator;   // BORROWED - CIndicatorsCollection owns it
@@ -1077,41 +2797,31 @@
       ChartRedraw();
      }
     // --- Col 2/3 checkboxes: per-template Buy/Sell signal filters. The table already
-    // --- flipped the checkbox image before this handler fires; DrawSignalArrows reads the
-    // --- checkbox states live, so all a toggle needs is a clean redraw of the arrows.
-    void CGUIPannel::OnClickToggleBuySignal(const string sname, const int row) { ResetSignalArrows(); }
-    void CGUIPannel::OnClickToggleSellSignal(const string sname, const int row) { ResetSignalArrows(); }
-    // --- Wipe this chart's signal arrows and rewind the watermark: the next timer tick
-    // --- redraws the whole history from scratch under the CURRENT Buy/Sell filters
-    void CGUIPannel::ResetSignalArrows(void)
+    // --- flipped the checkbox image before this handler fires; BuildAndWriteSignalBridge
+    // --- reads the checkbox states live via TemplateBuySellFor, so a toggle just needs the
+    // --- watermark rewound so the very next write is a full, immediate rewrite.
+    void CGUIPannel::OnClickToggleBuySignal(const string sname, const int row)
      {
-      string sym = ::Symbol();
-      ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-      int wm_idx = SignalArrowsFindOrAddKey(sym + "|" + EnumToString(tf));
-      m_signal_arrows_last_time[wm_idx] = 0;
-      PurgeSignalArrowObjects(sym, tf);
-      ::ChartRedraw(m_chart_id);
+      ResetSignalBridge();
      }
-    // --- Delete every signal-arrow object of (sym, tf) from BOTH the chart and
-    // --- CGraphElementsCollection's registry. A raw ObjectsDeleteAll leaves the registry
-    // --- stale, and the collection then refuses to re-create the same names forever
-    // --- ("Such a graphic object already exists" - its pre-create check is list-based).
-    void CGUIPannel::PurgeSignalArrowObjects(const string sym, const ENUM_TIMEFRAMES tf)
+    void CGUIPannel::OnClickToggleSellSignal(const string sname, const int row)
      {
-      string prefix = ::MQLInfoString(MQL_PROGRAM_NAME) + "_sig_" + sym + "_" + EnumToString(tf) + "_";
-      // 1) Deregister first: GetListGraphObj() hands out the LIVE registry list
-      //    (DeleteGraphObjFromList is private), and its FreeMode delete frees the
-      //    collection-owned CGStdGraphObj records
-      CArrayObj *registry = m_graph_elements.GetListGraphObj();
-      if(registry != NULL)
-         for(int r = registry.Total() - 1; r >= 0; r--)
-           {
-            CGStdGraphObj *obj = registry.At(r);
-            if(obj != NULL && obj.ChartID() == m_chart_id && ::StringFind(obj.Name(), prefix) == 0)
-               registry.Delete(r);
-           }
-      // 2) Then the chart objects themselves - also covers leftovers from a previous
-      //    EA run that this instance never registered
+      ResetSignalBridge();
+     }
+    // --- Rewinds the bridge watermark and rewrites the bridge file immediately (not deferred
+    // --- to the next timer tick) so a Buy/Sell toggle is reflected on the chart right away.
+    void CGUIPannel::ResetSignalBridge(void)
+     {
+      m_signal_bridge_last_time = 0;
+      BuildAndWriteSignalBridge();
+     }
+    // --- Delete every legacy signal-arrow chart object of (sym, tf) - leftovers from the old
+    // --- graphic-object drawing path (CreateSignalBuy/Sell/CreateThumbUp/Down), before the
+    // --- SignalMarkers.mq5 indicator + bridge file replaced it entirely (BugNote 2026-07-16).
+    // --- Kept only for migration/cleanup purposes - the new path never creates these objects.
+    void CGUIPannel::PurgeSignalArrowObjects(const string sym, const string tf_string)
+     {
+      string prefix = ::MQLInfoString(MQL_PROGRAM_NAME) + "_sig_" + sym + "_" + tf_string + "_";
       for(int i = ::ObjectsTotal(m_chart_id) - 1; i >= 0; i--)
         {
          string obj_name = ::ObjectName(m_chart_id, i);
@@ -1391,28 +3101,27 @@
          ::Print(__FUNCTION__, " > rejected: this template already exists");
          return;
         }
-
       if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
       SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
 
       // --- Append exactly ONE row for the new template (README 5c - no rescan, no rebuild).
       // --- The engine appends to the collection, so the new instance for the current chart
       // --- is the LAST one in the (symbol,TF)-filtered list.
-      string sym = ::Symbol();
-      ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
-      CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-      list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-      if(list == NULL || list.Total() == 0) return;
-      CIndicatorDE *indicator = list.At(list.Total() - 1);
-      int row = ArraySize(m_table_indicator_ptrs);
-      if(row > 0)                      // an empty table already owns one physical row - reuse it for row 0
+       string sym = ::Symbol();
+       ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+       CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+       list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+       if(list == NULL || list.Total() == 0) return;
+       CIndicatorDE *indicator = list.At(list.Total() - 1);
+       int row = ArraySize(m_table_indicator_ptrs);
+       if(row > 0)                      // an empty table already owns one physical row - reuse it for row 0
          m_table_indicator.AddRow(row, true);   // redraw=true - recalculate visible-area size, see
                                                   // README/BugNote 2026-07-14 black/smeared overflow bug
-      ArrayResize(m_table_indicator_names, row + 1);
-      ArrayResize(m_table_indicator_ptrs,  row + 1);
-      ArrayResize(m_settings_cache_state,  row + 1);
-      SetIndicatorTableRow(row, indicator);
-      m_table_indicator.Update(true);
+       ArrayResize(m_table_indicator_names, row + 1);
+       ArrayResize(m_table_indicator_ptrs,  row + 1);
+       ArrayResize(m_settings_cache_state,  row + 1);
+       SetIndicatorTableRow(row, indicator);
+       m_table_indicator.Update(true);
    }  
   // --- Does this Layer 3 line represent this Layer 1 instance?
   // --- Fast path: shared slot - only lines WE attached (ChartIndicatorAdd with our own
@@ -1548,6 +3257,43 @@
       if(row >= 0)
          OnClickRemoveIndicator(m_table_indicator_names[row], row);
       AddIndicatorInstance(-1, type, params);
+   }
+  //+------------------------------------------------------------------+
+  //| Deposit load - ported verbatim from V1 (Anatoli Kazharski\        |
+  //| GUIPannel.mqh): plain built-in AccountInfoDouble/SymbolInfoDouble |
+  //| calls, no Library CAccount wrapper needed. percent_mode==true     |
+  //| returns margin as % of EQUITY (not Balance).                      |
+  //| Used in: UpdateStatusBar (Deposit Load status bar item).          |
+  //+------------------------------------------------------------------+
+  double CGUIPannel::DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0)
+   {
+      //--- Calculate the current value of the deposit load
+      double margin = 0.0;
+      //--- Total account load
+      if (symbol == "" || volume == 0.0)
+         margin = ::AccountInfoDouble(ACCOUNT_MARGIN);
+      //--- Load on a specified symbol
+      else
+      {
+         //--- Get margin calculation data
+         double leverage = ((double)::AccountInfoInteger(ACCOUNT_LEVERAGE) == 0)
+                            ? 1
+                            : (double)::AccountInfoInteger(ACCOUNT_LEVERAGE);
+         double contract_size = ::SymbolInfoDouble(symbol, SYMBOL_TRADE_CONTRACT_SIZE);
+         string account_currency = ::AccountInfoString(ACCOUNT_CURRENCY);
+         string base_currency = ::SymbolInfoString(symbol, SYMBOL_CURRENCY_BASE);
+         //--- If trading account currency is the same as the symbol base currency
+         if (account_currency == base_currency)
+            margin = (volume * contract_size) / leverage;
+         else
+            margin = (volume * contract_size) / leverage * price;
+      }
+      //--- Get the current funds
+      double equity = (::AccountInfoDouble(ACCOUNT_EQUITY) == 0)
+                       ? 1
+                       : ::AccountInfoDouble(ACCOUNT_EQUITY);
+      //--- Return the current deposit load
+      return ((!percent_mode) ? margin : (margin / equity) * 100);
    }
   void CGUIPannel::PopulateIndicatorTree(void)
    {
@@ -1824,13 +3570,13 @@
     const int default_y = y_gap;
    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
      {
-      m_param_labels[i].MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_param_labels[i]);
+      m_param_labels[i].MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_labels[i]);
       if(!m_param_labels[i].CreateTextLabel("", default_x, default_y)) return false;
       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_labels[i]);
 
-      m_param_edits[i].MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_param_edits[i]);
+      m_param_edits[i].MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_edits[i]);
       m_param_edits[i].XSize(INDICATOR_PARAM_FIELD_W);
       // --- Inner CTextBox defaults its LOCAL x-offset to the outer box's x_size at
       // --- creation time unless told otherwise BEFORE CreateTextEdit() - confirmed via
@@ -1839,8 +3585,8 @@
        if(!m_param_edits[i].CreateTextEdit("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_edits[i]);
 
-       m_param_combo[i].MainPointer(m_tabs_main);
-       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_param_combo[i]);
+       m_param_combo[i].MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_combo[i]);
        m_param_combo[i].XSize(INDICATOR_PARAM_FIELD_W);
        m_param_combo[i].YSize(20);
        m_param_combo[i].ItemsTotal(7);          // room for the largest choice list (PRICE_CHOICES)
@@ -1861,8 +3607,8 @@
       // --- show/hide correctly AFTER CompletedGUI has already registered everything.
      }
      //For Button Add
-      m_btn_add_indicator.MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_btn_add_indicator);
+      m_btn_add_indicator.MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_add_indicator);
       m_btn_add_indicator.AutoXResizeMode(false);
       m_btn_add_indicator.XSize(80);
       m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);
@@ -1875,8 +3621,8 @@
    if(!created) return false;
    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_add_indicator);
    //For Button Save
-      m_btn_save_indicator.MainPointer(m_tabs_main);
-      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_btn_save_indicator);
+      m_btn_save_indicator.MainPointer(m_tabs_main_setting_config);
+      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_save_indicator);
       m_btn_save_indicator.AutoXResizeMode(false);
       m_btn_save_indicator.XSize(80);
       m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
@@ -2018,8 +3764,7 @@
   }
 void CGUIPannel::OnClickSaveIndicators(void)
     {
-      if(m_time_series_engine == NULL) return;
-      m_time_series_engine.SaveIndicatorToJSON("indicators_config.json");
+      SaveGUIConfigToJSON();
     }
  //Calculatioon for display in Control  
   void CGUIPannel::SyncIndicatorTreeViewIcons(void)
@@ -2149,6 +3894,85 @@ string CGUIPannel::BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem 
          pvalues += ::IntegerToString((int)mql_params[i].integer_value);
      }
    return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
+  }
+//+------------------------------------------------------------------+
+//| Builds the SAME (type, params-as-text) key CTimeSeriesEngine::   |
+//| SaveConfigurationToJSON writes/LoadConfigurationFromJSON parses -|
+//| NOT BuildIndicatorLabel's pvalues (that rounds doubles to 2      |
+//| decimals for display; the saved file uses 8, so matching against|
+//| it would silently fail for any non-integer param).               |
+//+------------------------------------------------------------------+
+void CGUIPannel::BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
+  {
+   type_key = "";
+   for(int c = 0; c < ArraySize(catalog); c++)
+      if(catalog[c].type == ind.TypeIndicator()) { type_key = catalog[c].name; break; }
+
+   SIndicatorParam schema[];
+   GetIndicatorParamSchema(ind.TypeIndicator(), schema);
+   MqlParam params[];
+   ind.GetMqlParams(params);
+
+   params_key = "";
+   for(int p = 0; p < ArraySize(params); p++)
+     {
+      if(p > 0) params_key += ",";
+      string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
+      if(choices == PRICE_CHOICES)
+         params_key += AppliedPriceDescription((ENUM_APPLIED_PRICE)params[p].integer_value);
+      else if(choices == CALCULATION_METHOD_CHOICES)
+         params_key += AveragingMethodDescription((ENUM_MA_METHOD)params[p].integer_value);
+      else if(choices == VOLUME_CHOICES)
+         params_key += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)params[p].integer_value);
+      else if(choices == STOCH_PRICE_CHOICES)
+         params_key += StochPriceDescription((ENUM_STO_PRICE)params[p].integer_value);
+      else if(params[p].type == TYPE_DOUBLE)
+         params_key += ::DoubleToString(params[p].double_value, 8);
+      else
+         params_key += ::IntegerToString((int)params[p].integer_value);
+     }
+  }
+//+------------------------------------------------------------------+
+//| Called ONCE right after the initial RefreshIndicatorTable() (see |
+//| OnInitEvent) - pulls the Buy/Sell state CTimeSeriesEngine::       |
+//| LoadConfigurationFromJSON() cached while loading indicators_config|
+//| .json and applies it to the matching m_table_indicator rows, so a |
+//| saved Buy/Sell setting survives an EA restart instead of          |
+//| resetting to OFF.                                                 |
+//+------------------------------------------------------------------+
+// --- Also applies Sound/Message (col 5/6) despite the name - kept the original name to avoid
+// --- touching its one call site's context; extended in place 2026-07-17.
+void CGUIPannel::ApplyLoadedIndicatorBuySell(void)
+  {
+   if(m_time_series_engine == NULL) return;
+   string types[], param_keys[];
+   bool buys[], sells[], sounds[], messages[];
+   m_time_series_engine.GetLoadedTemplateSettings(types, param_keys, buys, sells, sounds, messages);
+   if(ArraySize(types) == 0) return;
+
+   SIndicatorCatalogItem catalog[];
+   GetIndicatorCatalog(catalog);
+
+   int rows = ArraySize(m_table_indicator_ptrs);
+   bool any_changed = false;
+   for(int row = 0; row < rows; row++)
+     {
+      CIndicatorDE *ind = m_table_indicator_ptrs[row];
+      if(ind == NULL) continue;
+      string type_key, params_key;
+      BuildTemplateMatchKey(ind, catalog, type_key, params_key);
+      for(int q = 0; q < ArraySize(types); q++)
+        {
+         if(types[q] != type_key || param_keys[q] != params_key) continue;
+         m_table_indicator.ChangeImage(2, row, buys[q]     ? 0 : 1);
+         m_table_indicator.ChangeImage(3, row, sells[q]    ? 0 : 1);
+         m_table_indicator.ChangeImage(5, row, sounds[q]   ? 0 : 1);
+         m_table_indicator.ChangeImage(6, row, messages[q] ? 0 : 1);
+         any_changed = true;
+         break;
+        }
+     }
+   if(any_changed) m_table_indicator.Update(true);
   }
 //+------------------------------------------------------------------+
 //| Populate / refresh the Trade tab table (no-flicker per-cell)     |
@@ -2335,10 +4159,18 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
          m_table_indicator_SymbolTFValue.TextColor(3, row, txt_clr, true);
          any_changed = true;
         }
-      // Col 1 (TF): sig_img - the actual Signal system (CSignalBase.GetCurrentSignal), NOT value slope.
-      // GetOrCreateSignal itself returns NULL for indicator types with no CSignalXXX wired yet,
-      // so this falls back to dir_icon automatically - that fallback is the only place dir_icon
-      // and sig_icon are allowed to share a value.
+      // Col 1 (TF): sig_img - the actual Signal system, NOT value slope. GetOrCreateSignal itself
+      // returns NULL for indicator types with no CSignalXXX wired yet, so this falls back to
+      // dir_icon automatically - that fallback is the only place dir_icon and sig_icon are
+      // allowed to share a value.
+      // --- Sticky last-known direction (Anhnt, 2026-07-17): GetCurrentSignal() only fires at the
+      // --- exact tick a crossover happens (bar0 vs bar1) - EMPTY_VALUE/neutral the rest of the
+      // --- time, since a cross is a rare event, not a continuous state. User wants this column to
+      // --- read as "uptrend/downtrend since the last Buy/Sell signal" instead - green/red persists
+      // --- until the NEXT opposite flip, not just the instant of the flip itself. Prefer a flip
+      // --- happening RIGHT NOW (more responsive); otherwise fall back to the last COMMITTED
+      // --- history entry's direction (m_hist_* - permanent, only written when a bar actually
+      // --- closed with a real flip), which is exactly this "last known direction" state.
       int sig_icon = dir_icon;
       if(m_time_series_engine != NULL)
         {
@@ -2347,6 +4179,11 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
          if(signal != NULL)
            {
             ENUM_SIGNAL_DIR dir = signal.GetCurrentSignal();
+            if(dir == SIGNAL_NONE)
+              {
+               int last_idx = signal.HistoryTotal() - 1;
+               if(last_idx >= 0) dir = signal.HistoryDir(last_idx);
+              }
             sig_icon = (dir == SIGNAL_BUY) ? 0 : (dir == SIGNAL_SELL) ? 1 : 2;
            }
         }
@@ -2362,146 +4199,176 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
       m_table_indicator_SymbolTFValue.Update(false);
   }
 //+------------------------------------------------------------------+
-//| Find (or add) the watermark slot for a "symbol|TF" key - each    |
-//| chart symbol/TF gets its own "last drawn signal time" so         |
-//| switching the chart doesn't skip real signals by comparing       |
-//| against an unrelated timeline.                                   |
+//| Looks up (ind's type+params) among m_table_indicator_ptrs' rows  |
+//| and returns that row's Buy/Sell checkbox state. Can't match by   |
+//| pointer identity (m_table_indicator_ptrs only holds the CURRENT  |
+//| chart's own-TF instances) - ind may be from a DIFFERENT tracked  |
+//| TF of the same symbol, so this matches by TEMPLATE (type+params, |
+//| via IsEqualMqlParamArrays - same "same template regardless of    |
+//| symbol/TF" identity OnClickRemoveIndicator already relies on),   |
+//| which the project's own invariant guarantees is uniform across   |
+//| every TF (README: "every series has the exact same indicator    |
+//| set"). Returns false (buy/sell both false) if no matching row is |
+//| found at all.                                                    |
 //+------------------------------------------------------------------+
-int CGUIPannel::SignalArrowsFindOrAddKey(const string key)
+bool CGUIPannel::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
   {
-    int total = ::ArraySize(m_signal_arrows_key);
-    for(int i = 0; i < total; i++)
-      if(m_signal_arrows_key[i] == key) return i;
-    ::ArrayResize(m_signal_arrows_key, total + 1);
-    ::ArrayResize(m_signal_arrows_last_time, total + 1);
-    m_signal_arrows_key[total]        = key;
-    m_signal_arrows_last_time[total]  = 0;
-    return total;
+   buy = false; sell = false;
+   if(ind == NULL) return false;
+   ENUM_INDICATOR type = ind.TypeIndicator();
+   MqlParam params[];
+   ind.GetMqlParams(params);
+   for(int row = 0; row < ArraySize(m_table_indicator_ptrs); row++)
+     {
+      CIndicatorDE *row_ind = m_table_indicator_ptrs[row];
+      if(row_ind == NULL || row_ind.TypeIndicator() != type) continue;
+      MqlParam row_params[];
+      row_ind.GetMqlParams(row_params);
+      if(!IsEqualMqlParamArrays(params, row_params)) continue;
+      buy  = ((int)m_table_indicator.SelectedImageIndex(2, row) == 0);
+      sell = ((int)m_table_indicator.SelectedImageIndex(3, row) == 0);
+      return true;
+     }
+   return false;
   }
 //+------------------------------------------------------------------+
-//| Draw a Buy/Sell arrow (single signal) or Thumb (2+ signals at    |
-//| the same bar) for the CURRENT chart's own symbol+period - other  |
-//| symbols/TFs in the table have no chart of their own to draw on.  |
+//| Feeds the SignalMarkers.mq5 indicator: gathers every flip of     |
+//| every Buy/Sell-enabled indicator across EVERY tracked TF of the  |
+//| CURRENT chart's own symbol (same multi-TF loop RefreshCandleInfo |
+//| Window uses for the Ctrl+hover popup) and writes the COMPLETE set|
+//| to a bridge file - the indicator replaces its whole row array on |
+//| each read, it never merges deltas, so a partial/delta write here |
+//| would silently drop markers instead of updating them.            |
+//|                                                                    |
+//| Cheap early-out: a first pass only checks each signal's NEWEST   |
+//| committed flip time (O(indicators), not O(history)) - the full   |
+//| collection + file write below only runs when that moved past the |
+//| watermark (or the chart's own symbol just changed).              |
 //+------------------------------------------------------------------+
-void CGUIPannel::DrawSignalArrows(void)
+void CGUIPannel::BuildAndWriteSignalBridge(void)
   {
-   if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL) return;
+   if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL)
+      return;
 
    string sym = ::Symbol();
-   ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-   int wm_idx = SignalArrowsFindOrAddKey(sym + "|" + EnumToString(tf));
-   datetime last_time = m_signal_arrows_last_time[wm_idx];
+   bool fresh = (sym != m_signal_bridge_symbol);
 
-   CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-   ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-   int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+   CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
+   CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
+   int series_total = (series_list != NULL) ? series_list.Total() : 0;
 
-   // Merge every tracked indicator's signal history into buckets keyed by exact bar time,
-   // counting how many indicators agree Buy vs Sell at that bar (1 = plain arrow, 2+ = thumb).
-   datetime bucket_time[]; int bucket_buy[]; int bucket_sell[];
-   for(int i = 0; i < ind_total; i++)
+   datetime newest_seen = 0;
+   for(int ti = 0; ti < series_total; ti++)
      {
-      CIndicatorDE *ind = ind_list.At(i);
-      if(ind == NULL) continue;
-      // Col 2/3 checkboxes are the per-template opt-in: image 0 = ticked. Rows hold the
-      // very same current-symbol/TF instances this loop iterates, so pointer match works.
-      bool buy_on = false, sell_on = false;
-      for(int row = 0; row < ArraySize(m_table_indicator_ptrs); row++)
-         if(m_table_indicator_ptrs[row] == ind)
-           {
-            buy_on  = ((int)m_table_indicator.SelectedImageIndex(2, row) == 0);
-            sell_on = ((int)m_table_indicator.SelectedImageIndex(3, row) == 0);
-            break;
-           }
-      if(!buy_on && !sell_on) continue;   // nothing requested: don't even create the signal
-      // signal is BORROWED - CSignalsCollection owns it
-      CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
-      if(signal == NULL) continue;
-      int hist_total = signal.HistoryTotal();
-      for(int h = 0; h < hist_total; h++)
+      CBarSeriesDE *s = series_list.At(ti);
+      if(s == NULL) continue;
+      CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+      ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, s.Timeframe(), EQUAL);
+      int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+      for(int ii = 0; ii < ind_total; ii++)
         {
-         datetime t = signal.HistoryTime(h);
-         if(t <= last_time) continue; // already drawn in a prior call
-         ENUM_SIGNAL_DIR dir = signal.HistoryDir(h);
-         if(dir == SIGNAL_NONE) continue;
-         if(dir == SIGNAL_BUY  && !buy_on)  continue;
-         if(dir == SIGNAL_SELL && !sell_on) continue;
-         int bi = -1;
-         for(int b = 0; b < ::ArraySize(bucket_time); b++)
-            if(bucket_time[b] == t) { bi = b; break; }
-         if(bi < 0)
+         CIndicatorDE *ind = ind_list.At(ii);
+         if(ind == NULL) continue;
+         bool buy_on, sell_on;
+         if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+         // signal is BORROWED - CSignalsCollection owns it
+         CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+         if(signal == NULL) continue;
+         int ht = signal.HistoryTotal();
+         if(ht > 0)
            {
-            bi = ::ArraySize(bucket_time);
-            ::ArrayResize(bucket_time, bi + 1);
-            ::ArrayResize(bucket_buy,  bi + 1);
-            ::ArrayResize(bucket_sell, bi + 1);
-            bucket_buy[bi] = 0; bucket_sell[bi] = 0;
+            datetime t = signal.HistoryTime(ht - 1); // history is oldest->newest
+            if(t > newest_seen) newest_seen = t;
            }
-         if(dir == SIGNAL_BUY) bucket_buy[bi]++; else bucket_sell[bi]++;
         }
      }
 
-   // Fresh watermark (first run after start/restart or after a Buy/Sell toggle): wipe any
-   // leftover arrows of this sym|TF first, so the set on chart always equals exactly what
-   // the current filters say (also purges the price~0 corpses of README 5b).
-   if(last_time == 0 && ::ArraySize(bucket_time) > 0)
-      PurgeSignalArrowObjects(sym, tf);
+   if(!fresh && newest_seen <= m_signal_bridge_last_time)
+      return; // nothing changed since the last write - skip the full collection+file write
 
-   double pad = ::SymbolInfoDouble(sym, SYMBOL_POINT) * 50;
-   datetime newest = last_time;
-   datetime failed_oldest = 0;
-   for(int b = 0; b < ::ArraySize(bucket_time); b++)
+   m_signal_bridge_symbol = sym;
+
+   // --- Full collection: every flip of every Buy/Sell-enabled indicator, every tracked TF.
+   datetime row_time[]; int row_tf[]; int row_dir[];
+   int count = 0;
+   for(int ti = 0; ti < series_total; ti++)
      {
-      int total    = bucket_buy[b] + bucket_sell[b];
-      bool net_buy = bucket_buy[b] >= bucket_sell[b];
-      // README 5b fix: only draw when the bar data is truly ready - a failed shift or an
-      // empty CopyLow/High used to produce an arrow at price~0, parked forever below the
-      // viewport because the watermark advanced anyway.
-      int shift    = ::iBarShift(sym, tf, bucket_time[b], true);
-      double lo[1] = {0}, hi[1] = {0};
-      bool data_ok = (shift >= 0 &&
-                      ::CopyLow(sym, tf, shift, 1, lo)  == 1 &&
-                      ::CopyHigh(sym, tf, shift, 1, hi) == 1 &&
-                      lo[0] > 0.0);
-      if(!data_ok)
+      CBarSeriesDE *s = series_list.At(ti);
+      if(s == NULL) continue;
+      ENUM_TIMEFRAMES tf = s.Timeframe();
+      CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+      ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+      int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+      for(int ii = 0; ii < ind_total; ii++)
         {
-         // Remember the OLDEST failed bar: the watermark must stay below it so the next
-         // timer tick retries this signal instead of losing it forever
-         if(failed_oldest == 0 || bucket_time[b] < failed_oldest)
-            failed_oldest = bucket_time[b];
-         continue;
+         CIndicatorDE *ind = ind_list.At(ii);
+         if(ind == NULL) continue;
+         bool buy_on, sell_on;
+         if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+         CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+         if(signal == NULL) continue;
+         int hist_total = signal.HistoryTotal();
+         for(int h = 0; h < hist_total; h++)
+           {
+            ENUM_SIGNAL_DIR dir = signal.HistoryDir(h);
+            if(dir == SIGNAL_NONE) continue;
+            if(dir == SIGNAL_BUY  && !buy_on)  continue;
+            if(dir == SIGNAL_SELL && !sell_on) continue;
+            ArrayResize(row_time, count + 1);
+            ArrayResize(row_tf,   count + 1);
+            ArrayResize(row_dir,  count + 1);
+            row_time[count] = signal.HistoryTime(h);
+            row_tf[count]   = (int)tf;
+            row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
+            count++;
+           }
         }
-      double price = net_buy ? (lo[0] - pad) : (hi[0] + pad);
-      string name  = "sig_" + sym + "_" + EnumToString(tf) + "_" + (string)(long)bucket_time[b];
-
-      // Skip if this arrow is already physically on the chart - objects survive an EA
-      // restart/recompile while our watermark arrays reset to 0, so without this check the
-      // first refresh after a restart re-attempts every historical arrow and floods the log
-      // with "Such a graphic object already exists". CreateSignalXxx prefixes the object
-      // name with the program name, so check the same full name here.
-      if(::ObjectFind(m_chart_id, ::MQLInfoString(MQL_PROGRAM_NAME) + "_" + name) >= 0)
-        {
-         if(bucket_time[b] > newest) newest = bucket_time[b];
-         continue;
-        }
-
-      if(total == 1)
-        {
-         if(net_buy) m_graph_elements.CreateSignalBuy(m_chart_id, name, 0, false, bucket_time[b], price);
-         else        m_graph_elements.CreateSignalSell(m_chart_id, name, 0, false, bucket_time[b], price);
-        }
-      else
-        {
-         if(net_buy) m_graph_elements.CreateThumbUp(m_chart_id, name, 0, false, bucket_time[b], price);
-         else        m_graph_elements.CreateThumbDown(m_chart_id, name, 0, false, bucket_time[b], price);
-        }
-      if(bucket_time[b] > newest) newest = bucket_time[b];
      }
-   // Watermark never crosses an undrawn signal: cap it just below the oldest failure.
-   // Re-visiting already-drawn newer arrows next tick is cheap (the ObjectFind check).
-   if(failed_oldest > 0 && failed_oldest - 1 < newest)
-      newest = failed_oldest - 1;
-   m_signal_arrows_last_time[wm_idx] = newest;
+
+   // --- Sort ascending by time (bubble - count is small, same style used elsewhere in this file).
+   for(int a = 0; a < count - 1; a++)
+      for(int b = a + 1; b < count; b++)
+         if(row_time[b] < row_time[a])
+           {
+            datetime tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
+            int      tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
+            int      d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
+           }
+
+   WriteSignalBridgeFile(row_time, row_tf, row_dir, count);
+   m_signal_bridge_last_time = newest_seen;
+  }
+//+------------------------------------------------------------------+
+//| Writes the bridge file for m_signal_bridge_symbol - format MUST   |
+//| stay byte-identical to SignalMarkers.mq5's reader:                |
+//|   int magic_version; long last_update; int row_count;             |
+//|   row_count x { long flip_time; int tf; int dir(+1/-1); }          |
+//| Written to a .tmp file then FileMove'd over the real name, so the |
+//| indicator's own polling never sees a half-written file.           |
+//+------------------------------------------------------------------+
+void CGUIPannel::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count)
+  {
+   string final_name = "SignalBridge_" + m_signal_bridge_symbol + ".dat";
+   string tmp_name    = "SignalBridge_" + m_signal_bridge_symbol + ".tmp";
+
+   int fh = ::FileOpen(tmp_name, FILE_BIN|FILE_WRITE);
+   if(fh == INVALID_HANDLE)
+      return;
+
+   ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
+   ::FileWriteLong(fh, (long)::TimeCurrent()); // last_update is a plain rewrite-happened watermark,
+                                                // decoupled from m_signal_bridge_last_time's own
+                                                // change-detection role - always moves forward.
+   ::FileWriteInteger(fh, count, INT_VALUE);
+   for(int i = 0; i < count; i++)
+     {
+      ::FileWriteLong(fh, (long)row_time[i]);
+      ::FileWriteInteger(fh, row_tf[i],  INT_VALUE);
+      ::FileWriteInteger(fh, row_dir[i], INT_VALUE);
+     }
+   ::FileClose(fh);
+
+   ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);
   }
 
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION

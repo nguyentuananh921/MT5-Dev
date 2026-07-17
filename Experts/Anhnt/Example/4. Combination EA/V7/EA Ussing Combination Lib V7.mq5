@@ -119,7 +119,7 @@
  void OnTrade(void)
   {
     tradingEngine.OnTickEvent();
-    mGUIPannel.OnTradeEvent();   // lazy-init/redraw trigger for CTradingLevelBubble
+    //mGUIPannel.OnTradeEvent();   // lazy-init/redraw trigger for CTradingLevelBubble
   }
  //+------------------------------------------------------------------+
  //| ChartEvent function                                              |

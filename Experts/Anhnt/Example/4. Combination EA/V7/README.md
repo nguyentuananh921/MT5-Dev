@@ -14,6 +14,7 @@
    [] Layer 2: CGUIPannel dùng Libarary của Anatoli Kazharski
     - Library Link https://www.mql5.com/en/code/19703
     - Chỉ hold pointer các collection,không own gì thuộc PureData.
+    - Layer 2 sẽ Control việc Show/Hide trên Layer 3
    [] Layer 3: Display On Chart, control by Layer 2 and base on Layer 1
 Rule:
  [] Trao đổi bằng tiếng Việt, Comment trong code bằng tiếng Anh.
@@ -44,7 +45,7 @@ Rule:
      [v] AddAllIndicatorsToNewSeries
      [v] CIndicatorsCollection::TemplateExists(type, params):Check xem Indicator trên chart (Layer 3) đã có ở Layer 1 hay chưa
      [v] Save to JSON. 
-   [] FormatIndicatorLabel hiện mới xử lý IND_SAR và IND_MA
+   [] Hiện mới xử lý IND_SAR và IND_MA
 3. Layer 2
   [v] CTreeView  m_treeview_SymbolTF;
      [v] Display Symbol + TF on Layer 1.
@@ -57,8 +58,8 @@ Rule:
       - Việc Toggle các check box sẽ mirror từ layer 2 -> Layer 3.
      [v] CGUIPannel::LineRepresentsIndicator(line_handle, indicator) / OwnedInstanceOfLine nhận diện 1 line trên chart có phải instance của Layer 1 không
      [V] checkbox cột Show của m_table_indicator → ChartIndicatorAdd/Delete).
-     [] checkbox cột Buy của m_table_indicator -> Show Buy Signal của Indicator tương ứng on Chart (Layer 3)
-     [] checkbox cột Sell của m_table_indicator -> Show Sell Signal của Indicator tương ứng on Chart (Layer 3)
+     [v] checkbox cột Buy của m_table_indicator -> Show Buy Signal của Indicator tương ứng on Chart (Layer 3)
+     [v] checkbox cột Sell của m_table_indicator -> Show Sell Signal của Indicator tương ứng on Chart (Layer 3)
   [v] CTable     m_table_indicator_SymbolTFValue;
 4. Layer 3: Display on Chart
    [v] Indicator sẽ display bằng Buildin MT5 được control bởi Layer 2.
@@ -70,14 +71,17 @@ Rule:
 	 - ImportForeignChartIndicators()
      [v] Khi User Update một indicator ở Layer 3 (Update Paramete) thì sẽ phải Update Layer 2 và Layer 1.   
    [] CPatternRenderer: đang dừng lại do gây Lag.
-   [] m_window_infor khi ấn Ctr và di mouse vào candle đang chưa khôi phục lại
+   [v] m_window_infor khi ấn Ctr và di mouse vào candle đang chưa khôi phục lại
    [] CPatternRenderer để hiện các CandlePattern nhưng bị lag
-   [] CTradingLevelBubble để hiện SL, TP đang dừng lại.
+   [] CTradingLevelBubble để hiện SL, TP đang triển khai đã test thử hơi khó di chuyển một tí.
+     [v] Update lại sau khi có CChartObjCollection
+     [v] Bị mất khi đổi TF
+     [v] Chạy ngang
 
 5. Bug note
   2027 0713 
    [] CTradingLevelBubble: 
      [] Rất khó di chuyển.
-     [] ChartChange là mất.
-   [] m_table_indicator bị duplicate BBand
+     [v] ChartChange là mất.
+   [v] m_table_indicator bị duplicate BBand
   

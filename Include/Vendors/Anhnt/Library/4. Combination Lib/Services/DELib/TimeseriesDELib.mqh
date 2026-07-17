@@ -18,14 +18,14 @@
    ENUM_INDICATOR_GROUP  group;
    string                name;
   };
-struct SIndicatorParam
+ struct SIndicatorParam
   {
    string        name;          // field label
    ENUM_DATATYPE data_type;     // TYPE_INT or TYPE_DOUBLE
    string        default_value; // shown pre-filled in the edit box (or selected by index in choices)
    string        choices;       // "|"-separated option text, e.g. "Close|Open|High" - empty = plain numeric edit box
   };
-void GetIndicatorCatalog(SIndicatorCatalogItem &out[])
+ void GetIndicatorCatalog(SIndicatorCatalogItem &out[])
   {
    SIndicatorCatalogItem indicator_list[] =
      {
@@ -80,56 +80,56 @@ void GetIndicatorCatalog(SIndicatorCatalogItem &out[])
    for(int i = 0; i < total; i++)
       out[i] = indicator_list[i];
   }
-// How many data buffers this indicator type allocates - required by
-// CIndicatorsCollection::AddIndicatorToList() to actually register the created
-// indicator (without this, CreateIndicator() alone never adds it to m_list).
-int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
+ // How many data buffers this indicator type allocates - required by
+ // CIndicatorsCollection::AddIndicatorToList() to actually register the created
+ // indicator (without this, CreateIndicator() alone never adds it to m_list).
+ int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
   {
    switch(type)
      {
       // --- Trend
-      case IND_SAR:        return 1;
-      case IND_MA:         return 1;
-      case IND_BANDS:      return 3;   // base, upper, lower
-      case IND_ALLIGATOR:  return 3;   // jaw, teeth, lips
-      case IND_ICHIMOKU:   return 5;   // tenkan, kijun, senkou A/B, chikou
-      case IND_ENVELOPES:  return 3;   // base, upper, lower
-      case IND_FRAMA:      return 1;
-      case IND_AMA:        return 1;
-      case IND_DEMA:       return 1;
-      case IND_TEMA:       return 1;
-      case IND_VIDYA:      return 1;
-      case IND_ADX:        return 3;   // main, +DI, -DI
-      case IND_ADXW:       return 3;
-      case IND_STDDEV:     return 1;
+       case IND_SAR:        return 1;
+       case IND_MA:         return 1;
+       case IND_BANDS:      return 3;   // base, upper, lower
+       case IND_ALLIGATOR:  return 3;   // jaw, teeth, lips
+       case IND_ICHIMOKU:   return 5;   // tenkan, kijun, senkou A/B, chikou
+       case IND_ENVELOPES:  return 3;   // base, upper, lower
+       case IND_FRAMA:      return 1;
+       case IND_AMA:        return 1;
+       case IND_DEMA:       return 1;
+       case IND_TEMA:       return 1;
+       case IND_VIDYA:      return 1;
+       case IND_ADX:        return 3;   // main, +DI, -DI
+       case IND_ADXW:       return 3;
+       case IND_STDDEV:     return 1;
       // --- Oscillator
-      case IND_RSI:        return 1;
-      case IND_MACD:       return 2;   // main, signal
-      case IND_STOCHASTIC: return 2;   // main, signal
-      case IND_CCI:        return 1;
-      case IND_MOMENTUM:   return 1;
-      case IND_DEMARKER:   return 1;
-      case IND_RVI:        return 2;   // main, signal
-      case IND_WPR:        return 1;
-      case IND_OSMA:       return 1;
-      case IND_TRIX:       return 1;
-      case IND_ATR:        return 1;
-      case IND_FORCE:      return 1;
-      case IND_AO:         return 1;
-      case IND_AC:         return 1;
-      case IND_GATOR:      return 4;   // upper, lower + 2 color/histogram buffers
-      case IND_BEARS:      return 1;
-      case IND_BULLS:      return 1;
-      case IND_CHAIKIN:    return 1;
+       case IND_RSI:        return 1;
+       case IND_MACD:       return 2;   // main, signal
+       case IND_STOCHASTIC: return 2;   // main, signal
+       case IND_CCI:        return 1;
+       case IND_MOMENTUM:   return 1;
+       case IND_DEMARKER:   return 1;
+       case IND_RVI:        return 2;   // main, signal
+       case IND_WPR:        return 1;
+       case IND_OSMA:       return 1;
+       case IND_TRIX:       return 1;
+       case IND_ATR:        return 1;
+       case IND_FORCE:      return 1;
+       case IND_AO:         return 1;
+       case IND_AC:         return 1;
+       case IND_GATOR:      return 4;   // upper, lower + 2 color/histogram buffers
+       case IND_BEARS:      return 1;
+       case IND_BULLS:      return 1;
+       case IND_CHAIKIN:    return 1;
       // --- Volumes
-      case IND_OBV:        return 1;
-      case IND_AD:         return 1;
-      case IND_MFI:        return 1;
-      case IND_VOLUMES:    return 1;
-      case IND_BWMFI:      return 2;   // value + color index
+       case IND_OBV:        return 1;
+       case IND_AD:         return 1;
+       case IND_MFI:        return 1;
+       case IND_VOLUMES:    return 1;
+       case IND_BWMFI:      return 2;   // value + color index
       // --- Arrows
-      case IND_FRACTALS:   return 2;   // upper, lower
-      default:             return 1;
+       case IND_FRACTALS:   return 2;   // upper, lower
+       default:             return 1;
      }
   } 
  // --- Max param count across every standard indicator is 8 (Alligator/Gator:
@@ -150,129 +150,128 @@ int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
    // --- dv is the DEFAULT SELECTED ROW in ch, purely a UI preselect concern -
    // --- unrelated to what value actually gets stored, see the note above
    // --- SIndicatorParam for how enum-choice values are resolved).
-   #define I(idx,nm,tp,dv)     out[idx].name=nm; out[idx].data_type=tp;      out[idx].default_value=dv;
-   #define E(idx,nm,dv,ch)     out[idx].name=nm; out[idx].data_type=TYPE_INT; out[idx].default_value=dv; out[idx].choices=ch;
-   switch(type)
+    #define I(idx,nm,tp,dv)     out[idx].name=nm; out[idx].data_type=tp;      out[idx].default_value=dv;
+    #define E(idx,nm,dv,ch)     out[idx].name=nm; out[idx].data_type=TYPE_INT; out[idx].default_value=dv; out[idx].choices=ch;
+    switch(type)
      {
       // --- Trend ---------------------------------------------------------
-      case IND_SAR:
+       case IND_SAR:
          I(0,"Step",TYPE_DOUBLE,"0.02") I(1,"Maximum",TYPE_DOUBLE,"0.2")
          return 2;
-      case IND_MA:
+       case IND_MA:
          I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
          E(2,"Method","1",CALCULATION_METHOD_CHOICES) E(3,"Applied Price","0",PRICE_CHOICES)
          return 4;
-      case IND_BANDS:
+       case IND_BANDS:
          I(0,"Period",TYPE_INT,"20") I(1,"Shift",TYPE_INT,"0")
          I(2,"Deviation",TYPE_DOUBLE,"2.0")
          E(3,"Applied Price","0",PRICE_CHOICES)
          return 4;
-      case IND_ALLIGATOR:
+       case IND_ALLIGATOR:
          I(0,"Jaw Period",TYPE_INT,"13")  I(1,"Jaw Shift",TYPE_INT,"8")
          I(2,"Teeth Period",TYPE_INT,"8") I(3,"Teeth Shift",TYPE_INT,"5")
          I(4,"Lips Period",TYPE_INT,"5")  I(5,"Lips Shift",TYPE_INT,"3")
          E(6,"Method","2",CALCULATION_METHOD_CHOICES) E(7,"Applied Price","4",PRICE_CHOICES)
          return 8;
-      case IND_ICHIMOKU:
+       case IND_ICHIMOKU:
          I(0,"Tenkan-sen",TYPE_INT,"9") I(1,"Kijun-sen",TYPE_INT,"26")
          I(2,"Senkou Span B",TYPE_INT,"52")
          return 3;
-      case IND_ENVELOPES:
+       case IND_ENVELOPES:
          I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
          E(2,"Method","0",CALCULATION_METHOD_CHOICES) E(3,"Applied Price","0",PRICE_CHOICES)
          I(4,"Deviation %",TYPE_DOUBLE,"0.1")
          return 5;
-      case IND_FRAMA:
+       case IND_FRAMA:
          I(0,"Period",TYPE_INT,"14") 
          I(1,"Shift",TYPE_INT,"0")
          E(2,"Applied Price","0",PRICE_CHOICES)
          return 3;
-      case IND_AMA:
+       case IND_AMA:
          I(0,"AMA Period",TYPE_INT,"9") 
          I(1,"Fast EMA Period",TYPE_INT,"2")
          I(2,"Slow EMA Period",TYPE_INT,"30") 
          I(3,"Shift",TYPE_INT,"0")
          E(4,"Applied Price","0",PRICE_CHOICES)
          return 5;
-      case IND_DEMA:
+       case IND_DEMA:
          I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
          E(2,"Applied Price","0",PRICE_CHOICES)
          return 3;
-      case IND_TEMA:
+       case IND_TEMA:
          I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
          E(2,"Applied Price","0",PRICE_CHOICES)
          return 3;
-      case IND_VIDYA:
+       case IND_VIDYA:
          I(0,"CMO Period",TYPE_INT,"9") I(1,"EMA Period",TYPE_INT,"12")
          I(2,"Shift",TYPE_INT,"0") E(3,"Applied Price","0",PRICE_CHOICES)
          return 4;
-      case IND_ADX:
+       case IND_ADX:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_ADXW:
+       case IND_ADXW:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_STDDEV:
+       case IND_STDDEV:
          I(0,"Period",TYPE_INT,"20") 
          I(1,"Shift",TYPE_INT,"0")
          E(2,"Method","0",CALCULATION_METHOD_CHOICES) 
          E(3,"Applied Price","0",PRICE_CHOICES)
          return 4;
-
-     // --- Oscillator ------------------------------------------------------
-      case IND_RSI:
+      // --- Oscillator ------------------------------------------------------
+       case IND_RSI:
          I(0,"Period",TYPE_INT,"14") E(1,"Applied Price","0",PRICE_CHOICES)
          return 2;
-      case IND_MACD:
+       case IND_MACD:
          I(0,"Fast EMA Period",TYPE_INT,"12") I(1,"Slow EMA Period",TYPE_INT,"26")
          I(2,"Signal Period",TYPE_INT,"9") E(3,"Applied Price","0",PRICE_CHOICES)
          return 4;
-      case IND_STOCHASTIC:
+       case IND_STOCHASTIC:
          I(0,"%K Period",TYPE_INT,"5") 
          I(1,"%D Period",TYPE_INT,"3")
          I(2,"Slowing",TYPE_INT,"3") 
          E(3,"Method","0",CALCULATION_METHOD_CHOICES)
          E(4,"Price Field","0",STOCH_PRICE_CHOICES)
          return 5;
-      case IND_CCI:
+       case IND_CCI:
          I(0,"Period",TYPE_INT,"14") 
          E(1,"Applied Price","5",PRICE_CHOICES)
          return 2;
-      case IND_MOMENTUM:
+       case IND_MOMENTUM:
          I(0,"Period",TYPE_INT,"14") 
          E(1,"Applied Price","0",PRICE_CHOICES)
          return 2;
-      case IND_DEMARKER:
+       case IND_DEMARKER:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_RVI:
+       case IND_RVI:
          I(0,"Period",TYPE_INT,"10")
          return 1;
-      case IND_WPR:
+       case IND_WPR:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_OSMA:
+       case IND_OSMA:
          I(0,"Fast EMA Period",TYPE_INT,"12") 
          I(1,"Slow EMA Period",TYPE_INT,"26")
          I(2,"Signal Period",TYPE_INT,"9") 
          E(3,"Applied Price","0",PRICE_CHOICES)
          return 4;
-      case IND_TRIX:
+       case IND_TRIX:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_ATR:
+       case IND_ATR:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_FORCE:
+       case IND_FORCE:
          I(0,"Period",TYPE_INT,"13") 
          E(1,"Method","1",CALCULATION_METHOD_CHOICES)
          E(2,"Applied Volume","0",VOLUME_CHOICES)
          return 3;
-      case IND_AO:
+       case IND_AO:
          return 0;
-      case IND_AC:
+       case IND_AC:
          return 0;
-      case IND_GATOR:
+       case IND_GATOR:
          I(0,"Jaw Period",TYPE_INT,"13")  
          I(1,"Jaw Shift",TYPE_INT,"8")
          I(2,"Teeth Period",TYPE_INT,"8") 
@@ -282,13 +281,13 @@ int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
          E(6,"Method","2",CALCULATION_METHOD_CHOICES) 
          E(7,"Applied Price","4",PRICE_CHOICES)
          return 8;
-      case IND_BEARS:
+       case IND_BEARS:
          I(0,"Period",TYPE_INT,"13")
          return 1;
-      case IND_BULLS:
+       case IND_BULLS:
          I(0,"Period",TYPE_INT,"13")
          return 1;
-      case IND_CHAIKIN:
+       case IND_CHAIKIN:
          I(0,"Fast MA Period",TYPE_INT,"3") 
          I(1,"Slow MA Period",TYPE_INT,"10")
          E(2,"Method","1",CALCULATION_METHOD_CHOICES) 
@@ -296,23 +295,23 @@ int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
          return 4;
 
       // --- Volumes ---------------------------------------------------------
-      case IND_OBV:
+       case IND_OBV:
          E(0,"Applied Volume","0",VOLUME_CHOICES)
          return 1;
-      case IND_AD:
+       case IND_AD:
          E(0,"Applied Volume","0",VOLUME_CHOICES)
          return 1;
-      case IND_MFI:
+       case IND_MFI:
          I(0,"Period",TYPE_INT,"14")
          return 1;
-      case IND_VOLUMES:
+       case IND_VOLUMES:
          E(0,"Applied Volume","0",VOLUME_CHOICES)
          return 1;
-      case IND_BWMFI:
+       case IND_BWMFI:
          return 0;
 
       // --- Arrows ----------------------------------------------------------
-      case IND_FRACTALS:
+       case IND_FRACTALS:
          return 0;
 
       default:
@@ -327,14 +326,14 @@ int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
  string LineStyleDescription(const ENUM_LINE_STYLE style)
   {
     return
-        (
-          style==STYLE_SOLID      ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_SOLID)      :
-          style==STYLE_DASH       ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASH)       :
-          style==STYLE_DOT        ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DOT)        :
-          style==STYLE_DASHDOT    ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOT)    :
-          style==STYLE_DASHDOTDOT ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOTDOT) :
-          "Unknown"
-        );
+      (
+        style==STYLE_SOLID      ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_SOLID)      :
+        style==STYLE_DASH       ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASH)       :
+        style==STYLE_DOT        ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DOT)        :
+        style==STYLE_DASHDOT    ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOT)    :
+        style==STYLE_DASHDOTDOT ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOTDOT) :
+        "Unknown"
+      );
   }
  //+------------------------------------------------------------------+
  //| Compare two MqlParam structures                                  |

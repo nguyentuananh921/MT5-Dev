@@ -4,3 +4,5 @@ Get-shit-done
 https://github.com/gsd-build/get-shit-done
 
 https://github.com/amazingloft999-droid/mattpocock-skills
+
+C:\Users\nguye\.claude\projects\D--MT5-Dev\memory\

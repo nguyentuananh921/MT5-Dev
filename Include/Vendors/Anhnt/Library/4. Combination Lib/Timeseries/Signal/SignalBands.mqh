@@ -2,7 +2,10 @@
 //|                                                  SignalBands.mqh |
 //|  Signal for band-type indicators: price vs upper/lower band.    |
 //|                                                                  |
-//|  CSignalBollinger  (Bollinger Bands: buf 0=upper, 1=lower, 2=mid)
+//|  CSignalBollinger  (Bollinger Bands: buf 0=middle, 1=upper, 2=lower -
+//|    confirmed against MT5's own Standard Library CiBands class,   |
+//|    Include\Indicators\Trend.mqh:379-383 - buffer 0 was previously |
+//|    misread as "upper", causing wrong/over-frequent Buy/Sell)      |
 //|    BUY:  close[bar] < lower band                                |
 //|    SELL: close[bar] > upper band                                |
 //|                                                                  |
@@ -14,7 +17,7 @@
 #include "SignalBase.mqh"
 
 //+------------------------------------------------------------------+
-//--- Bollinger Bands: buffers 0=upper, 1=lower, 2=middle
+//--- Bollinger Bands: buffers 0=middle (BASE_LINE), 1=upper, 2=lower
 //+------------------------------------------------------------------+
 class CSignalBollinger : public CSignalBase
   {
@@ -40,8 +43,8 @@ CSignalBollinger::~CSignalBollinger(void)
 double CSignalBollinger::ComputeAt(int bar) const
   {
    if(m_indicator == NULL) return EMPTY_VALUE;
-   double upper = Buf(0, bar);
-   double lower = Buf(1, bar);
+   double upper = Buf(1, bar);
+   double lower = Buf(2, bar);
    if(upper == EMPTY_VALUE || lower == EMPTY_VALUE) return EMPTY_VALUE;
    double close[1];
    if(::CopyClose(m_indicator.Symbol(), m_indicator.Timeframe(), bar, 1, close) != 1) return EMPTY_VALUE;

@@ -3,16 +3,19 @@
 //| Minimal parser for this EA's indicator startup config file.      |
 //| Supports only the one shape this EA needs:                       |
 //|   {                                                               |
-//|     "symbols_tf": [ { "symbol": "<sym>", "tf": "<M1|...>" }, ], |
+//|     "symbols_tf": [ { "symbol": "<sym>", "tf": "<M1|...>",        |
+//|                       "buy": <true|false>, "sell": <true|false> }, ], |
 //|     "templates":  [ { "type": "<catalog name>",                  |
+//|                        "buy": <true|false>, "sell": <true|false>,|
+//|                        "sound": <true|false>, "message": <true|false>, |
 //|                        "params": [ <number> | "<choice text>", ] }, ]|
 //|   }                                                               |
 //| A "params" element is either a bare number (plain param, e.g.     |
 //| Period/Shift/Deviation) or a quoted string (enum-like param, e.g. |
 //| Method/Applied Price - matched against the catalog schema's      |
-//| choices text at load time, see LoadIndicatorFromJSON).            |
+//| choices text at load time, see LoadConfigurationFromJSON).            |
 //| "//" starts a line comment - non-standard JSON, but this file    |
-//| is our own format (used only by LoadIndicatorFromJSON), not      |
+//| is our own format (used only by LoadConfigurationFromJSON), not      |
 //| meant to be read by other JSON tools.                            |
 //+------------------------------------------------------------------+
 #ifndef __INDICATORCONFIGLOADER_MQH__
@@ -20,12 +23,18 @@
   struct SJsonIndicatorEntry
     {
      string type;
+     bool   buy;
+     bool   sell;
+     bool   sound;         // per-template alert sound opt-in (2026-07-17, m_table_indicator col 5)
+     bool   message;       // per-template Journal message opt-in (col 6)
      string params[];      // raw token text - unquoted content for strings, digits as-is for numbers
     };
   struct SJsonSymbolTF
     {
      string symbol;
      string tf;            // "M1", "H1", ... (TimestampByDescription() format)
+     bool   buy;
+     bool   sell;
     };
   //--- strip "//" line comments before scanning
   string IndicatorConfig_StripComments(const string &raw)
@@ -99,9 +108,71 @@
      out = StringSubstr(s, start, pos - start);
      return pos;
     }
+  //--- read a bare true/false literal starting at pos, return pos after it
+  int IndicatorConfig_ReadBool(const string &s, int pos, bool &out)
+    {
+     out = false;
+     if(StringSubstr(s, pos, 4) == "true")
+       {
+        out = true;
+        return pos + 4;
+       }
+     if(StringSubstr(s, pos, 5) == "false")
+       return pos + 5;
+     return pos;
+    }
+  //--- skips ANY JSON value (object/array/string/number/true/false/null) starting at pos,
+  //--- returning pos right after it - used for top-level keys this loader doesn't itself
+  //--- understand (e.g. "markers", written by CGUIPannel::SaveMarkerSettings into the same
+  //--- Config_Setting.json file) so an unrecognized key doesn't desync the whole parse.
+  int IndicatorConfig_SkipValue(const string &s, int pos)
+    {
+     int len = StringLen(s);
+     pos = IndicatorConfig_SkipSpace(s, pos);
+     if(pos >= len) return pos;
+     ushort ch = StringGetCharacter(s, pos);
+     if(ch == '{' || ch == '[')
+       {
+        ushort open_ch  = ch;
+        ushort close_ch = (ch == '{') ? '}' : ']';
+        int depth = 0;
+        bool in_string = false;
+        for(; pos < len; pos++)
+          {
+           ushort c = StringGetCharacter(s, pos);
+           if(in_string)
+             {
+              if(c == '\\') { pos++; continue; } // skip escaped char, whatever it is
+              if(c == '"') in_string = false;
+              continue;
+             }
+           if(c == '"') { in_string = true; continue; }
+           if(c == open_ch) depth++;
+           else if(c == close_ch)
+             {
+              depth--;
+              if(depth == 0) { pos++; break; }
+             }
+          }
+        return pos;
+       }
+     if(ch == '"')
+       {
+        string dummy;
+        return IndicatorConfig_ReadString(s, pos, dummy);
+       }
+     // --- bare literal (number/true/false/null) - scan to the next delimiter
+     while(pos < len)
+       {
+        ushort c = StringGetCharacter(s, pos);
+        if(c == ',' || c == '}' || c == ']') break;
+        pos++;
+       }
+     return pos;
+    }
   //--- read a "params" array whose elements are EITHER a bare number OR a "quoted
   //--- string" (enum choice text) - both stored as raw text in out[], the caller
-  //--- (LoadIndicatorFromJSON) decides how to interpret each element via the schema.
+  //--- (LoadConfigurationFromJSON) decides how to interpret each element via the schema.
   int IndicatorConfig_ReadParamsArray(const string &s, int pos, string &out[])
     {
      ArrayResize(out, 0);
@@ -126,10 +197,16 @@
        pos++; // skip ']'
      return pos;
     }
-  //--- read one { "type": "...", "params": [...] } object
+  //--- read one { "type": "...", "buy": true|false, "sell": true|false, "params": [...] } object -
+  //--- type/params keep their own readers, buy/sell are bare true/false literals (see
+  //--- IndicatorConfig_ReadSymbolTFEntry for why a blind ReadString() on those would hang).
   int IndicatorConfig_ReadEntry(const string &s, int pos, SJsonIndicatorEntry &entry)
     {
-     entry.type = "";
+     entry.type    = "";
+     entry.buy     = false;
+     entry.sell    = false;
+     entry.sound   = false;
+     entry.message = false;
      ArrayResize(entry.params, 0);
      pos = IndicatorConfig_SkipSpace(s, pos);
      if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '{')
@@ -154,17 +231,29 @@
           {
             pos = IndicatorConfig_ReadParamsArray(s, pos, entry.params);
           }
+        else if(key == "buy")
+           pos = IndicatorConfig_ReadBool(s, pos, entry.buy);
+        else if(key == "sell")
+           pos = IndicatorConfig_ReadBool(s, pos, entry.sell);
+        else if(key == "sound")
+           pos = IndicatorConfig_ReadBool(s, pos, entry.sound);
+        else if(key == "message")
+           pos = IndicatorConfig_ReadBool(s, pos, entry.message);
         pos = IndicatorConfig_SkipSpace(s, pos);
        }
      if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}')
        pos++; // skip '}'
      return pos;
     }
-  //--- read one { "symbol": "...", "tf": "..." } object
+  //--- read one { "symbol": "...", "tf": "...", "buy": true|false, "sell": true|false } object -
+  //--- symbol/tf are quoted strings, buy/sell are bare true/false literals, so each key needs
+  //--- its own reader (a blind ReadString() on a bare "true" token never advances pos - infinite loop).
   int IndicatorConfig_ReadSymbolTFEntry(const string &s, int pos, SJsonSymbolTF &entry)
     {
      entry.symbol = "";
      entry.tf     = "";
+     entry.buy    = false;
+     entry.sell   = false;
      pos = IndicatorConfig_SkipSpace(s, pos);
      if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '{')
        return pos;
@@ -178,10 +267,22 @@
         if(pos < StringLen(s) && StringGetCharacter(s, pos) == ':')
            pos++; // skip ':'
         pos = IndicatorConfig_SkipSpace(s, pos);
-        string value;
-        pos = IndicatorConfig_ReadString(s, pos, value);
-        if(key == "symbol") entry.symbol = value;
-        else if(key == "tf") entry.tf = value;
+        if(key == "symbol")
+          {
+           string value;
+           pos = IndicatorConfig_ReadString(s, pos, value);
+           entry.symbol = value;
+          }
+        else if(key == "tf")
+          {
+           string value;
+           pos = IndicatorConfig_ReadString(s, pos, value);
+           entry.tf = value;
+          }
+        else if(key == "buy")
+           pos = IndicatorConfig_ReadBool(s, pos, entry.buy);
+        else if(key == "sell")
+           pos = IndicatorConfig_ReadBool(s, pos, entry.sell);
         pos = IndicatorConfig_SkipSpace(s, pos);
        }
      if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}')
@@ -258,6 +359,8 @@
             pos = IndicatorConfig_ReadEntryArray(clean, pos, out_templates);
          else if(key == "symbols_tf")
             pos = IndicatorConfig_ReadSymbolTFArray(clean, pos, out_symbols_tf);
+         else
+            pos = IndicatorConfig_SkipValue(clean, pos); // e.g. "markers" - not this loader's concern
          pos = IndicatorConfig_SkipSpace(clean, pos);
         }
       return true;
@@ -277,5 +380,32 @@
    FileClose(handle);
    return IndicatorConfig_ParseText(text, out_templates, out_symbols_tf);
   }
+  //--- reads MQL5\Files\<filename> as plain text, "" if missing - shared by every writer that
+  //--- needs to read the file back before rewriting it (to preserve sections it doesn't own).
+  string IndicatorConfig_ReadWholeFile(const string &filename)
+   {
+    int fh = FileOpen(filename, FILE_READ | FILE_TXT | FILE_ANSI);
+    if(fh == INVALID_HANDLE) return "";
+    string text = "";
+    while(!FileIsEnding(fh))
+       text += FileReadString(fh) + "\n";
+    FileClose(fh);
+    return text;
+   }
+  //--- extracts the raw (unparsed) text of a top-level key's value from previously-read JSON
+  //--- content, "" if the key isn't present - lets a writer that only understands SOME of the
+  //--- top-level keys (e.g. CTimeSeriesEngine only knows "symbols_tf"/"templates", GUIPannel's
+  //--- marker settings only know "markers") carry the OTHER keys through unchanged when it
+  //--- rewrites the shared Config_Setting.json file, instead of clobbering them.
+  string IndicatorConfig_ExtractRawSection(const string &content, const string key)
+   {
+    int pos = StringFind(content, "\"" + key + "\"");
+    if(pos < 0) return "";
+    int colon = StringFind(content, ":", pos);
+    if(colon < 0) return "";
+    int start = IndicatorConfig_SkipSpace(content, colon + 1);
+    int end   = IndicatorConfig_SkipValue(content, start);
+    return StringSubstr(content, start, end - start);
+   }
 
 #endif // __INDICATORCONFIGLOADER_MQH__
