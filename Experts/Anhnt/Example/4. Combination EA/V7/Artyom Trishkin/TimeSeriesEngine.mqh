@@ -610,50 +610,45 @@
       SIndicatorCatalogItem catalog[];
       GetIndicatorCatalog(catalog);
 
-      // --- "symbols_tf": every (symbol,TF) series that currently exists in Layer 1 -
-      // --- so next EA attach can recreate them without the user re-visiting each chart.
-      // --- buy/sell come from the GUI's Symbol TF setting table (sf_symbols/sf_tfs/sf_buy/
-      // --- sf_sell, matched by symbol+tf) - default false/false when a pair isn't found there.
+      // --- "symbols_tf": exactly the (symbol,TF) pairs the GUI's Symbol TF setting table has
+      // --- right now (sf_symbols/sf_tfs/sf_buy/sf_sell) - so next EA attach recreates only
+      // --- those. NOT a re-scan of m_BarTimeSeriesCollection (Anhnt, 2026-07-19 - a pair the
+      // --- user deleted via the table's delete icon keeps its CBarSeriesDE alive in Layer 1
+      // --- all session, since there's no RemoveSeries() API yet; re-scanning Layer 1 here
+      // --- would silently resurrect it into the file on the very next Save, undoing the delete).
       string json = "{\n \"symbols_tf\": [\n";
       int sym_saved = 0;
-      CArrayObj *sym_containers = m_BarTimeSeriesCollection.GetList();
-      int sym_total = (sym_containers != NULL) ? sym_containers.Total() : 0;
-      for(int si = 0; si < sym_total; si++)
-        {
-         CBarTimeSeriesDE *bts = sym_containers.At(si);
-         if(bts == NULL) continue;
-         CArrayObj *series_list = bts.GetListSeries();
-         int series_total = (series_list != NULL) ? series_list.Total() : 0;
-         // --- Sort this symbol's timeframes ascending by IndexEnumTimeframe() (CommonDELib.mqh -
-         // --- M1..MN1 natural rank) before writing, instead of raw creation order.
-         int order[];
-         ArrayResize(order, series_total);
-         for(int ti = 0; ti < series_total; ti++)
-            order[ti] = ti;
-         for(int a = 0; a < series_total - 1; a++)
-            for(int b = a + 1; b < series_total; b++)
-              {
-               CBarSeriesDE *sa = series_list.At(order[a]);
-               CBarSeriesDE *sb = series_list.At(order[b]);
-               if(sa == NULL || sb == NULL) continue;
-               if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
-                 { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
-              }
-         for(int ti = 0; ti < series_total; ti++)
+      int sf_total = ArraySize(sf_symbols);
+      // --- Sort by symbol (alphabetical) then ascending IndexEnumTimeframe() (CommonDELib.mqh -
+      // --- M1..MN1 natural rank) within each symbol (Anhnt, 2026-07-19 - the GUI table itself
+      // --- is left in whatever order rows got added/deleted in, so this is the only place the
+      // --- order is actually normalized; sorting it here too, live in the table, would risk
+      // --- CTable flicker for no real benefit - LoadConfigurationFromJSON recreates series in
+      // --- file order, so a sorted file alone is enough to make the NEXT attach's table sorted).
+      int order[];
+      ArrayResize(order, sf_total);
+      for(int i = 0; i < sf_total; i++) order[i] = i;
+      for(int a = 0; a < sf_total - 1; a++)
+         for(int b = a + 1; b < sf_total; b++)
            {
-            CBarSeriesDE *s = series_list.At(order[ti]);
-            if(s == NULL) continue;
-            string tf_text = TimeframeDescription(s.Timeframe());
-            bool buy = false, sell = false;
-            for(int q = 0; q < ArraySize(sf_symbols); q++)
-              if(sf_symbols[q] == s.Symbol() && sf_tfs[q] == tf_text)
-                { buy = sf_buy[q]; sell = sf_sell[q]; break; }
-            if(sym_saved > 0) json += ",\n";
-            sym_saved++;
-            json += "  { \"symbol\": \"" + s.Symbol() + "\", \"tf\": \"" + tf_text +
-                    "\", \"buy\": " + (buy ? "true" : "false") +
-                    ", \"sell\": " + (sell ? "true" : "false") + " }";
+            bool swap = false;
+            if(sf_symbols[order[a]] > sf_symbols[order[b]])
+               swap = true;
+            else if(sf_symbols[order[a]] == sf_symbols[order[b]] &&
+                    IndexEnumTimeframe(TimestampByDescription(sf_tfs[order[b]])) < IndexEnumTimeframe(TimestampByDescription(sf_tfs[order[a]])))
+               swap = true;
+            if(swap)
+              { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
            }
+      for(int i = 0; i < sf_total; i++)
+        {
+         int q = order[i];
+         if(sf_symbols[q] == "") continue;
+         if(sym_saved > 0) json += ",\n";
+         sym_saved++;
+         json += "  { \"symbol\": \"" + sf_symbols[q] + "\", \"tf\": \"" + sf_tfs[q] +
+                 "\", \"buy\": " + (sf_buy[q] ? "true" : "false") +
+                 ", \"sell\": " + (sf_sell[q] ? "true" : "false") + " }";
         }
       json += "\n ],\n \"templates\": [\n";
 

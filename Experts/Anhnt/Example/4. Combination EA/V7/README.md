@@ -1,8 +1,4 @@
-# Combination EA V7 — Sổ tay trạng thái & quyết định
-> Note làm việc, cập nhật lần cuối: 2026-07-12.
-> Quy ước chung: hội thoại tiếng Việt, comment trong code tiếng Anh.
 > Hồ sơ bug chi tiết + luật xương máu: BugNote.md.
-
 1. EA gồm có 
  [] Layer 1:PureData Sử dụng Library của Artyom Trishkin
    - Library link Lib https://www.mql5.com/en/articles/14710
@@ -16,7 +12,7 @@
     - Chỉ hold pointer các collection,không own gì thuộc PureData.
     - Layer 2 sẽ Control việc Show/Hide trên Layer 3
    [] Layer 3: Display On Chart, control by Layer 2 and base on Layer 1
-Rule:
+2. Working Rule:
  [] Trao đổi bằng tiếng Việt, Comment trong code bằng tiếng Anh.
  [] Print Debug:   ::Print("MY DEBUG CGUIPannel::LineRepresentsIndicator .....=", ....);
     Tức là khi Print Debug phải có class và Method để còn lựa mà xóa đi.
@@ -35,7 +31,7 @@ Rule:
  [] Hạn chế tối đa Flicker ở Layer 2.
  [] Hạn chế viết method Inline, chỉ các method return ngắn gọn,mới dùng inline.
 
-2. Layer 1: 
+3. Layer 1: 
  []: CTimeSeriesEngine
    [] m_BarTimeSeriesCollection -> m_IndicatorsCollection quan hệ 1-n : Một CBarSeriesDE sẽ có nhiều CIndicatorDE
    [] m_IndicatorsCollection    -> m_SignalsCollection    quan hệ 1-1 : Mỗi Indicator sẽ có một Signal, một Signal có thể có nhiều Buffer (BBand)
@@ -43,10 +39,15 @@ Rule:
      [v] LoadIndicatorFromJSON
      [v] AddNewIndicatorToAllSeries
      [v] AddAllIndicatorsToNewSeries
-     [v] CIndicatorsCollection::TemplateExists(type, params):Check xem Indicator trên chart (Layer 3) đã có ở Layer 1 hay chưa
-     [v] Save to JSON. 
+     [v] CIndicatorsCollection::TemplateExists(type, params):Check xem Indicator trên chart (Layer 3)  đã có ở Layer 1 hay chưa
+     [v] Save to JSON.
+   [] Carefull check Indicator and Signal
+     [v]BBand: Boillinger Band
+     [v] AMA: Slope indicator
+     [v] MACD:
+
    [] Hiện mới xử lý IND_SAR và IND_MA
-3. Layer 2
+4. Layer 2
   [v] CTreeView  m_treeview_SymbolTF;
      [v] Display Symbol + TF on Layer 1.
      [v] Highlight node base on Current Chart on Layer 3
@@ -61,7 +62,7 @@ Rule:
      [v] checkbox cột Buy của m_table_indicator -> Show Buy Signal của Indicator tương ứng on Chart (Layer 3)
      [v] checkbox cột Sell của m_table_indicator -> Show Sell Signal của Indicator tương ứng on Chart (Layer 3)
   [v] CTable     m_table_indicator_SymbolTFValue;
-4. Layer 3: Display on Chart
+5. Layer 3: Display on Chart
    [v] Indicator sẽ display bằng Buildin MT5 được control bởi Layer 2.
    [x] Buy/Sell Signal sẽ được display bằng CGraphElementsCollection.
    [x] Quản lý Event bởi CChartObjCollection
@@ -78,10 +79,11 @@ Rule:
      [v] Bị mất khi đổi TF
      [v] Chạy ngang
 
-5. Bug note
+6. Bug note
   2027 0713 
    [] CTradingLevelBubble: 
      [] Rất khó di chuyển.
      [v] ChartChange là mất.
    [v] m_table_indicator bị duplicate BBand
   
+7. Feature Note

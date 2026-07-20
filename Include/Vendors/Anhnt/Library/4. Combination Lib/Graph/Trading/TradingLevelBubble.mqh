@@ -93,6 +93,14 @@
       double            m_price_per_pixel;    // price change per vertical pixel at drag-start
      bool              m_prev_left_btn; // previous MOUSE_MOVE's button state - see OnChartEvent note
      bool              m_prev_over;     // previous MOUSE_MOVE's dragbox-hover state
+     // --- True only while THIS class is the one holding CHART_MOUSE_SCROLL/AUTOSCROLL off
+     // --- (Anhnt, 2026-07-19 - "chuột trong m_window_main mà Scroll vẫn ảnh hưởng chart" bug):
+     // --- every "not over a dragbox / not dragging" path used to force these back to true
+     // --- unconditionally, fighting CWindow::SetChartState()'s own off-switch while the mouse
+     // --- is hovering the GUI panel instead (confirmed via MY DEBUG log - MOUSE_SCROLL flapped
+     // --- true/false every ~5-10ms while MOUSE_WHEEL stayed true throughout). Now this class
+     // --- only ever restores what IT itself turned off.
+     bool              m_scroll_locked_by_me;
     // Interaction boxes (one slot per ENUM_BUBBLE_TYPE)
      SBubbleBox        m_hitbox[BUBBLE_TOTAL];   // X close button
      SBubbleBox        m_dragbox[BUBBLE_TOTAL];  // draggable body    
@@ -160,7 +168,7 @@
       m_drag_y(0), m_drag_bx(0), 
       //Adding new Properties in constructor
        m_drag_anchor_y(0), m_drag_price_anchor(0.0), m_price_per_pixel(0.0),
-      m_prev_left_btn(false), m_prev_over(false), m_market(NULL),
+      m_prev_left_btn(false), m_prev_over(false), m_scroll_locked_by_me(false), m_market(NULL),
       m_trading_control(NULL),
       m_chart_obj_collection(NULL),
       m_drag_offset_y(0),
@@ -251,6 +259,7 @@
        // (diagonal/sideways) doesn't change the mapped time coordinate.
         ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
         ChartSetInteger(0, CHART_AUTOSCROLL, true);
+        m_scroll_locked_by_me = false;
         int dy = m_drag_y - m_drag_anchor_y;
         double new_price = m_drag_price_anchor + dy * m_price_per_pixel;
         ModifyAll(m_drag_type, new_price);
@@ -276,10 +285,15 @@
             my >= m_dragbox[i].y1 && my <= m_dragbox[i].y2)
            { over_now = true; break; }
         }
-       if(!over_now)
+       // --- Only restore what THIS class itself turned off (Anhnt, 2026-07-19) - never touch
+       // --- MOUSE_SCROLL/AUTOSCROLL when m_scroll_locked_by_me is false, since that means some
+       // --- other owner (e.g. CWindow, hovering the GUI panel) is the one holding it off right
+       // --- now for its own unrelated reason.
+       if(!over_now && m_scroll_locked_by_me)
         {
          ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
          ChartSetInteger(0, CHART_AUTOSCROLL, true);
+         m_scroll_locked_by_me = false;
         }
     }
    // Canvas resize check
@@ -367,8 +381,23 @@
         bool safe_to_engage = !wandered_in;
 
         bool lock = m_is_dragging || (over && safe_to_engage);
-        ChartSetInteger(0, CHART_MOUSE_SCROLL, !lock);
-        ChartSetInteger(0, CHART_AUTOSCROLL,   !lock);
+        // --- Only ever touch MOUSE_SCROLL/AUTOSCROLL for OUR OWN lock/unlock transitions
+        // --- (Anhnt, 2026-07-19 - see m_scroll_locked_by_me declaration): locking is always
+        // --- safe to assert, but unlocking must never fire unless THIS class was the one
+        // --- holding it off, otherwise it clobbers CWindow's own off-switch while the mouse
+        // --- hovers the GUI panel instead of a dragbox.
+        if(lock)
+          {
+           ChartSetInteger(0, CHART_MOUSE_SCROLL, false);
+           ChartSetInteger(0, CHART_AUTOSCROLL,   false);
+           m_scroll_locked_by_me = true;
+          }
+        else if(m_scroll_locked_by_me)
+          {
+           ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
+           ChartSetInteger(0, CHART_AUTOSCROLL,   true);
+           m_scroll_locked_by_me = false;
+          }
 
         // Begin drag immediately (no 16ms delay) - gated by safe_to_engage so an unrelated pan
         // wandering across the dragbox never gets hijacked into a bubble drag.

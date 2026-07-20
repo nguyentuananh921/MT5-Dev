@@ -19,7 +19,7 @@
 //+------------------------------------------------------------------+
 class CSignalMACDLineCross : public CSignalBase
   {
-public:
+   public:
                     CSignalMACDLineCross(void);
    virtual          ~CSignalMACDLineCross(void);
 

@@ -1624,6 +1624,16 @@
             }
           // --- If (1) this is not our node or (2) the sequence of local item
           // indices is not respected, let's move on to the next one
+          // --- NOTE (Anhnt, 2026-07-20 - "XAUUSDm missing from m_treeview_SymbolTF" bug):
+          // --- this silently DROPS item i from the displayed list whenever its item_index
+          // --- isn't strictly greater than the max already seen at this node_level so far -
+          // --- no error, no log, just missing from the tree. Caller code (AddTreeItem's
+          // --- item_index argument) MUST assign item_index in the exact same order items are
+          // --- added (list_index order) within a given node_level - it CANNOT be based on any
+          // --- external sort/id (e.g. a raw source-array index) if the caller's own visiting/
+          // --- insertion order doesn't match that external ordering. Worked around on the
+          // --- GUIPannel.mqh call site (CGUIPannel::PopulateSymbolTFTree) instead of fixing
+          // --- here - revisit if this bites another caller.
            if (nl != m_t_node_level[i] || m_t_item_index[i] <= l_item_index[nl])
             continue;
           // --- Let's move on to the next point if (1) is not currently in the root

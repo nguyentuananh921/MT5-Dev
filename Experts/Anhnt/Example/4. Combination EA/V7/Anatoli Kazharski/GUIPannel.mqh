@@ -30,9 +30,20 @@
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
 #define CGUIPANNEL_MQH_DECLARATION
- // Define GUI control  
-  enum ENUM_TAB_MAIN
-    {
+ // Define GUI control
+  // --- Main panel window m_window_main
+    #define M_WINDOW_MAIN_WIDTH         750
+    #define M_WINDOW_MAIN_HEIGHT        480
+   //Left pannel m_treeview_SymbolTF (fixed left strip, visible on all tabs)   
+    //#define SYMBOL_TREE_WIDTH         100
+    #define M_TREEVIEW_SYMBOLTF_WIDTH   100
+   //Right Pannel m_tabs_main starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.
+    // --- AutoXResizeRightOffset=3, so: TABS_WIDTH = PANEL_WIDTH - TABS_MAIN_X - 3.    
+    #define M_TABS_MAIN_X               115
+    #define M_TABS_MAIN_Y               43
+    #define M_TABS_MAIN_WIDTH           (M_WINDOW_MAIN_WIDTH - M_TABS_MAIN_X - 3)
+    enum ENUM_TAB_MAIN
+     {
       TAB_TAB_MAIN_ACCOUNT_INFO = 0,
       TAB_TAB_MAIN_SYMBOL_INFO,
       TAB_TAB_MAIN_TRADE,
@@ -41,42 +52,38 @@
       TAB_TAB_MAIN_SETTINGS,
       TAB_TAB_MAIN_EVENTS, //For Pattern Information      
       TAB_TAB_MAIN_TOTAL,
-    };
-  enum ENUM_TAB_CONFIG
-   {
-    TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR =0,
-    TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,    
-    TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER,
-    TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL,
-   };
+     };
+     //m_tabs_main_setting_config      
+      enum ENUM_TAB_MAIN_SETTINGS_CONFIG
+       {
+        TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR =0,
+        TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,    
+        TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER,
+        TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL,
+       };
+      enum ENUM_INDICATOR_SHOW_STATE
+       {
+        INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
+        INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
+       };
+   // Status bar items
+    #define STATUS_LABELS_TOTAL 4
+    enum ENUM_STATUS_BAR_ITEM
+     {
+      STATUS_BAR_HELP = 0,
+      STATUS_BAR_DEPOSIT_LOAD,
+      STATUS_BAR_PROFIT,
+      STATUS_BAR_SERVER_TIME,
+     };
+  //--------------------
   enum ENUM_CHECKBOX_STATE
    {
     CHECKBOX_STATE_ON  = 0,
     CHECKBOX_STATE_OFF = 1,
    };
-  enum ENUM_INDICATOR_SHOW_STATE
-   {
-    INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
-    INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
-   }; 
-  // Status bar items
-   #define STATUS_LABELS_TOTAL 4
-   enum ENUM_STATUS_BAR_ITEM
-    {
-      STATUS_BAR_HELP = 0,
-      STATUS_BAR_DEPOSIT_LOAD,
-      STATUS_BAR_PROFIT,
-      STATUS_BAR_SERVER_TIME,
-    };
-  //+------------------------------------------------------------------+
-  //| Tab indices                                                      |
-  //+------------------------------------------------------------------+
-    //  enum ENUM_TAB_INFO
-    //   {
-    //     TAB_INFO_PATTERNS   = 0,   // Candle pattern confluence
-    //     TAB_INFO_INDICATORS = 1,   // Indicator values (future)      
-    //     TAB_INFO_TOTAL
-    //   };  
+   
+  
+   
   // =====================================================================
   // --- Layer 2 (GUI) layout descriptor - decided BEFORE CreateAddIndicatorParaInfor/
   // --- ShowIndicatorParameterForm ever runs, separate from Layer 1's
@@ -100,16 +107,9 @@
   // --- Layout constants: all pixel dimensions defined here.
   // --- Change here; derived values update automatically.
   // =====================================================================
-  // --- Main panel window
-   #define PANEL_WIDTH               750
-   #define PANEL_HEIGHT              480
-  // --- Symbol/TF tree (fixed left strip, visible on all tabs)
-   #define SYMBOL_TREE_WIDTH         100
-  // --- m_tabs_main: starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.
-  // --- AutoXResizeRightOffset=3, so: TABS_WIDTH = PANEL_WIDTH - TABS_MAIN_X - 3.
-   #define TABS_MAIN_X               115
-   #define TABS_MAIN_Y               43
-   #define TABS_WIDTH                (PANEL_WIDTH - TABS_MAIN_X - 3)
+  
+  
+  
   // --- Nested m_tabs_main_setting_config header (its own tab row draws ABOVE its
   // --- canvas - offsetting its canvas down by the header height keeps that row
   // --- clear of m_tabs_main's own tab headers instead of overlapping them).
@@ -135,6 +135,15 @@
    #define SYMBOLTF_NOTE_H           20
    #define SYMBOLTF_BTN_Y            (SYMBOLTF_NOTE_H + 5)
    #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + ADD_BTN_H + 10)
+  // --- Positions tab: pre-trade-plan area above m_table_positions (Anhnt 2026-07-20).
+  // --- Row 1 (y=POSITIONS_PLAN_Y): m_combo_pre_Trade_plan_symbol.
+  // --- Row 2 (y=POSITIONS_PLAN_CONTROLS_Y): Distance mode+value, Lot mode+value - one
+  // --- horizontal row per user request ("dàn hàng ngang").
+  // --- Row 3 (y=POSITIONS_PLAN_TABLE_Y): m_table_pre_Trade_plan.
+   #define POSITIONS_PLAN_Y             0
+   #define POSITIONS_PLAN_CONTROLS_Y    25
+   #define POSITIONS_PLAN_TABLE_Y       50
+   #define POSITIONS_TABLE_Y            175
   // --- Candle info popup (BugNote 7.2): Ctrl+hover shows m_table_candle_information_atBar -
   // --- every tracked Indicator (current chart's symbol, every TF with a BarSeries) with its
   // --- Signal direction at the hovered bar. Fixed at the chart's top-right corner - content
@@ -159,25 +168,26 @@
   class CGUIPannel : public CWndEvents
    {
     private: 
-     //PUre Data Layer 1
-     // Private Pointer variables    
-      CSymbolsCollection         *m_symbol_collection;                //CTradingEngine owns
-      CBarTimeSeriesCollection   *m_BarTimeSeriesCollection;          //CBarTimeSeriesCollection owns      
-      CBarPatternsControl        *m_pattern_cfg;                      // borrowed from EA
-      CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
-      CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
-      CTickSeriesCollection      *m_tick_series;                      // Collection of tick series
+     //Layer 1 Pure Data
+      // Private Pointer variables    
+       CSymbolsCollection         *m_symbol_collection;                //CTradingEngine owns
+       CBarTimeSeriesCollection   *m_BarTimeSeriesCollection;          //CBarTimeSeriesCollection owns      
+       CBarPatternsControl        *m_pattern_cfg;                      // borrowed from EA
+       CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
+       CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
+       CTickSeriesCollection      *m_tick_series;                      // Collection of tick series
       
-      CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
-      int                        m_pending_remove_row;                // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
-      int                        m_pending_remove_row_symboltf;       // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
-      
+       CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
+       //For Layer 2 Handling on m_table_indicator
+        int                        m_pending_remove_row;                // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
+        int                        m_pending_remove_row_symboltf;       // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
+     //------------------- 
       CTimeCounter               m_gui_timecounter;                   //--- Time counters
-      CKeys                      m_keys;                              //For Keyboard    
-     // For trading bubble
-     //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
+      CKeys                      m_keys;                              //For Keyboard
+     //For Layer 2 Gui Control
+      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
       CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
-     // Control Elements
+      // GUI Control Elements
        CWindow                    m_window_main;
       //Control at m_window_main       
        //For CTreeView left pannel 
@@ -187,6 +197,21 @@
         CTabs                      m_tabs_main;
         //for control at TAB_TAB_MAIN_TRADE
           CTable               m_table_indicator_SymbolTFValue;
+        //For TAB_TAB_MAIN_POSITIONS - ported verbatim from V1 (Anatoli Kazharski\GUIPannel.mqh)
+          CComboBox            m_combo_pre_Trade_plan_symbol;
+          //--- Order-setup row, single horizontal line (Anhnt 2026-07-20): Distance mode toggle
+          //--- + Distance value, Lot mode toggle + Lot-or-Risk% value (same edit box, meaning
+          //--- switches with m_group_pre_trade_lot_mode - see SetValuesToPreTradePlanTable).
+          CTextLabel           m_label_pre_trade_distance;
+          CButtonsGroup        m_group_pre_trade_distance_mode;   // Fixed / ATR
+          CTextEdit            m_edit_pre_trade_distance_pts;
+          CTextLabel           m_label_pre_trade_lot;
+          CButtonsGroup        m_group_pre_trade_lot_mode;        // By Distance (manual) / By Risk %
+          CTextEdit            m_edit_pre_trade_lot_or_risk;
+          CTable               m_table_pre_Trade_plan;
+          CTable               m_table_positions;
+          datetime             m_last_deal_time;   // IsLastDealTicket's own HistorySelect watermark
+          ulong                m_last_deal_ticket;
         //For Control at TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR 
          CTabs                      m_tabs_main_setting_config;
          //For TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR at m_tabs_main_setting_config
@@ -281,14 +306,33 @@
           // --- Marker already shows closed-bar flips visually - Sound/Message is only for
           // --- catching a live move before it commits).
            ENUM_SIGNAL_DIR      m_live_signal_last_seen[];
-     //Information window at to display signal on chart
+          // --- BBands-only (IND_BANDS): Live-bar-0 tracker for CSignalBollinger's 2 remaining
+          // --- independent line histories (Upper/Lower - see ProcessBandLine/SignalBands.mqh
+          // --- Layer 1). MidBand is NOT tracked here anymore (Anhnt, 2026-07-19): it was folded
+          // --- into the primary signal itself (CSignalBollinger::ComputeAt IS the MidBand cross
+          // --- now), so Mid's Live/Closed events already come from the generic
+          // --- m_live_signal_last_seen / signal.HistoryDir() path below, with Sound included -
+          // --- keeping a separate Mid tracker here would have double-fired every Mid cross.
+          // --- Transient like the array above - only the LIVE side needs this; the Closed side
+          // --- reads CSignalBollinger's own real persisted LineHistoryXxx() instead.
+           ENUM_SIGNAL_DIR      m_upper_last_seen[];
+           ENUM_SIGNAL_DIR      m_lower_last_seen[];
+      //Information window at to display signal on chart
        CWindow                    m_window_candle_infomation;
        CTable                     m_table_candle_information_atBar;
        datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden
-     //For status Bar 
+      //For status Bar 
        CStatusBar                 m_status_bar;
-     //----------------
-         // per-row dirty-check cache for Trade tab table
+      // For guard on GUI.
+       bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA 
+     // --- Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
+       // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
+       // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
+       // --- indicator BY HAND on the chart. Styling (colors) is out of scope by design - MT5
+       // --- has no API to restyle an indicator instance that is already attached to a chart.
+        CChartObjCollection       m_chart_obj_collection;
+      
+     // per-row dirty-check cache for Trade tab table
          string               m_trade_cache_val[];
          int                  m_trade_cache_sig_icon[];
          int                  m_trade_cache_dir_icon[];
@@ -305,17 +349,10 @@
        // --- chart's current ::Symbol() (switching symbol resets it - see BuildAndWriteSignalBridge).
         string                    m_signal_bridge_symbol;
         datetime                  m_signal_bridge_last_time;
-
-       // --- Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
-       // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
-       // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
-       // --- indicator BY HAND on the chart. Styling (colors) is out of scope by design - MT5
-       // --- has no API to restyle an indicator instance that is already attached to a chart.
-        CChartObjCollection       m_chart_obj_collection;
+       
       // SIndicatorCatalogItem now lives in Artyom Trishkin\IndicatorCatalog.mqh (Tang 1 metadata)      
        // --- Params tab controls (generic fixed-slot form, max 4 params/indicator)
-     // For guard on GUI.
-      bool                          m_gui_created;        // guard thay cho s_gui_ready trong EA        
+            
     private: // Private methods
      //For GUI
        bool                            CreateGUIPannel(); 
@@ -357,9 +394,10 @@
          void                         RefreshIndicatorTable(void);         
          void                         RefreshIndicatorTableShowColumn(void);
          void                         SetIndicatorTableRow(const int row, CIndicatorDE *indicator);         
-         bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);         
+         bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);
          bool                         LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator);
          CIndicatorDE                 *OwnedInstanceOfLine(const int line_handle);
+         void                         DetachIndicatorFromChart(CIndicatorDE *indicator);
          void                         ImportForeignChartIndicators(void);
          void                         BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key);
          void                         ApplyLoadedIndicatorBuySell(void);
@@ -372,6 +410,27 @@
          void                         WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count);
          void                         ResetSignalBridge(void);
          void                         PurgeSignalArrowObjects(const string sym, const string tf_string);
+       //For Pre-Trade-Plan area (TAB_TAB_MAIN_POSITIONS), sits above m_table_positions - symbol
+       //picker + single-row order-setup table. Skeleton only (Anhnt 2026-07-20): Buy/Sell cells
+       //are plain CELL_BUTTON placeholders, NOT wired to send real orders yet - that needs the
+       //Distance(Fixed/ATR) and Lot(Manual/Risk%) mode toggles first (separate ButtonsGroup
+       //controls, not declared yet) to actually compute a price/lot worth sending.
+         bool                         CreatePreTradePlanSymbolCombo(const int x, const int y);
+         bool                         CreatePreTradePlanControls(const int x, const int y);
+         bool                         CreatePreTradePlanTable(const int x, const int y);
+         bool                         SetValuesToPreTradePlanTable(bool force = false);
+       //For Positions Table m_table_positions (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1,
+       //raw ::PositionsTotal()/::PositionGetX() loops (not Layer 1's CMarketCollection) - temporary,
+       //per user request to bring V1's table over as-is before any redesign.
+         bool                         CreatePositionsTable(const int x_gap, const int y_gap);
+         void                         InitializePositionsTable(void);
+         bool                         SetValuesToPositionsTable(string &symbols_name[], bool force = false);
+         bool                         IsLastDealTicket(void);
+         int                          GetPositionsSymbols(string &symbols_name[]);
+         double                       PositionAveragePrice(const string symbol);
+         int                          PositionsTotal(const string symbol);
+         double                       PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+         double                       PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
        //For Symbol/TF Setting Table m_table_indicator_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
          bool                         CreateTableSymbolTFSetting(const int x, const int y);
          void                         PopulateTableSymbolTFSetting(void);
@@ -407,11 +466,14 @@
          void                         OnClickChangeSoundFolder(void);
        //Per-indicator Sound/Message opt-in (m_table_indicator col 5/6) - fires on a genuinely NEW Signal
          void                         CheckIndicatorAlerts(void);
-         void                         WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status);
+         void                         WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text);
          datetime                     GetSignalLogWatermark(const string type_key, const string params_key);
          void                         SetSignalLogWatermark(const string type_key, const string params_key, const datetime t);
          void                         LoadSignalLogWatermarks(void);
          void                         SaveSignalLogWatermarksToFile(void);
+       //BBands-only: one independent line's real persisted history (CSignalBollinger::LineXxx) -
+       //Closed=log-only+own watermark, Live=Message+CSV (no Sound) - see CheckIndicatorAlerts
+         void                         ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name, ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key, const string label, const string tf_text, const int digits);
        //Helper
         static void                   SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw);
         int                           GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[]); 
@@ -431,6 +493,7 @@
        void                           OnDeinitEvent(const int reason);
        void                           OnTimerEvent(void);
        void                           OnTickEvent(void);
+       void                           OnTradeEvent(void);   // ported from V1 - refreshes m_table_positions on a genuinely new deal
        virtual void                   OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
       //For GUI
         void                           UpdateGUI(const bool redraw = false);        
@@ -868,11 +931,31 @@
    }
   void CGUIPannel::OnTickEvent(void)
    {
+      // --- Positions Table (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1, 2026-07-19:
+      // --- row-count mismatch (new/closed symbol) forces a full rebuild; otherwise a plain
+      // --- dirty-checked value refresh, same as V1's own OnTickEvent.
+      bool redraw_needed = false;
+      string pos_symbols_name[];
+      int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
+      int pos_rows_total = (int)m_table_positions.RowsTotal();
+      if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
+        {
+         InitializePositionsTable();
+         redraw_needed = true;
+        }
+      else if(pos_symbols_total > 0)
+         redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
       // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value
-      // --- actually changed - same call site/pattern as V1's OnTickEvent. Positions/Symbol
-      // --- Info table updates that used to sit alongside this in V1 aren't ported yet
-      // --- (those tabs are still empty shells in V7).
+      // --- actually changed - same call site/pattern as V1's OnTickEvent. Symbol Info table
+      // --- updates that used to sit alongside this in V1 aren't ported yet (still an empty
+      // --- shell in V7).
       if(UpdateStatusBar())
+         redraw_needed = true;
+      // --- Pre-trade-plan table (Anhnt 2026-07-20): Entry/SL live off Bid/Ask, dirty-checked
+      // --- per-cell same as everywhere else in this file.
+      if(SetValuesToPreTradePlanTable())
+         redraw_needed = true;
+      if(redraw_needed)
          ::ChartRedraw();
    }
   //+------------------------------------------------------------------+
@@ -880,9 +963,18 @@
   //+------------------------------------------------------------------+
   void CGUIPannel::OnDeinitEvent(const int reason)
    {
-      m_trading_bubble.OnDeinitEvent();
+      // --- CHARTCHANGE (TF/symbol switch on this SAME chart) must NOT touch
+      // --- m_trading_bubble's chart-level properties (Anhnt, 2026-07-19): its own
+      // --- OnDeinitEvent() restores CHART_SHOW_TRADE_LEVELS/CHART_SHIFT to MT5
+      // --- defaults, which only gets undone again (back to the bubble's preferred
+      // --- values) once EnsureCreated() next runs - and that's gated on HasAnyLevel(),
+      // --- so with zero open positions right after a TF change, native trade-level
+      // --- lines stay stuck ON indefinitely. The chart itself isn't going anywhere on
+      // --- CHARTCHANGE, so there's nothing to restore - skip it, same as every other
+      // --- teardown step below that already special-cases this reason.
       if(reason != REASON_CHARTCHANGE)
         {
+         m_trading_bubble.OnDeinitEvent();
          CWndEvents::Destroy();
          // --- Legacy cleanup (BugNote 2026-07-16, "2531 leftover Arrow objects after Remove
          // --- from chart"): the OLD graphic-object drawing path (CreateSignalBuy/Sell/
@@ -895,6 +987,7 @@
          // --- ChartIndicatorAdd() makes SignalMarkers.mq5 an independent chart program - it
          // --- keeps running/drawing even after this EA is gone unless explicitly detached here.
          RemoveMarkerIndicator();
+         ::ChartRedraw(m_chart_id);
         }
    }
   //+------------------------------------------------------------------+
@@ -977,7 +1070,7 @@
             Print(__FUNCTION__, " > Failed to create Status Bar!");
             return (false);
          }      
-       if (!CreateTab_Main(TABS_MAIN_X, TABS_MAIN_Y))
+       if (!CreateTab_Main(M_TABS_MAIN_X, M_TABS_MAIN_Y))
          {
             //Print(__FUNCTION__, " > Failed to create Tabs1!");
             return (false);
@@ -1006,6 +1099,14 @@
         if(!CreateTabSettingConfig_Marker(0, 22)) return false;
        //For Trade Tab at m_tabs_main
         if(!CreateIndicatorSymbolTFTable(0, 0)) return false;
+       //For Positions Tab at m_tabs_main - ported verbatim from V1 (2026-07-19)
+       //--- Pre-trade-plan area (2026-07-20): symbol combo, then the Distance/Lot mode+value
+       //--- controls in one horizontal row, then the order-setup table, m_table_positions
+       //--- still shifted down to POSITIONS_TABLE_Y below all of it.
+        if(!CreatePreTradePlanSymbolCombo(0, POSITIONS_PLAN_Y)) return false;
+        if(!CreatePreTradePlanControls(0, POSITIONS_PLAN_CONTROLS_Y)) return false;
+        if(!CreatePreTradePlanTable(0, POSITIONS_PLAN_TABLE_Y)) return false;
+        if(!CreatePositionsTable(0, POSITIONS_TABLE_Y)) return false;
       // --- Trading bubble: just wire the mouse pointer now (cheap, no canvas yet) -
       // --- it lazily creates its own canvas via EnsureCreated(), called from its own
       // --- OnPoll()/OnChartEvent(), only once HasAnyLevel() is true (avoid creating a
@@ -1055,8 +1156,8 @@
       //--- Add a window pointer to the window array
         CWndContainer::AddWindow(m_window_main);
       //--- Properties
-         m_window_main.XSize(PANEL_WIDTH);
-         m_window_main.YSize(PANEL_HEIGHT);
+         m_window_main.XSize(M_WINDOW_MAIN_WIDTH);
+         m_window_main.YSize(M_WINDOW_MAIN_HEIGHT);
          m_window_main.FontSize(9);
          m_window_main.IsMovable(true);
          m_window_main.ResizeMode(true);
@@ -1320,6 +1421,35 @@
                row_time[count] = ht;
                count++;
               }
+            // --- BBands-only: also surface the Upper/Lower line-cross histories (Anhnt,
+            // --- 2026-07-19) - same source BuildAndWriteSignalBridge now reads. Mid is
+            // --- skipped here: it IS the primary signal now (CSignalBollinger::ComputeAt),
+            // --- already collected by the generic signal.HistoryDir() loop just above -
+            // --- including it here too would duplicate every Mid cross in this table.
+            if(ind.TypeIndicator() == IND_BANDS)
+              {
+               CSignalBollinger *bb = (CSignalBollinger*)signal;
+               for(int li = 0; li < 3; li++)
+                 {
+                  if(li == BBAND_LINE_MID) continue;
+                  for(int h = bb.LineHistoryTotal(li) - 1; h >= 0; h--)
+                    {
+                     datetime ht = bb.LineHistoryTime(li, h);
+                     if(ht >= next_bar_time) continue;
+                     if(ht < bar_time) break;
+
+                     ArrayResize(row_ind,  count + 1);
+                     ArrayResize(row_tf,   count + 1);
+                     ArrayResize(row_dir,  count + 1);
+                     ArrayResize(row_time, count + 1);
+                     row_ind[count]  = ind;
+                     row_tf[count]   = tf_text;
+                     row_dir[count]  = bb.LineHistoryDir(li, h);
+                     row_time[count] = ht;
+                     count++;
+                    }
+                 }
+              }
            }
         }
 
@@ -1389,21 +1519,23 @@
       //--- Set text to the items of the status bar
          m_status_bar.SetValue(STATUS_BAR_HELP, "For Help, press F1");
       //--- Setup icons for Deposit Load item (arrow up=high load, gray=medium, arrow down=low)
+      //--- Same icon set as m_table_indicator_SymbolTFValue's own val_img (Anhnt, 2026-07-19 -
+      //--- unify look across the panel instead of the plain ARROW_UP/DOWN pair used before).
          CTextLabel *deposit_item = m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD);
          deposit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
-         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_UP_PNG);
-         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
          deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
          deposit_item.ChangeImage(0, 2); // default: gray
-         deposit_item.LabelXGap(14);     // shift text right for icon
+         deposit_item.LabelXGap(22);     // shift text right for icon (16px ICONS8 icon at x=2, same 22px clearance as m_table_indicator_SymbolTFValue's val_img)
       //--- Setup icons for Profit item (arrow up=profit, arrow down=loss, gray=zero)
          CTextLabel *profit_item = m_status_bar.GetItemPointer(STATUS_BAR_PROFIT);
          profit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
-         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_UP_PNG);
-         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
          profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
          profit_item.ChangeImage(0, 2); // default: gray
-         profit_item.LabelXGap(14);     // shift text right for icon
+         profit_item.LabelXGap(22);     // shift text right for icon (16px ICONS8 icon at x=2, same 22px clearance as m_table_indicator_SymbolTFValue's val_img)
       //--- Add the object to the common array of object groups      
          CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_status_bar);
          return (true);
@@ -1613,7 +1745,7 @@
        // --- CTextLabel::InitializeProperties defaults XSize to 100px when unset - too narrow for
        // --- this sentence (and CTextLabel never checks AutoXResizeMode, unlike CTable/CTreeView),
        // --- so XSize must be set explicitly, wide enough to clear the tab's own right edge.
-       m_label_symboltf_note.XSize(TABS_WIDTH - x - 5);
+       m_label_symboltf_note.XSize(M_TABS_MAIN_WIDTH - x - 5);
        m_label_symboltf_note.Font("Calibri Bold");   // CElement::DrawText hardcodes FW_NORMAL - request a bold face by name instead
        if(!m_label_symboltf_note.CreateTextLabel("Delete Symbol+TF here apply after the EA is restarted", x, y)) return false;
        m_label_symboltf_note.LabelColor(clrDodgerBlue);
@@ -2290,15 +2422,19 @@
     // --- Detaches SignalMarkers.mq5 if attached - ChartIndicatorAdd() makes it an independent
     // --- chart program, so removing THIS EA does NOT auto-detach it. Called from
     // --- ReattachSignalMarkersIndicator() (style change) AND from OnDeinitEvent on final removal.
+    // --- BugNote 2026-07-18: "SignalMarkers survives Remove EA" - the old scan-by-
+    // --- ChartIndicatorsTotal()/ChartIndicatorName() approach reads 0/garbage when called from
+    // --- OnDeinit() while THIS chart's own program is mid-removal (confirmed empirically: the
+    // --- native Indicators List dialog showed SignalMarkers very much still attached at the
+    // --- exact moment our own scan reported total=0). SignalMarkers.mq5 sets its own short name
+    // --- deterministically ("SignalMarkers(" + Symbol() + ")", see SignalMarkers.mq5 line ~102) -
+    // --- delete by that known name directly instead of trusting the unreliable enumeration.
+    // --- ChartIndicatorDelete() itself also reports a false/error return here (confirmed
+    // --- error 4022) even though the deletion genuinely takes effect - another OnDeinit-timing
+    // --- artifact, not a real failure, so the return value is intentionally not checked.
     void CGUIPannel::RemoveMarkerIndicator(void)
      {
-      int total = ::ChartIndicatorsTotal(m_chart_id, 0);
-      for(int i = total - 1; i >= 0; i--)
-        {
-         string name = ::ChartIndicatorName(m_chart_id, 0, i);
-         if(::StringFind(name, "SignalMarkers") == 0)
-            ::ChartIndicatorDelete(m_chart_id, 0, name);
-        }
+      ::ChartIndicatorDelete(m_chart_id, 0, "SignalMarkers(" + ::Symbol() + ")");
      }
     // --- Detach + re-attach with the CURRENT m_marker_* values - MT5 has no live-input-update
     // --- API for a running indicator, so a style change means recreate it.
@@ -2392,7 +2528,11 @@
       int prev_size = ArraySize(m_live_signal_last_seen);
       bool seeding = (prev_size != rows); // new rows just appeared - seed their baseline, don't fire
       if(seeding)
+        {
          ArrayResize(m_live_signal_last_seen, rows);
+         ArrayResize(m_upper_last_seen, rows);
+         ArrayResize(m_lower_last_seen, rows);
+        }
 
       SIndicatorCatalogItem catalog[];
       GetIndicatorCatalog(catalog);
@@ -2411,11 +2551,24 @@
          string label   = BuildIndicatorLabel(ind, catalog);
          string tf_text = TimeframeDescription(ind.Timeframe());
          int digits = (int)::SymbolInfoInteger(ind.Symbol(), SYMBOL_DIGITS);
+         string type_key, params_key;
+         BuildTemplateMatchKey(ind, catalog, type_key, params_key);
+
+         //--- BBands-only: Upper/Lower lines, each backed by CSignalBollinger's OWN real
+         //--- persisted history (Layer 1) - safe downcast, ind.TypeIndicator()==IND_BANDS
+         //--- already confirms `signal` really is a CSignalBollinger instance. Mid is NOT
+         //--- processed here (Anhnt, 2026-07-19): it's now the primary signal itself (see
+         //--- CSignalBollinger::ComputeAt), handled by the generic closed-bar/live-bar block
+         //--- below like any other indicator - processing it here too would double-fire it.
+         if(message_on && ind.TypeIndicator() == IND_BANDS)
+           {
+            CSignalBollinger *bb = (CSignalBollinger*)signal;
+            ProcessBandLine(row, bb, BBAND_LINE_UPPER, "Upper", m_upper_last_seen, seeding, type_key, params_key, label, tf_text, digits);
+            ProcessBandLine(row, bb, BBAND_LINE_LOWER, "Lower", m_lower_last_seen, seeding, type_key, params_key, label, tf_text, digits);
+           }
 
          //--- Closed-bar path: log-only catch-up of every committed flip newer than the
          //--- persisted per-template watermark - never Sound/Message.
-         string type_key, params_key;
-         BuildTemplateMatchKey(ind, catalog, type_key, params_key);
          datetime wm = GetSignalLogWatermark(type_key, params_key);
          int total = signal.HistoryTotal();
          datetime newest_committed = wm;
@@ -2425,13 +2578,18 @@
             if(t <= wm) continue;
             ENUM_SIGNAL_DIR hdir = signal.HistoryDir(idx);
             string dir_text = (hdir == SIGNAL_BUY) ? "Buy" : "Sell";
+            // --- BBands' own primary signal IS the MidBand cross now (Anhnt, 2026-07-19) -
+            // --- name it explicitly so this row can't be confused with the Upper/Lower
+            // --- line-cross rows (ProcessBandLine, below) which use the same "Buy"/"Sell" text.
+            string cross_text = (ind.TypeIndicator() == IND_BANDS)
+                                 ? ((hdir == SIGNAL_BUY) ? "Cross Up MidBand" : "Cross Down MidBand") : "";
             string time_text = ::TimeToString(t, TIME_DATE|TIME_MINUTES);
             // --- Bar already closed - look up ITS OWN Close, not the current live price
             // --- (Anhnt, 2026-07-17): map flip_time back to a shift via iBarShift.
             int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
             double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
             string price_text = ::DoubleToString(price, digits);
-            WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed");
+            WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
             if(t > newest_committed) newest_committed = t;
            }
          if(newest_committed > wm)
@@ -2441,6 +2599,8 @@
          ENUM_SIGNAL_DIR live_dir = signal.GetCurrentSignal();
          if(seeding)
            {
+            // --- Upper/Lower baselines already seeded by ProcessBandLine above; Mid is this
+            // --- very signal (see CSignalBollinger::ComputeAt), seeded right here.
             m_live_signal_last_seen[row] = live_dir; // baseline only, never fires on first sight
             continue;
            }
@@ -2460,28 +2620,82 @@
             // --- ScanSoundFolder). The chosen .wav needs to physically exist in MQL5\Sounds\
             // --- (copied once, not auto-synced) - native ::PlaySound(bare filename) resolves
             // --- against that folder directly, with no wrapper in the way.
-            string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
-            if(file != "")
-               ::PlaySound(file);
+             string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
+             if(file != "")
+                ::PlaySound(file);
            }
          if(message_on)
            {
-            // --- Same (Time, Indicator, TF) shape as m_table_candle_information_atBar's own
-            // --- columns (RefreshCandleInfoWindow) - keeps the two Signal-reporting surfaces
-            // --- reading the same way (Anhnt, 2026-07-17). Closed bars never reach this branch
-            // --- at all (log-only, see the loop above) - every message printed here IS a Live
-            // --- bar-0 event, tagged "(Live)" in the text itself for a quick visual cue in the
-            // --- Journal (Anhnt, 2026-07-17 - the CSV already had the Status column, but the
-            // --- Journal window itself gave no visual hint).
-            string dir_text  = is_buy ? "Buy" : "Sell";
-            string time_text = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
+            // --- Field order Time;Live/Closed;TF;Indicator;Signal (Anhnt, 2026-07-17) - ";"
+            // --- delimited so pasting Journal lines straight into Excel auto-splits into columns,
+            // --- same convention as Signal_Log.csv's own sep=; fix. Closed bars never reach this
+            // --- branch at all (log-only, see the loop above) - every message printed here IS a
+            // --- Live bar-0 event, hence the literal "Live" in the 2nd field.
+             string dir_text  = is_buy ? "Buy" : "Sell";
+            // --- Same MidBand naming as the closed-bar loop above (Anhnt, 2026-07-19).
+             string cross_text = (ind.TypeIndicator() == IND_BANDS)
+                                  ? (is_buy ? "Cross Up MidBand" : "Cross Down MidBand") : "";
+             string time_text = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
             // --- Bar 0 hasn't closed yet - treat the CURRENT price as its "Close" (Anhnt, 2026-07-17).
-            double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
-            string price_text = ::DoubleToString(price, digits);
-            CMessage::Out(time_text + " " + label + " " + tf_text + " " + dir_text + " signal (Live)");
-            WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live");
+             double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
+             string price_text = ::DoubleToString(price, digits);
+             CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
+             WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
            }
         }
+     }
+    // --- BBands-only (Anhnt, 2026-07-17): processes ONE line's REAL persisted history from
+    // --- CSignalBollinger (Layer 1) - Closed-bar catch-up mirrors the primary signal's own loop
+    // --- exactly (log-only, watermark keyed by params_key+"|"+line_name so it never collides
+    // --- with the primary signal's own watermark entry), then a Live-bar check (transient
+    // --- last_seen[] vs LineCurrentSignal()) fires Message+CSV (deliberately no Sound, matching
+    // --- the earlier scoped-down decision) on every real change.
+    void CGUIPannel::ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name, ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key, const string label, const string tf_text, const int digits)
+     {
+      CIndicatorDE *ind = bb.GetIndicator();
+      if(ind == NULL) return;
+      string line_params_key = params_key + "|" + line_name;
+
+      datetime wm = GetSignalLogWatermark(type_key, line_params_key);
+      int total = bb.LineHistoryTotal(line_idx);
+      datetime newest_committed = wm;
+      for(int idx = 0; idx < total; idx++)
+        {
+         datetime t = bb.LineHistoryTime(line_idx, idx);
+         if(t <= wm) continue;
+         ENUM_SIGNAL_DIR hdir = bb.LineHistoryDir(line_idx, idx);
+         string dir_text   = (hdir == SIGNAL_BUY) ? "Buy" : "Sell";
+         string cross_text = (hdir == SIGNAL_BUY) ? ("Cross Up " + line_name + "Band") : ("Cross Down " + line_name + "Band");
+         string time_text  = ::TimeToString(t, TIME_DATE|TIME_MINUTES);
+         int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
+         double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
+         string price_text = ::DoubleToString(price, digits);
+         WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
+         if(t > newest_committed) newest_committed = t;
+        }
+      if(newest_committed > wm)
+         SetSignalLogWatermark(type_key, line_params_key, newest_committed);
+
+      ENUM_SIGNAL_DIR live_dir = bb.LineCurrentSignal(line_idx);
+      if(seeding)
+        {
+         last_seen[row] = live_dir; // baseline only, never fires on first sight
+         return;
+        }
+      if(live_dir == last_seen[row]) return; // no change
+      last_seen[row] = live_dir;
+      if(live_dir == SIGNAL_NONE) return; // dropped to exactly-on-the-line - not report-worthy itself
+
+      // --- Same Time;Live;TF;Indicator;Signal shape as the primary message, plus a 6th
+      // --- ";"-delimited field naming which line/direction triggered it (Anhnt, 2026-07-17:
+      // --- "viết ra Journal như nào thì cũng viết ra Signal_Log.csv y như thế").
+      string dir_text   = (live_dir == SIGNAL_BUY) ? "Buy" : "Sell";
+      string cross_text = (live_dir == SIGNAL_BUY) ? ("Cross Up " + line_name + "Band") : ("Cross Down " + line_name + "Band");
+      string time_text  = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
+      double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
+      string price_text = ::DoubleToString(price, digits);
+      CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + ";" + cross_text);
+      WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
      }
     // --- Appends one row to MQL5\Files\Signal_Log.csv (Excel-openable) - writes a leading
     // --- "sep=;" line + header once, the very first time the file is empty/new, then appends
@@ -2489,8 +2703,11 @@
     // --- regardless of the machine's own Regional Settings list separator (Anhnt, 2026-07-17 -
     // --- opening the ','-delimited file directly in Excel dumped every field into one column).
     // --- Opened with FILE_READ|FILE_WRITE (not bare FILE_WRITE, which truncates on every open)
-    // --- so existing history is never lost between EA restarts.
-    void CGUIPannel::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status)
+    // --- so existing history is never lost between EA restarts. cross_text is "" for every
+    // --- non-BBands signal row; BBands rows always populate it - "Cross Up/Down MidBand" from
+    // --- the primary signal itself, or "Cross Up/Down Upper/LowerBand" from ProcessBandLine
+    // --- (Anhnt, 2026-07-19).
+    void CGUIPannel::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text)
      {
       int fh = ::FileOpen("Signal_Log.csv", FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
       if(fh == INVALID_HANDLE) return;
@@ -2498,11 +2715,11 @@
       if(is_new)
         {
          ::FileWriteString(fh, "sep=;\n");
-         ::FileWrite(fh, "Time", "Symbol", "TF", "Indicator", "Signal", "Price", "Status");
+         ::FileWrite(fh, "Time", "Symbol", "TF", "Indicator", "Signal", "Price", "Status", "Cross");
         }
       else
          ::FileSeek(fh, 0, SEEK_END);
-      ::FileWrite(fh, time_text, symbol, tf, indicator, direction, price_text, status);
+      ::FileWrite(fh, time_text, symbol, tf, indicator, direction, price_text, status, cross_text);
       ::FileClose(fh);
      }
     // --- Per-template watermark of the newest committed HistoryTime() already written to
@@ -2613,7 +2830,7 @@
       // --- Row set already matches the template count: re-point the BORROWED per-row
       // --- pointers at the CURRENT chart's instances (they change on CHARTCHANGE) and
       // --- dirty-refresh the per-chart "Show" column only - no structural change, no flicker.
-      if(count == ArraySize(m_table_indicator_ptrs) && count > 0)
+       if(count == ArraySize(m_table_indicator_ptrs) && count > 0)
        {
         SIndicatorCatalogItem catalog[];
         GetIndicatorCatalog(catalog);
@@ -2673,7 +2890,6 @@
       SIndicatorCatalogItem catalog[];
       GetIndicatorCatalog(catalog);
       string label = BuildIndicatorLabel(indicator, catalog);
-
       // --- Col 0: red Close (delete) icon + label - click detection covers the icon only
       // --- (Table.mqh CheckPressedButton scopes it to the image pixel width)
       m_table_indicator.CellType(0, row, CELL_BUTTON);
@@ -2763,6 +2979,28 @@
     // --- SelectedImageIndex(4,row) tells us the state to APPLY (0=show, 1=hide).
     // --- Matched by ind.Handle(), not by name - two instances of the same type
     // --- with different params can share the same native chart-assigned name.
+    // --- Detaches every chart line currently representing this indicator (Layer 3 mirror,
+    // --- handle = join key). Shared by the per-row Hide toggle, per-row Remove, and
+    // --- OnDeinitEvent's full sweep (BugNote 2026-07-18: Layer 1 indicators left shown
+    // --- on chart - BBands/PSAR/AMA/hand-added MAs - were never detached on final EA
+    // --- removal, only the SignalMarkers overlay was; this closes that gap for every row).
+    void CGUIPannel::DetachIndicatorFromChart(CIndicatorDE *indicator)
+     {
+      if(indicator == NULL) return;
+      CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+      if(chart == NULL) return;
+      for(int win = chart.WindowsTotal() - 1; win >= 0; win--)
+        {
+         CChartWnd *wnd = chart.GetWindowByNum(win);
+         if(wnd == NULL) continue;
+         for(int i = wnd.IndicatorsTotal() - 1; i >= 0; i--)
+           {
+            CWndInd *wnd_ind = wnd.GetIndicatorByIndex(i);
+            if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), indicator))
+               ChartIndicatorDelete(0, win, wnd_ind.Name());
+           }
+        }
+     }
     void CGUIPannel::OnClickToggleShowIndicatorOnChart(const string sname, const int row)
      {
       if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
@@ -2772,23 +3010,7 @@
       int new_state = (int)m_table_indicator.SelectedImageIndex(4, row);
       int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
       if(new_state == INDICATOR_HIDE_ON_CHART)   // Hide: remove from chart, PureData/handle stay intact
-        {
-         // Find this instance's line(s) through the Layer 3 mirror - handle is the join
-         // key (program-wide slot), no Get/Release needed in the GUI at all
-         CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
-         if(chart != NULL)
-            for(int win = chart.WindowsTotal() - 1; win >= 0; win--)
-              {
-               CChartWnd *wnd = chart.GetWindowByNum(win);
-               if(wnd == NULL) continue;
-               for(int i = wnd.IndicatorsTotal() - 1; i >= 0; i--)
-                 {
-                  CWndInd *wnd_ind = wnd.GetIndicatorByIndex(i);
-                  if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), ind))
-                     ChartIndicatorDelete(0, win, wnd_ind.Name());
-                 }
-              }
-        }
+         DetachIndicatorFromChart(ind);
       else // Show: re-attach using the stored handle
         {
          int sub_window = (ind.Group() == INDICATOR_GROUP_TREND) ? 0 : subwindows;
@@ -2828,6 +3050,624 @@
          if(::StringFind(obj_name, prefix) == 0)
             ::ObjectDelete(m_chart_id, obj_name);
         }
+     }
+    // ============================================================================
+    // Positions Table (TAB_TAB_MAIN_POSITIONS) - ported VERBATIM from V1
+    // (Anatoli Kazharski\GUIPannel.mqh), 2026-07-19, per user request: bring it over
+    // as-is before any redesign against Layer 1 (CTradingEngine/CMarketCollection).
+    // Deliberately still raw ::PositionsTotal()/::PositionGetX() loops, same as V1 -
+    // NOT wired to CMarketCollection/CTradingSelect yet.
+    // ============================================================================
+    //+------------------------------------------------------------------+
+    //| Create a position table                                          |
+    //+------------------------------------------------------------------+
+    //+------------------------------------------------------------------+
+    //| Pre-trade-plan symbol picker - Market Watch symbols, alphabetical |
+    //| (same sort convention as PopulateSymbolTFTree), default-selects   |
+    //| the current chart symbol.                                        |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::CreatePreTradePlanSymbolCombo(const int x, const int y)
+     {
+      m_combo_pre_Trade_plan_symbol.MainPointer(m_tabs_main);
+      m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_combo_pre_Trade_plan_symbol);
+      int mw_total = ::SymbolsTotal(true);
+      string labels[];
+      ::ArrayResize(labels, mw_total);
+      for(int i = 0; i < mw_total; i++)
+         labels[i] = ::SymbolName(i, true);
+      for(int a = 0; a < mw_total - 1; a++)
+         for(int b = a + 1; b < mw_total; b++)
+            if(labels[b] < labels[a])
+              { string tmp = labels[a]; labels[a] = labels[b]; labels[b] = tmp; }
+      int selected = 0;
+      for(int i = 0; i < mw_total; i++)
+         if(labels[i] == _Symbol) { selected = i; break; }
+      int combo_w = 150;
+      m_combo_pre_Trade_plan_symbol.XSize(combo_w);
+      m_combo_pre_Trade_plan_symbol.YSize(20);
+      m_combo_pre_Trade_plan_symbol.ItemsTotal(mw_total);
+      int list_h = 18 * mw_total + 4;
+      if(list_h > 300) list_h = 300;
+      m_combo_pre_Trade_plan_symbol.GetListViewPointer().YSize(list_h);
+      m_combo_pre_Trade_plan_symbol.GetButtonPointer().XGap(1);
+      m_combo_pre_Trade_plan_symbol.GetButtonPointer().XSize(combo_w);
+      m_combo_pre_Trade_plan_symbol.GetButtonPointer().LabelYGap(4);
+      m_combo_pre_Trade_plan_symbol.GetButtonPointer().IconYGap(3);
+      if(!m_combo_pre_Trade_plan_symbol.CreateComboBox("", x, y)) return false;
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_combo_pre_Trade_plan_symbol);
+      m_combo_pre_Trade_plan_symbol.GetListViewPointer().Rebuilding(mw_total);
+      for(int i = 0; i < mw_total; i++)
+         m_combo_pre_Trade_plan_symbol.SetValue(i, labels[i]);
+      m_combo_pre_Trade_plan_symbol.SelectItem(selected);
+      m_combo_pre_Trade_plan_symbol.GetListViewPointer().Update(true);
+      return true;
+     }
+    //+------------------------------------------------------------------+
+    //| Pre-trade-plan order-setup controls - Distance mode+value and    |
+    //| Lot mode+value, laid out in ONE horizontal row (Anhnt 2026-07-20,|
+    //| per user request "dàn hàng ngang" instead of the mockup's        |
+    //| original stacked layout). ATR mode is a placeholder toggle only -|
+    //| not wired to a real ATR series yet, falls back to the Distance   |
+    //| edit's own value either way (see SetValuesToPreTradePlanTable).  |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::CreatePreTradePlanControls(const int x, const int y)
+     {
+      //--- "Dist" caption + Fixed/ATR toggle
+       m_label_pre_trade_distance.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_label_pre_trade_distance);
+       m_label_pre_trade_distance.XSize(28);
+       if(!m_label_pre_trade_distance.CreateTextLabel("Dist", x, y + 4)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_pre_trade_distance);
+
+       int dist_group_x = x + 28;
+       m_group_pre_trade_distance_mode.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_group_pre_trade_distance_mode);
+       m_group_pre_trade_distance_mode.RadioButtonsMode(true);
+       m_group_pre_trade_distance_mode.AddButton(0, 0, "Fixed", 45);
+       m_group_pre_trade_distance_mode.AddButton(0, 0, "ATR", 45);
+       if(!m_group_pre_trade_distance_mode.CreateButtonsGroup(dist_group_x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_group_pre_trade_distance_mode);
+
+      //--- Distance value (points) - meaning is the same in both modes for now, ATR isn't
+      //--- wired up to override it yet.
+       int dist_edit_x = dist_group_x + 95;
+       m_edit_pre_trade_distance_pts.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_edit_pre_trade_distance_pts);
+       m_edit_pre_trade_distance_pts.XSize(50);
+       m_edit_pre_trade_distance_pts.GetTextBoxPointer().XGap(1);
+       if(!m_edit_pre_trade_distance_pts.CreateTextEdit("100", dist_edit_x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_pre_trade_distance_pts);
+
+      //--- "Lot" caption + By Distance(manual)/By Risk % toggle
+       int lot_label_x = dist_edit_x + 60;
+       m_label_pre_trade_lot.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_label_pre_trade_lot);
+       m_label_pre_trade_lot.XSize(25);
+       if(!m_label_pre_trade_lot.CreateTextLabel("Lot", lot_label_x, y + 4)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_pre_trade_lot);
+
+       int lot_group_x = lot_label_x + 25;
+       m_group_pre_trade_lot_mode.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_group_pre_trade_lot_mode);
+       m_group_pre_trade_lot_mode.RadioButtonsMode(true);
+       m_group_pre_trade_lot_mode.AddButton(0, 0, "By Distance", 80);
+       m_group_pre_trade_lot_mode.AddButton(0, 0, "By Risk %", 80);
+       if(!m_group_pre_trade_lot_mode.CreateButtonsGroup(lot_group_x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_group_pre_trade_lot_mode);
+
+      //--- Lot-or-Risk% value - same edit box, meaning switches with the toggle above
+       int lot_edit_x = lot_group_x + 165;
+       m_edit_pre_trade_lot_or_risk.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_edit_pre_trade_lot_or_risk);
+       m_edit_pre_trade_lot_or_risk.XSize(50);
+       m_edit_pre_trade_lot_or_risk.GetTextBoxPointer().XGap(1);
+       if(!m_edit_pre_trade_lot_or_risk.CreateTextEdit("0.01", lot_edit_x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_pre_trade_lot_or_risk);
+       return true;
+     }
+    //+------------------------------------------------------------------+
+    //| Pre-trade-plan order-setup table - one row per direction (row 0  |
+    //| = Buy, row 1 = Sell), matching the agreed mockup layout (Dir /   |
+    //| Entry / SL / Distance / Lot / Risk $ / Risk %). Values come from |
+    //| CreatePreTradePlanControls' Distance/Lot mode+value controls -   |
+    //| see SetValuesToPreTradePlanTable. Dir cell is still NOT wired to |
+    //| send real orders yet (Anhnt 2026-07-20).                          |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::CreatePreTradePlanTable(const int x, const int y)
+     {
+      #define COLUMNS3_TOTAL 7
+      #define ROWS3_TOTAL 2
+       m_table_pre_Trade_plan.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_table_pre_Trade_plan);
+       int width[COLUMNS3_TOTAL];
+       ::ArrayInitialize(width, 70);
+       width[0] = 55; // Dir
+       width[4] = 55; // Lot
+      //--- Icon columns (Dir) must be ALIGN_LEFT or RedrawCell silently skips DrawImage
+       ENUM_ALIGN_MODE align[COLUMNS3_TOTAL];
+       ::ArrayInitialize(align, ALIGN_RIGHT);
+       align[0] = ALIGN_LEFT;
+       int text_x_offset[COLUMNS3_TOTAL];
+       ::ArrayInitialize(text_x_offset, 5);
+       text_x_offset[0] = 22; // clear the Dir icon, same convention as m_table_indicator_SymbolTFValue
+       int image_x_offset[COLUMNS3_TOTAL];
+       ::ArrayInitialize(image_x_offset, 3);
+       int image_y_offset[COLUMNS3_TOTAL];
+       ::ArrayInitialize(image_y_offset, 2);
+       m_table_pre_Trade_plan.TableSize(COLUMNS3_TOTAL, ROWS3_TOTAL);
+       m_table_pre_Trade_plan.ColumnsWidth(width);
+       m_table_pre_Trade_plan.TextAlign(align);
+       m_table_pre_Trade_plan.TextXOffset(text_x_offset);
+       m_table_pre_Trade_plan.ImageXOffset(image_x_offset);
+       m_table_pre_Trade_plan.ImageYOffset(image_y_offset);
+       m_table_pre_Trade_plan.ShowHeaders(true);
+       m_table_pre_Trade_plan.SelectableRow(false);
+       m_table_pre_Trade_plan.AutoXResizeMode(true);
+       m_table_pre_Trade_plan.AutoXResizeRightOffset(2);
+       if(!m_table_pre_Trade_plan.CreateTable(x, y)) return false;
+       string headers[COLUMNS3_TOTAL] = {"Dir", "Entry", "SL", "Distance", "Lot", "Risk $", "Risk %"};
+       for(int i = 0; i < COLUMNS3_TOTAL; i++)
+          m_table_pre_Trade_plan.SetHeaderText(i, headers[i]);
+       for(int r = 0; r < ROWS3_TOTAL; r++)
+          m_table_pre_Trade_plan.AddRow(r, r == ROWS3_TOTAL - 1);
+      //--- Dir icon: same val_img set as m_table_indicator_SymbolTFValue's col 2 - row 0/Buy is
+      //--- always the up arrow, row 1/Sell is always the down arrow (gray/index 2 unused here,
+      //--- direction is fixed per row, not data-driven).
+       uint dir_img[] = {IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG,
+                        IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG,
+                        IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
+       m_table_pre_Trade_plan.SetImages(0, 0, dir_img);
+       m_table_pre_Trade_plan.ChangeImage(0, 0, 0);
+       m_table_pre_Trade_plan.SetValue(0, 0, " Buy");
+       m_table_pre_Trade_plan.SetImages(0, 1, dir_img);
+       m_table_pre_Trade_plan.ChangeImage(0, 1, 1);
+       m_table_pre_Trade_plan.SetValue(0, 1, " Sell");
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_pre_Trade_plan);
+       SetValuesToPreTradePlanTable(true);
+       return true;
+     }
+    //+------------------------------------------------------------------+
+    //| Live refresh for the pre-trade-plan table - Entry/SL track real  |
+    //| Bid/Ask of the combo's selected symbol every tick; Distance/Lot  |
+    //| now come from the real Distance/Lot mode+value controls (Anhnt   |
+    //| 2026-07-20). ATR mode isn't wired to a real ATR series yet - it  |
+    //| still just uses the Distance edit's own value either way. Risk   |
+    //| $/% use the same lot-sizing formula as EA2.mq5's CalcLots.       |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::SetValuesToPreTradePlanTable(bool force = false)
+     {
+      string symbol = m_combo_pre_Trade_plan_symbol.GetValue();
+      if(symbol == "") symbol = _Symbol;
+      double bid    = ::SymbolInfoDouble(symbol, SYMBOL_BID);
+      double ask    = ::SymbolInfoDouble(symbol, SYMBOL_ASK);
+      double point  = ::SymbolInfoDouble(symbol, SYMBOL_POINT);
+      int    digits = (int)::SymbolInfoInteger(symbol, SYMBOL_DIGITS);
+      int    stops_level  = (int)::SymbolInfoInteger(symbol, SYMBOL_TRADE_STOPS_LEVEL);
+      double dist_input   = ::StringToDouble(m_edit_pre_trade_distance_pts.GetValue());
+      // --- Distance mode toggle (Fixed/ATR) read but not yet acted on - ATR needs a real ATR
+      // --- series wired to this table, not built yet. Both modes use the edit's own value.
+      int    distance_pts = (dist_input > 0) ? (int)dist_input : ((stops_level > 0) ? stops_level : 100);
+      double tick_value  = ::SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_VALUE);
+      double balance     = ::AccountInfoDouble(ACCOUNT_BALANCE);
+      double lot_or_risk_input = ::StringToDouble(m_edit_pre_trade_lot_or_risk.GetValue());
+      double lot;
+      if(m_group_pre_trade_lot_mode.SelectedButtonIndex() == 1) // By Risk %
+        {
+         double risk_pct_target = (lot_or_risk_input > 0) ? lot_or_risk_input : 1.0;
+         double risk_usd_target = balance * risk_pct_target / 100.0;
+         double money_per_lot   = distance_pts * tick_value;
+         lot = (money_per_lot > 0) ? risk_usd_target / money_per_lot : 0.01;
+         double lot_step = ::SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
+         double lot_min  = ::SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
+         double lot_max  = ::SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
+         if(lot_step > 0) lot = ::MathFloor(lot / lot_step) * lot_step;
+         if(lot < lot_min) lot = lot_min;
+         if(lot > lot_max) lot = lot_max;
+        }
+      else // By Distance (manual pick)
+         lot = (lot_or_risk_input > 0) ? lot_or_risk_input : 0.01;
+      double risk_usd = lot * distance_pts * tick_value;
+      double risk_pct = (balance > 0) ? risk_usd / balance * 100.0 : 0.0;
+      double entry[2], sl[2];
+      entry[0] = ask; sl[0] = ask - distance_pts * point; // Buy
+      entry[1] = bid; sl[1] = bid + distance_pts * point; // Sell
+      static string s_entry[2], s_sl[2], s_dist[2], s_lot[2], s_risk_usd[2], s_risk_pct[2];
+      bool any_changed = false;
+      for(int row = 0; row < 2; row++)
+        {
+         string c_entry    = ::DoubleToString(entry[row], digits);
+         string c_sl       = ::DoubleToString(sl[row], digits);
+         string c_dist     = (string)distance_pts + " pts";
+         string c_lot      = ::DoubleToString(lot, 2);
+         string c_risk_usd = ::DoubleToString(risk_usd, 2);
+         string c_risk_pct = ::DoubleToString(risk_pct, 2) + "%";
+         if(force || c_entry    != s_entry[row])    { m_table_pre_Trade_plan.SetValue(1, row, c_entry,    0, true); s_entry[row]    = c_entry;    any_changed = true; }
+         if(force || c_sl       != s_sl[row])       { m_table_pre_Trade_plan.SetValue(2, row, c_sl,       0, true); s_sl[row]       = c_sl;       any_changed = true; }
+         if(force || c_dist     != s_dist[row])     { m_table_pre_Trade_plan.SetValue(3, row, c_dist,     0, true); s_dist[row]     = c_dist;     any_changed = true; }
+         if(force || c_lot      != s_lot[row])      { m_table_pre_Trade_plan.SetValue(4, row, c_lot,      0, true); s_lot[row]      = c_lot;      any_changed = true; }
+         if(force || c_risk_usd != s_risk_usd[row]) { m_table_pre_Trade_plan.SetValue(5, row, c_risk_usd, 0, true); s_risk_usd[row] = c_risk_usd; any_changed = true; }
+         if(force || c_risk_pct != s_risk_pct[row]) { m_table_pre_Trade_plan.SetValue(6, row, c_risk_pct, 0, true); s_risk_pct[row] = c_risk_pct; any_changed = true; }
+        }
+      // --- Update(false), NOT Update(true) - true runs the full DrawTable()/AutoResizeColumns
+      // --- repaint path, which given Entry/SL change on nearly every tick caused a full-table
+      // --- flicker (Anhnt, 2026-07-20, reported "nháy điên cuồng"). Per-cell RedrawCell (via
+      // --- SetValue's redraw=true above) + a cheap Update(false) is the same no-flicker pattern
+      // --- SetValuesToPositionsTable already uses.
+      if(any_changed) m_table_pre_Trade_plan.Update(false);
+      return any_changed;
+     }
+    bool CGUIPannel::CreatePositionsTable(const int x_gap, const int y_gap)
+     {
+      #define COLUMNS2_TOTAL 10
+      #define ROWS2_TOTAL 1
+      //--- Store the pointer to the parent tab and attach
+       m_table_positions.MainPointer(m_tabs_main);
+       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_table_positions);
+      //--- Array of column widths
+       int width[COLUMNS2_TOTAL];
+       ::ArrayInitialize(width, 75);
+       width[0] = 90;
+       width[1] = 63;
+       width[2] = 60;
+       width[5] = 60;
+       width[8] = 90;
+      //--- Array of text alignment in columns
+       ENUM_ALIGN_MODE align[COLUMNS2_TOTAL];
+       ::ArrayInitialize(align, ALIGN_CENTER);
+       align[0] = ALIGN_LEFT;
+      //--- Array of text offset along the X axis in the columns
+       int text_x_offset[COLUMNS2_TOTAL];
+       ::ArrayInitialize(text_x_offset, 21);
+      //--- Array of column image offsets along the X axis
+       int image_x_offset[COLUMNS2_TOTAL];
+       ::ArrayInitialize(image_x_offset, 3);
+      //--- Array of column image offsets along the Y axis
+       int image_y_offset[COLUMNS2_TOTAL];
+       ::ArrayInitialize(image_y_offset, 2);
+      //--- Properties
+       m_table_positions.TableSize(COLUMNS2_TOTAL, ROWS2_TOTAL);
+       m_table_positions.ColumnsWidth(width);
+       m_table_positions.TextAlign(align);
+       m_table_positions.TextXOffset(text_x_offset);
+       m_table_positions.ImageXOffset(image_x_offset);
+       m_table_positions.ImageYOffset(image_y_offset);
+       m_table_positions.ShowHeaders(true);
+       m_table_positions.IsSortMode(true);
+       m_table_positions.SelectableRow(true);
+       m_table_positions.ColumnResizeMode(true);
+       m_table_positions.IsZebraFormatRows(clrWhiteSmoke);
+       m_table_positions.AutoXResizeMode(true);
+       m_table_positions.AutoYResizeMode(true);
+       m_table_positions.AutoXResizeRightOffset(2);
+       m_table_positions.AutoYResizeBottomOffset(2);
+      //--- Create a control element
+       if(!m_table_positions.CreateTable(x_gap, y_gap))
+          return(false);
+      //--- Set the header titles
+       string headers[COLUMNS2_TOTAL] = {"Symbol", "Positions", "Volume", "Buy Volume", "Sell Volume", "Profit", "Buy Profit", "Sell Profit", "Deposit Load", "Average Price"};
+       for(int i = 0; i < COLUMNS2_TOTAL; i++)
+          m_table_positions.SetHeaderText(i, headers[i]);
+      //--- Add the object to the common array of object groups
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_positions);
+       return(true);
+     }
+    //+------------------------------------------------------------------+
+    //| Initialize the position table with current open positions        |
+    //+------------------------------------------------------------------+
+    void CGUIPannel::InitializePositionsTable(void)
+     {
+      //--- Get symbols of open positions
+       string symbols_name[];
+       int symbols_total = GetPositionsSymbols(symbols_name);
+      //--- Delete all rows
+       m_table_positions.DeleteAllRows();
+      //--- Set the number of rows by the number of symbols
+       for(int i = 0; i < symbols_total - 1; i++)
+          m_table_positions.AddRow(i);
+      //--- If there are positions
+       if(symbols_total > 0)
+         {
+          //--- Array of images for buttons
+           uint button_images[1] = {IMAGE_RESOURCE_BMP16_CLOSE_BLACK_BMP};
+          //--- Set the type and images for each row
+           for(uint row = 0; row < (uint)symbols_total; row++)
+             {
+              m_table_positions.CellType(0, row, CELL_BUTTON);
+              m_table_positions.SetImages(0, row, button_images);
+             }
+          //--- Force fill all cells (bypass dirty-check after DeleteAllRows)
+           SetValuesToPositionsTable(symbols_name, true);
+         }
+      //--- Update the table
+       m_table_positions.Update(true);
+     }
+    //+------------------------------------------------------------------+
+    //| Set the values in the position table                             |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::SetValuesToPositionsTable(string &symbols_name[], bool force = false)
+     {
+      uint symbols_total = ::ArraySize(symbols_name);
+      uint rows_total = m_table_positions.RowsTotal();
+      if(symbols_total < rows_total)
+         return false;
+      static uint s_prev_rows = 0;
+      static string s_c0[], s_c1[], s_c2[], s_c3[], s_c4[];
+      static string s_c5[], s_c6[], s_c7[], s_c8[], s_c9[];
+      if(s_prev_rows != rows_total || force)
+        {
+         s_prev_rows = rows_total;
+         ::ArrayResize(s_c0, rows_total);
+         ::ArrayResize(s_c1, rows_total);
+         ::ArrayResize(s_c2, rows_total);
+         ::ArrayResize(s_c3, rows_total);
+         ::ArrayResize(s_c4, rows_total);
+         ::ArrayResize(s_c5, rows_total);
+         ::ArrayResize(s_c6, rows_total);
+         ::ArrayResize(s_c7, rows_total);
+         ::ArrayResize(s_c8, rows_total);
+         ::ArrayResize(s_c9, rows_total);
+         for(uint i = 0; i < rows_total; i++)
+            s_c0[i] = s_c1[i] = s_c2[i] = s_c3[i] = s_c4[i] =
+                s_c5[i] = s_c6[i] = s_c7[i] = s_c8[i] = s_c9[i] = "";
+        }
+      bool any_changed = false;
+      // Calculate values and set to table with dirty-check
+      for(uint r = 0; r < rows_total; r++)
+        {
+         double pos_volume = PositionsVolumeTotal(symbols_name[r]);
+         double buy_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_BUY);
+         double sell_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_SELL);
+         double pos_profit = PositionsFloatingProfitTotal(symbols_name[r]);
+         double buy_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_BUY);
+         double sell_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_SELL);
+         double avg_price = PositionAveragePrice(symbols_name[r]);
+         string v0 = symbols_name[r];
+         string v1 = (string)PositionsTotal(symbols_name[r]);
+         string v2 = ::DoubleToString(pos_volume, 2);
+         string v3 = ::DoubleToString(buy_volume, 2);
+         string v4 = ::DoubleToString(sell_volume, 2);
+         string v5 = ::DoubleToString(pos_profit, 2);
+         string v6 = ::DoubleToString(buy_profit, 2);
+         string v7 = ::DoubleToString(sell_profit, 2);
+         string v8 = ::DoubleToString(DepositLoad(false, avg_price, symbols_name[r], pos_volume), 2) + "/" +
+                     ::DoubleToString(DepositLoad(true, avg_price, symbols_name[r], pos_volume), 2) + "%";
+         string v9 = ::DoubleToString(avg_price, (int)::SymbolInfoInteger(symbols_name[r], SYMBOL_DIGITS));
+
+         if(v0 != s_c0[r])
+           {
+            s_c0[r] = v0;
+            m_table_positions.SetValue(0, r, v0, 0, true);
+            any_changed = true;
+           }
+         if(v1 != s_c1[r])
+           {
+            s_c1[r] = v1;
+            m_table_positions.SetValue(1, r, v1, 0, true);
+            any_changed = true;
+           }
+         if(v2 != s_c2[r])
+           {
+            s_c2[r] = v2;
+            m_table_positions.SetValue(2, r, v2, 0, true);
+            any_changed = true;
+           }
+         if(v3 != s_c3[r])
+           {
+            s_c3[r] = v3;
+            m_table_positions.TextColor(3, r, (buy_volume > 0) ? clrBlack : clrLightGray);
+            m_table_positions.SetValue(3, r, v3, 0, true);
+            any_changed = true;
+           }
+         if(v4 != s_c4[r])
+           {
+            s_c4[r] = v4;
+            m_table_positions.TextColor(4, r, (sell_volume > 0) ? clrBlack : clrLightGray);
+            m_table_positions.SetValue(4, r, v4, 0, true);
+            any_changed = true;
+           }
+         if(v5 != s_c5[r])
+           {
+            s_c5[r] = v5;
+            m_table_positions.TextColor(5, r, (pos_profit != 0) ? (pos_profit > 0 ? clrGreen : clrRed) : clrLightGray);
+            m_table_positions.SetValue(5, r, v5, 0, true);
+            any_changed = true;
+           }
+         if(v6 != s_c6[r])
+           {
+            s_c6[r] = v6;
+            m_table_positions.TextColor(6, r, (buy_profit != 0) ? (buy_profit > 0 ? clrGreen : clrRed) : clrLightGray);
+            m_table_positions.SetValue(6, r, v6, 0, true);
+            any_changed = true;
+           }
+         if(v7 != s_c7[r])
+           {
+            s_c7[r] = v7;
+            m_table_positions.TextColor(7, r, (sell_profit != 0) ? (sell_profit > 0 ? clrGreen : clrRed) : clrLightGray);
+            m_table_positions.SetValue(7, r, v7, 0, true);
+            any_changed = true;
+           }
+         if(v8 != s_c8[r])
+           {
+            s_c8[r] = v8;
+            m_table_positions.SetValue(8, r, v8, 0, true);
+            any_changed = true;
+           }
+         if(v9 != s_c9[r])
+           {
+            s_c9[r] = v9;
+            m_table_positions.SetValue(9, r, v9, 0, true);
+            any_changed = true;
+           }
+        }
+      if(any_changed)
+         m_table_positions.Update(false);
+      return any_changed;
+     }
+    //+------------------------------------------------------------------+
+    //| Check a new trade on history                                     |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::IsLastDealTicket(void)
+     {
+      //--- Exit if the history is not received
+       if(!::HistorySelect(m_last_deal_time, UINT_MAX))
+          return(false);
+      //--- Get the number of deals in the obtained list
+       int total_deals = ::HistoryDealsTotal();
+      //--- Loop through the total number of deals in the obtained list from the
+      // last deal to the first one
+       for(int i = total_deals - 1; i >= 0; i--)
+         {
+          //--- Get the deal ticket
+           ulong deal_ticket = ::HistoryDealGetTicket(i);
+          //--- Exit if the tickets are equal
+           if(deal_ticket == m_last_deal_ticket)
+              return(false);
+          //--- If the tickets are not equal, report it
+           else
+             {
+              datetime deal_time = (datetime)::HistoryDealGetInteger(deal_ticket, DEAL_TIME);
+              //--- Save the last deal time and ticket
+               m_last_deal_time = deal_time;
+               m_last_deal_ticket = deal_ticket;
+               return(true);
+             }
+         }
+       return(false);
+     }
+    //+------------------------------------------------------------------+
+    //| Get symbols of open positions in the array                       |
+    //+------------------------------------------------------------------+
+    int CGUIPannel::GetPositionsSymbols(string &symbols_name[])
+     {
+      string symbols = "";
+      //--- Go through the loop for the first time and get symbols of open positions
+       int positions_total = ::PositionsTotal();
+       for(int i = 0; i < positions_total; i++)
+         {
+          //--- Select a position and get its symbol
+           string position_symbol = ::PositionGetSymbol(i);
+          //--- If there is a symbol name
+           if(position_symbol == "")
+              continue;
+          //--- If there is no such a string, add it
+           if(::StringFind(symbols, position_symbol, 0) == WRONG_VALUE)
+              ::StringAdd(symbols, (symbols == "") ? position_symbol : "," + position_symbol);
+         }
+      //--- Get string elements by separator
+       ushort u_sep = ::StringGetCharacter(",", 0);
+       int symbols_total = ::StringSplit(symbols, u_sep, symbols_name);
+      //--- Return the number of symbols
+       return(symbols_total);
+     }
+    //+------------------------------------------------------------------+
+    //| Position average price                                           |
+    //+------------------------------------------------------------------+
+    double CGUIPannel::PositionAveragePrice(const string symbol)
+     {
+      //--- For calculating the average price
+       double sum_mult = 0.0;
+       double sum_volumes = 0.0;
+      //--- Check if there is a position with specified properties
+       int positions_total = ::PositionsTotal();
+       for(int i = positions_total - 1; i >= 0; i--)
+         {
+          //--- If failed to select a position, go to the next one
+           if(symbol != ::PositionGetSymbol(i))
+              continue;
+          //--- Get the price and position volume
+           double pos_price = ::PositionGetDouble(POSITION_PRICE_OPEN);
+           double pos_volume = ::PositionGetDouble(POSITION_VOLUME);
+          //--- Sum up the intermediate indicators
+           sum_mult += (pos_price * pos_volume);
+           sum_volumes += pos_volume;
+         }
+      //--- Prevent division by zero
+       if(sum_volumes <= 0)
+          return(0.0);
+      //--- Return the average price
+       return(::NormalizeDouble(sum_mult / sum_volumes, (int)::SymbolInfoInteger(symbol, SYMBOL_DIGITS)));
+     }
+    //+------------------------------------------------------------------+
+    //| Number of position trades with a specified symbol                |
+    //+------------------------------------------------------------------+
+    int CGUIPannel::PositionsTotal(const string symbol)
+     {
+      //--- Position counter
+       int pos_counter = 0;
+      //--- Check if there is a position with specified properties
+       int positions_total = ::PositionsTotal();
+       for(int i = positions_total - 1; i >= 0; i--)
+         {
+          //--- If failed to select a position, go to the next one
+           if(symbol != ::PositionGetSymbol(i))
+              continue;
+          //--- Increase the counter
+           pos_counter++;
+         }
+      //--- Return the number of positions
+       return(pos_counter);
+     }
+    //+------------------------------------------------------------------+
+    //| Total volume of positions with the specified properties          |
+    //+------------------------------------------------------------------+
+    double CGUIPannel::PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
+     {
+      //--- Volume counter
+       double volume_counter = 0;
+      //--- Check if there is a position with specified properties
+       int positions_total = ::PositionsTotal();
+       for(int i = positions_total - 1; i >= 0; i--)
+         {
+          //--- If failed to select a position, go to the next one
+           if(symbol != ::PositionGetSymbol(i))
+              continue;
+          //--- If the type should be selected
+           if(type != WRONG_VALUE)
+             {
+              //--- If the type does not match, go to the next position
+               if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
+                  continue;
+             }
+          //--- Sum up the volume
+           volume_counter += ::PositionGetDouble(POSITION_VOLUME);
+         }
+      //--- Return the volume
+       return(volume_counter);
+     }
+    //+------------------------------------------------------------------+
+    //| Total floating profit of positions with the specified properties |
+    //+------------------------------------------------------------------+
+    double CGUIPannel::PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
+     {
+      //--- Current profit counter
+       double profit_counter = 0.0;
+      //--- Check if there is a position with specified properties
+       int positions_total = ::PositionsTotal();
+       for(int i = positions_total - 1; i >= 0; i--)
+         {
+          //--- If failed to select a position, go to the next one
+           if(symbol != "" && symbol != ::PositionGetSymbol(i))
+              continue;
+          //--- If the type should be selected
+           if(type != WRONG_VALUE)
+             {
+              //--- If the type does not match, go to the next position
+               if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
+                  continue;
+             }
+          //--- Sum up the current profit + accumulated swap
+           profit_counter += ::PositionGetDouble(POSITION_PROFIT) + ::PositionGetDouble(POSITION_SWAP);
+         }
+      //--- Return the result
+       return(profit_counter);
+     }
+    //+------------------------------------------------------------------+
+    //| Trade operation event - refresh positions table on a new deal    |
+    //+------------------------------------------------------------------+
+    void CGUIPannel::OnTradeEvent(void)
+     {
+      if(IsLastDealTicket())
+         InitializePositionsTable();
      }
     // --- Col 0 button: Tang 1 control - removes this whole template (same type+params,
     // --- regardless of symbol/timeframe) from PureData. Does NOT touch the JSON file
@@ -2870,19 +3710,7 @@
 
          // --- Detach from chart if currently shown (Layer 3 mirror, handle = join key).
          // --- The slot itself dies exactly once, in ~CIndicatorDE via list.Delete below.
-         CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
-         if(chart != NULL)
-            for(int win = chart.WindowsTotal() - 1; win >= 0; win--)
-              {
-               CChartWnd *wnd = chart.GetWindowByNum(win);
-               if(wnd == NULL) continue;
-               for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
-                 {
-                  CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
-                  if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), indicator))
-                     ChartIndicatorDelete(0, win, wnd_ind.Name());
-                 }
-              }
+         DetachIndicatorFromChart(indicator);
          list.Delete(i);   // CArrayObj FreeMode -> ~CIndicatorDE -> IndicatorRelease(handle)
         }
       // --- Drop exactly this row (Library CTable::DeleteRow shifts the rest up) and keep
@@ -2920,7 +3748,7 @@
     {       
        m_treeview_SymbolTF.MainPointer(m_window_main);
        m_treeview_SymbolTF.AutoXResizeMode(false);  // fixed width
-       m_treeview_SymbolTF.XSize(SYMBOL_TREE_WIDTH);
+       m_treeview_SymbolTF.XSize(M_TREEVIEW_SYMBOLTF_WIDTH);
        m_treeview_SymbolTF.AutoYResizeMode(true);
        m_treeview_SymbolTF.VisibleItemsTotal(15);
        m_treeview_SymbolTF.LightsHover(true);
@@ -2930,7 +3758,7 @@
        return true;
     }  
    void CGUIPannel::PopulateSymbolTFTree(void)
-    {      
+    {
       if(m_BarTimeSeriesCollection == NULL) return;
       int mw_total = ::SymbolsTotal(true);
       // Grow registry if MarketWatch expanded
@@ -2940,8 +3768,33 @@
          ArrayResize(m_sym_tree_pos, mw_total);
          ArrayFill  (m_sym_tree_pos, old, mw_total - old, -1);
         }
-       for(int i = 0; i < mw_total; i++)
+      // --- SymbolName(i,true)'s own index order is Market Watch's internal/insertion order,
+      // --- NOT the alphabetically-sorted order the Market Watch grid displays (Anhnt,
+      // --- 2026-07-19) - a brand new symbol node only ever gets APPENDED (AddTreeItem always
+      // --- uses ItemsTotal() as the new list_index, there's no "insert at position"), so the
+      // --- only way to make first-time node creation come out sorted is to visit symbols in
+      // --- sorted order here. m_sym_tree_pos[] stays keyed by the RAW Market Watch index i -
+      // --- only the iteration order changes, already-created nodes are unaffected.
+      int order[];
+      ArrayResize(order, mw_total);
+      for(int i = 0; i < mw_total; i++) order[i] = i;
+      for(int a = 0; a < mw_total - 1; a++)
+         for(int b = a + 1; b < mw_total; b++)
+            if(::SymbolName(order[b], true) < ::SymbolName(order[a], true))
+              { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
+      // --- FormTreeList() silently drops any item whose item_index is not monotonically
+      // --- increasing within its node_level, in the order items were created/appended
+      // --- (Anhnt, 2026-07-19) - since we now visit symbols in ALPHABETICAL order (not raw
+      // --- Market Watch index order), raw i is NOT monotonic across creation order any more.
+      // --- sym_item_seq tracks "how many sym nodes exist so far" and is used as item_index
+      // --- instead of i, so it always increases by exactly 1 per new node, regardless of
+      // --- which raw index i that node happens to be.
+       int sym_item_seq = 0;
+       for(int c = 0; c < ArraySize(m_sym_tree_pos); c++)
+         if(m_sym_tree_pos[c] != -1) sym_item_seq++;
+       for(int oi = 0; oi < mw_total; oi++)
         {
+          int               i        = order[oi];
           string            sym_name = ::SymbolName(i, true);
           CBarTimeSeriesDE *bts      = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
           CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
@@ -2952,18 +3805,19 @@
              int sym_li = m_treeview_SymbolTF.ItemsTotal();
              m_sym_tree_pos[i] = sym_li;
              // AddTreeItem() auto-increments parent count + sets state when TF children are added
-              m_treeview_SymbolTF.AddTreeItem(sym_li, 
+              m_treeview_SymbolTF.AddTreeItem(sym_li,
                                           -1, //prev_node_list_index
-                                          sym_name, 
+                                          sym_name,
                                           IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
-                                          i, 
+                                          sym_item_seq,
                                           0, //node_level symnode = 0 Node level must be >=0
                                           0,
-                                          0, 0, 
+                                          0, 0,
                                           false,    //item_state, m_t_item_state[]=true
                                           false      //is_folder m_t_is_folder[]=false
-                                          );             
-            }            
+                                          );
+             sym_item_seq++;
+            }
            int sym_li = m_sym_tree_pos[i];
            if(tf_cnt == 0) continue;   //No TF found on sym_li
           // Step 2: Collect existing TF children of sym_li node
@@ -2978,11 +3832,27 @@
                children[sz] = j;
              }
            int child_count = ArraySize(children);
+          // --- GetSeriesByIndex()'s own order is creation order, not TF rank (Anhnt,
+          // --- 2026-07-19) - sort the LOOKUP order by IndexEnumTimeframe() so slot k below
+          // --- (positionally matched against existing children[k]) ends up ascending M1..MN1,
+          // --- same reasoning as the symbol-level sort above.
+           int tf_order[];
+           ArrayResize(tf_order, tf_cnt);
+           for(int k = 0; k < tf_cnt; k++) tf_order[k] = k;
+           for(int a = 0; a < tf_cnt - 1; a++)
+              for(int b = a + 1; b < tf_cnt; b++)
+                {
+                 CBarSeriesDE *sa = bts.GetSeriesByIndex((uchar)tf_order[a]);
+                 CBarSeriesDE *sb = bts.GetSeriesByIndex((uchar)tf_order[b]);
+                 if(sa == NULL || sb == NULL) continue;
+                 if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
+                   { int tmp = tf_order[a]; tf_order[a] = tf_order[b]; tf_order[b] = tmp; }
+                }
           // Step 3: Match bts[k] against children[k]
-           int actual_sym_li = -1;     
+           int actual_sym_li = -1;
            for(int k = 0; k < tf_cnt; k++)
             {
-             CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
+             CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)tf_order[k]);
              if(s == NULL) continue;
              string actual = TimeframeDescription(s.Timeframe());
              if(k < child_count)
@@ -3007,9 +3877,9 @@
                 if(new_item != NULL)
                   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), *new_item);
              }
-            }          
+            }
         }
-    }  
+    }
    void CGUIPannel::SynSymbolTFTreeViewIcons(void)
     {
       string chart_tf = TimeframeDescription(_Period);
@@ -4280,6 +5150,20 @@ void CGUIPannel::BuildAndWriteSignalBridge(void)
             datetime t = signal.HistoryTime(ht - 1); // history is oldest->newest
             if(t > newest_seen) newest_seen = t;
            }
+         // --- BBands-only: also watch the 3 independent line-cross histories (Anhnt,
+         // --- 2026-07-17) - Layer 1 (SignalBands.mqh) keeps them inside the SAME
+         // --- CSignalBollinger instance, so this is a safe downcast.
+         if(ind.TypeIndicator() == IND_BANDS)
+           {
+            CSignalBollinger *bb = (CSignalBollinger*)signal;
+            for(int li = 0; li < 3; li++)
+              {
+               int lt = bb.LineHistoryTotal(li);
+               if(lt == 0) continue;
+               datetime lts = bb.LineHistoryTime(li, lt - 1);
+               if(lts > newest_seen) newest_seen = lts;
+              }
+           }
         }
      }
 
@@ -4321,6 +5205,35 @@ void CGUIPannel::BuildAndWriteSignalBridge(void)
             row_tf[count]   = (int)tf;
             row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
             count++;
+           }
+         // --- BBands-only: also feed the Upper/Lower line-cross histories (Anhnt, 2026-07-19)
+         // --- as extra rows for the SAME (symbol,tf) - a bar with both a Mid flip (the primary
+         // --- signal above) AND an Upper/Lower cross correctly ends up with 2+ rows, which is
+         // --- exactly what makes the multi-signal ("Thumb Up/Down") marker shape kick in instead
+         // --- of the single arrow. Mid itself is skipped here - it was already added by the
+         // --- generic signal.HistoryDir() loop just above; adding it again here would duplicate it.
+         if(ind.TypeIndicator() == IND_BANDS)
+           {
+            CSignalBollinger *bb = (CSignalBollinger*)signal;
+            for(int li = 0; li < 3; li++)
+              {
+               if(li == BBAND_LINE_MID) continue;
+               int line_total = bb.LineHistoryTotal(li);
+               for(int h = 0; h < line_total; h++)
+                 {
+                  ENUM_SIGNAL_DIR dir = bb.LineHistoryDir(li, h);
+                  if(dir == SIGNAL_NONE) continue;
+                  if(dir == SIGNAL_BUY  && !buy_on)  continue;
+                  if(dir == SIGNAL_SELL && !sell_on) continue;
+                  ArrayResize(row_time, count + 1);
+                  ArrayResize(row_tf,   count + 1);
+                  ArrayResize(row_dir,  count + 1);
+                  row_time[count] = bb.LineHistoryTime(li, h);
+                  row_tf[count]   = (int)tf;
+                  row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
+                  count++;
+                 }
+              }
            }
         }
      }

@@ -74,6 +74,10 @@
  void OnTick(void)
   {
     tradingEngine.OnTickEvent();
+    // --- Status Bar (Deposit Load/Profit/Server Time) - CGUIPannel::OnTickEvent() itself was
+    // --- already restored (calls UpdateStatusBar()), but this call site was never added back
+    // --- here, so the status bar never actually refreshed (Anhnt, 2026-07-19).
+    mGUIPannel.OnTickEvent();
     //For Bar
     //  Refresh pattern renderer on new bar
       SDataCalculate data_calc;

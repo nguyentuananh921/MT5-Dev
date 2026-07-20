@@ -58,16 +58,24 @@ class CSignalBase : public CBaseObj
 
     //--- realtime: recompute the still-forming bar (shift 0) - safe every tick, never touches history
      void             RefreshCurrent(void);
-
     //--- permanent: append the bar that just closed (shift 1, read at the moment its new-bar
     //--- event fires) to history, but ONLY if its direction differs from the last recorded one.
     //--- Call exactly once per closed bar - never call every tick.
      void             CommitClosedBar(void);
-
     //--- catch up: backfill flip history for bars 1..total_bars-1 that closed before this signal
     //--- object existed - mirrors CBarSeriesDE::SyncData's "grow to what's required" pattern.
     //--- Call once, right after SetIndicator, while history is still empty.
      void             SyncHistory(int total_bars);
+
+    //--- Extension hooks (Anhnt, 2026-07-17): no-op by default, called by CSignalsCollection
+    //--- right alongside the 3 methods above. Lets a multi-buffer indicator's signal (e.g.
+    //--- CSignalBollinger tracking Upper/Mid/Lower line-crosses alongside its own primary
+    //--- history) keep the "1 indicator = 1 signal" invariant while still maintaining several
+    //--- independent flip histories internally - one CSignalBase subclass, several buffers,
+    //--- exactly like one indicator can have several plots/buffers.
+     virtual void     RefreshCurrentExtra(void) { }
+     virtual void     CommitClosedBarExtra(void) { }
+     virtual void     SyncHistoryExtra(int total_bars) { }
 
     //--- read results
      ENUM_SIGNAL_DIR  GetCurrentSignal(void) const;
@@ -145,7 +153,6 @@ void CSignalBase::CommitClosedBar(void)
    m_hist_low[total]  = lo[0];
    m_hist_high[total] = hi[0];
   }
-
 //+------------------------------------------------------------------+
 //| Backfill flip history for bars 1..total_bars-1 - call once,     |
 //| right after SetIndicator, while history is still empty.         |

@@ -107,6 +107,7 @@
     // the moment this Signal was created. Capped at 500 bars - a one-time cost per indicator.
     int bars_avail = (int)::Bars(indicator.Symbol(), indicator.Timeframe());
     signal.SyncHistory(bars_avail > 500 ? 500 : bars_avail);
+    signal.SyncHistoryExtra(bars_avail > 500 ? 500 : bars_avail);
 
     if(!m_list.Add(signal))
       {
@@ -127,7 +128,7 @@
     for(int i = 0; i < total; i++)
       {
        CSignalBase *signal = m_list.At(i);
-       if(signal != NULL) signal.RefreshCurrent();
+       if(signal != NULL) { signal.RefreshCurrent(); signal.RefreshCurrentExtra(); }
       }
    }
   void CSignalsCollection::RefreshCurrentBar(const string symbol)
@@ -139,7 +140,7 @@
        if(signal == NULL) continue;
        CIndicatorDE *indicator = signal.GetIndicator();  // BORROWED
        if(indicator != NULL && indicator.Symbol() == symbol)
-          signal.RefreshCurrent();
+         { signal.RefreshCurrent(); signal.RefreshCurrentExtra(); }
       }
    }
   void CSignalsCollection::FreezeClosedBar(const string symbol, const ENUM_TIMEFRAMES tf)
@@ -151,7 +152,7 @@
        if(signal == NULL) continue;
        CIndicatorDE *indicator = signal.GetIndicator();  // BORROWED
        if(indicator != NULL && indicator.Symbol() == symbol && indicator.Timeframe() == tf)
-          signal.CommitClosedBar();
+         { signal.CommitClosedBar(); signal.CommitClosedBarExtra(); }
       }
    }
 #endif // CSIGNALSCOLLECTION_MQH_IMPLEMENTATION

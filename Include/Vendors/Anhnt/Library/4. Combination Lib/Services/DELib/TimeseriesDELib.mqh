@@ -353,22 +353,22 @@
         default           : return false;
       }
   }
- //+------------------------------------------------------------------+
- //| Compare two MqlParam arrays element by element                   |
- //+------------------------------------------------------------------+
- bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
-  {
-    int total = ArraySize(array1);
-    int size  = ArraySize(array2);
-    if(total != size)
-        return false;
-    for(int i = 0; i < total; i++)
-      {
-        if(!IsEqualMqlParams(array1[i], array2[i]))
-            return false;
-      }
-    return true;
-  }
+   //+------------------------------------------------------------------+
+   //| Compare two MqlParam arrays element by element                   |
+   //+------------------------------------------------------------------+
+   bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
+    {
+      int total = ArraySize(array1);
+      int size  = ArraySize(array2);
+      if(total != size)
+          return false;
+      for(int i = 0; i < total; i++)
+        {
+          if(!IsEqualMqlParams(array1[i], array2[i]))
+              return false;
+        }
+      return true;
+    }
  //+------------------------------------------------------------------+
  //| Return the number of candles for a given pattern type            |
  //+------------------------------------------------------------------+
