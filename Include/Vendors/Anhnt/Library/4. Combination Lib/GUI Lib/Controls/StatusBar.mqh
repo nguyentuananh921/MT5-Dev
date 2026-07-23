@@ -199,7 +199,7 @@
          uint array_size=::ArraySize(m_items);
       // --- If there is not a single item in the context menu, report it
          if(array_size<1)
-            ::Print(__FUNCTION__," > Вызов этого метода нужно осуществлять, когда есть хотя бы один пункт!");
+            ::Print(__FUNCTION__," This method should be called when there is at least one item!");
       // --- Adjustment in case of leaving the range
          uint i=(index>=array_size)? array_size-1 : index;
       // --- Return pointer

@@ -1234,7 +1234,7 @@
    // --- Calculation of the width of list items
     int w = (m_scrollv.IsScroll())
                 ? CElementBase::XSize() - m_scrollv.ScrollWidth() - 2
-                : CElementBase::XSize();
+                : CElementBase::XSize()-2; //Modify here from CElementBase::XSize() to fix width
    // --- Determining the scroll position
     int v = (m_scrollv.IsScroll()) ? m_scrollv.CurrentPos() : 0;
     m_scrollv.CurrentPos(v);

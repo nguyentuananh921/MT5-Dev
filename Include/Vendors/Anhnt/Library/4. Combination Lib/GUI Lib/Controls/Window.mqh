@@ -443,8 +443,8 @@ class CWindow : public CElement
         // --- If the subwindow fixed height mode is set
         if(m_height_subwindow_mode)
           {
-          m_subwindow_height=m_full_height+3;
-          ChangeSubwindowHeight(m_subwindow_height);
+           m_subwindow_height=m_full_height+3;
+           ChangeSubwindowHeight(m_subwindow_height);
           }
       }        
     // //Print Debug

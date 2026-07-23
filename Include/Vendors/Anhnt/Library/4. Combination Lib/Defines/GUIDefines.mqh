@@ -62,14 +62,13 @@
 // ──────────────────────────────────────────────────────────────────
 // ENUMERATIONS
 // ──────────────────────────────────────────────────────────────────
-enum ENUM_WINDOW_TYPE
- {
+ enum ENUM_WINDOW_TYPE
+  {
    W_MAIN   = 0,
    W_DIALOG = 1
- };
-
-enum ENUM_ELEMENT_TYPE
- {
+  };
+ enum ENUM_ELEMENT_TYPE
+  {
    E_CONTEXT_MENU    = 0,
    E_COMBO_BOX       = 1,
    E_SPLIT_BUTTON    = 2,
@@ -91,8 +90,7 @@ enum ENUM_ELEMENT_TYPE
    E_TOOLTIP         = 18,
    E_FRAME           = 19
   };
-
-enum ENUM_MOUSE_POINTER
+ enum ENUM_MOUSE_POINTER
   {
    MP_CUSTOM            = 0,
    MP_X_RESIZE          = 1,
@@ -106,80 +104,69 @@ enum ENUM_MOUSE_POINTER
    MP_Y_SCROLL          = 9,
    MP_TEXT_SELECT       = 10
   };
-
-enum ENUM_MOUSE_STATE
- {
+ enum ENUM_MOUSE_STATE
+  {
    NOT_PRESSED           = 0,
    PRESSED_INSIDE        = 1,
    PRESSED_OUTSIDE       = 2,
    PRESSED_INSIDE_HEADER = 3,
    PRESSED_INSIDE_BORDER = 4
- };
-
-enum ENUM_TYPE_MENU_ITEM
+  };
+ enum ENUM_TYPE_MENU_ITEM
   {
    MI_SIMPLE           = 0,
    MI_CHECKBOX         = 1,
    MI_RADIOBUTTON      = 2,
    MI_HAS_CONTEXT_MENU = 3
   };
-
-enum ENUM_TYPE_SEP_LINE
- {
+ enum ENUM_TYPE_SEP_LINE
+  {
    H_SEP_LINE = 0,
    V_SEP_LINE = 1
- };
-
-enum ENUM_FIX_CONTEXT_MENU
- {
+  };
+ enum ENUM_FIX_CONTEXT_MENU
+  {
    FIX_RIGHT  = 0,
    FIX_BOTTOM = 1
- };
-
-enum ENUM_TABS_POSITION
- {
+  };
+ enum ENUM_TABS_POSITION
+  {
    TABS_TOP    = 0,
    TABS_BOTTOM = 1,
    TABS_LEFT   = 2,
    TABS_RIGHT  = 3
- };
-
-enum ENUM_TYPE_TREE_ITEM
- {
+  };
+ enum ENUM_TYPE_TREE_ITEM
+  {
    TI_SIMPLE    = 0,
    TI_HAS_ITEMS = 1
- };
-
-enum ENUM_FILE_NAVIGATOR_MODE
- {
+  };
+ enum ENUM_FILE_NAVIGATOR_MODE
+  {
    FN_ALL          = 0,
    FN_ONLY_FOLDERS = 1
- };
-
-enum ENUM_FILE_NAVIGATOR_CONTENT
- {
+  };
+ enum ENUM_FILE_NAVIGATOR_CONTENT
+  {
    FN_BOTH        = 0,
    FN_ONLY_MQL    = 1,
    FN_ONLY_COMMON = 2
- };
-
-enum ENUM_CSORT_MODE
- {
+  };
+ enum ENUM_CSORT_MODE
+  {
    SORT_ASCEND  = 0,
    SORT_DESCEND = 1
- };
-
-enum ENUM_TYPE_CELL
- {
+  };
+ enum ENUM_TYPE_CELL
+  {
    CELL_SIMPLE   = 0,
    CELL_BUTTON   = 1,
    CELL_CHECKBOX = 2,
    CELL_COMBOBOX = 3,
    CELL_EDIT     = 4
- };
-
-enum ENUM_MOVE_TEXT_CURSOR
- {
+  };
+ enum ENUM_MOVE_TEXT_CURSOR
+  {
    TO_NEXT_LEFT_SYMBOL  = 0,
    TO_NEXT_RIGHT_SYMBOL = 1,
    TO_NEXT_LEFT_WORD    = 2,
@@ -190,8 +177,7 @@ enum ENUM_MOVE_TEXT_CURSOR
    TO_END_LINE          = 7,
    TO_BEGIN_FIRST_LINE  = 8,
    TO_END_LAST_LINE     = 9
- };
-
+  };
 // ──────────────────────────────────────────────────────────────────
 // MACROS
 // ──────────────────────────────────────────────────────────────────

@@ -29,19 +29,25 @@
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
 //  #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\Accounts\Account.mqh>
 #ifndef CGUIPANNEL_MQH_DECLARATION
-#define CGUIPANNEL_MQH_DECLARATION
+#define CGUIPANNEL_MQH_DECLARATION  
+   enum ENUM_CHECKBOX_STATE
+    {
+      CHECKBOX_STATE_ON  = 0,
+      CHECKBOX_STATE_OFF = 1,
+    };
  // Define GUI control
   // --- Main panel window m_window_main
     #define M_WINDOW_MAIN_WIDTH         750
     #define M_WINDOW_MAIN_HEIGHT        480
+    #define M_WINDOW_MAIN_MIN_WIDTH     300
+    #define M_WINDOW_MAIN_MIN_HEIGHT    200
    //Left pannel m_treeview_SymbolTF (fixed left strip, visible on all tabs)   
-    //#define SYMBOL_TREE_WIDTH         100
-    #define M_TREEVIEW_SYMBOLTF_WIDTH   100
-   //Right Pannel m_tabs_main starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.
-    // --- AutoXResizeRightOffset=3, so: TABS_WIDTH = PANEL_WIDTH - TABS_MAIN_X - 3.    
-    #define M_TABS_MAIN_X               115
-    #define M_TABS_MAIN_Y               43
-    #define M_TABS_MAIN_WIDTH           (M_WINDOW_MAIN_WIDTH - M_TABS_MAIN_X - 3)
+    #define M_CONTROL_BORDER_GAP        3  //Gap between border of two control
+    #define M_TREEVIEW_SYMBOLTF_WIDTH   85    
+   //Right Pannel m_tabs_main starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.        
+    #define M_TABS_MAIN_X               M_CONTROL_BORDER_GAP+M_TREEVIEW_SYMBOLTF_WIDTH +M_CONTROL_BORDER_GAP
+    #define M_TABS_MAIN_Y               43  //WINDOW_CAPTION_HEIGHT = 22
+    #define M_TABS_MAIN_WIDTH           (M_WINDOW_MAIN_WIDTH - M_TABS_MAIN_X - M_CONTROL_BORDER_GAP)
     enum ENUM_TAB_MAIN
      {
       TAB_TAB_MAIN_ACCOUNT_INFO = 0,
@@ -60,7 +66,7 @@
         TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,    
         TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER,
         TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL,
-       };
+       };      
       enum ENUM_INDICATOR_SHOW_STATE
        {
         INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
@@ -76,11 +82,7 @@
       STATUS_BAR_SERVER_TIME,
      };
   //--------------------
-  enum ENUM_CHECKBOX_STATE
-   {
-    CHECKBOX_STATE_ON  = 0,
-    CHECKBOX_STATE_OFF = 1,
-   };
+  
    
   
    
@@ -175,118 +177,134 @@
        CBarPatternsControl        *m_pattern_cfg;                      // borrowed from EA
        CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
        CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
-       CTickSeriesCollection      *m_tick_series;                      // Collection of tick series
-      
+       CTickSeriesCollection      *m_tick_series;                      // Collection of tick series      
        CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
-       //For Layer 2 Handling on m_table_indicator
-        int                        m_pending_remove_row;                // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
-        int                        m_pending_remove_row_symboltf;       // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
+       
      //------------------- 
-      CTimeCounter               m_gui_timecounter;                   //--- Time counters
-      CKeys                      m_keys;                              //For Keyboard
-     //For Layer 2 Gui Control
-      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
-      CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
-      // GUI Control Elements
-       CWindow                    m_window_main;
-      //Control at m_window_main       
-       //For CTreeView left pannel 
-        CTreeView                 m_treeview_SymbolTF;
-        int                       m_sym_tree_pos[];        //To save symbol node list_index
-       // Main Tab on Right
-        CTabs                      m_tabs_main;
-        //for control at TAB_TAB_MAIN_TRADE
-          CTable               m_table_indicator_SymbolTFValue;
-        //For TAB_TAB_MAIN_POSITIONS - ported verbatim from V1 (Anatoli Kazharski\GUIPannel.mqh)
+      CTimeCounter                m_gui_timecounter;                   //--- Time counters
+      CKeys                       m_keys;                              //For Keyboard
+     //For Layer 2 GUI Control Elements  
+       //For Main window m_window_main
+         CWindow                   m_window_main;
+       //For CTreeView left pannel of m_window_main
+         CTreeView                 m_treeview_SymbolTF;
+         int                       m_sym_tree_pos[];        //To save symbol node list_index       
+       // Main Tab on Right of m_window_main
+         CTabs                     m_tabs_main;
+         //
+         //For TAB_TAB_MAIN_TRADE of m_tabs_main
+          CTable               m_table_indicator_SymbolTFValue; 
+          // per-row dirty-check cache for Trade tab table           
+           string               m_string_table_indicator_SymbolTFValue_cache_val[];
+           int                  m_int_table_indicator_SymbolTFValue_cache_sig_icon[];
+           int                  m_int_table_indicator_SymbolTFValue_cache_dir_icon[];
+           int                  m_int_table_indicator_SymbolTFValue_table_row_count;
+         //For TAB_TAB_MAIN_POSITIONS at m_tabs_main
           CComboBox            m_combo_pre_Trade_plan_symbol;
           //--- Order-setup row, single horizontal line (Anhnt 2026-07-20): Distance mode toggle
           //--- + Distance value, Lot mode toggle + Lot-or-Risk% value (same edit box, meaning
           //--- switches with m_group_pre_trade_lot_mode - see SetValuesToPreTradePlanTable).
-          CTextLabel           m_label_pre_trade_distance;
-          CButtonsGroup        m_group_pre_trade_distance_mode;   // Fixed / ATR
-          CTextEdit            m_edit_pre_trade_distance_pts;
-          CTextLabel           m_label_pre_trade_lot;
-          CButtonsGroup        m_group_pre_trade_lot_mode;        // By Distance (manual) / By Risk %
-          CTextEdit            m_edit_pre_trade_lot_or_risk;
-          CTable               m_table_pre_Trade_plan;
-          CTable               m_table_positions;
-          datetime             m_last_deal_time;   // IsLastDealTicket's own HistorySelect watermark
-          ulong                m_last_deal_ticket;
-        //For Control at TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR 
-         CTabs                      m_tabs_main_setting_config;
-         //For TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR at m_tabs_main_setting_config
-          // Indicator TreeViews at the Left     
-           CTreeView                 m_treeview_indicator;
-           string                    m_table_indicator_names[];
-           int                       m_group_tree_pos[];
-           int                       m_type_node_li[];      // list_index của từng node Type (level 1)
-           ENUM_INDICATOR            m_type_node_value[];   // ENUM_INDICATOR tương ứng         
-          // For Indicator Add Form 
-          // --- INDICATOR_PARAM_SLOTS_MAX (8) matches the largest schema (Alligator/Gator)
-           CTextLabel           m_param_labels[INDICATOR_PARAM_SLOTS_MAX];
-           CTextEdit            m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
-           CComboBox            m_param_combo[INDICATOR_PARAM_SLOTS_MAX];    // enum-like params (Method, Applied Price, ...)
-           CButton              m_btn_add_indicator;                         //CButton to Add Indicator
-           CButton              m_btn_save_indicator;                        //CButton to Save Indicator to JSON
-           ENUM_INDICATOR       m_current_param_type;     // which type the form is currently showing
-           int                  m_current_param_type_li;  // its tree list_index (for tree-node insertion later)        
-          // --- Indicator Info table: port of V4 m_table_indicator         
-           CTable               m_table_indicator;
-         //for TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config
-          CTable               m_table_indicator_SymbolTFSeting;
-          CButton              m_btn_save_SymbolTF;
-          CTextLabel           m_label_symboltf_note;   // "takes effect after EA restart" note
-         //For TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER
-          // --- 4 independent shapes (each needs its OWN MT5 plot - PLOT_ARROW is a per-plot
-          // --- fixed property, not per-bar, so "Single" and "Multi" each need a Buy/Sell PAIR
-          // --- of shapes, not one shared shape re-colored - see SignalMarkers.mq5).
-           CComboBox            m_combo_shape_single_buy;
-           CComboBox            m_combo_shape_single_sell;
-           CComboBox            m_combo_shape_multi_buy;
-           CComboBox            m_combo_shape_multi_sell;
-          // --- 3 colors, independent of shape: Buy/Sell apply when a marker relates to this
-          // --- chart's own current Symbol+TF; Non-Related is used otherwise. Picked from a
-          // --- small fixed palette via ComboBox (CColorPicker is a fixed 348x266 full HSL/RGB
-          // --- dialog, no compact variant - not worth it for 3 preset-style picks).
-           CComboBox            m_combo_color_buy;
-           CComboBox            m_combo_color_sell;
-           CComboBox            m_combo_color_nonrelated;
-           CButton              m_btn_save_marker_settings;
-          // --- Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi
-          // --- Buy/Sell), index 0-2 of the color arrays = Buy/Sell/Non-Related. Preview labels
-          // --- render the ACTUAL Wingdings glyph (Font("Wingdings") + the raw char code) so the
-          // --- user sees the real shape, not just a number; color previews reuse CColorButton's
-          // --- own swatch rendering, just never wired to a click handler (display-only).
-           CTextLabel           m_label_other_caption[10];
-           CTextLabel           m_preview_shape[4];
-           CColorButton         m_preview_color[3];
-          // --- Current marker style/color state - loaded from Config_Setting.json's "markers" section at startup,
-          // --- fed to SignalMarkers.mq5 as iCustom inputs, updated by the Save button above.
-           int                  m_marker_single_buy_code;
-           int                  m_marker_single_sell_code;
-           int                  m_marker_multi_buy_code;
-           int                  m_marker_multi_sell_code;
-           color                m_marker_buy_color;
-           color                m_marker_sell_color;
-           color                m_marker_nonrelated_color;
-          // --- Buy/Sell alert sound files (2026-07-17) - CFileNavigator's tree+content-list
-          // --- popup turned out to have a real bug (splitter-drag state can get stuck, freezing
-          // --- the popup) and was overkill for "pick one file from one known folder" anyway.
-          // --- Simplified: m_marker_sound_folder is a user-editable path (relative to
-          // --- MQL5\Files\, persisted in JSON so it's never "lost" if changed) that gets scanned
-          // --- with plain FileFindFirst/FileFindNext into 2 comboboxes - no tree, no splitter,
-          // --- nothing to freeze. m_marker_buy_sound_file/m_marker_sell_sound_file now store just
-          // --- the FILENAME (not a full path) - portable if the folder itself ever moves, since
-          // --- the folder is tracked separately. Actually playing these on a live Signal is a
-          // --- separate, not-yet-wired step (per-indicator Sound checkbox in m_table_indicator
-          // --- already exists as UI-only).
-           string               m_marker_sound_folder;
-           string               m_marker_buy_sound_file;
-           string               m_marker_sell_sound_file;
-           CTextEdit            m_edit_sound_folder;
-           CButton              m_btn_refresh_sound_folder;
-           CComboBox            m_combo_buy_sound;
-           CComboBox            m_combo_sell_sound;
+           CTextLabel           m_label_pre_trade_distance;
+           CButtonsGroup        m_group_pre_trade_distance_mode;   // Fixed / ATR
+           CTextEdit            m_edit_pre_trade_distance_pts;
+           CTextLabel           m_label_pre_trade_lot;
+           CButtonsGroup        m_group_pre_trade_lot_mode;        // By Distance (manual) / By Risk %
+           CTextEdit            m_edit_pre_trade_lot_or_risk;
+           CTable               m_table_pre_Trade_plan;
+           CTable               m_table_positions;
+           datetime             m_last_deal_time;   // IsLastDealTicket's own HistorySelect watermark
+           ulong                m_last_deal_ticket;         
+         //For TAB_TAB_MAIN_SETTINGS at m_tabs_main
+          CTabs                      m_tabs_main_setting_config;
+           // For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR at m_tabs_main_setting_config
+            // Indicator TreeViews at the Left
+              CTreeView                 m_treeview_indicator;
+              string                    m_table_indicator_names[];
+              int                       m_group_tree_pos[];
+              int                       m_type_node_li[];      // list_index của từng node Type (level 1)
+              ENUM_INDICATOR            m_type_node_value[];   // ENUM_INDICATOR tương ứng   
+            // For Indicator Add Form display on click m_treeview_indicator node
+             CTextLabel           m_param_labels[INDICATOR_PARAM_SLOTS_MAX];
+             CTextEdit            m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
+             CComboBox            m_param_combo[INDICATOR_PARAM_SLOTS_MAX];    // enum-like params (Method, Applied Price, ...)
+             CButton              m_btn_add_indicator;                         //CButton to Add Indicator
+             CButton              m_btn_save_indicator;                        //CButton to Save Indicator to JSON
+             ENUM_INDICATOR       m_current_param_type;     // which type the form is currently showing
+             int                  m_current_param_type_li;  // its tree list_index (for tree-node insertion later) 
+            //for table display indicator template at Layer 1, check box to show/hide on Layer 3 (Chart)
+             CTable               m_table_indicator; 
+             // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - 
+             // rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)          
+              int                  m_pending_remove_row;
+           // For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config
+            CTable               m_table_indicator_SymbolTFSeting;
+            CButton              m_btn_save_SymbolTF;
+            CTextLabel           m_label_symboltf_note;   // "takes effect after EA restart" note
+            // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
+             int                  m_pending_remove_row_symboltf;       
+           //For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER at m_tabs_main_setting_config
+            // --- 4 independent shapes (each needs its OWN MT5 plot - PLOT_ARROW is a per-plot
+            // --- fixed property, not per-bar, so "Single" and "Multi" each need a Buy/Sell PAIR
+            // --- of shapes, not one shared shape re-colored - see SignalMarkers.mq5).
+             CComboBox            m_combo_shape_single_buy;
+             CComboBox            m_combo_shape_single_sell;
+             CComboBox            m_combo_shape_multi_buy;
+             CComboBox            m_combo_shape_multi_sell;
+            // --- 3 colors, independent of shape: Buy/Sell apply when a marker relates to this
+            // --- chart's own current Symbol+TF; Non-Related is used otherwise. Picked from a
+            // --- small fixed palette via ComboBox (CColorPicker is a fixed 348x266 full HSL/RGB
+            // --- dialog, no compact variant - not worth it for 3 preset-style picks).
+             CComboBox            m_combo_color_buy;
+             CComboBox            m_combo_color_sell;
+             CComboBox            m_combo_color_nonrelated;
+             CButton              m_btn_save_marker_settings;
+             // --- Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi
+             // --- Buy/Sell), index 0-2 of the color arrays = Buy/Sell/Non-Related. Preview labels
+             // --- render the ACTUAL Wingdings glyph (Font("Wingdings") + the raw char code) so the
+             // --- user sees the real shape, not just a number; color previews reuse CColorButton's
+             // --- own swatch rendering, just never wired to a click handler (display-only).
+              CTextLabel           m_label_other_caption[10];
+              CTextLabel           m_preview_shape[4];
+              CColorButton         m_preview_color[3];
+             // --- Current marker style/color state - loaded from Config_Setting.json's "markers" section at startup,
+             // --- fed to SignalMarkers.mq5 as iCustom inputs, updated by the Save button above.
+              int                  m_marker_single_buy_code;
+              int                  m_marker_single_sell_code;
+              int                  m_marker_multi_buy_code;
+              int                  m_marker_multi_sell_code;
+              color                m_marker_buy_color;
+              color                m_marker_sell_color;
+              color                m_marker_nonrelated_color;
+             // --- Buy/Sell alert sound files (2026-07-17) - CFileNavigator's tree+content-list
+             // --- popup turned out to have a real bug (splitter-drag state can get stuck, freezing
+             // --- the popup) and was overkill for "pick one file from one known folder" anyway.
+             // --- Simplified: m_marker_sound_folder is a user-editable path (relative to
+             // --- MQL5\Files\, persisted in JSON so it's never "lost" if changed) that gets scanned
+             // --- with plain FileFindFirst/FileFindNext into 2 comboboxes - no tree, no splitter,
+             // --- nothing to freeze. m_marker_buy_sound_file/m_marker_sell_sound_file now store just
+             // --- the FILENAME (not a full path) - portable if the folder itself ever moves, since
+             // --- the folder is tracked separately. Actually playing these on a live Signal is a
+             // --- separate, not-yet-wired step (per-indicator Sound checkbox in m_table_indicator
+             // --- already exists as UI-only).
+              string               m_marker_sound_folder;
+              string               m_marker_buy_sound_file;
+              string               m_marker_sell_sound_file;
+              CTextEdit            m_edit_sound_folder;
+              CButton              m_btn_refresh_sound_folder;
+              CComboBox            m_combo_buy_sound;
+              CComboBox            m_combo_sell_sound;
+           //-
+       //----------
+       //For status Bar at Bottom of m_window_main
+        CStatusBar                 m_status_bar;
+     //---------------
+
+
+
+     //For Layer 2 Gui Control
+      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
+      CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
+       
           // --- Closed-bar path (CheckIndicatorAlerts): per-template (type_key/params_key, NOT
           // --- per-row - row index isn't stable across a table rebuild) watermark of the newest
           // --- committed HistoryTime() already written to Signal_Log.csv, persisted to
@@ -317,12 +335,13 @@
           // --- reads CSignalBollinger's own real persisted LineHistoryXxx() instead.
            ENUM_SIGNAL_DIR      m_upper_last_seen[];
            ENUM_SIGNAL_DIR      m_lower_last_seen[];
+
+           
       //Information window at to display signal on chart
        CWindow                    m_window_candle_infomation;
        CTable                     m_table_candle_information_atBar;
        datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden
-      //For status Bar 
-       CStatusBar                 m_status_bar;
+      
       // For guard on GUI.
        bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA 
      // --- Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
@@ -332,12 +351,8 @@
        // --- has no API to restyle an indicator instance that is already attached to a chart.
         CChartObjCollection       m_chart_obj_collection;
       
-     // per-row dirty-check cache for Trade tab table
-         string               m_trade_cache_val[];
-         int                  m_trade_cache_sig_icon[];
-         int                  m_trade_cache_dir_icon[];
-         int                  m_trade_table_row_count;
-         // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
+     
+        // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
          int                  m_settings_cache_state[];
 
        // --- Signal Markers bridge (BugNote 2026-07-16): a separate SignalMarkers.mq5
@@ -358,7 +373,19 @@
        bool                            CreateGUIPannel(); 
      //--- Form
          int                           WindowIdx(CWindow &wnd);
+      //For m_window_main
          bool                          CreateMainWindow(const string text);
+       // Symbol TF TreeView m_treeview_SymbolTF        
+        bool                          CreateTreeView_SymbolTF(const int x_gap, const int y_gap);               
+        void                          PopulateSymbolTFTree(void);
+        void                          SynSymbolTFTreeViewIcons(void);
+       // For Main Tab
+         bool                          CreateTab_Main(const int x_gap, const int y_gap);
+       //--- Status bar
+         bool                          CreateStatusBar(const int x_gap, const int y_gap);
+         bool                          UpdateStatusBar(void);
+         
+      //
      // For candle info popup (BugNote 7.2: Ctrl+hover -> Signal direction per indicator at that bar)
          bool                          CreateWindowCandleInfo(void);
          bool                          RefreshCandleInfoWindow(const datetime bar_time);
@@ -366,18 +393,13 @@
          void                          RepositionCandleInfoWindow(const int cursor_x, const int cursor_y);
          void                          ShowCandleInfoPopup(const int cursor_x, const int cursor_y);
          void                          HideCandleInfoPopup(void);
-     // For Main Tab
-         bool                          CreateTab_Main(const int x_gap, const int y_gap);
+     
+     
+
      // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS
          bool                          CreateTabSettingConfig(const int x_gap, const int y_gap);
-     //--- Status bar
-         bool                          CreateStatusBar(const int x_gap, const int y_gap);
-         bool                          UpdateStatusBar(void);
-     //For TreeView
-       // Symbol TF TreeView m_treeview_SymbolTF        
-        bool                          CreateTreeView_SymbolTF(const int x_gap, const int y_gap);               
-        void                          PopulateSymbolTFTree(void);
-        void                          SynSymbolTFTreeViewIcons(void);
+     
+     //For TreeView       
        //Indicator TreeView m_treeview_indicator.         
          bool                         CreateTreeView_Indicator(const int x_gap, const int y_gap);
          void                         PopulateIndicatorTree(void);
@@ -390,8 +412,8 @@
          void                         OnClickAddIndicator(void);
          void                         OnClickSaveIndicators(void);
        //For Indicator Table m_table_indicator   
-         bool                         CreateIndicatorTable(const int x, const int y);         
-         void                         RefreshIndicatorTable(void);         
+         bool                         CreateTabbleIndicator(const int x, const int y);         
+         void                         RefreshTableIndicator(void);         
          void                         RefreshIndicatorTableShowColumn(void);
          void                         SetIndicatorTableRow(const int row, CIndicatorDE *indicator);         
          bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);
@@ -402,8 +424,8 @@
          void                         BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key);
          void                         ApplyLoadedIndicatorBuySell(void);
        //For Indicator Symbol TF Table m_table_indicator_SymbolTFValue
-         bool                         CreateIndicatorSymbolTFTable(const int x, const int y);
-         void                         SetValuesToIndicatorSymbolTFTable(void);
+         bool                         CreateTableIndicatorSymbolTFValue(const int x, const int y);
+         void                         SetValuesToTableIndicatorSymbolTFValue(void);
          string                       BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
          void                         BuildAndWriteSignalBridge(void);
          bool                         TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
@@ -517,15 +539,15 @@
   CGUIPannel::CGUIPannel(void)
    {
     //--- Setting parameters for the time counters
-      m_gui_timecounter.SetParameters(16, 500);
+       m_gui_timecounter.SetParameters(16, 500);
       //m_renderer = NULL;
-      m_IndicatorsCollection  = NULL;
-      m_trade_table_row_count  = 0;
-      m_pending_remove_row     = -1;
-      m_pending_remove_row_symboltf = -1;
-      m_candle_info_shown_bar  = 0;
+       m_IndicatorsCollection  = NULL;
+       m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
+       m_pending_remove_row     = -1;
+       m_pending_remove_row_symboltf = -1;
+       m_candle_info_shown_bar  = 0;
       //m_tick_series = NULL;
-      m_gui_created     = false;
+       m_gui_created     = false;
    }
   CGUIPannel::~CGUIPannel(void)
    {
@@ -538,13 +560,6 @@
             return i;
       return 0;
    } 
-  void CGUIPannel::SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw)
-    {
-      out[idx].row         = r;
-      out[idx].col         = c;
-      out[idx].total_width = tw;
-      out[idx].field_width = fw;
-    }
  // CGUIPannel Lifecycle  
   //+------------------------------------------------------------------+
   //| Init                                                             |
@@ -557,12 +572,12 @@
       m_gui_created = true;
       // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
       // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
-      m_chart_obj_collection.CreateCollection();
-      UpdateGUI(true);
+       m_chart_obj_collection.CreateCollection();
+       UpdateGUI(true);
       // --- Seed m_table_indicator's Buy/Sell checkboxes from indicators_config.json (same
       // --- pattern as ApplyLoadedSymbolTFSettings for m_table_indicator_SymbolTFSeting) - MUST
       // --- run after UpdateGUI() so m_table_indicator_ptrs[] is already built.
-      ApplyLoadedIndicatorBuySell();
+       ApplyLoadedIndicatorBuySell();
       // Startup reconcile: adopt any indicator the user attached while the EA was off.
       // MUST run AFTER UpdateGUI - m_IndicatorsCollection.TemplateExists() needs the collection
       // already populated; running before it re-imported
@@ -576,41 +591,33 @@
       // --- Remove from chart"): cleans up legacy CreateSignalBuy/Sell/CreateThumbUp/Down
       // --- objects from sessions before OnDeinitEvent's own per-removal purge existed. Gated
       // --- so it only ever runs once per terminal, not once per chart/attach.
-      if(!::GlobalVariableCheck("CombinationEA_SignalMarkersMigrated_v1"))
+       if(!::GlobalVariableCheck("CombinationEA_SignalMarkersMigrated_v1"))
         {
          PurgeSignalArrowObjects(::Symbol(), EnumToString((ENUM_TIMEFRAMES)::Period()));
          ::GlobalVariableSet("CombinationEA_SignalMarkersMigrated_v1", 1);
         }
-      EnsureMarkerIndicatorAttached();
-    }
-   else if(uninit_reason == REASON_CHARTCHANGE)
-    {
+       EnsureMarkerIndicatorAttached();
+     }
+    else if(uninit_reason == REASON_CHARTCHANGE)
+     {
       // No manual redraw here (2026-07-14) - MT5 already redraws the chart natively on
       // symbol/TF change, and CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE (OnEvent) does the
       // same content refresh moments later. Two ChartRedraw() calls back-to-back was
       // the m_window_main flicker on every TF switch.
-      UpdateGUI(false);
+       UpdateGUI(false);
       // --- No explicit bubble lazy-init call needed here (2026-07-14, BugNote "ChartChange
       // --- là mất") - CTradingLevelBubble now self-manages via EnsureCreated(), called from
       // --- its own OnPoll()/OnChartEvent() every time either is invoked, so the very next
       // --- OnEvent()/OnTimerEvent() call after this reinit already covers it.
       // --- Defensive re-check (cheap, idempotent) - the indicator itself already survives a
       // --- symbol/TF change on its own, this just covers the case where it got removed by hand.
-      EnsureMarkerIndicatorAttached();
-    }
-   return true;
+       EnsureMarkerIndicatorAttached();
+     }
+    return true;
    };
-  // Hides all param-form slots. Called after any ShowTabElements() that overrides our Hide().
-  void CGUIPannel::HideParamSlots(void)
-   {
-    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-     {
-      m_param_labels[i].Hide();
-      m_param_edits[i].Hide();
-      m_param_combo[i].Hide();
-     }     
-   }
-  // OnEvent handler
+  //+------------------------------------------------------------------+
+  //| OnEvent handler                                                  |
+  //+------------------------------------------------------------------+  
   void CGUIPannel::OnEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
    {
@@ -934,28 +941,28 @@
       // --- Positions Table (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1, 2026-07-19:
       // --- row-count mismatch (new/closed symbol) forces a full rebuild; otherwise a plain
       // --- dirty-checked value refresh, same as V1's own OnTickEvent.
-      bool redraw_needed = false;
-      string pos_symbols_name[];
-      int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
-      int pos_rows_total = (int)m_table_positions.RowsTotal();
-      if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
+       bool redraw_needed = false;
+       string pos_symbols_name[];
+       int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
+       int pos_rows_total = (int)m_table_positions.RowsTotal();
+       if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
         {
          InitializePositionsTable();
          redraw_needed = true;
         }
-      else if(pos_symbols_total > 0)
+       else if(pos_symbols_total > 0)
          redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
       // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value
       // --- actually changed - same call site/pattern as V1's OnTickEvent. Symbol Info table
       // --- updates that used to sit alongside this in V1 aren't ported yet (still an empty
       // --- shell in V7).
-      if(UpdateStatusBar())
+       if(UpdateStatusBar())
          redraw_needed = true;
       // --- Pre-trade-plan table (Anhnt 2026-07-20): Entry/SL live off Bid/Ask, dirty-checked
       // --- per-cell same as everywhere else in this file.
-      if(SetValuesToPreTradePlanTable())
+       if(SetValuesToPreTradePlanTable())
          redraw_needed = true;
-      if(redraw_needed)
+       if(redraw_needed)
          ::ChartRedraw();
    }
   //+------------------------------------------------------------------+
@@ -1038,7 +1045,7 @@
       // --- it's created or special-case the retry, just poll it unconditionally every tick.
       m_trading_bubble.OnPoll();
 
-      SetValuesToIndicatorSymbolTFTable();
+      SetValuesToTableIndicatorSymbolTFValue();
       BuildAndWriteSignalBridge();
       CheckIndicatorAlerts();
       //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
@@ -1048,57 +1055,71 @@
       ulong t2 = ::GetMicrosecondCount();
       // if(t2 - t0 > 1000)
       //  Print("PERF CGUIPannel::OnTimerEvent CWndEvents::OnTimerEvent= ", t1 - t0, " us CTradingLevelBubble::OnPoll= ", t2 - t1, " us");
-   }
+   }   
  //For GUIPannel
   bool CGUIPannel::CreateGUIPannel(void) 
    { 
       //DiscoverPatterns(); //Call before CreatePatternConfigTable
       //--- Creating form 1 for controls
       //Create control
-       if (!CreateMainWindow("EXPERT PANEL Ver7"))
+       //Create m_window_main
+        if (!CreateMainWindow("EXPERT PANEL Ver7"))
          {
             Print(__FUNCTION__, " > Failed to create panel!");
             return (false);
          }
-       if (!CreateWindowCandleInfo())
-         {
-            Print(__FUNCTION__, " > Failed to create candle info popup!");
+        //Create m_treeview_SymbolTF in left panel m_window_main        
+         PopulateSymbolTFTree();        
+         if(!CreateTreeView_SymbolTF(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22
+         SynSymbolTFTreeViewIcons(); 
+        //Create m_tabs_main in right panel m_window_main 
+         if (!CreateTab_Main(M_TABS_MAIN_X, M_TABS_MAIN_Y))
+          {
+            Print(__FUNCTION__, " > Failed to create Tabs1!");
             return (false);
-         }
-       if (!CreateStatusBar(1, 23))
-         {
+          }
+          //Create control at Each Tab
+           //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
+            if(!CreateTableIndicatorSymbolTFValue(0, 0)) return false;
+           //For TAB_TAB_MAIN_SETTINGS Tab at m_tabs_main
+            //Right Pannel of TAB_TAB_MAIN_SETTINGS m_tabs_main_setting_config
+              if (!CreateTabSettingConfig(0, TABS_CONFIG_HEADER_H))
+               {
+                 Print(__FUNCTION__, " > Failed to create Settings config tabs!");
+                 return (false);
+               }
+            //Left pannel of TAB_TAB_MAIN_SETTINGS m_treeview_indicator
+             PopulateIndicatorTree();
+             if(!CreateTreeView_Indicator(0, 0)) return false; 
+             if(!CreateAddIndicatorParaInfor(PARAM_FORM_X, PARAM_FORM_Y)) return false;
+             if(!CreateTabbleIndicator(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
+             
+        //Create Status Bar at m_window_main
+         if (!CreateStatusBar(1, 23))
+          {
             Print(__FUNCTION__, " > Failed to create Status Bar!");
             return (false);
-         }      
-       if (!CreateTab_Main(M_TABS_MAIN_X, M_TABS_MAIN_Y))
-         {
-            //Print(__FUNCTION__, " > Failed to create Tabs1!");
+          } 
+       //Create m_window_candle_infomation Information window at to display signal on chart
+        if (!CreateWindowCandleInfo())
+          {
+            Print(__FUNCTION__, " > Failed to create candle info popup!");
             return (false);
-         }
-       if (!CreateTabSettingConfig(0, TABS_CONFIG_HEADER_H))
-         {
-            Print(__FUNCTION__, " > Failed to create Settings config tabs!");
-            return (false);
-         }
-        PopulateSymbolTFTree();
-        if(!CreateTreeView_SymbolTF(10,22)) return false;  
-        SynSymbolTFTreeViewIcons(); 
-      //Create control in each tab
-       //For Settings Tab at m_tabs_main       
-        PopulateIndicatorTree();
-        //if(!Create_SplitContainer(10, 22)) return false;
-        if(!CreateTreeView_Indicator(0, 0)) return false;
-        //if(!CreateConfigDetailTabs(5, 5)) return false;
-        if(!CreateAddIndicatorParaInfor(PARAM_FORM_X, PARAM_FORM_Y)) return false;
-        if(!CreateIndicatorTable(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
+          }
+        m_window_candle_infomation.Hide();
+            
+       //----------                  
+        
+        
+        
        //For Symbol TF sub-tab at m_tabs_main_setting_config
-        if(!CreateTableSymbolTFSetting(0, 22)) return false;
+        if(!CreateTableSymbolTFSetting(0, WINDOW_CAPTION_HEIGHT)) return false;
         PopulateTableSymbolTFSetting();
         ApplyLoadedSymbolTFSettings();   // seed Buy/Sell from indicators_config.json, once (see note)
        //For Other sub-tab at m_tabs_main_setting_config (marker shape/color settings)
-        if(!CreateTabSettingConfig_Marker(0, 22)) return false;
+        if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
        //For Trade Tab at m_tabs_main
-        if(!CreateIndicatorSymbolTFTable(0, 0)) return false;
+        
        //For Positions Tab at m_tabs_main - ported verbatim from V1 (2026-07-19)
        //--- Pre-trade-plan area (2026-07-20): symbol combo, then the Distance/Lot mode+value
        //--- controls in one horizontal row, then the order-setup table, m_table_positions
@@ -1123,7 +1144,7 @@
       HideParamSlots();
       // --- Same reasoning as HideParamSlots above: hide only AFTER CompletedGUI so
       // --- FormAvailableElementsArray() still registers its labels as available.
-      m_window_candle_infomation.Hide();
+      
 
       //Debug
         //  Print("My Debug CreateGUIPannel END m_split_container.IsVisible=", m_split_container.IsVisible(),
@@ -1141,12 +1162,13 @@
       // Each call below repaints only the cells/icons it actually changed (dirty-check),
       // and PopulateSymbolTFTree (CHARTEVENT_CHART_CHANGE handler) already updates the tree
       // when the symbol/TF really changed.
-      RefreshIndicatorTable();
-      SetValuesToIndicatorSymbolTFTable();
-      SyncIndicatorTreeViewIcons();
-      if(redraw) m_chart.Redraw();
+       RefreshTableIndicator();
+       SetValuesToTableIndicatorSymbolTFValue();
+       SyncIndicatorTreeViewIcons();
+       if(redraw) m_chart.Redraw();
    }
- //For Control Create GUI controls  
+ //-
+ //For Control at GUI Pannel  
   //For Main Window
   //+------------------------------------------------------------------+
   //| Create Main Window                                               |
@@ -1165,19 +1187,939 @@
          m_window_main.CollapseButtonIsUsed(true);
          m_window_main.TooltipsButtonIsUsed(true);
          m_window_main.FullscreenButtonIsUsed(true);
-         m_window_main.MinimumXSize(300); // Allow shrinking horizontally down to 300px
-         m_window_main.MinimumYSize(200); // Allow shrinking vertically down to 200px
+        // Allow shrinking horizontally down to 300px and vertically down to 200px
+         m_window_main.MinimumXSize(M_WINDOW_MAIN_MIN_WIDTH); 
+         m_window_main.MinimumYSize(M_WINDOW_MAIN_MIN_HEIGHT); 
       //--- Set the tooltips
          m_window_main.GetCloseButtonPointer().Tooltip("Close");
          m_window_main.GetTooltipButtonPointer().Tooltip("Tooltips");
          m_window_main.GetFullscreenButtonPointer().Tooltip("Fullscreen");
          m_window_main.GetCollapseButtonPointer().Tooltip("Collapse/Expand");
-      //--- Create the form
+      //--- Create the form default ENUM_WINDOW_TYPE W_MAIN
          if (!m_window_main.CreateWindow(m_chart_id, m_subwin, caption_text, 1, 1))
             return (false);
       return (true);
     }
-  // For candle info popup (BugNote 7.2)
+   //For control inside m_window_main
+   //For m_treeview_SymbolTF on the left pannel m_window_main
+    bool CGUIPannel::CreateTreeView_SymbolTF(const int x_gap, const int y_gap)
+     {       
+       m_treeview_SymbolTF.MainPointer(m_window_main);
+       m_treeview_SymbolTF.AutoXResizeMode(false);  // fixed width
+       m_treeview_SymbolTF.XSize(M_TREEVIEW_SYMBOLTF_WIDTH);
+       m_treeview_SymbolTF.AutoYResizeMode(true);
+       m_treeview_SymbolTF.VisibleItemsTotal(15);
+       m_treeview_SymbolTF.LightsHover(true);
+       m_treeview_SymbolTF.AutoYResizeBottomOffset(25);
+       if(!m_treeview_SymbolTF.CreateTreeView(x_gap, y_gap)) return false;      
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_SymbolTF);      
+       return true;
+     }  
+    void CGUIPannel::PopulateSymbolTFTree(void)
+     {
+      if(m_BarTimeSeriesCollection == NULL) return;
+      int mw_total = ::SymbolsTotal(true);
+      // Grow registry if MarketWatch expanded
+       if(ArraySize(m_sym_tree_pos) < mw_total)
+        {
+         int old = ArraySize(m_sym_tree_pos);
+         ArrayResize(m_sym_tree_pos, mw_total);
+         ArrayFill  (m_sym_tree_pos, old, mw_total - old, -1);
+        }
+      // --- SymbolName(i,true)'s own index order is Market Watch's internal/insertion order,
+      // --- NOT the alphabetically-sorted order the Market Watch grid displays (Anhnt,
+      // --- 2026-07-19) - a brand new symbol node only ever gets APPENDED (AddTreeItem always
+      // --- uses ItemsTotal() as the new list_index, there's no "insert at position"), so the
+      // --- only way to make first-time node creation come out sorted is to visit symbols in
+      // --- sorted order here. m_sym_tree_pos[] stays keyed by the RAW Market Watch index i -
+      // --- only the iteration order changes, already-created nodes are unaffected.
+      int order[];
+      ArrayResize(order, mw_total);
+      for(int i = 0; i < mw_total; i++) order[i] = i;
+      for(int a = 0; a < mw_total - 1; a++)
+         for(int b = a + 1; b < mw_total; b++)
+            if(::SymbolName(order[b], true) < ::SymbolName(order[a], true))
+              { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
+      // --- FormTreeList() silently drops any item whose item_index is not monotonically
+      // --- increasing within its node_level, in the order items were created/appended
+      // --- (Anhnt, 2026-07-19) - since we now visit symbols in ALPHABETICAL order (not raw
+      // --- Market Watch index order), raw i is NOT monotonic across creation order any more.
+      // --- sym_item_seq tracks "how many sym nodes exist so far" and is used as item_index
+      // --- instead of i, so it always increases by exactly 1 per new node, regardless of
+      // --- which raw index i that node happens to be.
+       int sym_item_seq = 0;
+       for(int c = 0; c < ArraySize(m_sym_tree_pos); c++)
+         if(m_sym_tree_pos[c] != -1) sym_item_seq++;
+       for(int oi = 0; oi < mw_total; oi++)
+        {
+          int               i        = order[oi];
+          string            sym_name = ::SymbolName(i, true);
+          CBarTimeSeriesDE *bts      = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
+          CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
+          int               tf_cnt   = (list != NULL) ? list.Total() : 0;
+          // Step 1: Ensure sym node exists
+           if(m_sym_tree_pos[i] == -1)
+            {
+             int sym_li = m_treeview_SymbolTF.ItemsTotal();
+             m_sym_tree_pos[i] = sym_li;
+             // AddTreeItem() auto-increments parent count + sets state when TF children are added
+              m_treeview_SymbolTF.AddTreeItem(sym_li,
+                                          -1, //prev_node_list_index
+                                          sym_name,
+                                          IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
+                                          sym_item_seq,
+                                          0, //node_level symnode = 0 Node level must be >=0
+                                          0,
+                                          0, 0,
+                                          false,    //item_state, m_t_item_state[]=true
+                                          false      //is_folder m_t_is_folder[]=false
+                                          );
+             sym_item_seq++;
+            }
+           int sym_li = m_sym_tree_pos[i];
+           if(tf_cnt == 0) continue;   //No TF found on sym_li
+          // Step 2: Collect existing TF children of sym_li node
+           int children[];
+           ArrayResize(children, 0);
+           int total_now = m_treeview_SymbolTF.ItemsTotal();
+           for(int j = 0; j < total_now; j++)
+            if(m_treeview_SymbolTF.ItemPrevNode(j) == sym_li)
+             {
+               int sz = ArraySize(children);
+               ArrayResize(children, sz + 1);
+               children[sz] = j;
+             }
+           int child_count = ArraySize(children);
+          // --- GetSeriesByIndex()'s own order is creation order, not TF rank (Anhnt,
+          // --- 2026-07-19) - sort the LOOKUP order by IndexEnumTimeframe() so slot k below
+          // --- (positionally matched against existing children[k]) ends up ascending M1..MN1,
+          // --- same reasoning as the symbol-level sort above.
+           int tf_order[];
+           ArrayResize(tf_order, tf_cnt);
+           for(int k = 0; k < tf_cnt; k++) tf_order[k] = k;
+           for(int a = 0; a < tf_cnt - 1; a++)
+              for(int b = a + 1; b < tf_cnt; b++)
+                {
+                 CBarSeriesDE *sa = bts.GetSeriesByIndex((uchar)tf_order[a]);
+                 CBarSeriesDE *sb = bts.GetSeriesByIndex((uchar)tf_order[b]);
+                 if(sa == NULL || sb == NULL) continue;
+                 if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
+                   { int tmp = tf_order[a]; tf_order[a] = tf_order[b]; tf_order[b] = tmp; }
+                }
+          // Step 3: Match bts[k] against children[k]
+           int actual_sym_li = -1;
+           for(int k = 0; k < tf_cnt; k++)
+            {
+             CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)tf_order[k]);
+             if(s == NULL) continue;
+             string actual = TimeframeDescription(s.Timeframe());
+             if(k < child_count)
+              {
+               // Slot exists — Bug B: update label if period changed
+               CTreeItem *ti = m_treeview_SymbolTF.ItemPointer(children[k]);
+               if(ti != NULL && ti.LabelText() != actual)
+               { ti.LabelText(actual); ti.Update(true); }
+              }
+             else
+              {
+               // New slot — add TF node
+                m_treeview_SymbolTF.AddTreeItem(m_treeview_SymbolTF.ItemsTotal(), sym_li, 
+                                          actual,
+                                          IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
+                                          k, 1, i, 0, 0, 
+                                          true,   //item_state, m_t_item_state[]=true;
+                                          false   //is_folder m_t_is_folder[]=false
+                                       );
+               //Register new CTreeItem  
+                CTreeItem *new_item = m_treeview_SymbolTF.ItemPointer(m_treeview_SymbolTF.ItemsTotal() - 1);
+                if(new_item != NULL)
+                  CWndContainer::AddToElementsArray(WindowIdx(m_window_main), *new_item);
+             }
+            }
+        }
+     }
+    void CGUIPannel::SynSymbolTFTreeViewIcons(void)
+     {
+      string chart_tf = TimeframeDescription(_Period);
+      int    total    = m_treeview_SymbolTF.ItemsTotal();  // duyệt tất cả items
+      for(int i = 0; i < total; i++)
+       {
+         CTreeItem *item = m_treeview_SymbolTF.ItemPointer(i);
+         if(item == NULL) continue;
+         int parent_pos = m_treeview_SymbolTF.ItemPrevNode(i);
+         if(parent_pos == -1)  // sym node
+          {
+            bool active = (item.LabelText() == _Symbol);
+            if(item.ItemType() == TI_HAS_ITEMS)
+             {
+               item.IsActive(active);
+               item.Draw();
+               item.CanvasPointer().Update(false);
+             }
+            else
+             item.IconFile(active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
+                                    : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
+          }
+         else  // TF node
+          {
+               CTreeItem *parent_item = m_treeview_SymbolTF.ItemPointer(parent_pos);
+               bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
+               bool highlight = (parent_is_active && item.LabelText() == chart_tf);
+               item.IconFile(highlight ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
+                                 : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
+          }
+        }
+      m_treeview_SymbolTF.RedrawTreeList(); 
+      m_treeview_SymbolTF.UpdateTreeList(true);
+     } 
+   //For Main Tabs m_tabs_main on the right of Main Window m_window_main 
+    //+------------------------------------------------------------------+
+    //| Create a group with tabs Trade                                   |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
+     {      
+      string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Trade", "Positions", "History", "Settings","Bar Events"};
+      string texts[TAB_TAB_MAIN_TOTAL] = 
+         {
+         "[ Account Info Tab ]",
+         "[ Symbol Info Tab ]",
+         "[ Trade Tab ]",
+         "[ Positions Tab ]",
+         "[ History Tab ]",
+         "[ Settings Tab ]",
+         "[ Bar Events Tab ]"
+         };
+      //--- Store the pointer to the main control
+       m_tabs_main.MainPointer(m_window_main);
+      //--- Properties
+       m_tabs_main.IsCenterText(true);
+       m_tabs_main.PositionMode(TABS_TOP);
+       m_tabs_main.AutoXResizeMode(true);
+       m_tabs_main.AutoYResizeMode(true);
+       m_tabs_main.AutoXResizeRightOffset(3);
+       m_tabs_main.AutoYResizeBottomOffset(25);
+      //--- Add tabs with the specified properties
+       for (int i = 0; i < TAB_TAB_MAIN_TOTAL; i++)
+         {
+           m_tabs_main.AddTab(tabs_names[i], 100);            
+         }
+      //--- Create Tab before create other control element inside
+       if (!m_tabs_main.CreateTabs(x_gap, y_gap))
+          return (false);
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);
+      return (true);
+     }
+    //For control at TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL of m_tabs_main     
+     // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS
+     //+------------------------------------------------------------------+
+     //| Create a nested tab group for Settings tab config sections       |
+     //+------------------------------------------------------------------+
+     bool CGUIPannel::CreateTabSettingConfig(const int x_gap, const int y_gap)
+      {
+       string tabs_names[TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL] = {"Indicator", "Symbol TF", "Marker"};
+       //--- Store the pointer to the parent control - nested inside m_tabs_main's Settings tab
+        m_tabs_main_setting_config.MainPointer(m_tabs_main);
+       //--- Properties
+        m_tabs_main_setting_config.IsCenterText(true);
+        m_tabs_main_setting_config.PositionMode(TABS_TOP);
+        m_tabs_main_setting_config.AutoXResizeMode(true);
+        m_tabs_main_setting_config.AutoYResizeMode(true);
+        m_tabs_main_setting_config.AutoXResizeRightOffset(3);
+        m_tabs_main_setting_config.AutoYResizeBottomOffset(3);
+       //--- Add tabs with the specified properties
+        for(int i = 0; i < TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL; i++)
+          m_tabs_main_setting_config.AddTab(tabs_names[i], 100);
+       //--- Create Tab before create other control element inside
+        if(!m_tabs_main_setting_config.CreateTabs(x_gap, y_gap))
+          return (false);
+        m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_tabs_main_setting_config);
+        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main_setting_config);
+        return (true);
+      }
+     //For Control at TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR at TAB_TAB_MAIN_SETTINGS
+     // For TreeView Indicator m_treeview_indicator on the left TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR m_tabs_main_setting_config
+     bool CGUIPannel::CreateTreeView_Indicator(const int x_gap, const int y_gap)
+      {
+        m_treeview_indicator.MainPointer(m_tabs_main_setting_config);
+        m_treeview_indicator.AutoXResizeMode(false);
+        m_treeview_indicator.XSize(150);
+        m_treeview_indicator.AutoYResizeMode(true);
+        m_treeview_indicator.VisibleItemsTotal(15);
+        m_treeview_indicator.LightsHover(true);
+       //Create treeview
+        if(!m_treeview_indicator.CreateTreeView(x_gap, y_gap)) return false;
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_treeview_indicator);
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_indicator);       
+       return true;
+      }
+      //For m_table_indicator in TAB_TAB_MAIN_SETTINGS    
+     // =====================================================================
+     // --- Info tab: port of V4 m_table_indicator, same 5-column layout
+     // =====================================================================
+     bool CGUIPannel::CreateTabbleIndicator(const int x, const int y)
+      {
+       m_table_indicator.MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator);
+       //Resize Properties
+        m_table_indicator.AutoXResizeMode(true);
+        m_table_indicator.AutoXResizeRightOffset(3);
+        m_table_indicator.AutoYResizeMode(true);
+        m_table_indicator.AutoYResizeBottomOffset(3);
+       //Table Properties
+        m_table_indicator.ShowHeaders(true);
+        m_table_indicator.SelectableRow(true);
+        m_table_indicator.LightsHover(true);
+        m_table_indicator.IsSortMode(true);
+       // --- 7 columns: col 0 merges the old icon-only "show on T3" column with the
+       // --- "Indicator" text column (CTCell renders image+text independently, click
+       // --- detection is scoped to the image's own pixel width - see Table.mqh
+       // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Show/Sound/Message shift
+       // --- down by 1. Sound/Message added 2026-07-17: per-template opt-in for a sound
+       // --- alert + Journal message when that template gets a new Signal - wiring TBD,
+       // --- this only adds the checkbox UI columns for now.
+        m_table_indicator.TableSize(7, 20);
+        int widths[7]    = {180, 70, 40, 40, 40, 40, 40};
+        int img_x_off[7] = {3,   0,  10, 10, 10, 10, 10};
+        int img_y_off[7] = {3,   0,  3,  3,  3,  3,  3};
+        ENUM_ALIGN_MODE align[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+        m_table_indicator.ColumnsWidth(widths);
+        m_table_indicator.ImageXOffset(img_x_off);
+        m_table_indicator.ImageYOffset(img_y_off);
+        m_table_indicator.TextAlign(align);
+
+        if(!m_table_indicator.CreateTable(x, y)) return false;
+        //Set Header text
+          m_table_indicator.SetHeaderText(0, "Indicator");
+          m_table_indicator.SetHeaderText(1, "Group");
+        //Checkbox to show or hide on Layer 3 (Chart)
+          m_table_indicator.SetHeaderText(2, "Buy");
+          m_table_indicator.SetHeaderText(3, "Sell");
+          m_table_indicator.SetHeaderText(4, "Show");
+          m_table_indicator.SetHeaderText(5, "Sound");
+          m_table_indicator.SetHeaderText(6, "Message");
+
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
+       return true;
+      }
+    //Helper to set layout slot
+     void CGUIPannel::SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw)
+      {
+        out[idx].row         = r;
+        out[idx].col         = c;
+        out[idx].total_width = tw;
+        out[idx].field_width = fw;
+      } 
+     // Hides all param-form slots. Called after any ShowTabElements() that overrides our Hide().
+    void CGUIPannel::HideParamSlots(void)
+     {
+      for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
+      {
+        m_param_labels[i].Hide();
+        m_param_edits[i].Hide();
+        m_param_combo[i].Hide();
+      }     
+     }
+    //For TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config
+     // =====================================================================
+     // --- Symbol TF sub-tab: flat list of every Symbol+TF pair currently tracked by
+     // --- m_BarTimeSeriesCollection (same source as m_treeview_SymbolTF), each row with
+     // --- its own Buy/Sell checkboxes and a red delete icon. Save button writes the
+     // --- current Buy/Sell state to JSON.
+     // =====================================================================
+     bool CGUIPannel::CreateTableSymbolTFSetting(const int x, const int y)
+      {
+       //--- Note (own row, on top): Delete/Buy/Sell edits here only take effect in
+       //--- indicators_config.json - the running EA keeps today's live series/indicators
+       //--- until it's restarted. Colored to stand out from the Save button below it.
+         m_label_symboltf_note.MainPointer(m_tabs_main_setting_config);
+         m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_label_symboltf_note);
+       // --- CTextLabel::InitializeProperties defaults XSize to 100px when unset - too narrow for
+       // --- this sentence (and CTextLabel never checks AutoXResizeMode, unlike CTable/CTreeView),
+       // --- so XSize must be set explicitly, wide enough to clear the tab's own right edge.
+         m_label_symboltf_note.XSize(M_TABS_MAIN_WIDTH - x - 5);
+         m_label_symboltf_note.Font("Calibri Bold");   // CElement::DrawText hardcodes FW_NORMAL - request a bold face by name instead
+         if(!m_label_symboltf_note.CreateTextLabel("Delete Symbol+TF here apply after the EA is restarted", x, y)) return false;
+         m_label_symboltf_note.LabelColor(clrDodgerBlue);
+         m_label_symboltf_note.Draw();
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_symboltf_note);
+
+       //--- Save button, same convention as m_btn_save_indicator
+         m_btn_save_SymbolTF.MainPointer(m_tabs_main_setting_config);
+         m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_btn_save_SymbolTF);
+         m_btn_save_SymbolTF.AutoXResizeMode(false);
+         m_btn_save_SymbolTF.XSize(80);
+         m_btn_save_SymbolTF.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
+         if(!m_btn_save_SymbolTF.CreateButton("Save", x, y + SYMBOLTF_BTN_Y)) return false;
+         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_SymbolTF);
+       //--- Table: col 0 merges the red delete icon with the Symbol label (same CTable
+       //--- click-detection trick as m_table_indicator col 0 - see Table.mqh CheckPressedButton).
+         m_table_indicator_SymbolTFSeting.MainPointer(m_tabs_main_setting_config);
+         m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_table_indicator_SymbolTFSeting);
+         m_table_indicator_SymbolTFSeting.AutoXResizeMode(true);
+         m_table_indicator_SymbolTFSeting.AutoXResizeRightOffset(3);
+         m_table_indicator_SymbolTFSeting.AutoYResizeMode(true);
+         m_table_indicator_SymbolTFSeting.AutoYResizeBottomOffset(3);
+         m_table_indicator_SymbolTFSeting.ShowHeaders(true);
+         m_table_indicator_SymbolTFSeting.SelectableRow(true);
+         m_table_indicator_SymbolTFSeting.LightsHover(true);
+         m_table_indicator_SymbolTFSeting.IsSortMode(true);
+         m_table_indicator_SymbolTFSeting.TableSize(4, 10);
+         int widths[4]    = {150, 70, 40, 40};
+         int img_x_off[4] = {3,   0,  10, 10};
+         int img_y_off[4] = {3,   0,  3,  3};
+         ENUM_ALIGN_MODE align[4] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+         m_table_indicator_SymbolTFSeting.ColumnsWidth(widths);
+         m_table_indicator_SymbolTFSeting.ImageXOffset(img_x_off);
+         m_table_indicator_SymbolTFSeting.ImageYOffset(img_y_off);
+         m_table_indicator_SymbolTFSeting.TextAlign(align);
+
+         if(!m_table_indicator_SymbolTFSeting.CreateTable(x, y + SYMBOLTF_TABLE_Y)) return false;
+         m_table_indicator_SymbolTFSeting.SetHeaderText(0, "Symbol");
+         m_table_indicator_SymbolTFSeting.SetHeaderText(1, "TF");
+         m_table_indicator_SymbolTFSeting.SetHeaderText(2, "Buy");   
+         m_table_indicator_SymbolTFSeting.SetHeaderText(3, "Sell");
+       // --- Collapse the TableSize() padding down to a single blank baseline row -
+       // --- PopulateTableSymbolTFSetting() reuses that one row for its very first entry.
+        m_table_indicator_SymbolTFSeting.DeleteAllRows();
+
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator_SymbolTFSeting);
+       return true;
+      }
+     // --- Checkbox click stub (col 2 = Buy, col 3 = Sell) - the table already auto-toggled the
+     // --- icon before this event fires (see Table.mqh CheckPressedCheckBox), so no manual image
+     // --- flip needed here. Intentionally empty for now - no Tang 1 trading data model exists
+     // --- yet to apply this to (see PopulateTableSymbolTFSetting note); wire real behavior here
+     // --- once that's decided.
+     void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col)
+      {
+        
+      }
+     // --- Incremental sync with m_treeview_SymbolTF's own data source (m_BarTimeSeriesCollection) -
+     // --- called every time PopulateSymbolTFTree() runs (init + real symbol/TF change), same as the
+     // --- treeview. Purely ADDITIVE: only appends pairs not already present as a row - never
+     // --- DeleteAllRows()/rebuilds, so a user-deleted row stays deleted. Real "stop tracking" on
+     // --- delete is follow-up work once the Library gets a RemoveSeries()-style API (BugNote/2026-07-15).
+      void CGUIPannel::PopulateTableSymbolTFSetting(void)
+       {
+        if(m_BarTimeSeriesCollection == NULL) return;
+
+        int mw_total = ::SymbolsTotal(true);
+        for(int i = 0; i < mw_total; i++)
+         {
+          string sym_name = ::SymbolName(i, true);
+          CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
+          CArrayObj *list = (bts != NULL) ? bts.GetListSeries() : NULL;
+          int tf_cnt = (list != NULL) ? list.Total() : 0;
+          for(int k = 0; k < tf_cnt; k++)
+           {
+            CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
+            if(s == NULL) continue;
+            string tf_text = TimeframeDescription(s.Timeframe());
+            if(HasTableSymbolTFSettingRow(sym_name, tf_text)) continue;
+
+            int row = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+            string first_col0 = m_table_indicator_SymbolTFSeting.GetValue(0, 0);
+            StringTrimLeft(first_col0);
+            bool placeholder_only = (row == 1 && first_col0 == "");
+            if(placeholder_only)
+               row = 0;   // reuse the blank baseline row left by DeleteAllRows()
+            else
+               m_table_indicator_SymbolTFSeting.AddRow(row, false);
+            SetTableSymbolTFSettingRow(row, sym_name, tf_text);
+           }
+         }
+        m_table_indicator_SymbolTFSeting.Update(true);
+       }
+     // --- True when (sym, tf_text) already has a row (trimmed match against col0/col1 text)
+      bool CGUIPannel::HasTableSymbolTFSettingRow(const string sym, const string tf_text)
+       {
+        int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+        for(int row = 0; row < rows; row++)
+         {
+          string s = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+          StringTrimLeft(s);
+          if(s != sym) continue;
+          string t = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+          StringTrimLeft(t);
+          if(t == tf_text) return true;
+         }
+        return false;
+       }
+     // --- Called ONCE right after the initial PopulateTableSymbolTFSetting() (see CreateGUIPannel) -
+     // --- pulls the Buy/Sell state CTimeSeriesEngine::LoadConfigurationFromJSON() cached while
+     // --- loading indicators_config.json and applies it to the matching rows, so a saved Buy/Sell
+     // --- setting survives an EA restart instead of resetting to OFF.
+      void CGUIPannel::ApplyLoadedSymbolTFSettings(void)
+       {
+        if(m_time_series_engine == NULL) return;
+        string symbols[], tfs[];
+        bool buys[], sells[];
+        m_time_series_engine.GetLoadedSymbolTFSettings(symbols, tfs, buys, sells);
+        int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+        for(int i = 0; i < ArraySize(symbols); i++)
+          {
+           for(int row = 0; row < rows; row++)
+             {
+              string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+              StringTrimLeft(sym);
+              if(sym != symbols[i]) continue;
+              string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+              StringTrimLeft(tf);
+              if(tf != tfs[i]) continue;
+              m_table_indicator_SymbolTFSeting.ChangeImage(2, row, buys[i]  ? 0 : 1);
+              m_table_indicator_SymbolTFSeting.ChangeImage(3, row, sells[i] ? 0 : 1);
+              break;
+             }
+          }
+        m_table_indicator_SymbolTFSeting.Update(true);
+       }
+     // --- True for the ONE row matching this chart's own symbol/TF - CTimeSeriesEngine::OnInitEvent
+     // --- creates that series unconditionally and everything else (RefreshIndicatorTable,
+     // --- BuildAndWriteSignalBridge...) assumes it always exists, so that row must never be deletable.
+     bool CGUIPannel::IsCurrentChartSymbolTFRow(const string sym, const string tf_text)
+      {
+       return (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
+      }
+     // --- Re-evaluates col 0's icon (delete vs start) for every row - called after a real
+     // --- symbol/TF chart change, since which row counts as "current" just moved.
+     void CGUIPannel::SyncTableSymbolTFSettingCurrentChartIcon(void)  
+      {
+       uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
+       uint start_icon[]  = {IMAGE_RESOURCE_BMP16_START_BMP};
+       int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
+       for(int row = 0; row < rows; row++)
+         {
+          string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
+         StringTrimLeft(sym);
+         if(sym == "") continue;
+         string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
+         StringTrimLeft(tf);
+         if(IsCurrentChartSymbolTFRow(sym, tf))
+            m_table_indicator_SymbolTFSeting.SetImages(0, row, start_icon);
+         else
+            m_table_indicator_SymbolTFSeting.SetImages(0, row, delete_icon);
+         m_table_indicator_SymbolTFSeting.ChangeImage(0, row, 0);
+        }
+       m_table_indicator_SymbolTFSeting.Update(true);
+      }
+     // --- Fill every cell of one Symbol+TF row - Buy/Sell default OFF (opt-in, same convention
+     // --- as m_table_indicator's col 2/3)
+     void CGUIPannel::SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text)
+      {
+       uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
+       uint start_icon[]  = {IMAGE_RESOURCE_BMP16_START_BMP};
+       uint chk[]         = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
+
+       // --- Col 0: Symbol label + icon - red Close (delete), EXCEPT the row matching the current
+       // --- chart's own symbol/TF, which gets the "start" icon and is not deletable (this EA
+       // --- instance depends on that series existing - see IsCurrentChartSymbolTFRow).
+        bool is_current = IsCurrentChartSymbolTFRow(sym, tf_text);
+        m_table_indicator_SymbolTFSeting.CellType(0, row, CELL_BUTTON);
+        if(is_current)
+          m_table_indicator_SymbolTFSeting.SetImages(0, row, start_icon);
+        else
+          m_table_indicator_SymbolTFSeting.SetImages(0, row, delete_icon);
+        m_table_indicator_SymbolTFSeting.ChangeImage(0, row, 0);
+        m_table_indicator_SymbolTFSeting.SetValue(0, row, "        " + sym);
+       // --- Col 1: TF
+        m_table_indicator_SymbolTFSeting.SetValue(1, row, "  " + tf_text);
+       // --- Col 2/3: Buy / Sell
+        m_table_indicator_SymbolTFSeting.CellType(2, row, CELL_CHECKBOX);
+        m_table_indicator_SymbolTFSeting.SetImages(2, row, chk);
+        m_table_indicator_SymbolTFSeting.ChangeImage(2, row, 1);
+        m_table_indicator_SymbolTFSeting.CellType(3, row, CELL_CHECKBOX);
+        m_table_indicator_SymbolTFSeting.SetImages(3, row, chk);
+        m_table_indicator_SymbolTFSeting.ChangeImage(3, row, 1);
+      }
+     // --- Save button click - both m_btn_save_indicator and m_btn_save_SymbolTF write the SAME
+     // --- indicators_config.json (single source of truth, no separate Buy/Sell file) - see
+     // --- SaveGUIConfigToJSON().
+     void CGUIPannel::OnClickSaveSymbolTF(void)
+     {
+       SaveGUIConfigToJSON();
+     }
+    //For TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER
+     // --- Fixed catalog of common Wingdings arrow codes offered in all 4 marker-shape combos.
+     // --- 67/68 (Thumb Up/Down) restore the original OBJ_ARROW_THUMB_UP/DOWN look this popup
+     // --- used before the DRAW_COLOR_ARROW redesign (Anhnt, 2026-07-17) - those were native
+     // --- chart OBJECT types back then; now they're just Wingdings glyph codes like any other
+     // --- shape choice here, rendered via the indicator's PLOT_ARROW, not a chart object.
+     void CGUIPannel::GetMarkerArrowCodeChoices(int &codes[], string &labels[])
+      {
+       int    c[] = {233, 234, 67, 68, 108, 109, 159, 161, 162, 217, 218};
+       string l[] = {"233 Arrow Up", "234 Arrow Down", "67 Thumb Up", "68 Thumb Down",
+                    "108 Circle", "109 Circle Filled",
+                    "159 Diamond", "161 Diamond Filled", "162 Star", "217 Chevron Up", "218 Chevron Down"};
+       ArrayCopy(codes,  c);
+       ArrayCopy(labels, l);
+      }
+     // --- Fixed color palette offered in all 3 marker-color combos - CColorPicker is a hard-
+     // --- coded 348x266 full HSL/RGB/Lab dialog (ColorPicker.mqh:234-235, no compact variant),
+     // --- not worth it for what's really just picking from a short list of common colors.
+     void CGUIPannel::GetMarkerColorChoices(color &colors[], string &labels[])
+      {
+       color  c[] = {clrLime, clrGreen, clrDodgerBlue, clrOrange, clrYellow,
+                     clrRed, clrCrimson, clrMagenta,
+                     clrGray, clrSilver, clrWhite, clrBlack};
+       string l[] = {"Lime", "Green", "Dodger Blue", "Orange", "Yellow",
+                     "Red", "Crimson", "Magenta",
+                    "Gray", "Silver", "White", "Black"};
+       ArrayCopy(colors, c);
+       ArrayCopy(labels, l);
+      }
+     // --- Shared recipe for every combobox on the Other tab (4 shape + 3 color) - same
+     // --- creation/population steps as m_param_combo[]'s own recipe, just factored out since
+     // --- 7 combos would otherwise repeat it verbatim.
+     bool CGUIPannel::CreateMarkerTabComboBox(CComboBox &combo, const int x, const int y, const int combo_w, string &labels[], const int selected_index)
+      {
+       combo.MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, combo);
+       int n = ArraySize(labels);
+       combo.XSize(combo_w);
+       combo.YSize(20);
+       combo.ItemsTotal(n);
+       // --- Default dropdown viewport is only 93px (~5 rows) - with 11-12 choices that forces
+       // --- a cramped scrollbar drag to reach the rest (Anhnt, 2026-07-17: "scrollbar khó kéo,
+       // --- chọn không được"). Size the list to show every item at once so no scrolling is
+       // --- ever needed - must be set BEFORE CreateComboBox() (CreateList() reads it once).
+       // --- Capped at 300px (Anhnt, 2026-07-17: a real Sounds folder can have 30-40+ files -
+       // --- letting the list grow to 18*n+4 uncapped ran the dropdown off the bottom of the
+       // --- screen, making everything past the visible part unreachable). Small catalogs
+       // --- (shape/color, 11-12 items = up to ~220px) still fit under the cap with no scrolling.
+        int list_h = 18 * n + 4;
+        if(list_h > 300) list_h = 300;
+        combo.GetListViewPointer().YSize(list_h);
+        combo.GetButtonPointer().XGap(1);
+        combo.GetButtonPointer().XSize(combo_w);
+        combo.GetButtonPointer().LabelYGap(4);
+        combo.GetButtonPointer().IconYGap(3);
+        if(!combo.CreateComboBox("", x, y)) return false;
+         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), combo);
+
+        combo.GetListViewPointer().Rebuilding(n);
+        for(int i = 0; i < n; i++)
+          combo.SetValue(i, labels[i]);
+        combo.SelectItem(selected_index);
+        combo.GetListViewPointer().Update(true);
+        return true;
+      }
+     // --- Caption to the LEFT of a combo, e.g. "Single Buy:" - m_label_other_caption[row].
+     bool CGUIPannel::CreateMarkerTabCaption(const int row, const string text, const int x, const int y)
+      {
+       m_label_other_caption[row].MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_label_other_caption[row]);
+       m_label_other_caption[row].XSize(140);
+       if(!m_label_other_caption[row].CreateTextLabel(text, x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_other_caption[row]);
+       return true;
+      }
+     // --- Preview to the RIGHT of a shape combo - renders the ACTUAL Wingdings glyph (not just
+     // --- its numeric code) so the user can see what the shape looks like before saving.
+     bool CGUIPannel::CreateShapePreview(const int row, const int x, const int y, const int arrow_code)
+      {
+       m_preview_shape[row].MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_shape[row]);
+       m_preview_shape[row].Font("Wingdings");
+       m_preview_shape[row].FontSize(16);
+       if(!m_preview_shape[row].CreateTextLabel(::ShortToString((ushort)arrow_code), x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_shape[row]);
+       return true;
+      }
+     // --- Preview to the RIGHT of a color combo - reuses CColorButton's own swatch rendering
+     // --- (CurrentColor() builds a small bordered color icon) purely for DISPLAY - never wired
+     // --- to a click handler, so clicking it does nothing (no picker to open, see BugNote
+     // --- 2026-07-17: CColorPicker dropped in favor of these fixed-palette combos).
+     bool CGUIPannel::CreateColorPreview(const int row, const int x, const int y, const color clr)
+      {
+       m_preview_color[row].MainPointer(m_tabs_main_setting_config);
+       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_color[row]);
+       m_preview_color[row].CurrentColor(clr);
+       if(!m_preview_color[row].CreateColorButton("", x, y)) return false;
+       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_color[row]);
+       return true;
+      }
+     // --- Live-updates a shape preview as the user browses the combo, BEFORE clicking Save -
+     // --- called from OnEvent's ON_CLICK_COMBOBOX_ITEM handling, not from OnClickSaveMarkerSettings
+     // --- (which commits the choice to m_marker_* instead).
+     void CGUIPannel::UpdateShapePreview(const int row, const int arrow_code)
+      {
+       m_preview_shape[row].LabelText(::ShortToString((ushort)arrow_code));
+       m_preview_shape[row].Update(true);
+      }
+     void CGUIPannel::UpdateColorPreview(const int row, const color clr)
+      {
+       m_preview_color[row].CurrentColor(clr);
+       m_preview_color[row].Update(true);
+      }
+     // --- "Marker" sub-tab (TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER): 4 independent shape choices
+     // --- (Single Buy/Sell, Multi Buy/Sell - each needs its OWN plot/shape, see
+     // --- SignalMarkers.mq5's header comment) and 3 independent color choices (Buy/Sell when a
+     // --- marker relates to this chart's own Symbol+TF, Non-Related otherwise) - shape and
+     // --- color are orthogonal axes (Anhnt, 2026-07-17).
+     bool CGUIPannel::CreateTabSettingConfig_Marker(const int x, const int y)
+      {
+       LoadMarkerSettings(); // seed m_marker_* from Config_Setting.json's "markers" section before building defaults
+       int codes[]; string shape_labels[];
+       GetMarkerArrowCodeChoices(codes, shape_labels);
+       color mcolors[]; string color_labels[];
+       GetMarkerColorChoices(mcolors, color_labels);
+
+       // --- Anhnt 2026-07-17: captions were sitting flush against the tab's left edge while
+       // --- the combo/preview columns left a lot of empty space on the right - shift the
+       // --- whole row layout right by 20px.
+        const int base_x   = x + 20;
+        int combo_w   = 160;
+        int row_h     = 26;
+        int combo_x   = base_x + 110;
+        int preview_x = combo_x + combo_w + 10;
+
+        int n_shapes = ArraySize(codes);
+        int sel_single_buy = 0, sel_single_sell = 0, sel_multi_buy = 0, sel_multi_sell = 0;
+        for(int i = 0; i < n_shapes; i++)
+         {
+          if(codes[i] == m_marker_single_buy_code)  sel_single_buy  = i;
+          if(codes[i] == m_marker_single_sell_code) sel_single_sell = i;
+          if(codes[i] == m_marker_multi_buy_code)   sel_multi_buy   = i;
+          if(codes[i] == m_marker_multi_sell_code)  sel_multi_sell  = i;
+         }
+        string shape_captions[4] = {"Single Buy", "Single Sell", "Multi Buy", "Multi Sell"};
+        int    shape_codes[4]    = {m_marker_single_buy_code, m_marker_single_sell_code, m_marker_multi_buy_code, m_marker_multi_sell_code};
+
+        if(!CreateMarkerTabCaption(0, shape_captions[0], base_x, y))                                          return false;
+        if(!CreateMarkerTabComboBox(m_combo_shape_single_buy,  combo_x, y,             combo_w, shape_labels, sel_single_buy))  return false;
+        if(!CreateShapePreview(0, preview_x, y, shape_codes[0]))                                             return false;
+
+        if(!CreateMarkerTabCaption(1, shape_captions[1], base_x, y + row_h))                                   return false;
+        if(!CreateMarkerTabComboBox(m_combo_shape_single_sell, combo_x, y + row_h,     combo_w, shape_labels, sel_single_sell)) return false;
+        if(!CreateShapePreview(1, preview_x, y + row_h, shape_codes[1]))                                     return false;
+
+        if(!CreateMarkerTabCaption(2, shape_captions[2], base_x, y + row_h * 2))                               return false;
+        if(!CreateMarkerTabComboBox(m_combo_shape_multi_buy,   combo_x, y + row_h * 2, combo_w, shape_labels, sel_multi_buy))   return false;
+        if(!CreateShapePreview(2, preview_x, y + row_h * 2, shape_codes[2]))                                 return false;
+
+        if(!CreateMarkerTabCaption(3, shape_captions[3], base_x, y + row_h * 3))                               return false;
+        if(!CreateMarkerTabComboBox(m_combo_shape_multi_sell,  combo_x, y + row_h * 3, combo_w, shape_labels, sel_multi_sell))  return false;
+        if(!CreateShapePreview(3, preview_x, y + row_h * 3, shape_codes[3]))                                 return false;
+
+        int n_colors = ArraySize(mcolors);
+        int sel_buy = 0, sel_sell = 0, sel_nonrelated = 0;
+        for(int i = 0; i < n_colors; i++)
+          {
+          if(mcolors[i] == m_marker_buy_color)        sel_buy        = i;
+          if(mcolors[i] == m_marker_sell_color)       sel_sell       = i;
+          if(mcolors[i] == m_marker_nonrelated_color) sel_nonrelated = i;
+          }
+
+        int color_row0 = row_h * 4 + 10;
+
+        if(!CreateMarkerTabCaption(4, "Buy Color", base_x, y + color_row0))                                        return false;
+        if(!CreateMarkerTabComboBox(m_combo_color_buy,        combo_x, y + color_row0,           combo_w, color_labels, sel_buy))        return false;
+        if(!CreateColorPreview(0, preview_x, y + color_row0, m_marker_buy_color))                                return false;
+
+        if(!CreateMarkerTabCaption(5, "Sell Color", base_x, y + color_row0 + row_h))                               return false;
+        if(!CreateMarkerTabComboBox(m_combo_color_sell,       combo_x, y + color_row0 + row_h,   combo_w, color_labels, sel_sell))       return false;
+        if(!CreateColorPreview(1, preview_x, y + color_row0 + row_h, m_marker_sell_color))                       return false;
+
+        if(!CreateMarkerTabCaption(6, "Non-Related Color", base_x, y + color_row0 + row_h * 2))                    return false;
+        if(!CreateMarkerTabComboBox(m_combo_color_nonrelated, combo_x, y + color_row0 + row_h * 2, combo_w, color_labels, sel_nonrelated)) return false;
+        if(!CreateColorPreview(2, preview_x, y + color_row0 + row_h * 2, m_marker_nonrelated_color))             return false;
+
+        // --- Buy/Sell alert sound files (2026-07-17, simplified after CFileNavigator's splitter-
+        // --- drag froze the popup): m_marker_sound_folder is a user-editable path relative to
+        // --- MQL5\Files\ - persisted in JSON so it's never "lost" if changed. "Refresh" re-scans
+        // --- it with plain FileFindFirst/FileFindNext and repopulates both comboboxes below -
+        // --- no tree, no popup, nothing to freeze.
+        int sound_row0 = color_row0 + row_h * 3 + 10;
+        // --- Sound filenames (AUTO_TRADING_OFF_EN.wav etc.) run a lot longer than "233 Arrow Up"/
+        // --- "Lime" - widen just this section's field so names aren't clipped, and the
+        // --- Refresh/preview-x column lines up with the color swatches above (Anhnt, 2026-07-17).
+        int sound_combo_w = preview_x + 60 - combo_x;
+
+        if(!CreateMarkerTabCaption(7, "Sound Folder", base_x, y + sound_row0)) return false;
+        m_edit_sound_folder.MainPointer(m_tabs_main_setting_config);
+        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_edit_sound_folder);
+        m_edit_sound_folder.XSize(sound_combo_w);
+        m_edit_sound_folder.GetTextBoxPointer().XGap(1);
+        if(!m_edit_sound_folder.CreateTextEdit(m_marker_sound_folder, combo_x, y + sound_row0)) return false;
+        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_sound_folder);
+
+        m_btn_refresh_sound_folder.MainPointer(m_tabs_main_setting_config);
+        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_refresh_sound_folder);
+        m_btn_refresh_sound_folder.AutoXResizeMode(false);
+        m_btn_refresh_sound_folder.XSize(80);
+        if(!m_btn_refresh_sound_folder.CreateButton("Refresh", combo_x + sound_combo_w + 10, y + sound_row0)) return false;
+        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_refresh_sound_folder);
+
+        string files[];
+        ScanSoundFolder(files);
+        int n_files = ArraySize(files);
+        int sel_buy_sound = 0, sel_sell_sound = 0;
+        for(int i = 0; i < n_files; i++)
+          {
+          if(files[i] == m_marker_buy_sound_file)  sel_buy_sound  = i;
+          if(files[i] == m_marker_sell_sound_file) sel_sell_sound = i;
+          }
+
+        if(!CreateMarkerTabCaption(8, "Buy Sound", base_x, y + sound_row0 + row_h)) return false;
+        if(!CreateMarkerTabComboBox(m_combo_buy_sound, combo_x, y + sound_row0 + row_h, sound_combo_w, files, sel_buy_sound)) return false;
+
+        if(!CreateMarkerTabCaption(9, "Sell Sound", base_x, y + sound_row0 + row_h * 2)) return false;
+        if(!CreateMarkerTabComboBox(m_combo_sell_sound, combo_x, y + sound_row0 + row_h * 2, sound_combo_w, files, sel_sell_sound)) return false;
+
+        m_btn_save_marker_settings.MainPointer(m_tabs_main_setting_config);
+        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_save_marker_settings);
+        m_btn_save_marker_settings.AutoXResizeMode(false);
+        m_btn_save_marker_settings.XSize(80);
+        m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
+        if(!m_btn_save_marker_settings.CreateButton("Save", base_x, y + sound_row0 + row_h * 3 + 10)) return false;
+        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_marker_settings);
+
+        return true;
+      }
+     // --- Reads all 7 combos, persists to Config_Setting.json's "markers" section, and hot-swaps the running
+     // --- SignalMarkers.mq5 instance so the new look applies immediately.
+     void CGUIPannel::OnClickSaveMarkerSettings(void)
+      {
+        int codes[]; string shape_labels[];
+        GetMarkerArrowCodeChoices(codes, shape_labels);
+        int n_shapes = ArraySize(codes);
+
+        int sel;
+        sel = (int)m_combo_shape_single_buy.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_shapes) m_marker_single_buy_code = codes[sel];
+        sel = (int)m_combo_shape_single_sell.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_shapes) m_marker_single_sell_code = codes[sel];
+        sel = (int)m_combo_shape_multi_buy.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_shapes) m_marker_multi_buy_code = codes[sel];
+        sel = (int)m_combo_shape_multi_sell.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_shapes) m_marker_multi_sell_code = codes[sel];
+
+        color mcolors[]; string color_labels[];
+        GetMarkerColorChoices(mcolors, color_labels);
+        int n_colors = ArraySize(mcolors);
+
+        sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
+        sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
+        sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+        if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
+
+        m_marker_sound_folder = m_edit_sound_folder.GetValue();
+        string sound_val = m_combo_buy_sound.GetValue();
+        if(sound_val != "") m_marker_buy_sound_file = sound_val;
+        sound_val = m_combo_sell_sound.GetValue();
+        if(sound_val != "") m_marker_sell_sound_file = sound_val;
+
+        SaveMarkerSettings();
+        ReattachSignalMarkersIndicator();
+      }
+   //-------   
+   // For Status Bar at bottom of m_window_main
+    //+------------------------------------------------------------------+
+    //| Creates the status bar                                           |
+    //+------------------------------------------------------------------+
+    bool CGUIPannel::CreateStatusBar(const int x_gap, const int y_gap)
+     {
+      //--- Store the window pointer
+         m_status_bar.MainPointer(m_window_main);
+      //--- Properties
+         m_status_bar.AutoXResizeMode(true);
+         m_status_bar.AutoXResizeRightOffset(1);
+         m_status_bar.AnchorBottomWindowSide(true);
+      //--- Specify the number of parts and set their properties
+         int width[STATUS_LABELS_TOTAL] = {0, 200, 160, 120};
+         for (int i = 0; i < STATUS_LABELS_TOTAL; i++)
+            m_status_bar.AddItem("", width[i]);
+      //--- Create a control element
+         if (!m_status_bar.CreateStatusBar(x_gap, y_gap))
+            return (false);
+      //--- Set text to the items of the status bar
+         m_status_bar.SetValue(STATUS_BAR_HELP, "For Help, press F1");
+      //--- Setup icons for Deposit Load item (arrow up=high load, gray=medium, arrow down=low)
+      //--- Same icon set as m_table_indicator_SymbolTFValue's own val_img (Anhnt, 2026-07-19 -
+      //--- unify look across the panel instead of the plain ARROW_UP/DOWN pair used before).
+         CTextLabel *deposit_item = m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD);
+         deposit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
+         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
+         deposit_item.ChangeImage(0, 2); // default: gray
+         deposit_item.LabelXGap(22);     // shift text right for icon (16px ICONS8 icon at x=2, same 22px clearance as m_table_indicator_SymbolTFValue's val_img)
+      //--- Setup icons for Profit item (arrow up=profit, arrow down=loss, gray=zero)
+         CTextLabel *profit_item = m_status_bar.GetItemPointer(STATUS_BAR_PROFIT);
+         profit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
+         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
+         profit_item.ChangeImage(0, 2); // default: gray
+         profit_item.LabelXGap(22);     // shift text right for icon (16px ICONS8 icon at x=2, same 22px clearance as m_table_indicator_SymbolTFValue's val_img)
+      //--- Add the object to the common array of object groups      
+         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_status_bar);
+         return (true);
+     }
+    // Update Status Bar - ported from V1 (Anatoli Kazharski\GUIPannel.mqh); V7 kept the item
+    // creation/icons above but dropped both this function AND its OnTickEvent call site along
+    // the way - restored here, same call site as V1 (see OnTickEvent below).
+    bool CGUIPannel::UpdateStatusBar(void)
+     {
+      static string s_deposit = "";
+      static string s_time = "";
+      static string s_profit = "";
+      static double s_deposit_val = 0;
+      static double s_profit_val = 0;
+
+      double deposit_val = DepositLoad(false);
+      double profit_val = AccountInfoDouble(ACCOUNT_PROFIT);
+      string new_deposit = "Deposit load: " + ::DoubleToString(deposit_val, 2) + "/" +
+                           ::DoubleToString(DepositLoad(true), 2) + "%";
+      string new_time = ::TimeToString(::TimeTradeServer(), TIME_DATE | TIME_SECONDS);
+      string new_profit = "Profit: " + ::DoubleToString(profit_val, 2);
+      // Check if values changed, if changed, update the status bar item and redraw it. Only update when value changes to reduce CPU usage.
+      bool any_changed = false;
+      if (new_deposit != s_deposit)
+       {
+         int img = (s_deposit == "") ? 2 : (deposit_val > s_deposit_val) ? 0
+                                       : (deposit_val < s_deposit_val)   ? 1
+                                                                        : 2;
+         s_deposit_val = deposit_val;
+         s_deposit = new_deposit;
+         CTextLabel *item = m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD);
+         item.ChangeImage(0, img);
+         m_status_bar.SetValue(STATUS_BAR_DEPOSIT_LOAD, new_deposit);
+         item.Draw();
+         item.Update(false);
+         any_changed = true;
+       }
+      if (new_profit != s_profit)
+       {
+         int img = (s_profit == "") ? 2 : (profit_val > s_profit_val) ? 0
+                                    : (profit_val < s_profit_val)   ? 1
+                                                                     : 2;
+         color clr = (profit_val > 0) ? clrGreen : (profit_val < 0) ? clrRed
+                                                                  : clrBlack;
+         s_profit_val = profit_val;
+         s_profit = new_profit;
+         CTextLabel *item = m_status_bar.GetItemPointer(STATUS_BAR_PROFIT);
+         item.ChangeImage(0, img);
+         item.LabelColor(clr);
+         m_status_bar.SetValue(STATUS_BAR_PROFIT, new_profit);
+         item.Draw();
+         item.Update(false);
+         any_changed = true;
+       }
+      if (new_time != s_time)
+       {
+         s_time = new_time;
+         m_status_bar.SetValue(STATUS_BAR_SERVER_TIME, new_time);
+         m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Draw();
+         m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Update(false);
+       }
+      return any_changed;
+     }
+  
+  //-
+  //For m_window_candle_infomation
    //+------------------------------------------------------------------+
    //| True while the current mouse position is inside the candle info  |
    //| popup's own screen rect - used to suspend the Ctrl+hover bar      |
@@ -1215,28 +2157,27 @@
     {
      int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
      int chart_h = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
-
      // --- Cursor sits INSET pixels inside the popup's LEFT edge (popup extends mostly to the
      // --- right of the cursor) - flip so cursor sits INSET pixels inside the RIGHT edge
      // --- instead if that would run off the chart's right edge (popup extends to the left).
      // --- Either way the cursor is ALREADY inside the rect - see CANDLE_INFO_CURSOR_INSET.
-     int x = cursor_x - CANDLE_INFO_CURSOR_INSET;
-     if(x + CANDLE_INFO_WINDOW_W > chart_w)
+      int x = cursor_x - CANDLE_INFO_CURSOR_INSET;
+      if(x + CANDLE_INFO_WINDOW_W > chart_w)
         x = cursor_x - CANDLE_INFO_WINDOW_W + CANDLE_INFO_CURSOR_INSET;
-     if(x < 0) x = 0;
-
+      if(x < 0) x = 0;
      // --- Same idea vertically - cursor INSET pixels inside the top edge, flipping to sit
      // --- inside the bottom edge if that would run off the chart's bottom.
-     int y = cursor_y - CANDLE_INFO_CURSOR_INSET;
-     if(y + CANDLE_INFO_WINDOW_H > chart_h)
+      int y = cursor_y - CANDLE_INFO_CURSOR_INSET;
+      if(y + CANDLE_INFO_WINDOW_H > chart_h)
         y = cursor_y - CANDLE_INFO_WINDOW_H + CANDLE_INFO_CURSOR_INSET;
-     if(y < 0) y = 0;
+      if(y < 0) y = 0;
 
-     m_window_candle_infomation.X(x);
-     m_window_candle_infomation.Y(y);
-     m_window_candle_infomation.Moving(x, y);
-     m_table_candle_information_atBar.Moving();
+      m_window_candle_infomation.X(x);
+      m_window_candle_infomation.Y(y);
+      m_window_candle_infomation.Moving(x, y);
+      m_table_candle_information_atBar.Moving();
     }
+   // For candle info popup (BugNote 7.2)
    //+------------------------------------------------------------------+
    //| Shows the popup AND hands it native mouse/keyboard dispatch by    |
    //| making it the active window (BugNote 2026-07-16). CWndEvents::    |
@@ -1299,38 +2240,36 @@
       // --- this popup spans EVERY tracked TF of the symbol, not just the hovered bar's own TF -
       // --- a lower-TF indicator can flip at a time inside the hovered bar's span without
       // --- landing exactly on its open time (see RefreshCandleInfoWindow).
-      m_table_candle_information_atBar.MainPointer(m_window_candle_infomation);
-      m_table_candle_information_atBar.AutoXResizeMode(true);
-      m_table_candle_information_atBar.AutoXResizeRightOffset(3);
-      m_table_candle_information_atBar.AutoYResizeMode(true);
-      m_table_candle_information_atBar.AutoYResizeBottomOffset(3);
-      m_table_candle_information_atBar.ShowHeaders(true);
-      m_table_candle_information_atBar.SelectableRow(true);
-      m_table_candle_information_atBar.LightsHover(true);
-      m_table_candle_information_atBar.TableSize(3, 10);
-      int widths[3]    = {55, 150, 45};
-      int img_x_off[3] = {0, 3, 0};
-      int img_y_off[3] = {0, 3, 0};
-      int txt_x_off[3] = {5, 22, 5};
-      ENUM_ALIGN_MODE al[3] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
-      m_table_candle_information_atBar.ColumnsWidth(widths);
-      m_table_candle_information_atBar.ImageXOffset(img_x_off);
-      m_table_candle_information_atBar.ImageYOffset(img_y_off);
-      m_table_candle_information_atBar.TextXOffset(txt_x_off);
-      m_table_candle_information_atBar.TextAlign(al);
-
+       m_table_candle_information_atBar.MainPointer(m_window_candle_infomation);
+       m_table_candle_information_atBar.AutoXResizeMode(true);
+       m_table_candle_information_atBar.AutoXResizeRightOffset(3);
+       m_table_candle_information_atBar.AutoYResizeMode(true);
+       m_table_candle_information_atBar.AutoYResizeBottomOffset(3);
+       m_table_candle_information_atBar.ShowHeaders(true);
+       m_table_candle_information_atBar.SelectableRow(true);
+       m_table_candle_information_atBar.LightsHover(true);
+       m_table_candle_information_atBar.TableSize(3, 10);
+       int widths[3]    = {55, 150, 45};
+       int img_x_off[3] = {0, 3, 0};
+       int img_y_off[3] = {0, 3, 0};
+       int txt_x_off[3] = {5, 22, 5};
+       ENUM_ALIGN_MODE al[3] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+       m_table_candle_information_atBar.ColumnsWidth(widths);
+       m_table_candle_information_atBar.ImageXOffset(img_x_off);
+       m_table_candle_information_atBar.ImageYOffset(img_y_off);
+       m_table_candle_information_atBar.TextXOffset(txt_x_off);
+       m_table_candle_information_atBar.TextAlign(al);
       // --- y=WINDOW_CAPTION_HEIGHT, not 0 - CWindow's child coordinate space starts at the
       // --- window's absolute top-left, INCLUDING the caption bar (same convention as every
       // --- other table placed directly on a CWindow, e.g. CreateTableSymbolTFSetting(0,22));
       // --- y=0 here made the table paint straight over the "Signals at Bar" title.
-      if(!m_table_candle_information_atBar.CreateTable(0, WINDOW_CAPTION_HEIGHT)) return (false);
-      m_table_candle_information_atBar.SetHeaderText(0, "Time");
-      m_table_candle_information_atBar.SetHeaderText(1, "Indicator");
-      m_table_candle_information_atBar.SetHeaderText(2, "TF");
+       if(!m_table_candle_information_atBar.CreateTable(0, WINDOW_CAPTION_HEIGHT)) return (false);
+       m_table_candle_information_atBar.SetHeaderText(0, "Time");
+       m_table_candle_information_atBar.SetHeaderText(1, "Indicator");
+       m_table_candle_information_atBar.SetHeaderText(2, "TF");
       // --- Collapse the TableSize() padding down to a single blank baseline row, same
       // --- convention as CreateTableSymbolTFSetting.
-      m_table_candle_information_atBar.DeleteAllRows();
-
+       m_table_candle_information_atBar.DeleteAllRows();
       CWndContainer::AddToElementsArray(WindowIdx(m_window_candle_infomation), m_table_candle_information_atBar);
       return (true);
     }
@@ -1366,11 +2305,11 @@
 
       // --- Sort this symbol's TFs ascending by IndexEnumTimeframe() (CommonDELib.mqh - M1..MN1
       // --- natural rank), same convention as CTimeSeriesEngine::SaveConfigurationToJSON.
-      int order[];
-      ArrayResize(order, series_total);
-      for(int ti = 0; ti < series_total; ti++)
+       int order[];
+       ArrayResize(order, series_total);
+       for(int ti = 0; ti < series_total; ti++)
          order[ti] = ti;
-      for(int a = 0; a < series_total - 1; a++)
+       for(int a = 0; a < series_total - 1; a++)
          for(int b = a + 1; b < series_total; b++)
            {
             CBarSeriesDE *sa = series_list.At(order[a]);
@@ -1379,16 +2318,15 @@
             if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
               { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
            }
-
       // --- Collect (Indicator, TF text, Dir, Time) rows - one per flip whose time falls
       // --- inside [bar_time, next_bar_time). A signal with no flip in that span contributes
       // --- nothing at all (not even its carried-over state).
-      CIndicatorDE   *row_ind[];
-      string          row_tf[];
-      ENUM_SIGNAL_DIR row_dir[];
-      datetime        row_time[];
-      int count = 0;
-      for(int ti = 0; ti < series_total; ti++)
+       CIndicatorDE   *row_ind[];
+       string          row_tf[];
+       ENUM_SIGNAL_DIR row_dir[];
+       datetime        row_time[];
+       int count = 0;
+       for(int ti = 0; ti < series_total; ti++)
         {
          CBarSeriesDE *s = series_list.At(order[ti]);
          if(s == NULL) continue;
@@ -1453,16 +2391,15 @@
            }
         }
 
-      if(count == 0)
+       if(count == 0)
         {
          m_table_candle_information_atBar.DeleteAllRows();
          m_table_candle_information_atBar.Update(true);
          return false;
         }
-
       // --- Sort all collected rows ascending by time (stable-ish bubble sort - count is
       // --- small, same style as the TF order[] sort above).
-      for(int a = 0; a < count - 1; a++)
+       for(int a = 0; a < count - 1; a++)
          for(int b = a + 1; b < count; b++)
            if(row_time[b] < row_time[a])
              {
@@ -1472,18 +2409,17 @@
               datetime        tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
              }
 
-      SIndicatorCatalogItem catalog[];
-      GetIndicatorCatalog(catalog);
-      uint dir_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
+       SIndicatorCatalogItem catalog[];
+       GetIndicatorCatalog(catalog);
+       uint dir_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
                         IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
 
-      m_table_candle_information_atBar.DeleteAllRows();
+       m_table_candle_information_atBar.DeleteAllRows();
       // --- redraw=true on the LAST row only - same black/smeared row-overflow reasoning as
       // --- RefreshIndicatorTable (README/BugNote 2026-07-14).
-      for(int i = 0; i < count - 1; i++)
+       for(int i = 0; i < count - 1; i++)
          m_table_candle_information_atBar.AddRow(i, i == count - 2);
-
-      for(int row = 0; row < count; row++)
+       for(int row = 0; row < count; row++)
         {
          CIndicatorDE *ind = row_ind[row];
          int img_idx = (row_dir[row] == SIGNAL_BUY) ? 0 : 1; // row_dir is never SIGNAL_NONE here
@@ -1497,448 +2433,9 @@
       m_table_candle_information_atBar.Update(true);
       return true;
     }
-  // For Status Bar
-   //+------------------------------------------------------------------+
-   //| Creates the status bar                                           |
-   //+------------------------------------------------------------------+
-   bool CGUIPannel::CreateStatusBar(const int x_gap, const int y_gap)
-    {
-      //--- Store the window pointer
-         m_status_bar.MainPointer(m_window_main);
-      //--- Properties
-         m_status_bar.AutoXResizeMode(true);
-         m_status_bar.AutoXResizeRightOffset(1);
-         m_status_bar.AnchorBottomWindowSide(true);
-      //--- Specify the number of parts and set their properties
-         int width[STATUS_LABELS_TOTAL] = {0, 200, 160, 120};
-         for (int i = 0; i < STATUS_LABELS_TOTAL; i++)
-            m_status_bar.AddItem("", width[i]);
-      //--- Create a control element
-         if (!m_status_bar.CreateStatusBar(x_gap, y_gap))
-            return (false);
-      //--- Set text to the items of the status bar
-         m_status_bar.SetValue(STATUS_BAR_HELP, "For Help, press F1");
-      //--- Setup icons for Deposit Load item (arrow up=high load, gray=medium, arrow down=low)
-      //--- Same icon set as m_table_indicator_SymbolTFValue's own val_img (Anhnt, 2026-07-19 -
-      //--- unify look across the panel instead of the plain ARROW_UP/DOWN pair used before).
-         CTextLabel *deposit_item = m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD);
-         deposit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
-         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
-         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
-         deposit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
-         deposit_item.ChangeImage(0, 2); // default: gray
-         deposit_item.LabelXGap(22);     // shift text right for icon (16px ICONS8 icon at x=2, same 22px clearance as m_table_indicator_SymbolTFValue's val_img)
-      //--- Setup icons for Profit item (arrow up=profit, arrow down=loss, gray=zero)
-         CTextLabel *profit_item = m_status_bar.GetItemPointer(STATUS_BAR_PROFIT);
-         profit_item.AddImagesGroup(2, 6); // x_gap=2, y_gap=6
-         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
-         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
-         profit_item.AddImage(0, IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
-         profit_item.ChangeImage(0, 2); // default: gray
-         profit_item.LabelXGap(22);     // shift text right for icon (16px ICONS8 icon at x=2, same 22px clearance as m_table_indicator_SymbolTFValue's val_img)
-      //--- Add the object to the common array of object groups      
-         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_status_bar);
-         return (true);
-    }
-   // Update Status Bar - ported from V1 (Anatoli Kazharski\GUIPannel.mqh); V7 kept the item
-   // creation/icons above but dropped both this function AND its OnTickEvent call site along
-   // the way - restored here, same call site as V1 (see OnTickEvent below).
-   bool CGUIPannel::UpdateStatusBar(void)
-    {
-      static string s_deposit = "";
-      static string s_time = "";
-      static string s_profit = "";
-      static double s_deposit_val = 0;
-      static double s_profit_val = 0;
-
-      double deposit_val = DepositLoad(false);
-      double profit_val = AccountInfoDouble(ACCOUNT_PROFIT);
-      string new_deposit = "Deposit load: " + ::DoubleToString(deposit_val, 2) + "/" +
-                           ::DoubleToString(DepositLoad(true), 2) + "%";
-      string new_time = ::TimeToString(::TimeTradeServer(), TIME_DATE | TIME_SECONDS);
-      string new_profit = "Profit: " + ::DoubleToString(profit_val, 2);
-      // Check if values changed, if changed, update the status bar item and redraw it. Only update when value changes to reduce CPU usage.
-      bool any_changed = false;
-      if (new_deposit != s_deposit)
-       {
-         int img = (s_deposit == "") ? 2 : (deposit_val > s_deposit_val) ? 0
-                                       : (deposit_val < s_deposit_val)   ? 1
-                                                                        : 2;
-         s_deposit_val = deposit_val;
-         s_deposit = new_deposit;
-         CTextLabel *item = m_status_bar.GetItemPointer(STATUS_BAR_DEPOSIT_LOAD);
-         item.ChangeImage(0, img);
-         m_status_bar.SetValue(STATUS_BAR_DEPOSIT_LOAD, new_deposit);
-         item.Draw();
-         item.Update(false);
-         any_changed = true;
-       }
-      if (new_profit != s_profit)
-       {
-         int img = (s_profit == "") ? 2 : (profit_val > s_profit_val) ? 0
-                                    : (profit_val < s_profit_val)   ? 1
-                                                                     : 2;
-         color clr = (profit_val > 0) ? clrGreen : (profit_val < 0) ? clrRed
-                                                                  : clrBlack;
-         s_profit_val = profit_val;
-         s_profit = new_profit;
-         CTextLabel *item = m_status_bar.GetItemPointer(STATUS_BAR_PROFIT);
-         item.ChangeImage(0, img);
-         item.LabelColor(clr);
-         m_status_bar.SetValue(STATUS_BAR_PROFIT, new_profit);
-         item.Draw();
-         item.Update(false);
-         any_changed = true;
-       }
-      if (new_time != s_time)
-       {
-         s_time = new_time;
-         m_status_bar.SetValue(STATUS_BAR_SERVER_TIME, new_time);
-         m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Draw();
-         m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Update(false);
-       }
-      return any_changed;
-    }
-  // For Main Tabs
-   //+------------------------------------------------------------------+
-   //| Create a group with tabs Trade                                   |
-   //+------------------------------------------------------------------+
-   bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
-    {      
-      string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Trade", "Positions", "History", "Settings","Bar Events"};
-      string texts[TAB_TAB_MAIN_TOTAL] = 
-         {
-         "[ Account Info Tab ]",
-         "[ Symbol Info Tab ]",
-         "[ Trade Tab ]",
-         "[ Positions Tab ]",
-         "[ History Tab ]",
-         "[ Settings Tab ]",
-         "[ Bar Events Tab ]"
-         };
-      //--- Store the pointer to the main control
-       m_tabs_main.MainPointer(m_window_main);
-      //--- Properties
-       m_tabs_main.IsCenterText(true);
-       m_tabs_main.PositionMode(TABS_TOP);
-       m_tabs_main.AutoXResizeMode(true);
-       m_tabs_main.AutoYResizeMode(true);
-       m_tabs_main.AutoXResizeRightOffset(3);
-       m_tabs_main.AutoYResizeBottomOffset(25);
-      //--- Add tabs with the specified properties
-       for (int i = 0; i < TAB_TAB_MAIN_TOTAL; i++)
-         {
-           m_tabs_main.AddTab(tabs_names[i], 100);            
-         }
-      //--- Create Tab before create other control element inside
-       if (!m_tabs_main.CreateTabs(x_gap, y_gap))
-          return (false);
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);
-      return (true);
-    }
-   // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS
-   //+------------------------------------------------------------------+
-   //| Create a nested tab group for Settings tab config sections       |
-   //+------------------------------------------------------------------+
-    bool CGUIPannel::CreateTabSettingConfig(const int x_gap, const int y_gap)
-     {
-      string tabs_names[TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL] = {"Indicator", "Symbol TF", "Marker"};
-      //--- Store the pointer to the parent control - nested inside m_tabs_main's Settings tab
-       m_tabs_main_setting_config.MainPointer(m_tabs_main);
-      //--- Properties
-       m_tabs_main_setting_config.IsCenterText(true);
-       m_tabs_main_setting_config.PositionMode(TABS_TOP);
-       m_tabs_main_setting_config.AutoXResizeMode(true);
-       m_tabs_main_setting_config.AutoYResizeMode(true);
-       m_tabs_main_setting_config.AutoXResizeRightOffset(3);
-       m_tabs_main_setting_config.AutoYResizeBottomOffset(3);
-      //--- Add tabs with the specified properties
-       for(int i = 0; i < TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL; i++)
-          m_tabs_main_setting_config.AddTab(tabs_names[i], 100);
-      //--- Create Tab before create other control element inside
-       if(!m_tabs_main_setting_config.CreateTabs(x_gap, y_gap))
-          return (false);
-       m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_SETTINGS, m_tabs_main_setting_config);
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main_setting_config);
-      return (true);
-     }
-    // For TreeView Indicator TabSetting at m_tabs_main
-    bool CGUIPannel::CreateTreeView_Indicator(const int x_gap, const int y_gap)
-     {
-       m_treeview_indicator.MainPointer(m_tabs_main_setting_config);
-       m_treeview_indicator.AutoXResizeMode(false);
-       m_treeview_indicator.XSize(150);
-       m_treeview_indicator.AutoYResizeMode(true);
-       m_treeview_indicator.VisibleItemsTotal(15);
-       m_treeview_indicator.LightsHover(true);
-      //Create treeview
-       if(!m_treeview_indicator.CreateTreeView(x_gap, y_gap)) return false;
-
-       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_treeview_indicator);
-
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_indicator);       
-       return true;
-     }
-   //For m_table_indicator in TAB_TAB_MAIN_SETTINGS    
-    // =====================================================================
-    // --- Info tab: port of V4 m_table_indicator, same 5-column layout
-    // =====================================================================
-    bool CGUIPannel::CreateIndicatorTable(const int x, const int y)
-     {
-       m_table_indicator.MainPointer(m_tabs_main_setting_config);
-       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator);
-       //Resize Properties
-        m_table_indicator.AutoXResizeMode(true);
-        m_table_indicator.AutoXResizeRightOffset(3);
-        m_table_indicator.AutoYResizeMode(true);
-        m_table_indicator.AutoYResizeBottomOffset(3);
-       //Table Properties
-        m_table_indicator.ShowHeaders(true);
-        m_table_indicator.SelectableRow(true);
-        m_table_indicator.LightsHover(true);
-        m_table_indicator.IsSortMode(true);
-       // --- 7 columns: col 0 merges the old icon-only "show on T3" column with the
-       // --- "Indicator" text column (CTCell renders image+text independently, click
-       // --- detection is scoped to the image's own pixel width - see Table.mqh
-       // --- CheckPressedCheckBox/CheckPressedButton). Buy/Sell/Show/Sound/Message shift
-       // --- down by 1. Sound/Message added 2026-07-17: per-template opt-in for a sound
-       // --- alert + Journal message when that template gets a new Signal - wiring TBD,
-       // --- this only adds the checkbox UI columns for now.
-        m_table_indicator.TableSize(7, 20);
-        int widths[7]    = {180, 70, 40, 40, 40, 40, 40};
-        int img_x_off[7] = {3,   0,  10, 10, 10, 10, 10};
-        int img_y_off[7] = {3,   0,  3,  3,  3,  3,  3};
-        ENUM_ALIGN_MODE align[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
-        m_table_indicator.ColumnsWidth(widths);
-        m_table_indicator.ImageXOffset(img_x_off);
-        m_table_indicator.ImageYOffset(img_y_off);
-        m_table_indicator.TextAlign(align);
-
-        if(!m_table_indicator.CreateTable(x, y)) return false;
-        //Set Header text
-          m_table_indicator.SetHeaderText(0, "Indicator");
-          m_table_indicator.SetHeaderText(1, "Group");
-        //Checkbox to show or hide on Layer 3 (Chart)
-          m_table_indicator.SetHeaderText(2, "Buy");
-          m_table_indicator.SetHeaderText(3, "Sell");
-          m_table_indicator.SetHeaderText(4, "Show");
-          m_table_indicator.SetHeaderText(5, "Sound");
-          m_table_indicator.SetHeaderText(6, "Message");
-
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
-       return true;
-     }
-   //For m_table_indicator_SymbolTFSeting + m_btn_save_SymbolTF in TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF
-    // =====================================================================
-    // --- Symbol TF sub-tab: flat list of every Symbol+TF pair currently tracked by
-    // --- m_BarTimeSeriesCollection (same source as m_treeview_SymbolTF), each row with
-    // --- its own Buy/Sell checkboxes and a red delete icon. Save button writes the
-    // --- current Buy/Sell state to JSON.
-    // =====================================================================
-    bool CGUIPannel::CreateTableSymbolTFSetting(const int x, const int y)
-     {
-      //--- Note (own row, on top): Delete/Buy/Sell edits here only take effect in
-      //--- indicators_config.json - the running EA keeps today's live series/indicators
-      //--- until it's restarted. Colored to stand out from the Save button below it.
-       m_label_symboltf_note.MainPointer(m_tabs_main_setting_config);
-       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_label_symboltf_note);
-       // --- CTextLabel::InitializeProperties defaults XSize to 100px when unset - too narrow for
-       // --- this sentence (and CTextLabel never checks AutoXResizeMode, unlike CTable/CTreeView),
-       // --- so XSize must be set explicitly, wide enough to clear the tab's own right edge.
-       m_label_symboltf_note.XSize(M_TABS_MAIN_WIDTH - x - 5);
-       m_label_symboltf_note.Font("Calibri Bold");   // CElement::DrawText hardcodes FW_NORMAL - request a bold face by name instead
-       if(!m_label_symboltf_note.CreateTextLabel("Delete Symbol+TF here apply after the EA is restarted", x, y)) return false;
-       m_label_symboltf_note.LabelColor(clrDodgerBlue);
-       m_label_symboltf_note.Draw();
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_symboltf_note);
-
-      //--- Save button, same convention as m_btn_save_indicator
-       m_btn_save_SymbolTF.MainPointer(m_tabs_main_setting_config);
-       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_btn_save_SymbolTF);
-       m_btn_save_SymbolTF.AutoXResizeMode(false);
-       m_btn_save_SymbolTF.XSize(80);
-       m_btn_save_SymbolTF.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
-       if(!m_btn_save_SymbolTF.CreateButton("Save", x, y + SYMBOLTF_BTN_Y)) return false;
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_SymbolTF);
-
-      //--- Table: col 0 merges the red delete icon with the Symbol label (same CTable
-      //--- click-detection trick as m_table_indicator col 0 - see Table.mqh CheckPressedButton).
-       m_table_indicator_SymbolTFSeting.MainPointer(m_tabs_main_setting_config);
-       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_table_indicator_SymbolTFSeting);
-       m_table_indicator_SymbolTFSeting.AutoXResizeMode(true);
-       m_table_indicator_SymbolTFSeting.AutoXResizeRightOffset(3);
-       m_table_indicator_SymbolTFSeting.AutoYResizeMode(true);
-       m_table_indicator_SymbolTFSeting.AutoYResizeBottomOffset(3);
-       m_table_indicator_SymbolTFSeting.ShowHeaders(true);
-       m_table_indicator_SymbolTFSeting.SelectableRow(true);
-       m_table_indicator_SymbolTFSeting.LightsHover(true);
-       m_table_indicator_SymbolTFSeting.IsSortMode(true);
-       m_table_indicator_SymbolTFSeting.TableSize(4, 10);
-       int widths[4]    = {150, 70, 40, 40};
-       int img_x_off[4] = {3,   0,  10, 10};
-       int img_y_off[4] = {3,   0,  3,  3};
-       ENUM_ALIGN_MODE align[4] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
-       m_table_indicator_SymbolTFSeting.ColumnsWidth(widths);
-       m_table_indicator_SymbolTFSeting.ImageXOffset(img_x_off);
-       m_table_indicator_SymbolTFSeting.ImageYOffset(img_y_off);
-       m_table_indicator_SymbolTFSeting.TextAlign(align);
-
-       if(!m_table_indicator_SymbolTFSeting.CreateTable(x, y + SYMBOLTF_TABLE_Y)) return false;
-       m_table_indicator_SymbolTFSeting.SetHeaderText(0, "Symbol");
-       m_table_indicator_SymbolTFSeting.SetHeaderText(1, "TF");
-       m_table_indicator_SymbolTFSeting.SetHeaderText(2, "Buy");
-       m_table_indicator_SymbolTFSeting.SetHeaderText(3, "Sell");
-      // --- Collapse the TableSize() padding down to a single blank baseline row -
-      // --- PopulateTableSymbolTFSetting() reuses that one row for its very first entry.
-       m_table_indicator_SymbolTFSeting.DeleteAllRows();
-
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator_SymbolTFSeting);
-       return true;
-     }
-    // --- Incremental sync with m_treeview_SymbolTF's own data source (m_BarTimeSeriesCollection) -
-    // --- called every time PopulateSymbolTFTree() runs (init + real symbol/TF change), same as the
-    // --- treeview. Purely ADDITIVE: only appends pairs not already present as a row - never
-    // --- DeleteAllRows()/rebuilds, so a user-deleted row stays deleted. Real "stop tracking" on
-    // --- delete is follow-up work once the Library gets a RemoveSeries()-style API (BugNote/2026-07-15).
-    void CGUIPannel::PopulateTableSymbolTFSetting(void)
-     {
-      if(m_BarTimeSeriesCollection == NULL) return;
-
-      int mw_total = ::SymbolsTotal(true);
-      for(int i = 0; i < mw_total; i++)
-        {
-         string sym_name = ::SymbolName(i, true);
-         CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
-         CArrayObj *list = (bts != NULL) ? bts.GetListSeries() : NULL;
-         int tf_cnt = (list != NULL) ? list.Total() : 0;
-         for(int k = 0; k < tf_cnt; k++)
-           {
-            CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)k);
-            if(s == NULL) continue;
-            string tf_text = TimeframeDescription(s.Timeframe());
-            if(HasTableSymbolTFSettingRow(sym_name, tf_text)) continue;
-
-            int row = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
-            string first_col0 = m_table_indicator_SymbolTFSeting.GetValue(0, 0);
-            StringTrimLeft(first_col0);
-            bool placeholder_only = (row == 1 && first_col0 == "");
-            if(placeholder_only)
-               row = 0;   // reuse the blank baseline row left by DeleteAllRows()
-            else
-               m_table_indicator_SymbolTFSeting.AddRow(row, false);
-            SetTableSymbolTFSettingRow(row, sym_name, tf_text);
-           }
-        }
-      m_table_indicator_SymbolTFSeting.Update(true);
-     }
-    // --- True when (sym, tf_text) already has a row (trimmed match against col0/col1 text)
-    bool CGUIPannel::HasTableSymbolTFSettingRow(const string sym, const string tf_text)
-     {
-      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
-      for(int row = 0; row < rows; row++)
-        {
-         string s = m_table_indicator_SymbolTFSeting.GetValue(0, row);
-         StringTrimLeft(s);
-         if(s != sym) continue;
-         string t = m_table_indicator_SymbolTFSeting.GetValue(1, row);
-         StringTrimLeft(t);
-         if(t == tf_text) return true;
-        }
-      return false;
-     }
-    // --- Called ONCE right after the initial PopulateTableSymbolTFSetting() (see CreateGUIPannel) -
-    // --- pulls the Buy/Sell state CTimeSeriesEngine::LoadConfigurationFromJSON() cached while
-    // --- loading indicators_config.json and applies it to the matching rows, so a saved Buy/Sell
-    // --- setting survives an EA restart instead of resetting to OFF.
-    void CGUIPannel::ApplyLoadedSymbolTFSettings(void)
-     {
-      if(m_time_series_engine == NULL) return;
-      string symbols[], tfs[];
-      bool buys[], sells[];
-      m_time_series_engine.GetLoadedSymbolTFSettings(symbols, tfs, buys, sells);
-      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
-      for(int i = 0; i < ArraySize(symbols); i++)
-        {
-         for(int row = 0; row < rows; row++)
-           {
-            string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
-            StringTrimLeft(sym);
-            if(sym != symbols[i]) continue;
-            string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
-            StringTrimLeft(tf);
-            if(tf != tfs[i]) continue;
-            m_table_indicator_SymbolTFSeting.ChangeImage(2, row, buys[i]  ? 0 : 1);
-            m_table_indicator_SymbolTFSeting.ChangeImage(3, row, sells[i] ? 0 : 1);
-            break;
-           }
-        }
-      m_table_indicator_SymbolTFSeting.Update(true);
-     }
-    // --- True for the ONE row matching this chart's own symbol/TF - CTimeSeriesEngine::OnInitEvent
-    // --- creates that series unconditionally and everything else (RefreshIndicatorTable,
-    // --- BuildAndWriteSignalBridge...) assumes it always exists, so that row must never be deletable.
-    bool CGUIPannel::IsCurrentChartSymbolTFRow(const string sym, const string tf_text)
-     {
-      return (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
-     }
-    // --- Re-evaluates col 0's icon (delete vs start) for every row - called after a real
-    // --- symbol/TF chart change, since which row counts as "current" just moved.
-    void CGUIPannel::SyncTableSymbolTFSettingCurrentChartIcon(void)
-     {
-      uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
-      uint start_icon[]  = {IMAGE_RESOURCE_BMP16_START_BMP};
-      int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
-      for(int row = 0; row < rows; row++)
-        {
-         string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
-         StringTrimLeft(sym);
-         if(sym == "") continue;
-         string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
-         StringTrimLeft(tf);
-         if(IsCurrentChartSymbolTFRow(sym, tf))
-            m_table_indicator_SymbolTFSeting.SetImages(0, row, start_icon);
-         else
-            m_table_indicator_SymbolTFSeting.SetImages(0, row, delete_icon);
-         m_table_indicator_SymbolTFSeting.ChangeImage(0, row, 0);
-        }
-      m_table_indicator_SymbolTFSeting.Update(true);
-     }
-    // --- Fill every cell of one Symbol+TF row - Buy/Sell default OFF (opt-in, same convention
-    // --- as m_table_indicator's col 2/3)
-    void CGUIPannel::SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text)
-     {
-      uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
-      uint start_icon[]  = {IMAGE_RESOURCE_BMP16_START_BMP};
-      uint chk[]         = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
-
-      // --- Col 0: Symbol label + icon - red Close (delete), EXCEPT the row matching the current
-      // --- chart's own symbol/TF, which gets the "start" icon and is not deletable (this EA
-      // --- instance depends on that series existing - see IsCurrentChartSymbolTFRow).
-       bool is_current = IsCurrentChartSymbolTFRow(sym, tf_text);
-       m_table_indicator_SymbolTFSeting.CellType(0, row, CELL_BUTTON);
-       if(is_current)
-          m_table_indicator_SymbolTFSeting.SetImages(0, row, start_icon);
-       else
-          m_table_indicator_SymbolTFSeting.SetImages(0, row, delete_icon);
-       m_table_indicator_SymbolTFSeting.ChangeImage(0, row, 0);
-       m_table_indicator_SymbolTFSeting.SetValue(0, row, "        " + sym);
-      // --- Col 1: TF
-       m_table_indicator_SymbolTFSeting.SetValue(1, row, "  " + tf_text);
-      // --- Col 2/3: Buy / Sell
-       m_table_indicator_SymbolTFSeting.CellType(2, row, CELL_CHECKBOX);
-       m_table_indicator_SymbolTFSeting.SetImages(2, row, chk);
-       m_table_indicator_SymbolTFSeting.ChangeImage(2, row, 1);
-       m_table_indicator_SymbolTFSeting.CellType(3, row, CELL_CHECKBOX);
-       m_table_indicator_SymbolTFSeting.SetImages(3, row, chk);
-       m_table_indicator_SymbolTFSeting.ChangeImage(3, row, 1);
-     }
-    // --- Save button click - both m_btn_save_indicator and m_btn_save_SymbolTF write the SAME
-    // --- indicators_config.json (single source of truth, no separate Buy/Sell file) - see
-    // --- SaveGUIConfigToJSON().
-    void CGUIPannel::OnClickSaveSymbolTF(void)
-     {
-      SaveGUIConfigToJSON();
-     }
+  // ----------------
+   
+  //Helper for OnClickSaveIndicators() and OnClickSaveSymbolTF() and  
     // --- Shared by OnClickSaveIndicators() and OnClickSaveSymbolTF(): builds the Buy/Sell
     // --- lookup arrays from m_table_indicator_SymbolTFSeting and hands them to
     // --- CTimeSeriesEngine::SaveConfigurationToJSON, which merges them into each "symbols_tf"
@@ -2001,291 +2498,8 @@
          total++;
         }
      }
-    // --- Checkbox click stub (col 2 = Buy, col 3 = Sell) - the table already auto-toggled the
-    // --- icon before this event fires (see Table.mqh CheckPressedCheckBox), so no manual image
-    // --- flip needed here. Intentionally empty for now - no Tang 1 trading data model exists
-    // --- yet to apply this to (see PopulateTableSymbolTFSetting note); wire real behavior here
-    // --- once that's decided.
-    void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col)
-     {
-     }
-    // --- Fixed catalog of common Wingdings arrow codes offered in all 4 marker-shape combos.
-    // --- 67/68 (Thumb Up/Down) restore the original OBJ_ARROW_THUMB_UP/DOWN look this popup
-    // --- used before the DRAW_COLOR_ARROW redesign (Anhnt, 2026-07-17) - those were native
-    // --- chart OBJECT types back then; now they're just Wingdings glyph codes like any other
-    // --- shape choice here, rendered via the indicator's PLOT_ARROW, not a chart object.
-    void CGUIPannel::GetMarkerArrowCodeChoices(int &codes[], string &labels[])
-     {
-      int    c[] = {233, 234, 67, 68, 108, 109, 159, 161, 162, 217, 218};
-      string l[] = {"233 Arrow Up", "234 Arrow Down", "67 Thumb Up", "68 Thumb Down",
-                    "108 Circle", "109 Circle Filled",
-                    "159 Diamond", "161 Diamond Filled", "162 Star", "217 Chevron Up", "218 Chevron Down"};
-      ArrayCopy(codes,  c);
-      ArrayCopy(labels, l);
-     }
-    // --- Fixed color palette offered in all 3 marker-color combos - CColorPicker is a hard-
-    // --- coded 348x266 full HSL/RGB/Lab dialog (ColorPicker.mqh:234-235, no compact variant),
-    // --- not worth it for what's really just picking from a short list of common colors.
-    void CGUIPannel::GetMarkerColorChoices(color &colors[], string &labels[])
-     {
-      color  c[] = {clrLime, clrGreen, clrDodgerBlue, clrOrange, clrYellow,
-                    clrRed, clrCrimson, clrMagenta,
-                    clrGray, clrSilver, clrWhite, clrBlack};
-      string l[] = {"Lime", "Green", "Dodger Blue", "Orange", "Yellow",
-                    "Red", "Crimson", "Magenta",
-                    "Gray", "Silver", "White", "Black"};
-      ArrayCopy(colors, c);
-      ArrayCopy(labels, l);
-     }
-    // --- Shared recipe for every combobox on the Other tab (4 shape + 3 color) - same
-    // --- creation/population steps as m_param_combo[]'s own recipe, just factored out since
-    // --- 7 combos would otherwise repeat it verbatim.
-    bool CGUIPannel::CreateMarkerTabComboBox(CComboBox &combo, const int x, const int y, const int combo_w, string &labels[], const int selected_index)
-     {
-      combo.MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, combo);
-      int n = ArraySize(labels);
-      combo.XSize(combo_w);
-      combo.YSize(20);
-      combo.ItemsTotal(n);
-      // --- Default dropdown viewport is only 93px (~5 rows) - with 11-12 choices that forces
-      // --- a cramped scrollbar drag to reach the rest (Anhnt, 2026-07-17: "scrollbar khó kéo,
-      // --- chọn không được"). Size the list to show every item at once so no scrolling is
-      // --- ever needed - must be set BEFORE CreateComboBox() (CreateList() reads it once).
-      // --- Capped at 300px (Anhnt, 2026-07-17: a real Sounds folder can have 30-40+ files -
-      // --- letting the list grow to 18*n+4 uncapped ran the dropdown off the bottom of the
-      // --- screen, making everything past the visible part unreachable). Small catalogs
-      // --- (shape/color, 11-12 items = up to ~220px) still fit under the cap with no scrolling.
-      int list_h = 18 * n + 4;
-      if(list_h > 300) list_h = 300;
-      combo.GetListViewPointer().YSize(list_h);
-      combo.GetButtonPointer().XGap(1);
-      combo.GetButtonPointer().XSize(combo_w);
-      combo.GetButtonPointer().LabelYGap(4);
-      combo.GetButtonPointer().IconYGap(3);
-      if(!combo.CreateComboBox("", x, y)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), combo);
-
-      combo.GetListViewPointer().Rebuilding(n);
-      for(int i = 0; i < n; i++)
-         combo.SetValue(i, labels[i]);
-      combo.SelectItem(selected_index);
-      combo.GetListViewPointer().Update(true);
-      return true;
-     }
-    // --- Caption to the LEFT of a combo, e.g. "Single Buy:" - m_label_other_caption[row].
-    bool CGUIPannel::CreateMarkerTabCaption(const int row, const string text, const int x, const int y)
-     {
-      m_label_other_caption[row].MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_label_other_caption[row]);
-      m_label_other_caption[row].XSize(140);
-      if(!m_label_other_caption[row].CreateTextLabel(text, x, y)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_other_caption[row]);
-      return true;
-     }
-    // --- Preview to the RIGHT of a shape combo - renders the ACTUAL Wingdings glyph (not just
-    // --- its numeric code) so the user can see what the shape looks like before saving.
-    bool CGUIPannel::CreateShapePreview(const int row, const int x, const int y, const int arrow_code)
-     {
-      m_preview_shape[row].MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_shape[row]);
-      m_preview_shape[row].Font("Wingdings");
-      m_preview_shape[row].FontSize(16);
-      if(!m_preview_shape[row].CreateTextLabel(::ShortToString((ushort)arrow_code), x, y)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_shape[row]);
-      return true;
-     }
-    // --- Preview to the RIGHT of a color combo - reuses CColorButton's own swatch rendering
-    // --- (CurrentColor() builds a small bordered color icon) purely for DISPLAY - never wired
-    // --- to a click handler, so clicking it does nothing (no picker to open, see BugNote
-    // --- 2026-07-17: CColorPicker dropped in favor of these fixed-palette combos).
-    bool CGUIPannel::CreateColorPreview(const int row, const int x, const int y, const color clr)
-     {
-      m_preview_color[row].MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_color[row]);
-      m_preview_color[row].CurrentColor(clr);
-      if(!m_preview_color[row].CreateColorButton("", x, y)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_color[row]);
-      return true;
-     }
-    // --- Live-updates a shape preview as the user browses the combo, BEFORE clicking Save -
-    // --- called from OnEvent's ON_CLICK_COMBOBOX_ITEM handling, not from OnClickSaveMarkerSettings
-    // --- (which commits the choice to m_marker_* instead).
-    void CGUIPannel::UpdateShapePreview(const int row, const int arrow_code)
-     {
-      m_preview_shape[row].LabelText(::ShortToString((ushort)arrow_code));
-      m_preview_shape[row].Update(true);
-     }
-    void CGUIPannel::UpdateColorPreview(const int row, const color clr)
-     {
-      m_preview_color[row].CurrentColor(clr);
-      m_preview_color[row].Update(true);
-     }
-    // --- "Marker" sub-tab (TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER): 4 independent shape choices
-    // --- (Single Buy/Sell, Multi Buy/Sell - each needs its OWN plot/shape, see
-    // --- SignalMarkers.mq5's header comment) and 3 independent color choices (Buy/Sell when a
-    // --- marker relates to this chart's own Symbol+TF, Non-Related otherwise) - shape and
-    // --- color are orthogonal axes (Anhnt, 2026-07-17).
-    bool CGUIPannel::CreateTabSettingConfig_Marker(const int x, const int y)
-     {
-      LoadMarkerSettings(); // seed m_marker_* from Config_Setting.json's "markers" section before building defaults
-
-      int codes[]; string shape_labels[];
-      GetMarkerArrowCodeChoices(codes, shape_labels);
-      color mcolors[]; string color_labels[];
-      GetMarkerColorChoices(mcolors, color_labels);
-
-      // --- Anhnt 2026-07-17: captions were sitting flush against the tab's left edge while
-      // --- the combo/preview columns left a lot of empty space on the right - shift the
-      // --- whole row layout right by 20px.
-      const int base_x   = x + 20;
-      int combo_w   = 160;
-      int row_h     = 26;
-      int combo_x   = base_x + 110;
-      int preview_x = combo_x + combo_w + 10;
-
-      int n_shapes = ArraySize(codes);
-      int sel_single_buy = 0, sel_single_sell = 0, sel_multi_buy = 0, sel_multi_sell = 0;
-      for(int i = 0; i < n_shapes; i++)
-        {
-         if(codes[i] == m_marker_single_buy_code)  sel_single_buy  = i;
-         if(codes[i] == m_marker_single_sell_code) sel_single_sell = i;
-         if(codes[i] == m_marker_multi_buy_code)   sel_multi_buy   = i;
-         if(codes[i] == m_marker_multi_sell_code)  sel_multi_sell  = i;
-        }
-
-      string shape_captions[4] = {"Single Buy", "Single Sell", "Multi Buy", "Multi Sell"};
-      int    shape_codes[4]    = {m_marker_single_buy_code, m_marker_single_sell_code, m_marker_multi_buy_code, m_marker_multi_sell_code};
-
-      if(!CreateMarkerTabCaption(0, shape_captions[0], base_x, y))                                          return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_single_buy,  combo_x, y,             combo_w, shape_labels, sel_single_buy))  return false;
-      if(!CreateShapePreview(0, preview_x, y, shape_codes[0]))                                             return false;
-
-      if(!CreateMarkerTabCaption(1, shape_captions[1], base_x, y + row_h))                                   return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_single_sell, combo_x, y + row_h,     combo_w, shape_labels, sel_single_sell)) return false;
-      if(!CreateShapePreview(1, preview_x, y + row_h, shape_codes[1]))                                     return false;
-
-      if(!CreateMarkerTabCaption(2, shape_captions[2], base_x, y + row_h * 2))                               return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_multi_buy,   combo_x, y + row_h * 2, combo_w, shape_labels, sel_multi_buy))   return false;
-      if(!CreateShapePreview(2, preview_x, y + row_h * 2, shape_codes[2]))                                 return false;
-
-      if(!CreateMarkerTabCaption(3, shape_captions[3], base_x, y + row_h * 3))                               return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_multi_sell,  combo_x, y + row_h * 3, combo_w, shape_labels, sel_multi_sell))  return false;
-      if(!CreateShapePreview(3, preview_x, y + row_h * 3, shape_codes[3]))                                 return false;
-
-      int n_colors = ArraySize(mcolors);
-      int sel_buy = 0, sel_sell = 0, sel_nonrelated = 0;
-      for(int i = 0; i < n_colors; i++)
-        {
-         if(mcolors[i] == m_marker_buy_color)        sel_buy        = i;
-         if(mcolors[i] == m_marker_sell_color)       sel_sell       = i;
-         if(mcolors[i] == m_marker_nonrelated_color) sel_nonrelated = i;
-        }
-
-      int color_row0 = row_h * 4 + 10;
-
-      if(!CreateMarkerTabCaption(4, "Buy Color", base_x, y + color_row0))                                        return false;
-      if(!CreateMarkerTabComboBox(m_combo_color_buy,        combo_x, y + color_row0,           combo_w, color_labels, sel_buy))        return false;
-      if(!CreateColorPreview(0, preview_x, y + color_row0, m_marker_buy_color))                                return false;
-
-      if(!CreateMarkerTabCaption(5, "Sell Color", base_x, y + color_row0 + row_h))                               return false;
-      if(!CreateMarkerTabComboBox(m_combo_color_sell,       combo_x, y + color_row0 + row_h,   combo_w, color_labels, sel_sell))       return false;
-      if(!CreateColorPreview(1, preview_x, y + color_row0 + row_h, m_marker_sell_color))                       return false;
-
-      if(!CreateMarkerTabCaption(6, "Non-Related Color", base_x, y + color_row0 + row_h * 2))                    return false;
-      if(!CreateMarkerTabComboBox(m_combo_color_nonrelated, combo_x, y + color_row0 + row_h * 2, combo_w, color_labels, sel_nonrelated)) return false;
-      if(!CreateColorPreview(2, preview_x, y + color_row0 + row_h * 2, m_marker_nonrelated_color))             return false;
-
-      // --- Buy/Sell alert sound files (2026-07-17, simplified after CFileNavigator's splitter-
-      // --- drag froze the popup): m_marker_sound_folder is a user-editable path relative to
-      // --- MQL5\Files\ - persisted in JSON so it's never "lost" if changed. "Refresh" re-scans
-      // --- it with plain FileFindFirst/FileFindNext and repopulates both comboboxes below -
-      // --- no tree, no popup, nothing to freeze.
-      int sound_row0 = color_row0 + row_h * 3 + 10;
-      // --- Sound filenames (AUTO_TRADING_OFF_EN.wav etc.) run a lot longer than "233 Arrow Up"/
-      // --- "Lime" - widen just this section's field so names aren't clipped, and the
-      // --- Refresh/preview-x column lines up with the color swatches above (Anhnt, 2026-07-17).
-      int sound_combo_w = preview_x + 60 - combo_x;
-
-      if(!CreateMarkerTabCaption(7, "Sound Folder", base_x, y + sound_row0)) return false;
-      m_edit_sound_folder.MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_edit_sound_folder);
-      m_edit_sound_folder.XSize(sound_combo_w);
-      m_edit_sound_folder.GetTextBoxPointer().XGap(1);
-      if(!m_edit_sound_folder.CreateTextEdit(m_marker_sound_folder, combo_x, y + sound_row0)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_sound_folder);
-
-      m_btn_refresh_sound_folder.MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_refresh_sound_folder);
-      m_btn_refresh_sound_folder.AutoXResizeMode(false);
-      m_btn_refresh_sound_folder.XSize(80);
-      if(!m_btn_refresh_sound_folder.CreateButton("Refresh", combo_x + sound_combo_w + 10, y + sound_row0)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_refresh_sound_folder);
-
-      string files[];
-      ScanSoundFolder(files);
-      int n_files = ArraySize(files);
-      int sel_buy_sound = 0, sel_sell_sound = 0;
-      for(int i = 0; i < n_files; i++)
-        {
-         if(files[i] == m_marker_buy_sound_file)  sel_buy_sound  = i;
-         if(files[i] == m_marker_sell_sound_file) sel_sell_sound = i;
-        }
-
-      if(!CreateMarkerTabCaption(8, "Buy Sound", base_x, y + sound_row0 + row_h)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_buy_sound, combo_x, y + sound_row0 + row_h, sound_combo_w, files, sel_buy_sound)) return false;
-
-      if(!CreateMarkerTabCaption(9, "Sell Sound", base_x, y + sound_row0 + row_h * 2)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_sell_sound, combo_x, y + sound_row0 + row_h * 2, sound_combo_w, files, sel_sell_sound)) return false;
-
-      m_btn_save_marker_settings.MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_save_marker_settings);
-      m_btn_save_marker_settings.AutoXResizeMode(false);
-      m_btn_save_marker_settings.XSize(80);
-      m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
-      if(!m_btn_save_marker_settings.CreateButton("Save", base_x, y + sound_row0 + row_h * 3 + 10)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_marker_settings);
-
-      return true;
-     }
-    // --- Reads all 7 combos, persists to Config_Setting.json's "markers" section, and hot-swaps the running
-    // --- SignalMarkers.mq5 instance so the new look applies immediately.
-    void CGUIPannel::OnClickSaveMarkerSettings(void)
-     {
-      int codes[]; string shape_labels[];
-      GetMarkerArrowCodeChoices(codes, shape_labels);
-      int n_shapes = ArraySize(codes);
-
-      int sel;
-      sel = (int)m_combo_shape_single_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_single_buy_code = codes[sel];
-      sel = (int)m_combo_shape_single_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_single_sell_code = codes[sel];
-      sel = (int)m_combo_shape_multi_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_multi_buy_code = codes[sel];
-      sel = (int)m_combo_shape_multi_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_multi_sell_code = codes[sel];
-
-      color mcolors[]; string color_labels[];
-      GetMarkerColorChoices(mcolors, color_labels);
-      int n_colors = ArraySize(mcolors);
-
-      sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
-      sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
-      sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
-
-      m_marker_sound_folder = m_edit_sound_folder.GetValue();
-      string sound_val = m_combo_buy_sound.GetValue();
-      if(sound_val != "") m_marker_buy_sound_file = sound_val;
-      sound_val = m_combo_sell_sound.GetValue();
-      if(sound_val != "") m_marker_sell_sound_file = sound_val;
-
-      SaveMarkerSettings();
-      ReattachSignalMarkersIndicator();
-     }
+    
+    
     // --- Loads the "markers" section of Config_Setting.json - the SAME single file
     // --- CTimeSeriesEngine::SaveConfigurationToJSON/LoadConfigurationFromJSON already use for
     // --- "symbols_tf"/"templates" (Anhnt, 2026-07-17: one file for everything, not scattered
@@ -2817,7 +3031,7 @@
     // --- own row) and OnClickRemoveIndicator (DeleteRow) - so no dedup and no periodic rebuild.
     // --- By the Layer-1 invariant every series carries the same template set, hence the current
     // --- chart's (symbol,TF) instance list IS the template list, one instance per template.
-    void CGUIPannel::RefreshIndicatorTable(void)
+    void CGUIPannel::RefreshTableIndicator(void)
      {
       if(m_IndicatorsCollection == NULL) return;
       string sym = ::Symbol();
@@ -3738,182 +3952,12 @@
       else
          m_table_indicator.DeleteRow(row, true);
 
-      SetValuesToIndicatorSymbolTFTable();
+      SetValuesToTableIndicatorSymbolTFValue();
       SyncIndicatorTreeViewIcons();
       ChartRedraw();
      } 
    
-   //For Symbol TF treeview
-   bool CGUIPannel::CreateTreeView_SymbolTF(const int x_gap, const int y_gap)
-    {       
-       m_treeview_SymbolTF.MainPointer(m_window_main);
-       m_treeview_SymbolTF.AutoXResizeMode(false);  // fixed width
-       m_treeview_SymbolTF.XSize(M_TREEVIEW_SYMBOLTF_WIDTH);
-       m_treeview_SymbolTF.AutoYResizeMode(true);
-       m_treeview_SymbolTF.VisibleItemsTotal(15);
-       m_treeview_SymbolTF.LightsHover(true);
-       m_treeview_SymbolTF.AutoYResizeBottomOffset(25);
-       if(!m_treeview_SymbolTF.CreateTreeView(x_gap, y_gap)) return false;      
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_SymbolTF);      
-       return true;
-    }  
-   void CGUIPannel::PopulateSymbolTFTree(void)
-    {
-      if(m_BarTimeSeriesCollection == NULL) return;
-      int mw_total = ::SymbolsTotal(true);
-      // Grow registry if MarketWatch expanded
-       if(ArraySize(m_sym_tree_pos) < mw_total)
-        {
-         int old = ArraySize(m_sym_tree_pos);
-         ArrayResize(m_sym_tree_pos, mw_total);
-         ArrayFill  (m_sym_tree_pos, old, mw_total - old, -1);
-        }
-      // --- SymbolName(i,true)'s own index order is Market Watch's internal/insertion order,
-      // --- NOT the alphabetically-sorted order the Market Watch grid displays (Anhnt,
-      // --- 2026-07-19) - a brand new symbol node only ever gets APPENDED (AddTreeItem always
-      // --- uses ItemsTotal() as the new list_index, there's no "insert at position"), so the
-      // --- only way to make first-time node creation come out sorted is to visit symbols in
-      // --- sorted order here. m_sym_tree_pos[] stays keyed by the RAW Market Watch index i -
-      // --- only the iteration order changes, already-created nodes are unaffected.
-      int order[];
-      ArrayResize(order, mw_total);
-      for(int i = 0; i < mw_total; i++) order[i] = i;
-      for(int a = 0; a < mw_total - 1; a++)
-         for(int b = a + 1; b < mw_total; b++)
-            if(::SymbolName(order[b], true) < ::SymbolName(order[a], true))
-              { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
-      // --- FormTreeList() silently drops any item whose item_index is not monotonically
-      // --- increasing within its node_level, in the order items were created/appended
-      // --- (Anhnt, 2026-07-19) - since we now visit symbols in ALPHABETICAL order (not raw
-      // --- Market Watch index order), raw i is NOT monotonic across creation order any more.
-      // --- sym_item_seq tracks "how many sym nodes exist so far" and is used as item_index
-      // --- instead of i, so it always increases by exactly 1 per new node, regardless of
-      // --- which raw index i that node happens to be.
-       int sym_item_seq = 0;
-       for(int c = 0; c < ArraySize(m_sym_tree_pos); c++)
-         if(m_sym_tree_pos[c] != -1) sym_item_seq++;
-       for(int oi = 0; oi < mw_total; oi++)
-        {
-          int               i        = order[oi];
-          string            sym_name = ::SymbolName(i, true);
-          CBarTimeSeriesDE *bts      = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
-          CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
-          int               tf_cnt   = (list != NULL) ? list.Total() : 0;
-          // Step 1: Ensure sym node exists
-           if(m_sym_tree_pos[i] == -1)
-            {
-             int sym_li = m_treeview_SymbolTF.ItemsTotal();
-             m_sym_tree_pos[i] = sym_li;
-             // AddTreeItem() auto-increments parent count + sets state when TF children are added
-              m_treeview_SymbolTF.AddTreeItem(sym_li,
-                                          -1, //prev_node_list_index
-                                          sym_name,
-                                          IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
-                                          sym_item_seq,
-                                          0, //node_level symnode = 0 Node level must be >=0
-                                          0,
-                                          0, 0,
-                                          false,    //item_state, m_t_item_state[]=true
-                                          false      //is_folder m_t_is_folder[]=false
-                                          );
-             sym_item_seq++;
-            }
-           int sym_li = m_sym_tree_pos[i];
-           if(tf_cnt == 0) continue;   //No TF found on sym_li
-          // Step 2: Collect existing TF children of sym_li node
-           int children[];
-           ArrayResize(children, 0);
-           int total_now = m_treeview_SymbolTF.ItemsTotal();
-           for(int j = 0; j < total_now; j++)
-            if(m_treeview_SymbolTF.ItemPrevNode(j) == sym_li)
-             {
-               int sz = ArraySize(children);
-               ArrayResize(children, sz + 1);
-               children[sz] = j;
-             }
-           int child_count = ArraySize(children);
-          // --- GetSeriesByIndex()'s own order is creation order, not TF rank (Anhnt,
-          // --- 2026-07-19) - sort the LOOKUP order by IndexEnumTimeframe() so slot k below
-          // --- (positionally matched against existing children[k]) ends up ascending M1..MN1,
-          // --- same reasoning as the symbol-level sort above.
-           int tf_order[];
-           ArrayResize(tf_order, tf_cnt);
-           for(int k = 0; k < tf_cnt; k++) tf_order[k] = k;
-           for(int a = 0; a < tf_cnt - 1; a++)
-              for(int b = a + 1; b < tf_cnt; b++)
-                {
-                 CBarSeriesDE *sa = bts.GetSeriesByIndex((uchar)tf_order[a]);
-                 CBarSeriesDE *sb = bts.GetSeriesByIndex((uchar)tf_order[b]);
-                 if(sa == NULL || sb == NULL) continue;
-                 if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
-                   { int tmp = tf_order[a]; tf_order[a] = tf_order[b]; tf_order[b] = tmp; }
-                }
-          // Step 3: Match bts[k] against children[k]
-           int actual_sym_li = -1;
-           for(int k = 0; k < tf_cnt; k++)
-            {
-             CBarSeriesDE *s = bts.GetSeriesByIndex((uchar)tf_order[k]);
-             if(s == NULL) continue;
-             string actual = TimeframeDescription(s.Timeframe());
-             if(k < child_count)
-              {
-               // Slot exists — Bug B: update label if period changed
-               CTreeItem *ti = m_treeview_SymbolTF.ItemPointer(children[k]);
-               if(ti != NULL && ti.LabelText() != actual)
-               { ti.LabelText(actual); ti.Update(true); }
-              }
-             else
-              {
-               // New slot — add TF node
-                m_treeview_SymbolTF.AddTreeItem(m_treeview_SymbolTF.ItemsTotal(), sym_li, 
-                                          actual,
-                                          IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
-                                          k, 1, i, 0, 0, 
-                                          true,   //item_state, m_t_item_state[]=true;
-                                          false   //is_folder m_t_is_folder[]=false
-                                       );
-               //Register new CTreeItem  
-                CTreeItem *new_item = m_treeview_SymbolTF.ItemPointer(m_treeview_SymbolTF.ItemsTotal() - 1);
-                if(new_item != NULL)
-                  CWndContainer::AddToElementsArray(WindowIdx(m_window_main), *new_item);
-             }
-            }
-        }
-    }
-   void CGUIPannel::SynSymbolTFTreeViewIcons(void)
-    {
-      string chart_tf = TimeframeDescription(_Period);
-      int    total    = m_treeview_SymbolTF.ItemsTotal();  // duyệt tất cả items
-      for(int i = 0; i < total; i++)
-       {
-         CTreeItem *item = m_treeview_SymbolTF.ItemPointer(i);
-         if(item == NULL) continue;
-         int parent_pos = m_treeview_SymbolTF.ItemPrevNode(i);
-         if(parent_pos == -1)  // sym node
-          {
-            bool active = (item.LabelText() == _Symbol);
-            if(item.ItemType() == TI_HAS_ITEMS)
-             {
-               item.IsActive(active);
-               item.Draw();
-               item.CanvasPointer().Update(false);
-             }
-            else
-             item.IconFile(active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP
-                                    : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
-          }
-         else  // TF node
-          {
-               CTreeItem *parent_item = m_treeview_SymbolTF.ItemPointer(parent_pos);
-               bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
-               bool highlight = (parent_is_active && item.LabelText() == chart_tf);
-               item.IconFile(highlight ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
-                                 : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
-          }
-        }
-      m_treeview_SymbolTF.RedrawTreeList(); 
-      m_treeview_SymbolTF.UpdateTreeList(true);
-    } 
+   
 //Event Handle  
   // =====================================================================
   // --- "Add" button click handler — converts text fields to MqlParam[]
@@ -4680,7 +4724,7 @@ void CGUIPannel::OnClickSaveIndicators(void)
 //+------------------------------------------------------------------+
 //| Create Trade tab table: Symbol / TF / Indicator / Value / Buy / Sell / Trailing
 //+------------------------------------------------------------------+
-bool CGUIPannel::CreateIndicatorSymbolTFTable(const int x, const int y)
+bool CGUIPannel::CreateTableIndicatorSymbolTFValue(const int x, const int y)
   {
    m_table_indicator_SymbolTFValue.MainPointer(m_tabs_main);
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADE, m_table_indicator_SymbolTFValue);
@@ -4847,7 +4891,7 @@ void CGUIPannel::ApplyLoadedIndicatorBuySell(void)
 //+------------------------------------------------------------------+
 //| Populate / refresh the Trade tab table (no-flicker per-cell)     |
 //+------------------------------------------------------------------+
-void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
+void CGUIPannel::SetValuesToTableIndicatorSymbolTFValue(void)
   {
    if(m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL) return;
 
@@ -4897,22 +4941,22 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
    // --- row via AddRow(1) + DeleteRow(0), same trick as m_table_indicator.
    if(count == 0)
      {
-      if(m_trade_table_row_count != 0)
+      if(m_int_table_indicator_SymbolTFValue_table_row_count != 0)
         {
          m_table_indicator_SymbolTFValue.DeleteAllRows();
          m_table_indicator_SymbolTFValue.AddRow(1);
          m_table_indicator_SymbolTFValue.DeleteRow(0, true);
-         ::ArrayResize(m_trade_cache_val,      0);
-         ::ArrayResize(m_trade_cache_sig_icon, 0);
-         ::ArrayResize(m_trade_cache_dir_icon, 0);
-         m_trade_table_row_count = 0;
+         ::ArrayResize(m_string_table_indicator_SymbolTFValue_cache_val,      0);
+         ::ArrayResize(m_int_table_indicator_SymbolTFValue_cache_sig_icon, 0);
+         ::ArrayResize(m_int_table_indicator_SymbolTFValue_cache_dir_icon, 0);
+         m_int_table_indicator_SymbolTFValue_table_row_count = 0;
          m_table_indicator_SymbolTFValue.Update(true);
         }
       return;
      }
 
    // --- Full rebuild when row count changes
-   if(count != m_trade_table_row_count)
+   if(count != m_int_table_indicator_SymbolTFValue_table_row_count)
      {
       uint chk[]     = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG,
                         IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
@@ -4924,12 +4968,12 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
                         IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
 
       m_table_indicator_SymbolTFValue.DeleteAllRows();
-      ::ArrayResize(m_trade_cache_val,      count);
-      ::ArrayResize(m_trade_cache_sig_icon, count);
-      ::ArrayResize(m_trade_cache_dir_icon, count);
-      ::ArrayInitialize(m_trade_cache_sig_icon, -1);
-      ::ArrayInitialize(m_trade_cache_dir_icon, -1);
-      for(int i = 0; i < count; i++) m_trade_cache_val[i] = "";
+      ::ArrayResize(m_string_table_indicator_SymbolTFValue_cache_val,      count);
+      ::ArrayResize(m_int_table_indicator_SymbolTFValue_cache_sig_icon, count);
+      ::ArrayResize(m_int_table_indicator_SymbolTFValue_cache_dir_icon, count);
+      ::ArrayInitialize(m_int_table_indicator_SymbolTFValue_cache_sig_icon, -1);
+      ::ArrayInitialize(m_int_table_indicator_SymbolTFValue_cache_dir_icon, -1);
+      for(int i = 0; i < count; i++) m_string_table_indicator_SymbolTFValue_cache_val[i] = "";
 
       // --- redraw=true on the LAST row only, same reasoning as RefreshIndicatorTable - see
       // --- README/BugNote 2026-07-14 black/smeared row-overflow bug.
@@ -4963,7 +5007,7 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
          m_table_indicator_SymbolTFValue.ChangeImage(6, row, 1);
         }
 
-      m_trade_table_row_count = count;
+      m_int_table_indicator_SymbolTFValue_table_row_count = count;
       m_table_indicator_SymbolTFValue.Update(true);
       return;
      }
@@ -5008,22 +5052,22 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
                                         clrGray;         // flat    → gray text
 
       // Col 2 (Indicator): dir icon = value slope (v0 vs v1) - val_img, NOT the Signal system
-      bool dir_changed = (dir_icon != m_trade_cache_dir_icon[row]);
+      bool dir_changed = (dir_icon != m_int_table_indicator_SymbolTFValue_cache_dir_icon[row]);
       if(dir_changed)
         {
-         m_trade_cache_dir_icon[row] = dir_icon;
+         m_int_table_indicator_SymbolTFValue_cache_dir_icon[row] = dir_icon;
          m_table_indicator_SymbolTFValue.ChangeImage(2, row, dir_icon);
          m_table_indicator_SymbolTFValue.BackColor(2, row, clrWhite, true);
          any_changed = true;
         }
       // Col 3 (Value): ALIGN_RIGHT, colored text only — redraw via TextColor(true)
       string val_str     = (v0 == EMPTY_VALUE) ? "--" : ::DoubleToString(v0, 5);
-      bool   val_changed = (val_str != m_trade_cache_val[row]);
+      bool   val_changed = (val_str != m_string_table_indicator_SymbolTFValue_cache_val[row]);
       if(val_changed || dir_changed)  // recolor on direction change too, even if the text itself didn't
         {
          if(val_changed)
            {
-            m_trade_cache_val[row] = val_str;
+            m_string_table_indicator_SymbolTFValue_cache_val[row] = val_str;
             m_table_indicator_SymbolTFValue.SetValue(3, row, val_str);
            }
          m_table_indicator_SymbolTFValue.TextColor(3, row, txt_clr, true);
@@ -5057,9 +5101,9 @@ void CGUIPannel::SetValuesToIndicatorSymbolTFTable(void)
             sig_icon = (dir == SIGNAL_BUY) ? 0 : (dir == SIGNAL_SELL) ? 1 : 2;
            }
         }
-      if(sig_icon != m_trade_cache_sig_icon[row])
+      if(sig_icon != m_int_table_indicator_SymbolTFValue_cache_sig_icon[row])
         {
-         m_trade_cache_sig_icon[row] = sig_icon;
+         m_int_table_indicator_SymbolTFValue_cache_sig_icon[row] = sig_icon;
          m_table_indicator_SymbolTFValue.ChangeImage(1, row, sig_icon);
          m_table_indicator_SymbolTFValue.BackColor(1, row, clrWhite, true);
          any_changed = true;
