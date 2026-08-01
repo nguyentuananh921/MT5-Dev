@@ -7,9 +7,11 @@
 #ifndef __GUIPANNEL_MQH__
 #define __GUIPANNEL_MQH__ 
 #include "GUIPannel_Define.mqh"
+#include "..\Services\SignalLogger.mqh"
+#include "..\Services\SignalBridgeWriter.mqh"
 #ifndef CGUIPANNEL_MQH_DECLARATION
 #define CGUIPANNEL_MQH_DECLARATION   
-  class CGUIPannel : public CWndEvents
+  class CGUIPannel : public CWndEvents, public ITemplateBuySellProvider
    {
     private: 
      //Layer 1 Pure Data
@@ -21,6 +23,8 @@
        CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
        CTickSeriesCollection      *m_tick_series;                      // Collection of tick series      
        CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
+       CSignalLogger              m_signal_logger;                     // Signal logger for history and exports
+       CSignalBridgeWriter        m_bridge_writer;
        
      //------------------- 
       CTimeCounter                m_gui_timecounter;                   //--- Time counters
@@ -88,10 +92,14 @@
             // --- 4 independent shapes (each needs its OWN MT5 plot - PLOT_ARROW is a per-plot
             // --- fixed property, not per-bar, so "Single" and "Multi" each need a Buy/Sell PAIR
             // --- of shapes, not one shared shape re-colored - see SignalMarkers.mq5).
-             CComboBox            m_combo_shape_single_buy;
-             CComboBox            m_combo_shape_single_sell;
-             CComboBox            m_combo_shape_multi_buy;
-             CComboBox            m_combo_shape_multi_sell;
+             CComboBox            m_combo_shape_single_indicator_buy;
+             CComboBox            m_combo_shape_single_indicator_sell;
+             CComboBox            m_combo_shape_multi_indicator_buy;
+             CComboBox            m_combo_shape_multi_indicator_sell;
+             CComboBox            m_combo_shape_pattern_buy;
+             CComboBox            m_combo_shape_pattern_sell;
+             CComboBox            m_combo_shape_combo_buy;
+             CComboBox            m_combo_shape_combo_sell;
             // --- 3 colors, independent of shape: Buy/Sell apply when a marker relates to this
             // --- chart's own current Symbol+TF; Non-Related is used otherwise. Picked from a
             // --- small fixed palette via ComboBox (CColorPicker is a fixed 348x266 full HSL/RGB
@@ -105,15 +113,20 @@
              // --- render the ACTUAL Wingdings glyph (Font("Wingdings") + the raw char code) so the
              // --- user sees the real shape, not just a number; color previews reuse CColorButton's
              // --- own swatch rendering, just never wired to a click handler (display-only).
-              CTextLabel           m_label_other_caption[10];
-              CTextLabel           m_preview_shape[4];
+              CTextLabel           m_label_other_caption[16];
+              CTextLabel           m_preview_shape[16];
               CColorButton         m_preview_color[3];
              // --- Current marker style/color state - loaded from Config_Setting.json's "markers" section at startup,
              // --- fed to SignalMarkers.mq5 as iCustom inputs, updated by the Save button above.
-              int                  m_marker_single_buy_code;
-              int                  m_marker_single_sell_code;
-              int                  m_marker_multi_buy_code;
-              int                  m_marker_multi_sell_code;
+              int                  m_marker_single_indicator_buy_code;
+              int                  m_marker_single_indicator_sell_code;
+              int                  m_marker_multi_indicator_buy_code;
+              int                  m_marker_multi_indicator_sell_code;
+              int                  m_marker_pattern_buy_code;
+              int                  m_marker_pattern_sell_code;
+              int                  m_marker_combo_buy_code;
+              int                  m_marker_combo_sell_code;
+             //For color
               color                m_marker_buy_color;
               color                m_marker_sell_color;
               color                m_marker_nonrelated_color;
@@ -131,7 +144,9 @@
               string               m_marker_sound_folder;
               string               m_marker_buy_sound_file;
               string               m_marker_sell_sound_file;
-              CTextEdit            m_edit_sound_folder;
+              //CTextEdit            m_edit_sound_folder;
+              //CLabel               m_lbl_sound_folder;
+              CTextLabel           m_textLabel_sound_folder;
               CButton              m_btn_refresh_sound_folder;
               CComboBox            m_combo_buy_sound;
               CComboBox            m_combo_sell_sound;
@@ -144,16 +159,6 @@
       //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
       CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
        
-          // --- Closed-bar path (CheckIndicatorAlerts): per-template (type_key/params_key, NOT
-          // --- per-row - row index isn't stable across a table rebuild) watermark of the newest
-          // --- committed HistoryTime() already written to Signal_Log.csv, persisted to
-          // --- Signal_Log_Watermark_<SYMBOL>_<TF>.json so a restart's SyncHistory backfill is
-          // --- logged (catch-up) without ever re-writing rows already on disk. Loaded lazily,
-          // --- once, on CheckIndicatorAlerts' first call.
-           string               m_wm_type[];
-           string               m_wm_params[];
-           datetime             m_wm_time[];
-           bool                 m_signal_log_watermarks_loaded;
           // --- Live-bar path (CheckIndicatorAlerts): per-row (m_table_indicator_ptrs index - fine
           // --- here, this array is transient/session-only, never persisted) last-seen
           // --- GetCurrentSignal() direction for the still-forming bar 0. A still-forming bar can
@@ -195,15 +200,6 @@
          int                  m_settings_cache_state[];
 
        // --- Signal Markers bridge (BugNote 2026-07-16): a separate SignalMarkers.mq5
-       // --- indicator (DRAW_COLOR_ARROW buffers) renders the actual chart markers now -
-       // --- this EA only feeds it via a small binary file, one per symbol, containing every
-       // --- currently Buy/Sell-enabled indicator's flip history across every tracked TF of
-       // --- the CURRENT chart's own symbol. Watermark is a single (symbol, newest-seen-flip)
-       // --- pair, not an array, because this EA instance only ever cares about its own
-       // --- chart's current ::Symbol() (switching symbol resets it - see BuildAndWriteSignalBridge).
-        string                    m_signal_bridge_symbol;
-        datetime                  m_signal_bridge_last_time;
-       
       // SIndicatorCatalogItem now lives in Artyom Trishkin\IndicatorCatalog.mqh (Tang 1 metadata)      
        // --- Params tab controls (generic fixed-slot form, max 4 params/indicator)
             
@@ -264,10 +260,6 @@
          bool                         CreateTableIndicatorSymbolTFValue(const int x, const int y);
          void                         SetValuesToTableIndicatorSymbolTFValue(void);
          string                       BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
-         void                         BuildAndWriteSignalBridge(void);
-         bool                         TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
-         void                         WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count);
-         void                         ResetSignalBridge(void);
          void                         PurgeSignalArrowObjects(const string sym, const string tf_string);
        //For Pre-Trade-Plan area (TAB_TAB_MAIN_POSITIONS), sits above m_table_positions - symbol
        //picker + single-row order-setup table. Skeleton only (Anhnt 2026-07-20): Buy/Sell cells
@@ -314,7 +306,7 @@
          void                         GetMarkerColorChoices(color &colors[], string &labels[]);
          void                         OnClickSaveMarkerSettings(void);
          void                         LoadMarkerSettings(void);
-         void                         SaveMarkerSettings(void);
+         void                         SaveMarkerSettingsToJSON(void);
          bool                         JsonIntValue(const string content, const string key, int &value);
          bool                         JsonStringValue(const string content, const string key, string &value);
          void                         EnsureMarkerIndicatorAttached(void);
@@ -325,11 +317,6 @@
          void                         OnClickChangeSoundFolder(void);
        //Per-indicator Sound/Message opt-in (m_table_indicator col 5/6) - fires on a genuinely NEW Signal
          void                         CheckIndicatorAlerts(void);
-         void                         WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text);
-         datetime                     GetSignalLogWatermark(const string type_key, const string params_key);
-         void                         SetSignalLogWatermark(const string type_key, const string params_key, const datetime t);
-         void                         LoadSignalLogWatermarks(void);
-         void                         SaveSignalLogWatermarksToFile(void);
        //BBands-only: one independent line's real persisted history (CSignalBollinger::LineXxx) -
        //Closed=log-only+own watermark, Live=Message+CSV (no Sound) - see CheckIndicatorAlerts
          void                         ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name, ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key, const string label, const string tf_text, const int digits);
@@ -357,12 +344,14 @@
       //For GUI
         void                           UpdateGUI(const bool redraw = false);        
         CWindow *                      GetMainWindowPointer(void) { return &m_window_main; }
+        // ITemplateBuySellProvider implementation
+        bool                           TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
       //For Pointer      
         void                           SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbol_collection = symbols; }      
-        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts; } 
+        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts; m_bridge_writer.Initialize(this, m_time_series_engine, m_IndicatorsCollection, m_BarTimeSeriesCollection); } 
         void                           SetPatternsControl(CBarPatternsControl* ctrl) { m_pattern_cfg = ctrl; } 
-        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind; }
-        void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_time_series_engine = engine; }
+        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind; m_bridge_writer.Initialize(this, m_time_series_engine, m_IndicatorsCollection, m_BarTimeSeriesCollection); }
+        void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_time_series_engine = engine; m_bridge_writer.Initialize(this, m_time_series_engine, m_IndicatorsCollection, m_BarTimeSeriesCollection); }
       //Temporary remove due to change
         //void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
         //void  SetTickSeriesCollection(CTickSeriesCollection *ticks) { m_tick_series = ticks; }
@@ -417,13 +406,7 @@
       m_time_series_engine.SaveConfigurationToJSON("Config_Setting.json", symbols, tfs, buys, sells,
                                                     tmpl_ptrs, tmpl_buy, tmpl_sell, tmpl_sound, tmpl_message);
      }  
-    // --- Rewinds the bridge watermark and rewrites the bridge file immediately (not deferred
-    // --- to the next timer tick) so a Buy/Sell toggle is reflected on the chart right away.
-    void CGUIPannel::ResetSignalBridge(void)
-     {
-      m_signal_bridge_last_time = 0;
-      BuildAndWriteSignalBridge();
-     }
+
     // --- Delete every legacy signal-arrow chart object of (sym, tf) - leftovers from the old
     // --- graphic-object drawing path (CreateSignalBuy/Sell/CreateThumbUp/Down), before the
     // --- SignalMarkers.mq5 indicator + bridge file replaced it entirely (BugNote 2026-07-16).
@@ -471,186 +454,7 @@ bool CGUIPannel::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
      }
    return false;
   }
-//+------------------------------------------------------------------+
-//| Feeds the SignalMarkers.mq5 indicator: gathers every flip of     |
-//| every Buy/Sell-enabled indicator across EVERY tracked TF of the  |
-//| CURRENT chart's own symbol (same multi-TF loop RefreshCandleInfo |
-//| Window uses for the Ctrl+hover popup) and writes the COMPLETE set|
-//| to a bridge file - the indicator replaces its whole row array on |
-//| each read, it never merges deltas, so a partial/delta write here |
-//| would silently drop markers instead of updating them.            |
-//|                                                                    |
-//| Cheap early-out: a first pass only checks each signal's NEWEST   |
-//| committed flip time (O(indicators), not O(history)) - the full   |
-//| collection + file write below only runs when that moved past the |
-//| watermark (or the chart's own symbol just changed).              |
-//+------------------------------------------------------------------+
-void CGUIPannel::BuildAndWriteSignalBridge(void)
-  {
-   if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL)
-      return;
 
-   string sym = ::Symbol();
-   bool fresh = (sym != m_signal_bridge_symbol);
-
-   CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
-   CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
-   int series_total = (series_list != NULL) ? series_list.Total() : 0;
-
-   datetime newest_seen = 0;
-   for(int ti = 0; ti < series_total; ti++)
-     {
-      CBarSeriesDE *s = series_list.At(ti);
-      if(s == NULL) continue;
-      CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-      ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, s.Timeframe(), EQUAL);
-      int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
-      for(int ii = 0; ii < ind_total; ii++)
-        {
-         CIndicatorDE *ind = ind_list.At(ii);
-         if(ind == NULL) continue;
-         bool buy_on, sell_on;
-         if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-         // signal is BORROWED - CSignalsCollection owns it
-         CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
-         if(signal == NULL) continue;
-         int ht = signal.HistoryTotal();
-         if(ht > 0)
-           {
-            datetime t = signal.HistoryTime(ht - 1); // history is oldest->newest
-            if(t > newest_seen) newest_seen = t;
-           }
-         // --- BBands-only: also watch the 3 independent line-cross histories (Anhnt,
-         // --- 2026-07-17) - Layer 1 (SignalBands.mqh) keeps them inside the SAME
-         // --- CSignalBollinger instance, so this is a safe downcast.
-         if(ind.TypeIndicator() == IND_BANDS)
-           {
-            CSignalBollinger *bb = (CSignalBollinger*)signal;
-            for(int li = 0; li < 3; li++)
-              {
-               int lt = bb.LineHistoryTotal(li);
-               if(lt == 0) continue;
-               datetime lts = bb.LineHistoryTime(li, lt - 1);
-               if(lts > newest_seen) newest_seen = lts;
-              }
-           }
-        }
-     }
-
-   if(!fresh && newest_seen <= m_signal_bridge_last_time)
-      return; // nothing changed since the last write - skip the full collection+file write
-   m_signal_bridge_symbol = sym;
-
-   // --- Full collection: every flip of every Buy/Sell-enabled indicator, every tracked TF.
-   datetime row_time[]; int row_tf[]; int row_dir[];
-   int count = 0;
-   for(int ti = 0; ti < series_total; ti++)
-     {
-      CBarSeriesDE *s = series_list.At(ti);
-      if(s == NULL) continue;
-      ENUM_TIMEFRAMES tf = s.Timeframe();
-      CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-      ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-      int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
-      for(int ii = 0; ii < ind_total; ii++)
-        {
-         CIndicatorDE *ind = ind_list.At(ii);
-         if(ind == NULL) continue;
-         bool buy_on, sell_on;
-         if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-         CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
-         if(signal == NULL) continue;
-         int hist_total = signal.HistoryTotal();
-         for(int h = 0; h < hist_total; h++)
-           {
-            ENUM_SIGNAL_DIR dir = signal.HistoryDir(h);
-            if(dir == SIGNAL_NONE) continue;
-            if(dir == SIGNAL_BUY  && !buy_on)  continue;
-            if(dir == SIGNAL_SELL && !sell_on) continue;
-            ArrayResize(row_time, count + 1);
-            ArrayResize(row_tf,   count + 1);
-            ArrayResize(row_dir,  count + 1);
-            row_time[count] = signal.HistoryTime(h);
-            row_tf[count]   = (int)tf;
-            row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
-            count++;
-           }
-         // --- BBands-only: also feed the Upper/Lower line-cross histories (Anhnt, 2026-07-19)
-         // --- as extra rows for the SAME (symbol,tf) - a bar with both a Mid flip (the primary
-         // --- signal above) AND an Upper/Lower cross correctly ends up with 2+ rows, which is
-         // --- exactly what makes the multi-signal ("Thumb Up/Down") marker shape kick in instead
-         // --- of the single arrow. Mid itself is skipped here - it was already added by the
-         // --- generic signal.HistoryDir() loop just above; adding it again here would duplicate it.
-         if(ind.TypeIndicator() == IND_BANDS)
-           {
-            CSignalBollinger *bb = (CSignalBollinger*)signal;
-            for(int li = 0; li < 3; li++)
-              {
-               if(li == BBAND_LINE_MID) continue;
-               int line_total = bb.LineHistoryTotal(li);
-               for(int h = 0; h < line_total; h++)
-                 {
-                  ENUM_SIGNAL_DIR dir = bb.LineHistoryDir(li, h);
-                  if(dir == SIGNAL_NONE) continue;
-                  if(dir == SIGNAL_BUY  && !buy_on)  continue;
-                  if(dir == SIGNAL_SELL && !sell_on) continue;
-                  ArrayResize(row_time, count + 1);
-                  ArrayResize(row_tf,   count + 1);
-                  ArrayResize(row_dir,  count + 1);
-                  row_time[count] = bb.LineHistoryTime(li, h);
-                  row_tf[count]   = (int)tf;
-                  row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
-                  count++;
-                 }
-              }
-           }
-        }
-     }
-
-   // --- Sort ascending by time (bubble - count is small, same style used elsewhere in this file).
-   for(int a = 0; a < count - 1; a++)
-      for(int b = a + 1; b < count; b++)
-         if(row_time[b] < row_time[a])
-           {
-            datetime tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
-            int      tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
-            int      d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
-           }
-
-   WriteSignalBridgeFile(row_time, row_tf, row_dir, count);
-   m_signal_bridge_last_time = newest_seen;
-  }
-//+------------------------------------------------------------------+
-//| Writes the bridge file for m_signal_bridge_symbol - format MUST   |
-//| stay byte-identical to SignalMarkers.mq5's reader:                |
-//|   int magic_version; long last_update; int row_count;             |
-//|   row_count x { long flip_time; int tf; int dir(+1/-1); }          |
-//| Written to a .tmp file then FileMove'd over the real name, so the |
-//| indicator's own polling never sees a half-written file.           |
-//+------------------------------------------------------------------+
-void CGUIPannel::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count)
-  {
-   string final_name = "SignalBridge_" + m_signal_bridge_symbol + ".dat";
-   string tmp_name    = "SignalBridge_" + m_signal_bridge_symbol + ".tmp";
-
-   int fh = ::FileOpen(tmp_name, FILE_BIN|FILE_WRITE);
-   if(fh == INVALID_HANDLE)
-      return;
-
-   ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
-   ::FileWriteLong(fh, (long)::TimeCurrent()); // last_update is a plain rewrite-happened watermark,
-                                                // decoupled from m_signal_bridge_last_time's own
-                                                // change-detection role - always moves forward.
-   ::FileWriteInteger(fh, count, INT_VALUE);
-   for(int i = 0; i < count; i++)
-     {
-      ::FileWriteLong(fh, (long)row_time[i]);
-      ::FileWriteInteger(fh, row_tf[i],  INT_VALUE);
-      ::FileWriteInteger(fh, row_dir[i], INT_VALUE);
-     }
-   ::FileClose(fh);
-   ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);
-  }
 
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__

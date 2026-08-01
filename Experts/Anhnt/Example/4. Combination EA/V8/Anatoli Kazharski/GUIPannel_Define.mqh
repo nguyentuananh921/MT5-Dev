@@ -68,6 +68,18 @@
         INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
         INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
        };
+      //For marker
+      enum ENUM_MARKER_SHAPE_PREVIEW_ROW
+        {
+          SHAPE_PREVIEW_SINGLE_INDICATOR_BUY  = 0,
+          SHAPE_PREVIEW_SINGLE_INDICATOR_SELL = 1,
+          SHAPE_PREVIEW_MULTI_INDICATOR_BUY   = 2,   //Multi Indicator only
+          SHAPE_PREVIEW_MULTI_INDICATOR_SELL  = 3,
+          SHAPE_PREVIEW_PATTERN_BUY = 4,
+          SHAPE_PREVIEW_PATTERN_SELL= 5,
+          SHAPE_PREVIEW_COMBO_BUY   = 6,   //Combination Indicator and CandlePattern
+          SHAPE_PREVIEW_COMBO_SELL  = 7,
+        };
    // Status bar items
     #define STATUS_LABELS_TOTAL 4
     enum ENUM_STATUS_BAR_ITEM
@@ -76,12 +88,7 @@
       STATUS_BAR_DEPOSIT_LOAD,
       STATUS_BAR_PROFIT,
       STATUS_BAR_SERVER_TIME,
-     };
-  //--------------------
-  
-   
-  
-   
+     };   
   // =====================================================================
   // --- Layer 2 (GUI) layout descriptor - decided BEFORE CreateAddIndicatorParaInfor/
   // --- ShowIndicatorParameterForm ever runs, separate from Layer 1's
@@ -104,10 +111,7 @@
   // =====================================================================
   // --- Layout constants: all pixel dimensions defined here.
   // --- Change here; derived values update automatically.
-  // =====================================================================
-  
-  
-  
+  // ===================================================================== 
   // --- Nested m_tabs_main_setting_config header (its own tab row draws ABOVE its
   // --- canvas - offsetting its canvas down by the header height keeps that row
   // --- clear of m_tabs_main's own tab headers instead of overlapping them).

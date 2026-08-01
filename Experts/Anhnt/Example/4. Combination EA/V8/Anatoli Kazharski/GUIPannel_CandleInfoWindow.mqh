@@ -149,7 +149,7 @@
     // --- y=0 here made the table paint straight over the "Signals at Bar" title.
        if(!m_table_candle_information_atBar.CreateTable(0, WINDOW_CAPTION_HEIGHT)) return (false);
        m_table_candle_information_atBar.SetHeaderText(0, "Time");
-       m_table_candle_information_atBar.SetHeaderText(1, "Indicator");
+       m_table_candle_information_atBar.SetHeaderText(1, "Information");
        m_table_candle_information_atBar.SetHeaderText(2, "TF");
       // --- Collapse the TableSize() padding down to a single blank baseline row, same
       // --- convention as CreateTableSymbolTFSetting.
@@ -183,6 +183,9 @@
       datetime next_bar_time = bar_time + ::PeriodSeconds();
 
       string sym = ::Symbol();
+      SIndicatorCatalogItem catalog[];
+      GetIndicatorCatalog(catalog);
+
       CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
       CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
       int series_total = (series_list != NULL) ? series_list.Total() : 0;
@@ -205,7 +208,8 @@
       // --- Collect (Indicator, TF text, Dir, Time) rows - one per flip whose time falls
       // --- inside [bar_time, next_bar_time). A signal with no flip in that span contributes
       // --- nothing at all (not even its carried-over state).
-       CIndicatorDE   *row_ind[];
+       //CIndicatorDE   *row_ind[];
+       string          row_label[]; //Update here for candle 
        string          row_tf[];
        ENUM_SIGNAL_DIR row_dir[];
        datetime        row_time[];
@@ -233,11 +237,13 @@
                if(ht >= next_bar_time) continue;
                if(ht < bar_time) break;
 
-               ArrayResize(row_ind,  count + 1);
+               //ArrayResize(row_ind,  count + 1);
+               ArrayResize(row_label,  count + 1);
                ArrayResize(row_tf,   count + 1);
                ArrayResize(row_dir,  count + 1);
                ArrayResize(row_time, count + 1);
-               row_ind[count]  = ind;
+               //row_ind[count]  = ind;
+               row_label[count] = BuildIndicatorLabel(ind, catalog);
                row_tf[count]   = tf_text;
                row_dir[count]  = signal.HistoryDir(h);
                row_time[count] = ht;
@@ -260,11 +266,13 @@
                      if(ht >= next_bar_time) continue;
                      if(ht < bar_time) break;
 
-                     ArrayResize(row_ind,  count + 1);
+                     //ArrayResize(row_ind,  count + 1);
+                     ArrayResize(row_label, count + 1);
                      ArrayResize(row_tf,   count + 1);
                      ArrayResize(row_dir,  count + 1);
                      ArrayResize(row_time, count + 1);
-                     row_ind[count]  = ind;
+                     //row_ind[count]  = ind;
+                     row_label[count] = BuildIndicatorLabel(ind, catalog)+ ((li == BBAND_LINE_UPPER) ? " Upper" : " Lower");
                      row_tf[count]   = tf_text;
                      row_dir[count]  = bb.LineHistoryDir(li, h);
                      row_time[count] = ht;
@@ -274,7 +282,39 @@
               }
            }
         }
-
+      // --- Collect Candle Patterns forming in [bar_time, next_bar_time)
+       CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
+       if(all_patterns != NULL)
+         {
+          int pat_total = all_patterns.Total();
+          for(int p = 0; p < pat_total; p++)
+            {
+             CBarPattern *pat = all_patterns.At(p);
+             if(pat == NULL || pat.Symbol() != sym) continue;
+             datetime pt = pat.Time();
+             if(pt < bar_time || pt >= next_bar_time) continue;
+             ENUM_TIMEFRAMES ptf = pat.Timeframe();
+             string tf_text = TimeframeDescription(ptf);
+             ENUM_PATTERN_DIRECTION pdir = pat.Direction();
+             ENUM_SIGNAL_DIR dir = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
+                                   (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
+             if(dir == SIGNAL_NONE) continue;
+             // Format pattern label, e.g. "[2B] Bullish Engulfing"
+             uint candles = pat.Candles();
+             string candle_prefix = (candles > 0) ? "[" + IntegerToString(candles) + "B] " : "";
+             string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
+             if(pat_name == "") pat_name = EnumToString(pat.TypePattern());
+             ArrayResize(row_label, count + 1);
+             ArrayResize(row_tf,    count + 1);
+             ArrayResize(row_dir,   count + 1);
+             ArrayResize(row_time,  count + 1);
+             row_label[count] = candle_prefix + pat_name;
+             row_tf[count]    = tf_text;
+             row_dir[count]   = dir;
+             row_time[count]  = pt;
+             count++;
+            }
+         }
        if(count == 0)
         {
          m_table_candle_information_atBar.DeleteAllRows();
@@ -287,14 +327,12 @@
          for(int b = a + 1; b < count; b++)
            if(row_time[b] < row_time[a])
              {
-              CIndicatorDE   *ti_ = row_ind[a];  row_ind[a]  = row_ind[b];  row_ind[b]  = ti_;
+              //CIndicatorDE   *ti_ = row_ind[a];  row_ind[a]  = row_ind[b];  row_ind[b]  = ti_;
+              string          lbl_ = row_label[a]; row_label[a] = row_label[b]; row_label[b] = lbl_;
               string          tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
               ENUM_SIGNAL_DIR d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
               datetime        tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
-             }
-
-       SIndicatorCatalogItem catalog[];
-       GetIndicatorCatalog(catalog);
+             }       
        uint dir_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
                         IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
 
@@ -305,13 +343,14 @@
          m_table_candle_information_atBar.AddRow(i, i == count - 2);
        for(int row = 0; row < count; row++)
         {
-         CIndicatorDE *ind = row_ind[row];
+         //CIndicatorDE *ind = row_ind[row];
          int img_idx = (row_dir[row] == SIGNAL_BUY) ? 0 : 1; // row_dir is never SIGNAL_NONE here
 
          m_table_candle_information_atBar.SetImages(1, row, dir_img);
          m_table_candle_information_atBar.ChangeImage(1, row, img_idx);
          m_table_candle_information_atBar.SetValue(0, row, ::TimeToString(row_time[row], TIME_MINUTES));
-         m_table_candle_information_atBar.SetValue(1, row, BuildIndicatorLabel(ind, catalog));
+         //m_table_candle_information_atBar.SetValue(1, row, BuildIndicatorLabel(ind, catalog));
+         m_table_candle_information_atBar.SetValue(1, row, row_label[row]);
          m_table_candle_information_atBar.SetValue(2, row, row_tf[row]);
         }
       m_table_candle_information_atBar.Update(true);

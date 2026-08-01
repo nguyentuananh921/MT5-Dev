@@ -122,7 +122,7 @@
           // --- Stay open, don't touch bar_time - let the table's native dispatch (now
           // --- routed to it via m_active_window_index) handle the scrollbar/clicks.
          }
-       else if(m_keys.KeyCtrlState())
+       else if(m_keys.KeyShiftState())
          {
           datetime t; double price; int sub_window;
           if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
@@ -269,28 +269,52 @@
        GetMarkerColorChoices(mcolors, color_labels);
        int n_colors = ArraySize(mcolors);
 
-       if(lparam == m_combo_shape_single_buy.Id())
+       if(lparam == m_combo_shape_single_indicator_buy.Id())
          {
-          int sel = (int)m_combo_shape_single_buy.GetListViewPointer().SelectedItemIndex();
-          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(0, codes[sel]);
+          int sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_BUY, codes[sel]);
           return;
          }
-       if(lparam == m_combo_shape_single_sell.Id())
+       if(lparam == m_combo_shape_single_indicator_sell.Id())
          {
-          int sel = (int)m_combo_shape_single_sell.GetListViewPointer().SelectedItemIndex();
-          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(1, codes[sel]);
+          int sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_SELL, codes[sel]);
           return;
          }
-       if(lparam == m_combo_shape_multi_buy.Id())
+       if(lparam == m_combo_shape_multi_indicator_buy.Id())
          {
-          int sel = (int)m_combo_shape_multi_buy.GetListViewPointer().SelectedItemIndex();
-          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(2, codes[sel]);
+          int sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_BUY, codes[sel]);
           return;
          }
-       if(lparam == m_combo_shape_multi_sell.Id())
+       if(lparam == m_combo_shape_multi_indicator_sell.Id())
          {
-          int sel = (int)m_combo_shape_multi_sell.GetListViewPointer().SelectedItemIndex();
-          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(3, codes[sel]);
+          int sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_SELL, codes[sel]);
+          return;
+         }
+        if(lparam == m_combo_shape_pattern_buy.Id())
+         {
+          int sel = (int)m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_BUY, codes[sel]);
+          return;
+         }
+        if(lparam == m_combo_shape_pattern_sell.Id())
+         {
+          int sel = (int)m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_SELL, codes[sel]);
+          return;
+         }
+        if(lparam == m_combo_shape_combo_buy.Id())
+         {
+          int sel = (int)m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_COMBO_BUY, codes[sel]);
+          return;
+         }
+        if(lparam == m_combo_shape_combo_sell.Id())
+         {
+          int sel = (int)m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
+          if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_COMBO_SELL, codes[sel]);
           return;
          }
        if(lparam == m_combo_color_buy.Id())
@@ -604,8 +628,7 @@
       // --- OnPoll()/OnChartEvent(), only once HasAnyLevel() is true (avoid creating a
       // --- full-screen canvas + hiding native SL/TP lines when there is nothing to show).
         m_trading_bubble.MousePointer(m_mouse);
-        m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));
-      //m_tabs_main.ShowTabElements(); //Need verify
+        m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));      
       CWndEvents::CompletedGUI();
       // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
       // --- inside CompletedGUI) registers only VISIBLE elements into m_available_elements[],
@@ -656,7 +679,7 @@
       if(rows == 0) return;
       if(!m_signal_log_watermarks_loaded)
         {
-         LoadSignalLogWatermarks();
+         m_signal_logger.LoadSignalLogWatermarks();
          m_signal_log_watermarks_loaded = true;
         }
       int prev_size = ArraySize(m_live_signal_last_seen);
@@ -670,7 +693,6 @@
 
       SIndicatorCatalogItem catalog[];
       GetIndicatorCatalog(catalog);
-
       for(int row = 0; row < rows; row++)
         {
          CIndicatorDE *ind = m_table_indicator_ptrs[row];
@@ -703,7 +725,7 @@
 
          //--- Closed-bar path: log-only catch-up of every committed flip newer than the
          //--- persisted per-template watermark - never Sound/Message.
-         datetime wm = GetSignalLogWatermark(type_key, params_key);
+         datetime wm = m_signal_logger.GetSignalLogWatermark(type_key, params_key);
          int total = signal.HistoryTotal();
          datetime newest_committed = wm;
          for(int idx = 0; idx < total; idx++)
@@ -723,11 +745,11 @@
             int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
             double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
             string price_text = ::DoubleToString(price, digits);
-            WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
+            m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
             if(t > newest_committed) newest_committed = t;
            }
          if(newest_committed > wm)
-            SetSignalLogWatermark(type_key, params_key, newest_committed);
+            m_signal_logger.SetSignalLogWatermark(type_key, params_key, newest_committed);
 
          //--- Live bar-0 path: fire Sound+Message+CSV on every real direction change.
          ENUM_SIGNAL_DIR live_dir = signal.GetCurrentSignal();
@@ -774,7 +796,7 @@
              double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
              string price_text = ::DoubleToString(price, digits);
              CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
-             WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
+             m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
            }
         }
     }    
@@ -789,44 +811,44 @@
       CWndInd *old_ind = m_chart_obj_collection.GetLastChangedIndicator();
       //--- Every exit path reports itself: chart edits are rare, user-driven events and
       //--- each outcome (replace/skip/fail) is worth an audit line in the log
-      if(old_ind == NULL) { ::Print(__FUNCTION__, " > no changed-indicator record"); return; }
-      ::Print(__FUNCTION__, " > chart edit detected: old '", old_ind.Name(), "' handle=", old_ind.Handle(),
+       if(old_ind == NULL) { ::Print(__FUNCTION__, " > no changed-indicator record"); return; }
+       ::Print(__FUNCTION__, " > chart edit detected: old '", old_ind.Name(), "' handle=", old_ind.Handle(),
               " win=", old_ind.WindowNum(), " index=", old_ind.Index());
       // A hand-added line is a SEPARATE terminal instance - OwnedInstanceOfLine falls back
       // to type+params matching. Truly foreign lines (no matching template) are skipped:
       // the ADD/import path picks the new line up by itself.
-      CIndicatorDE *owned = OwnedInstanceOfLine(old_ind.Handle());
-      if(owned == NULL) { ::Print(__FUNCTION__, " > line matches no Layer 1 template - skip"); return; }
-      CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
-      if(chart == NULL) { ::Print(__FUNCTION__, " > no CChartObj for this chart"); return; }
-      CChartWnd *wnd = chart.GetWindowByNum(old_ind.WindowNum());
-      if(wnd == NULL) { ::Print(__FUNCTION__, " > no CChartWnd num=", old_ind.WindowNum()); return; }
-      CWndInd *new_ind = NULL;
-      for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
-        {
-         CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
-         if(wnd_ind != NULL && wnd_ind.Index() == old_ind.Index()) { new_ind = wnd_ind; break; }
-        }
-      if(new_ind == NULL || new_ind.Handle() == INVALID_HANDLE)
+       CIndicatorDE *owned = OwnedInstanceOfLine(old_ind.Handle());
+       if(owned == NULL) { ::Print(__FUNCTION__, " > line matches no Layer 1 template - skip"); return; }
+       CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+       if(chart == NULL) { ::Print(__FUNCTION__, " > no CChartObj for this chart"); return; }
+       CChartWnd *wnd = chart.GetWindowByNum(old_ind.WindowNum());
+       if(wnd == NULL) { ::Print(__FUNCTION__, " > no CChartWnd num=", old_ind.WindowNum()); return; }
+       CWndInd *new_ind = NULL;
+       for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
+         {
+          CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
+          if(wnd_ind != NULL && wnd_ind.Index() == old_ind.Index()) { new_ind = wnd_ind; break; }
+         }
+       if(new_ind == NULL || new_ind.Handle() == INVALID_HANDLE)
         { ::Print(__FUNCTION__, " > no mirror entry at window index ", old_ind.Index()); return; }
-      ENUM_INDICATOR type;
-      MqlParam params[];
-      if(IndicatorParameters(new_ind.Handle(), type, params) < 0)
-        { ::Print(__FUNCTION__, " > IndicatorParameters failed, err ", GetLastError()); return; }
+       ENUM_INDICATOR type;
+       MqlParam params[];
+       if(IndicatorParameters(new_ind.Handle(), type, params) < 0)
+         { ::Print(__FUNCTION__, " > IndicatorParameters failed, err ", GetLastError()); return; }
       // Find the table row of the owned template (its current-symbol/TF instance is the
       // very object GetIndicatorByHandle returned, because the edit happened on THIS chart)
-      int row = -1;
-      for(int r = 0; r < ArraySize(m_table_indicator_ptrs); r++)
+       int row = -1;
+       for(int r = 0; r < ArraySize(m_table_indicator_ptrs); r++)
          if(m_table_indicator_ptrs[r] == owned) { row = r; break; }
-      ::Print(__FUNCTION__, " > chart edit: replacing template '", old_ind.Name(),
+       ::Print(__FUNCTION__, " > chart edit: replacing template '", old_ind.Name(),
               "' with '", new_ind.Name(), "'");
       // Replace = remove the old template across ALL series + add the new one across ALL
       // series (CIndicatorDE cannot change params in place - its handle is bound to the
       // old instance). One row out, one row in - the table keeps its size.
       // NOTE: owned is DEAD after OnClickRemoveIndicator (collection FreeMode deletes it).
-      if(row >= 0)
+       if(row >= 0)
          OnClickRemoveIndicator(m_table_indicator_names[row], row);
-      AddIndicatorInstance(-1, type, params);
+        AddIndicatorInstance(-1, type, params);
    }
   // --- Layer 3 -> Layer 1 import (README: 3-layer sync): an indicator is present on the MAIN
   // --- chart that Layer 1 does not know yet (added BY HAND on the chart). Rebuild its
@@ -837,11 +859,11 @@
   // --- IND_ADD, but TemplateExists() filters it out here without log spam.
   void CGUIPannel::ImportForeignChartIndicators(void)
    {
-      if(m_time_series_engine == NULL) return;
-      SIndicatorCatalogItem catalog[];
-      GetIndicatorCatalog(catalog);
-      // Layer 3 topology comes from CChartObjCollection (the one chart observer),
-      // not from raw built-in scans - README: 3-layer sync.
+     if(m_time_series_engine == NULL) return;
+     SIndicatorCatalogItem catalog[];
+     GetIndicatorCatalog(catalog);
+     // Layer 3 topology comes from CChartObjCollection (the one chart observer),
+     // not from raw built-in scans - README: 3-layer sync.
       CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
       if(chart == NULL) return;
       for(int win = 0; win < chart.WindowsTotal(); win++)

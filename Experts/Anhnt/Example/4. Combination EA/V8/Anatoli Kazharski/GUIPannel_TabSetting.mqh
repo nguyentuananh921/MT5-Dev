@@ -3,6 +3,21 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABSETTING_MQH
 #define CGUIPANNEL_TABSETTING_MQH
+ //Define for GUI Layout in tab Marker
+    #define SETTING_MARKER_BASE_X_GAP 10
+    #define SETTING_MARKER_CAPTION_WIDTH  125 //For Non-Related Color, it needs 105px width to display the text 
+    #define SETTING_MARKER_COMBOBOX_WIDTH 125 //Combobox share & Sound file
+    #define SETTING_MARKER_PREVIEW_WIDTH  26  //Icon preview
+    #define SETTING_MARKER_GAP            5   //Gap between combobox and Preview 
+    #define SETTING_MARKER_COL_GAP        10  //Gap between col 1 and col 2 
+
+    #define SETTING_MARKER_COLOR_COMBO_WIDTH     70  //For Color combo box
+    #define SETTING_MARKER_COLOR_PREVIEW_WIDTH   70  //Color Preview Width
+    #define SETTING_MARKER_COLOR_PREVIEW_GAP     5  // Gap between Color Combo and Preview  
+    //For sound
+     #define SETTING_MARKER_LABEL_WIDTH_SOUND     120 //Label Width for Sound Folder           
+     
+    #define SETTING_MARKER_ROW_HEIGHT 26
  //For control at TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL of m_tabs_main
   //+------------------------------------------------------------------+
   //| Create a nested tab group for Settings tab config sections       |
@@ -920,11 +935,11 @@
      // --- watermark rewound so the very next write is a full, immediate rewrite.
      void CGUIPannel::OnClickToggleBuySignal(const string sname, const int row)
       {
-       ResetSignalBridge();
+       m_bridge_writer.ResetSignalBridge();
       }
      void CGUIPannel::OnClickToggleSellSignal(const string sname, const int row)
       {
-       ResetSignalBridge();
+       m_bridge_writer.ResetSignalBridge();
       }
      void CGUIPannel::OnClickSaveIndicators(void)
       {
@@ -1392,10 +1407,18 @@
     // --- (or a file that simply has no "markers" key yet) still leaves the EA in a working state.
     void CGUIPannel::LoadMarkerSettings(void)
      {
-      m_marker_single_buy_code  = 233;
-      m_marker_single_sell_code = 234;
-      m_marker_multi_buy_code   = 67;
-      m_marker_multi_sell_code  = 68;
+
+      //https://www.mql5.com/en/docs/constants/objectconstants/wingdings
+      m_marker_single_indicator_buy_code  = 217; 
+      m_marker_single_indicator_sell_code = 218;
+      m_marker_multi_indicator_buy_code   = 67; // Thumb Up
+      m_marker_multi_indicator_sell_code  = 68; // Thumb Down
+
+      m_marker_pattern_buy_code  = 83;   
+      m_marker_pattern_sell_code = 83;   
+      m_marker_combo_buy_code    = 77;  
+      m_marker_combo_sell_code   = 77;  
+
       m_marker_buy_color        = clrLime;
       m_marker_sell_color       = clrRed;
       m_marker_nonrelated_color = clrGray;
@@ -1405,10 +1428,16 @@
       string content = IndicatorConfig_ReadWholeFile("Config_Setting.json");
       if(content == "") return;
       int v;
-      if(JsonIntValue(content, "single_buy_arrow_code",  v)) m_marker_single_buy_code  = v;
-      if(JsonIntValue(content, "single_sell_arrow_code", v)) m_marker_single_sell_code = v;
-      if(JsonIntValue(content, "multi_buy_arrow_code",   v)) m_marker_multi_buy_code   = v;
-      if(JsonIntValue(content, "multi_sell_arrow_code",  v)) m_marker_multi_sell_code  = v;
+      if(JsonIntValue(content, "single_indicator_buy_arrow_code",  v)) m_marker_single_indicator_buy_code  = v;
+      if(JsonIntValue(content, "single_indicator_sell_arrow_code", v)) m_marker_single_indicator_sell_code = v;
+      if(JsonIntValue(content, "multi_indicator_buy_arrow_code",   v)) m_marker_multi_indicator_buy_code   = v;
+      if(JsonIntValue(content, "multi_indicator_sell_arrow_code",  v)) m_marker_multi_indicator_sell_code  = v;
+      
+      if(JsonIntValue(content, "pattern_buy_arrow_code",  v)) m_marker_pattern_buy_code   = v;
+      if(JsonIntValue(content, "pattern_sell_arrow_code", v)) m_marker_pattern_sell_code  = v;
+      if(JsonIntValue(content, "combo_buy_arrow_code",    v)) m_marker_combo_buy_code    = v;
+      if(JsonIntValue(content, "combo_sell_arrow_code",   v)) m_marker_combo_sell_code   = v;
+      
       if(JsonIntValue(content, "buy_color",        v)) m_marker_buy_color        = (color)v;
       if(JsonIntValue(content, "sell_color",       v)) m_marker_sell_color       = (color)v;
       if(JsonIntValue(content, "nonrelated_color", v)) m_marker_nonrelated_color = (color)v;
@@ -1422,7 +1451,7 @@
     // --- IndicatorConfig_ExtractRawSection - this function only owns "markers", so it must
     // --- never destroy the OTHER sections CTimeSeriesEngine owns, symmetric with how that
     // --- engine's own writers now preserve "markers" when THEY rewrite this same file.
-    void CGUIPannel::SaveMarkerSettings(void)
+    void CGUIPannel::SaveMarkerSettingsToJSON(void)
      {
       string existing   = IndicatorConfig_ReadWholeFile("Config_Setting.json");
       string symbols_tf = IndicatorConfig_ExtractRawSection(existing, "symbols_tf");
@@ -1437,10 +1466,14 @@
       ::StringReplace(buy_sound_esc,  "\\", "\\\\");
       ::StringReplace(sell_sound_esc, "\\", "\\\\");
       ::StringReplace(sound_folder_esc, "\\", "\\\\");
-      json += " \"markers\": { \"single_buy_arrow_code\": "  + (string)m_marker_single_buy_code +
-              ", \"single_sell_arrow_code\": " + (string)m_marker_single_sell_code +
-              ", \"multi_buy_arrow_code\": "   + (string)m_marker_multi_buy_code +
-              ", \"multi_sell_arrow_code\": "  + (string)m_marker_multi_sell_code +
+      json += " \"markers\": { \"single_indicator_buy_arrow_code\": "  + (string)m_marker_single_indicator_buy_code +
+              ", \"single_indicator_sell_arrow_code\": " + (string)m_marker_single_indicator_sell_code +
+              ", \"multi_indicator_buy_arrow_code\": "   + (string)m_marker_multi_indicator_buy_code +
+              ", \"multi_indicator_sell_arrow_code\": "  + (string)m_marker_multi_indicator_sell_code +
+              ", \"pattern_buy_arrow_code\": "  + (string)m_marker_pattern_buy_code +     
+              ", \"pattern_sell_arrow_code\": " + (string)m_marker_pattern_sell_code  +    
+              ", \"combo_buy_arrow_code\": "    + (string)m_marker_combo_buy_code +       
+              ", \"combo_sell_arrow_code\": "   + (string)m_marker_combo_sell_code +      
               ", \"buy_color\": "        + (string)(int)m_marker_buy_color +
               ", \"sell_color\": "       + (string)(int)m_marker_sell_color +
               ", \"nonrelated_color\": " + (string)(int)m_marker_nonrelated_color +
@@ -1504,8 +1537,9 @@
             return; // already attached
 
       int h = ::iCustom(NULL, 0, "Vendors\\Anhnt\\Custom Buildin\\SignalMarkers",
-                         m_marker_single_buy_code, m_marker_single_sell_code,
-                         m_marker_multi_buy_code, m_marker_multi_sell_code,
+                         m_marker_single_indicator_buy_code, m_marker_single_indicator_sell_code,
+                         m_marker_multi_indicator_buy_code, m_marker_multi_indicator_sell_code,
+                         m_marker_pattern_buy_code, m_marker_pattern_sell_code,
                          m_marker_buy_color, m_marker_sell_color, m_marker_nonrelated_color);
       if(h == INVALID_HANDLE)
         {
@@ -1522,10 +1556,22 @@
     // --- shape choice here, rendered via the indicator's PLOT_ARROW, not a chart object.
     void CGUIPannel::GetMarkerArrowCodeChoices(int &codes[], string &labels[])
      {
-      int    c[] = {233, 234, 67, 68, 108, 109, 159, 161, 162, 217, 218};
-      string l[] = {"233 Arrow Up", "234 Arrow Down", "67 Thumb Up", "68 Thumb Down",
-                  "108 Circle", "109 Circle Filled",
-                  "159 Diamond", "161 Diamond Filled", "162 Star", "217 Chevron Up", "218 Chevron Down"};
+      //See https://www.mql5.com/en/docs/constants/objectconstants/wingdings for reference
+      int    c[] = {39,67, 68, 83, 86, 108, 109, 159, 161, 162, 217, 218, 233, 234};
+      string l[] = {"39 Candle",
+                    "67 Thumb Up", 
+                    "68 Thumb Down",
+                    "83 Bomb",
+                    "86 Lightning",
+                    "108 Circle", 
+                    "109 Circle Filled",
+                    "159 Diamond", 
+                    "161 Diamond Filled", 
+                    "162 Star", 
+                    "217 Chevron Up", 
+                    "218 Chevron Down",
+                    "233 Arrow Up", 
+                    "234 Arrow Down"};
       ArrayCopy(codes,  c);
       ArrayCopy(labels, l);
      }
@@ -1552,7 +1598,7 @@
        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, combo);
        int n = ArraySize(labels);
        combo.XSize(combo_w);
-       combo.YSize(20);
+       combo.YSize(SETTING_MARKER_ROW_HEIGHT);
        combo.ItemsTotal(n);
        // --- Default dropdown viewport is only 93px (~5 rows) - with 11-12 choices that forces
        // --- a cramped scrollbar drag to reach the rest (Anhnt, 2026-07-17: "scrollbar khó kéo,
@@ -1584,7 +1630,7 @@
      {
        m_label_other_caption[row].MainPointer(m_tabs_main_setting_config);
        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_label_other_caption[row]);
-       m_label_other_caption[row].XSize(140);
+       m_label_other_caption[row].XSize(SETTING_MARKER_CAPTION_WIDTH);
        if(!m_label_other_caption[row].CreateTextLabel(text, x, y)) return false;
        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_other_caption[row]);
        return true;
@@ -1607,10 +1653,28 @@
      // --- 2026-07-17: CColorPicker dropped in favor of these fixed-palette combos).
      bool CGUIPannel::CreateColorPreview(const int row, const int x, const int y, const color clr)
       {
+        //CColorButton         m_preview_color[3];
        m_preview_color[row].MainPointer(m_tabs_main_setting_config);
        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_color[row]);
        m_preview_color[row].CurrentColor(clr);
+       //Setting size by Using CElementBase method
+        m_preview_color[row].XSize(SETTING_MARKER_PREVIEW_WIDTH);
+        m_preview_color[row].YSize(SETTING_MARKER_ROW_HEIGHT);
+        m_preview_color[row].GetButtonPointer().XSize(SETTING_MARKER_COLOR_PREVIEW_WIDTH - 2);
+        m_preview_color[row].GetButtonPointer().XGap(1);
+        m_preview_color[row].GetButtonPointer().YSize(SETTING_MARKER_ROW_HEIGHT);
        if(!m_preview_color[row].CreateColorButton("", x, y)) return false;
+      //  //Debug
+      //   PrintFormat("DEBUG CGUIPannel::CreateColorPreview row=%d preview=(%d,%d,%d,%d) button=(%d,%d,%d,%d) buttonGap=%d",
+      //   row,
+      //   m_preview_color[row].X(), m_preview_color[row].Y(),
+      //   m_preview_color[row].XSize(), m_preview_color[row].YSize(),
+      //   m_preview_color[row].GetButtonPointer().X(),
+      //   m_preview_color[row].GetButtonPointer().Y(),
+      //   m_preview_color[row].GetButtonPointer().XSize(),
+      //   m_preview_color[row].GetButtonPointer().YSize(),
+      //   m_preview_color[row].GetButtonPointer().XGap());
+        
        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_preview_color[row]);
        return true;
       }
@@ -1626,9 +1690,10 @@
       {
        m_preview_color[row].CurrentColor(clr);
        m_preview_color[row].Update(true);
+       m_preview_color[row].GetButtonPointer().Update(true);
       }
      
-    // --- "Marker" sub-tab (TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER): 4 independent shape choices
+    // --- "Marker" sub-tab (TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER): 8 independent shape choices
     // --- (Single Buy/Sell, Multi Buy/Sell - each needs its OWN plot/shape, see
     // --- SignalMarkers.mq5's header comment) and 3 independent color choices (Buy/Sell when a
     // --- marker relates to this chart's own Symbol+TF, Non-Related otherwise) - shape and
@@ -1639,116 +1704,161 @@
        int codes[]; string shape_labels[];
        GetMarkerArrowCodeChoices(codes, shape_labels);
        color mcolors[]; string color_labels[];
-       GetMarkerColorChoices(mcolors, color_labels);
+       GetMarkerColorChoices(mcolors, color_labels);       
+       //Calculation for GUI Layout Column 1 Buy
+        int base_x1    = x + SETTING_MARKER_BASE_X_GAP;
+        int combo_x1   = base_x1 + SETTING_MARKER_CAPTION_WIDTH;
+        int preview_x1 = combo_x1 + SETTING_MARKER_COMBOBOX_WIDTH + SETTING_MARKER_GAP;
 
-       // --- Anhnt 2026-07-17: captions were sitting flush against the tab's left edge while
-       // --- the combo/preview columns left a lot of empty space on the right - shift the
-       // --- whole row layout right by 20px.
-        const int base_x   = x + 20;
-        int combo_w   = 160;
-        int row_h     = 26;
-        int combo_x   = base_x + 110;
-        int preview_x = combo_x + combo_w + 10;
-
+       //Calculation for GUI Layout Column 2 (Sell)
+        int base_x2    = preview_x1 + SETTING_MARKER_PREVIEW_WIDTH + SETTING_MARKER_COL_GAP; 
+        int combo_x2   = base_x2 + SETTING_MARKER_CAPTION_WIDTH;
+        int preview_x2 = combo_x2 + SETTING_MARKER_COMBOBOX_WIDTH + SETTING_MARKER_GAP;
+        //int color_combo_x2   = base_x2 + SETTING_MARKER_COLOR_COMBO_WIDTH;
+        
+       //For shape of Marker
         int n_shapes = ArraySize(codes);
-        int sel_single_buy = 0, sel_single_sell = 0, sel_multi_buy = 0, sel_multi_sell = 0;
+        int sel_single_buy = 0, sel_single_sell = 0, 
+            sel_multi_buy = 0, sel_multi_sell = 0;
+        int sel_pattern_buy = 0, sel_pattern_sell = 0, 
+            sel_combo_buy = 0, sel_combo_sell = 0;
+
         for(int i = 0; i < n_shapes; i++)
          {
-          if(codes[i] == m_marker_single_buy_code)  sel_single_buy  = i;
-          if(codes[i] == m_marker_single_sell_code) sel_single_sell = i;
-          if(codes[i] == m_marker_multi_buy_code)   sel_multi_buy   = i;
-          if(codes[i] == m_marker_multi_sell_code)  sel_multi_sell  = i;
+          if(codes[i] == m_marker_single_indicator_buy_code)  sel_single_buy  = i;
+          if(codes[i] == m_marker_single_indicator_sell_code) sel_single_sell = i;
+          if(codes[i] == m_marker_multi_indicator_buy_code)   sel_multi_buy   = i;
+          if(codes[i] == m_marker_multi_indicator_sell_code)  sel_multi_sell  = i;
+          if(codes[i] == m_marker_pattern_buy_code)           sel_pattern_buy = i;
+          if(codes[i] == m_marker_pattern_sell_code)          sel_pattern_sell = i;
+          if(codes[i] == m_marker_combo_buy_code)            sel_combo_buy   = i;
+          if(codes[i] == m_marker_combo_sell_code)           sel_combo_sell  = i;
          }
-        string shape_captions[4] = {"Single Buy", "Single Sell", "Multi Buy", "Multi Sell"};
-        int    shape_codes[4]    = {m_marker_single_buy_code, m_marker_single_sell_code, m_marker_multi_buy_code, m_marker_multi_sell_code};
+        // string shape_captions[4] = {"Single Buy", "Single Sell", "Multi Buy", "Multi Sell"};
+        // int    shape_codes[4]    = {m_marker_single_indicator_buy_code, m_marker_single_indicator_sell_code, m_marker_multi_indicator_buy_code, m_marker_multi_indicator_sell_code};
 
-        if(!CreateMarkerTabCaption(0, shape_captions[0], base_x, y))                                          return false;
-        if(!CreateMarkerTabComboBox(m_combo_shape_single_buy,  combo_x, y,             combo_w, shape_labels, sel_single_buy))  return false;
-        if(!CreateShapePreview(0, preview_x, y, shape_codes[0]))                                             return false;
+        // For shape of Marker in Row 0: Single Buy Column 1, Single Sell Column 2
+         if(!CreateMarkerTabCaption(0, "Single Indicator Buy", base_x1, y)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_single_indicator_buy, combo_x1, y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_single_buy)) return false;
+         if(!CreateShapePreview(0, preview_x1, y, m_marker_single_indicator_buy_code)) return false;
 
-        if(!CreateMarkerTabCaption(1, shape_captions[1], base_x, y + row_h))                                   return false;
-        if(!CreateMarkerTabComboBox(m_combo_shape_single_sell, combo_x, y + row_h,     combo_w, shape_labels, sel_single_sell)) return false;
-        if(!CreateShapePreview(1, preview_x, y + row_h, shape_codes[1]))                                     return false;
-
-        if(!CreateMarkerTabCaption(2, shape_captions[2], base_x, y + row_h * 2))                               return false;
-        if(!CreateMarkerTabComboBox(m_combo_shape_multi_buy,   combo_x, y + row_h * 2, combo_w, shape_labels, sel_multi_buy))   return false;
-        if(!CreateShapePreview(2, preview_x, y + row_h * 2, shape_codes[2]))                                 return false;
-
-        if(!CreateMarkerTabCaption(3, shape_captions[3], base_x, y + row_h * 3))                               return false;
-        if(!CreateMarkerTabComboBox(m_combo_shape_multi_sell,  combo_x, y + row_h * 3, combo_w, shape_labels, sel_multi_sell))  return false;
-        if(!CreateShapePreview(3, preview_x, y + row_h * 3, shape_codes[3]))                                 return false;
-
-        int n_colors = ArraySize(mcolors);
-        int sel_buy = 0, sel_sell = 0, sel_nonrelated = 0;
-        for(int i = 0; i < n_colors; i++)
+         if(!CreateMarkerTabCaption(1, "Single Indicator Sell", base_x2, y)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_single_indicator_sell, combo_x2, y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_single_sell)) return false;
+         if(!CreateShapePreview(1, preview_x2, y, m_marker_single_indicator_sell_code)) return false;
+        // For shape of Marker in Row 1
+         if(!CreateMarkerTabCaption(2, "Multi Indicator Buy", base_x1, y + SETTING_MARKER_ROW_HEIGHT)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_multi_indicator_buy, combo_x1, y + SETTING_MARKER_ROW_HEIGHT, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_multi_buy)) return false;
+         if(!CreateShapePreview(2, preview_x1, y + SETTING_MARKER_ROW_HEIGHT, m_marker_multi_indicator_buy_code)) return false;
+         if(!CreateMarkerTabCaption(3, "Multi Indicator Sell", base_x2, y + SETTING_MARKER_ROW_HEIGHT)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_multi_indicator_sell, combo_x2, y + SETTING_MARKER_ROW_HEIGHT, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_multi_sell)) return false;
+         if(!CreateShapePreview(3, preview_x2, y + SETTING_MARKER_ROW_HEIGHT, m_marker_multi_indicator_sell_code)) return false;
+        // For shape of Marker in Row 2
+         if(!CreateMarkerTabCaption(4, "Pattern Buy", base_x1, y + SETTING_MARKER_ROW_HEIGHT * 2)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_pattern_buy, combo_x1, y + SETTING_MARKER_ROW_HEIGHT * 2, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_pattern_buy)) return false;
+         if(!CreateShapePreview(4, preview_x1, y + SETTING_MARKER_ROW_HEIGHT * 2, m_marker_pattern_buy_code)) return false;
+         
+         if(!CreateMarkerTabCaption(5, "Pattern Sell", base_x2, y + SETTING_MARKER_ROW_HEIGHT * 2)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_pattern_sell, combo_x2, y + SETTING_MARKER_ROW_HEIGHT * 2, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_pattern_sell)) return false;
+         if(!CreateShapePreview(5, preview_x2, y + SETTING_MARKER_ROW_HEIGHT * 2, m_marker_pattern_sell_code)) return false;
+        // For shape of Marker in Row 3
+         if(!CreateMarkerTabCaption(6, "Combo Buy", base_x1, y + SETTING_MARKER_ROW_HEIGHT * 3)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_combo_buy, combo_x1, y + SETTING_MARKER_ROW_HEIGHT * 3, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_combo_buy)) return false;
+         if(!CreateShapePreview(6, preview_x1, y + SETTING_MARKER_ROW_HEIGHT * 3, m_marker_combo_buy_code)) return false;
+         
+         if(!CreateMarkerTabCaption(7, "Combo Sell", base_x2, y + SETTING_MARKER_ROW_HEIGHT * 3)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_shape_combo_sell, combo_x2, y + SETTING_MARKER_ROW_HEIGHT * 3, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_combo_sell)) return false;
+         if(!CreateShapePreview(7, preview_x2, y + SETTING_MARKER_ROW_HEIGHT * 3, m_marker_combo_sell_code)) return false;
+        //For color
+         int n_colors = ArraySize(mcolors);
+         int sel_buy = 0, sel_sell = 0, sel_nonrelated = 0;
+         for(int i = 0; i < n_colors; i++)
           {
-          if(mcolors[i] == m_marker_buy_color)        sel_buy        = i;
-          if(mcolors[i] == m_marker_sell_color)       sel_sell       = i;
-          if(mcolors[i] == m_marker_nonrelated_color) sel_nonrelated = i;
+           if(mcolors[i] == m_marker_buy_color)        sel_buy        = i;
+           if(mcolors[i] == m_marker_sell_color)       sel_sell       = i;
+           if(mcolors[i] == m_marker_nonrelated_color) sel_nonrelated = i;
           }
+        //Position Y
+         int color_row0 = SETTING_MARKER_ROW_HEIGHT * 4 + 15;
+         //int color_preview_x1 = combo_x1 + SETTING_MARKER_COLOR_COMBO_WIDTH + SETTING_MARKER_COLOR_PREVIEW_GAP;
+         //int color_preview_x2 = combo_x2 + SETTING_MARKER_COLOR_COMBO_WIDTH + SETTING_MARKER_COLOR_PREVIEW_GAP;
+        //Row 0 of Color: Buy Color Column 1, Sell Color column 2
+          if(!CreateMarkerTabCaption(8, "Buy Color", base_x1, y + color_row0)) return false;
+          if(!CreateMarkerTabComboBox(m_combo_color_buy, combo_x1, y + color_row0, SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_buy)) return false;
+          //Debug
+          //  PrintFormat("Debug CGUIPannel::CreateTabSettingConfig_Marker combo_x1=%d, COLOR_COMBO_WIDTH=%d, GAP=%d, color_preview_x1=%d",
+          //   combo_x1, SETTING_MARKER_COLOR_COMBO_WIDTH, SETTING_MARKER_GAP, color_preview_x1);
+          
+          int color_preview_x1 = combo_x1 + m_combo_color_buy.XSize() + SETTING_MARKER_COLOR_PREVIEW_GAP;
+          if(!CreateColorPreview(0, color_preview_x1, y + color_row0, m_marker_buy_color)) return false;          
+         //Col 2
+          if(!CreateMarkerTabCaption(9, "Sell Color", base_x2, y + color_row0)) return false;
+          //if(!CreateMarkerTabComboBox(m_combo_color_sell, color_combo_x2, y + color_row0, SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_sell)) return false;
+          if(!CreateMarkerTabComboBox(m_combo_color_sell, combo_x2, y + color_row0, SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_sell)) return false;
+          //Debug
+          //  PrintFormat("Debug CGUIPannel::CreateTabSettingConfig_Marker color combo buy: x=%d, XSize=%d, canvasX=%d", combo_x1, m_combo_color_buy.XSize(), m_combo_color_buy.CanvasPointer().XSize());
+          //  PrintFormat("Debug CGUIPannel::CreateTabSettingConfig_Marker color combo sell: x=%d, XSize=%d, canvasX=%d", combo_x2, m_combo_color_sell.XSize(), m_combo_color_sell.CanvasPointer().XSize());
+          //  //PrintFormat("Debug CGUIPannel::CreateTabSettingConfig_Marker combo_x2=%d, COLOR_COMBO_WIDTH=%d, GAP=%d, color_preview_x2=%d",
+            //combo_x2, SETTING_MARKER_COLOR_COMBO_WIDTH, SETTING_MARKER_GAP, color_preview_x2);
+          int color_preview_x2 = combo_x2 + m_combo_color_sell.XSize() + SETTING_MARKER_COLOR_PREVIEW_GAP;
+          if(!CreateColorPreview(1, color_preview_x2, y + color_row0, m_marker_sell_color)) return false;
 
-        int color_row0 = row_h * 4 + 10;
-
-        if(!CreateMarkerTabCaption(4, "Buy Color", base_x, y + color_row0))                                        return false;
-        if(!CreateMarkerTabComboBox(m_combo_color_buy,        combo_x, y + color_row0,           combo_w, color_labels, sel_buy))        return false;
-        if(!CreateColorPreview(0, preview_x, y + color_row0, m_marker_buy_color))                                return false;
-
-        if(!CreateMarkerTabCaption(5, "Sell Color", base_x, y + color_row0 + row_h))                               return false;
-        if(!CreateMarkerTabComboBox(m_combo_color_sell,       combo_x, y + color_row0 + row_h,   combo_w, color_labels, sel_sell))       return false;
-        if(!CreateColorPreview(1, preview_x, y + color_row0 + row_h, m_marker_sell_color))                       return false;
-
-        if(!CreateMarkerTabCaption(6, "Non-Related Color", base_x, y + color_row0 + row_h * 2))                    return false;
-        if(!CreateMarkerTabComboBox(m_combo_color_nonrelated, combo_x, y + color_row0 + row_h * 2, combo_w, color_labels, sel_nonrelated)) return false;
-        if(!CreateColorPreview(2, preview_x, y + color_row0 + row_h * 2, m_marker_nonrelated_color))             return false;
-
-        // --- Buy/Sell alert sound files (2026-07-17, simplified after CFileNavigator's splitter-
-        // --- drag froze the popup): m_marker_sound_folder is a user-editable path relative to
-        // --- MQL5\Files\ - persisted in JSON so it's never "lost" if changed. "Refresh" re-scans
-        // --- it with plain FileFindFirst/FileFindNext and repopulates both comboboxes below -
-        // --- no tree, no popup, nothing to freeze.
-        int sound_row0 = color_row0 + row_h * 3 + 10;
-        // --- Sound filenames (AUTO_TRADING_OFF_EN.wav etc.) run a lot longer than "233 Arrow Up"/
-        // --- "Lime" - widen just this section's field so names aren't clipped, and the
-        // --- Refresh/preview-x column lines up with the color swatches above (Anhnt, 2026-07-17).
-        int sound_combo_w = preview_x + 60 - combo_x;
-
-        if(!CreateMarkerTabCaption(7, "Sound Folder", base_x, y + sound_row0)) return false;
-        m_edit_sound_folder.MainPointer(m_tabs_main_setting_config);
-        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_edit_sound_folder);
-        m_edit_sound_folder.XSize(sound_combo_w);
-        m_edit_sound_folder.GetTextBoxPointer().XGap(1);
-        if(!m_edit_sound_folder.CreateTextEdit(m_marker_sound_folder, combo_x, y + sound_row0)) return false;
-        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_sound_folder);
-
-        m_btn_refresh_sound_folder.MainPointer(m_tabs_main_setting_config);
-        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_refresh_sound_folder);
-        m_btn_refresh_sound_folder.AutoXResizeMode(false);
-        m_btn_refresh_sound_folder.XSize(80);
-        if(!m_btn_refresh_sound_folder.CreateButton("Refresh", combo_x + sound_combo_w + 10, y + sound_row0)) return false;
-        CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_refresh_sound_folder);
-
-        string files[];
-        ScanSoundFolder(files);
-        int n_files = ArraySize(files);
-        int sel_buy_sound = 0, sel_sell_sound = 0;
-        for(int i = 0; i < n_files; i++)
+         // Non-Related Color (Cột 1)
+         if(!CreateMarkerTabCaption(10, "Non-Related Color", base_x1, y + color_row0 + SETTING_MARKER_ROW_HEIGHT)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_color_nonrelated, combo_x1, y + color_row0 + SETTING_MARKER_ROW_HEIGHT, SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_nonrelated)) return false;
+          // //Debug
+          //  PrintFormat("Debug CGUIPannel::CreateTabSettingConfig_Marker combo_x2=%d, COLOR_COMBO_WIDTH=%d, GAP=%d, color_preview_x2=%d",
+          //   combo_x2, SETTING_MARKER_COLOR_COMBO_WIDTH, SETTING_MARKER_GAP, color_preview_x2);
+         if(!CreateColorPreview(2, color_preview_x1, y + color_row0 + SETTING_MARKER_ROW_HEIGHT, m_marker_nonrelated_color)) return false;
+        //Sound folder
+         int sound_row0 = color_row0 + SETTING_MARKER_ROW_HEIGHT * 2 + 10;
+         //int sound_combo_w = preview_x2 + SETTING_MARKER_PREVIEW_WIDTH - combo_x1;
+         if(!CreateMarkerTabCaption(11, "Sound Folder", base_x1, y + sound_row0)) return false;
+        // Sound folder text edit
+         //  m_edit_sound_folder.MainPointer(m_tabs_main_setting_config);
+         //  m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_edit_sound_folder);
+         //  m_edit_sound_folder.XSize(sound_combo_w);
+         //  m_edit_sound_folder.GetTextBoxPointer().XGap(1);
+         //  if(!m_edit_sound_folder.CreateTextEdit(m_marker_sound_folder, combo_x1, y + sound_row0)) return false;
+        
+        // Sound folder static label (read-only, shows where to drop .wav files)
+          m_textLabel_sound_folder.MainPointer(m_tabs_main_setting_config);
+          m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_textLabel_sound_folder);
+          
+          m_textLabel_sound_folder.XSize(SETTING_MARKER_LABEL_WIDTH_SOUND);   // leave room for Refresh button
+          string lbl_text = "MQL5\\Files\\" + m_marker_sound_folder + "\\";
+          
+          if(!m_textLabel_sound_folder.CreateTextLabel(lbl_text, combo_x1, y + sound_row0)) return false;
+          CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_textLabel_sound_folder);
+        //For Button Refresh sound folder
+         m_btn_refresh_sound_folder.MainPointer(m_tabs_main_setting_config);
+         m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_refresh_sound_folder);
+         m_btn_refresh_sound_folder.AutoXResizeMode(false);
+         m_btn_refresh_sound_folder.XSize(80);
+         if(!m_btn_refresh_sound_folder.CreateButton("Refresh", combo_x1 + SETTING_MARKER_LABEL_WIDTH_SOUND + SETTING_MARKER_BASE_X_GAP, y + sound_row0)) return false;
+         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_refresh_sound_folder);
+        // --- Sound files scan
+         string files[];
+         ScanSoundFolder(files);
+         int n_files = ArraySize(files);
+         int sel_buy_sound = 0, sel_sell_sound = 0;
+         for(int i = 0; i < n_files; i++)
           {
-          if(files[i] == m_marker_buy_sound_file)  sel_buy_sound  = i;
-          if(files[i] == m_marker_sell_sound_file) sel_sell_sound = i;
+           if(files[i] == m_marker_buy_sound_file)  sel_buy_sound  = i;
+           if(files[i] == m_marker_sell_sound_file) sel_sell_sound = i;
           }
+        //Buy Sound column 1, Sell Sound Column 2
+         if(!CreateMarkerTabCaption(12, "Buy Sound", base_x1, y + sound_row0 + SETTING_MARKER_ROW_HEIGHT)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_buy_sound, combo_x1, y + sound_row0 + SETTING_MARKER_ROW_HEIGHT, SETTING_MARKER_COMBOBOX_WIDTH, files, sel_buy_sound)) return false;
+         if(!CreateMarkerTabCaption(13, "Sell Sound", base_x2, y + sound_row0 + SETTING_MARKER_ROW_HEIGHT)) return false;
+         if(!CreateMarkerTabComboBox(m_combo_sell_sound, combo_x2, y + sound_row0 + SETTING_MARKER_ROW_HEIGHT, SETTING_MARKER_COMBOBOX_WIDTH, files, sel_sell_sound)) return false;
 
-        if(!CreateMarkerTabCaption(8, "Buy Sound", base_x, y + sound_row0 + row_h)) return false;
-        if(!CreateMarkerTabComboBox(m_combo_buy_sound, combo_x, y + sound_row0 + row_h, sound_combo_w, files, sel_buy_sound)) return false;
-
-        if(!CreateMarkerTabCaption(9, "Sell Sound", base_x, y + sound_row0 + row_h * 2)) return false;
-        if(!CreateMarkerTabComboBox(m_combo_sell_sound, combo_x, y + sound_row0 + row_h * 2, sound_combo_w, files, sel_sell_sound)) return false;
-
-        m_btn_save_marker_settings.MainPointer(m_tabs_main_setting_config);
-        m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_save_marker_settings);
-        m_btn_save_marker_settings.AutoXResizeMode(false);
-        m_btn_save_marker_settings.XSize(80);
-        m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
-        if(!m_btn_save_marker_settings.CreateButton("Save", base_x, y + sound_row0 + row_h * 3 + 10)) return false;
+        //For Button Save marker settings
+         m_btn_save_marker_settings.MainPointer(m_tabs_main_setting_config);
+         m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_save_marker_settings);
+         m_btn_save_marker_settings.AutoXResizeMode(false);
+         m_btn_save_marker_settings.XSize(80);
+         m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
+         if(!m_btn_save_marker_settings.CreateButton("Save", base_x1, y + sound_row0 + SETTING_MARKER_ROW_HEIGHT * 3 + 10)) return false;
         CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_marker_settings);
 
         return true;
@@ -1762,14 +1872,14 @@
       int n_shapes = ArraySize(codes);
 
       int sel;
-      sel = (int)m_combo_shape_single_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_single_buy_code = codes[sel];
-      sel = (int)m_combo_shape_single_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_single_sell_code = codes[sel];
-      sel = (int)m_combo_shape_multi_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_multi_buy_code = codes[sel];
-      sel = (int)m_combo_shape_multi_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_multi_sell_code = codes[sel];
+      sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_buy_code = codes[sel];
+      sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_sell_code = codes[sel];
+      sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_buy_code = codes[sel];
+      sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
+      if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_sell_code = codes[sel];
 
       color mcolors[]; string color_labels[];
       GetMarkerColorChoices(mcolors, color_labels);
@@ -1782,13 +1892,13 @@
       sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
       if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
 
-      m_marker_sound_folder = m_edit_sound_folder.GetValue();
+      //m_marker_sound_folder = m_edit_sound_folder.GetValue();
       string sound_val = m_combo_buy_sound.GetValue();
       if(sound_val != "") m_marker_buy_sound_file = sound_val;
       sound_val = m_combo_sell_sound.GetValue();
       if(sound_val != "") m_marker_sell_sound_file = sound_val;
 
-      SaveMarkerSettings();
+      SaveMarkerSettingsToJSON();
       ReattachSignalMarkersIndicator();
      } 
     // --- Lists every FILE (not subfolder) directly inside MQL5\Files\<m_marker_sound_folder>\ -
@@ -1822,7 +1932,7 @@
     // --- user may have just typed a new folder), re-scan it, and rebuild both combos in place.
     void CGUIPannel::OnClickChangeSoundFolder(void)
      {
-      m_marker_sound_folder = m_edit_sound_folder.GetValue();
+      //m_marker_sound_folder = m_edit_sound_folder.GetValue();
 
       string files[];
       ScanSoundFolder(files);
@@ -1850,43 +1960,43 @@
       m_combo_buy_sound.GetListViewPointer().Update(true);
       m_combo_sell_sound.GetListViewPointer().Update(true);
      }
-   // --- Detaches SignalMarkers.mq5 if attached - ChartIndicatorAdd() makes it an independent
-   // --- chart program, so removing THIS EA does NOT auto-detach it. Called from
-   // --- ReattachSignalMarkersIndicator() (style change) AND from OnDeinitEvent on final removal.
-   // --- BugNote 2026-07-18: "SignalMarkers survives Remove EA" - the old scan-by-
-   // --- ChartIndicatorsTotal()/ChartIndicatorName() approach reads 0/garbage when called from
-   // --- OnDeinit() while THIS chart's own program is mid-removal (confirmed empirically: the
-   // --- native Indicators List dialog showed SignalMarkers very much still attached at the
-   // --- exact moment our own scan reported total=0). SignalMarkers.mq5 sets its own short name
-   // --- deterministically ("SignalMarkers(" + Symbol() + ")", see SignalMarkers.mq5 line ~102) -
-   // --- delete by that known name directly instead of trusting the unreliable enumeration.
-   // --- ChartIndicatorDelete() itself also reports a false/error return here (confirmed
-   // --- error 4022) even though the deletion genuinely takes effect - another OnDeinit-timing
-   // --- artifact, not a real failure, so the return value is intentionally not checked.
-   void CGUIPannel::RemoveMarkerIndicator(void)
-    {
+    // --- Detaches SignalMarkers.mq5 if attached - ChartIndicatorAdd() makes it an independent
+    // --- chart program, so removing THIS EA does NOT auto-detach it. Called from
+    // --- ReattachSignalMarkersIndicator() (style change) AND from OnDeinitEvent on final removal.
+    // --- BugNote 2026-07-18: "SignalMarkers survives Remove EA" - the old scan-by-
+    // --- ChartIndicatorsTotal()/ChartIndicatorName() approach reads 0/garbage when called from
+    // --- OnDeinit() while THIS chart's own program is mid-removal (confirmed empirically: the
+    // --- native Indicators List dialog showed SignalMarkers very much still attached at the
+    // --- exact moment our own scan reported total=0). SignalMarkers.mq5 sets its own short name
+    // --- deterministically ("SignalMarkers(" + Symbol() + ")", see SignalMarkers.mq5 line ~102) -
+    // --- delete by that known name directly instead of trusting the unreliable enumeration.
+    // --- ChartIndicatorDelete() itself also reports a false/error return here (confirmed
+    // --- error 4022) even though the deletion genuinely takes effect - another OnDeinit-timing
+    // --- artifact, not a real failure, so the return value is intentionally not checked.
+    void CGUIPannel::RemoveMarkerIndicator(void)
+     {
       ::ChartIndicatorDelete(m_chart_id, 0, "SignalMarkers(" + ::Symbol() + ")");
-    }
-   // --- Detach + re-attach with the CURRENT m_marker_* values - MT5 has no live-input-update
-   // --- API for a running indicator, so a style change means recreate it.
-   void CGUIPannel::ReattachSignalMarkersIndicator(void)
-    {
+     }
+    // --- Detach + re-attach with the CURRENT m_marker_* values - MT5 has no live-input-update
+    // --- API for a running indicator, so a style change means recreate it.
+    void CGUIPannel::ReattachSignalMarkersIndicator(void)
+     {
       RemoveMarkerIndicator();
       EnsureMarkerIndicatorAttached();
-    }
-   // --- BBands-only (Anhnt, 2026-07-17): processes ONE line's REAL persisted history from
-   // --- CSignalBollinger (Layer 1) - Closed-bar catch-up mirrors the primary signal's own loop
-   // --- exactly (log-only, watermark keyed by params_key+"|"+line_name so it never collides
-   // --- with the primary signal's own watermark entry), then a Live-bar check (transient
-   // --- last_seen[] vs LineCurrentSignal()) fires Message+CSV (deliberately no Sound, matching
-   // --- the earlier scoped-down decision) on every real change.
-   void CGUIPannel::ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name, ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key, const string label, const string tf_text, const int digits)
-    {
+     }
+    // --- BBands-only (Anhnt, 2026-07-17): processes ONE line's REAL persisted history from
+    // --- CSignalBollinger (Layer 1) - Closed-bar catch-up mirrors the primary signal's own loop
+    // --- exactly (log-only, watermark keyed by params_key+"|"+line_name so it never collides
+    // --- with the primary signal's own watermark entry), then a Live-bar check (transient
+    // --- last_seen[] vs LineCurrentSignal()) fires Message+CSV (deliberately no Sound, matching
+    // --- the earlier scoped-down decision) on every real change.
+    void CGUIPannel::ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name, ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key, const string label, const string tf_text, const int digits)
+     {
       CIndicatorDE *ind = bb.GetIndicator();
       if(ind == NULL) return;
       string line_params_key = params_key + "|" + line_name;
 
-      datetime wm = GetSignalLogWatermark(type_key, line_params_key);
+      datetime wm = m_signal_logger.GetSignalLogWatermark(type_key, line_params_key);
       int total = bb.LineHistoryTotal(line_idx);
       datetime newest_committed = wm;
       for(int idx = 0; idx < total; idx++)
@@ -1900,11 +2010,11 @@
          int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
          double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
          string price_text = ::DoubleToString(price, digits);
-         WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
+         m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
          if(t > newest_committed) newest_committed = t;
         }
       if(newest_committed > wm)
-         SetSignalLogWatermark(type_key, line_params_key, newest_committed);
+         m_signal_logger.SetSignalLogWatermark(type_key, line_params_key, newest_committed);
 
       ENUM_SIGNAL_DIR live_dir = bb.LineCurrentSignal(line_idx);
       if(seeding)
@@ -1925,121 +2035,7 @@
       double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
       string price_text = ::DoubleToString(price, digits);
       CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + ";" + cross_text);
-      WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
-    }
-   // --- Appends one row to MQL5\Files\Signal_Log.csv (Excel-openable) - writes a leading
-   // --- "sep=;" line + header once, the very first time the file is empty/new, then appends
-   // --- after that. Delimiter is ';' (not ',') and the sep= line forces Excel to honor it
-   // --- regardless of the machine's own Regional Settings list separator (Anhnt, 2026-07-17 -
-   // --- opening the ','-delimited file directly in Excel dumped every field into one column).
-   // --- Opened with FILE_READ|FILE_WRITE (not bare FILE_WRITE, which truncates on every open)
-   // --- so existing history is never lost between EA restarts. cross_text is "" for every
-   // --- non-BBands signal row; BBands rows always populate it - "Cross Up/Down MidBand" from
-   // --- the primary signal itself, or "Cross Up/Down Upper/LowerBand" from ProcessBandLine
-   // --- (Anhnt, 2026-07-19).
-   void CGUIPannel::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text)
-    {
-      int fh = ::FileOpen("Signal_Log.csv", FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
-      if(fh == INVALID_HANDLE) return;
-      bool is_new = (::FileSize(fh) == 0);
-      if(is_new)
-        {
-         ::FileWriteString(fh, "sep=;\n");
-         ::FileWrite(fh, "Time", "Symbol", "TF", "Indicator", "Signal", "Price", "Status", "Cross");
-        }
-      else
-         ::FileSeek(fh, 0, SEEK_END);
-      ::FileWrite(fh, time_text, symbol, tf, indicator, direction, price_text, status, cross_text);
-      ::FileClose(fh);
-    }
-   // --- Per-template watermark of the newest committed HistoryTime() already written to
-   // --- Signal_Log.csv - linear search is fine, template counts here are small (<50).
-   datetime CGUIPannel::GetSignalLogWatermark(const string type_key, const string params_key)
-     {
-      for(int i = 0; i < ArraySize(m_wm_type); i++)
-         if(m_wm_type[i] == type_key && m_wm_params[i] == params_key)
-            return m_wm_time[i];
-      return 0;
+      m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
      }
-   // --- Updates (or appends) one template's watermark and persists the whole small file right
-   // --- away - only called when a closed bar genuinely committed a new flip, so this is a rare
-   // --- event, not a per-tick cost.
-   void CGUIPannel::SetSignalLogWatermark(const string type_key, const string params_key, const datetime t)
-    {
-      for(int i = 0; i < ArraySize(m_wm_type); i++)
-         if(m_wm_type[i] == type_key && m_wm_params[i] == params_key)
-           {
-            m_wm_time[i] = t;
-            SaveSignalLogWatermarksToFile();
-            return;
-           }
-      int n = ArraySize(m_wm_type);
-      ArrayResize(m_wm_type,   n + 1);
-      ArrayResize(m_wm_params, n + 1);
-      ArrayResize(m_wm_time,   n + 1);
-      m_wm_type[n]   = type_key;
-      m_wm_params[n] = params_key;
-      m_wm_time[n]   = t;
-      SaveSignalLogWatermarksToFile();
-    }
-   // --- Dedicated small file, NOT Config_Setting.json - that file is already rewritten wholesale
-   // --- by several other writers (SaveMarkerSettings, CTimeSeriesEngine::SaveConfigurationToJSON)
-   // --- that don't know about this section and would silently drop it; a separate per-(symbol,TF)
-   // --- file avoids any multi-writer coordination. Reuses the existing JsonIntValue/JsonStringValue
-   // --- single-key scanners against each "{...}" object substring - no new parser needed.
-   void CGUIPannel::LoadSignalLogWatermarks(void)
-    {
-      string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
-      string content = IndicatorConfig_ReadWholeFile(fname);
-      if(content == "") return;
 
-      int pos = ::StringFind(content, "\"watermarks\"");
-      if(pos < 0) return;
-      int arr_start = ::StringFind(content, "[", pos);
-      int arr_end   = ::StringFind(content, "]", arr_start);
-      if(arr_start < 0 || arr_end < 0) return;
-
-      int i = arr_start + 1;
-      while(i < arr_end)
-        {
-         int obj_start = ::StringFind(content, "{", i);
-         if(obj_start < 0 || obj_start > arr_end) break;
-         int obj_end = ::StringFind(content, "}", obj_start);
-         if(obj_end < 0 || obj_end > arr_end) break;
-         string obj = ::StringSubstr(content, obj_start, obj_end - obj_start + 1);
-
-         string type_key, params_key; int t;
-         if(JsonStringValue(obj, "type", type_key) && JsonStringValue(obj, "params", params_key) && JsonIntValue(obj, "time", t))
-           {
-            int n = ArraySize(m_wm_type);
-            ArrayResize(m_wm_type,   n + 1);
-            ArrayResize(m_wm_params, n + 1);
-            ArrayResize(m_wm_time,   n + 1);
-            m_wm_type[n]   = type_key;
-            m_wm_params[n] = params_key;
-            m_wm_time[n]   = (datetime)t;
-           }
-         i = obj_end + 1;
-        }
-    }
-   void CGUIPannel::SaveSignalLogWatermarksToFile(void)
-    {
-      string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
-      string json = "{\n \"watermarks\": [\n";
-      int n = ArraySize(m_wm_type);
-      for(int i = 0; i < n; i++)
-        {
-         string type_esc = m_wm_type[i]; ::StringReplace(type_esc, "\\", "\\\\");
-         string params_esc = m_wm_params[i]; ::StringReplace(params_esc, "\\", "\\\\");
-         json += "  { \"type\": \"" + type_esc + "\", \"params\": \"" + params_esc + "\", \"time\": " + (string)(int)m_wm_time[i] + " }";
-         json += (i < n - 1) ? ",\n" : "\n";
-        }
-      json += " ]\n}";
-
-      int fh = ::FileOpen(fname, FILE_TXT|FILE_WRITE|FILE_ANSI);
-      if(fh == INVALID_HANDLE) return;
-      ::FileWriteString(fh, json);
-      ::FileClose(fh);
-    }
-   
 #endif // CGUIPANNEL_TABSETTING_MQH
