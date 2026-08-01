@@ -228,9 +228,6 @@
          void                          RepositionCandleInfoWindow(const int cursor_x, const int cursor_y);
          void                          ShowCandleInfoPopup(const int cursor_x, const int cursor_y);
          void                          HideCandleInfoPopup(void);
-     
-     
-
      // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS
          bool                          CreateTabSettingConfig(const int x_gap, const int y_gap);     
       //For TreeView m_treeview_indicator on Left Pannel
@@ -369,8 +366,7 @@
  #include "GUIPannel_TabPosition.mqh" 
  #include "GUIPannel_TabSetting.mqh"    
  #include "GUIPannel_CandleInfoWindow.mqh" 
-// ----------------
-   
+// ----------------   
   //Helper for OnClickSaveIndicators() and OnClickSaveSymbolTF() and  
     // --- Shared by OnClickSaveIndicators() and OnClickSaveSymbolTF(): builds the Buy/Sell
     // --- lookup arrays from m_table_indicator_SymbolTFSeting and hands them to
@@ -454,7 +450,5 @@ bool CGUIPannel::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
      }
    return false;
   }
-
-
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__
