@@ -11,9 +11,10 @@
 #include "..\Services\SignalBridgeWriter.mqh"
 #ifndef CGUIPANNEL_MQH_DECLARATION
 #define CGUIPANNEL_MQH_DECLARATION   
-  class CGUIPannel : public CWndEvents, public ITemplateBuySellProvider
+  //class CGUIPannel : public CWndEvents, public ITemplateBuySellProvider
+  class CGUIPannel : public CWndEvents
    {
-    private: 
+    private:      
      //Layer 1 Pure Data
       // Private Pointer variables    
        CSymbolsCollection         *m_symbol_collection;                //CTradingEngine owns
@@ -22,9 +23,7 @@
        CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
        CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
        CTickSeriesCollection      *m_tick_series;                      // Collection of tick series      
-       CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
-       CSignalLogger              m_signal_logger;                     // Signal logger for history and exports
-       CSignalBridgeWriter        m_bridge_writer;
+       CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these      
        
      //------------------- 
       CTimeCounter                m_gui_timecounter;                   //--- Time counters
@@ -178,14 +177,11 @@
           // --- Transient like the array above - only the LIVE side needs this; the Closed side
           // --- reads CSignalBollinger's own real persisted LineHistoryXxx() instead.
            ENUM_SIGNAL_DIR      m_upper_last_seen[];
-           ENUM_SIGNAL_DIR      m_lower_last_seen[];
-
-           
+           ENUM_SIGNAL_DIR      m_lower_last_seen[];           
       //Information window at to display signal on chart
        CWindow                    m_window_candle_infomation;
        CTable                     m_table_candle_information_atBar;
-       datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden
-      
+       datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden      
       // For guard on GUI.
        bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA 
      // --- Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
@@ -193,16 +189,18 @@
        // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
        // --- indicator BY HAND on the chart. Styling (colors) is out of scope by design - MT5
        // --- has no API to restyle an indicator instance that is already attached to a chart.
-        CChartObjCollection       m_chart_obj_collection;
-      
-     
-        // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
+        CChartObjCollection       m_chart_obj_collection;  
+       // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
          int                  m_settings_cache_state[];
 
        // --- Signal Markers bridge (BugNote 2026-07-16): a separate SignalMarkers.mq5
       // SIndicatorCatalogItem now lives in Artyom Trishkin\IndicatorCatalog.mqh (Tang 1 metadata)      
        // --- Params tab controls (generic fixed-slot form, max 4 params/indicator)
-            
+      //Layer 4 IO File
+        //Layer 4 IO file
+        CSignalLogger              m_signal_logger;                     // Signal logger for history and exports
+        CSignalBridgeWriter        m_bridge_writer;
+        bool                       m_signal_log_watermarks_loaded; 
     private: // Private methods
      //For GUI
        bool                            CreateGUIPannel(); 
@@ -345,15 +343,17 @@
         bool                           TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
       //For Pointer      
         void                           SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbol_collection = symbols; }      
-        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts; m_bridge_writer.Initialize(this, m_time_series_engine, m_IndicatorsCollection, m_BarTimeSeriesCollection); } 
+        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts;} 
         void                           SetPatternsControl(CBarPatternsControl* ctrl) { m_pattern_cfg = ctrl; } 
-        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind; m_bridge_writer.Initialize(this, m_time_series_engine, m_IndicatorsCollection, m_BarTimeSeriesCollection); }
-        void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_time_series_engine = engine; m_bridge_writer.Initialize(this, m_time_series_engine, m_IndicatorsCollection, m_BarTimeSeriesCollection); }
+        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind;}
+        void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_time_series_engine = engine;}
       //Temporary remove due to change
         //void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
         //void  SetTickSeriesCollection(CTickSeriesCollection *ticks) { m_tick_series = ticks; }
         void  SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
         void  SetTradingControl(CTradingControl *trading_control) { m_trading_bubble.SetTradingControl(trading_control); }
+      //For Layer 4 b        
+        void UpdateSignalBridgeTemplateFlags(void);
    };
 #endif // CGUIPANNEL_MQH_DECLARATION
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION
@@ -449,6 +449,25 @@ bool CGUIPannel::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
       return true;
      }
    return false;
+  }
+void CGUIPannel::UpdateSignalBridgeTemplateFlags(void)
+  {
+      int tmpl_total = ArraySize(m_table_indicator_ptrs);
+      CIndicatorDE *tmpl_ptrs[];
+      bool tmpl_buy[], tmpl_sell[];
+
+      ArrayResize(tmpl_ptrs, tmpl_total);
+      ArrayResize(tmpl_buy,  tmpl_total);
+      ArrayResize(tmpl_sell, tmpl_total);
+
+      for(int row = 0; row < tmpl_total; row++)
+      {
+        tmpl_ptrs[row] = m_table_indicator_ptrs[row];
+        tmpl_buy[row]  = ((int)m_table_indicator.SelectedImageIndex(2, row) == 0);
+        tmpl_sell[row] = ((int)m_table_indicator.SelectedImageIndex(3, row) == 0);
+      }
+
+      m_bridge_writer.SetTemplateBuySell(tmpl_ptrs, tmpl_buy, tmpl_sell);
   }
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__

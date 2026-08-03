@@ -84,12 +84,13 @@
      [v] Update lại sau khi có CChartObjCollection
      [v] Bị mất khi đổi TF
      [v] Chạy ngang
+6. Layer 4 Working with file
 
-6. Bug note
+7. Bug note
   2027 0713 
    [] CTradingLevelBubble: 
      [] Rất khó di chuyển.
      [v] ChartChange là mất.
    [v] m_table_indicator bị duplicate BBand
   
-7. Feature Note
+8. Feature Note

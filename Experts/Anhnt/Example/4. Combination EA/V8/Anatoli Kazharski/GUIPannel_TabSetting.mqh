@@ -935,11 +935,13 @@
      // --- watermark rewound so the very next write is a full, immediate rewrite.
      void CGUIPannel::OnClickToggleBuySignal(const string sname, const int row)
       {
-       m_bridge_writer.ResetSignalBridge();
+        UpdateSignalBridgeTemplateFlags();
+        m_bridge_writer.ResetSignalBridge();
       }
      void CGUIPannel::OnClickToggleSellSignal(const string sname, const int row)
       {
-       m_bridge_writer.ResetSignalBridge();
+        UpdateSignalBridgeTemplateFlags();
+        m_bridge_writer.ResetSignalBridge();
       }
      void CGUIPannel::OnClickSaveIndicators(void)
       {
@@ -1407,7 +1409,6 @@
     // --- (or a file that simply has no "markers" key yet) still leaves the EA in a working state.
     void CGUIPannel::LoadMarkerSettings(void)
      {
-
       //https://www.mql5.com/en/docs/constants/objectconstants/wingdings
       m_marker_single_indicator_buy_code  = 217; 
       m_marker_single_indicator_sell_code = 218;

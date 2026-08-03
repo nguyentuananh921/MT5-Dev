@@ -6,34 +6,46 @@
 #ifndef __SIGNALBRIDGEWRITER_MQH__
 #define __SIGNALBRIDGEWRITER_MQH__
 
-#include "..\TradingEngine\Indicators\IndicatorDE.mqh"
-#include "..\TradingEngine\TimeSeriesEngine.mqh"
+//#include "..\TradingEngine\Indicators\IndicatorDE.mqh"
+#include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BarTimeSeriesCollection.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Indicators\IndicatorDE.mqh>
+//#include "..\TradingEngine\TimeSeriesEngine.mqh"
  #ifndef CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #define CSIGNALBRIDGEWRITER_MQH_DECLARATION
-  class ITemplateBuySellProvider
-   {
-    public:
-     virtual bool      TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell) = 0;
-   };
+  // class ITemplateBuySellProvider
+  //  {
+  //   public:
+  //    virtual bool      TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell) = 0;
+  //  };
 
   class CSignalBridgeWriter
   {
     private:
-     ITemplateBuySellProvider   *m_provider;
-     CTimeSeriesEngine          *m_engine;
-     CIndicatorsCollection      *m_indicators;
-     CBarTimeSeriesCollection   *m_bars;
-   
+     //ITemplateBuySellProvider   *m_provider;
+     //CTimeSeriesEngine          *m_engine;
+     CSignalsCollection         *m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
+     //CIndicatorsCollection      *m_indicators;
+     CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
+     CIndicatorDE               *m_template_ptrs[];
+     //CBarTimeSeriesCollection   *m_bars;
+     CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;          //Timeseries collection
+     bool                       m_template_buy[];
+     bool                       m_template_sell[];
+     
      string                     m_signal_bridge_symbol;
      datetime                   m_signal_bridge_last_time;
-
-     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count);
+     
+     bool                       TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
+     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count);     
 
     public:
      CSignalBridgeWriter(void);
     ~CSignalBridgeWriter(void);
                               
-     void                       Initialize(ITemplateBuySellProvider *provider, CTimeSeriesEngine *engine, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars);
+     void                       Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars);
+     void                       SetTemplateBuySell(CIndicatorDE *&tmpl_ptrs[], bool &tmpl_buy[], bool &tmpl_sell[]);
      void                       BuildAndWriteSignalBridge(void);
      void                       ResetSignalBridge(void);
   };
@@ -44,10 +56,13 @@
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
   CSignalBridgeWriter::CSignalBridgeWriter(void)
-   : m_provider(NULL), m_engine(NULL), m_indicators(NULL), m_bars(NULL),
-     m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
-   {
-   }
+    : m_SignalsCollection(NULL), m_IndicatorsCollection(NULL), m_BarTimeSeriesCollection(NULL),
+      m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
+  {
+    ArrayResize(m_template_ptrs, 0);
+    ArrayResize(m_template_buy, 0);
+    ArrayResize(m_template_sell, 0);
+  }
 
   //+------------------------------------------------------------------+
   //| Destructor                                                       |
@@ -59,26 +74,57 @@
   //+------------------------------------------------------------------+
   //| Initialize                                                       |
   //+------------------------------------------------------------------+
-  CSignalBridgeWriter::Initialize(ITemplateBuySellProvider *provider, CTimeSeriesEngine *engine, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars)
+  void CSignalBridgeWriter::Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars)
    {
-    m_provider = provider;
-    m_engine = engine;
-    m_indicators = ind;
-    m_bars = bars;
+    m_SignalsCollection = signals;
+    m_IndicatorsCollection = ind;
+    m_BarTimeSeriesCollection = bars;
    }
+  
+  void CSignalBridgeWriter::SetTemplateBuySell(CIndicatorDE *&tmpl_ptrs[], bool &tmpl_buy[], bool &tmpl_sell[])
+   {
+    ArrayCopy(m_template_ptrs, tmpl_ptrs);
+    ArrayCopy(m_template_buy, tmpl_buy);
+    ArrayCopy(m_template_sell, tmpl_sell);
+   }
+  bool CSignalBridgeWriter::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
+   {
+    buy = false;
+    sell = false;
+    if(ind == NULL) return false;
 
+    ENUM_INDICATOR type = ind.TypeIndicator();
+    MqlParam params[];
+    ind.GetMqlParams(params);
+
+    for(int row = 0; row < ArraySize(m_template_ptrs); row++)
+    {
+      CIndicatorDE *row_ind = m_template_ptrs[row];
+      if(row_ind == NULL || row_ind.TypeIndicator() != type) continue;
+
+      MqlParam row_params[];
+      row_ind.GetMqlParams(row_params);
+      if(!IsEqualMqlParamArrays(params, row_params)) continue;
+
+      buy  = ((int)m_template_buy[row] != 0);
+      sell = ((int)m_template_sell[row] != 0);
+      return true;
+    }
+
+    return false;
+   }
+  
   //+------------------------------------------------------------------+
   //| BuildAndWriteSignalBridge                                        |
   //+------------------------------------------------------------------+
-  CSignalBridgeWriter::BuildAndWriteSignalBridge(void)
-   {
-    if(m_engine == NULL || m_indicators == NULL || m_bars == NULL || m_provider == NULL)
-       return;
-
+  void CSignalBridgeWriter::BuildAndWriteSignalBridge(void)
+   {    
+    if(m_SignalsCollection == NULL || m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL)
+      return;
     string sym = ::Symbol();
     bool fresh = (sym != m_signal_bridge_symbol);
 
-    CBarTimeSeriesDE *bts = m_bars.GetTimeseries(sym);
+    CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
     CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
     int series_total = (series_list != NULL) ? series_list.Total() : 0;
 
@@ -87,7 +133,7 @@
       {
        CBarSeriesDE *s = series_list.At(ti);
        if(s == NULL) continue;
-       CArrayObj *ind_list = m_indicators.GetListIndBySymbol(sym);
+       CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
        ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, s.Timeframe(), EQUAL);
        int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
        for(int ii = 0; ii < ind_total; ii++)
@@ -95,8 +141,10 @@
           CIndicatorDE *ind = ind_list.At(ii);
           if(ind == NULL) continue;
           bool buy_on, sell_on;
-          if(!m_provider.TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-          CSignalBase *signal = m_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+          //if(!m_provider.TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+          if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+          //CSignalBase *signal = m_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+          CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
           if(signal == NULL) continue;
           int ht = signal.HistoryTotal();
           if(ht > 0)
@@ -129,7 +177,7 @@
       CBarSeriesDE *s = series_list.At(ti);
       if(s == NULL) continue;
       ENUM_TIMEFRAMES tf = s.Timeframe();
-      CArrayObj *ind_list = m_indicators.GetListIndBySymbol(sym);
+      CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
       ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
       int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
       for(int ii = 0; ii < ind_total; ii++)
@@ -137,8 +185,10 @@
          CIndicatorDE *ind = ind_list.At(ii);
          if(ind == NULL) continue;
          bool buy_on, sell_on;
-         if(!m_provider.TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-         CSignalBase *signal = m_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+         //if(!m_provider.TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+         //CSignalBase *signal = m_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+         if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+         CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
          if(signal == NULL) continue;
          int hist_total = signal.HistoryTotal();
          for(int h = 0; h < hist_total; h++)
@@ -197,7 +247,7 @@
   //+------------------------------------------------------------------+
   //| ResetSignalBridge                                                |
   //+------------------------------------------------------------------+
-  CSignalBridgeWriter::ResetSignalBridge(void)
+  void CSignalBridgeWriter::ResetSignalBridge(void)
     {
      m_signal_bridge_last_time = 0;
      BuildAndWriteSignalBridge();
@@ -205,7 +255,7 @@
   //+------------------------------------------------------------------+
   //| WriteSignalBridgeFile                                            |
   //+------------------------------------------------------------------+
-  CSignalBridgeWriter::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count)
+  void CSignalBridgeWriter::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count)
     {
      string final_name = "SignalBridge_" + m_signal_bridge_symbol + ".dat";
      string tmp_name    = "SignalBridge_" + m_signal_bridge_symbol + ".tmp";
@@ -222,11 +272,11 @@
      for(int i = 0; i < count; i++)
        {
          ::FileWriteLong(fh, (long)row_time[i]);
-      ::FileWriteInteger(fh, row_tf[i],  INT_VALUE);
-      ::FileWriteInteger(fh, row_dir[i], INT_VALUE);
-     }
-   ::FileClose(fh);
-   ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);
-  }
+         ::FileWriteInteger(fh, row_tf[i],  INT_VALUE);
+         ::FileWriteInteger(fh, row_dir[i], INT_VALUE);
+       }
+     ::FileClose(fh);
+     ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);
+    }
  #endif // CSIGNALBRIDGEWRITER_MQH_IMPLEMENTATION
 #endif // __SIGNALBRIDGEWRITER_MQH__

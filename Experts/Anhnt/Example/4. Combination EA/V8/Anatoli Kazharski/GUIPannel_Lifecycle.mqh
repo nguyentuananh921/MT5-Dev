@@ -36,6 +36,16 @@
    {      
     if(!m_gui_created)
      {
+      //Init m_bridge_writer
+       if(m_time_series_engine != NULL &&
+           m_IndicatorsCollection != NULL &&
+           m_BarTimeSeriesCollection != NULL)
+        {
+            m_bridge_writer.Initialize(
+                m_time_series_engine.GetSignalsCollection(),
+                m_IndicatorsCollection,
+                m_BarTimeSeriesCollection);
+        }
       if(!CreateGUIPannel()) return false;
       m_gui_created = true;
       // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
@@ -546,7 +556,8 @@
       m_trading_bubble.OnPoll();
 
       SetValuesToTableIndicatorSymbolTFValue();
-      BuildAndWriteSignalBridge();
+      UpdateSignalBridgeTemplateFlags();
+      m_bridge_writer.BuildAndWriteSignalBridge();
       CheckIndicatorAlerts();
       //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
       //--- custom events (handled in OnEvent -> RefreshIndicatorTableShowStates)

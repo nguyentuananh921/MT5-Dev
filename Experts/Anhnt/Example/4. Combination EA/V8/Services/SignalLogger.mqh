@@ -49,7 +49,7 @@
   //+------------------------------------------------------------------+
   //| WriteSignalLogRow                                                |
   //+------------------------------------------------------------------+
-  CSignalLogger::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text)
+  void CSignalLogger::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text)
    {
     int fh = ::FileOpen("Signal_Log.csv", FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
     if(fh == INVALID_HANDLE) return;
@@ -77,7 +77,7 @@
   //+------------------------------------------------------------------+
   //| SetSignalLogWatermark                                            |
   //+------------------------------------------------------------------+
-  CSignalLogger::SetSignalLogWatermark(const string type_key, const string params_key, const datetime t)
+  void CSignalLogger::SetSignalLogWatermark(const string type_key, const string params_key, const datetime t)
    {
     for(int i = 0; i < ArraySize(m_wm_type); i++)
        if(m_wm_type[i] == type_key && m_wm_params[i] == params_key)
@@ -98,7 +98,7 @@
   //+------------------------------------------------------------------+
   //| LoadSignalLogWatermarks                                          |
   //+------------------------------------------------------------------+
-  CSignalLogger::LoadSignalLogWatermarks(void)
+  void CSignalLogger::LoadSignalLogWatermarks(void)
    {
     string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
     string content = IndicatorConfig_ReadWholeFile(fname);
@@ -137,7 +137,7 @@
   //+------------------------------------------------------------------+
   //| SaveSignalLogWatermarksToFile                                    |
   //+------------------------------------------------------------------+
-  CSignalLogger::SaveSignalLogWatermarksToFile(void)
+  void CSignalLogger::SaveSignalLogWatermarksToFile(void)
    {
     string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
     string json = "{\n \"watermarks\": [\n";
@@ -160,7 +160,7 @@
   //+------------------------------------------------------------------+
   //| JsonIntValue                                                     |
   //+------------------------------------------------------------------+
-  CSignalLogger::JsonIntValue(const string content, const string key, int &value)
+  bool CSignalLogger::JsonIntValue(const string content, const string key, int &value)
    {
     int pos = ::StringFind(content, "\"" + key + "\"");
     if(pos < 0) return false;
@@ -184,7 +184,7 @@
   //+------------------------------------------------------------------+
   //| JsonStringValue                                                  |
   //+------------------------------------------------------------------+
-  CSignalLogger::JsonStringValue(const string content, const string key, string &value)
+  bool CSignalLogger::JsonStringValue(const string content, const string key, string &value)
    {
     int pos = ::StringFind(content, "\"" + key + "\"");
     if(pos < 0) return false;
