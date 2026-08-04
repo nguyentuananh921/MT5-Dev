@@ -14,26 +14,18 @@
 //#include "..\TradingEngine\TimeSeriesEngine.mqh"
  #ifndef CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #define CSIGNALBRIDGEWRITER_MQH_DECLARATION
-  // class ITemplateBuySellProvider
-  //  {
-  //   public:
-  //    virtual bool      TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell) = 0;
-  //  };
-
   class CSignalBridgeWriter
   {
     private:
-     //ITemplateBuySellProvider   *m_provider;
-     //CTimeSeriesEngine          *m_engine;
-     CSignalsCollection         *m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
-     //CIndicatorsCollection      *m_indicators;
+     //Pointer from Layer 1, CTimeSeriesEngine hold      
+     CSignalsCollection        *m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)     
      CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
-     CIndicatorDE               *m_template_ptrs[];
-     //CBarTimeSeriesCollection   *m_bars;
+     CIndicatorDE              *m_template_ptrs[];     
      CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;          //Timeseries collection
+    //Seting from CGUIPannel base on Selection on Checkbox 
      bool                       m_template_buy[];
-     bool                       m_template_sell[];
-     
+     bool                       m_template_sell[]; 
+         
      string                     m_signal_bridge_symbol;
      datetime                   m_signal_bridge_last_time;
      
@@ -265,7 +257,9 @@
         return;
 
      // SIGNAL_BRIDGE_MAGIC is defined in SignalMarkers.mq5, we should define it here
-     #define SIGNAL_BRIDGE_MAGIC 0x51674E79
+     #ifndef SIGNAL_BRIDGE_MAGIC
+      #define SIGNAL_BRIDGE_MAGIC 20260716
+     #endif     
      ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
      ::FileWriteLong(fh, (long)::TimeCurrent());
      ::FileWriteInteger(fh, count, INT_VALUE);

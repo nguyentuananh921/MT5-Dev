@@ -49,11 +49,17 @@
    [] Hiện mới xử lý IND_SAR và IND_MA
 4. Layer 2
   [v] Từ bản V8 thì Layer 2 được tách biệt việc implemenation ra các module khác nhau theo nguyên tắc chức năng của các GUI Control theo Tab
-    -GUIPannel.mqh
-    -GUIPannel_Lifecycle.mqh
-    -GUIPannel_MainWindows.mqh
-   
+    - GUIPannel.mqh  => Declareation
+    - GUIPannel_Define.mqh => Define enum in Class CGUIpanel only
+    - GUIPannel_Lifecycle.mqh => Implementation all lifecycle method    
+    - GUIPannel_MainWindows.mqh => Implementation all method create main window
+    - GUIPannel_TabMonitor.mqh => Implementation all method create tab monitor
+    - GUIPannel_TabPosition.mqh => Implementation all method create tab position 
+    - GUIPannel_TabSettingIndicator.mqh => Implementation all method create tab setting indicator
+    - GUIPannel_TabSettingSymbolTF.mqh => Implementation all method create tab setting symbol tf    
+    - GUIPannel_TabSetting.mqh => Implementation all method create tab setting
     
+    - GUIPannel_TabSettingMarket.mqh => Implementation all method create tab setting market  
   [v] CTreeView  m_treeview_SymbolTF;
      [v] Display Symbol + TF on Layer 1.
      [v] Highlight node base on Current Chart on Layer 3

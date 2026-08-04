@@ -47,8 +47,7 @@
      {
       TAB_TAB_MAIN_ACCOUNT_INFO = 0,
       TAB_TAB_MAIN_SYMBOL_INFO,
-      TAB_TAB_MAIN_MONITOR,
-      //TAB_TAB_MAIN_TRADE,
+      TAB_TAB_MAIN_MONITOR,      
       TAB_TAB_MAIN_POSITIONS,
       TAB_TAB_MAIN_HISTORY,
       TAB_TAB_MAIN_SETTINGS,
@@ -128,7 +127,7 @@
    #define PARAM_FORM_X              (INDICATOR_TREE_WIDTH + 10)
    #define PARAM_FORM_Y              5
    #define PARAM_ROW_H               30
-   #define ADD_BTN_H                 20
+   #define ADD_BTN_H                 22
   // --- Indicator table: below Add button with 10px gap; width auto-fills m_tabs_main via AutoXResizeMode.
    #define INDICATOR_TABLE_X         PARAM_FORM_X
    #define INDICATOR_TABLE_Y         (PARAM_FORM_Y + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10 + ADD_BTN_H + 10)
@@ -164,7 +163,6 @@
    // --- the popup's rect the instant it appears means MouseOverCandleInfoWindow() is true
    // --- before the user moves at all - zero distance left to cross.
    #define CANDLE_INFO_CURSOR_INSET  15
-
   //For Indicator table field show in m_table_indicator and m_table_indicator_SymbolTFValue
    #define INDICATOR_PARATEXT_WIDTH 180 //Include name + Icon
 #endif // CGUIPANNELDEFINE_MQH

@@ -338,278 +338,277 @@
  //+------------------------------------------------------------------+
  bool CGUIPannel::SetValuesToPositionsTable(string &symbols_name[], bool force = false)
   {
-      uint symbols_total = ::ArraySize(symbols_name);
-      uint rows_total = m_table_positions.RowsTotal();
-      if(symbols_total < rows_total)
-         return false;
-      static uint s_prev_rows = 0;
-      static string s_c0[], s_c1[], s_c2[], s_c3[], s_c4[];
-      static string s_c5[], s_c6[], s_c7[], s_c8[], s_c9[];
-      if(s_prev_rows != rows_total || force)
+   uint symbols_total = ::ArraySize(symbols_name);
+   uint rows_total = m_table_positions.RowsTotal();
+   if(symbols_total < rows_total)
+      return false;
+   static uint s_prev_rows = 0;
+   static string s_c0[], s_c1[], s_c2[], s_c3[], s_c4[];
+   static string s_c5[], s_c6[], s_c7[], s_c8[], s_c9[];
+   if(s_prev_rows != rows_total || force)
+    {
+      s_prev_rows = rows_total;
+      ::ArrayResize(s_c0, rows_total);
+      ::ArrayResize(s_c1, rows_total);
+      ::ArrayResize(s_c2, rows_total);
+      ::ArrayResize(s_c3, rows_total);
+      ::ArrayResize(s_c4, rows_total);
+      ::ArrayResize(s_c5, rows_total);
+      ::ArrayResize(s_c6, rows_total);
+      ::ArrayResize(s_c7, rows_total);
+      ::ArrayResize(s_c8, rows_total);
+      ::ArrayResize(s_c9, rows_total);
+      for(uint i = 0; i < rows_total; i++)
+         s_c0[i] = s_c1[i] = s_c2[i] = s_c3[i] = s_c4[i] =
+         s_c5[i] = s_c6[i] = s_c7[i] = s_c8[i] = s_c9[i] = "";
+    }
+    bool any_changed = false;
+    // Calculate values and set to table with dirty-check
+     for(uint r = 0; r < rows_total; r++)
+      {
+       double pos_volume = PositionsVolumeTotal(symbols_name[r]);
+       double buy_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_BUY);
+       double sell_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_SELL);
+       double pos_profit = PositionsFloatingProfitTotal(symbols_name[r]);
+       double buy_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_BUY);
+       double sell_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_SELL);
+       double avg_price = PositionAveragePrice(symbols_name[r]);
+       string v0 = symbols_name[r];
+       string v1 = (string)PositionsTotal(symbols_name[r]);
+       string v2 = ::DoubleToString(pos_volume, 2);
+       string v3 = ::DoubleToString(buy_volume, 2);
+       string v4 = ::DoubleToString(sell_volume, 2);
+       string v5 = ::DoubleToString(pos_profit, 2);
+       string v6 = ::DoubleToString(buy_profit, 2);
+       string v7 = ::DoubleToString(sell_profit, 2);
+       string v8 = ::DoubleToString(DepositLoad(false, avg_price, symbols_name[r], pos_volume), 2) + "/" +
+                   ::DoubleToString(DepositLoad(true, avg_price, symbols_name[r], pos_volume), 2) + "%";
+       string v9 = ::DoubleToString(avg_price, (int)::SymbolInfoInteger(symbols_name[r], SYMBOL_DIGITS));
+       if(v0 != s_c0[r])
         {
-         s_prev_rows = rows_total;
-         ::ArrayResize(s_c0, rows_total);
-         ::ArrayResize(s_c1, rows_total);
-         ::ArrayResize(s_c2, rows_total);
-         ::ArrayResize(s_c3, rows_total);
-         ::ArrayResize(s_c4, rows_total);
-         ::ArrayResize(s_c5, rows_total);
-         ::ArrayResize(s_c6, rows_total);
-         ::ArrayResize(s_c7, rows_total);
-         ::ArrayResize(s_c8, rows_total);
-         ::ArrayResize(s_c9, rows_total);
-         for(uint i = 0; i < rows_total; i++)
-            s_c0[i] = s_c1[i] = s_c2[i] = s_c3[i] = s_c4[i] =
-                s_c5[i] = s_c6[i] = s_c7[i] = s_c8[i] = s_c9[i] = "";
+         s_c0[r] = v0;
+         m_table_positions.SetValue(0, r, v0, 0, true);
+         any_changed = true;
         }
-      bool any_changed = false;
-      // Calculate values and set to table with dirty-check
-      for(uint r = 0; r < rows_total; r++)
+       if(v1 != s_c1[r])
         {
-         double pos_volume = PositionsVolumeTotal(symbols_name[r]);
-         double buy_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_BUY);
-         double sell_volume = PositionsVolumeTotal(symbols_name[r], POSITION_TYPE_SELL);
-         double pos_profit = PositionsFloatingProfitTotal(symbols_name[r]);
-         double buy_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_BUY);
-         double sell_profit = PositionsFloatingProfitTotal(symbols_name[r], POSITION_TYPE_SELL);
-         double avg_price = PositionAveragePrice(symbols_name[r]);
-         string v0 = symbols_name[r];
-         string v1 = (string)PositionsTotal(symbols_name[r]);
-         string v2 = ::DoubleToString(pos_volume, 2);
-         string v3 = ::DoubleToString(buy_volume, 2);
-         string v4 = ::DoubleToString(sell_volume, 2);
-         string v5 = ::DoubleToString(pos_profit, 2);
-         string v6 = ::DoubleToString(buy_profit, 2);
-         string v7 = ::DoubleToString(sell_profit, 2);
-         string v8 = ::DoubleToString(DepositLoad(false, avg_price, symbols_name[r], pos_volume), 2) + "/" +
-                     ::DoubleToString(DepositLoad(true, avg_price, symbols_name[r], pos_volume), 2) + "%";
-         string v9 = ::DoubleToString(avg_price, (int)::SymbolInfoInteger(symbols_name[r], SYMBOL_DIGITS));
-
-         if(v0 != s_c0[r])
-           {
-            s_c0[r] = v0;
-            m_table_positions.SetValue(0, r, v0, 0, true);
-            any_changed = true;
-           }
-         if(v1 != s_c1[r])
-           {
-            s_c1[r] = v1;
-            m_table_positions.SetValue(1, r, v1, 0, true);
-            any_changed = true;
-           }
-         if(v2 != s_c2[r])
-           {
-            s_c2[r] = v2;
-            m_table_positions.SetValue(2, r, v2, 0, true);
-            any_changed = true;
-           }
-         if(v3 != s_c3[r])
-           {
-            s_c3[r] = v3;
-            m_table_positions.TextColor(3, r, (buy_volume > 0) ? clrBlack : clrLightGray);
-            m_table_positions.SetValue(3, r, v3, 0, true);
-            any_changed = true;
-           }
-         if(v4 != s_c4[r])
-           {
-            s_c4[r] = v4;
-            m_table_positions.TextColor(4, r, (sell_volume > 0) ? clrBlack : clrLightGray);
-            m_table_positions.SetValue(4, r, v4, 0, true);
-            any_changed = true;
-           }
-         if(v5 != s_c5[r])
-           {
-            s_c5[r] = v5;
-            m_table_positions.TextColor(5, r, (pos_profit != 0) ? (pos_profit > 0 ? clrGreen : clrRed) : clrLightGray);
-            m_table_positions.SetValue(5, r, v5, 0, true);
-            any_changed = true;
-           }
-         if(v6 != s_c6[r])
-           {
-            s_c6[r] = v6;
-            m_table_positions.TextColor(6, r, (buy_profit != 0) ? (buy_profit > 0 ? clrGreen : clrRed) : clrLightGray);
-            m_table_positions.SetValue(6, r, v6, 0, true);
-            any_changed = true;
-           }
-         if(v7 != s_c7[r])
-           {
-            s_c7[r] = v7;
-            m_table_positions.TextColor(7, r, (sell_profit != 0) ? (sell_profit > 0 ? clrGreen : clrRed) : clrLightGray);
-            m_table_positions.SetValue(7, r, v7, 0, true);
-            any_changed = true;
-           }
-         if(v8 != s_c8[r])
-           {
-            s_c8[r] = v8;
-            m_table_positions.SetValue(8, r, v8, 0, true);
-            any_changed = true;
-           }
-         if(v9 != s_c9[r])
-           {
-            s_c9[r] = v9;
-            m_table_positions.SetValue(9, r, v9, 0, true);
-            any_changed = true;
-           }
+         s_c1[r] = v1;
+         m_table_positions.SetValue(1, r, v1, 0, true);
+         any_changed = true;
         }
+       if(v2 != s_c2[r])
+        {
+         s_c2[r] = v2;
+         m_table_positions.SetValue(2, r, v2, 0, true);
+         any_changed = true;
+        }
+       if(v3 != s_c3[r])
+        {
+         s_c3[r] = v3;
+         m_table_positions.TextColor(3, r, (buy_volume > 0) ? clrBlack : clrLightGray);
+         m_table_positions.SetValue(3, r, v3, 0, true);
+         any_changed = true;
+        }
+       if(v4 != s_c4[r])
+        {
+         s_c4[r] = v4;
+         m_table_positions.TextColor(4, r, (sell_volume > 0) ? clrBlack : clrLightGray);
+         m_table_positions.SetValue(4, r, v4, 0, true);
+         any_changed = true;
+        }
+       if(v5 != s_c5[r])
+        {
+         s_c5[r] = v5;
+         m_table_positions.TextColor(5, r, (pos_profit != 0) ? (pos_profit > 0 ? clrGreen : clrRed) : clrLightGray);
+         m_table_positions.SetValue(5, r, v5, 0, true);
+         any_changed = true;
+        }
+       if(v6 != s_c6[r])
+        {
+         s_c6[r] = v6;
+         m_table_positions.TextColor(6, r, (buy_profit != 0) ? (buy_profit > 0 ? clrGreen : clrRed) : clrLightGray);
+         m_table_positions.SetValue(6, r, v6, 0, true);
+         any_changed = true;
+        }
+       if(v7 != s_c7[r])
+        {
+         s_c7[r] = v7;
+         m_table_positions.TextColor(7, r, (sell_profit != 0) ? (sell_profit > 0 ? clrGreen : clrRed) : clrLightGray);
+         m_table_positions.SetValue(7, r, v7, 0, true);
+         any_changed = true;
+        }
+       if(v8 != s_c8[r])
+        {
+         s_c8[r] = v8;
+         m_table_positions.SetValue(8, r, v8, 0, true);
+         any_changed = true;
+        }
+       if(v9 != s_c9[r])
+        {
+         s_c9[r] = v9;
+         m_table_positions.SetValue(9, r, v9, 0, true);
+         any_changed = true;
+        }
+      }
       if(any_changed)
          m_table_positions.Update(false);
       return any_changed;
-     }
+  }
  //+------------------------------------------------------------------+
  //| Check a new trade on history                                     |
  //+------------------------------------------------------------------+
  bool CGUIPannel::IsLastDealTicket(void)
   {
-      //--- Exit if the history is not received
-       if(!::HistorySelect(m_last_deal_time, UINT_MAX))
-          return(false);
-      //--- Get the number of deals in the obtained list
-       int total_deals = ::HistoryDealsTotal();
-      //--- Loop through the total number of deals in the obtained list from the
-      // last deal to the first one
-       for(int i = total_deals - 1; i >= 0; i--)
-         {
-          //--- Get the deal ticket
-           ulong deal_ticket = ::HistoryDealGetTicket(i);
-          //--- Exit if the tickets are equal
-           if(deal_ticket == m_last_deal_ticket)
-              return(false);
-          //--- If the tickets are not equal, report it
-           else
-             {
-              datetime deal_time = (datetime)::HistoryDealGetInteger(deal_ticket, DEAL_TIME);
-              //--- Save the last deal time and ticket
-               m_last_deal_time = deal_time;
-               m_last_deal_ticket = deal_ticket;
-               return(true);
-             }
-         }
-       return(false);
+   //--- Exit if the history is not received
+    if(!::HistorySelect(m_last_deal_time, UINT_MAX))
+      return(false);
+   //--- Get the number of deals in the obtained list
+    int total_deals = ::HistoryDealsTotal();
+   //--- Loop through the total number of deals in the obtained list from the
+   // last deal to the first one
+    for(int i = total_deals - 1; i >= 0; i--)
+     {
+      //--- Get the deal ticket
+       ulong deal_ticket = ::HistoryDealGetTicket(i);
+      //--- Exit if the tickets are equal
+       if(deal_ticket == m_last_deal_ticket)
+         return(false);
+      //--- If the tickets are not equal, report it
+       else
+        {
+         datetime deal_time = (datetime)::HistoryDealGetInteger(deal_ticket, DEAL_TIME);
+         //--- Save the last deal time and ticket
+          m_last_deal_time = deal_time;
+          m_last_deal_ticket = deal_ticket;
+          return(true);
+        }
+     }
+   return(false);
   }
  //+------------------------------------------------------------------+
  //| Get symbols of open positions in the array                       |
  //+------------------------------------------------------------------+
  int CGUIPannel::GetPositionsSymbols(string &symbols_name[])
   {
-      string symbols = "";
-      //--- Go through the loop for the first time and get symbols of open positions
-       int positions_total = ::PositionsTotal();
-       for(int i = 0; i < positions_total; i++)
-         {
-          //--- Select a position and get its symbol
-           string position_symbol = ::PositionGetSymbol(i);
-          //--- If there is a symbol name
-           if(position_symbol == "")
-              continue;
-          //--- If there is no such a string, add it
-           if(::StringFind(symbols, position_symbol, 0) == WRONG_VALUE)
-              ::StringAdd(symbols, (symbols == "") ? position_symbol : "," + position_symbol);
-         }
-      //--- Get string elements by separator
-       ushort u_sep = ::StringGetCharacter(",", 0);
-       int symbols_total = ::StringSplit(symbols, u_sep, symbols_name);
-      //--- Return the number of symbols
-       return(symbols_total);
+    string symbols = "";
+    //--- Go through the loop for the first time and get symbols of open positions
+     int positions_total = ::PositionsTotal();
+     for(int i = 0; i < positions_total; i++)
+      {
+       //--- Select a position and get its symbol
+        string position_symbol = ::PositionGetSymbol(i);
+       //--- If there is a symbol name
+        if(position_symbol == "")
+          continue;
+       //--- If there is no such a string, add it
+        if(::StringFind(symbols, position_symbol, 0) == WRONG_VALUE)
+           ::StringAdd(symbols, (symbols == "") ? position_symbol : "," + position_symbol);
+      }
+    //--- Get string elements by separator
+     ushort u_sep = ::StringGetCharacter(",", 0);
+     int symbols_total = ::StringSplit(symbols, u_sep, symbols_name);
+    //--- Return the number of symbols
+     return(symbols_total);
   }
  //+------------------------------------------------------------------+
  //| Position average price                                           |
  //+------------------------------------------------------------------+
  double CGUIPannel::PositionAveragePrice(const string symbol)
   {
-      //--- For calculating the average price
-       double sum_mult = 0.0;
-       double sum_volumes = 0.0;
-      //--- Check if there is a position with specified properties
-       int positions_total = ::PositionsTotal();
-       for(int i = positions_total - 1; i >= 0; i--)
-         {
-          //--- If failed to select a position, go to the next one
-           if(symbol != ::PositionGetSymbol(i))
-              continue;
-          //--- Get the price and position volume
-           double pos_price = ::PositionGetDouble(POSITION_PRICE_OPEN);
-           double pos_volume = ::PositionGetDouble(POSITION_VOLUME);
-          //--- Sum up the intermediate indicators
-           sum_mult += (pos_price * pos_volume);
-           sum_volumes += pos_volume;
-         }
-      //--- Prevent division by zero
-       if(sum_volumes <= 0)
-          return(0.0);
-      //--- Return the average price
-       return(::NormalizeDouble(sum_mult / sum_volumes, (int)::SymbolInfoInteger(symbol, SYMBOL_DIGITS)));
+   //--- For calculating the average price
+    double sum_mult = 0.0;
+    double sum_volumes = 0.0;
+   //--- Check if there is a position with specified properties
+    int positions_total = ::PositionsTotal();
+    for(int i = positions_total - 1; i >= 0; i--)
+     {
+      //--- If failed to select a position, go to the next one
+       if(symbol != ::PositionGetSymbol(i))
+          continue;
+      //--- Get the price and position volume
+       double pos_price = ::PositionGetDouble(POSITION_PRICE_OPEN);
+       double pos_volume = ::PositionGetDouble(POSITION_VOLUME);
+      //--- Sum up the intermediate indicators
+       sum_mult += (pos_price * pos_volume);
+       sum_volumes += pos_volume;
+     }
+    //--- Prevent division by zero
+    if(sum_volumes <= 0)
+       return(0.0);
+    //--- Return the average price
+    return(::NormalizeDouble(sum_mult / sum_volumes, (int)::SymbolInfoInteger(symbol, SYMBOL_DIGITS)));
   }
  //+------------------------------------------------------------------+
  //| Number of position trades with a specified symbol                |
  //+------------------------------------------------------------------+
  int CGUIPannel::PositionsTotal(const string symbol)
   {
-      //--- Position counter
-       int pos_counter = 0;
-      //--- Check if there is a position with specified properties
-       int positions_total = ::PositionsTotal();
-       for(int i = positions_total - 1; i >= 0; i--)
-         {
-          //--- If failed to select a position, go to the next one
-           if(symbol != ::PositionGetSymbol(i))
-              continue;
-          //--- Increase the counter
-           pos_counter++;
-         }
-      //--- Return the number of positions
-       return(pos_counter);
+   //--- Position counter
+    int pos_counter = 0;
+   //--- Check if there is a position with specified properties
+    int positions_total = ::PositionsTotal();
+    for(int i = positions_total - 1; i >= 0; i--)
+     {
+      //--- If failed to select a position, go to the next one
+       if(symbol != ::PositionGetSymbol(i))
+          continue;
+      //--- Increase the counter
+       pos_counter++;
+     }
+    //--- Return the number of positions
+    return(pos_counter);
   }
  //+------------------------------------------------------------------+
  //| Total volume of positions with the specified properties          |
  //+------------------------------------------------------------------+
  double CGUIPannel::PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
   {
-      //--- Volume counter
-       double volume_counter = 0;
-      //--- Check if there is a position with specified properties
-       int positions_total = ::PositionsTotal();
-       for(int i = positions_total - 1; i >= 0; i--)
-         {
-          //--- If failed to select a position, go to the next one
-           if(symbol != ::PositionGetSymbol(i))
-              continue;
-          //--- If the type should be selected
-           if(type != WRONG_VALUE)
-             {
-              //--- If the type does not match, go to the next position
-               if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
-                  continue;
-             }
-          //--- Sum up the volume
-           volume_counter += ::PositionGetDouble(POSITION_VOLUME);
-         }
-      //--- Return the volume
-       return(volume_counter);
+   //--- Volume counter
+    double volume_counter = 0;
+   //--- Check if there is a position with specified properties
+    int positions_total = ::PositionsTotal();
+    for(int i = positions_total - 1; i >= 0; i--)
+     {
+      //--- If failed to select a position, go to the next one
+       if(symbol != ::PositionGetSymbol(i))
+          continue;
+      //--- If the type should be selected
+       if(type != WRONG_VALUE)
+        {
+         //--- If the type does not match, go to the next position
+          if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
+             continue;
+        }
+      //--- Sum up the volume
+      volume_counter += ::PositionGetDouble(POSITION_VOLUME);
+     }
+    //--- Return the volume
+    return(volume_counter);
   }
  //+------------------------------------------------------------------+
  //| Total floating profit of positions with the specified properties |
  //+------------------------------------------------------------------+
  double CGUIPannel::PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
   {
-    //--- Current profit counter
-      double profit_counter = 0.0;
-    //--- Check if there is a position with specified properties
-      int positions_total = ::PositionsTotal();
-      for(int i = positions_total - 1; i >= 0; i--)
+   //--- Current profit counter
+    double profit_counter = 0.0;
+   //--- Check if there is a position with specified properties
+    int positions_total = ::PositionsTotal();
+    for(int i = positions_total - 1; i >= 0; i--)
+     {
+      //--- If failed to select a position, go to the next one
+       if(symbol != "" && symbol != ::PositionGetSymbol(i))
+          continue;
+      //--- If the type should be selected
+       if(type != WRONG_VALUE)
         {
-        //--- If failed to select a position, go to the next one
-          if(symbol != "" && symbol != ::PositionGetSymbol(i))
+        //--- If the type does not match, go to the next position
+         if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
             continue;
-        //--- If the type should be selected
-          if(type != WRONG_VALUE)
-            {
-            //--- If the type does not match, go to the next position
-              if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
-                continue;
-            }
-        //--- Sum up the current profit + accumulated swap
-          profit_counter += ::PositionGetDouble(POSITION_PROFIT) + ::PositionGetDouble(POSITION_SWAP);
         }
+      //--- Sum up the current profit + accumulated swap
+      profit_counter += ::PositionGetDouble(POSITION_PROFIT) + ::PositionGetDouble(POSITION_SWAP);
+     }
     //--- Return the result
       return(profit_counter);
   }
