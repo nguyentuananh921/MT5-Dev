@@ -9,7 +9,7 @@
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreateTabSettingConfig(const int x_gap, const int y_gap)
   {
-    string tabs_names[TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL] = {"Indicator", "Symbol TF", "Marker"};
+    string tabs_names[TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL] = {"Indicator", "Symbol TF","Candle Pattern", "Marker"};
     //--- Store the pointer to the parent control - nested inside m_tabs_main's Settings tab
     m_tabs_main_setting_config.MainPointer(m_tabs_main);
     //--- Properties
@@ -148,30 +148,30 @@
      CIndicatorDE *indicator = list.At(list.Total() - 1);
      int row = ArraySize(m_table_indicator_ptrs);
      if(row > 0)                      // an empty table already owns one physical row - reuse it for row 0
-       m_table_indicator.AddRow(row, true);   // redraw=true - recalculate visible-area size, see
+       m_table_indicator_template.AddRow(row, true);   // redraw=true - recalculate visible-area size, see
                                                 // README/BugNote 2026-07-14 black/smeared overflow bug
      ArrayResize(m_table_indicator_names, row + 1);
      ArrayResize(m_table_indicator_ptrs,  row + 1);
      ArrayResize(m_settings_cache_state,  row + 1);
      SetIndicatorTableRow(row, indicator);
-     m_table_indicator.Update(true);
+     m_table_indicator_template.Update(true);
   }
  //For m_table_indicator in TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR m_tabs_main_setting_config
  //List all indicator in template
  bool CGUIPannel::CreateTabbleIndicator(const int x, const int y)
   {
-   m_table_indicator.MainPointer(m_tabs_main_setting_config);
-   m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator);
+   m_table_indicator_template.MainPointer(m_tabs_main_setting_config);
+   m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator_template);
    //Resize Properties
-    m_table_indicator.AutoXResizeMode(true);
-    m_table_indicator.AutoXResizeRightOffset(3);
-    m_table_indicator.AutoYResizeMode(true);
-    m_table_indicator.AutoYResizeBottomOffset(3);
+    m_table_indicator_template.AutoXResizeMode(true);
+    m_table_indicator_template.AutoXResizeRightOffset(3);
+    m_table_indicator_template.AutoYResizeMode(true);
+    m_table_indicator_template.AutoYResizeBottomOffset(3);
    //Table Properties
-    m_table_indicator.ShowHeaders(true);
-    m_table_indicator.SelectableRow(true);
-    m_table_indicator.LightsHover(true);
-    m_table_indicator.IsSortMode(true);
+    m_table_indicator_template.ShowHeaders(true);
+    m_table_indicator_template.SelectableRow(true);
+    m_table_indicator_template.LightsHover(true);
+    m_table_indicator_template.IsSortMode(true);
    // --- 7 columns: col 0 merges the old icon-only "show on T3" column with the
    // --- "Indicator" text column (CTCell renders image+text independently, click
    // --- detection is scoped to the image's own pixel width - see Table.mqh
@@ -179,27 +179,45 @@
    // --- down by 1. Sound/Message added 2026-07-17: per-template opt-in for a sound
    // --- alert + Journal message when that template gets a new Signal - wiring TBD,
    // --- this only adds the checkbox UI columns for now.
-    m_table_indicator.TableSize(7, 20);
+    m_table_indicator_template.TableSize(7, 20);
     int widths[7]    = {180, 70, 40, 40, 40, 40, 40};
     int img_x_off[7] = {3,   0,  10, 10, 10, 10, 10};
     int img_y_off[7] = {3,   0,  3,  3,  3,  3,  3};
     ENUM_ALIGN_MODE align[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
-    m_table_indicator.ColumnsWidth(widths);
-    m_table_indicator.ImageXOffset(img_x_off);
-    m_table_indicator.ImageYOffset(img_y_off);
-    m_table_indicator.TextAlign(align);
-    
-   if(!m_table_indicator.CreateTable(x, y)) return false;
+    m_table_indicator_template.ColumnsWidth(widths);
+    m_table_indicator_template.ImageXOffset(img_x_off);
+    m_table_indicator_template.ImageYOffset(img_y_off);
+    m_table_indicator_template.TextAlign(align);
+    m_table_indicator_template.HeaderYSize(24);
+
+   if(!m_table_indicator_template.CreateTable(x, y)) return false;
    //Set Header text
-    m_table_indicator.SetHeaderText(0, "Indicator");
-   m_table_indicator.SetHeaderText(1, "Group");
+    m_table_indicator_template.SetHeaderText(0, "Indicator");
+    m_table_indicator_template.SetHeaderText(1, "Group");
    //Checkbox to show or hide on Layer 3 (Chart)
-    m_table_indicator.SetHeaderText(2, "Buy");
-    m_table_indicator.SetHeaderText(3, "Sell");
-    m_table_indicator.SetHeaderText(4, "Show");   //On to show on Chart
-    m_table_indicator.SetHeaderText(5, "Sound");  //On to show sound alert
-    m_table_indicator.SetHeaderText(6, "Message");//On to show message alert
-   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator);
+   //Column 2
+    uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_BUY_PNG};
+    m_table_indicator_template.SetHeaderImage(2, resource_indices_buy);
+    m_table_indicator_template.SetHeaderText(2, "");
+   //Column 3
+    uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SELL_PNG};
+    m_table_indicator_template.SetHeaderImage(3, resource_indices_sell);
+    m_table_indicator_template.SetHeaderText(3, "");
+
+   //Column 4 Setting for Visiable on Chart
+    uint resource_indices_visiable[] = {IMAGE_RESOURCE_BMP16_VISIBLE_PNG};
+    m_table_indicator_template.SetHeaderImage(4, resource_indices_visiable);
+    m_table_indicator_template.SetHeaderText(4, "");   //On to show on Chart
+    
+   //Column 5 Setting for sound alert
+    uint resource_indices_sound[] = {IMAGE_RESOURCE_BMP16_BELL_PNG};
+    m_table_indicator_template.SetHeaderImage(5, resource_indices_sound);
+    m_table_indicator_template.SetHeaderText(5, "");  //On to show sound alert
+   //Column 6 Setting for message alert
+    uint resource_indices_message[] = {IMAGE_RESOURCE_BMP16_MESSAGE_PNG};
+    m_table_indicator_template.SetHeaderImage(6, resource_indices_message);
+    m_table_indicator_template.SetHeaderText(6, "");  //On to show message alert
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator_template);
    return true;
   } 
  // --- Template view of Layer 1 (see README 5c): one row per template. The row set changes
@@ -232,7 +250,7 @@
         string label = "        " + BuildIndicatorLabel(indicator, catalog);
         int row = -1;
         for(int r = 0; r < count; r++)
-         if(m_table_indicator.GetValue(0, r) == label) { row = r; break; }
+         if(m_table_indicator_template.GetValue(0, r) == label) { row = r; break; }
           if(row < 0) continue;
           m_table_indicator_ptrs[row]  = indicator;
           m_table_indicator_names[row] = indicator.ShortName();
@@ -244,27 +262,27 @@
    if(count == 0)
     {
      if(ArraySize(m_table_indicator_ptrs) == 0) return; // already showing the empty state - leave the table alone
-     m_table_indicator.DeleteAllRows();
-     m_table_indicator.AddRow(0);   // safety row: Library bug - DeleteAllRows does not reset m_item_index_focus
+     m_table_indicator_template.DeleteAllRows();
+     m_table_indicator_template.AddRow(0);   // safety row: Library bug - DeleteAllRows does not reset m_item_index_focus
      ArrayResize(m_table_indicator_names, 0);
      ArrayResize(m_table_indicator_ptrs, 0);
      ArrayResize(m_settings_cache_state, 0);
-     m_table_indicator.Update(true);
+     m_table_indicator_template.Update(true);
      return;
     }
-   m_table_indicator.DeleteAllRows();
+   m_table_indicator_template.DeleteAllRows();
    // --- redraw=true on the LAST row only: AddRow() only recalculates the table's visible-area
    // --- size (CTable::RecalculateAndResizeTable) when told to - skipping it on every row and
    // --- doing it once at the end avoids the black/smeared row-overflow bug (README/BugNote
    // --- 2026-07-14) without paying the recalculation cost on every single row.
    for(int i = 0; i < count - 1; i++)   // DeleteAllRows leaves one physical row behind
-    m_table_indicator.AddRow(i, i == count - 2);
+    m_table_indicator_template.AddRow(i, i == count - 2);
     ArrayResize(m_table_indicator_names, count);
     ArrayResize(m_table_indicator_ptrs, count);
     ArrayResize(m_settings_cache_state, count);
     for(int row = 0; row < count; row++)
     SetIndicatorTableRow(row, list.At(row));
-    m_table_indicator.Update(true);
+    m_table_indicator_template.Update(true);
   }
  // --- Fill every cell of one template row + the parallel arrays (names/ptrs/state cache)
  void CGUIPannel::SetIndicatorTableRow(const int row, CIndicatorDE *indicator)
@@ -279,36 +297,36 @@
    GetIndicatorCatalog(catalog);
    string label = BuildIndicatorLabel(indicator, catalog);
    // --- Col 0: red Close (delete) icon + label - click detection covers the icon only   
-    m_table_indicator.CellType(0, row, CELL_BUTTON);
-    m_table_indicator.SetImages(0, row, delete_icon);
-    m_table_indicator.ChangeImage(0, row, 0);
-    m_table_indicator.SetValue(0, row, "        " + label);   // leading spaces clear the icon
+    m_table_indicator_template.CellType(0, row, CELL_BUTTON);
+    m_table_indicator_template.SetImages(0, row, delete_icon);
+    m_table_indicator_template.ChangeImage(0, row, 0);
+    m_table_indicator_template.SetValue(0, row, "        " + label);   // leading spaces clear the icon
    // --- Col 1: group name
     int group = (int)indicator.Group();
     string gname = (group >= 0 && group < 4) ? group_names[group] : "Other";
-    m_table_indicator.SetValue(1, row, "  " + gname);
+    m_table_indicator_template.SetValue(1, row, "  " + gname);
    // --- Col 2/3: Buy / Sell signal filters (default OFF - markers are opt-in per template;
    // --- TemplateBuySellFor reads these checkboxes live, toggles rewrite the bridge file)
-    m_table_indicator.CellType(2, row, CELL_CHECKBOX);
-    m_table_indicator.SetImages(2, row, chk);
-    m_table_indicator.ChangeImage(2, row, 1);
-    m_table_indicator.CellType(3, row, CELL_CHECKBOX);
-    m_table_indicator.SetImages(3, row, chk);
-    m_table_indicator.ChangeImage(3, row, 1);
+    m_table_indicator_template.CellType(2, row, CELL_CHECKBOX);
+    m_table_indicator_template.SetImages(2, row, chk);
+    m_table_indicator_template.ChangeImage(2, row, 1);
+    m_table_indicator_template.CellType(3, row, CELL_CHECKBOX);
+    m_table_indicator_template.SetImages(3, row, chk);
+    m_table_indicator_template.ChangeImage(3, row, 1);
    // --- Col 4: "shown on the CURRENT chart" checkbox
     int state = IsIndicatorShownOnChart(indicator) ? INDICATOR_SHOW_ON_CHART : INDICATOR_HIDE_ON_CHART;
-    m_table_indicator.CellType(4, row, CELL_CHECKBOX);
-    m_table_indicator.SetImages(4, row, show_on_chart);
-    m_table_indicator.ChangeImage(4, row, state);
+    m_table_indicator_template.CellType(4, row, CELL_CHECKBOX);
+    m_table_indicator_template.SetImages(4, row, show_on_chart);
+    m_table_indicator_template.ChangeImage(4, row, state);
    // --- Col 5/6: Sound / Message opt-in per template (default OFF, same pattern as
    // --- Buy/Sell) - checkbox UI only for now, wiring to actually play/print on a new
    // --- Signal is still TBD (2026-07-17).
-    m_table_indicator.CellType(5, row, CELL_CHECKBOX);
-    m_table_indicator.SetImages(5, row, chk);
-    m_table_indicator.ChangeImage(5, row, 1);
-    m_table_indicator.CellType(6, row, CELL_CHECKBOX);
-    m_table_indicator.SetImages(6, row, chk);
-    m_table_indicator.ChangeImage(6, row, 1);
+    m_table_indicator_template.CellType(5, row, CELL_CHECKBOX);
+    m_table_indicator_template.SetImages(5, row, chk);
+    m_table_indicator_template.ChangeImage(5, row, 1);
+    m_table_indicator_template.CellType(6, row, CELL_CHECKBOX);
+    m_table_indicator_template.SetImages(6, row, chk);
+    m_table_indicator_template.ChangeImage(6, row, 1);
 
     m_table_indicator_names[row] = indicator.ShortName();
     m_table_indicator_ptrs[row]  = indicator;   // BORROWED - CIndicatorsCollection owns it
@@ -323,12 +341,12 @@
      int state = IsIndicatorShownOnChart(m_table_indicator_ptrs[row]) ? INDICATOR_SHOW_ON_CHART : INDICATOR_HIDE_ON_CHART;
      if(state == m_settings_cache_state[row]) continue;
      m_settings_cache_state[row] = state;
-     m_table_indicator.ChangeImage(4, row, state);
-     m_table_indicator.BackColor(4, row, clrWhite, true);   // force this one cell to repaint
+     m_table_indicator_template.ChangeImage(4, row, state);
+     m_table_indicator_template.BackColor(4, row, clrWhite, true);   // force this one cell to repaint
      any_changed = true;
     }
    if(any_changed)
-     m_table_indicator.Update(false);
+     m_table_indicator_template.Update(false);
   }
  //To Add Indicator
   // Builds the per-param layout for `type`. element_type is always carried
@@ -897,7 +915,7 @@
     if(row < 0 || row >= ArraySize(m_table_indicator_ptrs)) return;
     CIndicatorDE *ind = m_table_indicator_ptrs[row];
     if(ind == NULL) return;
-    int new_state = (int)m_table_indicator.SelectedImageIndex(4, row);
+    int new_state = (int)m_table_indicator_template.SelectedImageIndex(4, row);
     int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
     if(new_state == INDICATOR_HIDE_ON_CHART)   // Hide: remove from chart, PureData/handle stay intact
           DetachIndicatorFromChart(ind);
@@ -921,11 +939,7 @@
    {
     UpdateSignalBridgeTemplateFlags();
     m_bridge_writer.ResetSignalBridge();
-   }
-  void CGUIPannel::OnClickSaveIndicators(void)
-   {
-    SaveGUIConfigToJSON();
-   }
+   }  
   //+------------------------------------------------------------------+
   //| Called ONCE right after the initial RefreshIndicatorTable() (see |
   //| OnInitEvent) - pulls the Buy/Sell state CTimeSeriesEngine::       |
@@ -958,15 +972,15 @@
       for(int q = 0; q < ArraySize(types); q++)
        {
         if(types[q] != type_key || param_keys[q] != params_key) continue;
-        m_table_indicator.ChangeImage(2, row, buys[q]     ? 0 : 1);
-        m_table_indicator.ChangeImage(3, row, sells[q]    ? 0 : 1);
-        m_table_indicator.ChangeImage(5, row, sounds[q]   ? 0 : 1);
-        m_table_indicator.ChangeImage(6, row, messages[q] ? 0 : 1);
+        m_table_indicator_template.ChangeImage(2, row, buys[q]     ? 0 : 1);
+        m_table_indicator_template.ChangeImage(3, row, sells[q]    ? 0 : 1);
+        m_table_indicator_template.ChangeImage(5, row, sounds[q]   ? 0 : 1);
+        m_table_indicator_template.ChangeImage(6, row, messages[q] ? 0 : 1);
         any_changed = true;
             break;
         }
       }
-      if(any_changed) m_table_indicator.Update(true);
+      if(any_changed) m_table_indicator_template.Update(true);
    }
   //+------------------------------------------------------------------+
   //| Build the Col2 display label ("ShortName  (params)") for an      |
@@ -1115,12 +1129,12 @@
          // empty array (no API to strip a cell's icons) - so add a freshly CellInitialize'd
          // blank row first, then delete the old row 0 that still carries the delete/checkbox
          // icons. The blank row shifts up and becomes the single empty survivor.
-          m_table_indicator.AddRow(1);
-          m_table_indicator.DeleteRow(0, true);
-          m_table_indicator.Update(true);
+          m_table_indicator_template.AddRow(1);
+          m_table_indicator_template.DeleteRow(0, true);
+          m_table_indicator_template.Update(true);
         }
        else
-         m_table_indicator.DeleteRow(row, true);
+         m_table_indicator_template.DeleteRow(row, true);
       SetValuesToTableIndicatorSymbolTFValue();
       SyncIndicatorTreeViewIcons();
       ChartRedraw();

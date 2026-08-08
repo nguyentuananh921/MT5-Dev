@@ -12,7 +12,11 @@
    #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
    #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh>  
    #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
+   #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\NewBarObj.mqh>   
    #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Trading\TradingLevelBubble.mqh>
+   #include "..\Services\SignalLogger.mqh"
+   #include "..\Services\SignalBridgeWriter.mqh"
+   
   // For indicator catalog/schema + CTimeSeriesEngine itself - JSON loading and
   // indicator creation live there now, GUIPannel only reads + renders (EA-local, not the Library)
    #include "..\Artyom Trishkin\TimeSeriesEngine.mqh"
@@ -58,7 +62,8 @@
       enum ENUM_TAB_MAIN_SETTINGS_CONFIG
        {
         TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR =0,
-        TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,    
+        TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,
+        TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN,    
         TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER,
         TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL,
        };      
@@ -127,15 +132,16 @@
    #define PARAM_FORM_X              (INDICATOR_TREE_WIDTH + 10)
    #define PARAM_FORM_Y              5
    #define PARAM_ROW_H               30
-   #define ADD_BTN_H                 22
+   //#define ADD_BTN_H                 22
+   #define BTN_HEIGHT                 22
   // --- Indicator table: below Add button with 10px gap; width auto-fills m_tabs_main via AutoXResizeMode.
    #define INDICATOR_TABLE_X         PARAM_FORM_X
-   #define INDICATOR_TABLE_Y         (PARAM_FORM_Y + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10 + ADD_BTN_H + 10)
+   #define INDICATOR_TABLE_Y         (PARAM_FORM_Y + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10 + BTN_HEIGHT + 10)
   // --- Symbol/TF setting table (Symbol TF sub-tab): note row on top, save button below it,
   // --- table below the button - same 10px gap convention as INDICATOR_TABLE_Y.
    #define SYMBOLTF_NOTE_H           20
    #define SYMBOLTF_BTN_Y            (SYMBOLTF_NOTE_H + 5)
-   #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + ADD_BTN_H + 10)
+   #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + BTN_HEIGHT + 10)
   // --- Positions tab: pre-trade-plan area above m_table_positions (Anhnt 2026-07-20).
   // --- Row 1 (y=POSITIONS_PLAN_Y): m_combo_pre_Trade_plan_symbol.
   // --- Row 2 (y=POSITIONS_PLAN_CONTROLS_Y): Distance mode+value, Lot mode+value - one

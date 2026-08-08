@@ -42,6 +42,7 @@
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
         mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection());
         mGUIPannel.SetTimeSeriesEngine(&timeSeriesEngine);   // Tang 2 forwards "Add" clicks to Tang 1
+        mGUIPannel.SetPatternsControl(timeSeriesEngine.GetPatternsControl());
         //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
         mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl());

@@ -50,6 +50,7 @@
         int               m_text_x_offset;  // Text indentation
         int               m_image_x_offset; // Indent of the image from the X-edge of the cell
         int               m_image_y_offset; // Indent of the image from the Y-edge of the cell
+        CImage            m_header_image;   // Header image
         string            m_header_text;    // Column header text
         CTCell            m_rows[];         // Array of table rows
        };
@@ -162,7 +163,7 @@
     //Private methods
         void              InitializeProperties(const int x_gap,const int y_gap);
         bool              CreateCanvas(void);
-        bool              CreateHeaders(void);
+        bool              CreateHeaders(void);        
         bool              CreateTable(void);
         bool              CreateScrollV(void);
         bool              CreateScrollH(void);
@@ -389,6 +390,9 @@
       void              Clear(const bool redraw=false);
     // --- (1) Set the text to the specified header, (2) get the text of the specified header, (3) get the headers into the passed array
       void              SetHeaderText(const uint column_index,const string value);
+      void              SetHeaderImage(const uint column_index, const string bmp_file_path);
+      void              SetHeaderImage(const uint column_index,const uint &resource_index[]);
+
       string            GetHeaderText(const uint column_index);
       uint              GetHeadersText(string &headers[]);
     // --- Set (1) text alignment mode, (2) cell text indentation along X axis, and (3) width for each column
@@ -878,6 +882,18 @@
       ::ObjectSetInteger(m_chart_id,m_headers.ChartObjectName(),OBJPROP_XOFFSET,0);
       ::ObjectSetInteger(m_chart_id,m_headers.ChartObjectName(),OBJPROP_YOFFSET,0);
       return(true);
+   }
+  void CTable::SetHeaderImage(const uint column_index, const string bmp_file_path)
+   {
+    if(!CheckOutOfColumnRange(column_index)) return;
+    m_columns[column_index].m_header_image.ReadImageData(bmp_file_path);
+   }
+  void CTable::SetHeaderImage(const uint column_index,const uint &resource_index[])
+   {
+    if(!CheckOutOfColumnRange(column_index)) return;
+    int total = ::ArraySize(resource_index);
+    if(total < 1) return;
+    m_columns[column_index].m_header_image.ReadImageData(resource_index[0]);
    }
   //+------------------------------------------------------------------+
   // | Creates a vertical scroll |
@@ -2950,17 +2966,45 @@
       uint clr=::ColorToARGB(m_headers_text_color);
     // --- Font properties
       m_headers.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_NORMAL);
-    // --- Draw text
+    // --- Draw text & image for headers
+    for(uint c=0; c<m_columns_total; c++)
+     {
+      // --- Draw Header Image if this column has loaded image
+      if(m_columns[c].m_header_image.DataTotal() > 0)
+       {
+        uint img_w = m_columns[c].m_header_image.Width();
+        uint img_h = m_columns[c].m_header_image.Height();        
+        // Center image in header by X and Y
+        int img_x = m_columns[c].m_x + (m_columns[c].m_width - (int)img_w) / 2;
+        int img_y = (m_header_y_size - (int)img_h) / 2;
+        
+        for(uint ly=0, i=0; ly<img_h; ly++)
+           {
+            for(uint lx=0; lx<img_w; lx++, i++)
+             {
+                if(m_columns[c].m_header_image.Data(i) < 1) continue;
+                if(m_columns[c].m_header_image.Data(i) == 16777215) continue;  // Skip white transparent background
+                if((m_columns[c].m_header_image.Data(i) & 0xFF000000) == 0) continue;  // Skip if alpha = 0
+
+                uint bg  = m_headers.PixelGet(img_x + (int)lx, img_y + (int)ly);
+                uint px  = m_columns[c].m_header_image.Data(i);
+                uint fg  = ::ColorToARGB(m_clr.BlendColors(bg, px));
+                m_headers.PixelSet(img_x + (int)lx, img_y + (int)ly, fg);
+             }
+           }
+       }
+      // --- Draw text
       for(uint c=0; c<m_columns_total; c++)
-         {
+       {
          // --- Get the X-coordinate of the text
          x=TextX(c,true);
          // --- Let's get the text alignment method
          text_align=TextAlign(c,TA_VCENTER);
          // --- Draw column title
          m_headers.TextOut(x,y,CorrectingText(c,0,true),clr,text_align);
-         }
-   }
+        }
+     }
+    }
   //+------------------------------------------------------------------+
   // | Changing the color of table objects |
   //+------------------------------------------------------------------+

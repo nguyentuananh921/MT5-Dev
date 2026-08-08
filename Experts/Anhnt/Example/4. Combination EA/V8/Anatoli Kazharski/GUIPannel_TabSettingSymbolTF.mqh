@@ -57,8 +57,14 @@
     if(!m_table_indicator_SymbolTFSeting.CreateTable(x, y + SYMBOLTF_TABLE_Y)) return false;
     m_table_indicator_SymbolTFSeting.SetHeaderText(0, "Symbol");
     m_table_indicator_SymbolTFSeting.SetHeaderText(1, "TF");
-    m_table_indicator_SymbolTFSeting.SetHeaderText(2, "Buy");   
-    m_table_indicator_SymbolTFSeting.SetHeaderText(3, "Sell");
+    //Column 2 for Buy 
+     uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_BUY_PNG};   
+     m_table_indicator_SymbolTFSeting.SetHeaderText(2, ""); 
+     m_table_indicator_SymbolTFSeting.SetHeaderImage(2, resource_indices_buy); 
+    //Column 3 for sell
+     uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SELL_PNG}; 
+     m_table_indicator_SymbolTFSeting.SetHeaderText(3, "");
+     m_table_indicator_SymbolTFSeting.SetHeaderImage(3, resource_indices_sell);
    // --- Collapse the TableSize() padding down to a single blank baseline row -
    // --- PopulateTableSymbolTFSetting() reuses that one row for its very first entry.
     m_table_indicator_SymbolTFSeting.DeleteAllRows();
@@ -229,13 +235,6 @@
   {
    return (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
   }
- // --- Save button click - both m_btn_save_indicator and m_btn_save_SymbolTF write the SAME
- // --- indicators_config.json (single source of truth, no separate Buy/Sell file) - see
- // --- SaveGUIConfigToJSON().
- void CGUIPannel::OnClickSaveSymbolTF(void)
-  {
-   SaveGUIConfigToJSON();
-  }    
 // --- Checkbox click stub (col 2 = Buy, col 3 = Sell) - the table already auto-toggled the
 // --- icon before this event fires (see Table.mqh CheckPressedCheckBox), so no manual image
 // --- flip needed here. Intentionally empty for now - no Tang 1 trading data model exists

@@ -14,52 +14,60 @@
 //+------------------------------------------------------------------+
 #include "..\BarPatternControl.mqh"
 #include "..\..\BarSeriesPatterns\SCandlesPatterns\PatternPinBar.mqh"
-
-  #ifndef CBarPatternControlPinBar_MQH_DECLARATION
-  #define CBarPatternControlPinBar_MQH_DECLARATION
-//+------------------------------------------------------------------+
-//| Pin Bar pattern control class                                    |
-//+------------------------------------------------------------------+
-  class CBarPatternControlPinBar : public CBarPatternControl
-    {
+ #ifndef CBarPatternControlPinBar_MQH_DECLARATION
+ #define CBarPatternControlPinBar_MQH_DECLARATION
+ //+------------------------------------------------------------------+
+ //| Pin Bar pattern control class                                    |
+ //+------------------------------------------------------------------+
+ class CBarPatternControlPinBar : public CBarPatternControl
+  {
     protected:
-      //--- (1) Search for a pattern, return direction (or -1),
-      //--- (2) create a pattern with a specified direction,
-      //--- (3) create and return a unique pattern code
-      //--- (4) return the list of patterns managed by the object
+     //--- (1) Search for a pattern, return direction (or -1),
+     //--- (2) create a pattern with a specified direction,
+     //--- (3) create and return a unique pattern code
+     //--- (4) return the list of patterns managed by the object
       virtual ENUM_PATTERN_DIRECTION FindPattern(const datetime series_bar_time, MqlRates &mother_bar_data) const;
       virtual CBarPattern           *CreatePattern(const ENUM_PATTERN_DIRECTION direction, const uint id, CBar *bar);
-      virtual ulong                  GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const
-                                       {
-                                         return(time+PATTERN_TYPE_PIN_BAR+PATTERN_STATUS_PA+direction+this.Timeframe()+this.m_symbol_code);
-                                       }
+      virtual ulong                  GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const;
       virtual CArrayObj             *GetListPatterns(void);
-      //--- Create object ID based on pattern search criteria
+     //--- Create object ID based on pattern search criteria
       virtual ulong                  CreateObjectID(void);
-
     public:
-      //--- Parametric constructor
+     //--- Parametric constructor
                                      CBarPatternControlPinBar(const string symbol, const ENUM_TIMEFRAMES timeframe,
                                                               CArrayObj *list_series, CArrayObj *list_patterns,
-                                                              const MqlParam &param[]) :
-                                       CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_PIN_BAR, list_series, list_patterns, param)
-                                         {
-                                           this.m_min_body_size                          = (uint)this.PatternParams[0].integer_value;
-                                           this.m_ratio_body_to_candle_size              = this.PatternParams[1].double_value;
-                                           this.m_ratio_larger_shadow_to_candle_size     = this.PatternParams[2].double_value;
-                                           this.m_ratio_smaller_shadow_to_candle_size    = this.PatternParams[3].double_value;
-                                           this.m_ratio_candle_sizes                     = 0;
-                                           this.m_object_id                              = this.CreateObjectID();
-                                         }
-    };
-  #endif // CBarPatternControlPinBar_MQH_DECLARATION
-
-  #ifndef CBarPatternControlPinBar_MQH_IMPLEMENTATION
-  #define CBarPatternControlPinBar_MQH_IMPLEMENTATION
-//+------------------------------------------------------------------+
-//| Create object ID based on pattern search criteria                |
-//+------------------------------------------------------------------+
-ulong CBarPatternControlPinBar::CreateObjectID(void)
+                                                              const MqlParam &param[]);
+  };
+ #endif // CBarPatternControlPinBar_MQH_DECLARATION
+ #ifndef CBarPatternControlPinBar_MQH_IMPLEMENTATION
+ #define CBarPatternControlPinBar_MQH_IMPLEMENTATION
+ //+------------------------------------------------------------------+
+ //| Parametric constructor                                           |
+ //+------------------------------------------------------------------+
+ CBarPatternControlPinBar::CBarPatternControlPinBar(const string symbol, const ENUM_TIMEFRAMES timeframe,
+                                                   CArrayObj *list_series, CArrayObj *list_patterns,
+                                                   const MqlParam &param[]) :
+  CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_PIN_BAR, list_series, list_patterns, param)
+  {
+   int param_size = ArraySize(this.PatternParams);
+   this.m_min_body_size                          = (param_size > 0) ? (uint)this.PatternParams[0].integer_value : 0;
+   this.m_ratio_body_to_candle_size              = (param_size > 1) ? this.PatternParams[1].double_value : 0;
+   this.m_ratio_larger_shadow_to_candle_size     = (param_size > 2) ? this.PatternParams[2].double_value : 0;
+   this.m_ratio_smaller_shadow_to_candle_size    = (param_size > 3) ? this.PatternParams[3].double_value : 0;
+   this.m_ratio_candle_sizes                     = 0;
+   this.m_object_id                              = this.CreateObjectID();
+  }
+ //+------------------------------------------------------------------+
+ //| Get pattern code                                                  |
+ //+------------------------------------------------------------------+
+ ulong CBarPatternControlPinBar::GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const
+  {
+   return(time+PATTERN_TYPE_PIN_BAR+PATTERN_STATUS_PA+direction+this.Timeframe()+this.m_symbol_code);
+  }
+ //+------------------------------------------------------------------+
+ //| Create object ID based on pattern search criteria                |
+ //+------------------------------------------------------------------+
+ ulong CBarPatternControlPinBar::CreateObjectID(void)
   {
    ushort body    = (ushort)this.RatioBodyToCandleSizeValue() * 100;
    ushort larger  = (ushort)this.RatioLargerShadowToCandleSizeValue() * 100;
@@ -69,10 +77,10 @@ ulong CBarPatternControlPinBar::CreateObjectID(void)
    this.UshortToLong(larger,  1, res);
    return this.UshortToLong(smaller, 2, res);
   }
-//+------------------------------------------------------------------+
-//| CBarPatternControlPinBar::Create a pattern with a specified dir  |
-//+------------------------------------------------------------------+
-CBarPattern *CBarPatternControlPinBar::CreatePattern(const ENUM_PATTERN_DIRECTION direction, const uint id, CBar *bar)
+ //+------------------------------------------------------------------+
+ //| CBarPatternControlPinBar::Create a pattern with a specified dir  |
+ //+------------------------------------------------------------------+
+ CBarPattern *CBarPatternControlPinBar::CreatePattern(const ENUM_PATTERN_DIRECTION direction, const uint id, CBar *bar)
   {
    if(bar == NULL)
       return NULL;
@@ -90,10 +98,10 @@ CBarPattern *CBarPatternControlPinBar::CreatePattern(const ENUM_PATTERN_DIRECTIO
    obj.SetProperty(PATTERN_PROP_CTRL_OBJ_ID, this.ObjectID());
    return obj;
   }
-//+------------------------------------------------------------------+
-//| CBarPatternControlPinBar::Search for pattern                     |
-//+------------------------------------------------------------------+
-ENUM_PATTERN_DIRECTION CBarPatternControlPinBar::FindPattern(const datetime series_bar_time, MqlRates &mother_bar_data) const
+ //+------------------------------------------------------------------+
+ //| CBarPatternControlPinBar::Search for pattern                     |
+ //+------------------------------------------------------------------+
+ ENUM_PATTERN_DIRECTION CBarPatternControlPinBar::FindPattern(const datetime series_bar_time, MqlRates &mother_bar_data) const
   {
    CArrayObj *list = CTimeseriesSelect::ByBarProperty(this.m_list_series, BAR_PROP_TIME, series_bar_time, EQUAL);
    if(list == NULL || list.Total() == 0)
@@ -128,15 +136,15 @@ ENUM_PATTERN_DIRECTION CBarPatternControlPinBar::FindPattern(const datetime seri
      }
    return WRONG_VALUE;
   }
-//+------------------------------------------------------------------+
-//| Return the list of patterns managed by the object                |
-//+------------------------------------------------------------------+
-CArrayObj *CBarPatternControlPinBar::GetListPatterns(void)
+ //+------------------------------------------------------------------+
+ //| Return the list of patterns managed by the object                |
+ //+------------------------------------------------------------------+
+ CArrayObj *CBarPatternControlPinBar::GetListPatterns(void)
   {
    CArrayObj *list = CTimeseriesSelect::ByPatternProperty(this.m_list_all_patterns, PATTERN_PROP_PERIOD, this.Timeframe(), EQUAL);
    list            = CTimeseriesSelect::ByPatternProperty(list, PATTERN_PROP_SYMBOL, this.Symbol(), EQUAL);
    list            = CTimeseriesSelect::ByPatternProperty(list, PATTERN_PROP_TYPE, PATTERN_TYPE_PIN_BAR, EQUAL);
    return            CTimeseriesSelect::ByPatternProperty(list, PATTERN_PROP_CTRL_OBJ_ID, this.ObjectID(), EQUAL);
   }
-  #endif // CBarPatternControlPinBar_MQH_IMPLEMENTATION
+ #endif // CBarPatternControlPinBar_MQH_IMPLEMENTATION
 #endif // __BARPATTERNCONTROLPINBAR_MQH__

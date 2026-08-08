@@ -24,31 +24,11 @@
     {
 private:
       //--- Return the ratio of nearby candles for the specified bar
-      double                         GetRatioCandles(const CBar *bar) const
-                                       {
-                                         if(bar == NULL) return 0;
-                                         CArrayObj *list = CTimeseriesSelect::ByBarProperty(this.m_list_series, BAR_PROP_TIME, bar.Time(), LESS);
-                                         if(list == NULL || list.Total() == 0) return 0;
-                                         list.Sort(SORT_BY_BAR_TIME);
-                                         CBar *bar1 = list.At(list.Total() - 1);
-                                         if(bar1 == NULL) return 0;
-                                         return(bar.Size() > 0 ? bar1.Size() * 100.0 / bar.Size() : 0.0);
-                                       }
+      double                         GetRatioCandles(const CBar *bar) const;
       //--- Check proportions of candle body to candle size
-      bool                           CheckProportions(const CBar *bar) const { return(bar.RatioBodyToCandleSize() >= this.RatioBodyToCandleSizeValue()); }
+      bool                           CheckProportions(const CBar *bar) const;
       //--- Check and return the presence of a pattern on two adjacent bars
-      bool                           CheckOutsideBar(const CBar *bar1, const CBar *bar0) const
-                                       {
-                                         if(bar0 == NULL || bar1 == NULL ||
-                                            bar0.TypeBody() == BAR_BODY_TYPE_NULL         || bar1.TypeBody() == BAR_BODY_TYPE_NULL         ||
-                                            bar0.TypeBody() == BAR_BODY_TYPE_CANDLE_ZERO_BODY || bar1.TypeBody() == BAR_BODY_TYPE_CANDLE_ZERO_BODY ||
-                                            bar0.TypeBody() == bar1.TypeBody())
-                                            return false;
-                                         double ratio = (bar0.Size() > 0 ? bar1.Size() * 100.0 / bar0.Size() : 0.0);
-                                         if(ratio < this.RatioCandleSizeValue()) return false;
-                                         return(bar1.High() <= bar0.High() && bar1.Low() >= bar0.Low() &&
-                                                bar1.TopBody() < bar0.TopBody() && bar1.BottomBody() > bar0.BottomBody());
-                                       }
+      bool                           CheckOutsideBar(const CBar *bar1, const CBar *bar0) const;
 
 protected:
       //--- (1) Search for a pattern, return direction (or -1),
@@ -57,10 +37,7 @@ protected:
       //--- (4) return the list of patterns managed by the object
       virtual ENUM_PATTERN_DIRECTION FindPattern(const datetime series_bar_time, MqlRates &mother_bar_data) const;
       virtual CBarPattern           *CreatePattern(const ENUM_PATTERN_DIRECTION direction, const uint id, CBar *bar);
-      virtual ulong                  GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const
-                                       {
-                                         return(time+PATTERN_TYPE_OUTSIDE_BAR+PATTERN_STATUS_PA+direction+this.Timeframe()+this.m_symbol_code);
-                                       }
+      virtual ulong                  GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const;
       virtual CArrayObj             *GetListPatterns(void);
       //--- Create object ID based on pattern search criteria
       virtual ulong                  CreateObjectID(void);
@@ -69,19 +46,68 @@ public:
       //--- Parametric constructor
                                      CBarPatternControlOutsideBar(const string symbol, const ENUM_TIMEFRAMES timeframe,
                                                                   CArrayObj *list_series, CArrayObj *list_patterns,
-                                                                  const MqlParam &param[]) :
-                                       CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_OUTSIDE_BAR, list_series, list_patterns, param)
-                                         {
-                                           this.m_min_body_size             = (uint)this.PatternParams[0].integer_value;   // Minimum size of pattern candles
-                                           this.m_ratio_candle_sizes        = this.PatternParams[1].double_value;           // Percentage ratio of engulfing to engulfed candle
-                                           this.m_ratio_body_to_candle_size = this.PatternParams[2].double_value;           // Percentage of full size to candle body size
-                                           this.m_object_id                 = this.CreateObjectID();
-                                         }
+                                                                  const MqlParam &param[]);
     };
   #endif // CBarPatternControlOutsideBar_MQH_DECLARATION
 
   #ifndef CBarPatternControlOutsideBar_MQH_IMPLEMENTATION
   #define CBarPatternControlOutsideBar_MQH_IMPLEMENTATION
+//+------------------------------------------------------------------+
+//| Parametric constructor                                           |
+//+------------------------------------------------------------------+
+CBarPatternControlOutsideBar::CBarPatternControlOutsideBar(const string symbol, const ENUM_TIMEFRAMES timeframe,
+                                                           CArrayObj *list_series, CArrayObj *list_patterns,
+                                                           const MqlParam &param[]) :
+  CBarPatternControl(symbol, timeframe, PATTERN_STATUS_PA, PATTERN_TYPE_OUTSIDE_BAR, list_series, list_patterns, param)
+  {
+   int param_size = ArraySize(this.PatternParams);
+   this.m_min_body_size             = (param_size > 0) ? (uint)this.PatternParams[0].integer_value : 0;
+   this.m_ratio_candle_sizes        = (param_size > 1) ? this.PatternParams[1].double_value : 0;
+   this.m_ratio_body_to_candle_size = (param_size > 2) ? this.PatternParams[2].double_value : 0;
+   this.m_object_id                 = this.CreateObjectID();
+  }
+//+------------------------------------------------------------------+
+//| Return the ratio of nearby candles for the specified bar          |
+//+------------------------------------------------------------------+
+double CBarPatternControlOutsideBar::GetRatioCandles(const CBar *bar) const
+  {
+   if(bar == NULL) return 0;
+   CArrayObj *list = CTimeseriesSelect::ByBarProperty(this.m_list_series, BAR_PROP_TIME, bar.Time(), LESS);
+   if(list == NULL || list.Total() == 0) return 0;
+   list.Sort(SORT_BY_BAR_TIME);
+   CBar *bar1 = list.At(list.Total() - 1);
+   if(bar1 == NULL) return 0;
+   return(bar.Size() > 0 ? bar1.Size() * 100.0 / bar.Size() : 0.0);
+  }
+//+------------------------------------------------------------------+
+//| Check proportions of candle body to candle size                  |
+//+------------------------------------------------------------------+
+bool CBarPatternControlOutsideBar::CheckProportions(const CBar *bar) const
+  {
+   return(bar.RatioBodyToCandleSize() >= this.RatioBodyToCandleSizeValue());
+  }
+//+------------------------------------------------------------------+
+//| Check and return the presence of a pattern on two adjacent bars   |
+//+------------------------------------------------------------------+
+bool CBarPatternControlOutsideBar::CheckOutsideBar(const CBar *bar1, const CBar *bar0) const
+  {
+   if(bar0 == NULL || bar1 == NULL ||
+      bar0.TypeBody() == BAR_BODY_TYPE_NULL         || bar1.TypeBody() == BAR_BODY_TYPE_NULL         ||
+      bar0.TypeBody() == BAR_BODY_TYPE_CANDLE_ZERO_BODY || bar1.TypeBody() == BAR_BODY_TYPE_CANDLE_ZERO_BODY ||
+      bar0.TypeBody() == bar1.TypeBody())
+      return false;
+   double ratio = (bar0.Size() > 0 ? bar1.Size() * 100.0 / bar0.Size() : 0.0);
+   if(ratio < this.RatioCandleSizeValue()) return false;
+   return(bar1.High() <= bar0.High() && bar1.Low() >= bar0.Low() &&
+          bar1.TopBody() < bar0.TopBody() && bar1.BottomBody() > bar0.BottomBody());
+  }
+//+------------------------------------------------------------------+
+//| Get pattern code                                                  |
+//+------------------------------------------------------------------+
+ulong CBarPatternControlOutsideBar::GetPatternCode(const ENUM_PATTERN_DIRECTION direction, const datetime time) const
+  {
+   return(time+PATTERN_TYPE_OUTSIDE_BAR+PATTERN_STATUS_PA+direction+this.Timeframe()+this.m_symbol_code);
+  }
 //+------------------------------------------------------------------+
 //| Create object ID based on pattern search criteria                |
 //+------------------------------------------------------------------+

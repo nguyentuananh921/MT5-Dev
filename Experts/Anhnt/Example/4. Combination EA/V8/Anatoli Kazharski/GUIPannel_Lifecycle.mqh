@@ -33,6 +33,12 @@
  //For GUIPannel    
  bool CGUIPannel::CreateGUIPannel(void) 
   { 
+   // Build pattern list trước tạo GUI
+     //Debug
+      ::Print("CGUIPannel::CreateGUIPannel > Before BuildCandlePatternListFromRegistry, m_BarPatterns_Control=", (m_BarPatterns_Control != NULL ? "OK" : "NULL"));
+    this.BuildCandlePatternListFromRegistry();
+      //Debug
+       ::Print("CGUIPannel::CreateGUIPannel > After BuildCandlePatternListFromRegistry, m_pattern_types.size=", ArraySize(m_pattern_types));
    //DiscoverPatterns(); //Call before CreatePatternConfigTable
    //--- Creating form 1 for controls
    //Create control
@@ -81,9 +87,14 @@
     }
     m_window_candle_infomation.Hide();  
     //For Symbol TF sub-tab at m_tabs_main_setting_config
-    if(!CreateTableSymbolTFSetting(0, WINDOW_CAPTION_HEIGHT)) return false;
-    PopulateTableSymbolTFSetting();
-    ApplyLoadedSymbolTFSettings();   // seed Buy/Sell from indicators_config.json, once (see note)
+     if(!CreateTableSymbolTFSetting(0, WINDOW_CAPTION_HEIGHT)) return false;
+     PopulateTableSymbolTFSetting();
+     ApplyLoadedSymbolTFSettings();   // seed Buy/Sell from indicators_config.json, once (see note)
+    // For
+     //DiscoverPatterns();
+     RegisterPatterns();
+     if(!CreateTableCandlePatternSetting(0, 0)) return false;
+     InitializeTableCandlePatternSetting();
     //For Other sub-tab at m_tabs_main_setting_config (marker shape/color settings)
     if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
     //For Trade Tab at m_tabs_main
@@ -147,7 +158,7 @@
         }
      //Create main GUI windows and sub windows.
       if(!CreateGUIPannel()) return false;
-      m_gui_created = true;
+      m_gui_created = true;     
      // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
      // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
       m_chart_obj_collection.CreateCollection();
@@ -322,12 +333,12 @@
    //Handle Save Indicator config to JSON
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
      {
-      OnClickSaveIndicators();
+      SaveGUIConfigToJSON();
       return;
      }
    //Handle m_table_indicator event
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-       && lparam == m_table_indicator.Id())
+       && lparam == m_table_indicator_template.Id())
       {
        string parts[];
        if(StringSplit(sparam, '_', parts) != 2) return;
@@ -349,19 +360,25 @@
    //Handle Save Symbol/TF config to JSON
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_SymbolTF.Id())
      {
-      OnClickSaveSymbolTF();
+      SaveGUIConfigToJSON();
       return;
      }
    //Handle Save marker style/color settings
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.Id())
      {
-      OnClickSaveMarkerSettings();
+      SaveGUIConfigToJSON();
       return;
      }
    //Handle "Refresh" next to the sound folder path - re-scans and re-populates both combos
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_refresh_sound_folder.Id())
      {
       OnClickChangeSoundFolder();
+      return;
+     }
+   //Handle Save Pattern Config to JSON
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_pattern_config.Id())
+     {
+      SaveGUIConfigToJSON();
       return;
      }
    //Handle Other tab combo selection - live-updates the preview immediately (BEFORE Save),
@@ -463,6 +480,18 @@
       OnCheckTableSymbolTFSetting(sym, tf, row, col);
       return;
      }
+   // Handle m_table_CandlePatternsSetting event (Bull/Bear checkbox toggle)
+    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+      && lparam == m_table_CandlePatternsSetting.Id())
+     {
+      string parts[];
+      if(StringSplit(sparam, '_', parts) != 2) return;
+      int col = (int)StringToInteger(parts[0]);
+      int row = (int)StringToInteger(parts[1]);
+      // col 3 = Sound, col 4 = Message - library already auto-toggled the image before this fires
+      // Wire real behavior here (e.g. save to JSON, update Layer 1) when needed
+      return;
+     } 
    //--- Layer 3 -> Layer 2 state sync: an indicator was added/removed/param-changed on some
    //--- chart window (possibly BY HAND on the chart) - re-truth the "Show" column. Events
    //--- come from m_chart_obj_collection.Refresh() polled in OnTimerEvent.
@@ -535,6 +564,9 @@
   }
  void CGUIPannel::OnTickEvent(void)
   {
+   // Detect candle patterns on live bar 0 (includes new bar detection per TF)
+    CheckCandlePatternAlerts();
+
     // --- Positions Table (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1, 2026-07-19:
     // --- row-count mismatch (new/closed symbol) forces a full rebuild; otherwise a plain
     // --- dirty-checked value refresh, same as V1's own OnTickEvent.
@@ -549,10 +581,7 @@
       }
       else if(pos_symbols_total > 0)
         redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
-    // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value
-    // --- actually changed - same call site/pattern as V1's OnTickEvent. Symbol Info table
-    // --- updates that used to sit alongside this in V1 aren't ported yet (still an empty
-    // --- shell in V7).
+    // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value    
       if(UpdateStatusBar())
         redraw_needed = true;
     // --- Pre-trade-plan table (Anhnt 2026-07-20): Entry/SL live off Bid/Ask, dirty-checked
@@ -561,6 +590,9 @@
         redraw_needed = true;
       if(redraw_needed)
         ::ChartRedraw();
+    // --- Sound and message alerts - run every tick to catch all bar 0 changes
+      CheckIndicatorAlerts();
+      CheckCandlePatternAlerts();
   }
  //+------------------------------------------------------------------+
  //| Trade operation event - refresh positions table on a new deal    |
@@ -648,7 +680,6 @@
     SetValuesToTableIndicatorSymbolTFValue();
     UpdateSignalBridgeTemplateFlags();
     m_bridge_writer.BuildAndWriteSignalBridge();
-    CheckIndicatorAlerts();
    //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
    //--- custom events (handled in OnEvent -> RefreshIndicatorTableShowStates)
     m_chart_obj_collection.Refresh();

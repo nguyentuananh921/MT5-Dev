@@ -27,7 +27,8 @@
  [] Tận dụng triệt để method của Library thay vì Buildin.
  [] Tránh thêm các Method không cần trong khi Library có sẵn. 
    - Cụ thể: Library đã có PrintParameters mà vẫn muốn thêm trong Deblib
- [] Sự thay đổi trong Library cần trao đổi thống nhất làm rõ. Và ko tự thay đổi.
+ [] Mọi thay đổi trong Library cần trao đổi thống nhất làm rõ. Và ko tự thay đổi.
+ [] Mọi sự thay đổi trong code cần trao đổi trước.
  [] Hạn chế tối đa Flicker ở Layer 2.
  [] Hạn chế viết method Inline, chỉ các method return ngắn gọn,mới dùng inline.
 
@@ -57,8 +58,7 @@
     - GUIPannel_TabPosition.mqh => Implementation all method create tab position 
     - GUIPannel_TabSettingIndicator.mqh => Implementation all method create tab setting indicator
     - GUIPannel_TabSettingSymbolTF.mqh => Implementation all method create tab setting symbol tf    
-    - GUIPannel_TabSetting.mqh => Implementation all method create tab setting
-    
+    - GUIPannel_TabSetting.mqh => Implementation all method create tab setting    
     - GUIPannel_TabSettingMarket.mqh => Implementation all method create tab setting market  
   [v] CTreeView  m_treeview_SymbolTF;
      [v] Display Symbol + TF on Layer 1.
