@@ -107,8 +107,10 @@
   //+------------------------------------------------------------------+
   void CSignalLogger::LoadSignalLogWatermarks(void)
    {
-    //string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
-    string base_fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    // --- One file per SYMBOL, not per (symbol,TF) - watermarks now span every tracked TF of
+    // --- the symbol (Anhnt, 2026-08-10), so params_key already carries its own "|<TF>" suffix
+    // --- (see CGUIPannel::CheckIndicatorAlerts) to keep entries from different TFs apart.
+    string base_fname = "Signal_Log_Watermark_" + ::Symbol() + ".json";
     string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
     string content = IndicatorConfig_ReadWholeFile(fname);
     if(content == "") return;
@@ -148,8 +150,8 @@
   //+------------------------------------------------------------------+
   void CSignalLogger::SaveSignalLogWatermarksToFile(void)
    {
-    //string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
-    string base_fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    // --- One file per SYMBOL - see LoadSignalLogWatermarks (Anhnt, 2026-08-10).
+    string base_fname = "Signal_Log_Watermark_" + ::Symbol() + ".json";
     string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
     string json = "{\n \"watermarks\": [\n";
     int n = ArraySize(m_wm_type);
