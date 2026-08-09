@@ -15,6 +15,8 @@
      string            m_wm_params[];
      datetime          m_wm_time[];
 
+     static string     m_signal_log_folder;  // ← Static property (scoped to class)
+
      bool              JsonIntValue(const string content, const string key, int &value);
      bool              JsonStringValue(const string content, const string key, string &value);
 
@@ -27,15 +29,17 @@
      void              SetSignalLogWatermark(const string type_key, const string params_key, const datetime t);
      void              LoadSignalLogWatermarks(void);
      void              SaveSignalLogWatermarksToFile(void);
+     static void       SetFolder(const string folder) {m_signal_log_folder = folder;}
   };
  #endif // CSIGNALLOGGER_MQH_DECLARATION
  #ifndef CSIGNALLOGGER_MQH_IMPLEMENTATION
- #define CSIGNALLOGGER_MQH_IMPLEMENTATION
+ #define CSIGNALLOGGER_MQH_IMPLEMENTATION  
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
+  string CSignalLogger::m_signal_log_folder = ""; // ← Initialize static member HERE
   CSignalLogger::CSignalLogger(void)
-   {
+   {    
     ArrayResize(m_wm_type, 0);
     ArrayResize(m_wm_params, 0);
     ArrayResize(m_wm_time, 0);
@@ -46,12 +50,14 @@
   CSignalLogger::~CSignalLogger(void)
    {
    }
+  
   //+------------------------------------------------------------------+
   //| WriteSignalLogRow                                                |
   //+------------------------------------------------------------------+
   void CSignalLogger::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text)
-   {
-    int fh = ::FileOpen("Signal_Log.csv", FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
+   {    
+    string filepath = (m_signal_log_folder != "") ? (m_signal_log_folder + "/Signal_Log.csv") : "Signal_Log.csv";
+    int fh = ::FileOpen(filepath, FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
     if(fh == INVALID_HANDLE) return;
     bool is_new = (::FileSize(fh) == 0);
     if(is_new)
@@ -95,12 +101,15 @@
     m_wm_time[n]   = t;
     SaveSignalLogWatermarksToFile();
    }
+  
   //+------------------------------------------------------------------+
   //| LoadSignalLogWatermarks                                          |
   //+------------------------------------------------------------------+
   void CSignalLogger::LoadSignalLogWatermarks(void)
    {
-    string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    //string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    string base_fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
     string content = IndicatorConfig_ReadWholeFile(fname);
     if(content == "") return;
 
@@ -139,7 +148,9 @@
   //+------------------------------------------------------------------+
   void CSignalLogger::SaveSignalLogWatermarksToFile(void)
    {
-    string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    //string fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    string base_fname = "Signal_Log_Watermark_" + ::Symbol() + "_" + ::EnumToString((ENUM_TIMEFRAMES)::Period()) + ".json";
+    string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
     string json = "{\n \"watermarks\": [\n";
     int n = ArraySize(m_wm_type);
     for(int i = 0; i < n; i++)

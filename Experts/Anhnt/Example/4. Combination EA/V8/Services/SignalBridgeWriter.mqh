@@ -22,6 +22,8 @@
      CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
      CIndicatorDE              *m_template_ptrs[];     
      CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;          //Timeseries collection
+    
+     static string              m_bridge_folder;  // ← Static property (scoped to class)
     //Seting from CGUIPannel base on Selection on Checkbox 
      bool                       m_template_buy[];
      bool                       m_template_sell[]; 
@@ -30,7 +32,7 @@
      datetime                   m_signal_bridge_last_time;
      
      bool                       TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
-     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count);     
+     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count);     
 
     public:
      CSignalBridgeWriter(void);
@@ -40,6 +42,7 @@
      void                       SetTemplateBuySell(CIndicatorDE *&tmpl_ptrs[], bool &tmpl_buy[], bool &tmpl_sell[]);
      void                       BuildAndWriteSignalBridge(void);
      void                       ResetSignalBridge(void);
+     static void                SetFolder(const string folder) { m_bridge_folder = folder; }
   };
  #endif // CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #ifndef CSIGNALBRIDGEWRITER_MQH_IMPLEMENTATION
@@ -47,6 +50,7 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
+  string CSignalBridgeWriter::m_bridge_folder = "";
   CSignalBridgeWriter::CSignalBridgeWriter(void)
     : m_SignalsCollection(NULL), m_IndicatorsCollection(NULL), m_BarTimeSeriesCollection(NULL),
       m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
@@ -162,7 +166,7 @@
        return;
     m_signal_bridge_symbol = sym;
 
-    datetime row_time[]; int row_tf[]; int row_dir[];
+    datetime row_time[]; int row_tf[]; int row_dir[]; int row_source[];
     int count = 0;
     for(int ti = 0; ti < series_total; ti++)
      {
@@ -189,12 +193,14 @@
             if(dir == SIGNAL_NONE) continue;
             if(dir == SIGNAL_BUY  && !buy_on)  continue;
             if(dir == SIGNAL_SELL && !sell_on) continue;
-            ArrayResize(row_time, count + 1);
-            ArrayResize(row_tf,   count + 1);
-            ArrayResize(row_dir,  count + 1);
-            row_time[count] = signal.HistoryTime(h);
-            row_tf[count]   = (int)tf;
-            row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
+            ArrayResize(row_time,   count + 1);
+            ArrayResize(row_tf,     count + 1);
+            ArrayResize(row_dir,    count + 1);
+            ArrayResize(row_source, count + 1);
+            row_time[count]   = signal.HistoryTime(h);
+            row_tf[count]     = (int)tf;
+            row_dir[count]    = (dir == SIGNAL_BUY) ? 1 : -1;
+            row_source[count] = 0; // Indicator
             count++;
            }
          if(ind.TypeIndicator() == IND_BANDS)
@@ -210,17 +216,48 @@
                   if(dir == SIGNAL_NONE) continue;
                   if(dir == SIGNAL_BUY  && !buy_on)  continue;
                   if(dir == SIGNAL_SELL && !sell_on) continue;
-                  ArrayResize(row_time, count + 1);
-                  ArrayResize(row_tf,   count + 1);
-                  ArrayResize(row_dir,  count + 1);
-                  row_time[count] = bb.LineHistoryTime(li, h);
-                  row_tf[count]   = (int)tf;
-                  row_dir[count]  = (dir == SIGNAL_BUY) ? 1 : -1;
+                  ArrayResize(row_time,   count + 1);
+                  ArrayResize(row_tf,     count + 1);
+                  ArrayResize(row_dir,    count + 1);
+                  ArrayResize(row_source, count + 1);
+                  row_time[count]   = bb.LineHistoryTime(li, h);
+                  row_tf[count]     = (int)tf;
+                  row_dir[count]    = (dir == SIGNAL_BUY) ? 1 : -1;
+                  row_source[count] = 0; // Indicator
                   count++;
                  }
               }
            }
         }
+     }
+
+    // Phase 2b: Collect pattern signals (Anhnt, 2026-08-08) - same format as indicator signals
+    // Only closed bars: GetListAllPatterns() returns patterns from CBarSeriesDE.AddPatterns(),
+    // which only adds completed bars' patterns. Live bar 0 patterns excluded automatically.
+    CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
+    if(all_patterns != NULL)
+     {
+      int pat_total = all_patterns.Total();
+      for(int p = 0; p < pat_total; p++)
+       {
+        CBarPattern *pat = all_patterns.At(p);
+        if(pat == NULL || pat.Symbol() != sym) continue;
+
+        ENUM_PATTERN_DIRECTION pdir = pat.Direction();
+        ENUM_SIGNAL_DIR pdir_signal = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
+                                      (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
+        if(pdir_signal == SIGNAL_NONE) continue;
+
+        ArrayResize(row_time,   count + 1);
+        ArrayResize(row_tf,     count + 1);
+        ArrayResize(row_dir,    count + 1);
+        ArrayResize(row_source, count + 1);
+        row_time[count]   = pat.Time();
+        row_tf[count]     = (int)pat.Timeframe();
+        row_dir[count]    = (pdir_signal == SIGNAL_BUY) ? 1 : -1;
+        row_source[count] = 1; // Pattern
+        count++;
+       }
      }
 
     for(int a = 0; a < count - 1; a++)
@@ -230,9 +267,10 @@
             datetime tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
             int      tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
             int      d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
+            int      src_ = row_source[a]; row_source[a] = row_source[b]; row_source[b] = src_;
            }
 
-    WriteSignalBridgeFile(row_time, row_tf, row_dir, count);
+    WriteSignalBridgeFile(row_time, row_tf, row_dir, row_source, count);
     m_signal_bridge_last_time = newest_seen;
    }
 
@@ -247,27 +285,29 @@
   //+------------------------------------------------------------------+
   //| WriteSignalBridgeFile                                            |
   //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int count)
+  void CSignalBridgeWriter::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count)
     {
-     string final_name = "SignalBridge_" + m_signal_bridge_symbol + ".dat";
-     string tmp_name    = "SignalBridge_" + m_signal_bridge_symbol + ".tmp";
-
+      string base_name   = "SignalBridge_" + m_signal_bridge_symbol;
+      string final_name = (m_bridge_folder != "") ? (m_bridge_folder + "/" + base_name + ".dat") : (base_name + ".dat");
+      string tmp_name   = (m_bridge_folder != "") ? (m_bridge_folder + "/" + base_name + ".tmp") : (base_name + ".tmp");
      int fh = ::FileOpen(tmp_name, FILE_BIN|FILE_WRITE);
      if(fh == INVALID_HANDLE)
         return;
 
-     // SIGNAL_BRIDGE_MAGIC is defined in SignalMarkers.mq5, we should define it here
+     // SIGNAL_BRIDGE_MAGIC v2 (Anhnt, 2026-08-08): added source field (0=indicator, 1=pattern)
+     // File format: magic(int) + update(long) + count(int) + count×{time(long), tf(int), dir(int), source(int)}
      #ifndef SIGNAL_BRIDGE_MAGIC
-      #define SIGNAL_BRIDGE_MAGIC 20260716
-     #endif     
+      #define SIGNAL_BRIDGE_MAGIC 20260808
+     #endif
      ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
      ::FileWriteLong(fh, (long)::TimeCurrent());
      ::FileWriteInteger(fh, count, INT_VALUE);
      for(int i = 0; i < count; i++)
        {
          ::FileWriteLong(fh, (long)row_time[i]);
-         ::FileWriteInteger(fh, row_tf[i],  INT_VALUE);
-         ::FileWriteInteger(fh, row_dir[i], INT_VALUE);
+         ::FileWriteInteger(fh, row_tf[i],     INT_VALUE);
+         ::FileWriteInteger(fh, row_dir[i],    INT_VALUE);
+         ::FileWriteInteger(fh, row_source[i], INT_VALUE);
        }
      ::FileClose(fh);
      ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);

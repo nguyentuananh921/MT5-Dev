@@ -130,13 +130,13 @@
     if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL) return;
     // --- Source-side duplicate guard (README 5c): the template set stays unique HERE,
     // --- at the only place templates enter Layer 1 - not hidden later by a display dedup.
-    if(m_IndicatorsCollection.TemplateExists(type, params))
-     {
-      ::Print(__FUNCTION__, " > rejected: this template already exists");
-      return;
-     }
-    if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
-    SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
+     if(m_IndicatorsCollection.TemplateExists(type, params))
+      {
+       ::Print(__FUNCTION__, " > rejected: this template already exists");
+       return;
+      }
+     if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
+     SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
     // --- Append exactly ONE row for the new template (README 5c - no rescan, no rebuild).
     // --- The engine appends to the collection, so the new instance for the current chart
     // --- is the LAST one in the (symbol,TF)-filtered list.
@@ -292,7 +292,6 @@
    uint chk[]           = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
    uint show_on_chart[] = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
    string group_names[] = {"Trend", "Oscillator", "Volumes", "Arrows"};
-
    SIndicatorCatalogItem catalog[];
    GetIndicatorCatalog(catalog);
    string label = BuildIndicatorLabel(indicator, catalog);
@@ -718,7 +717,6 @@
     SIndicatorParam schema[];
     int total = GetIndicatorParamSchema(m_current_param_type, schema);      
     if(total == 0) return;
-
     MqlParam params[];
     ArrayResize(params, total);
     for(int i = 0; i < total; i++)

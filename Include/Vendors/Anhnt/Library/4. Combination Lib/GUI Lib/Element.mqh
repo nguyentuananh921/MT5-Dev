@@ -23,12 +23,12 @@
       // ---Image groups
        struct EImagesGroup 
          {
-            // --- Image array
+          // --- Image array
             CImage m_image[];
-            // --- Label padding
+          // --- Label padding
             int m_x_gap;
             int m_y_gap;
-            // --- The image selected for display in the group
+          // --- The image selected for display in the group
             int m_selected_image;
          };
        EImagesGroup m_images_group[];

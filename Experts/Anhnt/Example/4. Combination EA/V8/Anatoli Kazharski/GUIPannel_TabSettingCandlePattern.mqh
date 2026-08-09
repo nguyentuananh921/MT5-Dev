@@ -82,8 +82,10 @@
       m_table_CandlePatternsSetting.ChangeImage(4, i, 0);        // Message: default enabled
 
       m_table_CandlePatternsSetting.CellType(5, i, CELL_BUTTON);
-      m_table_CandlePatternsSetting.SetImages(5, i, arrow_dn);   
+      m_table_CandlePatternsSetting.SetImages(5, i, arrow_dn);
     }
+   // Load Pattern Alert settings (Sound/Message checkboxes) from Config_Setting.json
+    LoadPatternAlertConfigFromJSON();
    // Seeding for Live Candle 
    // Get all TF
     CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(::Symbol());
@@ -95,7 +97,7 @@
     for(int ti = 0; ti < tf_total; ti++)
      for(int pi = 0; pi < pattern_count; pi++)
       m_candle_pattern_last_seen[ti * pattern_count + pi] = WRONG_VALUE;           
- }
+  }
  bool CGUIPannel::CreateTableCandlePatternSetting(const int x, const int y)
   { 
    // Step 1: Create Save Button ABOVE the table

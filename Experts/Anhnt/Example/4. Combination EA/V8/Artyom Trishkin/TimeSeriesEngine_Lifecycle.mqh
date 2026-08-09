@@ -66,8 +66,10 @@
     if(is_new_series)
       {
         this.m_BarTimeSeriesCollection.CreateSeries(sym, curr);
-        // // Step 2: Apply patterns to the newly created series
-        //  this.SeriesApplyPatternRegistry(sym, curr);
+        // Step 2: Apply the full Candle Pattern registry to the newly created series
+        // (Anhnt, 2026-08-10: was commented out - new TFs switched to on the chart never
+        // got pattern detection wired, same bug as the JSON-load path).
+        this.SeriesApplyPatternRegistry(sym, curr);
         // Direction 2: replicate the already-established indicator template (from JSON or
         // earlier symbols/TFs) into this brand new series
         this.AddAllIndicatorsToNewSeries(sym, curr);

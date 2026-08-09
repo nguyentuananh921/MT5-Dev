@@ -7,32 +7,32 @@ Triển khai hệ thống **8 Signal Markers** cho phép hiển thị các dạn
 ## 1. Nguyên tắc phân loại & Tính toán Marker
 
 Tại mỗi bar `t` (cho tất cả Timeframe của Symbol đang theo dõi), gom toàn bộ tín hiệu xảy ra:
-- `ind_buy_count`: Số lượng tín hiệu Buy từ Indicator.
-- `ind_sell_count`: Số lượng tín hiệu Sell từ Indicator.
-- `pat_buy_count`: Số lượng tín hiệu Buy từ Candle Pattern.
-- `pat_sell_count`: Số lượng tín hiệu Sell từ Candle Pattern.
+- **Indicator Signals**: Đếm số lượng tín hiệu từ Indicator
+  - `ind_buy_count`: Số lượng tín hiệu Buy từ Indicator.
+  - `ind_sell_count`: Số lượng tín hiệu Sell từ Indicator.
+- **Candle Pattern Signal**: Boolean "có Candle Pattern" (không count)
+  - `has_pattern_buy`: Có Pattern Buy signal xảy ra trong bar này (1 signal trả về BUY từ 28 patterns kết hợp)
+  - `has_pattern_sell`: Có Pattern Sell signal xảy ra trong bar này (1 signal trả về SELL từ 28 patterns kết hợp)
 
 ### Tổng hợp:
-- `total_buy = ind_buy_count + pat_buy_count`
-- `total_sell = ind_sell_count + pat_sell_count`
 - `total_ind = ind_buy_count + ind_sell_count`
-- `total_pat = pat_buy_count + pat_sell_count`
-- `total = total_ind + total_pat`
+- `has_pattern = has_pattern_buy OR has_pattern_sell` (boolean)
+- `pattern_dir = has_pattern_buy ? BUY : SELL` (hướng pattern nếu có)
 
 ### Quy tắc xác định:
 1. **Hướng Tín hiệu (Direction):**
-   - Nếu `total_buy > total_sell` $\rightarrow$ **BUY**
-   - Nếu `total_sell > total_buy` $\rightarrow$ **SELL**
-   - Nếu `total_buy == total_sell` $\rightarrow$ Ưu tiên hướng có Candle Pattern hoặc hướng Buy.
+   - Nếu có indicator signals, hướng = majority direction của indicators
+   - Nếu chỉ có pattern (không indicator), hướng = pattern direction
+   - Nếu cả hai, hướng = majority của indicators (pattern là secondary)
 
 2. **Dạng Marker (Shape Family - 8 loại):**
-   - **Chỉ có 1 Indicator** (`total_pat == 0 && total_ind == 1`):
+   - **Chỉ có 1 Indicator** (`!has_pattern && total_ind == 1`):
      - $\rightarrow$ **Single Buy** / **Single Sell**
-   - **Nhiều Indicator** (`total_pat == 0 && total_ind > 1`):
+   - **Nhiều Indicator** (`!has_pattern && total_ind > 1`):
      - $\rightarrow$ **Multi Buy** / **Multi Sell**
-   - **Chỉ có Candle Pattern** (`total_pat > 0 && total_ind == 0`):
+   - **Chỉ có Candle Pattern** (`has_pattern && total_ind == 0`):
      - $\rightarrow$ **Pattern Buy** / **Pattern Sell**
-   - **Combo (Cả Indicator và Candle Pattern)** (`total_pat > 0 && total_ind > 0`):
+   - **Combo (Cả Indicator và Candle Pattern)** (`has_pattern && total_ind > 0`):
      - $\rightarrow$ **Combo Buy** / **Combo Sell**
 
 ---
@@ -56,14 +56,27 @@ Tại mỗi bar `t` (cho tất cả Timeframe của Symbol đang theo dõi), gom
 
 ---
 
-### Component 2: Signal Bridge Writer (`GUIPannel.mqh`)
+### Component 2: Signal Bridge Writer (`CSignalBridgeWriter`)
 
-#### [MODIFY] [GUIPannel.mqh](file:///c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4.%20Combination%20EA/V8/Anatoli%20Kazharski/GUIPannel.mqh)
+#### [MODIFY] [SignalBridgeWriter.mqh](file:///c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4.%20Combination%20EA/V8/Services/SignalBridgeWriter.mqh)
 - Nâng cấp `BuildAndWriteSignalBridge()`:
-  - Duyệt và ghi cả tín hiệu Indicator lẫn tín hiệu từ Candle Pattern (`m_BarTimeSeriesCollection.GetListAllPatterns()`).
-  - Định dạng record mới trong `SignalBridge_<SYMBOL>.dat`:
-    `{ long flip_time; int tf; int dir; int source_type; }`
-    (`source_type`: 0 = Indicator, 1 = Candle Pattern).
+  - **Coi Candle Pattern giống Indicator**: Duyệt pattern list từ `m_BarTimeSeriesCollection.GetListPatterns()` (chỉ **CLOSED BARS**, không xử lý live bar 0)
+  - Ghi pattern signals vào bridge file giống cách ghi indicator signals (không thêm source_type field)
+  - Định dạng bridge file **vẫn giữ nguyên**:
+    `{ long flip_time; int tf; int dir; }`
+  - Ghi pattern buy/sell signals với `dir = +1` (buy) hoặc `-1` (sell) giống indicator
+
+#### **Q2: Mỗi closed bar có bao nhiêu pattern signals?**
+- **Decision: 1 signal per closed bar (nếu có pattern)**
+- **Cơ chế**: 
+  - Mỗi closed bar có `BAR_PROP_PATTERNS_TYPE` = bitmask (có thể chứa 2-3 patterns)
+  - Ví dụ: bar có Hammer + Doji cùng Buy direction → **ghi 1 signal Buy** vào bridge, không ghi 2 signals riêng
+  - Direction = direction của pattern trên bar đó
+  - Nếu bar có multiple patterns với direction khác nhau → take majority direction
+- **Chú ý**: 
+  - **Live bar 0 patterns KHÔNG được ghi** vào bridge file (live bar 0 pattern detection chưa được implement đầy đủ)
+  - Chỉ xử lý patterns từ các closed bars via `GetListPatterns()`
+  - Không ghi từng pattern type riêng lẻ, chỉ 1 signal per bar
 
 ---
 
@@ -79,9 +92,18 @@ Tại mỗi bar `t` (cho tất cả Timeframe của Symbol đang theo dõi), gom
   6. `PatternSell`
   7. `ComboBuy`
   8. `ComboSell`
-- Nhận 8 tham số `input int` mã Wingdings icon.
-- Đọc định dạng bridge file mới chứa `source_type`.
-- Thực hiện logic đếm số lượng & xác định đúng 1 trong 8 plot buffer để hiển thị trên chart.
+- Nâng cấp `indicator_buffers` từ 8 → 12 (mỗi plot = 2 buffers: value + color_idx)
+- Nâng cấp `indicator_plots` từ 4 → 8
+- Nhận 8 tham số `input int` mã Wingdings icon (từ `m_marker_*_code[]` ở CGUIPannel)
+- **Cập nhật ComputeBar()** logic đếm:
+  - Đếm `ind_count` = toàn bộ indicator signals trong bucket
+  - Đếm `pat_count` = toàn bộ pattern signals trong bucket  
+  - Xác định shape dựa trên (ind_count, pat_count):
+    - `ind_count==1 && pat_count==0` → **SingleBuy/Sell**
+    - `ind_count>1 && pat_count==0` → **MultiBuy/Sell**
+    - `ind_count==0 && pat_count>0` → **PatternBuy/Sell**
+    - `ind_count>0 && pat_count>0` → **ComboBuy/Sell**
+  - Color logic vẫn giữ nguyên: dựa trên own-TF signals
 
 ---
 

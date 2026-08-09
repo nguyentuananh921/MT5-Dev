@@ -137,7 +137,7 @@
       if(dir == WRONG_VALUE) return WRONG_VALUE;
 
      //--- Pattern found — set mother_bar_data to the full 2-candle range
-      mother_bar_data.time        = bar0.Time();
+      mother_bar_data.time        = bar1.Time();
       mother_bar_data.open        = bar0.Open();
       mother_bar_data.high        = MathMax(bar0.High(), bar1.High());
       mother_bar_data.low         = MathMin(bar0.Low(),  bar1.Low());

@@ -794,9 +794,9 @@
             "-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/V8/Include",
             "-D__MQL5_BUILD__",
             "-c",
-            "D:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_Temp.mqh"
+            "D:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_SignalMarkers.mqh"
         ],
-        "file": "D:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_Temp.mqh"
+        "file": "D:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_SignalMarkers.mqh"
     },
     {
         "directory": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/V8",
@@ -827,7 +827,7 @@
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_TabSettingMarker.mqh",
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_CandleInfoWindow.mqh",
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_SoundAndMessageAlerts.mqh",
-            "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_Temp.mqh",
+            "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_SignalMarkers.mqh",
             "-fms-extensions",
             "-fms-compatibility",
             "-ferror-limit=0",
@@ -876,7 +876,7 @@
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_TabSettingMarker.mqh",
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_CandleInfoWindow.mqh",
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_SoundAndMessageAlerts.mqh",
-            "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_Temp.mqh",
+            "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel_SignalMarkers.mqh",
             "-includeD:/MT5-Dev/Experts/Anhnt/Example/4. Combination EA/V8/Anatoli Kazharski/GUIPannel.mqh",
             "-fms-extensions",
             "-fms-compatibility",

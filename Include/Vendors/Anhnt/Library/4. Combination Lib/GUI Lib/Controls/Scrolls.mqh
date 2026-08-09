@@ -34,6 +34,7 @@ class CScrollH;
       string            m_dec_file_pressed;
    // --- (1) Focus on the slider and (2) the moment it crosses the boundaries
       bool              m_thumb_focus;
+      bool              m_thumb_dragging;      // NEW: Track if thumb is currently being dragged
       bool              m_is_crossing_thumb_border;
    // --- Slider colors in different states
       color             m_thumb_color;
@@ -372,22 +373,33 @@ class CScrollH;
       if(!m_mouse.IsLeftBtn())
         {
          // --- Let's reset the variables
-         ZeroThumbVariables();
-         return;
+          ZeroThumbVariables();
+          return;
         }
      // ---If the button is pressed
       else
        {
         // --- Exit if the button is already pressed in any area
-         if(m_clamping_area_mouse!=NOT_PRESSED)
+        //BUT: Allow continue drag if m_thumb_dragging = true
+         if(m_clamping_area_mouse!=NOT_PRESSED && !m_thumb_dragging)
             return;
         // --- Outside the scrollbar slider area
-         if(!m_thumb_focus)
-            m_clamping_area_mouse=PRESSED_OUTSIDE;
+         if(!m_thumb_focus)   
+          {
+            // Only set PRESSED_OUTSIDE if NOT already dragging
+            if(!m_thumb_dragging)         // ← NEW: Allow drag to continue outside rect
+              m_clamping_area_mouse=PRESSED_OUTSIDE;
+             else
+              {
+                // While dragging outside thumb, keep scroll state active
+                  m_scroll_state = true;  // ← NEW
+              }
+          }            
         // --- In the scroll bar slider area
          else
           {
             m_scroll_state        =true;
+            m_thumb_dragging      =true;  // ← NEW: Mark as actively dragging
             m_clamping_area_mouse =PRESSED_INSIDE;
             // --- Redraw element
             Update(true);
@@ -423,6 +435,7 @@ class CScrollH;
         }
     // --- Reset variables
       m_scroll_state        =false;
+      m_thumb_dragging = false;   // ← NEW: Reset when button released
       m_thumb_size_fixing   =0;
       m_clamping_area_mouse =NOT_PRESSED;
     // --- Redraw element

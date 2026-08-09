@@ -156,7 +156,9 @@ ENUM_PATTERN_DIRECTION CBarPatternControlOutsideBar::FindPattern(const datetime 
       if(bar_prev == NULL) return WRONG_VALUE;
       if(!this.CheckProportions(bar_patt) || !this.CheckProportions(bar_prev)) return WRONG_VALUE;
       if(!this.CheckOutsideBar(bar_prev, bar_patt)) return WRONG_VALUE;
-      this.SetBarData(bar_prev, mother_bar_data);
+      // --- Mark the newest (outside/engulfing) bar itself, not the older enclosed bar
+      // --- (Anhnt, 2026-08-10).
+      this.SetBarData(bar_patt, mother_bar_data);
       if(bar_patt.TypeBody() == BAR_BODY_TYPE_BULLISH) return PATTERN_DIRECTION_BULLISH;
       if(bar_patt.TypeBody() == BAR_BODY_TYPE_BEARISH) return PATTERN_DIRECTION_BEARISH;
      }

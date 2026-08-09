@@ -160,7 +160,7 @@
    #define CANDLE_INFO_WINDOW_H      220
    // --- Signal Markers bridge file header magic - MUST match SignalMarkers.mq5's own
    // --- SIGNAL_BRIDGE_MAGIC exactly (Indicators\Vendors\Anhnt\Custom Buildin\SignalMarkers.mq5).
-   #define SIGNAL_BRIDGE_MAGIC       20260716
+   #define SIGNAL_BRIDGE_MAGIC       20260808
    // --- How far INSIDE the popup's near edge the cursor sits when it appears - NOT a gap.
    // --- BugNote 2026-07-16: a GAP between cursor and popup meant the mouse had to cross that
    // --- stretch of raw chart to reach it, and on a zoomed-out TF that stretch covers OTHER

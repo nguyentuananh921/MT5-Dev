@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CTIMESERIESENGINE_JSONCONFIG
 #define CTIMESERIESENGINE_JSONCONFIG
+ extern string g_ea_folder;  // From EA
  //+------------------------------------------------------------------+
  //| Tang 1: load the JSON indicator template and apply each entry to |
  //| every (symbol, timeframe) series that already exists. Called     |
@@ -10,9 +11,8 @@
  //| to (re)load, this engine only knows how to do it.                 |
  //+------------------------------------------------------------------+
  int CTimeSeriesEngine::LoadConfigurationFromJSON(const string filename)
-  {
-    string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
-    string full_path = ea_folder + "/" + filename;
+  {    
+    string full_path = g_ea_folder + "/" + filename;
     SJsonIndicatorEntry entries[];
     SJsonSymbolTF       symbols_tf[];
     if(!ParseIndicatorConfigFile(full_path, entries, symbols_tf))
@@ -63,13 +63,20 @@
       {
        string sym = symbols_tf[s].symbol;
        ENUM_TIMEFRAMES tf = TimestampByDescription(symbols_tf[s].tf);
+       //EA attach to Symbol TF not in Config
        if(sym == "" || this.m_BarTimeSeriesCollection.IsAvailable(sym, tf)) continue;
-       if(this.m_BarTimeSeriesCollection.CreateSeries(sym, tf)) series_created++;
+       if(this.m_BarTimeSeriesCollection.CreateSeries(sym, tf))
+         {
+          series_created++;
+          // --- Mirror of AddAllIndicatorsToNewSeries: a freshly created (symbol,TF) series
+          // --- also needs the full Candle Pattern registry pushed to its own ctrl + an
+          // --- initial RefreshAll(), otherwise it silently detects zero patterns forever
+          // --- (Anhnt, 2026-08-10: only the EA's very first startup TF ever got this).
+          this.SeriesApplyPatternRegistry(sym, tf);
+         }
       }
-
     SIndicatorCatalogItem catalog[];
     GetIndicatorCatalog(catalog);
-
     int applied = 0;
     int entries_total = ArraySize(entries);
     for(int e = 0; e < entries_total; e++)
@@ -104,7 +111,6 @@
                 " params, got ", ArraySize(entries[e].params), ", skipped");
           continue;
          }
-
        MqlParam params[];
        ArrayResize(params, total);
        bool param_error = false;
@@ -134,7 +140,6 @@
           else
              params[i].integer_value = StringToInteger(raw);
          }
-
        if(AddNewIndicatorToAllSeries(type, params))
           applied++;
       }
@@ -151,9 +156,8 @@
  //+------------------------------------------------------------------+
  bool CTimeSeriesEngine::SaveConfigurationToJSON(const string filename)
   {
-   // Build full path: MQL5/Files/{EA_FOLDER}/{filename}
-    string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
-    string full_path = ea_folder + "/" + filename;  
+   // Build full path: MQL5/Files/{EA_FOLDER}/{filename}    
+    string full_path = g_ea_folder + "/" + filename;  
    // Layer 1: Collect symbols/TF/buy/sell từ m_BarTimeSeriesCollection
     string sf_symbols[], sf_tfs[];
     bool sf_buy[], sf_sell[];
@@ -342,9 +346,8 @@
  bool CTimeSeriesEngine::RemoveSymbolTFFromConfigJSON(const string filename, const string symbol, const string tf_text)
   {
    // Build full path: MQL5/Files/{EA_FOLDER}/{filename}
-    string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
-    string full_path = ea_folder + "/" + filename;
-   
+    //string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
+    string full_path = g_ea_folder + "/" + filename;   
    SJsonIndicatorEntry entries[];
    SJsonSymbolTF       symbols_tf[];
     if(!ParseIndicatorConfigFile(full_path, entries, symbols_tf))

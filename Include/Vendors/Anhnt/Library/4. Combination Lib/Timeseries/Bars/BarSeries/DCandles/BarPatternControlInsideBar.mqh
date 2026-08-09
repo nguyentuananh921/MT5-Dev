@@ -139,8 +139,10 @@
       CBar *bar_prev = list.At(i);
       if(bar_prev == NULL) return WRONG_VALUE;
       if(!this.CheckInsideBar(bar_prev, bar_patt)) return WRONG_VALUE;
-      if(!this.FindMotherBar(list, mother_bar_data))
-         this.SetBarData(bar_prev, mother_bar_data);
+      // --- Mark the newest (inside) bar itself, not the older mother bar - FindMotherBar()
+      // --- used to extend back to the OLDEST bar in a chain of consecutive inside bars,
+      // --- placing the marker several candles too early (Anhnt, 2026-08-10).
+      this.SetBarData(bar_patt, mother_bar_data);
       return PATTERN_DIRECTION_BOTH;
      }
    return WRONG_VALUE;

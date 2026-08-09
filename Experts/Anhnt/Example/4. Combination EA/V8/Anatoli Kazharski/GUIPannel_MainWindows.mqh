@@ -1,5 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                        GUIPannel_MainWindows.mqh |
+//|           Implementation of function Main Windows m_window_main  |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_MAINWINDOWS_MQH
 #define CGUIPANNEL_MAINWINDOWS_MQH
@@ -33,8 +34,8 @@
          return (false);
    return (true);
   }
- //For control inside Main Window m_window_main
- //For m_treeview_SymbolTF on the left pannel m_window_main
+ // For control inside Main Window m_window_main
+ // For m_treeview_SymbolTF on the left pannel m_window_main
   bool CGUIPannel::CreateTreeView_SymbolTF(const int x_gap, const int y_gap)
    {       
      m_treeview_SymbolTF.MainPointer(m_window_main);
@@ -206,7 +207,7 @@
      m_treeview_SymbolTF.RedrawTreeList(); 
      m_treeview_SymbolTF.UpdateTreeList(true);
    } 
- //For Main Tabs m_tabs_main on the right of Main Window m_window_main  
+ // For Main Tabs m_tabs_main on the right of Main Window m_window_main  
   bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
    {      
     string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Monitor", "Positions", "History", "Settings","Bar Events"};
@@ -341,41 +342,5 @@
        m_status_bar.GetItemPointer(STATUS_BAR_SERVER_TIME).Update(false);
       }
      return any_changed;
-   }
-  // Deposit load - ported verbatim from V1 (Anatoli Kazharski\        |
-  // GUIPannel.mqh): plain built-in AccountInfoDouble/SymbolInfoDouble |
-  // calls, no Library CAccount wrapper needed. percent_mode==true     |
-  // returns margin as % of EQUITY (not Balance).                      |
-  // Used in: UpdateStatusBar (Deposit Load status bar item).          |
-  //+------------------------------------------------------------------+
-  double CGUIPannel::DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0)
-   {
-    //--- Calculate the current value of the deposit load
-     double margin = 0.0;
-    //--- Total account load
-     if (symbol == "" || volume == 0.0)
-     margin = ::AccountInfoDouble(ACCOUNT_MARGIN);
-    //--- Load on a specified symbol
-     else
-      {
-       //--- Get margin calculation data
-        double leverage = ((double)::AccountInfoInteger(ACCOUNT_LEVERAGE) == 0)
-                            ? 1
-                            : (double)::AccountInfoInteger(ACCOUNT_LEVERAGE);
-        double contract_size = ::SymbolInfoDouble(symbol, SYMBOL_TRADE_CONTRACT_SIZE);
-        string account_currency = ::AccountInfoString(ACCOUNT_CURRENCY);
-        string base_currency = ::SymbolInfoString(symbol, SYMBOL_CURRENCY_BASE);
-        //--- If trading account currency is the same as the symbol base currency
-        if (account_currency == base_currency)
-          margin = (volume * contract_size) / leverage;
-        else
-          margin = (volume * contract_size) / leverage * price;
-      }
-    //--- Get the current funds
-     double equity = (::AccountInfoDouble(ACCOUNT_EQUITY) == 0)
-                    ? 1
-                    : ::AccountInfoDouble(ACCOUNT_EQUITY);
-    //--- Return the current deposit load
-    return ((!percent_mode) ? margin : (margin / equity) * 100);
-   }
+   }  
 #endif // CGUIPANNEL_MAINWINDOWS_MQH

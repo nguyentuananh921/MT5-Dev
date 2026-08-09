@@ -93,7 +93,7 @@
       if(bar1.Low() < bar0.Low() - protrusion &&
          bar1.Low() < bar2.Low() - protrusion)
         {
-         mother_bar_data.time        = bar0.Time();
+         mother_bar_data.time        = bar2.Time();
          mother_bar_data.open        = bar0.Open();
          mother_bar_data.high        = MathMax(MathMax(bar0.High(), bar1.High()), bar2.High());
          mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());
@@ -106,7 +106,7 @@
       if(bar1.High() > bar0.High() + protrusion &&
          bar1.High() > bar2.High() + protrusion)
         {
-         mother_bar_data.time        = bar0.Time();
+         mother_bar_data.time        = bar2.Time();
          mother_bar_data.open        = bar0.Open();
          mother_bar_data.high        = MathMax(MathMax(bar0.High(), bar1.High()), bar2.High());
          mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());

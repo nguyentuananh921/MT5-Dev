@@ -147,8 +147,8 @@
    bar_0_temp.close = ::iClose(::Symbol(), ::Period(), 0);
    bar_0_temp.time = ::iTime(::Symbol(), ::Period(), 0);
 
-    string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
-    int debug_handle = FileOpen(ea_folder + "/CheckCandlePatternAlerts_Debug.log", FILE_WRITE | FILE_TXT | FILE_ANSI);
+    //string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
+    int debug_handle = FileOpen(g_ea_folder + "/CheckCandlePatternAlerts_Debug.log", FILE_WRITE | FILE_TXT | FILE_ANSI);
     string timestamp = ::TimeToString(::TimeCurrent(), TIME_SECONDS);
 
     if(debug_handle != INVALID_HANDLE) FileWrite(debug_handle, "[" + timestamp + "] CGUIPannel::CheckCandlePatternAlerts START\n");
@@ -174,7 +174,14 @@
      CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
      int series_total = (series_list != NULL) ? series_list.Total() : 0;
      if(series_total == 0) return;
-
+     // Ensure array has enough capacity - will grow as needed
+      int min_required_size = series_total * pattern_count;
+      if(min_required_size > 0 && ArraySize(m_candle_pattern_last_seen) < min_required_size)
+       {
+        ArrayResize(m_candle_pattern_last_seen, min_required_size);
+        for(int i = 0; i < min_required_size; i++)
+          m_candle_pattern_last_seen[i] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
+       }
     // Detect new bar on each TF of current symbol - reset pattern state for that TF
      for(int ti = 0; ti < series_total; ti++)
       {
@@ -217,6 +224,9 @@
          // Detect pattern on live bar 0 for this timeframe
           ENUM_PATTERN_DIRECTION current = DetectPatternOnBar0(pattern, tf, bar_0_temp);
           int index = ti * pattern_count + row;  // ← flatten index
+         // Ensure array can hold this index - grow on-the-fly if needed
+          if(index >= ArraySize(m_candle_pattern_last_seen))
+            ArrayResize(m_candle_pattern_last_seen, index + 1);
          // Compare with last state (2D array [tf_index][pattern_index])
           if(current != m_candle_pattern_last_seen[index])
            {
@@ -228,7 +238,18 @@
                 {
                  string sound_file = is_bullish ? m_marker_buy_sound_file : m_marker_sell_sound_file;
                  if(sound_file != "")
-                  ::PlaySound(sound_file);
+                  {
+                   // Extract bare filename if full path was stored
+                   int last_slash = -1, pos = 0;
+                   while((pos = StringFind(sound_file, "\\", pos)) >= 0)
+                     { last_slash = pos; pos++; }
+
+                   if(last_slash >= 0)
+                     sound_file = StringSubstr(sound_file, last_slash + 1);
+
+                   ::Print(__FUNCTION__, " > Playing sound: ", sound_file);
+                   ::PlaySound(sound_file);
+                  }
                 }
                if(message_on)
                 {
@@ -251,7 +272,6 @@
       }
     if(debug_handle != INVALID_HANDLE) FileClose(debug_handle);
   }
-
  // Get candle count for pattern type (static mapping)
  int CGUIPannel::GetPatternCandleCount(ENUM_PATTERN_TYPE pattern_type)
   {
@@ -281,7 +301,6 @@
    // 3-candle patterns (default)
    return 3;
   }
-
  // Check pattern criteria directly from OHLC (for live bar 0)
  ENUM_PATTERN_DIRECTION CGUIPannel::CheckPatternLive(ENUM_PATTERN_TYPE pattern_type, MqlRates &rates, CBarPatternControl *ctrl)
   {
@@ -403,5 +422,58 @@
         }
      }
     return (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
+  }
+ // --- BBands-only (Anhnt, 2026-07-17): processes ONE line's REAL persisted history from
+ // --- CSignalBollinger (Layer 1) - Closed-bar catch-up mirrors the primary signal's own loop
+ // --- exactly (log-only, watermark keyed by params_key+"|"+line_name so it never collides
+ // --- with the primary signal's own watermark entry), then a Live-bar check (transient
+ // --- last_seen[] vs LineCurrentSignal()) fires Message+CSV (deliberately no Sound, matching
+ // --- the earlier scoped-down decision) on every real change.
+ void CGUIPannel::ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name, ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key, const string label, const string tf_text, const int digits)
+  {
+   CIndicatorDE *ind = bb.GetIndicator();
+   if(ind == NULL) return;
+   string line_params_key = params_key + "|" + line_name;
+
+   datetime wm = m_signal_logger.GetSignalLogWatermark(type_key, line_params_key);
+   int total = bb.LineHistoryTotal(line_idx);
+   datetime newest_committed = wm;
+   for(int idx = 0; idx < total; idx++)
+    {
+      datetime t = bb.LineHistoryTime(line_idx, idx);
+      if(t <= wm) continue;
+      ENUM_SIGNAL_DIR hdir = bb.LineHistoryDir(line_idx, idx);
+      string dir_text   = (hdir == SIGNAL_BUY) ? "Buy" : "Sell";
+      string cross_text = (hdir == SIGNAL_BUY) ? ("Cross Up " + line_name + "Band") : ("Cross Down " + line_name + "Band");
+      string time_text  = ::TimeToString(t, TIME_DATE|TIME_MINUTES);
+      int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
+      double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
+      string price_text = ::DoubleToString(price, digits);
+      m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
+      if(t > newest_committed) newest_committed = t;
+    }
+   if(newest_committed > wm)
+      m_signal_logger.SetSignalLogWatermark(type_key, line_params_key, newest_committed);
+
+   ENUM_SIGNAL_DIR live_dir = bb.LineCurrentSignal(line_idx);
+   if(seeding)
+    {
+      last_seen[row] = live_dir; // baseline only, never fires on first sight
+      return;
+    }
+   if(live_dir == last_seen[row]) return; // no change
+   last_seen[row] = live_dir;
+   if(live_dir == SIGNAL_NONE) return; // dropped to exactly-on-the-line - not report-worthy itself
+
+   // --- Same Time;Live;TF;Indicator;Signal shape as the primary message, plus a 6th
+   // --- ";"-delimited field naming which line/direction triggered it (Anhnt, 2026-07-17:
+   // --- "viết ra Journal như nào thì cũng viết ra Signal_Log.csv y như thế").
+   string dir_text   = (live_dir == SIGNAL_BUY) ? "Buy" : "Sell";
+   string cross_text = (live_dir == SIGNAL_BUY) ? ("Cross Up " + line_name + "Band") : ("Cross Down " + line_name + "Band");
+   string time_text  = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
+   double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
+   string price_text = ::DoubleToString(price, digits);
+   CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + ";" + cross_text);
+   m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
   }
 #endif // CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH

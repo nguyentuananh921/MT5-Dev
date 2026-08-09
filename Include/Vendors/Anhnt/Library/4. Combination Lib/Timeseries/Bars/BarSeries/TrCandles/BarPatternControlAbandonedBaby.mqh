@@ -133,7 +133,7 @@
          bar1.High()     <  bar0.Low()             &&   // gap down: doji's high < bar0's low
          bar2.Low()      >  bar1.High())                // gap up:   bar2's low  > doji's high
         {
-         mother_bar_data.time        = bar0.Time();
+         mother_bar_data.time        = bar2.Time();
          mother_bar_data.open        = bar0.Open();
          mother_bar_data.high        = MathMax(MathMax(bar0.High(), bar1.High()), bar2.High());
          mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());
@@ -149,7 +149,7 @@
          bar1.Low()      >  bar0.High()            &&   // gap up:   doji's low  > bar0's high
          bar2.High()     <  bar1.Low())                 // gap down: bar2's high < doji's low
         {
-         mother_bar_data.time        = bar0.Time();
+         mother_bar_data.time        = bar2.Time();
          mother_bar_data.open        = bar0.Open();
          mother_bar_data.high        = MathMax(MathMax(bar0.High(), bar1.High()), bar2.High());
          mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());

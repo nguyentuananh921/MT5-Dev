@@ -23,6 +23,7 @@
   #include "IndicatorConfigLoader.mqh"
 #ifndef CTIMESERIESENGINE_MQH_DECLARATION
 #define CTIMESERIESENGINE_MQH_DECLARATION
+ extern string g_ea_folder;  // From EA
  class CTimeSeriesEngine
   {
     private:
@@ -61,7 +62,7 @@
        bool                      m_loaded_tmpl_message[]; // per-template Journal-message opt-in
     //Borrow
       CSymbolsCollection        *m_symbol_collection;    // Symbol collection
-    //For indicator
+    //For indicator ->Implementation in TimeSeriesEngine_JSONConfig.mqh
       int                       LoadConfigurationFromJSON(const string filename);
     //For Signal - freeze bar 1 of any (symbol,TF) that just got a SERIES_EVENTS_NEW_BAR event
     //this refresh cycle, read back from m_BarTimeSeriesCollection's own event list (never call

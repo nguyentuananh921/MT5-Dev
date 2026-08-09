@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                       IndicatorConfigLoader.mqh   |
+//|                                      IndicatorConfigLoader.mqh   |
 //| Minimal parser for this EA's indicator startup config file.      |
 //| Supports only the one shape this EA needs:                       |
 //|   {                                                               |
@@ -406,6 +406,65 @@
     int start = IndicatorConfig_SkipSpace(content, colon + 1);
     int end   = IndicatorConfig_SkipValue(content, start);
     return StringSubstr(content, start, end - start);
+   }
+  //--- Extract int value from JSON key - minimal parser for machine-written JSON only
+  bool JsonIntValue(const string content, const string key, int &value)
+   {
+    int pos = StringFind(content, "\"" + key + "\"");
+    if(pos < 0) return false;
+    int colon = StringFind(content, ":", pos);
+    if(colon < 0) return false;
+    int len = StringLen(content);
+    int i = colon + 1;
+    while(i < len && StringGetCharacter(content, i) == ' ') i++;
+    int start = i;
+    while(i < len)
+     {
+      ushort ch = StringGetCharacter(content, i);
+      if((ch < '0' || ch > '9') && ch != '-') break;
+      i++;
+     }
+    string num = StringSubstr(content, start, i - start);
+    if(num == "") return false;
+    value = (int)StringToInteger(num);
+    return true;
+   }
+  //--- Extract quoted string value from JSON key - unescapes backslashes
+  bool JsonStringValue(const string content, const string key, string &value)
+   {
+    int pos = StringFind(content, "\"" + key + "\"");
+    if(pos < 0) return false;
+    int colon = StringFind(content, ":", pos);
+    if(colon < 0) return false;
+    int q1 = StringFind(content, "\"", colon + 1);
+    if(q1 < 0) return false;
+    int q2 = StringFind(content, "\"", q1 + 1);
+    if(q2 < 0) return false;
+    value = StringSubstr(content, q1 + 1, q2 - q1 - 1);
+    StringReplace(value, "\\\\", "\\");
+    return true;
+   }
+  //--- Extract bool value (true/false literal) from JSON key
+  bool JsonBoolValue(const string content, const string key, bool &value)
+   {
+    int pos = StringFind(content, "\"" + key + "\"");
+    if(pos < 0) return false;
+    int colon = StringFind(content, ":", pos);
+    if(colon < 0) return false;
+    int len = StringLen(content);
+    int i = colon + 1;
+    while(i < len && StringGetCharacter(content, i) == ' ') i++;
+    if(StringSubstr(content, i, 4) == "true")
+     {
+      value = true;
+      return true;
+     }
+    if(StringSubstr(content, i, 5) == "false")
+     {
+      value = false;
+      return true;
+     }
+    return false;
    }
 
 #endif // __INDICATORCONFIGLOADER_MQH__

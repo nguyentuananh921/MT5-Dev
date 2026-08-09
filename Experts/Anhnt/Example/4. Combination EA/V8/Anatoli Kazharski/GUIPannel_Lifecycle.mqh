@@ -1,5 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                          GUIPannel_Lifecycle.mqh |
+//|Implementation of Init, Deinit and other lifecycle events         |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_LIFECYCLE_MQH
 #define CGUIPANNEL_LIFECYCLE_MQH
@@ -156,6 +157,10 @@
                         m_IndicatorsCollection,
                         m_BarTimeSeriesCollection);
         }
+     // Set folder paths for file writers (Anhnt, 2026-08-08)
+      string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
+      m_signal_logger.SetFolder(ea_folder);
+      m_bridge_writer.SetFolder(ea_folder);
      //Create main GUI windows and sub windows.
       if(!CreateGUIPannel()) return false;
       m_gui_created = true;     
@@ -240,6 +245,12 @@
        {
           // --- Stay open, don't touch bar_time - let the table's native dispatch (now
           // --- routed to it via m_active_window_index) handle the scrollbar/clicks.
+       }
+      else if(popup_shown && !MouseOverCandleInfoWindow())
+       {
+          // --- Mouse left the popup rect -> hide it, reset to m_window_main dispatch.
+          HideCandleInfoPopup();
+          m_candle_info_shown_bar = 0;
        }
       else if(m_keys.KeyShiftState())
        {
@@ -458,7 +469,25 @@
          if(sel >= 0 && sel < n_colors) UpdateColorPreview(2, mcolors[sel]);
          return;
         }
-      }
+       if(lparam == m_combo_buy_sound.Id())
+        {
+         int sel = (int)m_combo_buy_sound.GetListViewPointer().SelectedItemIndex();
+         string files[];
+         ScanSoundFolder(files);
+         if(sel >= 0 && sel < ArraySize(files))
+            m_marker_buy_sound_file = files[sel];
+         return;
+        }
+       if(lparam == m_combo_sell_sound.Id())
+        {
+         int sel = (int)m_combo_sell_sound.GetListViewPointer().SelectedItemIndex();
+         string files[];
+         ScanSoundFolder(files);
+         if(sel >= 0 && sel < ArraySize(files))
+            m_marker_sell_sound_file = files[sel];
+         return;
+        }
+     }
    //Handle m_table_indicator_SymbolTFSeting event
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
         && lparam == m_table_indicator_SymbolTFSeting.Id())

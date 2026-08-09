@@ -115,7 +115,7 @@
                                    ? PATTERN_DIRECTION_BULLISH
                                    : PATTERN_DIRECTION_BEARISH;
 
-      mother_bar_data.time        = bar0.Time();
+      mother_bar_data.time        = bar1.Time();
       mother_bar_data.open        = bar0.Open();
       mother_bar_data.high        = MathMax(bar0.High(), bar1.High());
       mother_bar_data.low         = MathMin(bar0.Low(),  bar1.Low());

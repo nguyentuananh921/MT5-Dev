@@ -131,7 +131,7 @@
       if(bar2.Close() <= bar1.Close())                                     return WRONG_VALUE;
 
      //--- Pattern found — set mother_bar_data to the full 3-candle range
-      mother_bar_data.time        = bar0.Time();
+      mother_bar_data.time        = bar2.Time();
       mother_bar_data.open        = bar0.Open();
       mother_bar_data.high        = MathMax(MathMax(bar0.High(), bar1.High()), bar2.High());
       mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());

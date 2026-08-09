@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                 EA Ussing Combination Lib V7.mq5 |
+//|                                 EA Using Combination Lib V8.mq5 |
 //|                        Copyright 2018, MetaQuotes Software Corp. |
 //|EA Code Base on https://www.mql5.com/en/articles/4727             |
 //|Library base on Link https://www.mql5.com/en/code/19703           |
@@ -8,9 +8,6 @@
 #property link "http://www.mql5.com"
 #property version "1.00"
 //--- Include application class
-// #include "MainProgram.mqh"
-// CMainProgram mainProgram;
-
  //For GUI
   #include "\Anatoli Kazharski\GUIPannel.mqh"
   CGUIPannel mGUIPannel;
@@ -18,6 +15,8 @@
   CTradingEngine tradingEngine;
   #include <..\Artyom Trishkin\TimeSeriesEngine.mqh>
     CTimeSeriesEngine timeSeriesEngine;
+  //--- Global folder path (centralized for all components)
+   string g_ea_folder = "";
 //For Candle Pattern Render
   // #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Timeseries\PatternRenderer.mqh>
   //   CPatternRenderer patternRenderer;    
@@ -31,12 +30,15 @@
       //--- Set the permissions to send cursor movement and mouse scroll events
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_MOVE, true);
               ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_WHEEL, true);
+      //--- Initialize centralized folder path ONCE
+        g_ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
+        Print(__FUNCTION__, "Debug EA::OnInit Folder initialized: ", g_ea_folder);
       //For trading
         tradingEngine.OnInitEvent();
       // Init timeseries engine first
       //  First attach only: set symbols, init engine, scan, fill table, init renderer
         timeSeriesEngine.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
-        timeSeriesEngine.OnInitEvent(Symbol(), Period());
+        timeSeriesEngine.OnInitEvent(Symbol(), Period());      
       //For GUI.Now set both pointers before GUI init 
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
@@ -45,7 +47,7 @@
         mGUIPannel.SetPatternsControl(timeSeriesEngine.GetPatternsControl());
         //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
-        mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl());
+        mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl());        
         mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE
       //For patternRenderer
         // patternRenderer.OnInitEvent(ChartID(), 0, Symbol(), Period(), _UninitReason);
