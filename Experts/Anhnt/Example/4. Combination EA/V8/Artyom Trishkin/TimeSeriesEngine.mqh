@@ -96,7 +96,10 @@
     // Tang 1: JSON template <-> indicator series
         void                        AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe);
         bool                        AddNewIndicatorToAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);
-        bool                        SaveConfigurationToJSON(const string filename);
+        //bool                        SaveConfigurationToJSON(const string filename);
+        bool                        SaveConfigurationToJSON(const string filename,
+                                      const string &symbols[], const string &tfs[],
+                                      const bool &buys[], const bool &sells[]);
         void                        GetLoadedSymbolTFSettings(string &symbols[], string &tfs[], bool &buys[], bool &sells[]);
         void                        GetLoadedTemplateSettings(string &types[], string &param_keys[], bool &buys[], bool &sells[],
                                                                 bool &sounds[], bool &messages[]);

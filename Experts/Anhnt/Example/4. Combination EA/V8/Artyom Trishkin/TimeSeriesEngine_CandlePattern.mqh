@@ -67,9 +67,7 @@
  // Push engine-level registry to each series-level ctrl, then trigger full scan.
  // Populates m_list_all_patterns with CBarPattern objects for all bars.
  bool CTimeSeriesEngine::SeriesApplyPatternRegistry(const string symbol, const ENUM_TIMEFRAMES timeframe)
-  {
-   // CBarTimeSeriesDE *ts  = this.m_time_series.GetTimeseries(symbol);
-    // CBarSeriesDE     *ser = NULL;
+  {   
     CBarTimeSeriesDE *bartimeseries  = this.m_BarTimeSeriesCollection.GetTimeseries(symbol);
     CBarSeriesDE     *barseries = NULL;
     if(bartimeseries != NULL)
@@ -82,30 +80,15 @@
             { barseries = s; break; }
         }
     }
-    CBarPatternsControl *ctrl = (barseries  != NULL ? barseries.GetPatternsCtrlObj()     : NULL);
-    // Debug — add after line 254 in BarEngine.mqh SeriesApplyPatternRegistry:
-      // ::Print("[SAR] ctrl.Timeframe()=", (ctrl != NULL ? EnumToString(ctrl.Timeframe()) : "NULL"),
-      //   " ser.Timeframe()=", (ser != NULL ? EnumToString(ser.Timeframe()) : "NULL"),
-      //   " requested_tf=", EnumToString(timeframe));
+    CBarPatternsControl *ctrl = (barseries  != NULL ? barseries.GetPatternsCtrlObj(): NULL);
     if(ctrl == NULL) return false;
-    CArrayObj *reg = m_BarPatterns_Control.GetListControls();
-    //Debug
-      // ::Print("CBarEngine::SeriesApplyPatternRegistry m_pattern_cfg.Total()=", m_pattern_cfg.GetListControls().Total(),
-      //   " ser.DataTotal()=", ser.DataTotal());
+    CArrayObj *reg = m_BarPatterns_Control.GetListControls();    
     for(int i = 0; i < reg.Total(); i++)
       {
         CBarPatternControl *c = reg.At(i);
         if(c != NULL)
           ctrl.SetUsedPattern(c.TypePattern(), c.PatternParams, true);
-      }
-      //Debug
-        // ::Print("[SAR] ser.DataTotal()=", ser.DataTotal(),
-        // " ser.Bars()=", ser.Bars(),
-        // " list_total_before=", (ts != NULL ? ts.GetListPatterns().Total() : -1));
-
-    ctrl.RefreshAll();
-      //Debug
-        // ::Print("[SAR] list_total_after=", (ts != NULL ? ts.GetListPatterns().Total() : -1));
+      }  
     return true;
   }
 

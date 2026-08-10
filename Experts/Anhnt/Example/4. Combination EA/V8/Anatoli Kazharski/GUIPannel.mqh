@@ -30,7 +30,6 @@
         CWindow                   m_window_main;
        //For CTreeView left pannel of m_window_main 
         CTreeView                 m_treeview_SymbolTF;
-        int                       m_sym_tree_pos[];        //To save symbol node list_index       
        // Main Tab on Right of m_window_main
         CTabs                     m_tabs_main;
        //For status Bar at Bottom of m_window_main
@@ -57,16 +56,15 @@
         CTable               m_table_positions;
         datetime             m_last_deal_time;   // IsLastDealTicket's own HistorySelect watermark
         ulong                m_last_deal_ticket;
-      //For TAB_TAB_MAIN_SETTINGS at m_tabs_main
-       CTabs                      m_tabs_main_setting_config;
-       // TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR at m_tabs_main_setting_config implementation in GUIPannel_TabSettingIndicator.mqh
-        // Indicator TreeViews at the Left
+      //For TAB_TAB_MAIN_SETTINGS configuration at m_tabs_main implemenation in GUIPannel_TabSettingIndicator.mqh
+       CTabs                      m_tabs_main_setting_config;       
+       // Indicator TreeViews at the Left
          CTreeView                 m_treeview_indicator;
          string                    m_table_indicator_names[];
-         int                       m_group_tree_pos[];
+         //int                       m_group_tree_pos[];
          int                       m_type_node_li[];      // list_index của từng node Type (level 1)
          ENUM_INDICATOR            m_type_node_value[];   // ENUM_INDICATOR tương ứng   
-        // For Indicator Add Form display on click m_treeview_indicator node
+       // For Indicator Add Form display on click m_treeview_indicator node
          CTextLabel           m_param_labels[INDICATOR_PARAM_SLOTS_MAX];
          CTextEdit            m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
          CComboBox            m_param_combo[INDICATOR_PARAM_SLOTS_MAX];    // enum-like params (Method, Applied Price, ...)
@@ -74,61 +72,34 @@
          CButton              m_btn_save_indicator;                        //CButton to Save Indicator to JSON
          ENUM_INDICATOR       m_current_param_type;     // which type the form is currently showing
          int                  m_current_param_type_li;  // its tree list_index (for tree-node insertion later) 
-        //for table display indicator template at Layer 1, check box to show/hide on Layer 3 (Chart)
-         //CTable               m_table_indicator; 
+       //Table to display indicator template at Layer 1, check box to show/hide on Layer 3 (Chart)         
          CTable               m_table_indicator_template;
-        // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - 
-        // rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
+         // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
+           int                m_settings_cache_state[];
+       // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - 
+       // rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
          int                  m_pending_remove_row;
-       // TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config implementation in GUIPannel_TabSettingIndicator.mqh
+      //TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config implementation in GUIPannel_TabSettingSymbolTF.mqh
          CTable               m_table_indicator_SymbolTFSeting;
          CButton              m_btn_save_SymbolTF;
          CTextLabel           m_label_symboltf_note;   // "takes effect after EA restart" note
         // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
          int                  m_pending_remove_row_symboltf;
-       //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN 
+      //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh
          CTable               m_table_CandlePatternsSetting;         
-         ENUM_PATTERN_TYPE          m_pattern_types[];
-         string                     m_pattern_display_names[];
-
-        //  CCheckBox            m_check_all_bull_CandlePatternsSetting;
-        //  CCheckBox            m_check_all_bear_CandlePatternsSetting; 
-        //  CTextLabel           m_pattern_labels_CandlePatternsSetting[PATTERNS_TOTAL];
-        //  CCheckBox            m_bull_checks_CandlePatternsSetting[PATTERNS_TOTAL];
-        //  CCheckBox            m_bear_checks_CandlePatternsSetting[PATTERNS_TOTAL];       
-       //For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER at m_tabs_main_setting_config
-        // 8 independent shapes (each needs its OWN MT5 plot - PLOT_ARROW is a per-plot
-        // fixed property, not per-bar, so "Single" and "Multi" each need a Buy/Sell PAIR
-        // of shapes, not one shared shape re-colored - see SignalMarkers.mq5).
-         CComboBox            m_combo_shape_single_indicator_buy;
-         CComboBox            m_combo_shape_single_indicator_sell;
-         CComboBox            m_combo_shape_multi_indicator_buy;
-         CComboBox            m_combo_shape_multi_indicator_sell;
-         CComboBox            m_combo_shape_pattern_buy;
-         CComboBox            m_combo_shape_pattern_sell;
-         CComboBox            m_combo_shape_combo_buy;
-         CComboBox            m_combo_shape_combo_sell;
-        // --- 3 colors, independent of shape: Buy/Sell apply when a marker relates to this
-        // --- chart's own current Symbol+TF; Non-Related is used otherwise. Picked from a
-        // --- small fixed palette via ComboBox (CColorPicker is a fixed 348x266 full HSL/RGB
-        // --- dialog, no compact variant - not worth it for 3 preset-style picks).
-         CComboBox            m_combo_color_buy;
-         CComboBox            m_combo_color_sell;
-         CComboBox            m_combo_color_nonrelated;
-        //For color
-         color                m_marker_buy_color;
-         color                m_marker_sell_color;
-         color                m_marker_nonrelated_color;
-        //For button Save marker setting
-         CButton              m_btn_save_marker_settings;
-        // --- Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi
-        // --- Buy/Sell), index 0-2 of the color arrays = Buy/Sell/Non-Related. Preview labels
-        // --- render the ACTUAL Wingdings glyph (Font("Wingdings") + the raw char code) so the
-        // --- user sees the real shape, not just a number; color previews reuse CColorButton's
-        // --- own swatch rendering, just never wired to a click handler (display-only).
-         CTextLabel           m_label_other_caption[16];
-         CTextLabel           m_preview_shape[16];
-         CColorButton         m_preview_color[3];
+         ENUM_PATTERN_TYPE    m_pattern_types[];
+         string               m_pattern_display_names[]; 
+         CButton              m_btn_save_pattern_config;      
+      //For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER at m_tabs_main_setting_config implementation in GUIPannel_TabSettingMarker.mqh
+       //For Marker 8 independent shapes to display at each Candle on Chart see SignalMarkers.mq5        
+         CComboBox            m_combo_shape_single_indicator_buy;  //candle only have single indicator, buy or sell base on indicator signal
+         CComboBox            m_combo_shape_single_indicator_sell; //candle only have single indicator, buy or sell base on indicator signal
+         CComboBox            m_combo_shape_multi_indicator_buy;   //candle have multi indicator, buy or sell base on indicator signal
+         CComboBox            m_combo_shape_multi_indicator_sell;  //candle have multi indicator, buy or sell base on indicator signal
+         CComboBox            m_combo_shape_pattern_buy;           //candle only have pattern, buy or sell base on pattern signal
+         CComboBox            m_combo_shape_pattern_sell;          //candle only have pattern, buy or sell base on pattern signal
+         CComboBox            m_combo_shape_combo_buy;             //candle have combo of indicator and pattern, buy or sell base on combo signal
+         CComboBox            m_combo_shape_combo_sell;            //candle have combo of indicator and pattern, buy or sell base on combo signal
         // Current marker style/color state - loaded from Config_Setting.json's "markers" section at startup,
         // Fed to SignalMarkers.mq5 as iCustom inputs, updated by the Save button above.
          int                  m_marker_single_indicator_buy_code;
@@ -139,6 +110,25 @@
          int                  m_marker_pattern_sell_code;
          int                  m_marker_combo_buy_code;
          int                  m_marker_combo_sell_code;
+        // For color Marker have 3 colors, independent of shape: Buy/Sell apply when a marker relates to this        
+         CComboBox            m_combo_color_buy;           //color of buy marker
+         CComboBox            m_combo_color_sell;          //color of sell marker
+         CComboBox            m_combo_color_nonrelated;    //color of non-related marker
+         //For color
+          color                m_marker_buy_color;          //color of buy marker
+          color                m_marker_sell_color;         //color of sell marker
+          color                m_marker_nonrelated_color;   //color of non-related marker
+        //For button Save marker setting
+         CButton              m_btn_save_marker_settings;
+        // --- Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi
+        // --- Buy/Sell), index 0-2 of the color arrays = Buy/Sell/Non-Related. Preview labels
+        // --- render the ACTUAL Wingdings glyph (Font("Wingdings") + the raw char code) so the
+        // --- user sees the real shape, not just a number; color previews reuse CColorButton's
+        // --- own swatch rendering, just never wired to a click handler (display-only).
+         CTextLabel           m_label_other_caption[16];
+         CTextLabel           m_preview_shape[16];
+         CColorButton         m_preview_color[3];
+        
         // --- Buy/Sell alert sound files (2026-07-17) - CFileNavigator's tree+content-list
         // --- popup turned out to have a real bug (splitter-drag state can get stuck, freezing
         // --- the popup) and was overkill for "pick one file from one known folder" anyway.
@@ -160,52 +150,45 @@
       //Information window at to display signal on chart
        CWindow                    m_window_candle_infomation;
        CTable                     m_table_candle_information_atBar;
-       datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden     
-     //For Layer 2 Gui Control
-      //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
-      CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()       
-      // --- Live-bar path (CheckIndicatorAlerts): per-row (m_table_indicator_ptrs index - fine
-      // --- here, this array is transient/session-only, never persisted) last-seen
-      // --- GetCurrentSignal() direction for the still-forming bar 0. A still-forming bar can
-      // --- flip back and forth several times before it closes ("uốn lượn như rắn", Anhnt
-      // --- 2026-07-17) - each real change fires Sound+Message+CSV immediately with
-      // --- TimeCurrent(), unlike the closed-bar path which never sounds an alert (the chart
-      // --- Marker already shows closed-bar flips visually - Sound/Message is only for
-      // --- catching a live move before it commits).
-        ENUM_SIGNAL_DIR      m_live_signal_last_seen[];
-      // --- BBands-only (IND_BANDS): Live-bar-0 tracker for CSignalBollinger's 2 remaining
-      // --- independent line histories (Upper/Lower - see ProcessBandLine/SignalBands.mqh
-      // --- Layer 1). MidBand is NOT tracked here anymore (Anhnt, 2026-07-19): it was folded
-      // --- into the primary signal itself (CSignalBollinger::ComputeAt IS the MidBand cross
-      // --- now), so Mid's Live/Closed events already come from the generic
-      // --- m_live_signal_last_seen / signal.HistoryDir() path below, with Sound included -
-      // --- keeping a separate Mid tracker here would have double-fired every Mid cross.
-      // --- Transient like the array above - only the LIVE side needs this; the Closed side
-      // --- reads CSignalBollinger's own real persisted LineHistoryXxx() instead.
-        ENUM_SIGNAL_DIR      m_upper_last_seen[];
-        ENUM_SIGNAL_DIR      m_lower_last_seen[];           
-          
-     // For guard on GUI.
-       bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA 
+       datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden
+      //For use in GUIPannel_SoundAndMessageAlerts.mqh
+       //For indicator
+        // --- Live-bar path (CheckIndicatorAlerts): per-row (m_table_indicator_ptrs index - fine
+        // --- here, this array is transient/session-only, never persisted) last-seen
+        // --- GetCurrentSignal() direction for the still-forming bar 0. A still-forming bar can
+        // --- flip back and forth several times before it closes ("uốn lượn như rắn", Anhnt
+        // --- 2026-07-17) - each real change fires Sound+Message+CSV immediately with
+        // --- TimeCurrent(), unlike the closed-bar path which never sounds an alert (the chart
+        // --- Marker already shows closed-bar flips visually - Sound/Message is only for
+        // --- catching a live move before it commits).
+          ENUM_SIGNAL_DIR      m_live_signal_last_seen[];
+        // --- BBands-only (IND_BANDS): Live-bar-0 tracker for CSignalBollinger's 2 remaining
+        // --- independent line histories (Upper/Lower - see ProcessBandLine/SignalBands.mqh
+        // --- Layer 1). MidBand is NOT tracked here anymore (Anhnt, 2026-07-19): it was folded
+        // --- into the primary signal itself (CSignalBollinger::ComputeAt IS the MidBand cross
+        // --- now), so Mid's Live/Closed events already come from the generic
+        // --- m_live_signal_last_seen / signal.HistoryDir() path below, with Sound included -
+        // --- keeping a separate Mid tracker here would have double-fired every Mid cross.
+        // --- Transient like the array above - only the LIVE side needs this; the Closed side
+        // --- reads CSignalBollinger's own real persisted LineHistoryXxx() instead.
+          ENUM_SIGNAL_DIR      m_upper_last_seen[];
+          ENUM_SIGNAL_DIR      m_lower_last_seen[]; 
+       //For candle at bar 0 [timeframe_index][pattern_type]track last state per pattern type       
+        ENUM_PATTERN_DIRECTION     m_candle_pattern_last_seen[];
      // Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
      // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
      // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
      // --- indicator BY HAND on the chart. Styling (colors) is out of scope by design - MT5
      // --- has no API to restyle an indicator instance that is already attached to a chart.
-      CChartObjCollection       m_chart_obj_collection;  
-     // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
-      int                  m_settings_cache_state[];
-     //For GUIPannel_SoundAndMessageAlerts.mqh
-      //For candle at bar 0 [timeframe_index][pattern_type]track last state per pattern type
-       CButton                 m_btn_save_pattern_config;
-       ENUM_PATTERN_DIRECTION  m_candle_pattern_last_seen[];   
-
-     
-     // --- Signal Markers bridge (BugNote 2026-07-16): a separate SignalMarkers.mq5      
-     //Layer 4 IO File
+      CChartObjCollection       m_chart_obj_collection;            
+     //Layer 4 IO File Signal Markers bridge a separate SignalMarkers.mq5 
         CSignalLogger              m_signal_logger;                     // Signal logger for history and exports
         CSignalBridgeWriter        m_bridge_writer;
         bool                       m_signal_log_watermarks_loaded; 
+     // For guard on GUI.
+       bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA 
+     //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
+      CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
     private: 
      //For Main Window m_window_main Implementation in GUIPannel_MainWindow.mqh
       bool                            CreateMainWindow(const string text);
@@ -277,20 +260,10 @@
         bool                         CreateTableIndicatorSymbolTFValue(const int x, const int y);
         void                         SetValuesToTableIndicatorSymbolTFValue(void);
      //------------ 
-     // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS implementation GUIPannel_TabSettingIndicator.mqh
-            
-      //For TreeView m_treeview_indicator on Left Pannel
-       
-                
-       
-       //Handler for TreeView m_treeview_indicator.
-         
-         
-                  
-      //For Indicator Table m_table_indicator   
-                  
-                  
-                 
+     // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS implementation GUIPannel_TabSettingIndicator.mqh            
+      //For TreeView m_treeview_indicator on Left Pannel  
+       //Handler for TreeView m_treeview_indicator.                  
+      //For Indicator Table m_table_indicator 
          bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);
          bool                         LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator);
          CIndicatorDE                 *OwnedInstanceOfLine(const int line_handle);
@@ -299,8 +272,6 @@
          void                         BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key);
          void                         ApplyLoadedIndicatorBuySell(void);
        //For Indicator Symbol TF Table m_table_indicator_SymbolTFValue implemented in GUIPannel_TabMonitor.mqh
-         
-
          string                       BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
          void                         PurgeSignalArrowObjects(const string sym, const string tf_string);
        //For Pre-Trade-Plan area (TAB_TAB_MAIN_POSITIONS), sits above m_table_positions - symbol
@@ -401,7 +372,7 @@
  #include "GUIPannel_MultiModule.mqh" //Implementation of function using in multi module GUI Pannel
  #include "GUIPannel_MainWindows.mqh" //Implementation of function Main Windows m_window_main
  #include "GUIPannel_TabMonitor.mqh"  
- #include "GUIPannel_TabPosition.mqh" 
+ #include "GUIPannel_TabPositions.mqh" 
  #include "GUIPannel_TabSettingSymbolTF.mqh" 
  #include "GUIPannel_TabSettingIndicator.mqh" 
  #include "GUIPannel_TabSettingCandlePattern.mqh"

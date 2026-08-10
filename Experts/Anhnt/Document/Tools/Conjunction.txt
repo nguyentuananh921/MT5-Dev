@@ -1,3 +1,3 @@
 mklink /J "Đường_dẫn_đến_thư_mục_ảo" "Đường_dẫn_đến_thư_mục_gốc_thật"
 
-mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Experts\Niquel Mendoza" "D:\MT5-Dev\Experts\Niquel Mendoza"
+mklink /J "C:\Users\nguye\AppData\Roaming\MetaQuotes\Terminal\D0E8209F77C8CF37AD8BF550E51FF075\MQL5\Experts\Solomon Anietie Sunday" "D:\MT5-Dev\Experts\Solomon Anietie Sunday"

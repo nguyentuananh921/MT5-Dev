@@ -154,37 +154,25 @@
  //| pairs have identical indicator sets, so all.At(0) is the source. |
  //| Called by Layer 2 (GUIPannel) when user clicks Save button.      |
  //+------------------------------------------------------------------+
- bool CTimeSeriesEngine::SaveConfigurationToJSON(const string filename)
+ bool CTimeSeriesEngine::SaveConfigurationToJSON(const string filename,
+                                                 const string &symbols[], const string &tfs[],
+                                                 const bool &buys[], const bool &sells[])
   {
    // Build full path: MQL5/Files/{EA_FOLDER}/{filename}    
-    string full_path = g_ea_folder + "/" + filename;  
-   // Layer 1: Collect symbols/TF/buy/sell từ m_BarTimeSeriesCollection
+    string full_path = g_ea_folder + "/" + filename;
+   //Read GUI Configuration
+    int sf_total = ArraySize(symbols);
     string sf_symbols[], sf_tfs[];
     bool sf_buy[], sf_sell[];
-    CArrayObj *bar_list = m_BarTimeSeriesCollection.GetList();
-    if(bar_list == NULL) return false;  
-    int sf_idx = 0;
-    for(int s = 0; s < bar_list.Total(); s++)
-      {
-       CBarTimeSeriesDE *bts = bar_list.At(s);
-       if(bts == NULL) continue;
-       CArrayObj *series_list = bts.GetListSeries();
-       if(series_list == NULL) continue;
-       for(int t = 0; t < series_list.Total(); t++)
-         {
-          CBarSeriesDE *series = series_list.At(t);
-          if(series == NULL) continue;
-          ArrayResize(sf_symbols, sf_idx + 1);
-          ArrayResize(sf_tfs, sf_idx + 1);
-          ArrayResize(sf_buy, sf_idx + 1);
-          ArrayResize(sf_sell, sf_idx + 1);
-          sf_symbols[sf_idx] = series.Symbol();
-          sf_tfs[sf_idx] = TimeframeDescription(series.Timeframe());
-          sf_buy[sf_idx] = true;
-          sf_sell[sf_idx] = true;
-          sf_idx++;
-         }
-      }
+    ArrayResize(sf_symbols, sf_total); ArrayResize(sf_tfs, sf_total);
+    ArrayResize(sf_buy, sf_total);     ArrayResize(sf_sell, sf_total);
+   for(int i = 0; i < sf_total; i++)
+    {
+     sf_symbols[i] = symbols[i];
+     sf_tfs[i]     = tfs[i];
+     sf_buy[i]     = buys[i];
+     sf_sell[i]    = sells[i];
+    }
    // Layer 1: Collect indicators template từ m_IndicatorsCollection
     int tmpl_total = 0;
     CIndicatorDE *tmpl_ptrs[];
@@ -224,7 +212,6 @@
     GetIndicatorCatalog(catalog);
     string json = "{\n \"symbols_tf\": [\n";
     int sym_saved = 0;
-    int sf_total = ArraySize(sf_symbols);
    // Sort by symbol (alphabetical) then ascending IndexEnumTimeframe()
     int order[];
     ArrayResize(order, sf_total);

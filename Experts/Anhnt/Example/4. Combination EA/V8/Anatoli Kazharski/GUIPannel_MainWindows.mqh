@@ -53,20 +53,15 @@
    {
     if(m_BarTimeSeriesCollection == NULL) return;
     int mw_total = ::SymbolsTotal(true);
-      // Grow registry if MarketWatch expanded
-       if(ArraySize(m_sym_tree_pos) < mw_total)
-        {
-         int old = ArraySize(m_sym_tree_pos);
-         ArrayResize(m_sym_tree_pos, mw_total);
-         ArrayFill  (m_sym_tree_pos, old, mw_total - old, -1);
-        }
       // --- SymbolName(i,true)'s own index order is Market Watch's internal/insertion order,
       // --- NOT the alphabetically-sorted order the Market Watch grid displays (Anhnt,
       // --- 2026-07-19) - a brand new symbol node only ever gets APPENDED (AddTreeItem always
       // --- uses ItemsTotal() as the new list_index, there's no "insert at position"), so the
       // --- only way to make first-time node creation come out sorted is to visit symbols in
-      // --- sorted order here. m_sym_tree_pos[] stays keyed by the RAW Market Watch index i -
-      // --- only the iteration order changes, already-created nodes are unaffected.
+      // --- sorted order here. Symbol nodes are found by scanning the tree's OWN items for a
+      // --- LabelText match (Step 1 below) instead of a raw-index shadow array - a raw Market
+      // --- Watch index went stale whenever symbols were added/removed/reordered, attaching a
+      // --- symbol's TF children under a DIFFERENT symbol's old node (Anhnt, 2026-08-10).
       int order[];
       ArrayResize(order, mw_total);
       for(int i = 0; i < mw_total; i++) order[i] = i;
@@ -82,8 +77,9 @@
       // --- instead of i, so it always increases by exactly 1 per new node, regardless of
       // --- which raw index i that node happens to be.
        int sym_item_seq = 0;
-       for(int c = 0; c < ArraySize(m_sym_tree_pos); c++)
-         if(m_sym_tree_pos[c] != -1) sym_item_seq++;
+       int sym_total0 = m_treeview_SymbolTF.ItemsTotal();
+       for(int j = 0; j < sym_total0; j++)
+         if(m_treeview_SymbolTF.ItemPrevNode(j) == -1) sym_item_seq++;
        for(int oi = 0; oi < mw_total; oi++)
         {
           int               i        = order[oi];
@@ -91,11 +87,19 @@
           CBarTimeSeriesDE *bts      = m_BarTimeSeriesCollection.GetTimeseries(sym_name);
           CArrayObj        *list     = (bts != NULL) ? bts.GetListSeries() : NULL;
           int               tf_cnt   = (list != NULL) ? list.Total() : 0;
-          // Step 1: Ensure sym node exists
-           if(m_sym_tree_pos[i] == -1)
+          // Step 1: Ensure sym node exists - matched by LABEL against existing top-level tree
+          // items (ItemPrevNode == -1), not a raw Market Watch index.
+           int sym_li = -1;
+           int sym_scan_total = m_treeview_SymbolTF.ItemsTotal();
+           for(int j = 0; j < sym_scan_total; j++)
             {
-             int sym_li = m_treeview_SymbolTF.ItemsTotal();
-             m_sym_tree_pos[i] = sym_li;
+             if(m_treeview_SymbolTF.ItemPrevNode(j) != -1) continue;
+             CTreeItem *tj = m_treeview_SymbolTF.ItemPointer(j);
+             if(tj != NULL && tj.LabelText() == sym_name) { sym_li = j; break; }
+            }
+           if(sym_li == -1)
+            {
+             sym_li = m_treeview_SymbolTF.ItemsTotal();
              // AddTreeItem() auto-increments parent count + sets state when TF children are added
               m_treeview_SymbolTF.AddTreeItem(sym_li,
                                           -1, //prev_node_list_index
@@ -110,7 +114,6 @@
                                           );
              sym_item_seq++;
             }
-           int sym_li = m_sym_tree_pos[i];
            if(tf_cnt == 0) continue;   //No TF found on sym_li
           // Step 2: Collect existing TF children of sym_li node
            int children[];

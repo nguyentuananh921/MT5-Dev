@@ -11,11 +11,14 @@
  // --- entry of indicators_config.json.
  void CGUIPannel::SaveGUIConfigToJSON(void)
   {
-    if(m_time_series_engine == NULL) return;    
-     ::Print(__FUNCTION__, " > Starting save config");    
-    // Layer 1: Indicator + SymbolTF settings (Layer 1 tự collect data)
-     bool result1 = m_time_series_engine.SaveConfigurationToJSON("Config_Setting.json");
-     //::Print(__FUNCTION__, " > SaveConfigurationToJSON: ", (result1 ? "OK" : "FAILED"));    
+    if(m_time_series_engine == NULL) return;
+     ::Print(__FUNCTION__, " > Starting save config");
+    // Layer 1: Indicator settings (Layer 1 tự collect data) + SymbolTF settings (từ GUI table hiện tại)
+     string symbols[], tfs[];
+     bool buys[], sells[];
+     BuildSymbolTFBuySellArrays(symbols, tfs, buys, sells);
+     bool result1 = m_time_series_engine.SaveConfigurationToJSON("Config_Setting.json", symbols, tfs, buys, sells);
+     //::Print(__FUNCTION__, " > SaveConfigurationToJSON: ", (result1 ? "OK" : "FAILED"));
     // Layer 2: Pattern Alert Config (Sound/Message checkboxes)
      SavePatternAlertConfigToJSON();
      //::Print(__FUNCTION__, " > SavePatternAlertConfigToJSON: OK");    

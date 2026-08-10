@@ -25,6 +25,22 @@
    string        default_value; // shown pre-filled in the edit box (or selected by index in choices)
    string        choices;       // "|"-separated option text, e.g. "Close|Open|High" - empty = plain numeric edit box
   };
+ //+------------------------------------------------------------------+
+ //| Map ENUM_INDICATOR_GROUP -> short display name - single source   |
+ //| for PopulateIndicatorTree's tree labels AND SetIndicatorTableRow's|
+ //| Group column (previously 2 separate hardcoded string arrays)     |
+ //+------------------------------------------------------------------+
+ string IndicatorGroupName(const ENUM_INDICATOR_GROUP group)
+  {
+   switch(group)
+    {
+     case INDICATOR_GROUP_TREND:      return "Trend";
+     case INDICATOR_GROUP_OSCILLATOR: return "Oscillator";
+     case INDICATOR_GROUP_VOLUMES:    return "Volumes";
+     case INDICATOR_GROUP_ARROWS:     return "Arrows";
+     default:                         return "Other";
+    }
+  }
  void GetIndicatorCatalog(SIndicatorCatalogItem &out[])
   {
    SIndicatorCatalogItem indicator_list[] =

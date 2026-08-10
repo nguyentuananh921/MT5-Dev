@@ -136,14 +136,12 @@ int OnInit(void)
       PlotIndexSetInteger(plot, PLOT_LINE_COLOR, 0, InpNonRelatedColor);
       PlotIndexSetInteger(plot, PLOT_LINE_COLOR, 1, InpBuyColor);
       PlotIndexSetInteger(plot, PLOT_LINE_COLOR, 2, InpSellColor);
+      PlotIndexSetInteger(plot, PLOT_LINE_WIDTH, 2); //Set Marker size (1-5 default 1)
       PlotIndexSetDouble(plot, PLOT_EMPTY_VALUE, EMPTY_VALUE);
      }
    string base_name = "SignalBridge_" + ::Symbol() + ".dat";
-   g_bridge_file = (InpBridgeFolderPath != "") ? (InpBridgeFolderPath + "/" + base_name) : base_name;   
-   //g_bridge_file = g_ea_folder + "/" + base_name;  // g_ea_folder Set from EA
-
+   g_bridge_file = (InpBridgeFolderPath != "") ? (InpBridgeFolderPath + "/" + base_name) : base_name;
    IndicatorSetString(INDICATOR_SHORTNAME, "SignalMarkers(" + ::Symbol() + ")");
-
    ReadBridgeFile(); // seed once at init, don't wait for the first timer tick
    ::EventSetMillisecondTimer(250);
    return(INIT_SUCCEEDED);
@@ -178,9 +176,7 @@ void OnTimer(void)
 //| Full reread of the bridge file into the flat row arrays.         |
 //+------------------------------------------------------------------+
 void ReadBridgeFile(void)
-  {
-    //Debug
-    ::Print(__FUNCTION__, " > SignalMarkers.mq5 ReadBridgeFile Trying to open: ", g_bridge_file);  // ← DEBUG
+  {    
    int fh = ::FileOpen(g_bridge_file, FILE_BIN|FILE_READ|FILE_SHARE_READ|FILE_SHARE_WRITE);
    if(fh == INVALID_HANDLE)
       return;
@@ -193,7 +189,6 @@ void ReadBridgeFile(void)
       ::FileClose(fh);
       return; // partial/mid-rewrite - keep old data, retry next timer tick
      }
-
    ::ArrayResize(g_rows_time,   count);
    ::ArrayResize(g_rows_tf,     count);
    ::ArrayResize(g_rows_dir,    count);
@@ -206,7 +201,6 @@ void ReadBridgeFile(void)
       g_rows_source[i] = (int)::FileReadInteger(fh, INT_VALUE);
      }
    ::FileClose(fh);
-
    g_row_count          = count;
    g_bridge_last_update = (datetime)update;
    g_dirty              = true;
@@ -225,7 +219,6 @@ void ComputeBar(const int i, const datetime &time[], const double &high[], const
    datetime bucket_start = time[i];
    datetime bucket_end   = bucket_start + ::PeriodSeconds();
    int      own_tf       = (int)::Period();
-
    BufSingleBuyValue[i]   = EMPTY_VALUE; BufSingleBuyColorIdx[i]   = 0;
    BufSingleSellValue[i]  = EMPTY_VALUE; BufSingleSellColorIdx[i]  = 0;
    BufMultiBuyValue[i]    = EMPTY_VALUE; BufMultiBuyColorIdx[i]    = 0;
@@ -265,13 +258,17 @@ void ComputeBar(const int i, const datetime &time[], const double &high[], const
       return;
 
    int color_idx = (own_buy + own_sell > 0) ? ((own_buy >= own_sell) ? 1 : 2) : 0; // 0=Non-Related, 1=Buy, 2=Sell
-   double gap   = (high[i] - low[i]) * 0.3;
+   // --- Gap scales with THIS bar's own High-Low range, not a fixed price distance - keeps
+   // --- markers proportionally clear of the candle across symbols/TFs with very different
+   // --- volatility. 0.3 sat markers almost on the wick on low-range bars (e.g. M1); raised
+   // --- to push them further off
+    double gap   = (high[i] - low[i]) * 0.5;
 
    // Determine marker type and direction
-   bool ind_is_buy  = (ind_buy >= ind_sell);
-   bool pat_is_buy  = (pat_buy >= pat_sell);
-   double value_buy  = low[i] - gap;
-   double value_sell = high[i] + gap;
+    bool ind_is_buy  = (ind_buy >= ind_sell); //Marker_Buy 
+    bool pat_is_buy  = (pat_buy >= pat_sell);
+    double value_buy  = low[i] - gap;
+    double value_sell = high[i] + gap;
 
    if(total_ind > 0 && total_pat == 0)
      { // Only indicators: Single or Multi
