@@ -4,10 +4,11 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_MultiModule_MQH
 #define CGUIPANNEL_MultiModule_MQH 
+#include "GUIPannel.mqh"
  // Used in: UpdateStatusBar (Deposit Load status bar item).          |
  //+------------------------------------------------------------------+
  double CGUIPannel::DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0)
- { 
+  { 
    //--- Calculate the current value of the deposit load
     double margin = 0.0;
    //--- Total account load
@@ -35,6 +36,5 @@
                     : ::AccountInfoDouble(ACCOUNT_EQUITY);
     //--- Return the current deposit load
      return ((!percent_mode) ? margin : (margin / equity) * 100);
- }
-
+  }  
 #endif

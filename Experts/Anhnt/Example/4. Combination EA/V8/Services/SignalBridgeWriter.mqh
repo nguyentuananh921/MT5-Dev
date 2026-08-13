@@ -162,6 +162,24 @@
          }
       }
 
+    // Fix (2026-08-10): newest_seen above only scanned indicator/BBand signal history, so a
+    // NEW PATTERN with no accompanying new indicator signal never advanced the watermark - the
+    // early-return below then skipped writing the bridge, and the pattern marker only showed up
+    // after a re-attach reset m_signal_bridge_symbol (forcing fresh=true). Patterns must also
+    // count toward newest_seen. See FeatureNote/UpdateCandlePattern.md.
+    CArrayObj *all_patterns_wm = m_BarTimeSeriesCollection.GetListAllPatterns();
+    if(all_patterns_wm != NULL)
+     {
+      int pat_total_wm = all_patterns_wm.Total();
+      for(int p = 0; p < pat_total_wm; p++)
+       {
+        CBarPattern *pat_wm = all_patterns_wm.At(p);
+        if(pat_wm == NULL || pat_wm.Symbol() != sym) continue;
+        datetime pt = pat_wm.Time();
+        if(pt > newest_seen) newest_seen = pt;
+       }
+     }
+
     if(!fresh && newest_seen <= m_signal_bridge_last_time)
        return;
     m_signal_bridge_symbol = sym;

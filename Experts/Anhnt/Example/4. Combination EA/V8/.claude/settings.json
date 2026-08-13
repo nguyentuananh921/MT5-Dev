@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Logs\" 2>/dev/null | tail -5; echo \"---\"; ls \"c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/Logs\" 2>/dev/null | tail -5)",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Logs/**)",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/Logs/**)",
+      "Bash(ls -la \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Sounds/NewBar.wav\" \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Files/Sounds/NewBar.wav\")",
+      "Read(//c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Sounds/**)",
+      "Bash(cp \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Sounds/SIGNAL_BUY_EN.wav\" \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Sounds/TestOld.wav\")",
+      "Bash(cp \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Sounds/NewBar.wav\" \"/c/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Sounds/TestNew.wav\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Sounds\\\\TestOld.wav','c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Sounds\\\\TestNew.wav','c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Sounds\\\\NewBar.wav','c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Sounds\\\\SIGNAL_BUY_EN.wav' | Select-Object Name,CreationTime,LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-Process terminal64 -ErrorAction SilentlyContinue | Select-Object Id,StartTime\")",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\Sounds' -ErrorAction SilentlyContinue | Select-Object Name,CreationTime,LastWriteTime | Format-Table -AutoSize\")",
+      "Bash(powershell -NoProfile -Command \"Get-Process terminal64 | Select-Object -ExpandProperty Path\")",
+      "Bash(powershell -NoProfile -Command 'Get-ChildItem '\\\\''C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds'\\\\'' -ErrorAction SilentlyContinue | Where-Object {$_.Name -match '\\\\''AUTO_TRADING|SIGNAL_BUY|TestOld|TestNew|NewBar'\\\\''} | Select-Object Name,CreationTime,LastWriteTime | Format-Table -AutoSize')",
+      "Bash(powershell -NoProfile -Command \"Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\NewBar.wav'; Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\TestOld.wav'; Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\TestNew.wav'\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\NewBar.wav' -ErrorAction SilentlyContinue | Select-Object FullName,Length,CreationTime,LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command ' *)",
+      "Bash(powershell -NoProfile -Command \"Get-CimInstance Win32_SoundDevice | Select-Object Name,Status; [System.Environment]::UserInteractive\")",
+      "Bash(powershell -NoProfile -Command \"Get-Content 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Logs\\\\20260813.log' -Tail 40\")",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Logs\\\\20260813.log' -Pattern 'NewBar.wav' | Select-Object -Last 5\")",
+      "Bash(powershell -NoProfile -Command \"Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\BUYLIMIT_ORDER_DELETE_EN.wav'; Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\NewBar.wav'\")",
+      "Bash(powershell -NoProfile -Command \"Get-Item 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\NewBar.wav' | Select-Object FullName,Length,LastWriteTime\")",
+      "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Logs\\\\20260813.log' -Pattern 'NewBar.wav' | Select-Object -Last 3\")",
+      "Bash(powershell -NoProfile -Command \"Get-Content 'C:\\\\Users\\\\nguye\\\\.claude\\\\projects\\\\D--MT5-Dev\\\\memory\\\\project_v7_playsound_vs_files_sandbox.md' -Raw\")"
+    ]
+  }
+}

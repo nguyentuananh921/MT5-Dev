@@ -4,6 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_SIGNALMARKERS_MQH
 #define CGUIPANNEL_SIGNALMARKERS_MQH
+#include "GUIPannel.mqh"
  // --- Attaches SignalMarkers.mq5 to this chart if not already running (checked by short
  // --- name, set via IndicatorSetString(INDICATOR_SHORTNAME,...) in the indicator's own
  // --- OnInit) - idempotent, safe to call defensively on every OnInitEvent branch, same

@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CTIMESERIESENGINE_CANDLEPATTERN_MQH
 #define CTIMESERIESENGINE_CANDLEPATTERN_MQH
+#include "TimeSeriesEngine.mqh"
  //For candle Pattern in Layer 1
  void CTimeSeriesEngine::RegisterAllCandlePatterns(void)
   {

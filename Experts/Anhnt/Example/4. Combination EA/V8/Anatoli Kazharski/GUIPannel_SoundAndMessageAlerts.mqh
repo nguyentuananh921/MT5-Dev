@@ -1,19 +1,40 @@
 //+------------------------------------------------------------------+
 //|                           GUIPannel_SoundAndMessageAlerts.mqh    |
 //+------------------------------------------------------------------+
+//Bug Note: Sound in folder C:\Program Files\MetaTrader 5\Sounds
 #ifndef CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH
 #define CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH 
- // --- CLOSED bar (HistoryTime/HistoryDir): never Sound/Message - the chart Marker already
- // --- shows these visually. Only appended to Signal_Log.csv (status "Closed"), gated by a
- // --- per-template-per-TF watermark (m_wm_*, persisted to Signal_Log_Watermark_<SYMBOL>.json,
- // --- params_key carries its own "|<TF>" suffix - Anhnt, 2026-08-10) so a restart's SyncHistory
- // --- backfill catches up the CSV without ever duplicating a row already on disk, and without
- // --- ever making noise for old history.
- // --- LIVE bar 0 (GetCurrentSignal): the still-forming bar can flip back and forth several
- // --- times before it closes - each REAL change (vs m_live_signal_last_seen[row]) fires
- // --- Sound+Message+CSV (status "Live") immediately with TimeCurrent(), since there's no
- // --- fixed bar time yet. Runs every OnTimerEvent tick - cheap, no file I/O unless something
- // --- actually changed.
+ #include "GUIPannel.mqh"
+ void CGUIPannel::PlaySoundFile(const string filename)
+    {
+     if(filename == "") return;
+     ::ResetLastError();
+     bool played = ::PlaySound(filename);
+     int err = ::GetLastError();
+     ::Print("MY DEBUG CGUIPannel::PlaySoundFile - filename=", filename,
+            " PlaySound returned=", played, " GetLastError=", err,
+            " | TERMINAL_PATH=", ::TerminalInfoString(TERMINAL_PATH),
+            " | TERMINAL_DATA_PATH=", ::TerminalInfoString(TERMINAL_DATA_PATH));
+    }
+ //+------------------------------------------------------------------+
+ //| Check and play sound when a new bar opens on any timeframe       |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::PlaySoundCloseBar(void)
+  {
+    if(!m_closebar_sound_played && m_BarTimeSeriesCollection.IsNewBar(::Symbol()))
+      {
+        m_closebar_sound_played = true;
+        PlaySoundFile("NewBar.wav");
+      }
+  }
+ //PlaySound for Live only for Close Bar only Play NewBar.wav 
+ void CGUIPannel::PlaySoundForDirection(const bool is_buy)
+    {
+     string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
+     PlaySoundFile(file);
+    }
+ //Every TF Share the same Template in Layer 1 similar to Template on Chart.
+ //Alert change in Direction in Every Indicator + TF at Live
  void CGUIPannel::CheckIndicatorAlerts(void)
   {
    if(m_time_series_engine == NULL || m_BarTimeSeriesCollection == NULL) return;
@@ -23,80 +44,74 @@
     {
       m_signal_logger.LoadSignalLogWatermarks();
       m_signal_log_watermarks_loaded = true;
-    }
-   // --- m_table_indicator_ptrs is scoped to the CHART's own TF only (RefreshTableIndicator -
-   // --- one settings-table row per TEMPLATE, chart's own instance is representative of the
-   // --- template since every TF shares the same template set). Alerts must fire for EVERY
-   // --- tracked TF of the symbol, not just the chart's - so this method now walks all series
-   // --- and, for each (TF,template) pair, finds that TF's own instance of the template
-   // --- (Anhnt, 2026-08-10: alerts silently never fired for any TF but the chart's own).
-   string sym = ::Symbol();
-   CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
-   CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
-   int series_total = (series_list != NULL) ? series_list.Total() : 0;
-   if(series_total == 0) return;
+    }   
+    string sym = ::Symbol();
+    CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
+    CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
+    int series_total = (series_list != NULL) ? series_list.Total() : 0;
+    if(series_total == 0) return;
 
-   SIndicatorCatalogItem catalog[];
-   GetIndicatorCatalog(catalog);
+    SIndicatorCatalogItem catalog[];
+    GetIndicatorCatalog(catalog);
    // --- Precompute each template row's match key once - shared by every TF below.
-   string tmpl_type_key[], tmpl_params_key[];
-   ArrayResize(tmpl_type_key, rows);
-   ArrayResize(tmpl_params_key, rows);
-   for(int row = 0; row < rows; row++)
-    {
-     CIndicatorDE *tmpl = m_table_indicator_ptrs[row];
-     if(tmpl != NULL) BuildTemplateMatchKey(tmpl, catalog, tmpl_type_key[row], tmpl_params_key[row]);
-    }
+    string tmpl_type_key[], tmpl_params_key[];
+    ArrayResize(tmpl_type_key, rows);
+    ArrayResize(tmpl_params_key, rows);
+    for(int row = 0; row < rows; row++)
+     {
+      CIndicatorDE *tmpl = m_table_indicator_ptrs[row];
+      if(tmpl != NULL) BuildTemplateMatchKey(tmpl, catalog, tmpl_type_key[row], tmpl_params_key[row]);
+     }
    // --- Flattened per-(TF,template) state - mirrors CheckCandlePatternAlerts's own
    // --- ti*pattern_count+row indexing.
-   int total_slots = series_total * rows;
-   int prev_size = ArraySize(m_live_signal_last_seen);
-   bool seeding = (prev_size != total_slots); // TF/row grid just changed shape - seed, don't fire
-   if(seeding)
-    {
-      ArrayResize(m_live_signal_last_seen, total_slots);
-      ArrayResize(m_upper_last_seen, total_slots);
-      ArrayResize(m_lower_last_seen, total_slots);
-    }
-   for(int ti = 0; ti < series_total; ti++)
-    {
-     CBarSeriesDE *s = series_list.At(ti);
-     if(s == NULL) continue;
-     ENUM_TIMEFRAMES tf = s.Timeframe();
-     string tf_text = TimeframeDescription(tf);
-     CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-     ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-     int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+    int total_slots = series_total * rows;
+    int prev_size = ArraySize(m_live_signal_last_seen);
+    bool seeding = (prev_size != total_slots); // TF/row grid just changed shape - seed, don't fire
+    if(seeding)
+     {
+       ArrayResize(m_live_signal_last_seen, total_slots);
+       ArrayResize(m_upper_last_seen, total_slots);
+       ArrayResize(m_lower_last_seen, total_slots);
+     }
+    for(int ti = 0; ti < series_total; ti++)
+     {
+      CBarSeriesDE *s = series_list.At(ti);
+      if(s == NULL) continue;
+      ENUM_TIMEFRAMES tf = s.Timeframe();
+      string tf_text = TimeframeDescription(tf);
+      CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+      ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+      int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
 
-     for(int row = 0; row < rows; row++)
-      {
-       if(tmpl_type_key[row] == "") continue;
-       bool sound_on   = ((int)m_table_indicator_template.SelectedImageIndex(5, row) == 0);
-       bool message_on = ((int)m_table_indicator_template.SelectedImageIndex(6, row) == 0);
-       if(!sound_on && !message_on) continue;
+      for(int row = 0; row < rows; row++)
+       {
+        if(tmpl_type_key[row] == "") continue;
+        bool sound_on   = ((int)m_table_indicator_template.SelectedImageIndex(5, row) == 0);
+        bool message_on = ((int)m_table_indicator_template.SelectedImageIndex(6, row) == 0);
+        if(!sound_on && !message_on) continue;
 
-       // --- Find THIS TF's own instance of the template (row).
-       CIndicatorDE *ind = NULL;
-       for(int ii = 0; ii < ind_total; ii++)
-        {
-         CIndicatorDE *cand = ind_list.At(ii);
-         if(cand == NULL) continue;
-         string ck_type, ck_params;
-         BuildTemplateMatchKey(cand, catalog, ck_type, ck_params);
-         if(ck_type == tmpl_type_key[row] && ck_params == tmpl_params_key[row]) { ind = cand; break; }
-        }
-       if(ind == NULL) continue;
-       CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
-       if(signal == NULL) continue;
+        // --- Find THIS TF's own instance of the template (row).
+        CIndicatorDE *ind = NULL;
+        for(int ii = 0; ii < ind_total; ii++)
+         {
+          CIndicatorDE *cand = ind_list.At(ii);
+          if(cand == NULL) continue;
+          string ck_type, ck_params;
+          BuildTemplateMatchKey(cand, catalog, ck_type, ck_params);
+          if(ck_type == tmpl_type_key[row] && ck_params == tmpl_params_key[row]) { ind = cand; break; }
+         }
+        if(ind == NULL) continue;
+        CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+        if(signal == NULL) continue;
 
-       int index = ti * rows + row;
-       string label   = BuildIndicatorLabel(ind, catalog);
-       int digits = (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS);
+        int index = ti * rows + row;
+        string label   = BuildIndicatorLabel(ind, catalog);
+        int digits = (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS);
        // --- TF-qualify the watermark key - a template is shared across every tracked TF, but
        // --- each TF's own flip history must never share a watermark record with another TF's
        // --- (Anhnt, 2026-08-10: used to be type+params only, which only ever worked because
        // --- this method used to check just the chart's own TF).
-       string wm_params_key = tmpl_params_key[row] + "|" + tf_text;
+        string wm_params_key = tmpl_params_key[row] + "|" + tf_text;
        //--- BBands-only: Upper/Lower lines, each backed by CSignalBollinger's OWN real
        //--- persisted history (Layer 1) - safe downcast, ind.TypeIndicator()==IND_BANDS
        //--- already confirms `signal` really is a CSignalBollinger instance. Mid is NOT
@@ -109,8 +124,8 @@
           ProcessBandLine(index, bb, BBAND_LINE_UPPER, "Upper", m_upper_last_seen, seeding, tmpl_type_key[row], wm_params_key, label, tf_text, digits);
           ProcessBandLine(index, bb, BBAND_LINE_LOWER, "Lower", m_lower_last_seen, seeding, tmpl_type_key[row], wm_params_key, label, tf_text, digits);
          }
-       //--- Closed-bar path: log-only catch-up of every committed flip newer than the
-       //--- persisted per-template-per-TF watermark - never Sound/Message.
+       //--- Closed-bar path: catch-up of every committed flip newer than the persisted
+       //--- per-template-per-TF watermark - fires Sound+Message+CSV same as Live (Anhnt, 2026-08-10).
         datetime wm = m_signal_logger.GetSignalLogWatermark(tmpl_type_key[row], wm_params_key);
         int total = signal.HistoryTotal();
         datetime newest_committed = wm;
@@ -119,19 +134,27 @@
           datetime t = signal.HistoryTime(idx);
           if(t <= wm) continue;
           ENUM_SIGNAL_DIR hdir = signal.HistoryDir(idx);
-          string dir_text = (hdir == SIGNAL_BUY) ? "Buy" : "Sell";
+          bool cb_is_buy = (hdir == SIGNAL_BUY);
+          string dir_text = cb_is_buy ? "Buy" : "Sell";
           // --- BBands' own primary signal IS the MidBand cross now (Anhnt, 2026-07-19) -
           // --- name it explicitly so this row can't be confused with the Upper/Lower
           // --- line-cross rows (ProcessBandLine, below) which use the same "Buy"/"Sell" text.
           string cross_text = (ind.TypeIndicator() == IND_BANDS)
-                                ? ((hdir == SIGNAL_BUY) ? "Cross Up MidBand" : "Cross Down MidBand") : "";
+                                ? (cb_is_buy ? "Cross Up MidBand" : "Cross Down MidBand") : "";
           string time_text = ::TimeToString(t, TIME_DATE|TIME_MINUTES);
           // --- Bar already closed - look up ITS OWN Close, not the current live price
           // --- (Anhnt, 2026-07-17): map flip_time back to a shift via iBarShift.
           int shift = ::iBarShift(sym, tf, t, false);
           double price = (shift >= 0) ? ::iClose(sym, tf, shift) : 0.0;
           string price_text = ::DoubleToString(price, digits);
-          m_signal_logger.WriteSignalLogRow(time_text, sym, tf_text, label, dir_text, price_text, "Closed", cross_text);
+          m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "CloseBar", dir_text, label, price_text, cross_text);
+          if(!m_closebar_sound_played)
+           {
+            m_closebar_sound_played = true;
+            PlaySoundFile("NewBar.wav");
+           }
+          if(message_on)
+            CMessage::Out(time_text + ";CloseBar;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
           if(t > newest_committed) newest_committed = t;
          }
         if(newest_committed > wm)
@@ -152,26 +175,21 @@
         bool is_buy = (live_dir == SIGNAL_BUY);
         if(sound_on)
          {
-          // --- Deliberately native ::PlaySound(), NOT CMessage::PlaySound() (Anhnt,
-          // --- 2026-07-17 - confirmed by reading Message.mqh): that wrapper unconditionally
-          // --- prepends "\Files\" to any filename that isn't one of its own built-in SND_*
-          // --- constants, no matter what we pass it - so it can NEVER reach a file sitting in
-          // --- MQL5\Sounds\ (only MQL5\Files\...\ - a different sandbox from FileFindFirst/
-          // --- FileOpen, which only reach MQL5\Files\ - see the Sound-picker combobox's own
-          // --- ScanSoundFolder). The chosen .wav needs to physically exist in MQL5\Sounds\
-          // --- (copied once, not auto-synced) - native ::PlaySound(bare filename) resolves
-          // --- against that folder directly, with no wrapper in the way.
-            string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
-            if(file != "")
-              ::PlaySound(file);
+          // --- Deliberately native ::PlaySound() (via PlaySoundFile), NOT CMessage::PlaySound()
+          // --- (Anhnt, 2026-07-17 - confirmed by reading Message.mqh): that wrapper
+          // --- unconditionally prepends "\Files\" to any filename that isn't one of its own
+          // --- built-in SND_* constants, no matter what we pass it.
+          // --- Bare filename only resolves against TERMINAL_PATH\Sounds\ (install dir, e.g.
+          // --- C:\Program Files\MetaTrader 5\Sounds\) - NOT MQL5\Sounds\, NOT MQL5\Files\Sounds\
+          // --- (confirmed 2026-08-13, see FeatureNote/SoundBugNote.md). Any new .wav must be
+          // --- copied there manually or it fails silently with GetLastError()=5019.
+            PlaySoundForDirection(is_buy);
          }
         if(message_on)
          {
-          // --- Field order Time;Live/Closed;TF;Indicator;Signal (Anhnt, 2026-07-17) - ";"
+          // --- Field order Time;Live/CloseBar;TF;Indicator;Signal (Anhnt, 2026-07-17) - ";"
           // --- delimited so pasting Journal lines straight into Excel auto-splits into columns,
-          // --- same convention as Signal_Log.csv's own sep=; fix. Closed bars never reach this
-          // --- branch at all (log-only, see the loop above) - every message printed here IS a
-          // --- Live bar-0 event, hence the literal "Live" in the 2nd field.
+          // --- same convention as Signal_Log_<SYMBOL>.csv's own sep=; fix.
             string dir_text  = is_buy ? "Buy" : "Sell";
           // --- Same MidBand naming as the closed-bar loop above (Anhnt, 2026-07-19).
             string cross_text = (ind.TypeIndicator() == IND_BANDS)
@@ -181,7 +199,7 @@
             double price = ::iClose(sym, tf, 0);
             string price_text = ::DoubleToString(price, digits);
             CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
-            m_signal_logger.WriteSignalLogRow(time_text, sym, tf_text, label, dir_text, price_text, "Live", cross_text);
+            m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
          }
       }
     }
@@ -231,6 +249,15 @@
         for(int i = 0; i < min_required_size; i++)
           m_candle_pattern_last_seen[i] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
        }
+     // --- CloseBar direction-change tracker (Anhnt, 2026-08-11) - separate from
+     // --- m_candle_pattern_last_seen above (that one is Live-only, reset every new bar); this
+     // --- one persists across bars, same grow-only sizing/indexing.
+      if(min_required_size > 0 && ArraySize(m_candle_pattern_closebar_last_dir) < min_required_size)
+       {
+        ArrayResize(m_candle_pattern_closebar_last_dir, min_required_size);
+        for(int i = 0; i < min_required_size; i++)
+          m_candle_pattern_closebar_last_dir[i] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
+       }
     // Detect new bar on each TF of current symbol - reset pattern state for that TF
      for(int ti = 0; ti < series_total; ti++)
       {
@@ -244,6 +271,84 @@
           {
            int index = ti * pattern_count + row;
            m_candle_pattern_last_seen[index] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
+          }
+        }
+      }
+    // --- CLOSED bar path (Anhnt, 2026-08-10): fires Sound+Message+CSV (status "CloseBar",
+    // --- source "Candle") for every committed pattern newer than a per-(pattern type, TF)
+    // --- watermark - same shape as CheckIndicatorAlerts's own Closed-bar loop. Reads directly
+    // --- from m_BarTimeSeriesCollection.GetListAllPatterns() (Layer 1's real per-series data,
+    // --- same source CSignalBridgeWriter/the CandleInfo popup already use), NOT through
+    // --- m_BarPatterns_Control/DetectPatternOnBar0 - that pair is still the separate, paused
+    // --- Live bar-0 bug (see FeatureNote/UpdateCandlePattern.md "Bug Live") and is untouched here.
+     CArrayObj *all_patterns_cb = m_BarTimeSeriesCollection.GetListAllPatterns();
+     if(all_patterns_cb != NULL)
+      {
+       int all_patterns_total_cb = all_patterns_cb.Total();
+       for(int ti = 0; ti < series_total; ti++)
+        {
+         CBarSeriesDE *bar_series_cb = series_list.At(ti);
+         if(bar_series_cb == NULL) continue;
+         ENUM_TIMEFRAMES tf_cb = bar_series_cb.Timeframe();
+         string tf_text_cb = TimeframeDescription(tf_cb);
+
+         for(int row = 0; row < pattern_count; row++)
+          {
+           ENUM_PATTERN_TYPE pattern_cb = m_pattern_types[row];
+           bool sound_on_cb   = ((int)m_table_CandlePatternsSetting.SelectedImageIndex(3, row) == 0);
+           bool message_on_cb = ((int)m_table_CandlePatternsSetting.SelectedImageIndex(4, row) == 0);
+           if(!sound_on_cb && !message_on_cb) continue;
+
+           string wm_type_key_cb   = "Pattern_" + EnumToString(pattern_cb);
+           datetime wm_cb = m_signal_logger.GetSignalLogWatermark(wm_type_key_cb, tf_text_cb);
+           datetime newest_committed_cb = wm_cb;
+
+           for(int p = 0; p < all_patterns_total_cb; p++)
+            {
+             CBarPattern *pat_cb = all_patterns_cb.At(p);
+             if(pat_cb == NULL) continue;
+             if(pat_cb.Symbol() != sym || pat_cb.Timeframe() != tf_cb || pat_cb.TypePattern() != pattern_cb) continue;
+             datetime pt_cb = pat_cb.Time();
+             if(pt_cb <= wm_cb) continue;
+
+             ENUM_PATTERN_DIRECTION pdir_cb = pat_cb.Direction();
+             // Only BULLISH/BEARISH map to a Buy/Sell row (matches SignalBridgeWriter's own
+             // filter) - BOTH/anything else isn't a directional alert, skip but still advance
+             // the watermark so it doesn't get re-checked forever.
+             if(pdir_cb != PATTERN_DIRECTION_BULLISH && pdir_cb != PATTERN_DIRECTION_BEARISH)
+               { if(pt_cb > newest_committed_cb) newest_committed_cb = pt_cb; continue; }
+             bool is_buy_cb = (pdir_cb == PATTERN_DIRECTION_BULLISH);
+             // --- Sound only on a real direction change vs the last CloseBar-committed one for
+             // --- this (pattern type, TF) - same principle as Live/Indicator (Anhnt, 2026-08-11).
+             // --- Tracked unconditionally (not gated on sound_on_cb) so toggling Sound on later
+             // --- doesn't replay a direction already seen while it was off.
+             int index_cb = ti * pattern_count + row;
+             bool is_new_flip_cb = (pdir_cb != m_candle_pattern_closebar_last_dir[index_cb]);
+             m_candle_pattern_closebar_last_dir[index_cb] = pdir_cb;
+             string dir_text_cb = is_buy_cb ? "Buy" : "Sell";
+             uint candles_cb = pat_cb.Candles();
+             string pat_name_cb = pat_cb.GetProperty(PATTERN_PROP_NAME);
+             if(pat_name_cb == "") pat_name_cb = EnumToString(pat_cb.TypePattern());
+             string name_cb = (candles_cb > 0 ? "[" + IntegerToString(candles_cb) + "B] " : "") + pat_name_cb;
+             string time_text_cb = ::TimeToString(pt_cb, TIME_DATE|TIME_MINUTES);
+             int shift_cb = ::iBarShift(sym, tf_cb, pt_cb, false);
+             double price_cb = (shift_cb >= 0) ? ::iClose(sym, tf_cb, shift_cb) : 0.0;
+             int digits_cb = (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS);
+             string price_text_cb = ::DoubleToString(price_cb, digits_cb);
+
+             m_signal_logger.WriteSignalLogRow(time_text_cb, "Candle", tf_text_cb, "CloseBar", dir_text_cb, name_cb, price_text_cb, "");
+             if(is_new_flip_cb && !m_closebar_sound_played)
+              {
+               m_closebar_sound_played = true;
+               PlaySoundFile("NewBar.wav");
+              }
+             if(message_on_cb)
+               CMessage::Out(time_text_cb + ";CloseBar;" + tf_text_cb + ";" + name_cb + ";" + dir_text_cb);
+
+             if(pt_cb > newest_committed_cb) newest_committed_cb = pt_cb;
+            }
+           if(newest_committed_cb > wm_cb)
+             m_signal_logger.SetSignalLogWatermark(wm_type_key_cb, tf_text_cb, newest_committed_cb);
           }
         }
       }
@@ -284,22 +389,7 @@
               // New pattern formed on bar 0
                bool is_bullish = (current == PATTERN_DIRECTION_BULLISH);
                if(sound_on)
-                {
-                 string sound_file = is_bullish ? m_marker_buy_sound_file : m_marker_sell_sound_file;
-                 if(sound_file != "")
-                  {
-                   // Extract bare filename if full path was stored
-                   int last_slash = -1, pos = 0;
-                   while((pos = StringFind(sound_file, "\\", pos)) >= 0)
-                     { last_slash = pos; pos++; }
-
-                   if(last_slash >= 0)
-                     sound_file = StringSubstr(sound_file, last_slash + 1);
-
-                   ::Print(__FUNCTION__, " > Playing sound: ", sound_file);
-                   ::PlaySound(sound_file);
-                  }
-                }
+                 PlaySoundForDirection(is_bullish);
                if(message_on)
                 {
                  string dir_text = is_bullish ? "Buy" : "Sell";
@@ -451,7 +541,6 @@
     }
     return (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
   }
-
  // Detect pattern on live bar 0 - treat as closed bar with current OHLC + closed bars -1, -2 from series
  ENUM_PATTERN_DIRECTION CGUIPannel::DetectPatternOnBar0(ENUM_PATTERN_TYPE pattern_type, ENUM_TIMEFRAMES tf, MqlRates &bar_0_temp)
   {
@@ -498,7 +587,10 @@
       int shift = ::iBarShift(ind.Symbol(), ind.Timeframe(), t, false);
       double price = (shift >= 0) ? ::iClose(ind.Symbol(), ind.Timeframe(), shift) : 0.0;
       string price_text = ::DoubleToString(price, digits);
-      m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Closed", cross_text);
+      m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "CloseBar", dir_text, label, price_text, cross_text);
+      // --- No Sound here (deliberate scoped-down decision, matches the Live block below) - only
+      // --- Message+CSV now fire for CloseBar too (Anhnt, 2026-08-10).
+      CMessage::Out(time_text + ";CloseBar;" + tf_text + ";" + label + ";" + dir_text + ";" + cross_text);
       if(t > newest_committed) newest_committed = t;
     }
    if(newest_committed > wm)
@@ -523,6 +615,6 @@
    double price = ::iClose(ind.Symbol(), ind.Timeframe(), 0);
    string price_text = ::DoubleToString(price, digits);
    CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + ";" + cross_text);
-   m_signal_logger.WriteSignalLogRow(time_text, ::Symbol(), tf_text, label, dir_text, price_text, "Live", cross_text);
+   m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
   }
 #endif // CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH

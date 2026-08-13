@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABSETTINGSYMBOLTF_MQH
 #define CGUIPANNEL_TABSETTINGSYMBOLTF_MQH
+ #include "GUIPannel.mqh"
  // =====================================================================
  // --- Symbol TF sub-tab: flat list of every Symbol+TF pair currently tracked by
  // --- m_BarTimeSeriesCollection (same source as m_treeview_SymbolTF), each row with
@@ -104,7 +105,12 @@
        SetTableSymbolTFSettingRow(row, sym_name, tf_text);
       }
     }
-   m_table_indicator_SymbolTFSeting.Update(true);
+   // Fix (2026-08-10): was Update(true) - forced a full-table rebuild (AutoResizeColumns/
+   // ChangeMainSize/DrawTable/scrollbars) on every genuinely-new TF, on top of MT5's own
+   // native chart-change redraw - that double-redraw was the m_window_main flicker. Update(false)
+   // still flushes the just-added row's cells (m_canvas/m_table/m_headers.Update()) without
+   // the full rebuild - see FeatureNote/FixMainWindowFlicker.md.
+   m_table_indicator_SymbolTFSeting.Update(false);
   }
  //Tab Symbol TF TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config
  // --- Re-evaluates col 0's icon (delete vs start) for every row - called after a real

@@ -4,6 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_JSONCONFIG_MQH
 #define CGUIPANNEL_JSONCONFIG_MQH
+ #include "GUIPannel.mqh"
  //Helper for OnClickSaveIndicators() and OnClickSaveSymbolTF() and  
  // --- Shared by OnClickSaveIndicators() and OnClickSaveSymbolTF(): builds the Buy/Sell
  // --- lookup arrays from m_table_indicator_SymbolTFSeting and hands them to
@@ -86,10 +87,10 @@
   
     string buy_sound_esc  = m_marker_buy_sound_file;
     string sell_sound_esc = m_marker_sell_sound_file;
-    string sound_folder_esc = m_marker_sound_folder;
+    // string sound_folder_esc = m_marker_sound_folder;
     ::StringReplace(buy_sound_esc,  "\\", "\\\\");
     ::StringReplace(sell_sound_esc, "\\", "\\\\");
-    ::StringReplace(sound_folder_esc, "\\", "\\\\");
+    // ::StringReplace(sound_folder_esc, "\\", "\\\\");
   
     json += " \"markers\": {\n" +
         "  \"single_indicator_buy_arrow_code\": "  + (string)m_marker_single_indicator_buy_code + ",\n" +
@@ -106,8 +107,8 @@
         " },\n" +
         " \"sound_settings\": {\n" +
         "  \"buy_sound_file\": \""  + buy_sound_esc  + "\",\n" +
-        "  \"sell_sound_file\": \"" + sell_sound_esc + "\",\n" +
-        "  \"sound_folder\": \""    + sound_folder_esc + "\"\n" +
+        "  \"sell_sound_file\": \"" + sell_sound_esc + "\"\n" +
+        // "  \"sound_folder\": \""    + sound_folder_esc + "\"\n" +
         " }\n}";
 
     int fh = FileOpen(full_path, FILE_TXT | FILE_WRITE | FILE_ANSI);
@@ -146,7 +147,7 @@
    //For sound
     m_marker_buy_sound_file   = "";
     m_marker_sell_sound_file  = "";
-    m_marker_sound_folder     = "Sounds";
+    // m_marker_sound_folder     = "Sounds";
    //For Config_Setting.json
     //string content = IndicatorConfig_ReadWholeFile("Config_Setting.json");
     string full_path = g_ea_folder + "/Config_Setting.json";
@@ -167,7 +168,7 @@
     string sv;
     if(::JsonStringValue(content, "buy_sound_file",  sv)) m_marker_buy_sound_file  = sv;
     if(::JsonStringValue(content, "sell_sound_file", sv)) m_marker_sell_sound_file = sv;
-    if(::JsonStringValue(content, "sound_folder",    sv)) m_marker_sound_folder    = sv;
+    //if(::JsonStringValue(content, "sound_folder",    sv)) m_marker_sound_folder    = sv;
   }
  void CGUIPannel::LoadPatternAlertConfigFromJSON(void)
   {

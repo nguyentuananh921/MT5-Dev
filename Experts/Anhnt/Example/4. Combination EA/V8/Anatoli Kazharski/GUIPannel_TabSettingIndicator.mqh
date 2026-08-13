@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABSETTINGINDICATOR_MQH
 #define CGUIPANNEL_TABSETTINGINDICATOR_MQH
+#include "GUIPannel.mqh"
  //For control at TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL of m_tabs_main
  //+------------------------------------------------------------------+
  //| Create a nested tab group m_tabs_main_setting_config for Settings tab config sections       |
@@ -46,44 +47,7 @@
     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_treeview_indicator);       
     return true;
   }
-//  void CGUIPannel::PopulateIndicatorTree(void)
-  //   {
-  //     string group_names[4] = {"Trend", "Oscillator", "Volumes", "Arrows"};
-  //     ENUM_INDICATOR_GROUP group_values[4] = {INDICATOR_GROUP_TREND, INDICATOR_GROUP_OSCILLATOR, INDICATOR_GROUP_VOLUMES, INDICATOR_GROUP_ARROWS};
-
-  //     SIndicatorCatalogItem catalog[];
-  //     GetIndicatorCatalog(catalog);
-  //     ArrayResize(m_group_tree_pos, 4); 
-  //     for(int g = 0; g < 4; g++)
-  //      {
-  //       int root_li = m_treeview_indicator.ItemsTotal();
-  //       m_group_tree_pos[g] = root_li;
-  //       m_treeview_indicator.AddTreeItem(root_li,
-  //                                     -1,                          // prev_node_list_index = -1 (root)
-  //                                     group_names[g],
-  //                                     IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
-  //                                     g, 0,                        // item_index, node_level = 0
-  //                                     0, 0, 0,
-  //                                     true, true);                 // item_state, is_folder
-  //       int k = 0;
-  //       for(int i = 0; i < ArraySize(catalog); i++)
-  //        {
-  //         if(catalog[i].group != group_values[g]) continue;
-  //         int child_li = m_treeview_indicator.ItemsTotal();
-  //         m_treeview_indicator.AddTreeItem(child_li, root_li, catalog[i].name,
-  //                                         IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
-  //                                         k, 1, g, 0, 0, true, true);
-  //         // --- KHÔNG còn gọi leaf.Index(...) nữa — lưu mapping riêng
-  //         int sz = ArraySize(m_type_node_li);
-  //         ArrayResize(m_type_node_li, sz + 1);
-  //         ArrayResize(m_type_node_value, sz + 1);
-  //         m_type_node_li[sz]    = child_li;
-  //         m_type_node_value[sz] = catalog[i].type;
-  //         k++;
-  //        }
-  //      }
-  //   } 
-void CGUIPannel::PopulateIndicatorTree(void)
+ void CGUIPannel::PopulateIndicatorTree(void)
   {    
     //Seting Root Node for m_treeview_indicator base on ENUM_INDICATOR_GROUP in TimeseriesDefines.mqh
     ENUM_INDICATOR_GROUP group_values[4] = {INDICATOR_GROUP_TREND, 
@@ -99,7 +63,7 @@ void CGUIPannel::PopulateIndicatorTree(void)
       //m_group_tree_pos[g] = root_li;
       m_treeview_indicator.AddTreeItem(root_li,
                                     -1,                          // prev_node_list_index = -1 (root)
-                                    IndicatorGroupName(group_values[g]),//Node Name IndicatorGroupName in TimeseriesDELib.mqh
+                                    GetIndicatorGroupName(group_values[g]),//Node Name IndicatorGroupName in TimeseriesDELib.mqh
                                     IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,     //Inactive Icon
                                     g, 0,                        // item_index, node_level = 0
                                     0, 0, 0,
@@ -162,40 +126,7 @@ void CGUIPannel::PopulateIndicatorTree(void)
      }
     m_treeview_indicator.Update(true);
   }
- // --- GUI "Add" button: indicator creation itself now lives in CTimeSeriesEngine
- // --- (Tang 1, PureData) - GUIPannel only forwards the call, then updates its own
- // --- display state (TreeView icon + m_table_indicator), which is its Tang 2 job.
- void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
-  {
-    if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL) return;
-    // --- Source-side duplicate guard (README 5c): the template set stays unique HERE,
-    // --- at the only place templates enter Layer 1 - not hidden later by a display dedup.
-     if(m_IndicatorsCollection.TemplateExists(type, params))
-      {
-       ::Print(__FUNCTION__, " > rejected: this template already exists");
-       return;
-      }
-     if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
-     SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
-    // --- Append exactly ONE row for the new template (README 5c - no rescan, no rebuild).
-    // --- The engine appends to the collection, so the new instance for the current chart
-    // --- is the LAST one in the (symbol,TF)-filtered list.
-     string sym = ::Symbol();
-     ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
-     CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-     list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-     if(list == NULL || list.Total() == 0) return;
-     CIndicatorDE *indicator = list.At(list.Total() - 1);
-     int row = ArraySize(m_table_indicator_ptrs);
-     if(row > 0)                      // an empty table already owns one physical row - reuse it for row 0
-       m_table_indicator_template.AddRow(row, true);   // redraw=true - recalculate visible-area size, see
-                                                // README/BugNote 2026-07-14 black/smeared overflow bug
-     ArrayResize(m_table_indicator_names, row + 1);
-     ArrayResize(m_table_indicator_ptrs,  row + 1);
-     ArrayResize(m_settings_cache_state,  row + 1);
-     SetIndicatorTableRow(row, indicator);
-     m_table_indicator_template.Update(true);
-  }
+ 
  //For m_table_indicator in TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR m_tabs_main_setting_config
  //List all indicator in template
  bool CGUIPannel::CreateTabbleIndicator(const int x, const int y)
@@ -388,6 +319,13 @@ void CGUIPannel::PopulateIndicatorTree(void)
      m_table_indicator_template.Update(false);
   }
  //To Add Indicator
+  void CGUIPannel::SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw)
+   {
+    out[idx].row         = r;
+    out[idx].col         = c;
+    out[idx].total_width = tw;
+    out[idx].field_width = fw;
+   } 
   // Builds the per-param layout for `type`. element_type is always carried
   // straight from Tang 1's schema (choices!="" -> E_COMBO_BOX) - Tang 2 does
   // not re-decide that fact, only how/where to render it. row/col/field_width
@@ -613,6 +551,7 @@ void CGUIPannel::PopulateIndicatorTree(void)
      }
     return total;
    }
+
   // =====================================================================
   // --- Called from OnEvent when a Type-level tree node is clicked
   // =====================================================================
@@ -730,15 +669,6 @@ void CGUIPannel::PopulateIndicatorTree(void)
        m_param_combo[i].GetButtonPointer().Update(true);
       }   
    }
-
-  //Helper to set layout slot
-  void CGUIPannel::SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw)
-   {
-    out[idx].row         = r;
-    out[idx].col         = c;
-    out[idx].total_width = tw;
-    out[idx].field_width = fw;
-   } 
   // Hides all param-form slots. Called after any ShowTabElements() that overrides our Hide().
   void CGUIPannel::HideParamSlots(void)
    {
@@ -867,6 +797,41 @@ void CGUIPannel::PopulateIndicatorTree(void)
      m_btn_save_indicator.Update(true);
     return true;
    }
+  // --- GUI "Add" button: indicator creation itself now lives in CTimeSeriesEngine
+  // --- (Tang 1, PureData) - GUIPannel only forwards the call, then updates its own
+  // --- display state (TreeView icon + m_table_indicator), which is its Tang 2 job.
+  void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
+   {
+    if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL) return;
+    // --- Source-side duplicate guard (README 5c): the template set stays unique HERE,
+    // --- at the only place templates enter Layer 1 - not hidden later by a display dedup.
+     if(m_IndicatorsCollection.TemplateExists(type, params))
+      {
+       ::Print(__FUNCTION__, " > rejected: this template already exists");
+       return;
+      }
+     if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
+     SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
+    // --- Append exactly ONE row for the new template (README 5c - no rescan, no rebuild).
+    // --- The engine appends to the collection, so the new instance for the current chart
+    // --- is the LAST one in the (symbol,TF)-filtered list.
+     string sym = ::Symbol();
+     ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+     CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
+     list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+     if(list == NULL || list.Total() == 0) return;
+     CIndicatorDE *indicator = list.At(list.Total() - 1);
+     int row = ArraySize(m_table_indicator_ptrs);
+     if(row > 0)                      // an empty table already owns one physical row - reuse it for row 0
+       m_table_indicator_template.AddRow(row, true);   // redraw=true - recalculate visible-area size, see
+                                                // README/BugNote 2026-07-14 black/smeared overflow bug
+     ArrayResize(m_table_indicator_names, row + 1);
+     ArrayResize(m_table_indicator_ptrs,  row + 1);
+     ArrayResize(m_settings_cache_state,  row + 1);
+     SetIndicatorTableRow(row, indicator);
+     m_table_indicator_template.Update(true);
+   }
+
   // =====================================================================
   // --- Col 4 checkbox: Tang 2 controls Tang 3 only - never touches PureData.
   // --- The table already auto-toggled the icon before sending this event, so
@@ -995,7 +960,6 @@ void CGUIPannel::PopulateIndicatorTree(void)
     bool buys[], sells[], sounds[], messages[];
     m_time_series_engine.GetLoadedTemplateSettings(types, param_keys, buys, sells, sounds, messages);
     if(ArraySize(types) == 0) return;
-
     SIndicatorCatalogItem catalog[];
     GetIndicatorCatalog(catalog);
 
@@ -1019,84 +983,7 @@ void CGUIPannel::PopulateIndicatorTree(void)
         }
       }
       if(any_changed) m_table_indicator_template.Update(true);
-   }
-  //+------------------------------------------------------------------+
-  //| Build the Col2 display label ("ShortName  (params)") for an      |
-  //| indicator - shared by the row-rebuild path and the row-identity  |
-  //| key used to keep per-tick updates aligned after a user sort.     |
-  //+------------------------------------------------------------------+
-  string CGUIPannel::BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[])
-   {
-    string short_name = "";
-    for(int c = 0; c < ::ArraySize(catalog); c++)
-      if(catalog[c].type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
-    if(short_name == "") short_name = ind.GetTypeDescription();
-    // --- Same schema the Add form uses (README: Tang 1 metadata). schema[i].choices
-    // marks an enum-like param (Method, Applied Price, ...) - stored integer_value is
-    // always the REAL MQL5 enum value (never a bare combo index), so decode it back to
-    // text via the matching CommonDELib.mqh XxxDescription() - dispatched by comparing
-    // choices against the 4 known constants, no separate "kind" needed.
-    SIndicatorParam schema[];
-    GetIndicatorParamSchema(ind.TypeIndicator(), schema);
-    MqlParam mql_params[];
-    ind.GetMqlParams(mql_params);
-    string pvalues = "";
-    for(int i = 0; i < ::ArraySize(mql_params); i++)
-     {
-      if(i > 0) pvalues += ", ";
-      string choices = (i < ::ArraySize(schema)) ? schema[i].choices : "";
-      if(choices == PRICE_CHOICES)
-        pvalues += AppliedPriceDescription((ENUM_APPLIED_PRICE)mql_params[i].integer_value);
-      else if(choices == CALCULATION_METHOD_CHOICES)
-        pvalues += AveragingMethodDescription((ENUM_MA_METHOD)mql_params[i].integer_value);
-      else if(choices == VOLUME_CHOICES)
-        pvalues += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)mql_params[i].integer_value);
-      else if(choices == STOCH_PRICE_CHOICES)
-        pvalues += StochPriceDescription((ENUM_STO_PRICE)mql_params[i].integer_value);
-      else if(mql_params[i].type == TYPE_DOUBLE)
-        pvalues += ::DoubleToString(mql_params[i].double_value, 2);
-      else
-        pvalues += ::IntegerToString((int)mql_params[i].integer_value);
-     }
-      return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
-   }
-  //+------------------------------------------------------------------+
-  //| Builds the SAME (type, params-as-text) key CTimeSeriesEngine::   |
-  //| SaveConfigurationToJSON writes/LoadConfigurationFromJSON parses -|
-  //| NOT BuildIndicatorLabel's pvalues (that rounds doubles to 2      |
-  //| decimals for display; the saved file uses 8, so matching against|
-  //| it would silently fail for any non-integer param).               |
-  //+------------------------------------------------------------------+
-  void CGUIPannel::BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
-   {
-    type_key = "";
-    for(int c = 0; c < ArraySize(catalog); c++)
-      if(catalog[c].type == ind.TypeIndicator()) { type_key = catalog[c].name; break; }
-
-    SIndicatorParam schema[];
-    GetIndicatorParamSchema(ind.TypeIndicator(), schema);
-    MqlParam params[];
-    ind.GetMqlParams(params);
-
-    params_key = "";
-    for(int p = 0; p < ArraySize(params); p++)
-     {
-      if(p > 0) params_key += ",";
-       string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
-      if(choices == PRICE_CHOICES)
-        params_key += AppliedPriceDescription((ENUM_APPLIED_PRICE)params[p].integer_value);
-      else if(choices == CALCULATION_METHOD_CHOICES)
-        params_key += AveragingMethodDescription((ENUM_MA_METHOD)params[p].integer_value);
-      else if(choices == VOLUME_CHOICES)
-        params_key += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)params[p].integer_value);
-      else if(choices == STOCH_PRICE_CHOICES)
-        params_key += StochPriceDescription((ENUM_STO_PRICE)params[p].integer_value);
-      else if(params[p].type == TYPE_DOUBLE)
-        params_key += ::DoubleToString(params[p].double_value, 8);
-      else
-        params_key += ::IntegerToString((int)params[p].integer_value);
-     }
-   }
+   }  
   // --- Resolve a Layer 3 line to the Layer 1 instance (current symbol/TF) it represents,
   // --- or NULL when the line is foreign. Same fast/slow paths as LineRepresentsIndicator.
   CIndicatorDE *CGUIPannel::OwnedInstanceOfLine(const int line_handle)

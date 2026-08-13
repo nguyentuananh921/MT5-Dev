@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CTIMESERIESENGINE_JSONCONFIG
 #define CTIMESERIESENGINE_JSONCONFIG
+#include "TimeSeriesEngine.mqh"
  extern string g_ea_folder;  // From EA
  //+------------------------------------------------------------------+
  //| Tang 1: load the JSON indicator template and apply each entry to |

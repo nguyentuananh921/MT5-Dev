@@ -4,23 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_LIFECYCLE_MQH
 #define CGUIPANNEL_LIFECYCLE_MQH
- //| Constructor/Destructor                                          | 
- CGUIPannel::CGUIPannel(void)
-  {
-   //--- Setting parameters for the time counters
-    m_gui_timecounter.SetParameters(16, 500);
-   //m_renderer = NULL;
-    m_IndicatorsCollection  = NULL;
-    m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
-    m_pending_remove_row     = -1;
-    m_pending_remove_row_symboltf = -1;
-    m_candle_info_shown_bar  = 0;
-   //m_tick_series = NULL;
-    m_gui_created     = false;
-  }
- CGUIPannel::~CGUIPannel(void)
-  {
-  }
+//Private Method
  //Get window index
  int CGUIPannel::WindowIdx(CWindow &wnd)
   {
@@ -34,16 +18,10 @@
  //For GUIPannel    
  bool CGUIPannel::CreateGUIPannel(void) 
   { 
-   // Build pattern list trước tạo GUI
-     //Debug
-      ::Print("CGUIPannel::CreateGUIPannel > Before BuildCandlePatternListFromRegistry, m_BarPatterns_Control=", (m_BarPatterns_Control != NULL ? "OK" : "NULL"));
-    this.BuildCandlePatternListFromRegistry();
-      //Debug
-       ::Print("CGUIPannel::CreateGUIPannel > After BuildCandlePatternListFromRegistry, m_pattern_types.size=", ArraySize(m_pattern_types));
+   // Build pattern list trước tạo GUI     
+    this.BuildCandlePatternListFromRegistry();      
    //DiscoverPatterns(); //Call before CreatePatternConfigTable
-   //--- Creating form 1 for controls
-   //Create control
-   //Create m_window_main
+   //--- Creating form 1 for controls   
    if (!CreateMainWindow("EXPERT PANEL Ver8 Seperation Module"))
      {
        Print(__FUNCTION__, " > Failed to create panel!");
@@ -55,38 +33,38 @@
     SynSymbolTFTreeViewIcons(); 
    //Create m_tabs_main in right panel m_window_main 
     if (!CreateTab_Main(M_TABS_MAIN_X, M_TABS_MAIN_Y))
-    {
+     {
       Print(__FUNCTION__, " > Failed to create Tabs1!");
       return (false);
-    }
+     }
     //Create control at Each Tab
-    //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
-    if(!CreateTableIndicatorSymbolTFValue(0, 0)) return false;
-    //For TAB_TAB_MAIN_SETTINGS Tab at m_tabs_main
-    //Right Pannel of TAB_TAB_MAIN_SETTINGS m_tabs_main_setting_config
-    if (!CreateTabSettingConfig(0, TABS_CONFIG_HEADER_H))
-      {
+     //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
+      if(!CreateTableIndicatorSymbolTFValue(0, 0)) return false;
+     //For TAB_TAB_MAIN_SETTINGS Tab at m_tabs_main
+      //Right Pannel of TAB_TAB_MAIN_SETTINGS m_tabs_main_setting_config
+      if (!CreateTabSettingConfig(0, TABS_CONFIG_HEADER_H))
+       {
         Print(__FUNCTION__, " > Failed to create Settings config tabs!");
         return (false);
-      }
-    //Left pannel of TAB_TAB_MAIN_SETTINGS m_treeview_indicator
-    PopulateIndicatorTree();
-    if(!CreateTreeView_Indicator(0, 0)) return false; 
-    if(!CreateAddIndicatorParaInfor(PARAM_FORM_X, PARAM_FORM_Y)) return false;
-    if(!CreateTabbleIndicator(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
-    //Create Status Bar at m_window_main
-    if (!CreateStatusBar(1, 23))
-    {
-      Print(__FUNCTION__, " > Failed to create Status Bar!");
-      return (false);
-    } 
+       }
+     //Left pannel of TAB_TAB_MAIN_SETTINGS m_treeview_indicator
+      PopulateIndicatorTree();
+      if(!CreateTreeView_Indicator(0, 0)) return false; 
+      if(!CreateAddIndicatorParaInfor(PARAM_FORM_X, PARAM_FORM_Y)) return false;
+      if(!CreateTabbleIndicator(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
+     //Create Status Bar at m_window_main
+      if (!CreateStatusBar(1, 23))
+       {
+        Print(__FUNCTION__, " > Failed to create Status Bar!");
+        return (false);
+       } 
     //Create m_window_candle_infomation Information window at to display signal on chart
-    if (!CreateWindowCandleInfo())
-    {
-      Print(__FUNCTION__, " > Failed to create candle info popup!");
-      return (false);
-    }
-    m_window_candle_infomation.Hide();  
+     if (!CreateWindowCandleInfo())
+      {
+        Print(__FUNCTION__, " > Failed to create candle info popup!");
+        return (false);
+      }
+     m_window_candle_infomation.Hide();  
     //For Symbol TF sub-tab at m_tabs_main_setting_config
      if(!CreateTableSymbolTFSetting(0, WINDOW_CAPTION_HEIGHT)) return false;
      PopulateTableSymbolTFSetting();
@@ -106,7 +84,7 @@
      if(!CreatePreTradePlanSymbolCombo(0, POSITIONS_PLAN_Y)) return false;
      if(!CreatePreTradePlanControls(0, POSITIONS_PLAN_CONTROLS_Y)) return false;
      if(!CreateTablePreTradePlan(0, POSITIONS_PLAN_TABLE_Y)) return false;
-     if(!CreatePositionsTable(0, POSITIONS_TABLE_Y)) return false;
+     if(!CreateTablePositions(0, POSITIONS_TABLE_Y)) return false;
     // --- Trading bubble: just wire the mouse pointer now (cheap, no canvas yet) -
     // --- it lazily creates its own canvas via EnsureCreated(), called from its own
     // --- OnPoll()/OnChartEvent(), only once HasAnyLevel() is true (avoid creating a
@@ -124,21 +102,24 @@
     // --- FormAvailableElementsArray() still registers its labels as available.
      return true;
   }
- //+------------------------------------------------------------------+
- //| Update GUI                                                       |
- //+------------------------------------------------------------------+ 
- void CGUIPannel::UpdateGUI(const bool redraw)
+//Public Method
+ //| Constructor/Destructor                                          | 
+ CGUIPannel::CGUIPannel(void)
   {
-    // No unconditional full-canvas Update(true) here - repainting the whole treeview and
-    // the whole Settings table on every CHARTCHANGE was exactly the m_window_main blink.
-    // Each call below repaints only the cells/icons it actually changed (dirty-check),
-    // and PopulateSymbolTFTree (CHARTEVENT_CHART_CHANGE handler) already updates the tree
-    // when the symbol/TF really changed.
-      RefreshTableIndicator();
-      SetValuesToTableIndicatorSymbolTFValue();
-      SyncIndicatorTreeViewIcons();
-      if(redraw) m_chart.Redraw();
-  } 
+   //--- Setting parameters for the time counters
+    m_gui_timecounter.SetParameters(16, 500);
+   //m_renderer = NULL;
+    m_IndicatorsCollection  = NULL;
+    m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
+    m_pending_remove_row     = -1;
+    m_pending_remove_row_symboltf = -1;
+    m_candle_info_shown_bar  = 0;
+   //m_tick_series = NULL;
+    m_gui_created     = false;
+  }
+ CGUIPannel::~CGUIPannel(void)
+  {
+  }
  // CGUIPannel Lifecycle  
  //+------------------------------------------------------------------+
  //| Init                                                             |
@@ -156,14 +137,25 @@
                         m_time_series_engine.GetSignalsCollection(),
                         m_IndicatorsCollection,
                         m_BarTimeSeriesCollection);
-        }
+       }
      // Set folder paths for file writers (Anhnt, 2026-08-08)
       string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
       m_signal_logger.SetFolder(ea_folder);
       m_bridge_writer.SetFolder(ea_folder);
      //Create main GUI windows and sub windows.
       if(!CreateGUIPannel()) return false;
-      m_gui_created = true;     
+      m_gui_created = true;
+     // --- TEMP DEBUG (Anhnt, 2026-08-12, see FeatureNote/SoundBugNote.md "isolated OnInit test")
+     // --- - isolated test confirmed PlaySoundFile("NewBar.wav") ALSO fails here (5019), not a
+     // --- CheckIndicatorAlerts/CheckCandlePatternAlerts timing/context issue. Round 2: TestOld.wav
+     // --- (byte-identical copy of the KNOWN-WORKING SIGNAL_BUY_EN.wav, brand new filename, added
+     // --- today) vs TestNew.wav (byte-identical copy of NewBar.wav, different new filename) - both
+     // --- placed in MQL5\Sounds\ - isolates whether this is about "NewBar.wav" specifically or
+     // --- about ANY file added to MQL5\Sounds\ today (vs SIGNAL_BUY/SELL, dated 2026-07-17,
+     // --- possibly stale-cached by MT5 at a level that survives EA/terminal restart).
+     // --- DELETE these calls (and this comment block) once the isolated result is known.
+      PlaySoundFile("TestOld.wav");
+      PlaySoundFile("TestNew.wav");
      // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
      // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
       m_chart_obj_collection.CreateCollection();
@@ -208,7 +200,134 @@
       EnsureMarkerIndicatorAttached();
     }
    return true;
-  };
+  }; 
+ //+------------------------------------------------------------------+
+ //| Deinit                                                           |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::OnDeinitEvent(const int reason)
+  {
+   // --- CHARTCHANGE (TF/symbol switch on this SAME chart) must NOT touch
+   // --- m_trading_bubble's chart-level properties (Anhnt, 2026-07-19): its own
+   // --- OnDeinitEvent() restores CHART_SHOW_TRADE_LEVELS/CHART_SHIFT to MT5
+   // --- defaults, which only gets undone again (back to the bubble's preferred
+   // --- values) once EnsureCreated() next runs - and that's gated on HasAnyLevel(),
+   // --- so with zero open positions right after a TF change, native trade-level
+   // --- lines stay stuck ON indefinitely. The chart itself isn't going anywhere on
+   // --- CHARTCHANGE, so there's nothing to restore - skip it, same as every other
+   // --- teardown step below that already special-cases this reason.
+    if(reason != REASON_CHARTCHANGE)
+     {
+      m_trading_bubble.OnDeinitEvent();
+      CWndEvents::Destroy();
+      // --- Legacy cleanup (BugNote 2026-07-16, "2531 leftover Arrow objects after Remove
+      // --- from chart"): the OLD graphic-object drawing path (CreateSignalBuy/Sell/
+      // --- CreateThumbUp/Down, now retired in favor of the SignalMarkers.mq5 indicator +
+      // --- bridge file) never purged its own objects on final removal. Purge this chart's
+      // --- own current (sym, tf) directly - the broader one-time sweep for OTHER (sym,tf)
+      // --- combos this chart visited in past sessions lives in OnInitEvent instead (gated
+      // --- by a GlobalVariable so it only ever runs once per terminal).
+       PurgeSignalArrowObjects(::Symbol(), EnumToString((ENUM_TIMEFRAMES)::Period()));
+      // --- ChartIndicatorAdd() makes SignalMarkers.mq5 an independent chart program - it
+      // --- keeps running/drawing even after this EA is gone unless explicitly detached here.
+       RemoveMarkerIndicator();
+       ::ChartRedraw(m_chart_id);
+     }
+  }
+ //+------------------------------------------------------------------+
+ //| Timer                                                            |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::OnTimerEvent(void)
+  {
+   //--- Exit if this is the tester
+    if (::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
+        return;
+    //--- Deferred indicator delete (queued by the col-0 click in OnEvent) - safe here,
+    //--- the table finished its own click processing on the previous chart event
+    if(m_pending_remove_row >= 0)
+     {
+      int remove_row = m_pending_remove_row;
+      m_pending_remove_row = -1;
+      if(remove_row < ArraySize(m_table_indicator_names))
+        OnClickRemoveIndicator(m_table_indicator_names[remove_row], remove_row);
+     }
+    //--- Deferred delete for m_table_indicator_SymbolTFSeting - GUI-only removal (no Tang 1
+    //--- series is stopped yet, see PopulateTableSymbolTFSetting note)
+    if(m_pending_remove_row_symboltf >= 0)
+     {
+      int remove_row = m_pending_remove_row_symboltf;
+      m_pending_remove_row_symboltf = -1;
+      if(remove_row < (int)m_table_indicator_SymbolTFSeting.RowsTotal())
+       {
+        // --- Drop the pair from indicators_config.json BEFORE the row disappears - live
+        // --- Tang1 (BarSeriesDE/indicators/signals) keeps running this session (no Library
+        // --- removal method yet); it just won't be recreated on the next EA attach/restart.
+        string sym = m_table_indicator_SymbolTFSeting.GetValue(0, remove_row); StringTrimLeft(sym);
+        string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, remove_row); StringTrimLeft(tf);
+        if(m_time_series_engine != NULL)
+          m_time_series_engine.RemoveSymbolTFFromConfigJSON("Config_Setting.json", sym, tf);
+        m_table_indicator_SymbolTFSeting.DeleteRow(remove_row, true);
+       }
+     }
+   //--- Handling the elements
+    ulong t0 = ::GetMicrosecondCount();
+    CWndEvents::OnTimerEvent();
+    ulong t1 = ::GetMicrosecondCount();
+   // --- CTradingLevelBubble self-manages lazy-init via EnsureCreated(), called from the
+   // --- top of its own OnPoll() (2026-07-14) - GUIPannel no longer needs to track whether
+   // --- it's created or special-case the retry, just poll it unconditionally every tick.
+    m_trading_bubble.OnPoll();
+    SetValuesToTableIndicatorSymbolTFValue();
+    UpdateSignalBridgeTemplateFlags();
+    m_bridge_writer.BuildAndWriteSignalBridge();
+   //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
+   //--- custom events (handled in OnEvent -> RefreshIndicatorTableShowStates)
+    m_chart_obj_collection.Refresh();
+    ulong t2 = ::GetMicrosecondCount();
+   // if(t2 - t0 > 1000)
+   //  Print("PERF CGUIPannel::OnTimerEvent CWndEvents::OnTimerEvent= ", t1 - t0, " us CTradingLevelBubble::OnPoll= ", t2 - t1, " us");
+  }  
+ void CGUIPannel::OnTickEvent(void)
+  {  
+    // --- Positions Table (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1, 2026-07-19:
+    // --- row-count mismatch (new/closed symbol) forces a full rebuild; otherwise a plain
+    // --- dirty-checked value refresh, same as V1's own OnTickEvent.
+      bool redraw_needed = false;
+      string pos_symbols_name[];
+      int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
+      int pos_rows_total = (int)m_table_positions.RowsTotal();
+      if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
+      {
+        InitializePositionsTable();
+        redraw_needed = true;
+      }
+      else if(pos_symbols_total > 0)
+        redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
+    // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value    
+      if(UpdateStatusBar())
+        redraw_needed = true;
+    // --- Pre-trade-plan table (Anhnt 2026-07-20): Entry/SL live off Bid/Ask, dirty-checked
+    // --- per-cell same as everywhere else in this file.
+      if(SetValuesToPreTradePlanTable())
+        redraw_needed = true;
+      if(redraw_needed)
+        ::ChartRedraw();
+    // --- Sound and message alerts - run every tick to catch all bar 0 changes. CloseBar Sound
+    // --- dedup gate reset here, BEFORE either function runs - shared budget across both, played
+    // --- INLINE inside them (NOT deferred to a point here after - see
+    // --- m_closebar_sound_played comment in GUIPannel.mqh / FeatureNote/SoundBugNote.md).
+      PlaySoundCloseBar();
+      m_closebar_sound_played = false;
+      CheckIndicatorAlerts();
+      CheckCandlePatternAlerts();
+  }
+ //+------------------------------------------------------------------+
+ //| Trade operation event - refresh positions table on a new deal    |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::OnTradeEvent(void)
+  {
+      if(IsLastDealTicket())
+        InitializePositionsTable();
+  } 
  //+------------------------------------------------------------------+
  //| OnEvent handler                                                  |
  //+------------------------------------------------------------------+  
@@ -591,130 +710,19 @@
    // --- above (2026-07-14) - this native event still fires on every scroll/zoom too, so it was never
    // --- a reliable "did symbol/TF really change" signal on its own; the CChartObjCollection event is.
   }
- void CGUIPannel::OnTickEvent(void)
+ //+------------------------------------------------------------------+
+ //| Update GUI                                                       |
+ //+------------------------------------------------------------------+ 
+ void CGUIPannel::UpdateGUI(const bool redraw)
   {
-   // Detect candle patterns on live bar 0 (includes new bar detection per TF)
-    CheckCandlePatternAlerts();
-
-    // --- Positions Table (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1, 2026-07-19:
-    // --- row-count mismatch (new/closed symbol) forces a full rebuild; otherwise a plain
-    // --- dirty-checked value refresh, same as V1's own OnTickEvent.
-      bool redraw_needed = false;
-      string pos_symbols_name[];
-      int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
-      int pos_rows_total = (int)m_table_positions.RowsTotal();
-      if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
-      {
-        InitializePositionsTable();
-        redraw_needed = true;
-      }
-      else if(pos_symbols_total > 0)
-        redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
-    // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value    
-      if(UpdateStatusBar())
-        redraw_needed = true;
-    // --- Pre-trade-plan table (Anhnt 2026-07-20): Entry/SL live off Bid/Ask, dirty-checked
-    // --- per-cell same as everywhere else in this file.
-      if(SetValuesToPreTradePlanTable())
-        redraw_needed = true;
-      if(redraw_needed)
-        ::ChartRedraw();
-    // --- Sound and message alerts - run every tick to catch all bar 0 changes
-      CheckIndicatorAlerts();
-      CheckCandlePatternAlerts();
-  }
- //+------------------------------------------------------------------+
- //| Trade operation event - refresh positions table on a new deal    |
- //+------------------------------------------------------------------+
- void CGUIPannel::OnTradeEvent(void)
-  {
-      if(IsLastDealTicket())
-        InitializePositionsTable();
-  }
- //+------------------------------------------------------------------+
- //| Deinit                                                           |
- //+------------------------------------------------------------------+
- void CGUIPannel::OnDeinitEvent(const int reason)
-  {
-   // --- CHARTCHANGE (TF/symbol switch on this SAME chart) must NOT touch
-   // --- m_trading_bubble's chart-level properties (Anhnt, 2026-07-19): its own
-   // --- OnDeinitEvent() restores CHART_SHOW_TRADE_LEVELS/CHART_SHIFT to MT5
-   // --- defaults, which only gets undone again (back to the bubble's preferred
-   // --- values) once EnsureCreated() next runs - and that's gated on HasAnyLevel(),
-   // --- so with zero open positions right after a TF change, native trade-level
-   // --- lines stay stuck ON indefinitely. The chart itself isn't going anywhere on
-   // --- CHARTCHANGE, so there's nothing to restore - skip it, same as every other
-   // --- teardown step below that already special-cases this reason.
-    if(reason != REASON_CHARTCHANGE)
-     {
-      m_trading_bubble.OnDeinitEvent();
-      CWndEvents::Destroy();
-      // --- Legacy cleanup (BugNote 2026-07-16, "2531 leftover Arrow objects after Remove
-      // --- from chart"): the OLD graphic-object drawing path (CreateSignalBuy/Sell/
-      // --- CreateThumbUp/Down, now retired in favor of the SignalMarkers.mq5 indicator +
-      // --- bridge file) never purged its own objects on final removal. Purge this chart's
-      // --- own current (sym, tf) directly - the broader one-time sweep for OTHER (sym,tf)
-      // --- combos this chart visited in past sessions lives in OnInitEvent instead (gated
-      // --- by a GlobalVariable so it only ever runs once per terminal).
-      PurgeSignalArrowObjects(::Symbol(), EnumToString((ENUM_TIMEFRAMES)::Period()));
-      // --- ChartIndicatorAdd() makes SignalMarkers.mq5 an independent chart program - it
-      // --- keeps running/drawing even after this EA is gone unless explicitly detached here.
-      RemoveMarkerIndicator();
-      ::ChartRedraw(m_chart_id);
-     }
-  }
- //+------------------------------------------------------------------+
- //| Timer                                                            |
- //+------------------------------------------------------------------+
- void CGUIPannel::OnTimerEvent(void)
-  {
-   //--- Exit if this is the tester
-    if (::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
-        return;
-    //--- Deferred indicator delete (queued by the col-0 click in OnEvent) - safe here,
-    //--- the table finished its own click processing on the previous chart event
-    if(m_pending_remove_row >= 0)
-     {
-      int remove_row = m_pending_remove_row;
-      m_pending_remove_row = -1;
-      if(remove_row < ArraySize(m_table_indicator_names))
-        OnClickRemoveIndicator(m_table_indicator_names[remove_row], remove_row);
-     }
-    //--- Deferred delete for m_table_indicator_SymbolTFSeting - GUI-only removal (no Tang 1
-    //--- series is stopped yet, see PopulateTableSymbolTFSetting note)
-    if(m_pending_remove_row_symboltf >= 0)
-     {
-      int remove_row = m_pending_remove_row_symboltf;
-      m_pending_remove_row_symboltf = -1;
-      if(remove_row < (int)m_table_indicator_SymbolTFSeting.RowsTotal())
-       {
-        // --- Drop the pair from indicators_config.json BEFORE the row disappears - live
-        // --- Tang1 (BarSeriesDE/indicators/signals) keeps running this session (no Library
-        // --- removal method yet); it just won't be recreated on the next EA attach/restart.
-        string sym = m_table_indicator_SymbolTFSeting.GetValue(0, remove_row); StringTrimLeft(sym);
-        string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, remove_row); StringTrimLeft(tf);
-        if(m_time_series_engine != NULL)
-          m_time_series_engine.RemoveSymbolTFFromConfigJSON("Config_Setting.json", sym, tf);
-        m_table_indicator_SymbolTFSeting.DeleteRow(remove_row, true);
-       }
-     }
-   //--- Handling the elements
-    ulong t0 = ::GetMicrosecondCount();
-    CWndEvents::OnTimerEvent();
-    ulong t1 = ::GetMicrosecondCount();
-   // --- CTradingLevelBubble self-manages lazy-init via EnsureCreated(), called from the
-   // --- top of its own OnPoll() (2026-07-14) - GUIPannel no longer needs to track whether
-   // --- it's created or special-case the retry, just poll it unconditionally every tick.
-    m_trading_bubble.OnPoll();
-    SetValuesToTableIndicatorSymbolTFValue();
-    UpdateSignalBridgeTemplateFlags();
-    m_bridge_writer.BuildAndWriteSignalBridge();
-   //--- Layer-3 observer poll: diffs all open charts and broadcasts CHART_OBJ_EVENT_*
-   //--- custom events (handled in OnEvent -> RefreshIndicatorTableShowStates)
-    m_chart_obj_collection.Refresh();
-    ulong t2 = ::GetMicrosecondCount();
-   // if(t2 - t0 > 1000)
-   //  Print("PERF CGUIPannel::OnTimerEvent CWndEvents::OnTimerEvent= ", t1 - t0, " us CTradingLevelBubble::OnPoll= ", t2 - t1, " us");
-  }   
- 
+    // No unconditional full-canvas Update(true) here - repainting the whole treeview and
+    // the whole Settings table on every CHARTCHANGE was exactly the m_window_main blink.
+    // Each call below repaints only the cells/icons it actually changed (dirty-check),
+    // and PopulateSymbolTFTree (CHARTEVENT_CHART_CHANGE handler) already updates the tree
+    // when the symbol/TF really changed.
+      RefreshTableIndicator();
+      SetValuesToTableIndicatorSymbolTFValue();
+      SyncIndicatorTreeViewIcons();
+      if(redraw) m_chart.Redraw();
+  }  
 #endif // CGUIPANNEL_LIFECYCLE_MQH

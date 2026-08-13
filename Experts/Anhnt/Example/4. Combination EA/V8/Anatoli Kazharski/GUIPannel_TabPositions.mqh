@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABPOSITION_MQH
 #define CGUIPANNEL_TABPOSITION_MQH
+ #include "GUIPannel.mqh"
  // ============================================================================
  // Positions Table (TAB_TAB_MAIN_POSITIONS) - ported VERBATIM from V1
  // (Anatoli Kazharski\GUIPannel.mqh), 2026-07-19, per user request: bring it over
@@ -248,7 +249,7 @@
       if(any_changed) m_table_pre_Trade_plan.Update(false);
       return any_changed;
   }
- bool CGUIPannel::CreatePositionsTable(const int x_gap, const int y_gap)
+ bool CGUIPannel::CreateTablePositions(const int x_gap, const int y_gap)
   {
       #define COLUMNS2_TOTAL 10
       #define ROWS2_TOTAL 1

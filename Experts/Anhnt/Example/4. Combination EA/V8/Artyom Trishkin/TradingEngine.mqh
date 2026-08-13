@@ -57,6 +57,8 @@
         void                     TradeEventsControl(void);
         void                     MarketWatchEventsControl(void);
      public:
+
+       //CTradingEngine Lifecycle ->Implementation in CTradingEngine_Lifecycle.mqh 
         CTradingEngine(void);
        ~CTradingEngine(void);
 
@@ -94,6 +96,7 @@
 
 #ifndef CTRADING_ENGINE_MQH_IMPLEMENTATION
 #define CTRADING_ENGINE_MQH_IMPLEMENTATION
+#include "TradingEngine_Lifecycle.mqh"
   //+------------------------------------------------------------------+
   //| Constructor/Destructor                                           |
   //+------------------------------------------------------------------+
@@ -171,68 +174,8 @@
         return;
       this.m_symbol_collection.MarketWatchEventsControl();
     }
-  //+------------------------------------------------------------------+
-  //| Initialize collections and setup control thresholds             |
-  //+------------------------------------------------------------------+
-  bool CTradingEngine::OnInitEvent(void)
-    {
-      //For m_accounts
-      //Using in Account info at tab Trade, initialize account collection and set control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
-        m_accounts_collection.RefreshAndEventsControl();
-        int index = m_accounts_collection.IndexCurrentAccount();
-                  if(index == WRONG_VALUE) return false;    
-        CAccount *acc = (CAccount*)m_accounts_collection.GetList().At(index);
-          if(acc == NULL) return false;
-        //Seting control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
-          acc.SetControlBalanceInc(0);
-          acc.SetControlBalanceDec(0);
-          acc.SetControlProfitInc(0);
-          acc.SetControlProfitDec(0);
-          acc.SetControlEquityInc(0);
-          acc.SetControlEquityDec(0);
-      //For trading
-      //For Symbols Information at tab Trade, initialize symbols collection      
-        // Symbols — init with current chart symbol
-        m_market_collection.Refresh();
-        m_history_collection.Refresh();
-        if(!m_symbol_collection.CreateSymbolsList(true)) // true = MarketWatch
-            return false;        
-        m_trading_control.OnInit(GetCurrentAccount(), &m_symbol_collection, &m_market_collection, &m_history_collection, &m_trade_event_collection);
-        return true;  
-      
-    }
-  //+------------------------------------------------------------------+
-  //| Refresh all collections and detect changes                       |
-  //+------------------------------------------------------------------+
-  void CTradingEngine::OnTickEvent(void)
-    {      
-      //For Account info at tab Trade, only update dynamic info when there is an event in account, no need to update every tick
-        m_is_event   = false;
-        m_event_code = ENGINE_EVENT_NONE;
-
-        m_accounts_collection.RefreshAndEventsControl();
-        if(m_accounts_collection.IsEvent())
-          {
-            m_is_event   = true;
-            m_event_code = ENGINE_EVENT_ACCOUNT;
-          }
-      //For Symbols Information at tab Trade, only update symbols collection when there is an event in symbols, no need to update every tick
-        m_symbol_collection.RefreshAndEventsControl();
-        if(m_symbol_collection.IsEvent())
-          {
-            m_is_event   = true;
-            m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_SYMBOL);
-          }
-        if(m_symbol_collection.ModeSymbolsList() == SYMBOLS_MODE_MARKET_WATCH)
-            this.MarketWatchEventsControl();
-      //For Order and deal
-       this.TradeEventsControl();
-       if(this.m_is_market_trade_event || this.m_is_history_trade_event)
-        {
-            m_is_event   = true;
-            m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_ORDER);
-        }
-    }
+  
+  
 //For Pointer
   CAccount * CTradingEngine::GetCurrentAccount(void)
     {
@@ -341,51 +284,7 @@
     {
         return CalcProfitAt(symbol, POSITION_TYPE_BUY,  price)
             + CalcProfitAt(symbol, POSITION_TYPE_SELL, price);
-    }
-  //Rebuild symbols collection for Symbols Information at tab Trade according to 
-  // the selected mode in the GUI and return true if it is successful, otherwise false
-  // bool CTradingEngine::RebuildSymbols(ENUM_SYMBOLS_MODE mode)
-  // {
-  //   if(mode == SYMBOLS_MODE_CURRENT)
-  //     {
-  //       string syms[1] = { ::Symbol() };
-  //       m_symbols_rebuild_count = 1;
-  //       return m_symbol_collection.SetUsedSymbols(syms);
-  //     }
-  //   if(mode == SYMBOLS_MODE_DEFINES)
-  //     {
-  //       string syms[];
-  //       string buf = "";
-  //       int total = ::PositionsTotal();
-  //       for(int i = 0; i < total; i++)
-  //         {
-  //           string sym = ::PositionGetSymbol(i);
-  //           if(sym == "") continue;
-  //           if(::StringFind(buf, sym, 0) == WRONG_VALUE)
-  //               ::StringAdd(buf, (buf == "") ? sym : "," + sym);
-  //         }
-  //       ushort sep = ::StringGetCharacter(",", 0);
-  //       ::StringSplit(buf, sep, syms);
-  //       m_symbols_rebuild_count = ::ArraySize(syms);
-  //       if(m_symbols_rebuild_count == 0)
-  //           return true;  // no positions, skip rebuild
-  //       return m_symbol_collection.SetUsedSymbols(syms);
-  //     }
-  //   if(mode == SYMBOLS_MODE_MARKET_WATCH)
-  //     {
-  //       string clear[1] = { ::Symbol() };
-  //       m_symbol_collection.SetUsedSymbols(clear);  // force clear collection
-  //       bool res = m_symbol_collection.CreateSymbolsList(true);
-  //       m_symbols_rebuild_count = m_symbol_collection.GetSymbolsCollectionTotal();
-  //       return res;
-  //     }
-  //   // SYMBOLS_MODE_ALL
-  //     string clear[1] = { ::Symbol() };
-  //     m_symbol_collection.SetUsedSymbols(clear);  // force clear collection
-  //     bool res = m_symbol_collection.CreateSymbolsList(false);
-  //     m_symbols_rebuild_count = m_symbol_collection.GetSymbolsCollectionTotal();
-  //   return res;
-  // }
+    }  
 
 #endif // CTRADING_ENGINE_MQH_IMPLEMENTATION
 #endif // __TRADING_ENGINE_MQH__

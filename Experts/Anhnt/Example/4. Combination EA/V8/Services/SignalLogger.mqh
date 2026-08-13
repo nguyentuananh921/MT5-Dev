@@ -24,7 +24,7 @@
                      CSignalLogger(void);
                     ~CSignalLogger(void);
 
-     void              WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text);
+     void              WriteSignalLogRow(const string time_text, const string source_type, const string tf, const string status, const string direction, const string name, const string price_text, const string cross_text);
      datetime          GetSignalLogWatermark(const string type_key, const string params_key);
      void              SetSignalLogWatermark(const string type_key, const string params_key, const datetime t);
      void              LoadSignalLogWatermarks(void);
@@ -54,20 +54,27 @@
   //+------------------------------------------------------------------+
   //| WriteSignalLogRow                                                |
   //+------------------------------------------------------------------+
-  void CSignalLogger::WriteSignalLogRow(const string time_text, const string symbol, const string tf, const string indicator, const string direction, const string price_text, const string status, const string cross_text)
-   {    
-    string filepath = (m_signal_log_folder != "") ? (m_signal_log_folder + "/Signal_Log.csv") : "Signal_Log.csv";
+  // Column order (Anhnt, 2026-08-10): Time; Source(Indicator/Candle); TF; Status(Live/CloseBar);
+  // Direction(Buy/Sell); Name(indicator label, or "[nB] PatternName" for candle patterns);
+  // Price; Cross - matches the popup CandleInfo window's Time/TF/Information layout, with
+  // Price/Cross kept as extra trailing columns so nothing already tracked gets lost.
+  // One file PER SYMBOL (Signal_Log_<SYMBOL>.csv), same convention as the watermark file -
+  // ::Symbol() is always the current chart's own symbol, same as every WriteSignalLogRow caller.
+  void CSignalLogger::WriteSignalLogRow(const string time_text, const string source_type, const string tf, const string status, const string direction, const string name, const string price_text, const string cross_text)
+   {
+    string base_fname = "Signal_Log_" + ::Symbol() + ".csv";
+    string filepath = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
     int fh = ::FileOpen(filepath, FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
     if(fh == INVALID_HANDLE) return;
     bool is_new = (::FileSize(fh) == 0);
     if(is_new)
       {
         ::FileWriteString(fh, "sep=;\n");
-        ::FileWrite(fh, "Time", "Symbol", "TF", "Indicator", "Signal", "Price", "Status", "Cross");
+        ::FileWrite(fh, "Time", "Source", "TF", "Status", "Direction", "Name", "Price", "Cross");
       }
     else
         ::FileSeek(fh, 0, SEEK_END);
-    ::FileWrite(fh, time_text, symbol, tf, indicator, direction, price_text, status, cross_text);
+    ::FileWrite(fh, time_text, source_type, tf, status, direction, name, price_text, cross_text);
     ::FileClose(fh);
    }
   //+------------------------------------------------------------------+

@@ -11,6 +11,7 @@
  //| Include files                                                    |
  //+------------------------------------------------------------------+
  #include "CommonDELib.mqh" 
+ #include "..\..\Timeseries\Indicators\IndicatorDE.mqh"
  #include "..\..\Defines\IndicatorPara.mqh" 
  struct SIndicatorCatalogItem
   {
@@ -30,7 +31,7 @@
  //| for PopulateIndicatorTree's tree labels AND SetIndicatorTableRow's|
  //| Group column (previously 2 separate hardcoded string arrays)     |
  //+------------------------------------------------------------------+
- string IndicatorGroupName(const ENUM_INDICATOR_GROUP group)
+ string GetIndicatorGroupName(const ENUM_INDICATOR_GROUP group)
   {
    switch(group)
     {
@@ -335,7 +336,83 @@
      }
    #undef I
    #undef E
-  } 
+  }
+ //+------------------------------------------------------------------+
+ //| Build the Col2 display label ("ShortName  (params)") for an      |
+ //| indicator - shared by the row-rebuild path and the row-identity  |
+ //| key used to keep per-tick updates aligned after a user sort.     |
+ //+------------------------------------------------------------------+
+ string BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[])
+   {
+    string short_name = "";
+    for(int c = 0; c < ::ArraySize(catalog); c++)
+      if(catalog[c].type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
+    if(short_name == "") short_name = ind.GetTypeDescription();
+    // --- Same schema the Add form uses (README: Tang 1 metadata). schema[i].choices
+    // marks an enum-like param (Method, Applied Price, ...) - stored integer_value is
+    // always the REAL MQL5 enum value (never a bare combo index), so decode it back to
+    // text via the matching CommonDELib.mqh XxxDescription() - dispatched by comparing
+    // choices against the 4 known constants, no separate "kind" needed.
+    SIndicatorParam schema[];
+    GetIndicatorParamSchema(ind.TypeIndicator(), schema);
+    MqlParam mql_params[];
+    ind.GetMqlParams(mql_params);
+    string pvalues = "";
+    for(int i = 0; i < ::ArraySize(mql_params); i++)
+     {
+      if(i > 0) pvalues += ", ";
+      string choices = (i < ::ArraySize(schema)) ? schema[i].choices : "";
+      if(choices == PRICE_CHOICES)
+        pvalues += AppliedPriceDescription((ENUM_APPLIED_PRICE)mql_params[i].integer_value);
+      else if(choices == CALCULATION_METHOD_CHOICES)
+        pvalues += AveragingMethodDescription((ENUM_MA_METHOD)mql_params[i].integer_value);
+      else if(choices == VOLUME_CHOICES)
+        pvalues += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)mql_params[i].integer_value);
+      else if(choices == STOCH_PRICE_CHOICES)
+        pvalues += StochPriceDescription((ENUM_STO_PRICE)mql_params[i].integer_value);
+      else if(mql_params[i].type == TYPE_DOUBLE)
+        pvalues += ::DoubleToString(mql_params[i].double_value, 2);
+      else
+        pvalues += ::IntegerToString((int)mql_params[i].integer_value);
+     }
+      return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
+   }
+ //+------------------------------------------------------------------+
+ //| Builds the SAME (type, params-as-text) key CTimeSeriesEngine::   |
+ //| SaveConfigurationToJSON writes/LoadConfigurationFromJSON parses -|
+ //| NOT BuildIndicatorLabel's pvalues (that rounds doubles to 2      |
+ //| decimals for display; the saved file uses 8, so matching against|
+ //| it would silently fail for any non-integer param).               |
+ //+------------------------------------------------------------------+
+ void BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
+   {
+    type_key = "";
+    for(int c = 0; c < ArraySize(catalog); c++)
+      if(catalog[c].type == ind.TypeIndicator()) { type_key = catalog[c].name; break; }
+
+    SIndicatorParam schema[];
+    GetIndicatorParamSchema(ind.TypeIndicator(), schema);
+    MqlParam params[];
+    ind.GetMqlParams(params);
+    params_key = "";
+    for(int p = 0; p < ArraySize(params); p++)
+     {
+      if(p > 0) params_key += ",";
+       string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
+      if(choices == PRICE_CHOICES)
+        params_key += AppliedPriceDescription((ENUM_APPLIED_PRICE)params[p].integer_value);
+      else if(choices == CALCULATION_METHOD_CHOICES)
+        params_key += AveragingMethodDescription((ENUM_MA_METHOD)params[p].integer_value);
+      else if(choices == VOLUME_CHOICES)
+        params_key += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)params[p].integer_value);
+      else if(choices == STOCH_PRICE_CHOICES)
+        params_key += StochPriceDescription((ENUM_STO_PRICE)params[p].integer_value);
+      else if(params[p].type == TYPE_DOUBLE)
+        params_key += ::DoubleToString(params[p].double_value, 8);
+      else
+        params_key += ::IntegerToString((int)params[p].integer_value);
+     }
+   } 
  //+------------------------------------------------------------------+
  //| Return description of the line style                             |
  //+------------------------------------------------------------------+
@@ -372,41 +449,22 @@
    //+------------------------------------------------------------------+
    //| Compare two MqlParam arrays element by element                   |
    //+------------------------------------------------------------------+
-   bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
-    {
-      int total = ArraySize(array1);
-      int size  = ArraySize(array2);
-      if(total != size)
-          return false;
-      for(int i = 0; i < total; i++)
-        {
-          if(!IsEqualMqlParams(array1[i], array2[i]))
-              return false;
-        }
-      return true;
-    }
- //+------------------------------------------------------------------+
- //| Return the number of candles for a given pattern type            |
- //+------------------------------------------------------------------+
- int CandlesForPatternType(const ENUM_PATTERN_TYPE type)
-    {
-      // Single Candlestick (1 bar) 8 pattern
-      if(type==PATTERN_TYPE_SHOOTING_STAR || type==PATTERN_TYPE_HAMMER ||
-        type==PATTERN_TYPE_INVERTED_HAMMER || type==PATTERN_TYPE_HANGING_MAN ||
-        type==PATTERN_TYPE_DOJI || type==PATTERN_TYPE_DRAGONFLY_DOJI ||
-        type==PATTERN_TYPE_GRAVESTONE_DOJI || type==PATTERN_TYPE_PIN_BAR)
-          return 1;
-      // Double Candlestick (2 bars) 9 pattern
-      if(type==PATTERN_TYPE_HARAMI || type==PATTERN_TYPE_HARAMI_CROSS ||
-        type==PATTERN_TYPE_TWEEZER || type==PATTERN_TYPE_PIERCING_LINE ||
-        type==PATTERN_TYPE_DARK_CLOUD_COVER || type==PATTERN_TYPE_ENGULFING ||
-        type==PATTERN_TYPE_OUTSIDE_BAR || type==PATTERN_TYPE_INSIDE_BAR ||
-        type==PATTERN_TYPE_RAILS)
-          return 2;
-      return 3; // Triple (3 bars) 11 pattern
-    }
+ bool IsEqualMqlParamArrays(MqlParam &array1[], MqlParam &array2[])
+  {
+    int total = ArraySize(array1);
+    int size  = ArraySize(array2);
+    if(total != size)
+        return false;
+    for(int i = 0; i < total; i++)
+      {
+        if(!IsEqualMqlParams(array1[i], array2[i]))
+            return false;
+      }
+    return true;
+  } 
  //+------------------------------------------------------------------+
  //| Return ENUM_INDICATOR from indicator shortname on chart          |
+ //| Not full
  //+------------------------------------------------------------------+
  ENUM_INDICATOR ShortNameToIndicatorType(const string shortname)
   {
@@ -425,6 +483,26 @@
     if(StringFind(shortname, "Force")          >= 0) return IND_FORCE;
     // ... thêm dần khi cần
     return IND_CUSTOM;  // unknown = skip for now
+  }
+ //+------------------------------------------------------------------+
+ //| Return the number of candles for a given pattern type            |
+ //+------------------------------------------------------------------+
+ int CandlesForPatternType(const ENUM_PATTERN_TYPE type)
+  {
+    // Single Candlestick (1 bar) 8 pattern
+    if(type==PATTERN_TYPE_SHOOTING_STAR || type==PATTERN_TYPE_HAMMER ||
+      type==PATTERN_TYPE_INVERTED_HAMMER || type==PATTERN_TYPE_HANGING_MAN ||
+      type==PATTERN_TYPE_DOJI || type==PATTERN_TYPE_DRAGONFLY_DOJI ||
+      type==PATTERN_TYPE_GRAVESTONE_DOJI || type==PATTERN_TYPE_PIN_BAR)
+        return 1;
+    // Double Candlestick (2 bars) 9 pattern
+    if(type==PATTERN_TYPE_HARAMI || type==PATTERN_TYPE_HARAMI_CROSS ||
+      type==PATTERN_TYPE_TWEEZER || type==PATTERN_TYPE_PIERCING_LINE ||
+      type==PATTERN_TYPE_DARK_CLOUD_COVER || type==PATTERN_TYPE_ENGULFING ||
+      type==PATTERN_TYPE_OUTSIDE_BAR || type==PATTERN_TYPE_INSIDE_BAR ||
+      type==PATTERN_TYPE_RAILS)
+        return 2;
+    return 3; // Triple (3 bars) 11 pattern
   }
  //+------------------------------------------------------------------+
 

@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CTIMESERIESENGINE_LIFECYCLE_MQH
 #define CTIMESERIESENGINE_LIFECYCLE_MQH
+#include "TimeSeriesEngine.mqh"
  //Life cycle management
  bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period)
   {

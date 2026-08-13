@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABMONITOR_MQH
 #define CGUIPANNEL_TABMONITOR_MQH
+#include "GUIPannel.mqh"
  //To Monitor Indicator value Per Symbol + Tf Value
  //+------------------------------------------------------------------+
  //| Create Trade tab table: Symbol / TF / Indicator / Value / Buy / Sell / Trailing

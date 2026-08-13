@@ -1,8 +1,11 @@
 //+------------------------------------------------------------------+
 //|                                   GUIPannel_TabSettingMarker.mqh |
 //+------------------------------------------------------------------+
+
+//Bug Note: Sound in folder C:\Program Files\MetaTrader 5\Sounds
 #ifndef CGUIPANNEL_TABSETTINGMARKER_MQH
-#define CGUIPANNEL_TABSETTINGMARKER_MQH  
+#define CGUIPANNEL_TABSETTINGMARKER_MQH 
+ #include "GUIPannel.mqh" 
  //Tab Marker TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER of Tab m_tabs_main_setting_config
  // --- "Marker" sub-tab (TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER): 8 independent shape choices
  // --- (Single Buy/Sell, Multi Buy/Sell - each needs its OWN plot/shape, see
@@ -155,7 +158,8 @@
       m_textLabel_sound_folder.MainPointer(m_tabs_main_setting_config);
       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_textLabel_sound_folder);      
       m_textLabel_sound_folder.XSize(SETTING_MARKER_COMBOBOX_WIDTH);   // leave room for Refresh button
-      string lbl_text = "MQL5\\Files\\" + m_marker_sound_folder + "\\";      
+      //string lbl_text = "MQL5\\Files\\" + m_marker_sound_folder + "\\";
+      string lbl_text = ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\";      
       if(!m_textLabel_sound_folder.CreateTextLabel(lbl_text, x + SETTING_MARKER_BASE_X_GAP+SETTING_MARKER_CAPTION_WIDTH, 
                                 y + SETTING_MARKER_ROW_HEIGHT * 6 + SETTING_MARKER_ROW_GAP*6)) return false;
       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_textLabel_sound_folder);
@@ -330,12 +334,14 @@
     ArrayCopy(colors, c);
     ArrayCopy(labels, l);
   }
+ //Note: Must Scand the Default folder that can play the sound
  void CGUIPannel::ScanSoundFolder(string &files[])
   {
    ::ArrayResize(files, 0);
-   string folder = m_marker_sound_folder;
-   if(folder == "") folder = "Sounds";
-   string search_path = folder + "\\*.*";
+  //  string folder = m_marker_sound_folder;
+  //  if(folder == "") folder = "Sounds";
+   //string search_path = folder + "\\*.*";
+   string search_path = ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\";
    string name;
    long h = ::FileFindFirst(search_path, name);
    if(h == INVALID_HANDLE) return;

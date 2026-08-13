@@ -9,11 +9,11 @@
 #property version "1.00"
 //--- Include application class
  //For GUI
-  #include "\Anatoli Kazharski\GUIPannel.mqh"
+  #include "Anatoli Kazharski\GUIPannel.mqh"
   CGUIPannel mGUIPannel;
-  #include <..\Artyom Trishkin\TradingEngine.mqh>
+  #include "Artyom Trishkin\TradingEngine.mqh"
   CTradingEngine tradingEngine;
-  #include <..\Artyom Trishkin\TimeSeriesEngine.mqh>
+  #include "Artyom Trishkin\TimeSeriesEngine.mqh"
     CTimeSeriesEngine timeSeriesEngine;
   //--- Global folder path (centralized for all components)
    string g_ea_folder = "";

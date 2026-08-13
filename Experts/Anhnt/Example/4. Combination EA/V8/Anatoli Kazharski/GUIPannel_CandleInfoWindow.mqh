@@ -4,6 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_CANDLEINFO_WINDOW_MQH
 #define CGUIPANNEL_CANDLEINFO_WINDOW_MQH
+#include "GUIPannel.mqh"
 //For m_window_candle_infomation
  //+------------------------------------------------------------------+
  //| True while the current mouse position is inside the candle info  |

@@ -160,14 +160,14 @@
              else
               {
                // New slot — add TF node
-                m_treeview_SymbolTF.AddTreeItem(m_treeview_SymbolTF.ItemsTotal(), sym_li, 
+                m_treeview_SymbolTF.AddTreeItem(m_treeview_SymbolTF.ItemsTotal(), sym_li,
                                           actual,
                                           IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
-                                          k, 1, i, 0, 0, 
+                                          k, 1, i, 0, 0,
                                           true,   //item_state, m_t_item_state[]=true;
                                           false   //is_folder m_t_is_folder[]=false
                                        );
-               //Register new CTreeItem  
+               //Register new CTreeItem
                 CTreeItem *new_item = m_treeview_SymbolTF.ItemPointer(m_treeview_SymbolTF.ItemsTotal() - 1);
                 if(new_item != NULL)
                   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), *new_item);
