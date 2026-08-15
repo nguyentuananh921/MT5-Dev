@@ -22,7 +22,11 @@
       "Bash(powershell -NoProfile -Command \"Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\BUYLIMIT_ORDER_DELETE_EN.wav'; Test-Path 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\NewBar.wav'\")",
       "Bash(powershell -NoProfile -Command \"Get-Item 'C:\\\\Program Files\\\\MetaTrader 5\\\\Sounds\\\\NewBar.wav' | Select-Object FullName,Length,LastWriteTime\")",
       "Bash(powershell -NoProfile -Command \"Select-String -Path 'c:\\\\Users\\\\nguye\\\\AppData\\\\Roaming\\\\MetaQuotes\\\\Terminal\\\\D0E8209F77C8CF37AD8BF550E51FF075\\\\MQL5\\\\Logs\\\\20260813.log' -Pattern 'NewBar.wav' | Select-Object -Last 3\")",
-      "Bash(powershell -NoProfile -Command \"Get-Content 'C:\\\\Users\\\\nguye\\\\.claude\\\\projects\\\\D--MT5-Dev\\\\memory\\\\project_v7_playsound_vs_files_sandbox.md' -Raw\")"
+      "Bash(powershell -NoProfile -Command \"Get-Content 'C:\\\\Users\\\\nguye\\\\.claude\\\\projects\\\\D--MT5-Dev\\\\memory\\\\project_v7_playsound_vs_files_sandbox.md' -Raw\")",
+      "Read(//d/MT5-Dev/**)"
+    ],
+    "additionalDirectories": [
+      "D:\\MT5-Dev\\Indicators\\Vendors\\Anhnt\\Custom Buildin"
     ]
   }
 }

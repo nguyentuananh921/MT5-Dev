@@ -4,6 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_LIFECYCLE_MQH
 #define CGUIPANNEL_LIFECYCLE_MQH
+#include "GUIPannel.mqh"
 //Private Method
  //Get window index
  int CGUIPannel::WindowIdx(CWindow &wnd)
@@ -114,6 +115,8 @@
     m_pending_remove_row     = -1;
     m_pending_remove_row_symboltf = -1;
     m_candle_info_shown_bar  = 0;
+    m_pattern_bitmap_shown   = NULL;
+    m_pattern_bitmap_scale   = -1;
    //m_tick_series = NULL;
     m_gui_created     = false;
   }
@@ -144,18 +147,8 @@
       m_bridge_writer.SetFolder(ea_folder);
      //Create main GUI windows and sub windows.
       if(!CreateGUIPannel()) return false;
-      m_gui_created = true;
-     // --- TEMP DEBUG (Anhnt, 2026-08-12, see FeatureNote/SoundBugNote.md "isolated OnInit test")
-     // --- - isolated test confirmed PlaySoundFile("NewBar.wav") ALSO fails here (5019), not a
-     // --- CheckIndicatorAlerts/CheckCandlePatternAlerts timing/context issue. Round 2: TestOld.wav
-     // --- (byte-identical copy of the KNOWN-WORKING SIGNAL_BUY_EN.wav, brand new filename, added
-     // --- today) vs TestNew.wav (byte-identical copy of NewBar.wav, different new filename) - both
-     // --- placed in MQL5\Sounds\ - isolates whether this is about "NewBar.wav" specifically or
-     // --- about ANY file added to MQL5\Sounds\ today (vs SIGNAL_BUY/SELL, dated 2026-07-17,
-     // --- possibly stale-cached by MT5 at a level that survives EA/terminal restart).
-     // --- DELETE these calls (and this comment block) once the isolated result is known.
-      PlaySoundFile("TestOld.wav");
-      PlaySoundFile("TestNew.wav");
+      m_gui_created = true;     
+      
      // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
      // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
       m_chart_obj_collection.CreateCollection();
@@ -215,6 +208,7 @@
    // --- lines stay stuck ON indefinitely. The chart itself isn't going anywhere on
    // --- CHARTCHANGE, so there's nothing to restore - skip it, same as every other
    // --- teardown step below that already special-cases this reason.
+    ::ObjectDelete(m_chart_id, PATTERN_HOVER_LABEL_NAME);   // Alt+hover pattern label, harmless no-op if never created
     if(reason != REASON_CHARTCHANGE)
      {
       m_trading_bubble.OnDeinitEvent();
@@ -312,11 +306,10 @@
       if(redraw_needed)
         ::ChartRedraw();
     // --- Sound and message alerts - run every tick to catch all bar 0 changes. CloseBar Sound
-    // --- dedup gate reset here, BEFORE either function runs - shared budget across both, played
-    // --- INLINE inside them (NOT deferred to a point here after - see
-    // --- m_closebar_sound_played comment in GUIPannel.mqh / FeatureNote/SoundBugNote.md).
+    // --- is just "NewBar.wav" via PlaySoundCloseBar now (Anhnt, 2026-08-14) - no more per-flip
+    // --- dedup gate shared with CheckIndicatorAlerts/CheckCandlePatternAlerts (those two only
+    // --- fire Message/CSV on CloseBar now, see FeatureNote/SoundBugNote.md).
       PlaySoundCloseBar();
-      m_closebar_sound_played = false;
       CheckIndicatorAlerts();
       CheckCandlePatternAlerts();
   }
@@ -404,6 +397,44 @@
            m_candle_info_shown_bar = 0;
           }
        }
+      // --- Alt + hover pattern bitmap - independent of the Shift popup above (Anhnt,
+      // --- 2026-08-14): while Alt is held, shows the CGCnvPatternBitmap for whatever
+      // --- pattern is confirmed at the hovered bar; releasing Alt or moving off a bar
+      // --- with no pattern hides it again (ShowPatternBitmapAtBar/HidePatternBitmapShown
+      // --- both no-op cheaply when there's nothing to do).
+      if(m_keys.KeyAltState())
+       {
+        datetime t; double price; int sub_window;
+        if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
+         {
+          string sym = ::Symbol();
+          ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+          int shift = ::iBarShift(sym, tf, t, false);
+          if(shift >= 0)
+           {
+            datetime bar_time = ::iTime(sym, tf, shift);
+            // --- MY DEBUG - verifies the mouse pixel really falls inside the bar we picked.
+            // --- Gated on bar_time change so continuous MOUSE_MOVE doesn't spam the log.
+            static datetime dbg_last_alt_bar = 0;
+            if(bar_time != dbg_last_alt_bar)
+             {
+              dbg_last_alt_bar = bar_time;
+              int bx1 = -1, by1 = -1, bx2 = -1, by2 = -1;
+              ::ChartTimePriceToXY(m_chart_id, sub_window, bar_time, price, bx1, by1);
+              ::ChartTimePriceToXY(m_chart_id, sub_window, bar_time + ::PeriodSeconds(tf), price, bx2, by2);
+              ::Print("MY DEBUG CGUIPannel::OnEvent(Alt-hover): mouse=(", m_mouse.X(), ",", m_mouse.Y(),
+                      ") ChartXYToTimePrice.t=", ::TimeToString(t, TIME_DATE|TIME_SECONDS),
+                      " bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
+                      " bar_pixel_x=[", bx1, ",", bx2, "]");
+             }
+            ShowPatternBitmapAtBar(bar_time);
+           }
+         }
+        else
+           HidePatternBitmapShown();
+       }
+      else
+         HidePatternBitmapShown();
      }
    // --- Re-hide param slots after CTabs::ShowTabElements() shows them on tab switch.
    //     ShowTabElements() runs inside CTabs::OnEvent() (before our OnEvent is called),
@@ -496,15 +527,57 @@
    //Handle Save marker style/color settings
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.Id())
      {
+      // --- Commit current combobox/color selections into m_marker_* BEFORE saving - the
+      // --- ON_CLICK_COMBOBOX_ITEM handler above only ever updated the live preview
+      // --- (UpdateShapePreview/UpdateColorPreview), never m_marker_* itself, so Save silently
+      // --- re-serialized the same old defaults no matter what the user picked
+      // --- (BugNote_MarkerMissingDespitePattern.md, 2026-08-15 - Anhnt picked Yellow, Save
+      // --- kept writing Lime). Mirrors how the sound-file combos already commit directly.
+       int codes[]; string shape_labels[];
+       GetMarkerArrowCodeChoices(codes, shape_labels);
+       int n_shapes = ArraySize(codes);
+       color mcolors[]; string color_labels[];
+       GetMarkerColorChoices(mcolors, color_labels);
+       int n_colors = ArraySize(mcolors);
+       int sel;
+       sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_buy_code  = codes[sel];
+       sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_sell_code = codes[sel];
+       sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_buy_code   = codes[sel];
+       sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_sell_code  = codes[sel];
+       sel = (int)m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_pattern_buy_code  = codes[sel];
+       sel = (int)m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_pattern_sell_code = codes[sel];
+       sel = (int)m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_combo_buy_code  = codes[sel];
+       sel = (int)m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_combo_sell_code = codes[sel];
+       sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
+       sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
+       sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
+
       SaveGUIConfigToJSON();
+      // --- Save alone only persists m_marker_* to JSON - the already-running SignalMarkers
+      // --- indicator (attached via iCustom) never re-reads input params on its own, so a
+      // --- style/color change here had no visible effect until the user manually removed +
+      // --- re-added it (BugNote_MarkerMissingDespitePattern.md, 2026-08-15). Recreate it now
+      // --- with the just-saved m_marker_* values so Save actually takes effect immediately.
+      ReattachSignalMarkersIndicator();
       return;
      }
-   //Handle "Refresh" next to the sound folder path - re-scans and re-populates both combos
-    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_refresh_sound_folder.Id())
-     {
-      OnClickChangeSoundFolder();
-      return;
-     }
+  //  //Handle "Refresh" next to the sound folder path - re-scans and re-populates both combos
+  //   if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_refresh_sound_folder.Id())
+  //    {
+  //     OnClickChangeSoundFolder();
+  //     return;
+  //    }
    //Handle Save Pattern Config to JSON
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_pattern_config.Id())
      {

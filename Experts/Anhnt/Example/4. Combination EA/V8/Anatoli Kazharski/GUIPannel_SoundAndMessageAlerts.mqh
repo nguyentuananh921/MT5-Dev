@@ -5,33 +5,20 @@
 #ifndef CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH
 #define CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH 
  #include "GUIPannel.mqh"
- void CGUIPannel::PlaySoundFile(const string filename)
-    {
-     if(filename == "") return;
-     ::ResetLastError();
-     bool played = ::PlaySound(filename);
-     int err = ::GetLastError();
-     ::Print("MY DEBUG CGUIPannel::PlaySoundFile - filename=", filename,
-            " PlaySound returned=", played, " GetLastError=", err,
-            " | TERMINAL_PATH=", ::TerminalInfoString(TERMINAL_PATH),
-            " | TERMINAL_DATA_PATH=", ::TerminalInfoString(TERMINAL_DATA_PATH));
-    }
  //+------------------------------------------------------------------+
  //| Check and play sound when a new bar opens on any timeframe       |
  //+------------------------------------------------------------------+
  void CGUIPannel::PlaySoundCloseBar(void)
   {
-    if(!m_closebar_sound_played && m_BarTimeSeriesCollection.IsNewBar(::Symbol()))
-      {
-        m_closebar_sound_played = true;
-        PlaySoundFile("NewBar.wav");
-      }
+    if(m_BarTimeSeriesCollection.IsNewBar(::Symbol()))
+      ::PlaySound("NewBar.wav");
   }
  //PlaySound for Live only for Close Bar only Play NewBar.wav 
  void CGUIPannel::PlaySoundForDirection(const bool is_buy)
     {
      string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
-     PlaySoundFile(file);
+     if(file == "") return;
+     ::PlaySound(file);
     }
  //Every TF Share the same Template in Layer 1 similar to Template on Chart.
  //Alert change in Direction in Every Indicator + TF at Live
@@ -148,11 +135,6 @@
           double price = (shift >= 0) ? ::iClose(sym, tf, shift) : 0.0;
           string price_text = ::DoubleToString(price, digits);
           m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "CloseBar", dir_text, label, price_text, cross_text);
-          if(!m_closebar_sound_played)
-           {
-            m_closebar_sound_played = true;
-            PlaySoundFile("NewBar.wav");
-           }
           if(message_on)
             CMessage::Out(time_text + ";CloseBar;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
           if(t > newest_committed) newest_committed = t;
@@ -175,7 +157,7 @@
         bool is_buy = (live_dir == SIGNAL_BUY);
         if(sound_on)
          {
-          // --- Deliberately native ::PlaySound() (via PlaySoundFile), NOT CMessage::PlaySound()
+          // --- Deliberately native ::PlaySound() (via PlaySoundForDirection), NOT CMessage::PlaySound()
           // --- (Anhnt, 2026-07-17 - confirmed by reading Message.mqh): that wrapper
           // --- unconditionally prepends "\Files\" to any filename that isn't one of its own
           // --- built-in SND_* constants, no matter what we pass it.
@@ -318,12 +300,11 @@
              if(pdir_cb != PATTERN_DIRECTION_BULLISH && pdir_cb != PATTERN_DIRECTION_BEARISH)
                { if(pt_cb > newest_committed_cb) newest_committed_cb = pt_cb; continue; }
              bool is_buy_cb = (pdir_cb == PATTERN_DIRECTION_BULLISH);
-             // --- Sound only on a real direction change vs the last CloseBar-committed one for
-             // --- this (pattern type, TF) - same principle as Live/Indicator (Anhnt, 2026-08-11).
-             // --- Tracked unconditionally (not gated on sound_on_cb) so toggling Sound on later
-             // --- doesn't replay a direction already seen while it was off.
+             // --- m_candle_pattern_closebar_last_dir kept updated even though CloseBar no longer
+             // --- gates Sound on it (Anhnt, 2026-08-14: CloseBar Sound is just "NewBar.wav" via
+             // --- PlaySoundCloseBar now, no longer per-flip) - state still maintained in case a
+             // --- future feature needs "did this (pattern type, TF) actually flip on CloseBar".
              int index_cb = ti * pattern_count + row;
-             bool is_new_flip_cb = (pdir_cb != m_candle_pattern_closebar_last_dir[index_cb]);
              m_candle_pattern_closebar_last_dir[index_cb] = pdir_cb;
              string dir_text_cb = is_buy_cb ? "Buy" : "Sell";
              uint candles_cb = pat_cb.Candles();
@@ -337,11 +318,6 @@
              string price_text_cb = ::DoubleToString(price_cb, digits_cb);
 
              m_signal_logger.WriteSignalLogRow(time_text_cb, "Candle", tf_text_cb, "CloseBar", dir_text_cb, name_cb, price_text_cb, "");
-             if(is_new_flip_cb && !m_closebar_sound_played)
-              {
-               m_closebar_sound_played = true;
-               PlaySoundFile("NewBar.wav");
-              }
              if(message_on_cb)
                CMessage::Out(time_text_cb + ";CloseBar;" + tf_text_cb + ";" + name_cb + ";" + dir_text_cb);
 

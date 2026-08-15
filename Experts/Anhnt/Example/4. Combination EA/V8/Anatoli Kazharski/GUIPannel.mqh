@@ -131,14 +131,15 @@
          //string               m_marker_sound_folder;
          string               m_marker_buy_sound_file;
          string               m_marker_sell_sound_file;        
-         CTextLabel           m_textLabel_sound_folder;
-         CButton              m_btn_refresh_sound_folder;
+         CTextLabel           m_textLabel_sound_folder;         
          CComboBox            m_combo_buy_sound;
          CComboBox            m_combo_sell_sound;
       //Information window at to display signal on chart
        CWindow                    m_window_candle_infomation;
        CTable                     m_table_candle_information_atBar;
        datetime                   m_candle_info_shown_bar;             // 0 = window currently hidden
+       CBarPattern                *m_pattern_bitmap_shown;             // pattern whose CGCnvPatternBitmap is visible via Alt+hover, NULL = none
+       int                        m_pattern_bitmap_scale;              // CHART_SCALE the shown bitmap was built at - forces rebuild on zoom change
       //For use in GUIPannel_SoundAndMessageAlerts.mqh
        //For indicator
         // --- Live-bar path (CheckIndicatorAlerts): per-row (m_table_indicator_ptrs index - fine
@@ -187,7 +188,7 @@
         // --- that was tried and reliably stomped any Live sound that had already played earlier
         // --- the same pass, since NewBar.wav would then always fire last - see
         // --- FeatureNote/SoundBugNote.md). Reset false at the top of OnTickEvent.
-        bool                       m_closebar_sound_played;
+        //bool                       m_closebar_sound_played;
      // Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
      // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
      // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
@@ -254,6 +255,9 @@
        void                          HideCandleInfoPopup(void);
        bool                          CreateWindowCandleInfo(void);
        bool                          RefreshCandleInfoWindow(const datetime bar_time);
+       void                          ShowPatternBitmapAtBar(const datetime bar_time);
+       void                          ShowPatternHoverLabel(CBarPattern *pat);
+       void                          HidePatternBitmapShown(void);
      //For working with SignalMarker.mq5 implementation in GUIPannel_SignalMarkers.mqh
         void                         EnsureMarkerIndicatorAttached(void);
         void                         ReattachSignalMarkersIndicator(void);
@@ -269,12 +273,9 @@
       //Per-indicator Sound/Message opt-in (m_table_indicator col 5/6) - fires on a genuinely NEW Signal
        void                         CheckIndicatorAlerts(void);
        void                         CheckCandlePatternAlerts(void);
-      //Single call site for every sound played (Anhnt, 2026-08-12) - which folder actually works
-      //is still being empirically nailed down (conflicting evidence, MY DEBUG Print inside logs
-      //the exact path tried), see comment above the method body, GUIPannel_SoundAndMessageAlerts.mqh.
-       void                         PlaySoundFile(const string filename);
-      //Buy/Sell .wav lookup + play - Live-only (Anhnt, 2026-08-11): CloseBar plays a fixed
-      //NewBar.wav instead (see m_closebar_sound_played comment above), not Buy/Sell-specific
+      //Buy/Sell .wav lookup + play - Live-only (Anhnt, 2026-08-14): resolves against
+      //TERMINAL_PATH\Sounds\ only (see FeatureNote/SoundBugNote.md). CloseBar plays a fixed
+      //NewBar.wav instead via PlaySoundCloseBar, not Buy/Sell-specific.
        void                         PlaySoundForDirection(const bool is_buy);
        void                         PlaySoundCloseBar(void);
        int                          GetPatternCandleCount(ENUM_PATTERN_TYPE pattern_type);
@@ -344,9 +345,16 @@
          void                         UpdateColorPreview(const int row, const color clr);
          void                         GetMarkerArrowCodeChoices(int &codes[], string &labels[]);
          void                         GetMarkerColorChoices(color &colors[], string &labels[]);
+        // --- Round-trip helpers so Config_Setting.json stores human-readable labels
+        // --- ("83 Bomb", "Dodger Blue") instead of raw Wingdings codes/color ints - looks up
+        // --- against the SAME catalogs above, so the JSON always matches what the combo shows.
+         string                       ArrowLabelForCode(const int code);
+         int                          ArrowCodeForLabel(const string label, const int default_code);
+         string                       ColorLabelForValue(const color clr);
+         color                        ColorForLabel(const string label, const color default_color);
         //For Buy/Sell alert sound file pickers (Marker tab) - plain combobox, folder scanned via FileFindFirst
          void                         ScanSoundFolder(string &files[]);
-         void                         OnClickChangeSoundFolder(void);
+         //void                         OnClickChangeSoundFolder(void);
        //Event Handler for m_table_indicator
         void                          OnClickToggleShowIndicatorOnChart(const string sname, const int row);
         void                          OnClickToggleBuySignal(const string sname, const int row);

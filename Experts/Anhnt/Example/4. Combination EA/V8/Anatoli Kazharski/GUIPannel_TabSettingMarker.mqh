@@ -36,7 +36,7 @@
     #define SETTING_MARKER_COL1_COLOR_PREVIEW_X  SETTING_MARKER_COL1_COMBO_X + SETTING_MARKER_COLOR_COMBO_WIDTH + SETTING_MARKER_GAP
     #define SETTING_MARKER_COL2_COLOR_PREVIEW_X  SETTING_MARKER_COL2_COMBO_X + SETTING_MARKER_COLOR_COMBO_WIDTH + SETTING_MARKER_GAP  
    //For sound row 7,8,9
-    #define SETTING_MARKER_SOUND_WIDTH 250 //Combobox Sound file    
+    #define SETTING_MARKER_SOUND_WIDTH 350 //Combobox Sound file    
     
     LoadMarkerSettingsFromJSON(); // seed m_marker_* from Config_Setting.json's "markers" section before building defaults
     int codes[]; string shape_labels[];
@@ -157,20 +157,11 @@
      // Sound folder static label (read-only, shows where to drop .wav files)
       m_textLabel_sound_folder.MainPointer(m_tabs_main_setting_config);
       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_textLabel_sound_folder);      
-      m_textLabel_sound_folder.XSize(SETTING_MARKER_COMBOBOX_WIDTH);   // leave room for Refresh button
-      //string lbl_text = "MQL5\\Files\\" + m_marker_sound_folder + "\\";
+      m_textLabel_sound_folder.XSize(SETTING_MARKER_SOUND_WIDTH); 
       string lbl_text = ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\";      
       if(!m_textLabel_sound_folder.CreateTextLabel(lbl_text, x + SETTING_MARKER_BASE_X_GAP+SETTING_MARKER_CAPTION_WIDTH, 
                                 y + SETTING_MARKER_ROW_HEIGHT * 6 + SETTING_MARKER_ROW_GAP*6)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_textLabel_sound_folder);
-     //For Button Refresh sound folder
-      m_btn_refresh_sound_folder.MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_refresh_sound_folder);
-      m_btn_refresh_sound_folder.AutoXResizeMode(false);
-      m_btn_refresh_sound_folder.XSize(80);
-      if(!m_btn_refresh_sound_folder.CreateButton("Refresh", x + SETTING_MARKER_BASE_X_GAP + SETTING_MARKER_SOUND_WIDTH + SETTING_MARKER_GAP, 
-                                                  y + SETTING_MARKER_ROW_HEIGHT * 6 + SETTING_MARKER_ROW_GAP*6)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_refresh_sound_folder);
+      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_textLabel_sound_folder);     
     // --- Sound files scan
       string files[];
       ScanSoundFolder(files);
@@ -334,14 +325,47 @@
     ArrayCopy(colors, c);
     ArrayCopy(labels, l);
   }
- //Note: Must Scand the Default folder that can play the sound
+ // --- Round-trip helpers for Config_Setting.json (Anhnt, 2026-08-15): look up against the
+ // --- SAME catalogs above so save/load always matches what the combo actually shows.
+ // --- Falls back to the raw number/int if the code/color isn't in the fixed catalog (e.g. an
+ // --- older JSON saved a value outside the current choice list).
+ string CGUIPannel::ArrowLabelForCode(const int code)
+  {
+   int codes[]; string labels[];
+   GetMarkerArrowCodeChoices(codes, labels);
+   for(int i = 0; i < ArraySize(codes); i++)
+      if(codes[i] == code) return labels[i];
+   return (string)code;
+  }
+ int CGUIPannel::ArrowCodeForLabel(const string label, const int default_code)
+  {
+   int codes[]; string labels[];
+   GetMarkerArrowCodeChoices(codes, labels);
+   for(int i = 0; i < ArraySize(labels); i++)
+      if(labels[i] == label) return codes[i];
+   return default_code;
+  }
+ string CGUIPannel::ColorLabelForValue(const color clr)
+  {
+   color colors[]; string labels[];
+   GetMarkerColorChoices(colors, labels);
+   for(int i = 0; i < ArraySize(colors); i++)
+      if(colors[i] == clr) return labels[i];
+   return (string)(int)clr;
+  }
+ color CGUIPannel::ColorForLabel(const string label, const color default_color)
+  {
+   color colors[]; string labels[];
+   GetMarkerColorChoices(colors, labels);
+   for(int i = 0; i < ArraySize(labels); i++)
+      if(labels[i] == label) return colors[i];
+   return default_color;
+  }
+ //Note: Must Scand the Default folder that can play the sound ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\
  void CGUIPannel::ScanSoundFolder(string &files[])
   {
    ::ArrayResize(files, 0);
-  //  string folder = m_marker_sound_folder;
-  //  if(folder == "") folder = "Sounds";
-   //string search_path = folder + "\\*.*";
-   string search_path = ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\";
+   string search_path = "Sounds\\*.wav";
    string name;
    long h = ::FileFindFirst(search_path, name);
    if(h == INVALID_HANDLE) return;
@@ -359,35 +383,5 @@
     }
     while(::FileFindNext(h, name));
     ::FileFindClose(h);
-  }
- // --- "Refresh" button next to the sound-folder path: read the CURRENT text box value (the
- // --- user may have just typed a new folder), re-scan it, and rebuild both combos in place.
- void CGUIPannel::OnClickChangeSoundFolder(void)
-  {
-    string files[];
-    ScanSoundFolder(files);
-    int n_files = ArraySize(files);
-
-    // --- Rebuilding() only replaces the ITEM CONTENT - it does NOT resize the dropdown's own
-    // --- viewport (that's a one-time YSize() read at CreateComboBox() time, same trap as
-    // --- CreateMarkerTabComboBox's own comment) - without redoing it here, a folder that grows
-    // --- from a handful of files to 61 keeps the OLD tiny viewport, squeezing the scrollbar
-    // --- thumb down to almost nothing (Anhnt, 2026-07-17: exactly this happened on Refresh).
-    int list_h = 18 * n_files + 4;
-    if(list_h > 300) list_h = 300;
-    m_combo_buy_sound.GetListViewPointer().YSize(list_h);
-    m_combo_sell_sound.GetListViewPointer().YSize(list_h);
-
-    m_combo_buy_sound.GetListViewPointer().Rebuilding(n_files);
-    m_combo_sell_sound.GetListViewPointer().Rebuilding(n_files);
-    for(int i = 0; i < n_files; i++)
-      {
-        m_combo_buy_sound.SetValue(i, files[i]);
-        m_combo_sell_sound.SetValue(i, files[i]);
-      }
-    m_combo_buy_sound.SelectItem(0);
-    m_combo_sell_sound.SelectItem(0);
-    m_combo_buy_sound.GetListViewPointer().Update(true);
-    m_combo_sell_sound.GetListViewPointer().Update(true);
-  }
+  } 
 #endif // CGUIPANNEL_TABSETTINGMARKER_MQH

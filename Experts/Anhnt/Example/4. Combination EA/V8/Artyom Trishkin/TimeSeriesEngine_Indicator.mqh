@@ -89,13 +89,12 @@ CIndicatorDE *CTimeSeriesEngine::GetIndicatorByHandle(const int handle)
     // ::Period() call chain in OnInit/OnChartEvent). CBarSeriesDE::Symbol() has never been
     // observed to drift; CIndicatorDE::Symbol() has, whenever it was fed a string sourced
     // from that raw call chain instead of a stable object's own accessor.
-     CBarSeriesDE *target_series = m_BarTimeSeriesCollection.GetSeries(symbol, timeframe);
-     if(target_series == NULL) return;
+     if(!m_BarTimeSeriesCollection.IsAvailable(symbol, timeframe)) return;
+     CBarSeriesDE *target_series = m_BarTimeSeriesCollection.GetSeries(symbol, timeframe);     
      string safe_symbol = target_series.Symbol();
      CArrayObj *all = m_IndicatorsCollection.GetList();
      if(all == NULL || all.Total() == 0)
         return; // nothing in PureData yet - LoadIndicatorsFromJson seeds it first
-
      // Pick the first entry as the reference: guaranteed to be a different (sym, tf)
      // because (symbol, timeframe) is freshly created and has no entries here yet.
       CIndicatorDE *ref_entry = all.At(0);
@@ -133,19 +132,4 @@ CIndicatorDE *CTimeSeriesEngine::GetIndicatorByHandle(const int handle)
          created_count++;
       }
    } 
- //Temporary debug: dump every indicator instance with its handle - identifies which
- //object owns a handle reported broken by CSeriesDataInd::Refresh (err 4807 hunt)
- void CTimeSeriesEngine::PrintIndicatorsInventory(void)
-  {
-   CArrayObj *all = m_IndicatorsCollection.GetList();
-   if(all == NULL) return;
-   ::Print("=== Indicators inventory: ", all.Total(), " instance(s) ===");
-   for(int i = 0; i < all.Total(); i++)
-    {
-     CIndicatorDE *indicator = all.At(i);
-     if(indicator == NULL) continue;
-     ::Print("INV[", i, "] handle=", indicator.Handle(), " ", indicator.Symbol(), " ",
-              TimeframeDescription(indicator.Timeframe()), " ", indicator.ShortName());
-    }
-  } 
 #endif // CTIMESERIESENGINE_INDICATOR_MQH

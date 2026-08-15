@@ -8,7 +8,7 @@
  void CTimeSeriesEngine::RegisterAllCandlePatterns(void)
   {
    MqlParam p[];
-   // 25 patterns with default parameters (empty array)
+   // 24 patterns with default parameters (empty array)
    // Parameter define in PatternControl.mqh
     this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_HAMMER,               p, true);
     this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_HANGING_MAN,          p, true);
@@ -34,7 +34,6 @@
     this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_THREE_INSIDE_UP,      p, true);
     this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_THREE_INSIDE_DOWN,    p, true);
     this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_ABANDONED_BABY,       p, true);
-    this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_PIVOT_POINT_REVERSAL, p, true);
 
    // OutsideBar: requires 3 parameters from BarPatternControl constants
     MqlParam outside_bar_params[];
@@ -51,7 +50,13 @@
     ArrayResize(inside_bar_params, 1);
     inside_bar_params[0].type = TYPE_INT;
     inside_bar_params[0].integer_value = PATTERN_DEF_INSIDE_BAR_MIN_BODY_SIZE;
-    this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_INSIDE_BAR, inside_bar_params, true);    
+    this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_INSIDE_BAR, inside_bar_params, true);
+   // PivotPointReversal: requires 1 parameter from BarPatternControl constants
+    MqlParam ppr_params[];
+    ArrayResize(ppr_params, 1);
+    ppr_params[0].type = TYPE_DOUBLE;
+    ppr_params[0].double_value = PATTERN_DEF_PPR_RATIO_CANDLE_SIZE;
+    this.m_BarPatterns_Control.SetUsedPattern(PATTERN_TYPE_PIVOT_POINT_REVERSAL, ppr_params, true);
    // PinBar: requires 4 parameters from BarPatternControl constants
     MqlParam pinbar_params[];
     ArrayResize(pinbar_params, 4);
@@ -72,24 +77,24 @@
     CBarTimeSeriesDE *bartimeseries  = this.m_BarTimeSeriesCollection.GetTimeseries(symbol);
     CBarSeriesDE     *barseries = NULL;
     if(bartimeseries != NULL)
-    {
-        CArrayObj *barserieslist = bartimeseries.GetListSeries();
-        for(int i = 0; i < barserieslist.Total(); i++)
+     {
+       CArrayObj *barserieslist = bartimeseries.GetListSeries();
+       for(int i = 0; i < barserieslist.Total(); i++)
         {
-            CBarSeriesDE *s = barserieslist.At(i);
-            if(s != NULL && s.Timeframe() == timeframe)
-            { barseries = s; break; }
+          CBarSeriesDE *s = barserieslist.At(i);
+          if(s != NULL && s.Timeframe() == timeframe)
+          { barseries = s; break; }
         }
-    }
+     }
     CBarPatternsControl *ctrl = (barseries  != NULL ? barseries.GetPatternsCtrlObj(): NULL);
     if(ctrl == NULL) return false;
     CArrayObj *reg = m_BarPatterns_Control.GetListControls();    
     for(int i = 0; i < reg.Total(); i++)
-      {
+     {
         CBarPatternControl *c = reg.At(i);
         if(c != NULL)
           ctrl.SetUsedPattern(c.TypePattern(), c.PatternParams, true);
-      }  
+     }  
     return true;
   }
 

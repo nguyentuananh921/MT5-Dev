@@ -91,6 +91,20 @@
      [v] Bị mất khi đổi TF
      [v] Chạy ngang
 6. Layer 4 Working with file
+ [] Config_Setting.json to save and load Configuration.
+   - 1 file JSON duy nhất, dùng chung cho cả Layer 1 và Layer 2. Mỗi hàm Save chỉ được BUILD MỚI đúng (các) section mình sở hữu, còn lại phải đọc file cũ và PRESERVE nguyên văn (raw text) section không sở hữu trước khi ghi đè cả file.
+   - Bảng sở hữu section (tên key chính thức):
+     - Layer 1 (CTimeSeriesEngine::SaveConfigurationToJSON, RemoveSymbolTFFromConfigJSON) sở hữu:
+       - "Symbols_TFs_List"
+       - "Indicator_Templates"
+     - Layer 2 (CGUIPannel::SavePatternAlertConfigToJSON, SaveMarkerSettingsToJSON) sở hữu:
+       - "Markers_Setting"
+       - "Pattern_Alerts_Setting"
+       - "Sound_Settings"
+   - Quy tắc preserve: trước khi FileOpen(FILE_WRITE) ghi đè file, hàm Save phải 
+   - IndicatorConfig_ReadWholeFile()
+   - IndicatorConfig_ExtractRawSection() 
+   cho TỪNG section mình không sở hữu, rồi nối lại vào JSON output. Thiếu bước này ở bất kỳ hàm Save nào sẽ làm mất section của layer kia (đã từng xảy ra vì CTimeSeriesEngine::SaveConfigurationToJSON không preserve markers/pattern_alerts/sound_settings).
 
 7. Bug note
   2027 0713 

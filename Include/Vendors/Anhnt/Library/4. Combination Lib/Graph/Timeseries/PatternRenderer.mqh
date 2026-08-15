@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                          PatternRenderer.mqh     |
 //|                                         Copyright 2025, Anhnt    |
+//| Laging so Can't use
 //+------------------------------------------------------------------+
 //| DoEasy-style OBJ_BITMAP positioning:                             |
 //|   OBJPROP_TIME  = t_oldest  (ANCHOR_CENTER → bar slot center)   |

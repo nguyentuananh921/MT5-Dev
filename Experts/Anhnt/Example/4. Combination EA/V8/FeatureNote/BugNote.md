@@ -264,6 +264,28 @@ WForms của Trishkin không bị xoá khỏi ổ đĩa — chỉ không include
     SetBuffers/SetGate), họ MA khác (DEMA/TEMA/FRAMA/VIDYA → `CSignalMA`) — nối 1 dòng
     case khi cần.
 
+### 5g. CWindow resize-Y quá nhỏ làm nội dung tab tràn ra ngoài (Marker tab) — ⚠ CHƯA FIX (phát hiện 2026-08-13)
+- **Triệu chứng**: kéo cạnh dưới `m_window_main` (CWindow, GUI Lib Anatoli Kazharski) thu hẹp
+  theo Y — nội dung tab Marker (combobox, label, nút Save) không co/ẩn theo mà đứng nguyên ở
+  toạ độ tuyệt đối cũ, tràn hẳn ra ngoài khung cửa sổ đã bị co, đè lên status bar và chart.
+  Biểu hiện dễ thấy nhất: 4 ô chữ nhật trắng (preview icon cột "Sell" hàng 0-3: Single/Multi/
+  Pattern/Combo) lộ ra ngoài panel — chỉ là phần dễ nhìn thấy của hiện tượng tràn, không phải
+  bug riêng của ListView/ComboBox.
+- **Root cause (xác nhận qua đọc code, KHÔNG phải Library bug)**:
+  `GUIPannel_Define.mqh:40-42` — `M_WINDOW_MAIN_HEIGHT=480` (đúng, đủ cho tab Marker: tự tính
+  9 hàng × (ROW_HEIGHT 26 + ROW_GAP 10) + caption/tab-header ≈ 480), nhưng
+  `M_WINDOW_MAIN_MIN_HEIGHT=200` — quá nhỏ so với nhu cầu thật. `MinimumYSize()`
+  (`GUIPannel_MainWindows.mqh:26`) dùng đúng constant này làm giới hạn kéo-resize của Library —
+  Library tự nó không có gì sai, chỉ là bị truyền giới hạn sai từ EA-local code.
+- **Hướng fix (chưa áp, EA-local, KHÔNG cần đụng Library)**: tăng `M_WINDOW_MAIN_MIN_HEIGHT`
+  lên gần/bằng `M_WINDOW_MAIN_HEIGHT` (480), hoặc tính theo chiều cao thật cần của tab cao nhất,
+  để Library tự chặn user kéo hẹp quá mức — không cần sửa `Window.mqh`/`ComboBox.mqh`/`ListView.mqh`.
+- Điều tra phụ (không phải nguyên nhân, nhưng đã lần qua khi tìm bug): chuỗi resize-Y của Library
+  — `CWindow::ChangeWindowHeight` → event `ON_WINDOW_CHANGE_YSIZE` →
+  `CWndEvents::OnWindowChangeYSize` (`Moving()` + chỉ touch `m_auto_y_resize_elements`) —
+  `CListView::Hide()/Show()/Moving()` (`ListView.mqh` dòng 780-849) — logic Hide/Show dùng
+  `OBJPROP_TIMEFRAMES=OBJ_NO_PERIODS`, đọc code thấy đúng, không phải nguồn bug.
+
 ## 6. Quy ước code đã thống nhất
 
 - Pointer: `CIndicatorDE*` đặt tên `indicator`, `CSignalBase*` đặt tên `signal`; member khai báo
@@ -284,3 +306,5 @@ WForms của Trishkin không bị xoá khỏi ổ đĩa — chỉ không include
 4. Persist việc xoá indicator vào JSON (hiện xoá xong restart là template quay lại).
 5. Buy/Sell checkbox (col 2/3 bảng Settings) đang là stub TODO.
 6. Sort bảng Trade: đã fix theo row-identity (đọc lại Col0/1/2 mỗi tick) — theo dõi thêm.
+7. Sửa 5g (`M_WINDOW_MAIN_MIN_HEIGHT` quá nhỏ, `GUIPannel_Define.mqh:42`) — tăng lên gần/bằng
+   `M_WINDOW_MAIN_HEIGHT` (480) để chặn resize-Y tràn nội dung tab Marker.

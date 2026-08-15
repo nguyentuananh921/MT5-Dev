@@ -367,5 +367,177 @@
       m_table_candle_information_atBar.Update(true);
       return true;
   }
+ //+------------------------------------------------------------------+
+ //| Alt + hover: shows the CGCnvPatternBitmap of the highest-priority |
+ //| pattern (most candles, same tie-break as CPatternRenderer's pass  |
+ //| 3->2->1) confirmed at the hovered bar's span [bar_time, bar_time+ |
+ //| PeriodSeconds()). Only ONE bitmap is ever alive at a time - unlike|
+ //| CPatternRenderer (disabled, too laggy rendering EVERY pattern on  |
+ //| the chart at once), this stays cheap because it only ever draws  |
+ //| the single pattern under the cursor.                              |
+ //| The bitmap itself is created lazily and lives on the CBarPattern  |
+ //| object (mirrors CPatternRenderer::CreatePatternBitmap) so re-     |
+ //| hovering the same candle later just re-Shows() the cached one.    |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::ShowPatternBitmapAtBar(const datetime bar_time)
+  {
+   if(m_BarTimeSeriesCollection == NULL) { HidePatternBitmapShown(); return; }
+   datetime next_bar_time = bar_time + ::PeriodSeconds();
+   string sym = ::Symbol();
+   ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+
+   CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
+   if(all_patterns == NULL) { HidePatternBitmapShown(); return; }
+
+   CBarPattern *best = NULL;
+   int best_candles = 0;
+   int total = all_patterns.Total();
+   for(int i = 0; i < total; i++)
+    {
+     CBarPattern *p = all_patterns.At(i);
+     if(p == NULL || p.Symbol() != sym || p.Timeframe() != tf) continue;
+     datetime pt = p.Time();
+     if(pt < bar_time || pt >= next_bar_time) continue;
+     int n = (int)p.Candles();
+     if(best == NULL || n > best_candles) { best = p; best_candles = n; }
+    }
+
+   // --- MY DEBUG - gated on bar_time change so continuous MOUSE_MOVE doesn't spam the log.
+   static datetime dbg_last_bar_time = 0;
+   if(bar_time != dbg_last_bar_time)
+    {
+     dbg_last_bar_time = bar_time;
+     if(best != NULL)
+        ::Print("MY DEBUG CGUIPannel::ShowPatternBitmapAtBar: hover bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
+                " best.Time()=", ::TimeToString(best.Time(), TIME_DATE|TIME_MINUTES),
+                " best.ID()=", best.ID(), " candles=", best_candles,
+                " High=", ::DoubleToString(best.MotherBarHigh(), 3),
+                " Low=", ::DoubleToString(best.MotherBarLow(), 3),
+                " Dir=", best.DirectDescription());
+     else
+        ::Print("MY DEBUG CGUIPannel::ShowPatternBitmapAtBar: hover bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
+                " no pattern matched (patterns_total=", total, ")");
+    }
+
+   if(best == NULL) { HidePatternBitmapShown(); return; }
+
+   int curr_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);
+   if(best == m_pattern_bitmap_shown && best.HasBitmap() && curr_scale == m_pattern_bitmap_scale)
+    {
+     if(!best.GetBitmap().IsVisible()) { best.GetBitmap().Show(); ::ChartRedraw(m_chart_id); }
+     return;
+    }
+
+   HidePatternBitmapShown();
+
+   // --- Always rebuild from scratch (never reuse a cached bitmap across hovers) - its pixel
+   // --- geometry is baked in at creation time from CHART_SCALE/CHART_HEIGHT_IN_PIXELS/price
+   // --- range (CGCnvPatternBitmap::CalcWidth/CalcHeight), so reusing one across an intervening
+   // --- zoom/pan renders it in the wrong place. Confirmed 2026-08-14: a fresh create always
+   // --- matched the SignalMarkers marker exactly; a reused cached one didn't. Only ever 1
+   // --- bitmap is alive at a time here, so the rebuild cost is negligible.
+   best.ClearBitmap();
+    {
+     int      n        = best_candles;
+     int      tf_ps     = (int)::PeriodSeconds(tf);
+     datetime t_new     = best.Time();
+     datetime t_old     = t_new - (datetime)((n - 1) * tf_ps);   // oldest bar's OPEN time
+     // --- ChartTimePriceToXY(bar_open_time) lands on the bar's LEFT edge (confirmed via debug:
+     // --- a single bar's own [open, open+period) span is exactly 1 slot wide in pixels), but
+     // --- the DoEasy width/ANCHOR_CENTER formula below assumes the anchor time lands on the bar
+     // --- SLOT CENTER (see CGCnvPatternBitmap header comment) - that mismatch shifted the whole
+     // --- box half a bar too far left. Shifting the anchor by half a period (whole seconds,
+     // --- every standard MQL5 timeframe is even) fixes it without touching the Library formula.
+     datetime anchor_time = t_old + (datetime)(tf_ps / 2);
+     int      chart_h   = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
+     double   price_max = ::ChartGetDouble(m_chart_id, CHART_PRICE_MAX);
+     double   price_min = ::ChartGetDouble(m_chart_id, CHART_PRICE_MIN);
+     string   name      = "PatternHover_" + (string)t_new + "_" + (string)best.ID();
+
+     CGCnvPatternBitmap *bmp = new CGCnvPatternBitmap(m_chart_id, m_subwin, name, best.ID(),
+                                                        anchor_time, best.MotherBarHigh(), best.MotherBarLow(),
+                                                        best.Direction(), n,
+                                                        curr_scale, chart_h, price_max, price_min);
+     if(bmp == NULL) return;
+     ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_ANCHOR,  ANCHOR_CENTER);
+     // --- "\n" suppresses MT5's default object tooltip (name + price) - we already draw our
+     // --- own label via ShowPatternHoverLabel, don't want the native one leaking through too.
+     ::ObjectSetString (m_chart_id, bmp.Name(), OBJPROP_TOOLTIP, "\n");
+     ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_BACK,    true);
+     bmp.DrawView();
+     best.AttachBitmap(bmp);
+     // --- MY DEBUG - compares the box's own anchor bars' real screen pixel-X against
+     // --- bar_pixel_x logged in OnEvent(Alt-hover), to catch a stale/misplaced bitmap.
+     int ox1 = -1, oy1 = -1, ox2 = -1, oy2 = -1;
+     ::ChartTimePriceToXY(m_chart_id, m_subwin, t_old, best.MotherBarHigh(), ox1, oy1);
+     ::ChartTimePriceToXY(m_chart_id, m_subwin, t_new, best.MotherBarHigh(), ox2, oy2);
+     ::Print("MY DEBUG CGUIPannel::ShowPatternBitmapAtBar(create): id=", best.ID(),
+             " t_old=", ::TimeToString(t_old, TIME_MINUTES), " t_new=", ::TimeToString(t_new, TIME_MINUTES),
+             " scale=", curr_scale, " box_pixel_x=[", ox1, ",", ox2, "] width=", bmp.Width());
+    }
+   m_pattern_bitmap_scale = curr_scale;
+   best.GetBitmap().Show();
+   m_pattern_bitmap_shown = best;
+   ShowPatternHoverLabel(best);
+   ::ChartRedraw(m_chart_id);
+  }
+ //+------------------------------------------------------------------+
+ //| Draws the pattern's name directly on the chart (one fixed OBJ_TEXT|
+ //| object, repositioned/retexted per hover) - native OBJPROP_TOOLTIP |
+ //| hover-delay proved unreliable while the mouse keeps moving with   |
+ //| Alt held (BugNote 2026-08-14: user never saw it appear), so the   |
+ //| label is rendered proactively instead of relying on that.         |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::ShowPatternHoverLabel(CBarPattern *pat)
+  {
+   if(pat == NULL) return;
+   string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
+   if(pat_name == "") pat_name = ::EnumToString(pat.TypePattern());
+   // --- Direction is already conveyed by color (blue=Bullish/red=Bearish, same convention
+   // --- as the box itself), and candle count is already conveyed by the box's own width -
+   // --- no "[nB]" prefix or direction word needed, just the name.
+   string text = pat_name;
+   color  clr  = (pat.Direction() == PATTERN_DIRECTION_BULLISH) ? clrRoyalBlue :
+                 (pat.Direction() == PATTERN_DIRECTION_BEARISH) ? clrCrimson : clrDimGray;
+   // --- Pixel-based gap above the box (not a % of visible price range) - a % gap shrinks to
+   // --- near-zero price on a zoomed-in chart, which is what let the label overlap the candles.
+   int    chart_h    = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
+   double price_max  = ::ChartGetDouble(m_chart_id, CHART_PRICE_MAX);
+   double price_min  = ::ChartGetDouble(m_chart_id, CHART_PRICE_MIN);
+   double px_to_price = (chart_h > 0) ? (price_max - price_min) / chart_h : 0;
+   double price = pat.MotherBarHigh() + px_to_price * 16;   // ~16px above the box
+
+   if(::ObjectFind(m_chart_id, PATTERN_HOVER_LABEL_NAME) < 0)
+    {
+     ::ObjectCreate(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJ_TEXT, m_subwin, pat.Time(), price);
+     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_SELECTABLE, false);
+     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_HIDDEN,     true);
+     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_BACK,       false);
+     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_ANCHOR,     ANCHOR_LOWER);
+     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_FONTSIZE,   9);
+    }
+   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TIME,       pat.Time());
+   ::ObjectSetDouble (m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_PRICE,      price);
+   ::ObjectSetString (m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TEXT,       text);
+   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_COLOR,      clr);
+   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TIMEFRAMES, OBJ_ALL_PERIODS);
+  }
+ //+------------------------------------------------------------------+
+ //| Hides the currently-shown Alt+hover pattern bitmap + label, if    |
+ //| any. Hides rather than deletes - the CGCnvPatternBitmap object    |
+ //| stays cached on its CBarPattern so re-hovering the same candle    |
+ //| later doesn't need to recreate it.                                |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::HidePatternBitmapShown(void)
+  {
+   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TIMEFRAMES, OBJ_NO_PERIODS);
+   if(m_pattern_bitmap_shown == NULL) return;
+   if(m_pattern_bitmap_shown.HasBitmap() && m_pattern_bitmap_shown.GetBitmap().IsVisible())
+    {
+     m_pattern_bitmap_shown.GetBitmap().Hide();
+     ::ChartRedraw(m_chart_id);
+    }
+   m_pattern_bitmap_shown = NULL;
+  }
 
 #endif // CGUIPANNEL_CANDLEINFO_WINDOW_MQH

@@ -342,7 +342,7 @@
       int pos = IndicatorConfig_SkipSpace(clean, 0);
       if(pos >= StringLen(clean) || StringGetCharacter(clean, pos) != '{')
         {
-         Print("IndicatorConfig_ParseText > top-level JSON must be an object { \"symbols_tf\":[...], \"templates\":[...] }");
+         Print("IndicatorConfig_ParseText > top-level JSON must be an object { \"Symbols_TFs_List\":[...], \"Indicator_Templates\":[...] }");
          return false;
         }
       pos++; // skip '{'
@@ -355,9 +355,9 @@
          if(pos < StringLen(clean) && StringGetCharacter(clean, pos) == ':')
             pos++; // skip ':'
          pos = IndicatorConfig_SkipSpace(clean, pos);
-         if(key == "templates")
+         if(key == "Indicator_Templates")
             pos = IndicatorConfig_ReadEntryArray(clean, pos, out_templates);
-         else if(key == "symbols_tf")
+         else if(key == "Symbols_TFs_List")
             pos = IndicatorConfig_ReadSymbolTFArray(clean, pos, out_symbols_tf);
          else
             pos = IndicatorConfig_SkipValue(clean, pos); // e.g. "markers" - not this loader's concern

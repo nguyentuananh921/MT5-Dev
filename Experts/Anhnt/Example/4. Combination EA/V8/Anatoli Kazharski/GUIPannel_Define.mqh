@@ -171,5 +171,10 @@
    #define CANDLE_INFO_CURSOR_INSET  15
   //For Indicator table field show in m_table_indicator and m_table_indicator_SymbolTFValue
    #define INDICATOR_PARATEXT_WIDTH 180 //Include name + Icon
+  // --- Alt + hover pattern bitmap label (GUIPannel_CandleInfoWindow.mqh:ShowPatternBitmapAtBar).
+  // --- One fixed OBJ_TEXT object, repositioned/retexted per hover - native OBJPROP_TOOLTIP
+  // --- hover-delay proved unreliable while the mouse keeps moving with Alt held, so the name
+  // --- is drawn directly on chart instead.
+   #define PATTERN_HOVER_LABEL_NAME  "GUIPannel_PatternHoverLabel"
 #endif // CGUIPANNELDEFINE_MQH
 

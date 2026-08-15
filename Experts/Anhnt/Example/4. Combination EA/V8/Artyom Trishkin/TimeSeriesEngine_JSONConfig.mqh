@@ -161,6 +161,11 @@
   {
    // Build full path: MQL5/Files/{EA_FOLDER}/{filename}    
     string full_path = g_ea_folder + "/" + filename;
+   // Preserve the 3 sections owned by Layer 2 (CGUIPannel) - not this function's own section
+     string existing        = IndicatorConfig_ReadWholeFile(full_path);
+     string markers         = IndicatorConfig_ExtractRawSection(existing, "Markers_Setting");
+     string pattern_alerts  = IndicatorConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
+     string sound_settings  = IndicatorConfig_ExtractRawSection(existing, "Sound_Settings");    
    //Read GUI Configuration
     int sf_total = ArraySize(symbols);
     string sf_symbols[], sf_tfs[];
@@ -211,7 +216,7 @@
    // Start building JSON
     SIndicatorCatalogItem catalog[];
     GetIndicatorCatalog(catalog);
-    string json = "{\n \"symbols_tf\": [\n";
+    string json = "{\n \"Symbols_TFs_List\": [\n";
     int sym_saved = 0;
    // Sort by symbol (alphabetical) then ascending IndexEnumTimeframe()
     int order[];
@@ -239,7 +244,7 @@
             "\", \"buy\": " + (sf_buy[q] ? "true" : "false") +
             ", \"sell\": " + (sf_sell[q] ? "true" : "false") + " }";
      }
-    json += "\n ],\n \"templates\": [\n";
+    json += "\n ],\n \"Indicator_Templates\": [\n";
     int saved = 0;
     for(int i = 0; i < tmpl_total; i++)
      {
@@ -285,7 +290,10 @@
        }
       json += "] }";
      }
-    json += "\n ]";
+    json += "\n ]";        
+    if(markers != "")        json += ",\n \"Markers_Setting\": " + markers;
+    if(pattern_alerts != "") json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
+    if(sound_settings != "") json += ",\n \"Sound_Settings\": " + sound_settings;
     json += "\n}";
 
     int fh = FileOpen(full_path, FILE_WRITE | FILE_TXT | FILE_ANSI);
@@ -343,7 +351,7 @@
       Print("CTimeSeriesEngine::RemoveSymbolTFFromConfigJSON > failed to read/parse ", full_path);
       return false;
      }
-    string json = "{\n \"symbols_tf\": [\n";
+    string json = "{\n \"Symbols_TFs_List\": [\n";
    bool first = true;
    for(int i = 0; i < ArraySize(symbols_tf); i++)
     {
@@ -355,7 +363,7 @@
             "\", \"buy\": " + (symbols_tf[i].buy ? "true" : "false") +
             ", \"sell\": " + (symbols_tf[i].sell ? "true" : "false") + " }";
     }
-   json += "\n ],\n \"templates\": [\n";
+   json += "\n ],\n \"Indicator_Templates\": [\n";
    first = true;
    for(int i = 0; i < ArraySize(entries); i++)
     {

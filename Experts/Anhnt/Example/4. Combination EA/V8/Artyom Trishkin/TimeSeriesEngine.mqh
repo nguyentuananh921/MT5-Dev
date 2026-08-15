@@ -76,9 +76,9 @@
     //Also the ownership test for chart scans: a chart line whose ChartIndicatorGet slot
     //matches an instance here belongs to Layer 1 - that slot must NEVER be released.
       CIndicatorDE             *GetIndicatorByHandle(const int handle);
-    //Temporary debug: dump every indicator instance with its handle - identifies which
-    //object owns a handle reported broken by CSeriesDataInd::Refresh (err 4807 hunt)
-      void                      PrintIndicatorsInventory(void);       
+    // //Temporary debug: dump every indicator instance with its handle - identifies which
+    // //object owns a handle reported broken by CSeriesDataInd::Refresh (err 4807 hunt)
+    //   void                      PrintIndicatorsInventory(void);       
     //CTimeSeriesEngine Lifecycle ->Implementation in TimeSeriesEngine_Lifecycle.mqh
         bool  OnTimerEvent(void);
         bool  OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period);

@@ -215,7 +215,17 @@ Sau khi thêm `PlaySoundCloseBar()` (tách riêng sự kiện "có bar mới" ra
 
 Hướng duy nhất tìm được để gộp thật về 1 thư mục: bypass `::PlaySound()` built-in, dùng `#import "winmm.dll"` gọi thẳng `PlaySoundW` (full path hoặc `SND_MEMORY` + bytes đọc qua `FileOpen`) - bỏ qua được giới hạn 2-thư-mục-cố-định vì đây là WinAPI thô, đọc được path bất kỳ kể cả `MQL5\Files\...`. Cần bật "Allow DLL imports" cho EA. **Chưa code, Anhnt đang cân nhắc.**
 
+## ĐƠN GIẢN HOÁ LẠI (2026-08-14) - bỏ hẳn dedup per-flip cho CloseBar, bỏ `PlaySoundFile()`
+
+Sau khi root cause thư mục đã đóng xong (mục "KẾT LUẬN ĐÚNG CUỐI CÙNG" ở trên), rà soát lại thấy toàn bộ cơ chế `m_closebar_sound_played` (dựng ra để dedup Sound giữa nhiều flip Indicator/CandlePattern cùng lúc CloseBar, xem "QUYẾT ĐỊNH CUỐI 2026-08-11") giờ không còn cần thiết - đơn giản hoá lại theo quyết định mới của Anhnt:
+
+- **CloseBar giờ chỉ còn 1 nguồn Sound duy nhất**: `PlaySoundCloseBar()` - phát `NewBar.wav` vô điều kiện mỗi khi `IsNewBar()` true, KHÔNG còn phụ thuộc có flip Indicator/CandlePattern hay không.
+- **`CheckIndicatorAlerts()`/`CheckCandlePatternAlerts()` nhánh CloseBar bỏ hẳn phần Sound** - chỉ còn ghi Message/CSV đầy đủ như cũ (không mất thông tin, chỉ mất phần tự phát sound riêng theo từng flip).
+- **Xoá `m_closebar_sound_played`** khỏi cả 4 nơi: khai báo (`GUIPannel.mqh`), reset (`GUIPannel_Lifecycle.mqh`), 2 chỗ check-and-set trong `CheckIndicatorAlerts`/`CheckCandlePatternAlerts`.
+- **Xoá hẳn `PlaySoundFile()` wrapper** (guard rỗng + debug Print) - debug phase coi như xong, gọi thẳng `::PlaySound()` ở cả 3 chỗ còn lại (`PlaySoundCloseBar`, `PlaySoundForDirection`). Guard rỗng-tên-file dời vào thẳng `PlaySoundForDirection` (nơi duy nhất còn cần, vì `m_marker_buy_sound_file`/`sell` có thể chưa chọn).
+- **`m_candle_pattern_closebar_last_dir[]` giữ nguyên** (không xoá lại lần nữa, xem "Thử sai #2" ở trên từng xoá nhầm) - vẫn được cập nhật mỗi CloseBar dù không còn dùng để gate Sound nữa, phòng khi cần lại sau này.
+
 ## File liên quan
-- `V8/Anatoli Kazharski/GUIPannel_SoundAndMessageAlerts.mqh` — `CheckIndicatorAlerts` (2 nhánh CloseBar + Live), `PlaySoundCloseBar()`, `PlaySoundFile()`
+- `V8/Anatoli Kazharski/GUIPannel_SoundAndMessageAlerts.mqh` — `CheckIndicatorAlerts` (2 nhánh CloseBar + Live), `PlaySoundCloseBar()`, `PlaySoundForDirection()`
 - `V8/Anatoli Kazharski/GUIPannel_Lifecycle.mqh:584-599` — wiring combobox chọn sound file
 - `V8/Anatoli Kazharski/GUIPannel_TabSettingMarker.mqh:334` — `ScanSoundFolder()`, tab Marker, nơi chọn Buy/Sell Sound (chỉ scan được `MQL5\Files\...`, khác thư mục `::PlaySound()` thật sự đọc)

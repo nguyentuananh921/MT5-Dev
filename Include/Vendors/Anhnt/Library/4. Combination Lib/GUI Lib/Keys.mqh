@@ -21,6 +21,8 @@
       bool              KeyCtrlState(void);
      // --- Returns the state of the Shift key
       bool              KeyShiftState(void);
+     // --- Returns the state of the Alt key
+      bool              KeyAltState(void);
    };
  #ifndef CKEYS_MQH_IMPLEMENTATION
  #define CKEYS_MQH_IMPLEMENTATION
@@ -71,6 +73,13 @@
    bool CKeys::KeyShiftState(void)
      {
       return(::TerminalInfoInteger(TERMINAL_KEYSTATE_SHIFT)<0);
+     }
+   //+------------------------------------------------------------------+
+   // | Returns the state of the Alt key |
+   //+------------------------------------------------------------------+
+   bool CKeys::KeyAltState(void)
+     {
+      return(::TerminalInfoInteger(TERMINAL_KEYSTATE_MENU)<0);
      }
    //+------------------------------------------------------------------+
  #endif // CKEYS_MQH_IMPLEMENTATION

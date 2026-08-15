@@ -43,7 +43,7 @@
     #define BUBBLE_CLR_PROFIT_POS clrLimeGreen      // P&L text when profit is positive
     #define BUBBLE_CLR_PROFIT_NEG clrTomato         // P&L text when profit is negative
  //+------------------------------------------------------------------+
- //| Clickable / draggable region on canvas                           |
+ //| Clickable region on canvas (X button) / hover zone (SL-TP line)  |
  //+------------------------------------------------------------------+
  struct SBubbleBox
   {
@@ -54,14 +54,24 @@
  //+------------------------------------------------------------------+
  //| CTradingLevelBubble                                              |
  //| Draws up to 4 price-anchored SL/TP bubbles on the chart canvas. |
- //| - Drag bubble  → modify SL or TP for all positions (same side). |
- //| - Click X btn  → close all positions on that side.              |
+ //| - Dragging the level itself is done by MT5's OWN native SL/TP   |
+ //|   line (Anhnt, 2026-08-14 - "Hybrid Native Line" redesign):     |
+ //|   CHART_SHOW_TRADE_LEVELS is left ON, this class briefly hides  |
+ //|   its own bubble whenever the mouse is holding the left button  |
+ //|   near a line (so the user only ever sees the native line move,|
+ //|   not our own stale bubble sitting on top of it), then reacts   |
+ //|   to the resulting TRADE_EVENT_MODIFY_POSITION_SL/TP/SL_TP once |
+ //|   MT5 commits it, syncing the SAME new SL/TP to every other     |
+ //|   position on that side (SyncFromModifiedPosition) - the one    |
+ //|   thing native dragging can't do on its own (it only ever       |
+ //|   touches the ONE position whose line was grabbed).             |
+ //| - Click X btn  → close all positions on that side (unchanged).  |
  //+------------------------------------------------------------------+
 #ifndef CTRADING_LEVEL_BUBBLE_DECLARATION
 #define CTRADING_LEVEL_BUBBLE_DECLARATION
  // --- Inherits CGBaseObj purely for Layer-3 graphic-object identity (name/chart_id/
  // --- Belong/Species/Type) - same base CGStdGraphObj/CGStdBitmapLabelObj use. Drawing
- // --- itself stays on CCanvas (own hitbox/drag state) - no existing base in either
+ // --- itself stays on CCanvas (own hitbox state) - no existing base in either
  // --- Trishkin's or Kazharski's hierarchy offers free-form pixel drawing, so that part
  // --- remains this class's own responsibility (see README/BugNote discussion 2026-07-13).
  class CTradingLevelBubble : public CGBaseObj
@@ -75,35 +85,24 @@
     bool               m_orig_chart_shift; // CHART_SHIFT value before we forced it on, restored on deinit
     bool               m_need_resize;
     bool               m_need_redraw;     // set true bởi CHARTEVENT_CHART_CHANGE (zoom/scroll)
-    double             m_last_sl_buy; 
-    double             m_last_tp_buy; 
-    double             m_last_sl_sell; 
+    double             m_last_sl_buy;
+    double             m_last_tp_buy;
+    double             m_last_sl_sell;
     double             m_last_tp_sell;
 
-    int                m_drag_offset_y;    
     CMouseCombine     *m_mouse;
-    // Drag state
-     bool              m_is_dragging;
-     ENUM_BUBBLE_TYPE  m_drag_type;
-     int               m_drag_y;        // current drag Y in pixels
-     int               m_drag_bx;       // X frozen at drag-start - see DrawBubble() note
-     //Add properties here
-      int m_drag_anchor_y;      // Y anchor at drag-start (pixel)
-      double            m_drag_price_anchor;  // price at anchor (capture at drag-start)
-      double            m_price_per_pixel;    // price change per vertical pixel at drag-start
-     bool              m_prev_left_btn; // previous MOUSE_MOVE's button state - see OnChartEvent note
-     bool              m_prev_over;     // previous MOUSE_MOVE's dragbox-hover state
-     // --- True only while THIS class is the one holding CHART_MOUSE_SCROLL/AUTOSCROLL off
-     // --- (Anhnt, 2026-07-19 - "chuột trong m_window_main mà Scroll vẫn ảnh hưởng chart" bug):
-     // --- every "not over a dragbox / not dragging" path used to force these back to true
-     // --- unconditionally, fighting CWindow::SetChartState()'s own off-switch while the mouse
-     // --- is hovering the GUI panel instead (confirmed via MY DEBUG log - MOUSE_SCROLL flapped
-     // --- true/false every ~5-10ms while MOUSE_WHEEL stayed true throughout). Now this class
-     // --- only ever restores what IT itself turned off.
-     bool              m_scroll_locked_by_me;
+    // --- Hide-for-native-drag state (Anhnt, 2026-08-14 - "Hybrid Native Line"): while the
+    // --- left button is held down with the mouse near a level's line, we assume the user is
+    // --- dragging MT5's own native SL/TP line underneath our bubble and hide THAT one bubble
+    // --- (others stay visible) so it doesn't visually fight the native line moving with the
+    // --- mouse. Purely a heuristic - worst case it hides/shows a beat early/late, never wrong
+    // --- in a way that blocks the native drag itself (we don't touch chart scroll/mouse
+    // --- capture at all anymore - MT5 owns 100% of the actual drag).
+     bool              m_hide_active;
+     ENUM_BUBBLE_TYPE  m_hide_type;
     // Interaction boxes (one slot per ENUM_BUBBLE_TYPE)
-     SBubbleBox        m_hitbox[BUBBLE_TOTAL];   // X close button
-     SBubbleBox        m_dragbox[BUBBLE_TOTAL];  // draggable body    
+     SBubbleBox        m_hitbox[BUBBLE_TOTAL];    // X close button
+     SBubbleBox        m_linezone[BUBBLE_TOTAL];  // hover zone around this level's line - hide-heuristic only, no dragging
     //Calculation profit
      double CalcProfitAt(ENUM_BUBBLE_TYPE type, double target_price);
     // Internal helpers
@@ -111,9 +110,16 @@
      bool              HasSells(void);
      double            GetSL(ENUM_POSITION_TYPE dir);
      double            GetTP(ENUM_POSITION_TYPE dir);
-     void              DrawBubble(ENUM_BUBBLE_TYPE type, int y_pixel);
+     void              DrawBubble(ENUM_BUBBLE_TYPE type, int y_pixel, bool visible);
      void              CloseAll(ENUM_POSITION_TYPE dir);
-     void              ModifyAll(ENUM_BUBBLE_TYPE type, double new_price);
+     // --- Reacts to a native SL/TP modify on ONE position (Anhnt, 2026-08-14): reads that
+     // --- position's OWN just-committed SL/TP straight from m_market (already refreshed by the
+     // --- time this event fires - CTradingEngine::TradeEventsControl() runs
+     // --- m_market_collection.Refresh() BEFORE broadcasting), then applies the SAME SL/TP to
+     // --- every OTHER position on the same side. Excludes modified_ticket itself so it never
+     // --- re-modifies the position that just triggered the event (would be a harmless no-op
+     // --- price-wise, but pointless extra broker round-trip / event noise).
+     void              SyncFromModifiedPosition(const ulong modified_ticket);
      string            BubbleLabel(ENUM_BUBBLE_TYPE type, double price);
      int               PriceToY(double price);
      int               AnchorBX(void);
@@ -134,7 +140,6 @@
     void      OnPoll(void);
     void      OnChartEvent(const int id, const long &lparam,
                       const double &dparam, const string &sparam);
-    bool      IsDragging(void) const { return m_is_dragging; }
     void      Draw(void);
     // --- Used internally by EnsureCreated() to decide whether it's time to lazily call
     // --- OnInitEvent() (canvas creation) - true as soon as any position on the current
@@ -157,29 +162,24 @@
 #endif // CTRADING_LEVEL_BUBBLE_DECLARATION
 
 #ifndef CTRADING_LEVEL_BUBBLE_IMPLEMENTATION
-#define CTRADING_LEVEL_BUBBLE_IMPLEMENTATION 
+#define CTRADING_LEVEL_BUBBLE_IMPLEMENTATION
  CTradingLevelBubble::CTradingLevelBubble(void)
     : m_created(false),
       m_orig_chart_shift(true),
       m_need_resize(true),
       m_need_redraw(true),
-      m_is_dragging(false),
-      m_drag_type(BUBBLE_SL_BUY),
-      m_drag_y(0), m_drag_bx(0), 
-      //Adding new Properties in constructor
-       m_drag_anchor_y(0), m_drag_price_anchor(0.0), m_price_per_pixel(0.0),
-      m_prev_left_btn(false), m_prev_over(false), m_scroll_locked_by_me(false), m_market(NULL),
+      m_hide_active(false), m_hide_type(BUBBLE_SL_BUY),
+      m_market(NULL),
       m_trading_control(NULL),
       m_chart_obj_collection(NULL),
-      m_drag_offset_y(0),
       m_mouse(NULL),
       m_last_sl_buy(0), m_last_tp_buy(0),
       m_last_sl_sell(0), m_last_tp_sell(0)
   {
-    for(int i = 0; i < BUBBLE_TOTAL; i++)
+   for(int i = 0; i < BUBBLE_TOTAL; i++)
     {
-        m_hitbox[i].active  = false;
-        m_dragbox[i].active = false;
+        m_hitbox[i].active   = false;
+        m_linezone[i].active = false;
     }
     // --- CGBaseObj identity: not a native named object (no ObjectCreate behind it
     // --- beyond the CCanvas bitmap label), but still gets a name/chart_id/species so
@@ -194,127 +194,96 @@
 
  //+------------------------------------------------------------------+
  bool CTradingLevelBubble::OnInitEvent(void)
-  {
-    ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
-    ChartSetInteger(0, CHART_SHOW_TRADE_LEVELS, false); // hide MT5 default lines
-    // --- Anhnt 2026-07-17 ("nó cứ bị trôi sang trái"): with CHART_SHIFT off there's no reserved
-    // --- margin right of the last bar, so every new bar forces MT5 to shift ALL existing bars
-    // --- left to make room - while our bubble stays pinned to a constant chart_w-relative pixel,
-    // --- making price visually crawl away from it. Force shift on so new bars fill that margin
-    // --- instead of shoving the whole view left.
-    m_orig_chart_shift = (bool)ChartGetInteger(0, CHART_SHIFT);
-    ChartSetInteger(0, CHART_SHIFT, true);
-    int w = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
-    int h = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
-    // --- Reject a degenerate size instead of "successfully" creating a 0x0 canvas
-    // --- (2026-07-14, BugNote "ChartChange là mất"): right after REASON_CHARTCHANGE the
-    // --- chart hasn't finished laying out yet, so CHART_WIDTH/HEIGHT_IN_PIXELS can still be
-    // --- 0 here. CreateBitmapLabel(0,0) used to "succeed" (canvas stays permanently 0x0,
-    // --- confirmed via the "canvas= 0x0" PERF log line in Draw()) and latch m_bubble_created
-    // --- true forever - returning false here instead lets OnTradeEvent() retry on the next
-    // --- tick once the chart's real size is available. Do NOT Destroy() the old canvas
-    // --- before this check - if it's still valid, keep showing it rather than blanking out.
-    if(w <= 0 || h <= 0)
-       return false;
-    m_canvas.Destroy();
-    if(!m_canvas.CreateBitmapLabel("TradingLevelBubbleCanvas", 0, 0, w, h,
-                                   COLOR_FORMAT_ARGB_NORMALIZE))
-        return false;
-
-    m_canvas.FontSet("Calibri", 18, FW_BOLD);
-    m_created = true;
-    Draw(); // populate bubbles for positions already open when EA attaches
-    return true;
-  }
+ {
+   ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
+   // --- Native SL/TP line stays ON (Anhnt, 2026-08-14 - "Hybrid Native Line"): dragging is
+   // --- done by MT5 itself now, not by this class - see class header comment. Native dragging
+   // --- proved buttery-smooth on its own; this class only adds the "sync to every same-side
+   // --- position" behavior native dragging can't do, plus the nicer P&L-labeled bubble visual.
+   ChartSetInteger(0, CHART_SHOW_TRADE_LEVELS, true);
+   m_orig_chart_shift = (bool)ChartGetInteger(0, CHART_SHIFT);
+   ChartSetInteger(0, CHART_SHIFT, true);
+   int w = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
+   int h = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
+   if(w <= 0 || h <= 0)
+   return false;
+   m_canvas.Destroy();
+   if(!m_canvas.CreateBitmapLabel("TradingLevelBubbleCanvas", 0, 0, w, h,
+                                  COLOR_FORMAT_ARGB_NORMALIZE))
+   return false;
+   m_canvas.FontSet("Calibri", 18, FW_BOLD);
+   m_created = true;
+   Draw(); // populate bubbles for positions already open when EA attaches
+   return true;
+ }
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::EnsureCreated(void)
   {
-    if(m_created) return;
-    if(!HasAnyLevel()) return;
-    OnInitEvent(); // sets m_created=true itself on success; a failed attempt (chart not
-                    // laid out yet, w/h still 0) just leaves m_created false to retry later
+   if(m_created) return;
+   if(!HasAnyLevel()) return;
+   OnInitEvent(); // sets m_created=true itself on success; a failed attempt (chart not
+                   // laid out yet, w/h still 0) just leaves m_created false to retry later
   }
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::OnDeinitEvent(void)
   {
-    ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
-    ChartSetInteger(0, CHART_AUTOSCROLL, true);
-    ChartSetInteger(0, CHART_SHOW_TRADE_LEVELS, true); // restore
-    ChartSetInteger(0, CHART_SHIFT, m_orig_chart_shift); // restore
-    m_canvas.Destroy();
-    m_created = false;
-    ChartRedraw();
+   ChartSetInteger(0, CHART_SHOW_TRADE_LEVELS, true); // leave native lines visible
+   ChartSetInteger(0, CHART_SHIFT, m_orig_chart_shift); // restore
+   m_canvas.Destroy();
+   m_created = false;
+   ChartRedraw();
   }
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::OnPoll(void)
   {
    EnsureCreated(); // periodic retry - covers positions/SL/TP that appeared from any source
-   if(m_mouse == NULL) return;
-
-   bool left_btn = m_mouse.IsLeftBtn();
-   // End drag: button released without a MOUSE_MOVE event to catch it
-    if(m_is_dragging && !left_btn)
+   // Hide/un-hide for native drag, polled here NOT event-driven (Anhnt, 2026-08-14 v3 - "thấy
+   // rõ ràng cái Bubble không ẩn đi"): both CHARTEVENT_MOUSE_MOVE and CHARTEVENT_CLICK turned
+   // out unreliable for this - MT5 appears to take over mouse capture entirely for its own
+   // native SL/TP line drag, so this EA stops receiving those events for the whole drag. This
+   // timer (16ms, fires unconditionally regardless of MT5's event suppression) polls
+   // m_mouse's LAST KNOWN state instead - CMouseCombine only updates on an actual MOUSE_MOVE,
+   // so during a native drag its X/Y/button values sit frozen at whatever the last real event
+   // reported (normally the click that started the drag, still correctly "held" since nothing
+   // has told it otherwise) - false only once the drag truly ends and a real MOUSE_MOVE/CLICK
+   // finally gets through again reporting the release.
+    if(m_mouse != NULL)
      {
-       // Use the frozen drag X captured at drag-start so horizontal mouse movement
-       // (diagonal/sideways) doesn't change the mapped time coordinate.
-        ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
-        ChartSetInteger(0, CHART_AUTOSCROLL, true);
-        m_scroll_locked_by_me = false;
-        int dy = m_drag_y - m_drag_anchor_y;
-        double new_price = m_drag_price_anchor + dy * m_price_per_pixel;
-        ModifyAll(m_drag_type, new_price);
-        m_is_dragging = false;
+      int mx = m_mouse.X(), my = m_mouse.Y();
+      bool left_btn = m_mouse.IsLeftBtn();
+      bool over = false; int over_idx = -1;
+      for(int i = 0; i < BUBBLE_TOTAL; i++)
+       {
+        if(!m_linezone[i].active) continue;
+        if(mx >= m_linezone[i].x1 && mx <= m_linezone[i].x2 &&
+           my >= m_linezone[i].y1 && my <= m_linezone[i].y2)
+           { over = true; over_idx = i; break; }
+       }
+      bool want_hide = left_btn && over;
+      bool hide_type_changed = want_hide && over_idx >= 0 && m_linezone[over_idx].type != m_hide_type;
+      if(want_hide != m_hide_active || hide_type_changed)
+       {
+        m_hide_active = want_hide;
+        if(want_hide && over_idx >= 0) m_hide_type = m_linezone[over_idx].type;
+        m_need_redraw = true;
         Draw();
-        return;
+       }
      }
-   // While dragging, OnChartEvent(MOUSE_MOVE) already redraws each frame
-    if(m_is_dragging) return;
-   // --- Safety net for the hover-based scroll lock in OnChartEvent (Anhnt, 2026-07-17): that
-   // --- lock must fire on bare hover (not just left_btn) to win MT5's race against its own
-   // --- native pan-gesture latch, but bare hover can only be CLEARED by a later MOUSE_MOVE with
-   // --- the cursor no longer over the dragbox - if the user moves onto the GUI panel instead
-   // --- (no further chart-relative MOUSE_MOVE), it would stay stuck off. Polled here independent
-   // --- of MOUSE_MOVE via m_mouse's own position, so it always self-heals within one poll cycle.
-    {
-       int mx = m_mouse.X(), my = m_mouse.Y();
-       bool over_now = false;
-       for(int i = 0; i < BUBBLE_TOTAL; i++)
-        {
-         if(!m_dragbox[i].active) continue;
-         if(mx >= m_dragbox[i].x1 && mx <= m_dragbox[i].x2 &&
-            my >= m_dragbox[i].y1 && my <= m_dragbox[i].y2)
-           { over_now = true; break; }
-        }
-       // --- Only restore what THIS class itself turned off (Anhnt, 2026-07-19) - never touch
-       // --- MOUSE_SCROLL/AUTOSCROLL when m_scroll_locked_by_me is false, since that means some
-       // --- other owner (e.g. CWindow, hovering the GUI panel) is the one holding it off right
-       // --- now for its own unrelated reason.
-       if(!over_now && m_scroll_locked_by_me)
-        {
-         ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
-         ChartSetInteger(0, CHART_AUTOSCROLL, true);
-         m_scroll_locked_by_me = false;
-        }
-    }
    // Canvas resize check
     static uint last_resize_ms = 0;
     uint now_rc = GetTickCount();
-
     if(now_rc - last_resize_ms >= 250)
      {
-        last_resize_ms = now_rc;
-        int chart_w = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
-        int chart_h = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
-        if(chart_w != m_canvas.Width() || chart_h != m_canvas.Height())
-         {
-            m_need_resize = true;
-            Draw();
-         }
+      last_resize_ms = now_rc;
+      int chart_w = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
+      int chart_h = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
+      if(chart_w != m_canvas.Width() || chart_h != m_canvas.Height())
+       {
+        m_need_resize = true;
+        Draw();
+       }
      }
-   // No periodic SL/TP scan anymore — Draw() is now triggered by real
-   // CHARTEVENT_CUSTOM trade events (see OnChartEvent) instead of polling.
   }
-
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::OnChartEvent(const int id, const long &lparam,
                                      const double &dparam, const string &sparam)
@@ -326,10 +295,6 @@
        Draw(); // zoom/scroll moves bubble pixel position even if SL/TP price didn't change
        return;
      }
-    // Real symbol/TF change (CChartObjCollection, 2026-07-14) - distinct from the raw
-    // CHARTEVENT_CHART_CHANGE above, which also fires on every pan/zoom. Checked BEFORE the
-    // generic CHARTEVENT_CUSTOM trade-event block below since these ids are >= CHARTEVENT_CUSTOM
-    // too and would otherwise get mis-read as a trade event there.
     if(m_chart_obj_collection != NULL &&
        (id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_CHANGE ||
         id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_TF_CHANGE ||
@@ -342,203 +307,119 @@
     // Trade event broadcast by CTradingEngine (CTradeEventsCollection) — react instead of polling
     if(id >= CHARTEVENT_CUSTOM)
      {
-        ushort trade_event = (ushort)(id - CHARTEVENT_CUSTOM);
-        if(trade_event == (ushort)TRADE_EVENT_MODIFY_POSITION_SL    ||
+       ushort trade_event = (ushort)(id - CHARTEVENT_CUSTOM);
+       bool is_position_closed_event =
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED             ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_BY_POS      ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_BY_SL       ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_BY_TP       ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_PARTIAL     ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_PARTIAL_BY_POS ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_PARTIAL_BY_SL  ||
+           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED_PARTIAL_BY_TP;
+       bool is_modify_event =
+           trade_event == (ushort)TRADE_EVENT_MODIFY_POSITION_SL    ||
            trade_event == (ushort)TRADE_EVENT_MODIFY_POSITION_TP    ||
-           trade_event == (ushort)TRADE_EVENT_MODIFY_POSITION_SL_TP ||
-           trade_event == (ushort)TRADE_EVENT_POSITION_OPENED       ||
-           trade_event == (ushort)TRADE_EVENT_POSITION_CLOSED)
-            Draw();
-        return;
-     }
-    if(id == CHARTEVENT_MOUSE_MOVE)
-     {
-        int mx = (int)lparam, my = (int)dparam;
-        uint state    = (uint)StringToInteger(sparam);
-        bool left_btn = ((state & 1) != 0);  // bit 0 = left mouse button
-
-        bool over = false; int over_idx = -1;
-        for(int i = 0; i < BUBBLE_TOTAL; i++)
+           trade_event == (ushort)TRADE_EVENT_MODIFY_POSITION_SL_TP;
+       if(is_modify_event)
+        {
+         // lparam = ticket of the position MT5 (native line) just modified - sync its new
+         // SL/TP to every other same-side position (see SyncFromModifiedPosition comment).
+          SyncFromModifiedPosition((ulong)lparam);
+         // Un-hide now - the drag that triggered the CHARTEVENT_CLICK hide is done, this is
+         // the normal (not safety-net) path back to showing the bubble again.
+          m_hide_active = false;
+          m_need_redraw = true;
+         Draw();
+         return;
+        }
+       if(trade_event == (ushort)TRADE_EVENT_POSITION_OPENED || is_position_closed_event)
          {
-            if(!m_dragbox[i].active) continue;
-            if(mx >= m_dragbox[i].x1 && mx <= m_dragbox[i].x2 &&
-              my >= m_dragbox[i].y1 && my <= m_dragbox[i].y2)
-            { over = true; over_idx = i; break; }
+          Draw();
          }
-        // --- Lock scroll off for the WHOLE drag (2026-07-14, BugNote "chạy ngang trên chart").
-        // --- Locking on bare `over` (Anhnt, 2026-07-17) wins the race against MT5 latching "this
-        // --- mouse-down is a chart-pan gesture" at button-down time (before any MOUSE_MOVE
-        // --- reaches us) - but bare `over` can't tell a genuine grab apart from an UNRELATED pan
-        // --- that started elsewhere (button already held) and simply wanders across the bubble's
-        // --- screen area mid-pan: both look identical (over=true, left_btn=true) on that frame.
-        // --- Confirmed by the user: candles were panning right during what looked like a bubble
-        // --- drag - i.e. an ordinary chart-drag gesture was being hijacked. `m_prev_left_btn` /
-        // --- `m_prev_over` (this frame's PREVIOUS values) distinguish the two: a wander-in has the
-        // --- button ALREADY down before `over` ever became true; a genuine grab either starts the
-        // --- press while already hovering (pre-armed by the hover-lock below) or presses down on
-        // --- the very frame it enters the box (m_prev_left_btn still false that frame).
-        bool wandered_in   = left_btn && m_prev_left_btn && !m_prev_over;
-        bool safe_to_engage = !wandered_in;
-
-        bool lock = m_is_dragging || (over && safe_to_engage);
-        // --- Only ever touch MOUSE_SCROLL/AUTOSCROLL for OUR OWN lock/unlock transitions
-        // --- (Anhnt, 2026-07-19 - see m_scroll_locked_by_me declaration): locking is always
-        // --- safe to assert, but unlocking must never fire unless THIS class was the one
-        // --- holding it off, otherwise it clobbers CWindow's own off-switch while the mouse
-        // --- hovers the GUI panel instead of a dragbox.
-        if(lock)
-          {
-           ChartSetInteger(0, CHART_MOUSE_SCROLL, false);
-           ChartSetInteger(0, CHART_AUTOSCROLL,   false);
-           m_scroll_locked_by_me = true;
-          }
-        else if(m_scroll_locked_by_me)
-          {
-           ChartSetInteger(0, CHART_MOUSE_SCROLL, true);
-           ChartSetInteger(0, CHART_AUTOSCROLL,   true);
-           m_scroll_locked_by_me = false;
-          }
-
-        // Begin drag immediately (no 16ms delay) - gated by safe_to_engage so an unrelated pan
-        // wandering across the dragbox never gets hijacked into a bubble drag.
-        if(!m_is_dragging && left_btn && over && over_idx >= 0 && safe_to_engage)
-         {
-            ENUM_BUBBLE_TYPE btype = m_dragbox[over_idx].type;
-            bool is_buy = (btype == BUBBLE_SL_BUY || btype == BUBBLE_TP_BUY);
-            bool is_sl  = (btype == BUBBLE_SL_BUY || btype == BUBBLE_SL_SELL);
-            ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-            double price  = is_sl ? GetSL(dir) : GetTP(dir);
-            int    anchor = PriceToY(price);
-            m_is_dragging   = true;
-            m_drag_type     = btype;
-            m_drag_y        = anchor;
-            m_drag_bx       = AnchorBX(); // frozen for the whole drag - see DrawBubble() note
-
-            // capture pixel anchor and price-per-pixel at drag-start
-              m_drag_anchor_y = anchor;
-              {
-                datetime ttmp; double p0 = 0.0, p1 = 0.0; int sub;
-                if(ChartXYToTimePrice(0, m_drag_bx, m_drag_anchor_y, sub, ttmp, p0) &&
-                  ChartXYToTimePrice(0, m_drag_bx, m_drag_anchor_y + 1, sub, ttmp, p1))
-                {
-                    m_drag_price_anchor = p0;
-                    m_price_per_pixel   = p1 - p0;
-                    if(MathAbs(m_price_per_pixel) < 1e-12)
-                        m_price_per_pixel = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-                }
-                else
-                {
-                    // fallback: use current SL/TP and tick step
-                    ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-                    m_drag_price_anchor = is_sl ? GetSL(dir) : GetTP(dir);
-                    m_price_per_pixel   = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-                }
-
-              }
-            m_drag_offset_y = my - anchor;
-            ChartSetInteger(0, CHART_MOUSE_SCROLL, false);
-            ChartSetInteger(0, CHART_AUTOSCROLL, false);
-         }
-        if(m_is_dragging)
-         {
-           //Debug
-            ::PrintFormat("CTradingLevelBubble::OnChartEvent DBG Drag bx=%d drag_y=%d anchor_y=%d dy=%d price_anchor=%.5f ppp=%.12f",
-                    m_drag_bx, m_drag_y, m_drag_anchor_y,
-                    m_drag_y - m_drag_anchor_y,
-                    m_drag_price_anchor, m_price_per_pixel);
-            m_drag_y = my - m_drag_offset_y;
-            Draw();
-         }
-        m_prev_left_btn = left_btn;
-        m_prev_over     = over;
-        return;
+       return;
      }
     if(id != CHARTEVENT_CLICK) return;
     int mx = (int)lparam;
     int my = (int)dparam;
+    // X close button. Hide-for-native-drag is handled by OnPoll()'s polling now, not here -
+    // see its comment (Anhnt, 2026-08-14 v3): neither MOUSE_MOVE nor CLICK reliably fires
+    // during an actual native-line drag once MT5 takes over mouse capture.
     for(int i = 0; i < BUBBLE_TOTAL; i++)
-    {
-        if(!m_hitbox[i].active) continue;
-        if(mx >= m_hitbox[i].x1 && mx <= m_hitbox[i].x2 &&
-           my >= m_hitbox[i].y1 && my <= m_hitbox[i].y2)
-        {
-            ENUM_POSITION_TYPE dir = (i <= BUBBLE_TP_BUY)
-                                    ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-            CloseAll(dir);
-            Draw();
-            return;
-        }
-    }
+     {
+      if(!m_hitbox[i].active) continue;
+      if(mx >= m_hitbox[i].x1 && mx <= m_hitbox[i].x2 &&
+         my >= m_hitbox[i].y1 && my <= m_hitbox[i].y2)
+       {
+        ENUM_POSITION_TYPE dir = (i <= BUBBLE_TP_BUY)
+                                ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
+        CloseAll(dir);
+        Draw();
+        return;
+       }
+     }
   }
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::Draw(void)
   {
-    if(!m_created) return; // canvas not created yet - EnsureCreated() owns that decision
+   if(!m_created) return; // canvas not created yet - EnsureCreated() owns that decision
+   ulong t0 = ::GetMicrosecondCount();
 
-    ulong t0 = ::GetMicrosecondCount();
+   double sl_buy  = GetSL(POSITION_TYPE_BUY);
+   double tp_buy  = GetTP(POSITION_TYPE_BUY);
+   double sl_sell = GetSL(POSITION_TYPE_SELL);
+   double tp_sell = GetTP(POSITION_TYPE_SELL);
+   ulong fetch_us = ::GetMicrosecondCount() - t0;
 
-    double sl_buy  = GetSL(POSITION_TYPE_BUY);
-    double tp_buy  = GetTP(POSITION_TYPE_BUY);
-    double sl_sell = GetSL(POSITION_TYPE_SELL);
-    double tp_sell = GetTP(POSITION_TYPE_SELL);
-
-    ulong fetch_us = ::GetMicrosecondCount() - t0;
-
-    bool unchanged = !m_need_resize && !m_need_redraw && !m_is_dragging &&
+   bool unchanged = !m_need_resize && !m_need_redraw &&
                  sl_buy == m_last_sl_buy && tp_buy == m_last_tp_buy &&
                  sl_sell == m_last_sl_sell && tp_sell == m_last_tp_sell;
-    if(unchanged)
-     {
-        ulong us = ::GetMicrosecondCount() - t0;
-        if(us > 1000)
-           ::Print("PERF CTradingLevelBubble::Draw(skip) us= ", us, " fetch=", fetch_us, "us");
-        return;
-     }
-    m_last_sl_buy = sl_buy;  m_last_tp_buy = tp_buy;
-    m_last_sl_sell = sl_sell; m_last_tp_sell = tp_sell;
-    m_need_redraw = false;
-    
-    if(m_need_resize)
-     {
-        int w = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
-        int h = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
-        if(w != m_canvas.Width() || h != m_canvas.Height())
-            m_canvas.Resize(w, h);
-        m_need_resize = false;
-     }
-    m_canvas.Erase(0x00000000); // transparent
-    for(int i = 0; i < BUBBLE_TOTAL; i++)
-     {
-        m_hitbox[i].active  = false;
-        m_dragbox[i].active = false;
-     }
-    if(sl_buy > 0 || tp_buy > 0)
-     {
-      int y_sl = -1, y_tp = -1;
-      if(sl_buy > 0) y_sl = (m_is_dragging && m_drag_type == BUBBLE_SL_BUY) ? m_drag_y : PriceToY(sl_buy);
-      if(tp_buy > 0) y_tp = (m_is_dragging && m_drag_type == BUBBLE_TP_BUY) ? m_drag_y : PriceToY(tp_buy);
-      ResolveOverlap(y_sl, y_tp,
-                     m_is_dragging && m_drag_type == BUBBLE_SL_BUY,
-                     m_is_dragging && m_drag_type == BUBBLE_TP_BUY);
-      if(sl_buy > 0 && y_sl >= 0) DrawBubble(BUBBLE_SL_BUY, y_sl);
-      if(tp_buy > 0 && y_tp >= 0) DrawBubble(BUBBLE_TP_BUY, y_tp);
-     }
-    if(sl_sell > 0 || tp_sell > 0)
-     {
-      int y_sl = -1, y_tp = -1;
-      if(sl_sell > 0) y_sl = (m_is_dragging && m_drag_type == BUBBLE_SL_SELL) ? m_drag_y : PriceToY(sl_sell);
-      if(tp_sell > 0) y_tp = (m_is_dragging && m_drag_type == BUBBLE_TP_SELL) ? m_drag_y : PriceToY(tp_sell);
-      ResolveOverlap(y_sl, y_tp,
-                     m_is_dragging && m_drag_type == BUBBLE_SL_SELL,
-                     m_is_dragging && m_drag_type == BUBBLE_TP_SELL);
-      if(sl_sell > 0 && y_sl >= 0) DrawBubble(BUBBLE_SL_SELL, y_sl);
-      if(tp_sell > 0 && y_tp >= 0) DrawBubble(BUBBLE_TP_SELL, y_tp);
-     }
-    m_canvas.Update();
-
-    ulong us = ::GetMicrosecondCount() - t0;
-    if(us > 1000)
-       ::Print("PERF CTradingLevelBubble::Draw us= ", us, " fetch=", fetch_us, " us canvas= ", m_canvas.Width(), "x", m_canvas.Height());
+   if(unchanged)
+    {
+     ulong us = ::GetMicrosecondCount() - t0;
+     if(us > 1000)
+      ::Print("PERF CTradingLevelBubble::Draw(skip) us= ", us, " fetch=", fetch_us, "us");
+     return;
+    }
+   m_last_sl_buy = sl_buy;  m_last_tp_buy = tp_buy;
+   m_last_sl_sell = sl_sell; m_last_tp_sell = tp_sell;
+   m_need_redraw = false;
+   if(m_need_resize)
+    {
+      int w = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
+      int h = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
+      if(w != m_canvas.Width() || h != m_canvas.Height())
+      m_canvas.Resize(w, h);
+      m_need_resize = false;
+    }
+   m_canvas.Erase(0x00000000); // transparent
+   for(int i = 0; i < BUBBLE_TOTAL; i++)
+    {
+     m_hitbox[i].active   = false;
+     m_linezone[i].active = false;
+    }
+   if(sl_buy > 0 || tp_buy > 0)
+    {
+     int y_sl = -1, y_tp = -1;
+     if(sl_buy > 0) y_sl = PriceToY(sl_buy);
+     if(tp_buy > 0) y_tp = PriceToY(tp_buy);
+     ResolveOverlap(y_sl, y_tp, false, false); // neither side is ever "being dragged" anymore
+     if(sl_buy > 0 && y_sl >= 0) DrawBubble(BUBBLE_SL_BUY, y_sl, !(m_hide_active && m_hide_type == BUBBLE_SL_BUY));
+     if(tp_buy > 0 && y_tp >= 0) DrawBubble(BUBBLE_TP_BUY, y_tp, !(m_hide_active && m_hide_type == BUBBLE_TP_BUY));
+    }
+   if(sl_sell > 0 || tp_sell > 0)
+    {
+     int y_sl = -1, y_tp = -1;
+     if(sl_sell > 0) y_sl = PriceToY(sl_sell);
+     if(tp_sell > 0) y_tp = PriceToY(tp_sell);
+     ResolveOverlap(y_sl, y_tp, false, false);
+     if(sl_sell > 0 && y_sl >= 0) DrawBubble(BUBBLE_SL_SELL, y_sl, !(m_hide_active && m_hide_type == BUBBLE_SL_SELL));
+     if(tp_sell > 0 && y_tp >= 0) DrawBubble(BUBBLE_TP_SELL, y_tp, !(m_hide_active && m_hide_type == BUBBLE_TP_SELL));
+    }
+   m_canvas.Update();
+   ulong us = ::GetMicrosecondCount() - t0;
+   if(us > 1000)
+      ::Print("PERF CTradingLevelBubble::Draw us= ", us, " fetch=", fetch_us, " us canvas= ", m_canvas.Width(), "x", m_canvas.Height());
   }
  //+------------------------------------------------------------------+
  //| Horizontal anchor: the last bar's actual on-screen X + a fixed   |
@@ -557,47 +438,54 @@
    return bx;
   }
  //+------------------------------------------------------------------+
- void CTradingLevelBubble::DrawBubble(ENUM_BUBBLE_TYPE type, int by)
+ void CTradingLevelBubble::DrawBubble(ENUM_BUBBLE_TYPE type, int by, bool visible)
   {
-      // --- Anchor to the LAST BAR's actual on-screen X (Anhnt, 2026-07-17: "chỉ lên xuống thôi" -
-      // --- a chart_w-only formula is screen-fixed, but MT5's own autoscroll continuously creeps
-      // --- price content left as new bars form (with or without CHART_SHIFT), so the bubble
-      // --- visibly drifted relative to price even though its own pixel never moved. Recomputing
-      // --- from ChartTimePriceToXY ties bx to the SAME coordinate system as the candles, so it
-      // --- rides along with whatever the chart does at rest - zero relative drift, by
-      // --- construction. WHILE dragging THIS bubble, though, use the FROZEN m_drag_bx captured
-      // --- at drag-start instead of recomputing - MT5 can still sneak in a pan tick mid-drag
-      // --- despite the scroll lock, and recomputing here would let that leak through as
-      // --- horizontal movement; freezing guarantees pure vertical drag regardless.
-      int bx = (m_is_dragging && m_drag_type == type) ? m_drag_bx : AnchorBX();
-      int half = BUBBLE_BDY_H / 2;
+   int bx = AnchorBX();
+   int half = BUBBLE_BDY_H / 2;
+   // Flags
+    bool is_sl  = (type == BUBBLE_SL_BUY  || type == BUBBLE_SL_SELL);
+    bool is_buy = (type == BUBBLE_SL_BUY  || type == BUBBLE_TP_BUY);
 
-      // Flags
-      bool is_sl  = (type == BUBBLE_SL_BUY  || type == BUBBLE_SL_SELL);
-      bool is_buy = (type == BUBBLE_SL_BUY  || type == BUBBLE_TP_BUY);
+    int body_x1 = bx + BUBBLE_TIP_W;
+    int body_x2 = bx + BUBBLE_TIP_W + BUBBLE_BDY_W;
+    int body_y1 = by - half;
+    int body_y2 = by + half;
+    int btn_x1 = body_x2 - BUBBLE_XSZ - 4;
 
-      // Colors
-      uint border_clr = ColorToARGB(is_sl  ? BUBBLE_CLR_SELL : BUBBLE_CLR_BUY);  // SL=red, TP=green
-      uint label_clr  = ColorToARGB(is_buy ? BUBBLE_CLR_BUY  : BUBBLE_CLR_SELL); // Buy=green, Sell=red
-      uint bg         = ColorToARGB(BUBBLE_CLR_BG);
+    // Register line hover-zone UNCONDITIONALLY, even while hidden (Anhnt, 2026-08-14 v4 -
+    // "nháy loạn xạ"/flicker fix): OnPoll() polls this every 16ms to decide hide/un-hide - if a
+    // HIDDEN bubble stopped re-registering its own zone (used to bail out early before this
+    // point when !visible), OnPoll() would see "not over anything" on the very next poll, un-
+    // hide, which re-registers the zone, which gets hidden again next poll - a rapid hide/show
+    // loop. Geometry must still track the CURRENT by/bx so the zone follows the live price.
+    int zone_pad_y = 4;
+    m_linezone[type].active = true;
+    m_linezone[type].type   = type;
+    m_linezone[type].x1     = 0;
+    m_linezone[type].y1     = body_y1 - zone_pad_y;
+    m_linezone[type].x2     = MathMin(body_x2, btn_x1 - 4);
+    m_linezone[type].y2     = body_y2 + zone_pad_y;
 
-      // Dashed horizontal level line
-      uint line_clr = ColorToARGB(is_sl ? BUBBLE_CLR_SELL : BUBBLE_CLR_BUY, 180);
-      int  dash_w = 10, gap_w = 5;
-      for(int x = 0; x < bx; x += dash_w + gap_w)
-      {
-          int x2 = MathMin(x + dash_w - 1, bx - 1);
-          m_canvas.LineHorizontal(x, x2, by - 1, line_clr);
-          m_canvas.LineHorizontal(x, x2, by,     line_clr);
-          m_canvas.LineHorizontal(x, x2, by + 1, line_clr);
-      }
+    if(!visible) return; // hidden for native drag - zone above stays live, pixels don't
 
-      int body_x1 = bx + BUBBLE_TIP_W;
-      int body_x2 = bx + BUBBLE_TIP_W + BUBBLE_BDY_W;
-      int body_y1 = by - half;
-      int body_y2 = by + half;
+   // Colors
+    uint border_clr = ColorToARGB(is_sl  ? BUBBLE_CLR_SELL : BUBBLE_CLR_BUY);  // SL=red, TP=green
+    uint label_clr  = ColorToARGB(is_buy ? BUBBLE_CLR_BUY  : BUBBLE_CLR_SELL); // Buy=green, Sell=red
+    uint bg         = ColorToARGB(BUBBLE_CLR_BG);
 
-      // Outer fill: border color (full size)
+   // Dashed horizontal level line (purely visual now - the REAL draggable line is MT5's own
+   // native one, drawn separately by the terminal since CHART_SHOW_TRADE_LEVELS is on)
+    uint line_clr = ColorToARGB(is_sl ? BUBBLE_CLR_SELL : BUBBLE_CLR_BUY, 180);
+    int  dash_w = 10, gap_w = 5;
+    for(int x = 0; x < bx; x += dash_w + gap_w)
+     {
+      int x2 = MathMin(x + dash_w - 1, bx - 1);
+      m_canvas.LineHorizontal(x, x2, by - 1, line_clr);
+      m_canvas.LineHorizontal(x, x2, by,     line_clr);
+      m_canvas.LineHorizontal(x, x2, by + 1, line_clr);
+     }
+
+    // Outer fill: border color (full size)
       m_canvas.FillTriangle(bx, by, bx + BUBBLE_TIP_W, by - half, bx + BUBBLE_TIP_W, by + half, border_clr);
       m_canvas.FillRectangle(body_x1, body_y1, body_x2, body_y2, border_clr);
 
@@ -608,25 +496,15 @@
       m_canvas.FillRectangle(body_x1, body_y1 + BUBBLE_BDR_W, body_x2 - BUBBLE_BDR_W, body_y2 - BUBBLE_BDR_W, bg);
 
       // X close button
-      int btn_x1 = body_x2 - BUBBLE_XSZ - 4;
       int btn_y1 = by - BUBBLE_XSZ / 2;
       int btn_x2 = btn_x1 + BUBBLE_XSZ;
       int btn_y2 = btn_y1 + BUBBLE_XSZ;
       m_canvas.FillRectangle(btn_x1, btn_y1, btn_x2, btn_y2, ColorToARGB(clrFireBrick));
       m_canvas.TextOut(btn_x1 + BUBBLE_XSZ / 2, by, "X", ColorToARGB(clrWhite), TA_CENTER | TA_VCENTER);
 
-      // Price label (top): drag price during drag, else stored SL/TP
-      double display_price = 0;
-      if(m_is_dragging && m_drag_type == type)
-      {
-          int dy = m_drag_y - m_drag_anchor_y;
-          display_price = m_drag_price_anchor + dy * m_price_per_pixel;
-      }
-      else
-      {
-          ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-          display_price = is_sl ? GetSL(dir) : GetTP(dir);
-      }
+      // Price label (top)
+      ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
+      double display_price = is_sl ? GetSL(dir) : GetTP(dir);
       string lbl = BubbleLabel(type, display_price);
       m_canvas.TextOut(body_x1 + 8, by - 12, lbl, label_clr, TA_LEFT | TA_VCENTER);
 
@@ -636,7 +514,8 @@
       uint   pnl_clr = ColorToARGB(pnl >= 0 ? BUBBLE_CLR_PROFIT_POS : BUBBLE_CLR_PROFIT_NEG);
       m_canvas.TextOut(body_x1 + 8, by + 12, pnl_str, pnl_clr, TA_LEFT | TA_VCENTER);
 
-      // Register hitbox (X button) — expand slightly for easier clicking
+      // Register hitbox (X button) — expand slightly for easier clicking. Only while visible -
+      // no equivalent flicker risk since CHARTEVENT_CLICK is discrete, not polled every 16ms.
       int hit_pad = 6;
       m_hitbox[type].active = true;
       m_hitbox[type].type   = type;
@@ -644,31 +523,22 @@
       m_hitbox[type].y1     = MathMax(0, btn_y1 - hit_pad);
       m_hitbox[type].x2     = btn_x2 + hit_pad;
       m_hitbox[type].y2     = btn_y2 + hit_pad;
-
-      // Register drag zone — constrain to visible bubble body and add padding
-      int drag_pad_x = 8;
-      int drag_pad_y = 4;
-      m_dragbox[type].active = true;
-      m_dragbox[type].type   = type;
-      m_dragbox[type].x1     = MathMax(0, body_x1 - drag_pad_x);
-      m_dragbox[type].y1     = body_y1 - drag_pad_y;
-      m_dragbox[type].x2     = MathMin(body_x2, btn_x1 - 4 + drag_pad_x);
-      m_dragbox[type].y2     = body_y2 + drag_pad_y;
+      // (line hover-zone already registered above, before the visibility check)
   }
  //+------------------------------------------------------------------+
  int CTradingLevelBubble::PriceToY(double price)
   {
-    int x, y;
-    datetime t = iTime(_Symbol, PERIOD_CURRENT, 0);
-    if(!ChartTimePriceToXY(0, 0, t, price, x, y)) return -1;
-    return y;
+   int x, y;
+   datetime t = iTime(_Symbol, PERIOD_CURRENT, 0);
+   if(!ChartTimePriceToXY(0, 0, t, price, x, y)) return -1;
+   return y;
   }
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::ResolveOverlap(int &ya, int &yb, bool a_dragged, bool b_dragged)
   {
-    if(ya < 0 || yb < 0) return;
-    if(MathAbs(ya - yb) >= BUBBLE_BDY_H + 2) return;
-    //int gap = BDY_H + 2;
+   if(ya < 0 || yb < 0) return;
+   if(MathAbs(ya - yb) >= BUBBLE_BDY_H + 2) return;
+   //int gap = BDY_H + 2;
     int gap = BUBBLE_BDY_H + BUBBLE_BDY_W + 6;
     if(a_dragged)
         yb = (ya >= yb) ? ya - gap : ya + gap;
@@ -676,130 +546,141 @@
         ya = (yb >= ya) ? yb - gap : yb + gap;
     else
      {
-        int mid = (ya + yb) / 2;
-        int half = gap / 2;
-        if(ya >= yb) { ya = mid + half; yb = mid - half; }
-        else         { ya = mid - half; yb = mid + half; }
+      int mid = (ya + yb) / 2;
+      int half = gap / 2;
+      if(ya >= yb) { ya = mid + half; yb = mid - half; }
+      else         { ya = mid - half; yb = mid + half; }
      }
   }
  //+------------------------------------------------------------------+
  bool CTradingLevelBubble::HasBuys(void)
   {
-    if(m_market == NULL) return false;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)POSITION_TYPE_BUY, EQUAL);
-    return (list != NULL && list.Total() > 0);
+   if(m_market == NULL) return false;
+   CArrayObj *list = m_market.GetList();
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)POSITION_TYPE_BUY, EQUAL);
+   return (list != NULL && list.Total() > 0);
   }
  bool CTradingLevelBubble::HasSells(void)
   {
-    if(m_market == NULL) return false;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)POSITION_TYPE_SELL, EQUAL);
-    return (list != NULL && list.Total() > 0);
+   if(m_market == NULL) return false;
+   CArrayObj *list = m_market.GetList();
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)POSITION_TYPE_SELL, EQUAL);
+   return (list != NULL && list.Total() > 0);
   }
  double CTradingLevelBubble::GetSL(ENUM_POSITION_TYPE dir)
   {
-    if(m_market == NULL) return 0;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return 0;
-    for(int i = 0; i < list.Total(); i++)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double sl = pos.StopLoss();
-        if(sl > 0) return sl;
-     }
-    return 0;
+   if(m_market == NULL) return 0;
+   CArrayObj *list = m_market.GetList();
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+   if(list == NULL) return 0;
+   for(int i = 0; i < list.Total(); i++)
+    {
+     CMarketPosition *pos = (CMarketPosition*)list.At(i);
+     if(pos == NULL) continue;
+     double sl = pos.StopLoss();
+     if(sl > 0) return sl;
+    }
+   return 0;
   }
  double CTradingLevelBubble::GetTP(ENUM_POSITION_TYPE dir)
   {
-    if(m_market == NULL) return 0;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return 0;
-    for(int i = 0; i < list.Total(); i++)
+   if(m_market == NULL) return 0;
+   CArrayObj *list = m_market.GetList();
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+   if(list == NULL) return 0;
+   for(int i = 0; i < list.Total(); i++)
     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double tp = pos.TakeProfit();
-        if(tp > 0) return tp;
+     CMarketPosition *pos = (CMarketPosition*)list.At(i);
+     if(pos == NULL) continue;
+     double tp = pos.TakeProfit();
+     if(tp > 0) return tp;
     }
-    return 0;
+   return 0;
   }
  void CTradingLevelBubble::CloseAll(ENUM_POSITION_TYPE dir)
   {
-    if(m_market == NULL || m_trading_control == NULL) return;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return;
-    for(int i = list.Total() - 1; i >= 0; i--)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        m_trading_control.ClosePosition((ulong)pos.Ticket());
-     }
+   if(m_market == NULL || m_trading_control == NULL) return;
+   CArrayObj *list = m_market.GetList();
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+   if(list == NULL) return;
+   for(int i = list.Total() - 1; i >= 0; i--)
+    {
+     CMarketPosition *pos = (CMarketPosition*)list.At(i);
+     if(pos == NULL) continue;
+     m_trading_control.ClosePosition((ulong)pos.Ticket());
+    }
   }
 
- void CTradingLevelBubble::ModifyAll(ENUM_BUBBLE_TYPE type, double new_price)
+ //+------------------------------------------------------------------+
+ void CTradingLevelBubble::SyncFromModifiedPosition(const ulong modified_ticket)
   {
-    if(m_market == NULL || m_trading_control == NULL) return;
-    ENUM_POSITION_TYPE dir = (type <= BUBBLE_TP_BUY) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-    bool modify_sl = (type == BUBBLE_SL_BUY || type == BUBBLE_SL_SELL);
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return;
-    for(int i = list.Total() - 1; i >= 0; i--)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double sl = modify_sl ? new_price : pos.StopLoss();
-        double tp = modify_sl ? pos.TakeProfit() : new_price;
-        m_trading_control.ModifyPosition((ulong)pos.Ticket(), sl, tp);
-     }
+   if(m_market == NULL || m_trading_control == NULL) return;
+   ENUM_POSITION_TYPE dirs[2] = {POSITION_TYPE_BUY, POSITION_TYPE_SELL};
+   for(int d = 0; d < 2; d++)
+    {
+     CArrayObj *list = m_market.GetList();
+     list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+     list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+     list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dirs[d], EQUAL);
+     if(list == NULL) continue;
+     double src_sl = 0, src_tp = 0; bool found = false;
+     for(int i = 0; i < list.Total(); i++)
+      {
+       CMarketPosition *pos = (CMarketPosition*)list.At(i);
+       if(pos != NULL && (ulong)pos.Ticket() == modified_ticket)
+        { src_sl = pos.StopLoss(); src_tp = pos.TakeProfit(); found = true; break; }
+      }
+     if(!found) continue; // wrong direction, or not this chart's symbol at all
+     for(int i = list.Total() - 1; i >= 0; i--)
+      {
+       CMarketPosition *pos = (CMarketPosition*)list.At(i);
+       if(pos == NULL) continue;
+       if((ulong)pos.Ticket() == modified_ticket) continue; // don't re-modify the source itself
+       m_trading_control.ModifyPosition((ulong)pos.Ticket(), src_sl, src_tp);
+      }
+     return;
+    }
   }
  double CTradingLevelBubble::CalcProfitAt(ENUM_BUBBLE_TYPE type, double target_price)
   {
-    if(m_market == NULL || target_price <= 0) return 0;
-    ENUM_POSITION_TYPE dir = (type <= BUBBLE_TP_BUY) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return 0;
-    double total = 0;
-    for(int i = 0; i < list.Total(); i++)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double p = 0;
-        if(OrderCalcProfit((ENUM_ORDER_TYPE)dir, _Symbol, pos.Volume(), pos.PriceOpen(), target_price, p))
-            total += p;
-     }
-    return total;
+   if(m_market == NULL || target_price <= 0) return 0;
+   ENUM_POSITION_TYPE dir = (type <= BUBBLE_TP_BUY) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
+   CArrayObj *list = m_market.GetList();
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
+   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
+   if(list == NULL) return 0;
+   double total = 0;
+   for(int i = 0; i < list.Total(); i++)
+    {
+     CMarketPosition *pos = (CMarketPosition*)list.At(i);
+     if(pos == NULL) continue;
+     double p = 0;
+     if(OrderCalcProfit((ENUM_ORDER_TYPE)dir, _Symbol, pos.Volume(), pos.PriceOpen(), target_price, p))
+      total += p;
+    }
+   return total;
   }
  string CTradingLevelBubble::BubbleLabel(ENUM_BUBBLE_TYPE type, double price)
   {
-    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
-    string prefix = "";
-    switch(type)
+   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+   string prefix = "";
+   switch(type)
     {
-        case BUBBLE_SL_BUY:  prefix = "SL Buy  "; break;
-        case BUBBLE_TP_BUY:  prefix = "TP Buy  "; break;
-        case BUBBLE_SL_SELL: prefix = "SL Sell "; break;
-        case BUBBLE_TP_SELL: prefix = "TP Sell "; break;
+     case BUBBLE_SL_BUY:  prefix = "SL Buy  "; break;
+     case BUBBLE_TP_BUY:  prefix = "TP Buy  "; break;
+     case BUBBLE_SL_SELL: prefix = "SL Sell "; break;
+     case BUBBLE_TP_SELL: prefix = "TP Sell "; break;
     }
     return prefix + DoubleToString(price, digits);
   }

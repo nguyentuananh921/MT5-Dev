@@ -10,12 +10,9 @@ Anhnt (2026-08-10): *"Việc Live tức là cái Bar0 chưa đóng, cái đấy 
 ---
 
 ## Luồng update đầy đủ (3 Layer, cho khái niệm 2 — UpdatePatternOnNewBar)
-
-```
 Layer 1 (Pure Data: detect + lưu pattern)
    → Layer 2 (EA: ghi Bridge file)
-      → Layer 3 (SignalMarkers.mq5: đọc Bridge + vẽ marker trên chart)
-```
+      → Layer 3 (SignalMarkers.mq5: đọc Bridge + vẽ marker trên chart)```
 
 ### Layer 1 — Detect + lưu (`BarPatternsControl.mqh` / `BarSeriesDE.mqh`)
 2 đường ghi vào cùng 1 nơi (`m_list_all_patterns` của `CBarPatternControl`, per-series thật — lấy qua `bar_series.GetPatternsCtrlObj()`):

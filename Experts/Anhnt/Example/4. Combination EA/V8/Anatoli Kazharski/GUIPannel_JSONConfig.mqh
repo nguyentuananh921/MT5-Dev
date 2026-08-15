@@ -28,25 +28,21 @@
       //::Print(__FUNCTION__, " > SaveMarkerSettingsToJSON: OK");
   }  
  void CGUIPannel::SavePatternAlertConfigToJSON(void)
-  {
-   // Build full file path: MQL5/Files/{EA_FOLDER}/Config_Setting.json
-    //string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
+  {   
     string full_path = g_ea_folder + "/Config_Setting.json";
    // Preserve existing sections from Config_Setting.json
     string existing   = IndicatorConfig_ReadWholeFile(full_path);
-    string symbols_tf = IndicatorConfig_ExtractRawSection(existing, "symbols_tf");
-    string templates  = IndicatorConfig_ExtractRawSection(existing, "templates");
-    string markers    = IndicatorConfig_ExtractRawSection(existing, "markers");
+    string symbols_tf = IndicatorConfig_ExtractRawSection(existing, "Symbols_TFs_List");
+    string templates  = IndicatorConfig_ExtractRawSection(existing, "Indicator_Templates");
+    string markers    = IndicatorConfig_ExtractRawSection(existing, "Markers_Setting");
 
     string json = "{\n";
-    if(symbols_tf != "") json += " \"symbols_tf\": " + symbols_tf + ",\n";
-    if(templates  != "") json += " \"templates\": "  + templates  + ",\n";
-    if(markers    != "") json += " \"markers\": "    + markers    + ",\n";
-  
-   // Build "pattern_alerts" section - Global settings (not symbol/TF specific)
+    if(symbols_tf != "") json += " \"Symbols_TFs_List\": " + symbols_tf + ",\n";
+    if(templates  != "") json += " \"Indicator_Templates\": "  + templates  + ",\n";
+    if(markers    != "") json += " \"Markers_Setting\": "    + markers    + ",\n";
    // Each pattern type has one Sound + Message alert setting that applies to both BUY and SELL
     int pattern_count = ArraySize(m_pattern_types);
-    json += " \"pattern_alerts\": {\n";
+    json += " \"Pattern_Alerts_Setting\": {\n";
     for(int i = 0; i < pattern_count; i++)
     {
      if(i > 0) json += ",\n";
@@ -68,22 +64,21 @@
     Print("CGUIPannel::SavePatternAlertConfigToJSON > saved pattern alert settings to ", full_path);
   }
  void CGUIPannel::SaveMarkerSettingsToJSON(void)
-  {
-    //string ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
+  {    
     string full_path = g_ea_folder + "/Config_Setting.json";
-    //Debug
-     Print("DEBUG:CGUIPannel::SaveMarkerSettingsToJSON g_ea_folder=", g_ea_folder);      // ← ADD THIS
-     Print("DEBUG: CGUIPannel::SaveMarkerSettingsToJSONfull_path=", full_path);          // ← ADD THIS
+    // //Debug
+    //  Print("DEBUG:CGUIPannel::SaveMarkerSettingsToJSON g_ea_folder=", g_ea_folder);      // ← ADD THIS
+    //  Print("DEBUG: CGUIPannel::SaveMarkerSettingsToJSONfull_path=", full_path);          // ← ADD THIS
 
     string existing   = IndicatorConfig_ReadWholeFile(full_path);
-    string symbols_tf = IndicatorConfig_ExtractRawSection(existing, "symbols_tf");
-    string templates  = IndicatorConfig_ExtractRawSection(existing, "templates");
-    string pattern_alerts = IndicatorConfig_ExtractRawSection(existing, "pattern_alerts");
+    string symbols_tf = IndicatorConfig_ExtractRawSection(existing, "Symbols_TFs_List");
+    string templates  = IndicatorConfig_ExtractRawSection(existing, "Indicator_Templates");
+    string pattern_alerts = IndicatorConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
 
     string json = "{\n";
-    if(symbols_tf != "") json += " \"symbols_tf\": " + symbols_tf + ",\n";
-    if(templates  != "") json += " \"templates\": "  + templates  + ",\n";
-    if(pattern_alerts != "") json += " \"pattern_alerts\": " + pattern_alerts + ",\n";
+    if(symbols_tf != "") json += " \"Symbols_TFs_List\": " + symbols_tf + ",\n";
+    if(templates  != "") json += " \"Indicator_Templates\": "  + templates  + ",\n";
+    if(pattern_alerts != "") json += " \"Pattern_Alerts_Setting\": " + pattern_alerts + ",\n";
   
     string buy_sound_esc  = m_marker_buy_sound_file;
     string sell_sound_esc = m_marker_sell_sound_file;
@@ -92,20 +87,23 @@
     ::StringReplace(sell_sound_esc, "\\", "\\\\");
     // ::StringReplace(sound_folder_esc, "\\", "\\\\");
   
-    json += " \"markers\": {\n" +
-        "  \"single_indicator_buy_arrow_code\": "  + (string)m_marker_single_indicator_buy_code + ",\n" +
-        "  \"single_indicator_sell_arrow_code\": " + (string)m_marker_single_indicator_sell_code + ",\n" +
-        "  \"multi_indicator_buy_arrow_code\": "   + (string)m_marker_multi_indicator_buy_code + ",\n" +
-        "  \"multi_indicator_sell_arrow_code\": "  + (string)m_marker_multi_indicator_sell_code + ",\n" +
-        "  \"pattern_buy_arrow_code\": "  + (string)m_marker_pattern_buy_code + ",\n" +     
-        "  \"pattern_sell_arrow_code\": " + (string)m_marker_pattern_sell_code + ",\n" +    
-        "  \"combo_buy_arrow_code\": "    + (string)m_marker_combo_buy_code + ",\n" +       
-        "  \"combo_sell_arrow_code\": "   + (string)m_marker_combo_sell_code + ",\n" +      
-        "  \"buy_color\": "        + (string)(int)m_marker_buy_color + ",\n" +
-        "  \"sell_color\": "       + (string)(int)m_marker_sell_color + ",\n" +
-        "  \"nonrelated_color\": " + (string)(int)m_marker_nonrelated_color + "\n" +
+    // --- Human-readable labels (Anhnt, 2026-08-15), not raw Wingdings codes/color ints - e.g.
+    // --- "83 Bomb" / "Dodger Blue" instead of "83" / "65280" - matches exactly what the combo
+    // --- shows (ArrowLabelForCode/ColorLabelForValue look up the SAME GetMarker*Choices catalogs).
+    json += " \"Markers_Setting\": {\n" +
+        "  \"single_indicator_buy_arrow_code\": \""  + ArrowLabelForCode(m_marker_single_indicator_buy_code) + "\",\n" +
+        "  \"single_indicator_sell_arrow_code\": \"" + ArrowLabelForCode(m_marker_single_indicator_sell_code) + "\",\n" +
+        "  \"multi_indicator_buy_arrow_code\": \""   + ArrowLabelForCode(m_marker_multi_indicator_buy_code) + "\",\n" +
+        "  \"multi_indicator_sell_arrow_code\": \""  + ArrowLabelForCode(m_marker_multi_indicator_sell_code) + "\",\n" +
+        "  \"pattern_buy_arrow_code\": \""  + ArrowLabelForCode(m_marker_pattern_buy_code) + "\",\n" +
+        "  \"pattern_sell_arrow_code\": \"" + ArrowLabelForCode(m_marker_pattern_sell_code) + "\",\n" +
+        "  \"combo_buy_arrow_code\": \""    + ArrowLabelForCode(m_marker_combo_buy_code) + "\",\n" +
+        "  \"combo_sell_arrow_code\": \""   + ArrowLabelForCode(m_marker_combo_sell_code) + "\",\n" +
+        "  \"buy_color\": \""        + ColorLabelForValue(m_marker_buy_color) + "\",\n" +
+        "  \"sell_color\": \""       + ColorLabelForValue(m_marker_sell_color) + "\",\n" +
+        "  \"nonrelated_color\": \"" + ColorLabelForValue(m_marker_nonrelated_color) + "\"\n" +
         " },\n" +
-        " \"sound_settings\": {\n" +
+        " \"Sound_Settings\": {\n" +
         "  \"buy_sound_file\": \""  + buy_sound_esc  + "\",\n" +
         "  \"sell_sound_file\": \"" + sell_sound_esc + "\"\n" +
         // "  \"sound_folder\": \""    + sound_folder_esc + "\"\n" +
@@ -153,19 +151,22 @@
     string full_path = g_ea_folder + "/Config_Setting.json";
     string content = IndicatorConfig_ReadWholeFile(full_path);
     if(content == "") return;
-    int v;
-    if(::JsonIntValue(content, "single_indicator_buy_arrow_code",  v)) m_marker_single_indicator_buy_code  = v;
-    if(::JsonIntValue(content, "single_indicator_sell_arrow_code", v)) m_marker_single_indicator_sell_code = v;
-    if(::JsonIntValue(content, "multi_indicator_buy_arrow_code",   v)) m_marker_multi_indicator_buy_code   = v;
-    if(::JsonIntValue(content, "multi_indicator_sell_arrow_code",  v)) m_marker_multi_indicator_sell_code  = v;
-    if(::JsonIntValue(content, "pattern_buy_arrow_code",  v)) m_marker_pattern_buy_code   = v;
-    if(::JsonIntValue(content, "pattern_sell_arrow_code", v)) m_marker_pattern_sell_code  = v;
-    if(::JsonIntValue(content, "combo_buy_arrow_code",    v)) m_marker_combo_buy_code    = v;
-    if(::JsonIntValue(content, "combo_sell_arrow_code",   v)) m_marker_combo_sell_code   = v;
-    if(::JsonIntValue(content, "buy_color",        v)) m_marker_buy_color        = (color)v;
-    if(::JsonIntValue(content, "sell_color",       v)) m_marker_sell_color       = (color)v;
-    if(::JsonIntValue(content, "nonrelated_color", v)) m_marker_nonrelated_color = (color)v;
+    // --- Read back the human-readable labels SaveMarkerSettingsToJSON now writes ("83 Bomb",
+    // --- "Dodger Blue") - reverse-lookup via ArrowCodeForLabel/ColorForLabel against the SAME
+    // --- GetMarker*Choices catalogs, falling back to the default already set above if the
+    // --- label is missing/unrecognized (e.g. older JSON, or a hand-edited typo).
     string sv;
+    if(::JsonStringValue(content, "single_indicator_buy_arrow_code",  sv)) m_marker_single_indicator_buy_code  = ArrowCodeForLabel(sv, m_marker_single_indicator_buy_code);
+    if(::JsonStringValue(content, "single_indicator_sell_arrow_code", sv)) m_marker_single_indicator_sell_code = ArrowCodeForLabel(sv, m_marker_single_indicator_sell_code);
+    if(::JsonStringValue(content, "multi_indicator_buy_arrow_code",   sv)) m_marker_multi_indicator_buy_code   = ArrowCodeForLabel(sv, m_marker_multi_indicator_buy_code);
+    if(::JsonStringValue(content, "multi_indicator_sell_arrow_code",  sv)) m_marker_multi_indicator_sell_code  = ArrowCodeForLabel(sv, m_marker_multi_indicator_sell_code);
+    if(::JsonStringValue(content, "pattern_buy_arrow_code",  sv)) m_marker_pattern_buy_code  = ArrowCodeForLabel(sv, m_marker_pattern_buy_code);
+    if(::JsonStringValue(content, "pattern_sell_arrow_code", sv)) m_marker_pattern_sell_code = ArrowCodeForLabel(sv, m_marker_pattern_sell_code);
+    if(::JsonStringValue(content, "combo_buy_arrow_code",    sv)) m_marker_combo_buy_code    = ArrowCodeForLabel(sv, m_marker_combo_buy_code);
+    if(::JsonStringValue(content, "combo_sell_arrow_code",   sv)) m_marker_combo_sell_code   = ArrowCodeForLabel(sv, m_marker_combo_sell_code);
+    if(::JsonStringValue(content, "buy_color",        sv)) m_marker_buy_color        = ColorForLabel(sv, m_marker_buy_color);
+    if(::JsonStringValue(content, "sell_color",       sv)) m_marker_sell_color       = ColorForLabel(sv, m_marker_sell_color);
+    if(::JsonStringValue(content, "nonrelated_color", sv)) m_marker_nonrelated_color = ColorForLabel(sv, m_marker_nonrelated_color);
     if(::JsonStringValue(content, "buy_sound_file",  sv)) m_marker_buy_sound_file  = sv;
     if(::JsonStringValue(content, "sell_sound_file", sv)) m_marker_sell_sound_file = sv;
     //if(::JsonStringValue(content, "sound_folder",    sv)) m_marker_sound_folder    = sv;
@@ -176,7 +177,7 @@
     string full_path = g_ea_folder + "/Config_Setting.json";    
     string content = IndicatorConfig_ReadWholeFile(full_path);
     if(content == "") return;
-    string pattern_alerts_section = IndicatorConfig_ExtractRawSection(content, "pattern_alerts");
+    string pattern_alerts_section = IndicatorConfig_ExtractRawSection(content, "Pattern_Alerts_Setting");
     if(pattern_alerts_section == "") return;
     int pattern_count = ArraySize(m_pattern_types);
     for(int i = 0; i < pattern_count; i++)
