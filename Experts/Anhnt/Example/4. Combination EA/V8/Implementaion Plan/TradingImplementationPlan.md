@@ -7,6 +7,36 @@ Sources: Nguồn thực hiện Trading
 - Mobile app / mobile signal source
 - EA trên PC (Expert Advisor)
 - Có thể mở rộng thêm: web service, manual input, bot khác
+- Mục tiêu cần biết trước khi Push một trading command
+  SYMBOL_TRADE_STOPS_LEVEL
+  SYMBOL_BID/SYMBOL_ASK 
+  SYMBOL_POINT
+  SYMBOL_TRADE_TICK_VALUE->Bước nhẩy nhỏ nhất của giá.
+-Lot size: Cần Combobox ->Cái này CTable có hỗ trợ đặt một Combobox vào trong cell (chưa Implementation)
+    SYMBOL_VOLUME_MIN
+    SYMBOL_VOLUME_MAX
+    SYMBOL_VOLUME_STEP 
+  
+- Set SL on ->CTextEdit ->Set m_slPip
+ - Min SL (Price) = SYMBOL_TRADE_STOPS_LEVEL * SYMBOL_POINT
+ - Fix SL: //FixPip=50
+     For Sell: slPrice = Ask + FixedPip * Pip(); 
+     For Buy:  slPrice = Bid - FixedPip * Pip();  
+ - Dynamic SL: Calculation base on ATR
+     - double GetAverageATR()
+       {
+          double atrVals[];
+          ArraySetAsSeries(atrVals, true);
+          if(CopyBuffer(h_atr, 0, 1, 5, atrVals) <= 0) return 0.0;          
+          double sum = 0;
+          for(int i = 0; i < 5; i++)
+            sum += atrVals[i];
+          return sum / 5.0;
+       }
+     - slPips = atrAvg * ATR_Multiplier / Pip(); //ATR_Multiplier=1.2 set ở trên.
+
+- Set Trailling on
+   
 Khi gửi một lệnh trading lên Server, chúng ta cần
 
 1. Thông tin lệnh cơ bản
@@ -18,7 +48,7 @@ Khi gửi một lệnh trading lên Server, chúng ta cần
   - stop_loss->Editbox
   - take_profit->Editbox
   - Trailling
-
+2. 
 2. Thông tin xác thực & định danh
 account_id / client_id
 strategy_id hoặc source_id (EA, Mobile, manual, bot)

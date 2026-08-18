@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                          TimeseriesDELib.mqh    |
+//|                                           TimeseriesDELib.mqh    |
 //|                         Copyright 2020, MetaQuotes Software Corp.|
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
@@ -15,7 +15,8 @@
  #include "..\..\Defines\IndicatorPara.mqh" 
  struct SIndicatorCatalogItem
   {
-   ENUM_INDICATOR        type;
+   ENUM_INDICATOR        ind_type;   // renamed from "type" (2026-08-17, SynIndicatorPlan.md) - matches
+                                      // CIndicatorDE's constructor param name for the same ENUM_INDICATOR
    ENUM_INDICATOR_GROUP  group;
    string                name;
   };
@@ -346,7 +347,7 @@
    {
     string short_name = "";
     for(int c = 0; c < ::ArraySize(catalog); c++)
-      if(catalog[c].type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
+      if(catalog[c].ind_type == ind.TypeIndicator()) { short_name = catalog[c].name; break; }
     if(short_name == "") short_name = ind.GetTypeDescription();
     // --- Same schema the Add form uses (README: Tang 1 metadata). schema[i].choices
     // marks an enum-like param (Method, Applied Price, ...) - stored integer_value is
@@ -384,35 +385,56 @@
  //| decimals for display; the saved file uses 8, so matching against|
  //| it would silently fail for any non-integer param).               |
  //+------------------------------------------------------------------+
- void BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
+ // --- Builds the params[] TEXT ARRAY form (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - same
+ // --- per-param schema-aware formatting BuildTemplateMatchKey's params_key uses, but as
+ // --- separate array elements (matches SJsonIndicatorEntry.params[] shape, the JSON
+ // --- "params": [...] format) instead of one comma-joined string. BuildTemplateMatchKey
+ // --- below calls this + joins with commas - single source for the per-param text format.
+ void BuildIndicatorParamsText(const ENUM_INDICATOR type, MqlParam &params[], string &out_params_text[])
+   {
+    SIndicatorParam schema[];
+    GetIndicatorParamSchema(type, schema);
+    ArrayResize(out_params_text, ArraySize(params));
+    for(int p = 0; p < ArraySize(params); p++)
+     {
+      string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
+      if(choices == PRICE_CHOICES)
+        out_params_text[p] = AppliedPriceDescription((ENUM_APPLIED_PRICE)params[p].integer_value);
+      else if(choices == CALCULATION_METHOD_CHOICES)
+        out_params_text[p] = AveragingMethodDescription((ENUM_MA_METHOD)params[p].integer_value);
+      else if(choices == VOLUME_CHOICES)
+        out_params_text[p] = AppliedVolumeDescription((ENUM_APPLIED_VOLUME)params[p].integer_value);
+      else if(choices == STOCH_PRICE_CHOICES)
+        out_params_text[p] = StochPriceDescription((ENUM_STO_PRICE)params[p].integer_value);
+      else if(params[p].type == TYPE_DOUBLE)
+        out_params_text[p] = ::DoubleToString(params[p].double_value, 8);
+      else
+        out_params_text[p] = ::IntegerToString((int)params[p].integer_value);
+     }
+   }
+ // --- Raw-params overload (SynIndicatorPlan.md, 2026-08-17): same key-building logic, usable
+ // --- BEFORE a CIndicatorDE instance exists yet (e.g. CTimeSeriesEngine::AddNewIndicatorToAllSeries
+ // --- registering the template into its live m_indicator_template[] mirror, which only has
+ // --- (type, params[]) on hand, not an indicator object). The CIndicatorDE overload below just
+ // --- extracts type+params and delegates here - single source for the actual key format.
+ void BuildTemplateMatchKey(const ENUM_INDICATOR type, MqlParam &params[], SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
    {
     type_key = "";
     for(int c = 0; c < ArraySize(catalog); c++)
-      if(catalog[c].type == ind.TypeIndicator()) { type_key = catalog[c].name; break; }
+      if(catalog[c].ind_type == type) { type_key = catalog[c].name; break; }
 
-    SIndicatorParam schema[];
-    GetIndicatorParamSchema(ind.TypeIndicator(), schema);
+    string params_text[];
+    BuildIndicatorParamsText(type, params, params_text);
+    params_key = "";
+    for(int p = 0; p < ArraySize(params_text); p++)
+      params_key += (p > 0 ? "," : "") + params_text[p];
+   }
+ void BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
+   {
     MqlParam params[];
     ind.GetMqlParams(params);
-    params_key = "";
-    for(int p = 0; p < ArraySize(params); p++)
-     {
-      if(p > 0) params_key += ",";
-       string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
-      if(choices == PRICE_CHOICES)
-        params_key += AppliedPriceDescription((ENUM_APPLIED_PRICE)params[p].integer_value);
-      else if(choices == CALCULATION_METHOD_CHOICES)
-        params_key += AveragingMethodDescription((ENUM_MA_METHOD)params[p].integer_value);
-      else if(choices == VOLUME_CHOICES)
-        params_key += AppliedVolumeDescription((ENUM_APPLIED_VOLUME)params[p].integer_value);
-      else if(choices == STOCH_PRICE_CHOICES)
-        params_key += StochPriceDescription((ENUM_STO_PRICE)params[p].integer_value);
-      else if(params[p].type == TYPE_DOUBLE)
-        params_key += ::DoubleToString(params[p].double_value, 8);
-      else
-        params_key += ::IntegerToString((int)params[p].integer_value);
-     }
-   } 
+    BuildTemplateMatchKey(ind.TypeIndicator(), params, catalog, type_key, params_key);
+   }
  //+------------------------------------------------------------------+
  //| Return description of the line style                             |
  //+------------------------------------------------------------------+
@@ -466,6 +488,13 @@
  //| Return ENUM_INDICATOR from indicator shortname on chart          |
  //| Not full
  //+------------------------------------------------------------------+
+ // --- DEAD CODE (SynIndicatorPlan.md, 2026-08-17): 0 call site found anywhere in EA or Library.
+ // --- Superseded by IndicatorParameters(handle, type, params) (native MQL5) - already used by
+ // --- ImportForeignChartIndicators/HandleChartIndicatorChange to get ENUM_INDICATOR directly,
+ // --- no fuzzy shortname string-matching needed. Commented out (not deleted yet) per Anhnt's
+ // --- safety convention - delete for real once build+test after this session confirms nothing
+ // --- unexpectedly depended on it.
+ /*
  ENUM_INDICATOR ShortNameToIndicatorType(const string shortname)
   {
     if(StringFind(shortname, "Moving Average") >= 0) return IND_MA;
@@ -484,6 +513,7 @@
     // ... thêm dần khi cần
     return IND_CUSTOM;  // unknown = skip for now
   }
+ */
  //+------------------------------------------------------------------+
  //| Return the number of candles for a given pattern type            |
  //+------------------------------------------------------------------+

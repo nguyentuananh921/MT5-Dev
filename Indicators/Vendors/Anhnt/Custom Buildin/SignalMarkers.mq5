@@ -258,12 +258,12 @@ void ComputeBar(const int i, const datetime &time[], const double &high[], const
       return;
 
    int color_idx = (own_buy + own_sell > 0) ? ((own_buy >= own_sell) ? 1 : 2) : 0; // 0=Non-Related, 1=Buy, 2=Sell
-   // MY DEBUG SignalMarkers::ComputeBar: bar has signal(s) - dump counts/branch before buffers are set
-   string dbg_branch = (total_ind > 0 && total_pat == 0) ? (total_ind == 1 ? "Single" : "Multi") :
-                       (total_ind == 0 && total_pat > 0) ? "Pattern" : "Combo";
-   ::Print("MY DEBUG SignalMarkers::ComputeBar: i=", i, " time=", ::TimeToString(time[i], TIME_DATE|TIME_MINUTES),
-           " total_ind=", total_ind, " total_pat=", total_pat, " own_buy=", own_buy, " own_sell=", own_sell,
-           " color_idx=", color_idx, " branch=", dbg_branch);
+    //  // MY DEBUG SignalMarkers::ComputeBar: bar has signal(s) - dump counts/branch before buffers are set
+    //  string dbg_branch = (total_ind > 0 && total_pat == 0) ? (total_ind == 1 ? "Single" : "Multi") :
+    //                      (total_ind == 0 && total_pat > 0) ? "Pattern" : "Combo";
+    //  ::Print("MY DEBUG SignalMarkers::ComputeBar: i=", i, " time=", ::TimeToString(time[i], TIME_DATE|TIME_MINUTES),
+    //          " total_ind=", total_ind, " total_pat=", total_pat, " own_buy=", own_buy, " own_sell=", own_sell,
+    //          " color_idx=", color_idx, " branch=", dbg_branch);
    // --- Gap scales with THIS bar's own High-Low range, not a fixed price distance - keeps
    // --- markers proportionally clear of the candle across symbols/TFs with very different
    // --- volatility. 0.3 sat markers almost on the wick on low-range bars (e.g. M1); raised
@@ -324,10 +324,10 @@ int OnCalculate(const int rates_total,
       for(int i = 0; i < rates_total; i++)
          ComputeBar(i, time, high, low);
       g_dirty = false;
-      // MY DEBUG SignalMarkers::OnCalculate: confirms full recompute actually ran + its range
-      ::Print("MY DEBUG SignalMarkers::OnCalculate: full recompute done, rates_total=", rates_total,
-              " g_row_count=", g_row_count, " first_time=", ::TimeToString(time[0], TIME_DATE|TIME_MINUTES),
-              " last_time=", ::TimeToString(time[rates_total-1], TIME_DATE|TIME_MINUTES));
+      // // MY DEBUG SignalMarkers::OnCalculate: confirms full recompute actually ran + its range
+      // ::Print("MY DEBUG SignalMarkers::OnCalculate: full recompute done, rates_total=", rates_total,
+      //         " g_row_count=", g_row_count, " first_time=", ::TimeToString(time[0], TIME_DATE|TIME_MINUTES),
+      //         " last_time=", ::TimeToString(time[rates_total-1], TIME_DATE|TIME_MINUTES));
      }
    else
      {

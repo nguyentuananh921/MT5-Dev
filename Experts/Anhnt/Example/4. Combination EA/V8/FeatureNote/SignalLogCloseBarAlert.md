@@ -7,6 +7,23 @@
 
 ## Quyết định cụ thể (qua trao đổi 2026-08-10)
 1. **CloseBar giờ có cả Sound+Message**, không chỉ ghi log nữa — đảo ngược thiết kế cũ (Closed trước đây log-only, không Sound/Message vì chart Marker đã hiện rồi). Rủi ro đã biết: lần đầu chạy (watermark=0) hoặc symbol mới sẽ bắn Sound+Message dồn dập cho toàn bộ lịch sử catch-up — Anhnt đã được thông báo và chủ động chọn đánh đổi này.
+
+   **⚠ ĐÃ ĐẢO NGƯỢC LẦN NỮA sau đó (Anhnt, note lại 2026-08-17 — quyết định gốc đã có từ trước
+   nhưng thất lạc chỗ ghi chú)**: phần **Sound riêng theo Direction cho CloseBar bị BỎ HẲN** — vì
+   CloseBar catch-up có thể dồn RẤT NHIỀU flip cùng lúc (nhiều Indicator × nhiều TF cùng bắt kịp 1
+   lượt), phát Sound riêng cho từng cái sẽ "rách việc" (spam tiếng dồn dập, không nghe được gì).
+   **Hành vi ĐÚNG/CUỐI CÙNG hiện tại**:
+   - CloseBar: **Message** (per-flip, text nên không bị spam) + **CSV log** — CÓ. **Sound riêng theo
+     Direction** — KHÔNG, bỏ hẳn có chủ đích.
+   - Thay vào đó: 1 tiếng **`NewBar.wav`** CHUNG (không phân biệt hướng Buy/Sell) phát 1 lần mỗi khi
+     có bar mới đóng, qua `CGUIPannel::PlaySoundCloseBar()` (`GUIPannel_SoundAndMessageAlerts.mqh`) -
+     tách biệt hoàn toàn khỏi vòng lặp per-indicator/per-TF ở trên.
+   - Live bar-0 (không đổi): Sound riêng theo Direction (`PlaySoundForDirection`) + Message + Log —
+     CÓ đủ cả 3, vì Live chỉ bắn đúng 1 flip/lần, không có rủi ro dồn dập như CloseBar catch-up.
+
+   Code hiện tại (`CheckIndicatorAlerts`, nhánh CloseBar dòng ~152-175) đã ĐÚNG theo quyết định này -
+   chỉ có `WriteSignalLogRow` + `if(message_on) CMessage::Out(...)`, không có `PlaySoundForDirection`
+   nào cả. **Không phải bug, không cần sửa.**
 2. **Tách file theo Symbol**: `Signal_Log_<SYMBOL>.csv` (giống cách `Signal_Log_Watermark_<SYMBOL>.json` đã tách) — không còn 1 file `Signal_Log.csv` chung cho mọi symbol, nên bỏ cột Symbol.
 3. **Giữ thêm Price + Cross** làm 2 cột phụ (cột 7-8), không bỏ hẳn như spec gốc 6 cột.
 
@@ -41,7 +58,9 @@
 
 ## Trạng thái
 - [x] Code đã sửa xong (2026-08-10) — cả 3 điểm: SignalLogger format mới, CloseBar+Alert cho Indicator, CloseBar+Alert mới hoàn toàn cho CandlePattern.
-- [ ] **Chưa compile/test thực tế** — cần Anhnt compile lại EA, kiểm tra `Signal_Log_<SYMBOL>.csv` sinh đúng 8 cột, mở thử trên Excel, và theo dõi xem lần chạy đầu (nhiều lịch sử catch-up cùng lúc) có bị spam Sound/Message quá mức không — nếu có, quay lại cân nhắc lại quyết định #1.
+- [x] Đã compile/test thực tế (2026-08-17) — xác nhận CloseBar Message + CSV log hoạt động đúng
+      (VD log thật: "16:26;Live;M1;BBands...;Buy;Cross Up MidBand"). Sound riêng theo Direction cho
+      CloseBar đã bị bỏ có chủ đích (xem mục #1 phía trên) - không phải phần chưa test/chưa xong.
 
 ## File liên quan
 - `V8/Services/SignalLogger.mqh`

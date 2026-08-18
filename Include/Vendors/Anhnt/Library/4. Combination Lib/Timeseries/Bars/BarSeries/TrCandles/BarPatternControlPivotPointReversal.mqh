@@ -108,15 +108,15 @@
          mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());
          mother_bar_data.close       = bar2.Close();
          mother_bar_data.tick_volume = 3;
-         // MY DEBUG CBarPatternControlPivotPointReversal::FindPattern: dump bar0/bar1/bar2 to verify pivot visually
-         ::Print("MY DEBUG CBarPatternControlPivotPointReversal::FindPattern(Bullish): min_ratio=", min_ratio, "%",
-                 " | bar0 t=", ::TimeToString(bar0.Time(), TIME_DATE|TIME_MINUTES),
-                 " O=", bar0.Open(), " H=", bar0.High(), " L=", bar0.Low(), " C=", bar0.Close(),
-                 " | bar1 t=", ::TimeToString(bar1.Time(), TIME_DATE|TIME_MINUTES),
-                 " O=", bar1.Open(), " H=", bar1.High(), " L=", bar1.Low(), " C=", bar1.Close(),
-                 " | bar2 t=", ::TimeToString(bar2.Time(), TIME_DATE|TIME_MINUTES),
-                 " O=", bar2.Open(), " H=", bar2.High(), " L=", bar2.Low(), " C=", bar2.Close(),
-                 " | ratio_vs_bar0=", low_ratio_vs_bar0, "% ratio_vs_bar2=", low_ratio_vs_bar2, "%");
+        //  // MY DEBUG CBarPatternControlPivotPointReversal::FindPattern: dump bar0/bar1/bar2 to verify pivot visually
+        //  ::Print("MY DEBUG CBarPatternControlPivotPointReversal::FindPattern(Bullish): min_ratio=", min_ratio, "%",
+        //          " | bar0 t=", ::TimeToString(bar0.Time(), TIME_DATE|TIME_MINUTES),
+        //          " O=", bar0.Open(), " H=", bar0.High(), " L=", bar0.Low(), " C=", bar0.Close(),
+        //          " | bar1 t=", ::TimeToString(bar1.Time(), TIME_DATE|TIME_MINUTES),
+        //          " O=", bar1.Open(), " H=", bar1.High(), " L=", bar1.Low(), " C=", bar1.Close(),
+        //          " | bar2 t=", ::TimeToString(bar2.Time(), TIME_DATE|TIME_MINUTES),
+        //          " O=", bar2.Open(), " H=", bar2.High(), " L=", bar2.Low(), " C=", bar2.Close(),
+        //          " | ratio_vs_bar0=", low_ratio_vs_bar0, "% ratio_vs_bar2=", low_ratio_vs_bar2, "%");
          return PATTERN_DIRECTION_BULLISH;
        }
 
@@ -131,15 +131,15 @@
          mother_bar_data.low         = MathMin(MathMin(bar0.Low(),  bar1.Low()),  bar2.Low());
          mother_bar_data.close       = bar2.Close();
          mother_bar_data.tick_volume = 3;
-         // MY DEBUG CBarPatternControlPivotPointReversal::FindPattern: dump bar0/bar1/bar2 to verify pivot visually
-         ::Print("MY DEBUG CBarPatternControlPivotPointReversal::FindPattern(Bearish): min_ratio=", min_ratio, "%",
-                 " | bar0 t=", ::TimeToString(bar0.Time(), TIME_DATE|TIME_MINUTES),
-                 " O=", bar0.Open(), " H=", bar0.High(), " L=", bar0.Low(), " C=", bar0.Close(),
-                 " | bar1 t=", ::TimeToString(bar1.Time(), TIME_DATE|TIME_MINUTES),
-                 " O=", bar1.Open(), " H=", bar1.High(), " L=", bar1.Low(), " C=", bar1.Close(),
-                 " | bar2 t=", ::TimeToString(bar2.Time(), TIME_DATE|TIME_MINUTES),
-                 " O=", bar2.Open(), " H=", bar2.High(), " L=", bar2.Low(), " C=", bar2.Close(),
-                 " | ratio_vs_bar0=", high_ratio_vs_bar0, "% ratio_vs_bar2=", high_ratio_vs_bar2, "%");
+        //  // MY DEBUG CBarPatternControlPivotPointReversal::FindPattern: dump bar0/bar1/bar2 to verify pivot visually
+        //  ::Print("MY DEBUG CBarPatternControlPivotPointReversal::FindPattern(Bearish): min_ratio=", min_ratio, "%",
+        //          " | bar0 t=", ::TimeToString(bar0.Time(), TIME_DATE|TIME_MINUTES),
+        //          " O=", bar0.Open(), " H=", bar0.High(), " L=", bar0.Low(), " C=", bar0.Close(),
+        //          " | bar1 t=", ::TimeToString(bar1.Time(), TIME_DATE|TIME_MINUTES),
+        //          " O=", bar1.Open(), " H=", bar1.High(), " L=", bar1.Low(), " C=", bar1.Close(),
+        //          " | bar2 t=", ::TimeToString(bar2.Time(), TIME_DATE|TIME_MINUTES),
+        //          " O=", bar2.Open(), " H=", bar2.High(), " L=", bar2.Low(), " C=", bar2.Close(),
+        //          " | ratio_vs_bar0=", high_ratio_vs_bar0, "% ratio_vs_bar2=", high_ratio_vs_bar2, "%");
          return PATTERN_DIRECTION_BEARISH;
        }
 

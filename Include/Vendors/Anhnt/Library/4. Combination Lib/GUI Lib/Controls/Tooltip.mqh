@@ -9,7 +9,6 @@
 #ifndef __TOOLTIP_MQH__
 #define __TOOLTIP_MQH__
  #include "..\Element.mqh"
-
  class CTooltip : public CElement
   {
    private:
@@ -35,7 +34,11 @@
       void              HeaderColor(const color clr)     { m_header_color=clr;             }
     // --- Adds a line for a tooltip
       void              AddString(const string text);
-
+    // --- Clears all lines added via AddString() - needed to reuse the SAME tooltip
+    // --- instance when content changes (e.g. re-hovering a different item), since
+    // --- AddString() only ever appends.
+      void              ClearStrings(void)                { ::ArrayFree(m_tooltip_lines); m_alpha=0; }
+      void              Moving(const int x, const int y);
     // --- (1) Shows and (2) hides the tooltip
       void              ShowTooltip(void);
       void              FadeOutTooltip(void);    
@@ -117,141 +120,152 @@
    //---
    return(true);
   }
-  //+------------------------------------------------------------------+
-  // | Initializing properties |
-  //+------------------------------------------------------------------+
-  void CTooltip::InitializeProperties(void)
-   {
-      m_x        =CElement::CalculateX(m_element.XGap());
-      m_y        =CElement::CalculateY(m_element.YGap()+m_element.YSize()+1);
-      m_x_size   =(m_x_size<1)? 100 : m_x_size;
-      m_y_size   =(m_y_size<1)? 50 : m_y_size;
+ //+------------------------------------------------------------------+
+ // | Initializing properties |
+ //+------------------------------------------------------------------+
+ void CTooltip::InitializeProperties(void)
+  {
+    m_x        =CElement::CalculateX(m_element.XGap());
+    m_y        =CElement::CalculateY(m_element.YGap()+m_element.YSize()+1);
+    m_x_size   =(m_x_size<1)? 100 : m_x_size;
+    m_y_size   =(m_y_size<1)? 50 : m_y_size;
 
-      // ---Default colors
-      //m_border_color =(m_border_color!=clrNONE)? m_border_color : C'150,170,180';
-      //m_border_color = (m_border_color != clrNONE && (int)m_border_color != -1)? m_border_color : C'150,170,180';
-      if(m_border_color == clrNONE)
-         m_border_color = C'150,170,180';
+    // ---Default colors
+    //m_border_color =(m_border_color!=clrNONE)? m_border_color : C'150,170,180';
+    //m_border_color = (m_border_color != clrNONE && (int)m_border_color != -1)? m_border_color : C'150,170,180';
+     if(m_border_color == clrNONE)
+      m_border_color = C'150,170,180';
       
-      m_label_color  =(m_label_color!=clrNONE)? m_label_color : clrDimGray;
-      // --- Indents from the extreme point
+     m_label_color  =(m_label_color!=clrNONE)? m_label_color : clrDimGray;
+    // --- Indents from the extreme point
       CElement::XGap(CElement::CalculateXGap(m_x));
       CElement::YGap(CElement::CalculateYGap(m_y));
-   }
-  //+------------------------------------------------------------------+
-  // | Creates a canvas for drawing |
-  //+------------------------------------------------------------------+
-  bool CTooltip::CreateCanvas(void)
-   {
-      // --- Formation of object name
-      string name=CElementBase::ElementName("tooltip");
-      // ---Create an object
-      if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
+  }
+ //+------------------------------------------------------------------+
+ // | Creates a canvas for drawing |
+ //+------------------------------------------------------------------+
+ bool CTooltip::CreateCanvas(void)
+  {
+   // --- Formation of object name
+    string name=CElementBase::ElementName("tooltip");
+   // ---Create an object
+    if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
          return(false);
-      // --- Clearing the drawing canvas
-      m_canvas.Erase(::ColorToARGB(clrNONE,0));
-      m_canvas.Update();
-      // --- Reset push priority
-      Z_Order(WRONG_VALUE);
-      return(true);
-   }
-   //+------------------------------------------------------------------+
-   // | Adds the line |
-   //+------------------------------------------------------------------+
-   void CTooltip::AddString(const string text)
-   {
+   // --- Clearing the drawing canvas
+    m_canvas.Erase(::ColorToARGB(clrNONE,0));
+    m_canvas.Update();
+   // --- Reset push priority
+    Z_Order(WRONG_VALUE);
+    return(true);
+  }
+ //+------------------------------------------------------------------+
+ // | Adds the line |
+ //+------------------------------------------------------------------+
+ void CTooltip::AddString(const string text)
+  {
    // --- Increase the size of the arrays by one element
    int array_size=::ArraySize(m_tooltip_lines);
    ::ArrayResize(m_tooltip_lines,array_size+1);
    // --- Save the values ​​of the passed parameters
    m_tooltip_lines[array_size]=text;
-   }
-   //+------------------------------------------------------------------+
-   // | Displays tooltip |
-   //+------------------------------------------------------------------+
-   void CTooltip::ShowTooltip(void)
-    {
-      // --- Quit if the tooltip is 100% visible
-         if(m_alpha>=255)
-            return;
-      // --- Coordinates and indentation for the title
-         int x=5,y=5;
-         int y_offset=15;
-      // --- Fully visible tooltip sign
-         m_alpha=255;
-      // --- Draw the background and frame
-         //DrawBackground(); // ✅ Thay vì DrawBackground() — erase trong suốt trước, rồi vẽ box tooltip
-            m_canvas.Erase(::ColorToARGB(clrNONE, 0));  // xóa sạch
-         //DrawBorder();  //Remove to Draw transparent Tooltips
-      // --- Draw the title (if installed)
-      if(m_header_text!="")
-         {
-         // --- Set font parameters
-         m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_BLACK);
-         // --- Drawing the title text
+  }
+ //+------------------------------------------------------------------+
+ // | Displays tooltip |
+ //+------------------------------------------------------------------+
+ void CTooltip::ShowTooltip(void)
+  {
+   // --- Quit if the tooltip is 100% visible
+   if(m_alpha>=255)
+      return;
+   // --- Coordinates and indentation for the title
+   int x=5,y=5;
+   int y_offset=15;
+   // --- Fully visible tooltip sign
+    m_alpha=255;
+   // --- Draw the background and frame
+   //DrawBackground(); // ✅ Thay vì DrawBackground() — erase trong suốt trước, rồi vẽ box tooltip
+    m_canvas.Erase(::ColorToARGB(clrNONE, 0));  // xóa sạch
+   //DrawBorder();  //Remove to Draw transparent Tooltips
+   // --- Draw the title (if installed)
+    if(m_header_text!="")
+     {
+      // --- Set font parameters
+       m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_BLACK);
+      // --- Drawing the title text
          m_canvas.TextOut(x,y,m_header_text,::ColorToARGB(m_header_color),TA_LEFT|TA_TOP);
-         }
-      // --- Coordinates for the main text of the tooltip (taking into account the presence of a title)
+     }
+     // --- Coordinates for the main text of the tooltip (taking into account the presence of a title)
       x =(m_header_text!="")? 15 : 5;
       y =(m_header_text!="")? 25 : 5;
-      // --- Set font parameters
+     // --- Set font parameters
       m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_THIN);
-      // --- Drawing the main text of the tooltip
+    // --- Drawing the main text of the tooltip
       int lines_total=::ArraySize(m_tooltip_lines);
       for(int i=0; i<lines_total; i++)
-         {
+       {
          m_canvas.TextOut(x,y,m_tooltip_lines[i],::ColorToARGB(m_label_color),TA_LEFT|TA_TOP);
          y=y+y_offset;
-         }
-      // --- Refresh canvas
+       }
+    // --- Refresh canvas
       m_canvas.Update();
-    }
-   //+------------------------------------------------------------------+
-   // | Fade out tooltip |
-   //+------------------------------------------------------------------+
-   void CTooltip::FadeOutTooltip(void)
-   {
+  }
+ // --- Absolute reposition (mirrors CWindow::Moving(x,y), Window.mqh:992-1004) - the
+ // --- inherited CElement::Moving(bool) is USELESS for a tooltip that must follow an
+ // --- arbitrary chart point (bar hover): it repositions via m_canvas.XGap()/YGap(),
+ // --- which CreateCanvas() freezes at creation time and never updates again.
+ void CTooltip::Moving(const int x, const int y)
+  {
+   m_canvas.X(x);
+   m_canvas.Y(y);
+   ::ObjectSetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_XDISTANCE, x);
+   ::ObjectSetInteger(m_chart_id, m_canvas.ChartObjectName(), OBJPROP_YDISTANCE, y);
+  }
+ //+------------------------------------------------------------------+
+ // | Fade out tooltip |
+ //+------------------------------------------------------------------+
+ void CTooltip::FadeOutTooltip(void)
+  {
    // --- Quit if the tooltip is 100% hidden
-   if(m_alpha<1)
+    if(m_alpha<1)
       return;
    // --- Indent for header
-   int y_offset=15;
+         int y_offset=15;
    // --- Transparency step
-   uchar fadeout_step=7;
+    uchar fadeout_step=7;
    // --- Initial value
-   uchar alpha=m_alpha;
+    uchar alpha=m_alpha;
    // --- Smooth disappearance of tooltip
-   for(uchar a=alpha; a>=0; a-=fadeout_step)
-      {
+    for(uchar a=alpha; a>=0; a-=fadeout_step)
+     {
       m_alpha=a;
       // --- If the next step is negative, stop the cycle
       if(a-fadeout_step<0)
-         {
-         m_alpha=0;
-         m_canvas.Erase(::ColorToARGB(clrNONE,m_alpha));
-         m_canvas.Update();
-         break;
-         }
+        {
+          m_alpha=0;
+          m_canvas.Erase(::ColorToARGB(clrNONE,m_alpha));
+          m_canvas.Update();
+          break;
+        }
       // --- Coordinates for header
-      int x=5,y=5;
+       int x=5,y=5;
       // --- Draw the background and frame
-      DrawBackground();
-      DrawBorder();
+       DrawBackground();
+       DrawBorder();
       // --- Draw the title (if installed)
-      if(m_header_text!="")
-         {
+       if(m_header_text!="")
+        {
          // --- Set font parameters
-         m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_BLACK);
+          m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_BLACK);
          // --- Drawing the title text
-         m_canvas.TextOut(x,y,m_header_text,::ColorToARGB(m_header_color,m_alpha),TA_LEFT|TA_TOP);
-         }
+          m_canvas.TextOut(x,y,m_header_text,::ColorToARGB(m_header_color,m_alpha),TA_LEFT|TA_TOP);
+        }
       // --- Coordinates for the main text of the tooltip (taking into account the presence of a title)
-      x =(m_header_text!="")? 15 : 5;
-      y =(m_header_text!="")? 25 : 5;
+        x =(m_header_text!="")? 15 : 5;
+        y =(m_header_text!="")? 25 : 5;
       // --- Set font parameters
-      m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_THIN);
+        m_canvas.FontSet(CElement::Font(),-CElement::FontSize()*10,FW_THIN);
       // --- Drawing the main text of the tooltip
-      int lines_total=::ArraySize(m_tooltip_lines);
+        int lines_total=::ArraySize(m_tooltip_lines);
       for(int i=0; i<lines_total; i++)
          {
          m_canvas.TextOut(x,y,m_tooltip_lines[i],::ColorToARGB(m_label_color,m_alpha),TA_LEFT|TA_TOP);
@@ -259,27 +273,27 @@
          }
       // --- Refresh canvas
       m_canvas.Update();
-      }
-   }
-   //+------------------------------------------------------------------+
-   // | Redraw |
-   //+------------------------------------------------------------------+
-   void CTooltip::Reset(void)
-   {
+     }
+  }
+ //+------------------------------------------------------------------+
+ // | Redraw |
+ //+------------------------------------------------------------------+
+ void CTooltip::Reset(void)
+  {
    Hide();
    Show();
-   }
-   //+------------------------------------------------------------------+
-   // | Removal |
-   //+------------------------------------------------------------------+
-   void CTooltip::Delete(void)
-   {
+  }
+ //+------------------------------------------------------------------+
+ // | Removal |
+ //+------------------------------------------------------------------+
+ void CTooltip::Delete(void)
+  {
    // --- Deleting objects
-   CElement::Delete();
+    CElement::Delete();
    // --- Freeing element arrays
-   ::ArrayFree(m_tooltip_lines);
-   }
-   //+------------------------------------------------------------------+
+    ::ArrayFree(m_tooltip_lines);
+  }
+ //+------------------------------------------------------------------+
 #endif // TOOLTIP_IMPLEMENTATION
 #endif // __TOOLTIP_MQH__
 

@@ -1,9 +1,11 @@
 //+------------------------------------------------------------------+
-//|                                   GUIPannel_CandleInfoWindow.mqh |
-//| Implementation of function Candle Info Window m_window_candle_infomation|
+//|                                         GUIPannel_CandleInfo.mqh |
+//| Implementation of function Candle Info                           |
+//| Window m_window_candle_infomation                               |
+//| CTooltip m_tooltip_candle_info
 //+------------------------------------------------------------------+
-#ifndef CGUIPANNEL_CANDLEINFO_WINDOW_MQH
-#define CGUIPANNEL_CANDLEINFO_WINDOW_MQH
+#ifndef CGUIPANNEL_CANDLEINFO_MQH
+#define CGUIPANNEL_CANDLEINFO_MQH
 #include "GUIPannel.mqh"
 //For m_window_candle_infomation
  //+------------------------------------------------------------------+
@@ -156,6 +158,18 @@
     // --- convention as CreateTableSymbolTFSetting.
      m_table_candle_information_atBar.DeleteAllRows();
      CWndContainer::AddToElementsArray(WindowIdx(m_window_candle_infomation), m_table_candle_information_atBar);
+    // --- Alt+hover pattern-name tooltip (ShowCandlePatternInfo) - MainPointer/ElementPointer
+    // --- only satisfy CTooltip::CreateTooltip()'s requirements; actual position is always
+    // --- overridden via Moving(x,y) before each show (arbitrary chart point per hover, not
+    // --- "below an anchor element" like a normal Library tooltip). NOT added to any
+    // --- elements array on purpose - stays outside native OnEvent auto show/hide dispatch,
+    // --- fully driven by our own Alt+hover logic below.
+     m_tooltip_candle_info.MainPointer(m_window_main);
+     m_tooltip_candle_info.ElementPointer(m_window_main);
+     m_tooltip_candle_info.XSize(160);
+     m_tooltip_candle_info.YSize(20);
+     if(!m_tooltip_candle_info.CreateTooltip()) return (false);
+     m_tooltip_candle_info.Show();   // attach once (OBJ_ALL_PERIODS); ShowTooltip()/FadeOutTooltip() drive visible content from here on
      return (true);
   }
  //+------------------------------------------------------------------+
@@ -381,13 +395,13 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::ShowPatternBitmapAtBar(const datetime bar_time)
   {
-   if(m_BarTimeSeriesCollection == NULL) { HidePatternBitmapShown(); return; }
+   if(m_BarTimeSeriesCollection == NULL) { HidePatternBitmapAtBar(); return; }
    datetime next_bar_time = bar_time + ::PeriodSeconds();
    string sym = ::Symbol();
    ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
 
    CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
-   if(all_patterns == NULL) { HidePatternBitmapShown(); return; }
+   if(all_patterns == NULL) { HidePatternBitmapAtBar(); return; }
 
    CBarPattern *best = NULL;
    int best_candles = 0;
@@ -402,24 +416,7 @@
      if(best == NULL || n > best_candles) { best = p; best_candles = n; }
     }
 
-   // --- MY DEBUG - gated on bar_time change so continuous MOUSE_MOVE doesn't spam the log.
-   static datetime dbg_last_bar_time = 0;
-   if(bar_time != dbg_last_bar_time)
-    {
-     dbg_last_bar_time = bar_time;
-     if(best != NULL)
-        ::Print("MY DEBUG CGUIPannel::ShowPatternBitmapAtBar: hover bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
-                " best.Time()=", ::TimeToString(best.Time(), TIME_DATE|TIME_MINUTES),
-                " best.ID()=", best.ID(), " candles=", best_candles,
-                " High=", ::DoubleToString(best.MotherBarHigh(), 3),
-                " Low=", ::DoubleToString(best.MotherBarLow(), 3),
-                " Dir=", best.DirectDescription());
-     else
-        ::Print("MY DEBUG CGUIPannel::ShowPatternBitmapAtBar: hover bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
-                " no pattern matched (patterns_total=", total, ")");
-    }
-
-   if(best == NULL) { HidePatternBitmapShown(); return; }
+   if(best == NULL) { HidePatternBitmapAtBar(); return; }
 
    int curr_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);
    if(best == m_pattern_bitmap_shown && best.HasBitmap() && curr_scale == m_pattern_bitmap_scale)
@@ -428,7 +425,7 @@
      return;
     }
 
-   HidePatternBitmapShown();
+   HidePatternBitmapAtBar();
 
    // --- Always rebuild from scratch (never reuse a cached bitmap across hovers) - its pixel
    // --- geometry is baked in at creation time from CHART_SCALE/CHART_HEIGHT_IN_PIXELS/price
@@ -461,34 +458,27 @@
      if(bmp == NULL) return;
      ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_ANCHOR,  ANCHOR_CENTER);
      // --- "\n" suppresses MT5's default object tooltip (name + price) - we already draw our
-     // --- own label via ShowPatternHoverLabel, don't want the native one leaking through too.
+     // --- own label via ShowCandlePatternInfo, don't want the native one leaking through too.
      ::ObjectSetString (m_chart_id, bmp.Name(), OBJPROP_TOOLTIP, "\n");
      ::ObjectSetInteger(m_chart_id, bmp.Name(), OBJPROP_BACK,    true);
      bmp.DrawView();
      best.AttachBitmap(bmp);
-     // --- MY DEBUG - compares the box's own anchor bars' real screen pixel-X against
-     // --- bar_pixel_x logged in OnEvent(Alt-hover), to catch a stale/misplaced bitmap.
-     int ox1 = -1, oy1 = -1, ox2 = -1, oy2 = -1;
-     ::ChartTimePriceToXY(m_chart_id, m_subwin, t_old, best.MotherBarHigh(), ox1, oy1);
-     ::ChartTimePriceToXY(m_chart_id, m_subwin, t_new, best.MotherBarHigh(), ox2, oy2);
-     ::Print("MY DEBUG CGUIPannel::ShowPatternBitmapAtBar(create): id=", best.ID(),
-             " t_old=", ::TimeToString(t_old, TIME_MINUTES), " t_new=", ::TimeToString(t_new, TIME_MINUTES),
-             " scale=", curr_scale, " box_pixel_x=[", ox1, ",", ox2, "] width=", bmp.Width());
     }
    m_pattern_bitmap_scale = curr_scale;
    best.GetBitmap().Show();
    m_pattern_bitmap_shown = best;
-   ShowPatternHoverLabel(best);
+   ShowCandlePatternTooltipInfo(best);
    ::ChartRedraw(m_chart_id);
   }
  //+------------------------------------------------------------------+
- //| Draws the pattern's name directly on the chart (one fixed OBJ_TEXT|
- //| object, repositioned/retexted per hover) - native OBJPROP_TOOLTIP |
- //| hover-delay proved unreliable while the mouse keeps moving with   |
- //| Alt held (BugNote 2026-08-14: user never saw it appear), so the   |
- //| label is rendered proactively instead of relying on that.         |
+ //| Draws the pattern's name directly on the chart (m_tooltip_candle_ |
+ //| info, one CTooltip instance repositioned/retexted per hover via   |
+ //| Moving(x,y) - Tooltip.mqh) - native OBJPROP_TOOLTIP hover-delay   |
+ //| proved unreliable while the mouse keeps moving with Alt held      |
+ //| (BugNote 2026-08-14: user never saw it appear), so the label is   |
+ //| rendered proactively instead of relying on that.                  |
  //+------------------------------------------------------------------+
- void CGUIPannel::ShowPatternHoverLabel(CBarPattern *pat)
+ void CGUIPannel::ShowCandlePatternTooltipInfo(CBarPattern *pat)
   {
    if(pat == NULL) return;
    string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
@@ -496,9 +486,8 @@
    // --- Direction is already conveyed by color (blue=Bullish/red=Bearish, same convention
    // --- as the box itself), and candle count is already conveyed by the box's own width -
    // --- no "[nB]" prefix or direction word needed, just the name.
-   string text = pat_name;
-   color  clr  = (pat.Direction() == PATTERN_DIRECTION_BULLISH) ? clrRoyalBlue :
-                 (pat.Direction() == PATTERN_DIRECTION_BEARISH) ? clrCrimson : clrDimGray;
+   color clr = (pat.Direction() == PATTERN_DIRECTION_BULLISH) ? clrRoyalBlue :
+               (pat.Direction() == PATTERN_DIRECTION_BEARISH) ? clrCrimson : clrDimGray;
    // --- Pixel-based gap above the box (not a % of visible price range) - a % gap shrinks to
    // --- near-zero price on a zoomed-in chart, which is what let the label overlap the candles.
    int    chart_h    = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
@@ -507,20 +496,14 @@
    double px_to_price = (chart_h > 0) ? (price_max - price_min) / chart_h : 0;
    double price = pat.MotherBarHigh() + px_to_price * 16;   // ~16px above the box
 
-   if(::ObjectFind(m_chart_id, PATTERN_HOVER_LABEL_NAME) < 0)
-    {
-     ::ObjectCreate(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJ_TEXT, m_subwin, pat.Time(), price);
-     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_SELECTABLE, false);
-     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_HIDDEN,     true);
-     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_BACK,       false);
-     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_ANCHOR,     ANCHOR_LOWER);
-     ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_FONTSIZE,   9);
-    }
-   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TIME,       pat.Time());
-   ::ObjectSetDouble (m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_PRICE,      price);
-   ::ObjectSetString (m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TEXT,       text);
-   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_COLOR,      clr);
-   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TIMEFRAMES, OBJ_ALL_PERIODS);
+   int x = 0, y = 0;
+   ::ChartTimePriceToXY(m_chart_id, m_subwin, pat.Time(), price, x, y);
+
+   m_tooltip_candle_info.ClearStrings();
+   m_tooltip_candle_info.AddString(pat_name);
+   m_tooltip_candle_info.HeaderColor(clr);
+   m_tooltip_candle_info.Moving(x, y - m_tooltip_candle_info.YSize());   // box sits ABOVE the anchor point
+   m_tooltip_candle_info.ShowTooltip();   // ClearStrings() above already reset alpha, so this repaints even if still fully visible from the PREVIOUS pattern
   }
  //+------------------------------------------------------------------+
  //| Hides the currently-shown Alt+hover pattern bitmap + label, if    |
@@ -528,9 +511,9 @@
  //| stays cached on its CBarPattern so re-hovering the same candle    |
  //| later doesn't need to recreate it.                                |
  //+------------------------------------------------------------------+
- void CGUIPannel::HidePatternBitmapShown(void)
+ void CGUIPannel::HidePatternBitmapAtBar(void)
   {
-   ::ObjectSetInteger(m_chart_id, PATTERN_HOVER_LABEL_NAME, OBJPROP_TIMEFRAMES, OBJ_NO_PERIODS);
+   m_tooltip_candle_info.FadeOutTooltip();
    if(m_pattern_bitmap_shown == NULL) return;
    if(m_pattern_bitmap_shown.HasBitmap() && m_pattern_bitmap_shown.GetBitmap().IsVisible())
     {
@@ -540,4 +523,4 @@
    m_pattern_bitmap_shown = NULL;
   }
 
-#endif // CGUIPANNEL_CANDLEINFO_WINDOW_MQH
+#endif // CGUIPANNEL_CANDLEINFO_MQH
