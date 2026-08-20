@@ -33,13 +33,8 @@
       // Init timeseries engine first
       //  First attach only: set symbols, init engine, scan, fill table, init renderer
         timeSeriesEngine.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
-      // --- loaded_entries/loaded_symbols_tf: only populated on first-ever startup (empty on later CHARTCHANGE re-inits) - 
-      // the full JSON rows (incl. buy/sell/sound/message)
-      // Layer 1 just parsed, handed straight to Layer 2 below instead of Layer 1 keeping them (SeparateLayer_Plan.md, Cách B).
-        SJsonIndicatorEntry loaded_entries[];
-        SJsonSymbolTF       loaded_symbols_tf[];
-        timeSeriesEngine.OnInitEvent(Symbol(), Period(), loaded_entries, loaded_symbols_tf);
-      //For GUI.Now set both pointers before GUI init
+      //For GUI. Set pointers before GUI init - SetTimeSeriesEngine MUST run before
+      //ForwardInitEventToLayer1() below, which needs it.
         mGUIPannel.SetSymbolsCollection(tradingEngine.GetSymbolsCollection());
         mGUIPannel.SetTimeSeriesCollection(timeSeriesEngine.GetTimeSeriesCollection());
         mGUIPannel.SetIndicatorsCollection(timeSeriesEngine.GetIndicatorsCollection());
@@ -48,8 +43,12 @@
         //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
         mGUIPannel.SetTradingControl(tradingEngine.GetTradingControl());
-        mGUIPannel.SetLoadedIndicatorSettings(loaded_entries, loaded_symbols_tf);  // before OnInitEvent - ApplyLoadedIndicatorBuySell needs it seeded already
-        mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE      
+      // --- Layer 1 parses Config_Setting.json (first-ever startup only, no-op on later
+      // --- CHARTCHANGE re-inits) and writes straight into CGUIPannel's own
+      // --- m_indicator_template_setting[]/m_symbol_tf_Setting[] - no local temp arrays or
+      // --- copy step needed (SynIndicatorPlan.md, "Action" Step 2, 2026-08-18).
+        //mGUIPannel.ForwardInitEventToLayer1(Symbol(), Period());
+        mGUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE
       EventSetMillisecondTimer(16); 
       return (INIT_SUCCEEDED);
    }
@@ -126,8 +125,8 @@
     //--- If working in the tester, exit
      if(MQLInfoInteger(MQL_TESTER)) return;
     //For TimeSeriesEngine must before mGUIPannel ChartEvent to UpdateTreeNodeStates and before patternRenderer ChartEvent to UpdateNewPatterns
-     timeSeriesEngine.OnChartEvent(id, lparam, dparam, sparam);    
-    //For GUI     
+     mGUIPannel.ForwardChartEventToLayer1(id, lparam, dparam, sparam);
+    //For GUI
      mGUIPannel.ChartEvent(id, lparam, dparam, sparam);
   }
  //+------------------------------------------------------------------+

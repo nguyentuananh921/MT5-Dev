@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #ifndef __SIGNALLOGGER_MQH__
 #define __SIGNALLOGGER_MQH__
-#include "..\Artyom Trishkin\IndicatorConfigLoader.mqh" // for IndicatorConfig_ReadWholeFile
+#include "..\Anatoli Kazharski\JSONConfig.mqh" // Working with JSON Config file
  #ifndef CSIGNALLOGGER_MQH_DECLARATION
  #define CSIGNALLOGGER_MQH_DECLARATION
  class CSignalLogger

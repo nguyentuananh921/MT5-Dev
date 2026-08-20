@@ -23,7 +23,7 @@
     this.BuildCandlePatternListFromRegistry();      
    //DiscoverPatterns(); //Call before CreatePatternConfigTable
    //--- Creating form 1 for controls   
-   if (!CreateMainWindow("EXPERT PANEL Ver8 Seperation Module"))
+   if (!CreateMainWindow("EXPERT PANEL Ver9 Synchronize Indicator"))
      {
        Print(__FUNCTION__, " > Failed to create panel!");
        return (false);
@@ -68,8 +68,7 @@
      m_window_candle_infomation.Hide();  
     //For Symbol TF sub-tab at m_tabs_main_setting_config
      if(!CreateTableSymbolTFSetting(0, WINDOW_CAPTION_HEIGHT)) return false;
-     PopulateTableSymbolTFSetting();
-     ApplyLoadedSymbolTFSettings();   // seed Buy/Sell from indicators_config.json, once (see note)
+     PopulateTableSymbolTFSetting();   // SetTableSymbolTFSettingRow already reads Buy/Sell from m_symbol_tf_Setting[]
     // For
      //DiscoverPatterns();
      RegisterPatterns();
@@ -78,8 +77,7 @@
     //For Other sub-tab at m_tabs_main_setting_config (marker shape/color settings)
     if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
     //For Trade Tab at m_tabs_main
-    //For Positions Tab at m_tabs_main - ported verbatim from V1 (2026-07-19)
-    //--- Pre-trade-plan area (2026-07-20): symbol combo, then the Distance/Lot mode+value
+    //For Positions Tab at m_tabs_main symbol combo, then the Distance/Lot mode+value
     //--- controls in one horizontal row, then the order-setup table, m_table_positions
     //--- still shifted down to POSITIONS_TABLE_Y below all of it.
      if(!CreatePreTradePlanSymbolCombo(0, POSITIONS_PLAN_Y)) return false;
@@ -109,7 +107,6 @@
   {
    //--- Setting parameters for the time counters
     m_gui_timecounter.SetParameters(16, 500);
-   //m_renderer = NULL;
     m_IndicatorsCollection  = NULL;
     m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
     m_pending_remove_row     = -1;
@@ -117,7 +114,6 @@
     m_candle_info_shown_bar  = 0;
     m_pattern_bitmap_shown   = NULL;
     m_pattern_bitmap_scale   = -1;
-   //m_tick_series = NULL;
     m_gui_created     = false;
   }
  CGUIPannel::~CGUIPannel(void)
@@ -128,9 +124,21 @@
  //| Init                                                             |
  //+------------------------------------------------------------------+ 
  bool CGUIPannel::OnInitEvent(const int uninit_reason)
-  {      
+  {
    if(!m_gui_created)
     {
+     // --- Layer 1's mechanical init (build collection, create current chart's Series, DOM/pattern
+     // --- setup) + Config_Setting.json load MUST run FIRST - CreateGUIPannel() below reads
+     // --- m_indicator_template_setting[]/m_symbol_tf_Setting[] to build its tables
+     // --- (SynIndicatorPlan.md, "Action" Step 2, 2026-08-18).
+      if(m_time_series_engine != NULL)
+       {
+        m_time_series_engine.OnInitEvent(::Symbol(), (ENUM_TIMEFRAMES)::Period());
+        // Order matters: SymbolTF first (creates the Series), Template second (needs those
+        // Series to attach indicators to).
+        LoadSymbolTFSettingFromJSON();
+        LoadIndicatorTemplateSettingFromJSON();
+       }
      //Init m_bridge_writer
       if(m_time_series_engine != NULL &&
          m_IndicatorsCollection != NULL &&
@@ -153,13 +161,12 @@
      // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
       m_chart_obj_collection.CreateCollection();
       UpdateGUI(true);
-     // --- DEAD (SynIndicatorPlan.md, Dot 3b, 2026-08-17): ApplyLoadedIndicatorBuySell() removed -
-     // --- UpdateGUI(true) above already runs RefreshTableIndicator(), which now resolves each
-     // --- row's Buy/Sell/Sound/Message INLINE (SetIndicatorTableRow searching the pre-rebuild
-     // --- m_indicator_template_setting[] snapshot) - nothing left to "apply" as a second pass.
-     // ApplyLoadedIndicatorBuySell();
-     // --- Seed CSignalBridgeWriter's own Buy/Sell filter arrays from the table's checkbox
-     // --- state right now - without this, m_template_ptrs[]/buy[]/sell[] stay at their
+     // --- ApplyLoadedIndicatorBuySell() deleted (SynIndicatorPlan.md, Dot 3b, 2026-08-17):
+     // --- UpdateGUI(true) above already runs RefreshTableIndicator(), which now paints each row's
+     // --- Buy/Sell/Sound/Message straight from m_indicator_template_setting[row] (Anhnt,
+     // --- 2026-08-18) - nothing left to "apply" as a second pass.
+     // --- Seed CSignalBridgeWriter's own template copy from the table's checkbox state right
+     // --- now - without this, m_template_setting[] stays at its
      // --- constructor-time empty size, so TemplateBuySellFor() returns false for every
      // --- indicator and the Bridge (chart Marker) never includes any indicator signal until
      // --- the user manually toggles a Buy/Sell checkbox at least once (Anhnt, 2026-08-16 -
@@ -167,12 +174,10 @@
      // --- removing that polling call below dropped the only startup seed too).
        SyncIndicatorTemplateSettingToBridge();
      // Startup reconcile: adopt any indicator the user attached while the EA was off.
-     // MUST run AFTER UpdateGUI - ImportForeignChartIndicators' dedup check (SynIndicatorPlan.md,
-     // Dot 3d: m_time_series_engine.TemplateExists(), the live m_indicator_template[] mirror)
-     // needs it already populated from JSON; running before it re-imported
-     // every JSON template as a duplicate (and AddIndicatorToList deleting those duplicates
-     // was the source of the dangling-pointer crash in SignalsCollection).
-       ImportForeignChartIndicators();
+     // MUST run AFTER UpdateGUI - ScanIndicatorOnChart's dedup check (IsIndicatorInTemplateSetting,
+     // against m_indicator_template_setting[]) needs it already populated from JSON; running before
+     // it would re-add every JSON template as a duplicate row.
+       ScanIndicatorOnChart();
      // Debug helper (kept available, call disabled after the 4807 hunt closed): dump the
      // instance->handle map right after startup
      //m_time_series_engine.PrintIndicatorsInventory();
@@ -251,8 +256,8 @@
      {
       int remove_row = m_pending_remove_row;
       m_pending_remove_row = -1;
-      if(remove_row < ArraySize(m_table_indicator_names))
-        OnClickRemoveIndicator(m_table_indicator_names[remove_row], remove_row);
+      if(remove_row < ArraySize(m_indicator_template_setting))
+        OnClickRemoveIndicator(remove_row);
      }
     //--- Deferred delete for m_table_indicator_SymbolTFSeting - GUI-only removal (no Tang 1
     //--- series is stopped yet, see PopulateTableSymbolTFSetting note)
@@ -262,13 +267,22 @@
       m_pending_remove_row_symboltf = -1;
       if(remove_row < (int)m_table_indicator_SymbolTFSeting.RowsTotal())
        {
-        // --- Drop the pair from indicators_config.json BEFORE the row disappears - live
-        // --- Tang1 (BarSeriesDE/indicators/signals) keeps running this session (no Library
-        // --- removal method yet); it just won't be recreated on the next EA attach/restart.
+        // --- Drop the pair from m_symbol_tf_Setting[] (the live source of truth) - NOT the JSON
+        // --- file directly, same as every other setting here: only the Save button writes to
+        // --- disk. Tang1 (BarSeriesDE/indicators/signals) keeps running this session (no Library
+        // --- removal method yet); the pair just won't be recreated on the next EA attach/restart,
+        // --- once the user actually saves.
         string sym = m_table_indicator_SymbolTFSeting.GetValue(0, remove_row); StringTrimLeft(sym);
         string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, remove_row); StringTrimLeft(tf);
-        if(m_time_series_engine != NULL)
-          m_time_series_engine.RemoveSymbolTFFromConfigJSON("Config_Setting.json", sym, tf);
+        for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
+          if(m_symbol_tf_Setting[i].symbol == sym && m_symbol_tf_Setting[i].tf == tf)
+           {
+            int last = ArraySize(m_symbol_tf_Setting) - 1;
+            for(int r = i; r < last; r++)
+               m_symbol_tf_Setting[r] = m_symbol_tf_Setting[r + 1];
+            ArrayResize(m_symbol_tf_Setting, last);
+            break;
+           }
         m_table_indicator_SymbolTFSeting.DeleteRow(remove_row, true);
        }
      }
@@ -336,9 +350,16 @@
       if(IsLastDealTicket())
         InitializePositionsTable();
   } 
+ // --- See declaration (GUIPannel.mqh) - thin forward so EA.mq5 can call Layer 1's OnChartEvent
+ // --- without needing its own copy of/reference to m_indicator_template_setting[].
+ bool CGUIPannel::ForwardChartEventToLayer1(const int id, const long &lparam, const double &dparam, const string &sparam)
+  {
+   if(m_time_series_engine == NULL) return false;
+   return m_time_series_engine.OnChartEvent(id, lparam, dparam, sparam, m_indicator_template_setting);
+  }
  //+------------------------------------------------------------------+
  //| OnEvent handler                                                  |
- //+------------------------------------------------------------------+  
+ //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
   {
@@ -503,23 +524,25 @@
        && lparam == m_table_indicator_template.Id())
       {
        string parts[];
-       if(StringSplit(sparam, '_', parts) != 2) return;
+       if(StringSplit(sparam, '_', parts) != 2)
+        { Print("MY DEBUG CGUIPannel::OnEvent: m_table_indicator_template click - bad sparam='", sparam, "'"); return; }
        int col = (int)StringToInteger(parts[0]);
        int row = (int)StringToInteger(parts[1]);
-       if(row < 0 || row >= ArraySize(m_table_indicator_names)) return;
-       string sname = m_table_indicator_names[row];
+       Print("MY DEBUG CGUIPannel::OnEvent: m_table_indicator_template click col=", col, " row=", row,
+             " ArraySize(m_indicator_template_setting)=", ArraySize(m_indicator_template_setting));
+       if(row < 0 || row >= ArraySize(m_indicator_template_setting))
+        { Print("MY DEBUG CGUIPannel::OnEvent: rejected - row out of range"); return; }
        // --- col 0 = Tang 1 (remove template from PureData), col 4 = Tang 3
        // --- (show/hide on chart). Buy/Sell unchanged at 2/3.
        // --- Delete is DEFERRED to OnTimerEvent: rebuilding the table here, inside its
        // --- own click processing, crashes CTable (stale focus/press row indices).
        if(col == 0)        m_pending_remove_row = row;
-       else if(col == 2)    OnClickToggleBuySignal(sname, row);
-       else if(col == 3)    OnClickToggleSellSignal(sname, row);
-       //else if(col == 4)    OnClickShowLine(sname, row);     // toggle ChartIndicatorAdd/Delete
-       else if(col == 4)    OnClickToggleShowIndicatorOnChart(sname, row);     // toggle ChartIndicatorAdd/Delete
+       else if(col == 2)    OnClickToggleBuySignal(row);
+       else if(col == 3)    OnClickToggleSellSignal(row);
+       else if(col == 4)    OnClickToggleShowIndicatorOnChart(row);     // toggle ChartIndicatorAdd/Delete
        // --- New (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - cols 5/6 never had a handler before.
-       else if(col == 5)    OnClickToggleSoundAlert(sname, row);
-       else if(col == 6)    OnClickToggleMessageAlert(sname, row);
+       else if(col == 5)    OnClickToggleSoundAlert(row);
+       else if(col == 6)    OnClickToggleMessageAlert(row);
        return;
       }
    //Handle Save Symbol/TF config to JSON
@@ -740,6 +763,27 @@
         id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_TF_CHANGE ||
         id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE)
       {
+       // --- CGUIPannel owns m_symbol_tf_Setting[] (SynIndicatorPlan.md, "Action" Step 2,
+       // --- 2026-08-18) - self-register here, the ONE place that reliably catches every real
+       // --- Symbol/TF change regardless of cause (treeview click, native MT5 symbol box,
+       // --- keyboard shortcut...), same reasoning as PopulateTableSymbolTFSetting() below.
+       // --- CTimeSeriesEngine::OnChartEvent() already created the series on its own - no call
+       // --- into Layer 1 needed here, just keeping Layer 2's own array in sync.
+       // --- Buy/Sell default true (Anhnt, 2026-08-18) - wired to SignalBridge later.
+        string sym_now = _Symbol;
+        string tf_now  = TimeframeDescription(_Period);
+        bool sym_tf_found = false;
+        for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
+          if(m_symbol_tf_Setting[i].symbol == sym_now && m_symbol_tf_Setting[i].tf == tf_now) { sym_tf_found = true; break; }
+        if(!sym_tf_found)
+          {
+           int n = ArraySize(m_symbol_tf_Setting);
+           ArrayResize(m_symbol_tf_Setting, n + 1);
+           m_symbol_tf_Setting[n].symbol = sym_now;
+           m_symbol_tf_Setting[n].tf     = tf_now;
+           m_symbol_tf_Setting[n].buy    = true;
+           m_symbol_tf_Setting[n].sell   = true;
+          }
        PopulateSymbolTFTree();
        SynSymbolTFTreeViewIcons();
        PopulateTableSymbolTFSetting();   // additive-only: picks up any newly tracked Symbol+TF pair
@@ -754,22 +798,22 @@
       // ADDED: guard against stale/out-of-range list_index from event queue.
       // ItemPointer() clamps silently so item != NULL even for invalid li;
       // this early return prevents navigating to the wrong node.
-      if(li < 0 || li >= m_treeview_SymbolTF.ItemsTotal()) return;
-      CTreeItem *item = m_treeview_SymbolTF.ItemPointer(li);         
+       if(li < 0 || li >= m_treeview_SymbolTF.ItemsTotal()) return;
+       CTreeItem *item = m_treeview_SymbolTF.ItemPointer(li);         
       //--------------------------------
-      if(item == NULL) return;
-      int parent_pos = m_treeview_SymbolTF.ItemPrevNode(li);
-      if(parent_pos == -1)  // Symbol node
+       if(item == NULL) return;
+       int parent_pos = m_treeview_SymbolTF.ItemPrevNode(li);
+       if(parent_pos == -1)  // Symbol node
         {
-          if(item.ItemType() == TI_SIMPLE) //No TF Found
+         if(item.ItemType() == TI_SIMPLE) //No TF Found
           {              
-          ChartSetSymbolPeriod(0, item.LabelText(), _Period);
+           ChartSetSymbolPeriod(0, item.LabelText(), _Period);
           } 
         }
       else // TF node → navigate to exact sym + tf
         {
-        CTreeItem *parent = m_treeview_SymbolTF.ItemPointer(parent_pos);
-        if(parent != NULL)
+          CTreeItem *parent = m_treeview_SymbolTF.ItemPointer(parent_pos);
+          if(parent != NULL)
           {
             ENUM_TIMEFRAMES target_tf = TimestampByDescription(item.LabelText());
             ChartSetSymbolPeriod(0,parent.LabelText(),target_tf);

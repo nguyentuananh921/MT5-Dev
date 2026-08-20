@@ -86,19 +86,16 @@
        }
      }
   }
- //Syn and Highlight active Indicator in Template 
+ //Syn and Highlight active Indicator in Template - reads m_indicator_template_setting[]
+ //(Layer 2's own Data), not Layer 1's live collection: the set of applied types is exactly
+ //what's in the array (one row per template, symbol/TF-agnostic), no live instance needed.
  void CGUIPannel::SyncIndicatorTreeViewIcons(void)
   {
-   if(m_IndicatorsCollection == NULL) return;
-   CArrayObj *all = m_IndicatorsCollection.GetList();
-   if(all == NULL) return;
    ENUM_INDICATOR applied[];
    int applied_count = 0;
-   for(int i = 0; i < all.Total(); i++)
+   for(int i = 0; i < ArraySize(m_indicator_template_setting); i++)
     {
-     CIndicatorDE *ind = all.At(i);
-     if(ind == NULL) continue;
-     ENUM_INDICATOR t = ind.TypeIndicator();
+     ENUM_INDICATOR t = m_indicator_template_setting[i].type_enum;
      bool found = false;
      for(int j = 0; j < applied_count; j++)
       if(applied[j] == t) { found = true; break; }
@@ -108,6 +105,16 @@
        applied[applied_count++] = t;
       }
     }
+   // --- Reset every Group node to inactive FIRST - the loop below only ever SETS a group's icon
+   // --- to active (blue) when it has an active type, never un-sets it. Without this reset, a
+   // --- group that just lost its last active indicator would stay stuck blue forever.
+    for(int i = 0; i < ArraySize(m_type_node_li); i++)
+     {
+      int group_li = m_treeview_indicator.ItemPrevNode(m_type_node_li[i]);
+      CTreeItem *group_item = m_treeview_indicator.ItemPointer(group_li);
+      if(group_item != NULL)
+         group_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
+     }
     for(int i = 0; i < ArraySize(m_type_node_li); i++)
      {
       bool active = false;

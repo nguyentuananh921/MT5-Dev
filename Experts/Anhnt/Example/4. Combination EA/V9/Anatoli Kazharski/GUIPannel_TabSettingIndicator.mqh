@@ -3,22 +3,26 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABSETTINGINDICATOR_MQH
 #define CGUIPANNEL_TABSETTINGINDICATOR_MQH
-#include "GUIPannel.mqh"
-  //To Add Indicator
-  void CGUIPannel::SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw)
-   {
-    out[idx].row         = r;
-    out[idx].col         = c;
-    out[idx].total_width = tw;
-    out[idx].field_width = fw;
-   } 
-  // Builds the per-param layout for `type`. element_type is always carried
-  // straight from Tang 1's schema (choices!="" -> E_COMBO_BOX) - Tang 2 does
-  // not re-decide that fact, only how/where to render it. row/col/field_width
-  // are explicitly curated per type below (this is the per-indicator layout
-  // the user asked to control directly, not a blanket formula).
-  int CGUIPannel::GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[])
-   {
+#include "GUIPannel.mqh" 
+//+-------------------------------------------------------------------------+
+//| To Add Indicator                                                        |
+//+-------------------------------------------------------------------------+
+ void CGUIPannel::SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw)
+  {
+   out[idx].row         = r;
+   out[idx].col         = c;
+   out[idx].total_width = tw;
+   out[idx].field_width = fw;
+  } 
+ //+-------------------------------------------------------------------------+  
+ //| Builds the per-param layout for `type`. element_type is always carried  |
+ //| straight from Tang 1's schema (choices!="" -> E_COMBO_BOX) - Tang 2 does|
+ //| not re-decide that fact, only how/where to render it. row/col/field_width|
+ //| are explicitly curated per type below (this is the per-indicator layout  |
+ //| the user asked to control directly, not a blanket formula).             |
+ //+-------------------------------------------------------------------------+  
+ int CGUIPannel::GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[])
+  {
     SIndicatorParam schema[];
     int total = GetIndicatorParamSchema(type, schema);
     ArrayResize(out, total);
@@ -236,40 +240,114 @@
         break; // default pairing is fine
      }
     return total;
-   }
+  }
+ //+-------------------------------------------------------------------------+
+ //| Params tab: up to INDICATOR_PARAM_SLOTS_MAX (8) label+field pairs,      |  
+ //| laid out as 2 columns x 4 rows. Each slot has BOTH a CTextEdit (plain   |  
+ //| numeric params) and a CComboBox (enum-like params) at the same spot.    |  
+ //| ShowIndicatorParameterForm() shows exactly one of the two per slot,     |  
+ //| based on whether that param has choices in the schema.                  |  
+ //+-------------------------------------------------------------------------+
+ bool CGUIPannel::CreateAddIndicatorParaInfor(const int x_gap, const int y_gap)
+  {
+   const int default_x = x_gap;
+   const int default_y = y_gap;
+   for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
+    {
+     m_param_labels[i].MainPointer(m_tabs_main_setting_config);
+     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_labels[i]);
+     if(!m_param_labels[i].CreateTextLabel("", default_x, default_y)) return false;
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_labels[i]);
 
-  // =====================================================================
-  // --- Called from OnEvent when a Type-level tree node is clicked
-  // =====================================================================
-  void CGUIPannel::ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li)
-   {
-    m_current_param_type    = type;
-    m_current_param_type_li = type_li;
-    SIndicatorParam schema[];
-    int total = GetIndicatorParamSchema(type, schema);
-    // --- Layer 2 layout - decided BEFORE we touch a single control, separate
-    // --- from Layer 1's data schema. Drives both position AND which control renders.
-     SIndicatorLayout layout[];
-     GetIndicatorGuiLayout(type, layout);
-    // --- x_gap offsets right of the 150px indicator tree; y_gap from the tab's top.
-     const int x_gap = PARAM_FORM_X, y_gap = PARAM_FORM_Y;
+     m_param_edits[i].MainPointer(m_tabs_main_setting_config);
+     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_edits[i]);
+     m_param_edits[i].XSize(INDICATOR_PARAM_FIELD_W);
+     // --- Inner CTextBox defaults its LOCAL x-offset to the outer box's x_size at
+     // --- creation time unless told otherwise BEFORE CreateTextEdit() - confirmed via
+     // --- debug log (inner canvas sitting ~90px right of the outer frame after resize).
+     m_param_edits[i].GetTextBoxPointer().XGap(1);
+     if(!m_param_edits[i].CreateTextEdit("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_edits[i]);
+
+     m_param_combo[i].MainPointer(m_tabs_main_setting_config);
+     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_combo[i]);
+     m_param_combo[i].XSize(INDICATOR_PARAM_FIELD_W);
+     m_param_combo[i].YSize(20);
+     m_param_combo[i].ItemsTotal(7);          // room for the largest choice list (PRICE_CHOICES)
+     // --- CButton inside CComboBox defaults to XSize=80 at XGap=80 unless explicitly
+     // --- told otherwise BEFORE CreateComboBox() - mirrors how CTable's own combo usage
+     // --- configures it. Without this the button/listview end up outside the narrow canvas.
+     m_param_combo[i].GetButtonPointer().XGap(1);
+     m_param_combo[i].GetButtonPointer().XSize(INDICATOR_PARAM_FIELD_W);
+     m_param_combo[i].GetButtonPointer().LabelYGap(4);
+     m_param_combo[i].GetButtonPointer().IconYGap(3);
+     if(!m_param_combo[i].CreateComboBox("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_combo[i]);
+     // --- Do NOT call Hide() here - CompletedGUI() (called after this function)
+     // --- runs FormAvailableElementsArray() which only includes VISIBLE elements
+     // --- in m_available_elements[]. Hiding early means MOUSE_MOVE events never
+     // --- reach the combo button later (even after Show()), so the dropdown arrow
+     // --- click silently does nothing. ShowIndicatorParameterForm() manages
+      // --- show/hide correctly AFTER CompletedGUI has already registered everything.
+    }
+    //For Button Add
+     m_btn_add_indicator.MainPointer(m_tabs_main_setting_config);
+     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_add_indicator);
+     m_btn_add_indicator.AutoXResizeMode(false);
+     m_btn_add_indicator.XSize(80);
+     m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);            
+     bool created = m_btn_add_indicator.CreateButton("Add", x_gap, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
+     if(!created) return false;
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_add_indicator);
+    //For Button Save
+     m_btn_save_indicator.MainPointer(m_tabs_main_setting_config);
+     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_save_indicator);
+     m_btn_save_indicator.AutoXResizeMode(false);
+     m_btn_save_indicator.XSize(80);
+     m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);          
+     bool created_save = m_btn_save_indicator.CreateButton("Save", x_gap + 85, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
+     if(!created_save) return false;
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_indicator);
      for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
       {
-       if(i < total)
-        {
-         int x = x_gap + layout[i].col * INDICATOR_PARAM_COL_WIDTH;
-         int y = y_gap + layout[i].row * 30;
-         // --- Reposition label/edit/combo to this type's layout slot. Moving()
-         // --- reads the CANVAS's own XGap/YGap (not just the element's), and
-         // --- skips repositioning hidden elements by default - see CElement::Moving().
+       m_param_labels[i].Update(true);
+       m_param_edits[i].Update(true);
+      }
+     m_btn_add_indicator.Update(true);
+     m_btn_save_indicator.Update(true);
+    return true;
+  }
+ //+-------------------------------------------------------------------------+  
+ //| Called from OnEvent when a Type-level tree node is clicked              |  
+ //+-------------------------------------------------------------------------+  
+ void CGUIPannel::ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li)
+  {
+   m_current_param_type    = type;
+   SIndicatorParam schema[];
+   int total = GetIndicatorParamSchema(type, schema);
+   // Layer 2 layout - decided BEFORE we touch a single control, separate
+   // from Layer 1's data schema. Drives both position AND which control renders.
+    SIndicatorLayout layout[];
+    GetIndicatorGuiLayout(type, layout);
+   // x_gap offsets right of the 150px indicator tree; y_gap from the tab's top.
+    const int x_gap = PARAM_FORM_X, y_gap = PARAM_FORM_Y;
+    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
+     {
+      if(i < total)
+       {
+        int x = x_gap + layout[i].col * INDICATOR_PARAM_COL_WIDTH;
+        int y = y_gap + layout[i].row * 30;
+        // Reposition label/edit/combo to this type's layout slot. Moving()
+        // reads the CANVAS's own XGap/YGap (not just the element's), and
+        // skips repositioning hidden elements by default - see CElement::Moving().
           m_param_labels[i].XGap(x); m_param_labels[i].CanvasPointer().XGap(x);
           m_param_labels[i].YGap(y); m_param_labels[i].CanvasPointer().YGap(y);
           m_param_labels[i].LabelText(schema[i].name);
           m_param_labels[i].Show();
           m_param_labels[i].Moving();
-         // --- Field starts after (total_width - field_width) px of label room.
-         // --- Keeping total_width equal across a type's rows is what makes the
-         // --- field line up at the same right edge regardless of label length.
+        // --- Field starts after (total_width - field_width) px of label room.
+        // --- Keeping total_width equal across a type's rows is what makes the
+        // --- field line up at the same right edge regardless of label length.
           int fx = x + (layout[i].total_width - layout[i].field_width);
           if(layout[i].element_type == E_COMBO_BOX)
            {
@@ -354,21 +432,124 @@
        m_param_edits[i].Update(true);
        m_param_combo[i].GetButtonPointer().Update(true);
       }   
-   }
-  // Hides all param-form slots. Called after any ShowTabElements() that overrides our Hide().
-  void CGUIPannel::HideParamSlots(void)
-   {
-    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-     {
+  }
+ //+-------------------------------------------------------------------------+  
+ //| Hides all param-form slots.                                             |  
+ //| Called after any ShowTabElements() that overrides our Hide()            |  
+ //+-------------------------------------------------------------------------+
+ void CGUIPannel::HideParamSlots(void)
+  {
+   for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
+    {
       m_param_labels[i].Hide();
       m_param_edits[i].Hide();
       m_param_combo[i].Hide();
-     }     
-   } 
-  // =====================================================================
-  // --- "Add" button click handler — converts text fields to MqlParam[]
-  // =====================================================================
-  void CGUIPannel::OnClickAddIndicator(void)
+    }     
+  } 
+ //Update Setting
+ //+------------------------------------------------------------------------------------+
+ //| True when (type,params) already exists as a row in m_indicator_template_setting[] -|
+ //| RAW compare (.type_enum/.raw_params[]), same style TemplateBuySellFor already uses.|
+ //| Text (.type/.params[]) is display-only, for the table - never the comparison key.  |
+ //+------------------------------------------------------------------------------------+
+ bool CGUIPannel::IsIndicatorInTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
+  {
+   for(int row = 0; row < ArraySize(m_indicator_template_setting); row++)
+    {
+     if(m_indicator_template_setting[row].type_enum != type) continue;
+     if(IsEqualMqlParamArrays(m_indicator_template_setting[row].raw_params, params)) return true;
+    }
+   return false;
+  }
+ //+------------------------------------------------------------------------------------+
+ //| True when the CURRENT chart displays a line matching (type,params) - scans every   |
+ //| Layer 3 line directly, RAW compare (no CIndicatorDE instance, no text key needed). |
+ //+------------------------------------------------------------------------------------+
+ bool CGUIPannel::IsIndicatorShownOnChart(const ENUM_INDICATOR type, MqlParam &params[])
+  {
+    CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
+    if(chart == NULL) return false;
+    for(int win = 0; win < chart.WindowsTotal(); win++)
+    {
+      CChartWnd *wnd = chart.GetWindowByNum(win);
+      if(wnd == NULL) continue;
+      for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
+        {
+        CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
+        if(wnd_ind == NULL) continue;
+        ENUM_INDICATOR line_type;
+        MqlParam line_params[];
+        if(IndicatorParameters(wnd_ind.Handle(), line_type, line_params) < 0) continue;
+        if(line_type == type && IsEqualMqlParamArrays(line_params, params))
+           return true;
+        }
+    }
+    return false;
+  }
+ //+------------------------------------------------------------------------------------+
+ //| Identity-based Delete, symmetric to AddIndicatorToTemplateSetting() above. Removes  |
+ //| ONE row from m_indicator_template_setting[] (Single Source of Truth). Mutates       |
+ //| m_indicator_template_setting[]/PureData ONLY - Layer 1 delete, Layer 3 detach, view |
+ //| resync are ALL the caller's job now (OnClickRemoveIndicator / SynIndicatorOnChart), |
+ //| same split AddIndicatorToTemplateSetting() already uses. Does NOT touch the JSON    |
+ //| file - persisting the removal so it doesn't come back on next EA restart is still   |
+ //| open, deferred.                                                                     |
+ //+------------------------------------------------------------------------------------+
+ void CGUIPannel::RemoveIndicatorFromTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
+  {
+   int tmpl_total = ArraySize(m_indicator_template_setting);
+   // --- Find the row first (need its index before we can shift anything) - inlined here since
+   // --- this is the only caller left, no need for a separate GetRowForIdentity() method.
+    int row = -1;
+    for(int i = 0; i < tmpl_total; i++)
+      if(m_indicator_template_setting[i].type_enum == type &&
+         IsEqualMqlParamArrays(m_indicator_template_setting[i].raw_params, params))
+        { row = i; break; }
+   if(row < 0) { ::Print(__FUNCTION__, " > rejected: no table row for this identity"); return; }
+   //--- Audit line: template removals are destructive and reachable from several paths
+   //--- (X icon, SynIndicatorOnChart's CHANGE branch) - always log who goes and from which row
+    ::Print(__FUNCTION__, " > row=", row, " '", m_indicator_template_setting[row].type, "'");
+    for(int i = row; i < tmpl_total - 1; i++)
+       m_indicator_template_setting[i] = m_indicator_template_setting[i + 1];
+    ArrayResize(m_indicator_template_setting, tmpl_total - 1);
+  }
+ //+------------------------------------------------------------------------------------+
+ //| Identity-based Add, symmetric to RemoveIndicatorFromTemplateSetting() - appends    |
+ //| ONE new row to m_indicator_template_setting[] (Single Source of Truth), text+RAW   |
+ //| both filled. Mutates m_indicator_template_setting[]/PureData ONLY - existence-     |
+ //| check, Layer 1 create, Layer 3 show, view resync are the caller's job (see         |
+ //| OnClickAddIndicator / SynIndicatorOnChart) - "Layer 2 decides, Layer 1 obeys":     |
+ //| Data changes first, caller commands Layer 1 to catch up AFTER, same order          |
+ //| RemoveIndicatorFromTemplateSetting() already uses.                                 |
+ //+------------------------------------------------------------------------------------+
+ void CGUIPannel::AddIndicatorToTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
+  {
+   SIndicatorCatalogItem catalog[];
+   GetIndicatorCatalog(catalog);
+   string type_key, params_key;   // DISPLAY TEXT only, for the table/JSON - not an identity key
+   BuildTemplateMatchKey(type, params, catalog, type_key, params_key);
+   int new_row = ArraySize(m_indicator_template_setting);
+   ArrayResize(m_indicator_template_setting, new_row + 1);
+   m_indicator_template_setting[new_row].type = type_key;
+   string params_text[];
+   BuildIndicatorParamsText(type, params, params_text);
+   ArrayResize(m_indicator_template_setting[new_row].params, ArraySize(params_text));
+   for(int p = 0; p < ArraySize(params_text); p++)
+      m_indicator_template_setting[new_row].params[p] = params_text[p];
+   m_indicator_template_setting[new_row].type_enum = type;
+   ArrayResize(m_indicator_template_setting[new_row].raw_params, ArraySize(params));
+   for(int p = 0; p < ArraySize(params); p++)
+      m_indicator_template_setting[new_row].raw_params[p] = params[p];
+   m_indicator_template_setting[new_row].buy     = true;
+   m_indicator_template_setting[new_row].sell    = true;
+   m_indicator_template_setting[new_row].sound   = true;
+   m_indicator_template_setting[new_row].message = true;
+  }
+ //+-------------------------------------------------------------------------+  
+ //| "Add" button click handler — converts text fields to MqlParam[]         |  
+ //| Called after any ShowTabElements() that overrides our Hide()            |  
+ //+-------------------------------------------------------------------------+
+ void CGUIPannel::OnClickAddIndicator(void)
    {      
     SIndicatorParam schema[];
     int total = GetIndicatorParamSchema(m_current_param_type, schema);      
@@ -405,155 +586,53 @@
         params[i].integer_value = (long)StringToInteger(m_param_edits[i].GetValue());
        }      
      }
-    // --- SynIndicatorPlan.md, "3 Layer Task breakdown", 2026-08-18 (Anhnt): call Layer 1 directly -
-    // --- type+params are already fully built above, and Layer 1 already has TemplateExists()/
-    // --- AddNewIndicatorToAllSeries() - no AddIndicatorInstance() middle-man needed. Row creation
-    // --- reuses RefreshTableIndicator() (the SAME Sync mechanism CHARTCHANGE/Init already call)
-    // --- instead of a bespoke single-row-append.
-     if(m_time_series_engine == NULL) return;
-     SIndicatorCatalogItem catalog[];
-     GetIndicatorCatalog(catalog);
-     string type_key, params_key;
-     BuildTemplateMatchKey(m_current_param_type, params, catalog, type_key, params_key);
-     if(m_time_series_engine.TemplateExists(type_key, params_key))
+    // --- Existence-check on Data first (AddIndicatorToTemplateSetting no longer does this itself).
+     if(IsIndicatorInTemplateSetting(m_current_param_type, params))
       {
        ::Print(__FUNCTION__, " > rejected: this template already exists");
        return;
       }
-     if(!m_time_series_engine.AddNewIndicatorToAllSeries(m_current_param_type, params)) return;
-     SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
+    // --- "Layer 2 decides, Layer 1 obeys": Data changes FIRST (Single Source of Truth), Layer 1
+    // --- commands AFTER to catch up - same order RemoveIndicatorFromTemplateSetting() already uses.
+     AddIndicatorToTemplateSetting(m_current_param_type, params);
+     if(m_time_series_engine != NULL)
+        m_time_series_engine.AddNewIndicatorToAllSeries(m_current_param_type, params);
+    // --- Show on the current chart immediately - BEFORE RefreshTableIndicator() below so this
+    // --- row's first paint of the Show column already reads correct, not stale-Hidden.
+     if(m_time_series_engine != NULL)
+      {
+       int handle = m_time_series_engine.GetIndicatorHandle(::Symbol(), (ENUM_TIMEFRAMES)::ChartPeriod(0),
+                      m_current_param_type, params);
+       if(handle != INVALID_HANDLE)
+        {
+         int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
+         ENUM_INDICATOR_GROUP group = GetIndicatorGroupForType(m_current_param_type);
+         int sub_window = (group == INDICATOR_GROUP_TREND) ? 0 : subwindows;
+         ChartIndicatorAdd(0, sub_window, handle);
+        }
+      }
+     SyncIndicatorTreeViewIcons();
      RefreshTableIndicator();
+    // --- Refresh the Bridge's own template copy so this new row's default buy/sell=true
+    // --- is actually recognized by TemplateBuySellFor on the very next tick, not just after some
+    // --- later checkbox toggle happens to call this (same fix as RemoveIndicatorFromTemplateSetting).
+     SyncIndicatorTemplateSettingToBridge();
+     ChartRedraw();
    }
-  // =====================================================================
-  // --- Params tab: up to INDICATOR_PARAM_SLOTS_MAX (8) label+field pairs,
-  // --- laid out as 2 columns x 4 rows. Each slot has BOTH a CTextEdit (plain
-  // --- numeric params) and a CComboBox (enum-like params) at the same spot -
-  // --- ShowIndicatorParameterForm() shows exactly one of the two per slot,
-  // --- based on whether that param has choices in the schema.
-  // =====================================================================  
-  bool CGUIPannel::CreateAddIndicatorParaInfor(const int x_gap, const int y_gap)
+  //+-----------------------------------------------------------------------------+
+  //| Layer 2/3 concern (chart display) - takes RAW (type,params) identity        |
+  //| straight from Data, no CIndicatorDE/Layer 1 instance needed. Matched by     |
+  //| type+params (via IndicatorParameters on each line), not by name - two       |
+  //| instances of the same type with different params can share the same        |
+  //| native chart-assigned name.                                                  |
+  //| Detaches every chart line currently representing this identity. Shared by  |
+  //| the per-row Hide toggle, per-row Remove, and OnDeinitEvent's full sweep.    |
+  //+-----------------------------------------------------------------------------+
+  void CGUIPannel::RemoveIndicatorFromChart(const ENUM_INDICATOR type, MqlParam &params[])
    {
-    const int default_x = x_gap;
-    const int default_y = y_gap;
-    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-     {
-      m_param_labels[i].MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_labels[i]);
-      if(!m_param_labels[i].CreateTextLabel("", default_x, default_y)) return false;
-      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_labels[i]);
-
-      m_param_edits[i].MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_edits[i]);
-      m_param_edits[i].XSize(INDICATOR_PARAM_FIELD_W);
-      // --- Inner CTextBox defaults its LOCAL x-offset to the outer box's x_size at
-      // --- creation time unless told otherwise BEFORE CreateTextEdit() - confirmed via
-      // --- debug log (inner canvas sitting ~90px right of the outer frame after resize).
-       m_param_edits[i].GetTextBoxPointer().XGap(1);
-       if(!m_param_edits[i].CreateTextEdit("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_edits[i]);
-
-       m_param_combo[i].MainPointer(m_tabs_main_setting_config);
-       m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_combo[i]);
-       m_param_combo[i].XSize(INDICATOR_PARAM_FIELD_W);
-       m_param_combo[i].YSize(20);
-       m_param_combo[i].ItemsTotal(7);          // room for the largest choice list (PRICE_CHOICES)
-      // --- CButton inside CComboBox defaults to XSize=80 at XGap=80 unless explicitly
-      // --- told otherwise BEFORE CreateComboBox() - mirrors how CTable's own combo usage
-      // --- configures it. Without this the button/listview end up outside the narrow canvas.
-       m_param_combo[i].GetButtonPointer().XGap(1);
-       m_param_combo[i].GetButtonPointer().XSize(INDICATOR_PARAM_FIELD_W);
-       m_param_combo[i].GetButtonPointer().LabelYGap(4);
-       m_param_combo[i].GetButtonPointer().IconYGap(3);
-       if(!m_param_combo[i].CreateComboBox("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_param_combo[i]);
-      // --- Do NOT call Hide() here - CompletedGUI() (called after this function)
-      // --- runs FormAvailableElementsArray() which only includes VISIBLE elements
-      // --- in m_available_elements[]. Hiding early means MOUSE_MOVE events never
-      // --- reach the combo button later (even after Show()), so the dropdown arrow
-      // --- click silently does nothing. ShowIndicatorParameterForm() manages
-      // --- show/hide correctly AFTER CompletedGUI has already registered everything.
-     }
-    //For Button Add
-     m_btn_add_indicator.MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_add_indicator);
-     m_btn_add_indicator.AutoXResizeMode(false);
-     m_btn_add_indicator.XSize(80);
-     m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);            
-     bool created = m_btn_add_indicator.CreateButton("Add", x_gap, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
-     if(!created) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_add_indicator);
-    //For Button Save
-     m_btn_save_indicator.MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_save_indicator);
-     m_btn_save_indicator.AutoXResizeMode(false);
-     m_btn_save_indicator.XSize(80);
-     m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);          
-     bool created_save = m_btn_save_indicator.CreateButton("Save", x_gap + 85, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
-     if(!created_save) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_save_indicator);
-     for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-      {
-       m_param_labels[i].Update(true);
-       m_param_edits[i].Update(true);
-      }
-     m_btn_add_indicator.Update(true);
-     m_btn_save_indicator.Update(true);
-    return true;
-   }
-  // --- DEAD (SynIndicatorPlan.md, "3 Layer Task breakdown", 2026-08-18): commented out, not
-  // --- deleted yet (Anhnt's safety convention). All 3 former callers (OnClickAddIndicator,
-  // --- ImportForeignChartIndicators, SynIndicatorOnChart's CHANGE branch) now call Layer 1
-  // --- directly (TemplateExists + AddNewIndicatorToAllSeries) and reuse RefreshTableIndicator()
-  // --- for row creation instead of this bespoke single-row-append - grep confirms 0 call sites left.
-  /*
-  void CGUIPannel::AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[])
-   {
-    if(m_time_series_engine == NULL || m_IndicatorsCollection == NULL) return;
-     SIndicatorCatalogItem dedup_catalog[];
-     GetIndicatorCatalog(dedup_catalog);
-     string dedup_type_key, dedup_params_key;
-     BuildTemplateMatchKey(type, params, dedup_catalog, dedup_type_key, dedup_params_key);
-     if(m_time_series_engine.TemplateExists(dedup_type_key, dedup_params_key))
-      {
-       ::Print(__FUNCTION__, " > rejected: this template already exists");
-       return;
-      }
-     if(!m_time_series_engine.AddNewIndicatorToAllSeries(type, params)) return;
-     SyncIndicatorTreeViewIcons();   // full sweep + Update(true)
-     string sym = ::Symbol();
-     ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::ChartPeriod(0);
-     CArrayObj *list = m_IndicatorsCollection.GetListIndBySymbol(sym);
-     list = CTimeseriesSelect::ByIndicatorProperty(list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-     if(list == NULL || list.Total() == 0) return;
-     CIndicatorDE *indicator = list.At(list.Total() - 1);
-     int row = ArraySize(m_indicator_template_setting);
-     if(row > 0)
-       m_table_indicator_template.AddRow(row, true);
-     ArrayResize(m_table_indicator_names, row + 1);
-     ArrayResize(m_table_indicator_ptrs,  row + 1);
-     ArrayResize(m_settings_cache_state,  row + 1);
-     ArrayResize(m_indicator_template_setting, row + 1);
-      SJsonIndicatorEntry empty_setting[];
-      SetIndicatorTableRow(row, indicator, empty_setting);
-     m_table_indicator_template.Update(true);
-   }
-  */
-  // =====================================================================
-  // --- Col 4 checkbox: Tang 2 controls Tang 3 only - never touches PureData.
-  // --- The table already auto-toggled the icon before sending this event, so
-  // --- SelectedImageIndex(4,row) tells us the state to APPLY (0=show, 1=hide).
-  // --- Matched by ind.Handle(), not by name - two instances of the same type
-  // --- with different params can share the same native chart-assigned name.
-  // --- Detaches every chart line currently representing this indicator (Layer 3 mirror,
-  // --- handle = join key). Shared by the per-row Hide toggle, per-row Remove, and
-  // --- OnDeinitEvent's full sweep (BugNote 2026-07-18: Layer 1 indicators left shown
-  // --- on chart - BBands/PSAR/AMA/hand-added MAs - were never detached on final EA
-  // --- removal, only the SignalMarkers overlay was; this closes that gap for every row).
-  void CGUIPannel::DetachIndicatorFromChart(CIndicatorDE *indicator)
-   {
-    if(indicator == NULL) return;
     CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
-    if(chart == NULL) return;
+    if(chart == NULL) { Print("MY DEBUG CGUIPannel::RemoveIndicatorFromChart: chart=NULL for ChartID=", ::ChartID()); return; }
+    int debug_deleted = 0;
     for(int win = chart.WindowsTotal() - 1; win >= 0; win--)
      {
       CChartWnd *wnd = chart.GetWindowByNum(win);
@@ -561,70 +640,27 @@
       for(int i = wnd.IndicatorsTotal() - 1; i >= 0; i--)
        {
         CWndInd *wnd_ind = wnd.GetIndicatorByIndex(i);
-        if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), indicator))
-            ChartIndicatorDelete(0, win, wnd_ind.Name());
+        if(wnd_ind == NULL) continue;
+        ENUM_INDICATOR line_type;
+        MqlParam line_params[];
+        if(IndicatorParameters(wnd_ind.Handle(), line_type, line_params) < 0) continue;
+        if(line_type == type && IsEqualMqlParamArrays(line_params, params))
+          {
+           Print("MY DEBUG CGUIPannel::RemoveIndicatorFromChart: deleting win=", win, " name='", wnd_ind.Name(), "' line_handle=", wnd_ind.Handle());
+           ChartIndicatorDelete(0, win, wnd_ind.Name());
+           debug_deleted++;
+          }
        }
      }
+    Print("MY DEBUG CGUIPannel::RemoveIndicatorFromChart: windows=", chart.WindowsTotal(), " deleted=", debug_deleted);
    }
-  // --- Does this Layer 3 line represent this Layer 1 instance?
-  // --- Fast path: shared slot - only lines WE attached (ChartIndicatorAdd with our own
-  // --- handle). A HAND-ADDED line is a SEPARATE terminal instance with its own slot
-  // --- (proven 18:58 log: line handle=17 vs owned=18 for identical SAR(0.05,0.20)),
-  // --- so fall back to the template identity: type+params via IndicatorParameters.
-  // --- The line's slot stays readable forever because nobody ever releases it.
-  bool CGUIPannel::LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator)
-   {
-    if(line_handle == INVALID_HANDLE || indicator == NULL) return false;
-    if(line_handle == indicator.Handle())
-     {
-      // --- DEBUG LineRepresentsIndicator FAST-MATCH - removed 2026-07-14, fired every row every tick
-      //::Print("DEBUG CGUIPannel::LineRepresentsIndicator FAST-MATCH line_handle=", line_handle,
-      //        " own_handle=", indicator.Handle());
-       return true;
-     }
-    ENUM_INDICATOR type;
-    MqlParam params[];
-    if(IndicatorParameters(line_handle, type, params) < 0) return false;
-    if(type != indicator.TypeIndicator()) return false;
-    MqlParam own_params[];
-    indicator.GetMqlParams(own_params);
-    bool eq = IsEqualMqlParamArrays(own_params, params);
-    return eq;
-   }
-  // --- True when the CURRENT chart displays this indicator instance. The Layer 3 mirror
-  // --- (CChartObjCollection -> CWndInd) stores the real slot handle, and MQL5 slots are
-  // --- program-wide: the line of an instance Layer 1 owns carries Layer 1's own handle
-  // --- number - the handle is the exact join key (names have different formats:
-  // --- chart line "SAR(0.05,0.2)" vs CIndicatorDE::ShortName "SAR(BTCUSDm,M1)").
-  bool CGUIPannel::IsIndicatorShownOnChart(CIndicatorDE *indicator)
-   {
-    if(indicator == NULL) return false;
-    CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
-    if(chart == NULL) return false;
-    for(int win = 0; win < chart.WindowsTotal(); win++)
-    {
-      CChartWnd *wnd = chart.GetWindowByNum(win);
-      if(wnd == NULL) continue;
-      for(int k = wnd.IndicatorsTotal() - 1; k >= 0; k--)
-        {
-        CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
-        if(wnd_ind != NULL && LineRepresentsIndicator(wnd_ind.Handle(), indicator))
-          {
-            // --- DEBUG IsIndicatorShownOnChart - removed 2026-07-14, fired every row every tick
-            //::Print("DEBUG IsIndicatorShownOnChart indicator_handle=", indicator.Handle(),
-            //        " -> MATCHED line '", wnd_ind.Name(), "' handle=", wnd_ind.Handle());
-            return true;
-          }
-        }
-    }
-    return false;
-   } 
+
   // --- Layer 3 -> Layer 1/2 sync, single entry point (Anhnt, 2026-08-18, see SynIndicatorPlan.md
   // --- "3 UseCase" discussion) for the 3 ways a chart-side edit can reach here:
-  // --- UseCase 1 (re-Insert an existing/possibly-hidden template by hand): ImportForeignChartIndicators()
-  // --- already no-ops for this (handle already owned, or TemplateExists() true) - nothing written
-  // --- to Layer 1/2; RefreshIndicatorTableShowColumn() below re-truths the Show checkbox live off
-  // --- the chart scan regardless (IsIndicatorShownOnChart/LineRepresentsIndicator fall back to
+  // --- UseCase 1 (re-Insert an existing/possibly-hidden template by hand): ScanIndicatorOnChart()
+  // --- already no-ops for this (IsIndicatorInTemplateSetting() true) - nothing written to the
+  // --- array; RefreshIndicatorTableShowColumn() below re-truths the Show checkbox live off the
+  // --- chart scan regardless (IsIndicatorShownOnChart/LineRepresentsIndicator fall back to
   // --- type+params match, so it flips ON even if MT5 assigned the re-inserted line a new handle).
   // --- UseCase 2 (style/color only): never reaches this function's CHANGE branch at all - Library's
   // --- CChartWnd::IndicatorsChangeCheck only fires IND_CHANGE when the tracked indicator's NAME
@@ -639,7 +675,7 @@
   void CGUIPannel::SynIndicatorOnChart(const long id)
    {
     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_ADD)
-       ImportForeignChartIndicators();
+       ScanIndicatorOnChart();
     else if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_CHANGE && m_time_series_engine != NULL)
      {
       // --- do/while(false): break plays the role of the original method's early-return guard
@@ -652,11 +688,30 @@
          if(old_ind == NULL) { ::Print(__FUNCTION__, " > no changed-indicator record"); break; }
          ::Print(__FUNCTION__, " > chart edit detected: old '", old_ind.Name(), "' handle=", old_ind.Handle(),
                   " win=", old_ind.WindowNum(), " index=", old_ind.Index());
-        // A hand-added line is a SEPARATE terminal instance - OwnedInstanceOfLine falls back
-        // to type+params matching. Truly foreign lines (no matching template) are skipped:
+        // A hand-added line is a SEPARATE terminal instance - fall back to type+params matching
+        // against our own Data (README.md muc 7.b: Layer 2 checks its own m_indicator_template_setting[]
+        // instead of asking Layer 1). Truly foreign lines (no matching template) are skipped:
         // the ADD/import path picks the new line up by itself.
-         CIndicatorDE *owned = OwnedInstanceOfLine(old_ind.Handle());
-         if(owned == NULL) { ::Print(__FUNCTION__, " > line matches no Layer 1 template - skip"); break; }
+        // --- Inlined LineRepresentsIndicator (its only caller): fast path checks the Layer 1
+        // --- handle Layer 1 assigned this row's instance; slow path reads the line's own
+        // --- (type,params) via IndicatorParameters and matches straight against Data - no live
+        // --- CIndicatorDE needed either way (proven 18:58 log: line handle=17 vs owned=18 for
+        // --- identical SAR(0.05,0.20), so the fast path alone isn't always enough).
+         int owned_row = -1;
+         for(int row = 0; row < ArraySize(m_indicator_template_setting); row++)
+          {
+           int row_handle = (m_time_series_engine != NULL) ?
+              m_time_series_engine.GetIndicatorHandle(::Symbol(), (ENUM_TIMEFRAMES)::ChartPeriod(0),
+                 m_indicator_template_setting[row].type_enum, m_indicator_template_setting[row].raw_params) :
+              INVALID_HANDLE;
+           if(row_handle != INVALID_HANDLE && row_handle == old_ind.Handle()) { owned_row = row; break; }
+           ENUM_INDICATOR line_type;
+           MqlParam line_params[];
+           if(IndicatorParameters(old_ind.Handle(), line_type, line_params) < 0) continue;
+           if(line_type != m_indicator_template_setting[row].type_enum) continue;
+           if(IsEqualMqlParamArrays(line_params, m_indicator_template_setting[row].raw_params)) { owned_row = row; break; }
+          }
+         if(owned_row < 0) { ::Print(__FUNCTION__, " > line matches no Layer 1 template - skip"); break; }
          CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
          if(chart == NULL) { ::Print(__FUNCTION__, " > no CChartObj for this chart"); break; }
          CChartWnd *wnd = chart.GetWindowByNum(old_ind.WindowNum());
@@ -673,35 +728,52 @@
          MqlParam new_params[];
          if(IndicatorParameters(new_ind.Handle(), new_type, new_params) < 0)
           { ::Print(__FUNCTION__, " > IndicatorParameters failed, err ", GetLastError()); break; }
-         // --- Capture the OLD identity into plain values NOW, before RemoveIndicatorInstance
-         // --- below deletes 'owned' (it matches its own template) - never dereference it after.
-          ENUM_INDICATOR old_type = owned.TypeIndicator();
+         // --- Capture the OLD identity into plain values NOW, before RemoveIndicatorFromTemplateSetting
+         // --- below splices owned_row out of the array - read straight off Data, no live pointer
+         // --- to go dangling.
+          ENUM_INDICATOR old_type = m_indicator_template_setting[owned_row].type_enum;
           MqlParam old_params[];
-          owned.GetMqlParams(old_params);
+          ArrayResize(old_params, ArraySize(m_indicator_template_setting[owned_row].raw_params));
+          for(int p = 0; p < ArraySize(old_params); p++)
+             old_params[p] = m_indicator_template_setting[owned_row].raw_params[p];
+         // --- Explicit check BEFORE removing anything: if the NEW params already match some OTHER
+         // --- existing template, appending it below would create a duplicate row - without this
+         // --- early check we'd have already removed the OLD template by then, net result = template
+         // --- lost with nothing replacing it. Bail out first instead, old template stays untouched.
+          if(IsIndicatorInTemplateSetting(new_type, new_params))
+           { ::Print(__FUNCTION__, " > chart edit rejected: new params already match another template - old template kept"); break; }
           ::Print(__FUNCTION__, " > chart edit: replacing template '", old_ind.Name(),
                 "' with '", new_ind.Name(), "'");
          // --- Replace = remove the old template across ALL series + add the new one across ALL
-         // --- series (CIndicatorDE cannot change params in place - its handle is bound to the
-         // --- old instance). SynIndicatorPlan.md, "3 Layer Task breakdown", 2026-08-18: both
-         // --- sides now identity-based (RemoveIndicatorInstance/AddNewIndicatorToAllSeries take
-         // --- type+params directly) - no row lookup needed at all anymore.
-          RemoveIndicatorInstance(old_type, old_params);
-          SIndicatorCatalogItem catalog[];
-          GetIndicatorCatalog(catalog);
-          string new_type_key, new_params_key;
-          BuildTemplateMatchKey(new_type, new_params, catalog, new_type_key, new_params_key);
-          if(m_time_series_engine.TemplateExists(new_type_key, new_params_key))
+         // --- series (CIndicatorDE cannot change params in place - its handle is bound to the old
+         // --- instance). Both RemoveIndicatorFromTemplateSetting()/AddIndicatorToTemplateSetting()
+         // --- are now PureData-only (Layer1 create-or-delete/Layer3 detach-or-show/view resync ALL
+         // --- moved to callers) - this branch supplies those for both sides of the replace. Same
+         // --- "Layer 2 decides, Layer 1 obeys" order (Data first) as every other caller.
+          RemoveIndicatorFromChart(old_type, old_params);
+          RemoveIndicatorFromTemplateSetting(old_type, old_params);
+          if(m_time_series_engine != NULL)
+             m_time_series_engine.RemoveIndicatorFromAllSeries(old_type, old_params);
+          AddIndicatorToTemplateSetting(new_type, new_params);
+          if(m_time_series_engine != NULL)
+             m_time_series_engine.AddNewIndicatorToAllSeries(new_type, new_params);
+          if(m_time_series_engine != NULL)
            {
-            // --- New params collide with an already-existing template - the changed line just
-            // --- merges into it (old row already removed above, nothing to re-add).
-            ::Print(__FUNCTION__, " > new params collide with an existing template - merged, not re-added");
-            break;
+            int handle = m_time_series_engine.GetIndicatorHandle(::Symbol(), (ENUM_TIMEFRAMES)::ChartPeriod(0),
+                           new_type, new_params);
+            if(handle != INVALID_HANDLE)
+             {
+              int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
+              ENUM_INDICATOR_GROUP group = GetIndicatorGroupForType(new_type);
+              int sub_window = (group == INDICATOR_GROUP_TREND) ? 0 : subwindows;
+              ChartIndicatorAdd(0, sub_window, handle);
+             }
            }
-          if(m_time_series_engine.AddNewIndicatorToAllSeries(new_type, new_params))
-           {
-            SyncIndicatorTreeViewIcons();
-            RefreshTableIndicator();
-           }
+          SyncIndicatorTreeViewIcons();
+          RefreshTableIndicator();
+          SyncIndicatorTemplateSettingToBridge();
+          ChartRedraw();
+          SetValuesToTableIndicatorSymbolTFValue();
        }
       while(false);
      }
@@ -709,17 +781,19 @@
     // re-truth the Show column below, same as every other branch.
     RefreshIndicatorTableShowColumn();
    }
-  // --- Layer 3 -> Layer 1 import (README: 3-layer sync): an indicator is present on the MAIN
-  // --- chart that Layer 1 does not know yet (added BY HAND on the chart). Rebuild its
-  // --- type+params via IndicatorParameters() and feed it straight to Layer 1
-  // --- (SynIndicatorPlan.md, "3 Layer Task breakdown", 2026-08-18: no AddIndicatorInstance()
-  // --- middle-man - TemplateExists()/AddNewIndicatorToAllSeries() are called directly, same as
-  // --- OnClickAddIndicator now does). RefreshTableIndicator() runs ONCE after the whole scan
-  // --- (not per-indicator) - cheaper than N separate single-row appends, and self-corrects the
-  // --- table row set from the live collection regardless of how many were imported. Idempotent:
-  // --- our own ChartIndicatorAdd (Show checkbox) also fires IND_ADD, but TemplateExists() filters
-  // --- it out here without log spam.
-  void CGUIPannel::ImportForeignChartIndicators(void)
+  // --- Layer 3 -> Layer 2/1 sync (Anhnt, 2026-08-19 - CORRECTED after real-world test): an indicator
+  // --- is present on the MAIN chart that m_indicator_template_setting[] does not know yet (added BY
+  // --- HAND on the chart). MUST also call Layer 1's AddNewIndicatorToAllSeries for a genuinely new
+  // --- identity - the earlier "array-only, never touch Layer 1" version left a row in the array with
+  // --- NO backing CIndicatorDE anywhere, so GetIndicatorForRow() could never resolve it: Remove/Show-
+  // --- toggle/Label all silently no-op'd for a chart-inserted indicator (confirmed via log 2026-08-19
+  // --- 22:21 - clicking the row's X did nothing, no crash, no error, just silently rejected inside
+  // --- OnClickRemoveIndicator's ref_indicator==NULL guard). Same "Layer 1 stays fully synced with the
+  // --- array" invariant AddIndicatorToTemplateSetting() already upholds - this just triggers from a chart
+  // --- scan instead of the Add button. A RE-INSERT of an identity that already has a row (user hand-
+  // --- adds something already in the template set, possibly currently Hidden) changes NOTHING in the
+  // --- array - only the Show/Hide column needs re-truthing, via RefreshIndicatorTableShowColumn().
+  void CGUIPannel::ScanIndicatorOnChart(void)
    {
     if(m_time_series_engine == NULL) return;
     SIndicatorCatalogItem catalog[];
@@ -728,7 +802,7 @@
     // not from raw built-in scans - README: 3-layer sync.
     CChartObj *chart = m_chart_obj_collection.GetChart(::ChartID());
     if(chart == NULL) return;
-    bool imported_any = false;
+    bool found_new = false;
     for(int win = 0; win < chart.WindowsTotal(); win++)
      {
       CChartWnd *wnd = chart.GetWindowByNum(win);
@@ -737,39 +811,61 @@
        {
          CWndInd *wnd_ind = wnd.GetIndicatorByIndex(k);
          if(wnd_ind == NULL) continue;
-         string name = wnd_ind.Name();
          // The mirror's handle is the join key: same program-wide slot number as the
          // owned instance when the line belongs to Layer 1. Never released anywhere
          // in the GUI - the sole IndicatorRelease site is ~CIndicatorDE.
           int handle = wnd_ind.Handle();
           if(handle == INVALID_HANDLE) continue;
-          if(m_time_series_engine.GetIndicatorByHandle(handle) != NULL)
-             continue;   // Layer 1 owns it already: nothing to import
           ENUM_INDICATOR type;
           MqlParam params[];
           int params_total = IndicatorParameters(handle, type, params);
-         // Only types Layer 1 knows how to create (present in the catalog)
+         // Only types the catalog knows (display name lookup needs it)
           bool supported = false;
           for(int c = 0; c < ArraySize(catalog); c++)
           if(catalog[c].ind_type == type) { supported = true; break; }
           if(params_total < 0 || !supported) continue;
-         // --- Check against the live identity-only m_indicator_template[] mirror instead of
-         // --- looping every symbol/TF instance.
-          string import_type_key, import_params_key;
-          BuildTemplateMatchKey(type, params, catalog, import_type_key, import_params_key);
-          if(m_time_series_engine.TemplateExists(import_type_key, import_params_key))
-             continue;
-          ::Print(__FUNCTION__, " > importing hand-added indicator '", name, "' into Layer 1");
-          // Adopt: IndicatorCreate (inside AddNewIndicatorToAllSeries) returns this very slot and
-          // Layer 1 becomes its owner (released exactly once, in ~CIndicatorDE).
-          if(m_time_series_engine.AddNewIndicatorToAllSeries(type, params))
-             imported_any = true;
+          string type_key, params_key;
+          BuildTemplateMatchKey(type, params, catalog, type_key, params_key);   // display text only, for the Print below + .type storage
+          if(IsIndicatorInTemplateSetting(type, params))
+           {
+            Print("MY DEBUG CGUIPannel::ScanIndicatorOnChart: type_key='", type_key, "' params_key='", params_key,
+                  "' already exists in array - re-Insert path, skip");
+            continue;   // re-Insert of an existing template - array unchanged, Show column only (below)
+           }
+          // --- Adopt into Layer 1 - IndicatorCreate/AddIndicatorToList (inside AddNewIndicatorToAllSeries)
+          // --- reuse the terminal's own handle-sharing for identical (symbol,TF,type,params), so this
+          // --- does NOT create a second visible line for the one the user just hand-inserted.
+          bool added_ok = m_time_series_engine.AddNewIndicatorToAllSeries(type, params);
+          Print("MY DEBUG CGUIPannel::ScanIndicatorOnChart: type_key='", type_key, "' params_key='", params_key,
+                "' AddNewIndicatorToAllSeries=", (added_ok ? "OK" : "FAILED"));
+          if(!added_ok) continue;
+          int new_row = ArraySize(m_indicator_template_setting);
+          ArrayResize(m_indicator_template_setting, new_row + 1);
+          m_indicator_template_setting[new_row].type = type_key;
+          string params_text[];
+          BuildIndicatorParamsText(type, params, params_text);
+          ArrayResize(m_indicator_template_setting[new_row].params, ArraySize(params_text));
+          for(int p = 0; p < ArraySize(params_text); p++)
+             m_indicator_template_setting[new_row].params[p] = params_text[p];
+          // --- SynIndicatorActionPlan.md Phase 1: already have RAW (type,params) right here - no parse needed.
+           m_indicator_template_setting[new_row].type_enum = type;
+           ArrayResize(m_indicator_template_setting[new_row].raw_params, ArraySize(params));
+           for(int p = 0; p < ArraySize(params); p++)
+              m_indicator_template_setting[new_row].raw_params[p] = params[p];
+          m_indicator_template_setting[new_row].buy     = false;
+          m_indicator_template_setting[new_row].sell    = false;
+          m_indicator_template_setting[new_row].sound   = false;
+          m_indicator_template_setting[new_row].message = false;
+          found_new = true;
        }
      }
-    if(imported_any)
+    if(found_new)
      {
       SyncIndicatorTreeViewIcons();
-      RefreshTableIndicator();
+      RefreshTableIndicator();   // structural rebuild already re-paints Show for every row too
+      SyncIndicatorTemplateSettingToBridge();   // same fix as AddIndicatorToTemplateSetting/RemoveIndicatorFromTemplate
      }
+    else
+      RefreshIndicatorTableShowColumn();   // pure re-Insert of an existing template - just re-truth Show
    }
 #endif // CGUIPANNEL_TABSETTINGINDICATOR_MQH

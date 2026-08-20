@@ -12,6 +12,9 @@
     - Chỉ hold pointer các collection,không own gì thuộc PureData.
     - Layer 2 sẽ Control việc Show/Hide trên Layer 3
    [] Layer 3: Display On Chart, control by Layer 2 and base on Layer 1
+   [] Layer 4: File có 
+      - JSON Config 
+      - SignalBride
 2. Working Rule:
  [] Trao đổi bằng tiếng Việt, Comment trong code bằng tiếng Anh.
  [] Print Debug:   ::Print("MY DEBUG CGUIPannel::LineRepresentsIndicator .....=", ....);
@@ -31,17 +34,36 @@
  [] Mọi sự thay đổi trong code cần trao đổi trước.
  [] Hạn chế tối đa Flicker ở Layer 2.
  [] Hạn chế viết method Inline, chỉ các method return ngắn gọn,mới dùng inline.
+ [] Thống nhất lại format của Comment ở mỗi đầu hàm theo format
+   //+-------------------------------------------------------------------------+  
+   //|                                                                         |
+   //+-------------------------------------------------------------------------+  
 
 3. Layer 1: 
  []: CTimeSeriesEngine
    [] m_BarTimeSeriesCollection -> m_IndicatorsCollection quan hệ 1-n : Một CBarSeriesDE sẽ có nhiều CIndicatorDE
    [] m_IndicatorsCollection    -> m_SignalsCollection    quan hệ 1-1 : Mỗi Indicator sẽ có một Signal, một Signal có thể có nhiều Buffer (BBand)
-   [] Template ở Layer 1: Là số Indicator có ở một CBarTimeSeriesDE     
-     [v] LoadIndicatorFromJSON
-     [v] AddNewIndicatorToAllSeries
-     [v] AddAllIndicatorsToNewSeries
-     [v] CIndicatorsCollection::TemplateExists(type, params):Check xem Indicator trên chart (Layer 3)  đã có ở Layer 1 hay chưa
-     [v] Save to JSON.
+   [] Template ở Layer 1: Là số Indicator có ở một CBarTimeSeriesDE khái niệm Indicator-Template này sẽ xuyên suốt giữa các Layer và được CGUIPannel (Layer 2) hold, nó sẽ phải update  
+      SJsonIndicatorEntry         m_indicator_template_setting[];
+      SJsonSymbolTF               m_symbol_tf_Setting[];  
+     [v] Layer 1 KHÔNG parse JSON nữa (từ V9, SynIndicatorPlan.md) - CGUIPannel::LoadSymbolTFSettingFromJSON
+         và CGUIPannel::LoadIndicatorTemplateSettingFromJSON (tách từ LoadGUIConfigFromJSON,
+         2026-08-20 - mỗi hàm tự parse riêng file JSON, chỉ giữ đúng section mình cần) tự parse
+         (dùng free function ParseIndicatorConfigFile của JSONConfig.mqh) rồi điền thẳng vào 2 mảng
+         trên, gọi 1 lần duy nhất từ đầu CGUIPannel::OnInitEvent (EA's OnInit) - SymbolTF trước
+         (tạo Series), Template sau (cần Series đã tạo để attach indicator vào).
+     [v] CTimeSeriesEngine::ApplySymbolTFSetting: nhận mảng ĐÃ có sẵn (không tự parse) làm phần việc
+         cơ học - tạo Series thật cho từng entry. ApplyIndicatorTemplateSetting đã XÓA (2026-08-19) -
+         startup giờ coi là "mọi Series đều mới", LoadIndicatorTemplateSettingFromJSON gọi thẳng
+         AddAllIndicatorsToNewSeries (mục dưới) 1 lần/Series thay vì có path "Apply" riêng.
+     [v] AddNewIndicatorToAllSeries/RemoveIndicatorFromAllSeries: thuần cơ học, không nhận/không
+         đụng m_indicator_template_setting[] nữa - CGUIPannel tự check tồn tại trước
+         (IsIndicatorInTemplateSetting) rồi mới gọi Add/Remove.
+     [v] AddAllIndicatorsToNewSeries (dùng chung cho CẢ startup lẫn CHARTCHANGE - series mới): nhận
+         m_indicator_template_setting[] làm input ĐỌC, đọc thẳng .type_enum/.raw_params[] (đã điền
+         sẵn bởi CGUIPannel) - không tự check tồn tại, không tự ghi mảng, không đụng gì tới text/
+         catalog/schema (đúng nguyên tắc CTimeSeriesEngine không làm việc với JSON).
+     
    [] Carefull check Indicator and Signal
      [v]BBand: Boillinger Band
      [v] AMA: Slope indicator
@@ -59,58 +81,72 @@
     - GUIPannel_TabSettingIndicator.mqh => Implementation all method create tab setting indicator
     - GUIPannel_TabSettingSymbolTF.mqh => Implementation all method create tab setting symbol tf    
     - GUIPannel_TabSetting.mqh => Implementation all method create tab setting    
-    - GUIPannel_TabSettingMarket.mqh => Implementation all method create tab setting market  
-  [v] CTreeView  m_treeview_SymbolTF;
-     [v] Display Symbol + TF on Layer 1.
-     [v] Highlight node base on Current Chart on Layer 3
-     [v] Add CBarSeriesDE on Layer 1: OnEvent click on Node
-  [v] CTreeView  m_treeview_indicator;
-     [v] Display and Highlight Indicator, có thể có nhiều Indicator PSAR chẳng hạn khác nhua ở Parameter
-  [] CTable     m_table_indicator; danh sách các Indicator có trong template ở Layer 1.
+    - GUIPannel_TabSettingMarket.mqh => Implementation all method create tab setting market 
+  [v] Từ bản V9 thì CGUIPannel trực tiếp làm việc với JSONConfig.
+5. Feature    
+ [v] CTreeView  m_treeview_SymbolTF;
+    [v] Display Symbol + TF 
+    [v] Highlight node base on Current Chart on Layer 3
+    [v] Add CBarSeriesDE on Layer 1: OnEvent click on Node
+ [v] CTreeView  m_treeview_indicator;
+    [v] Display and Highlight Indicator, có thể có nhiều Indicator PSAR chẳng hạn khác nhua ở Parameter
+ [v] CTable     m_table_indicator_template; danh sách các Indicator có trong template ở 
       nó có thể nhiều hơn ở Layer 3 vì đơn giản có checkbox để điều khiển việc show/hide
-      - Việc Toggle các check box sẽ mirror từ layer 2 -> Layer 3.
-     [v] CGUIPannel::LineRepresentsIndicator(line_handle, indicator) / OwnedInstanceOfLine nhận diện 1 line trên chart có phải instance của Layer 1 không
-     [V] checkbox cột Show của m_table_indicator → ChartIndicatorAdd/Delete).
-     [v] checkbox cột Buy của m_table_indicator -> Show Buy Signal của Indicator tương ứng on Chart (Layer 3)
-     [v] checkbox cột Sell của m_table_indicator -> Show Sell Signal của Indicator tương ứng on Chart (Layer 3)
-  [v] CTable     m_table_indicator_SymbolTFValue;
-5. Layer 3: Display on Chart
+      - Việc Toggle các check box sẽ mirror từ layer 2 -> Layer 3.  
+ [v] CTable     m_table_indicator_SymbolTFValue;
+6. Layer 3: Display on Chart trên Chart lúc nào cũng có một Template để display các Indicator
    [v] Indicator sẽ display bằng Buildin MT5 được control bởi Layer 2.
-   [x] Buy/Sell Signal sẽ được display bằng CGraphElementsCollection.
-   [x] Quản lý Event bởi CChartObjCollection
-   [v] Đồng bộ Indicator của Layer 3 với Layer 2 và Layer 1
-     [v] Khi User Insert một indicator ở Layer 3 
-         - Sẽ phải Map với Layer 1, nếu có rồi thì thôi, không có thì phải Add vào Layer 1
-	 - ImportForeignChartIndicators()
-     [v] Khi User Update một indicator ở Layer 3 (Update Paramete) thì sẽ phải Update Layer 2 và Layer 1.   
-   [] CPatternRenderer: đang dừng lại do gây Lag.
-   [v] m_window_infor khi ấn Ctr và di mouse vào candle đang chưa khôi phục lại
-   [] CPatternRenderer để hiện các CandlePattern nhưng bị lag
-   [] CTradingLevelBubble để hiện SL, TP đang triển khai đã test thử hơi khó di chuyển một tí.
-     [v] Update lại sau khi có CChartObjCollection
-     [v] Bị mất khi đổi TF
-     [v] Chạy ngang
-6. Layer 4 Working with file
- [] Config_Setting.json to save and load Configuration.
-   - 1 file JSON duy nhất, dùng chung cho cả Layer 1 và Layer 2. Mỗi hàm Save chỉ được BUILD MỚI đúng (các) section mình sở hữu, còn lại phải đọc file cũ và PRESERVE nguyên văn (raw text) section không sở hữu trước khi ghi đè cả file.
-   - Bảng sở hữu section (tên key chính thức):
-     - Layer 1 (CTimeSeriesEngine::SaveConfigurationToJSON, RemoveSymbolTFFromConfigJSON) sở hữu:
+   [v] Buy/Sell Signal sẽ được display bằng SignalMarker
+   [v] Quản lý Event bởi CChartObjCollection
+7. Sync Indicator-Template và SymbolTF giữa các Layer 3 (Chart), Layer 2 (Table), Layer 1 Pure Data, Layer 4 File (SignalBride)
+ a. CGUIPannel sẽ hold 2 Live Array Data
+  - SJsonSymbolTF               m_symbol_tf_Setting[] là Data
+   - Xóa 1 dòng Symbol/TF (nút X) trong m_table_indicator_SymbolTFSeting sẽ KHÔNG ghi file ngay - chỉ xóa entry khỏi m_symbol_tf_Setting[] (mảng live), giống mọi setting khác; chỉ nút Save mới thực sự ghi xuống đĩa.   
+  - SJsonIndicatorEntry         m_indicator_template_setting[]
+   ->Cái struct này không có trường nào để lưu trạng thái Show/Hide  
+    - m_bool_table_indicator_template_cache_show để bổ sung thêm cho CTable
+    - m_indicator_template_setting là Center Point of Data, Single Source of Truth khi Live, còn m_table_indicator_template là view của nó, và vì thế chúng là Mirror của nhau dc thực hiện bởi 
+      - RefreshTableIndicator
+      - SetIndicatorTableRow
+  -Layer 2:       
+  b: Layer 2 vs Layer 1 CGUIPannel sẽ call Layer 1 sau khi check không có chiều ngược lại
+    -CTimeSeriesEngine::AddAllIndicatorsToNewSeries (không có delete vì PureData không delete Series)
+    -CTimeSeriesEngine::AddNewIndicatorToAllSeries
+    -CTimeSeriesEngine::RemoveIndicatorFromAllSeries
+  c: Layer 2 vs Layer 3: m_indicator_template_setting,m_table_indicator_template, và Indicator-Template ở Chart phải đồng bộ.
+    -CGUIPannel::IsIndicatorInTemplateSetting ->Check xem một indicator có trong m_table_indicator_template hay không?
+    - CGUIPannel::IsIndicatorShownOnChart->Check xem Indicator đó có trên Chart hay không
+    - CGUIPannel::RemoveIndicatorFromTemplateSetting -> Remove một indicator trong     m_indicator_template_setting
+    - CGUIPannel::AddIndicatorToTemplateSetting->Add một indicator vào m_indicator_template_setting
+
+    - CTimeSeriesEngine::GetIndicatorHandle(symbol,tf,type,params) -> trả Handle (Layer 1 query, không trả live pointer)
+    - CGUIPannel::GetIndicatorGroupForType(type) -> trả Group qua catalog[], không cần Layer 1
+    - Table ở Layer 2 có một cột để chọn Show/Hide
+    - Layer 3-> Layer 2: SCanIndicatorOnChart-> 
+    - Layer 2-> Layer 3: 
+      - OnClickToggleShowIndicatorOnChart
+        Show -> Call Build in ChartIndicatorAdd
+        Hide ->  RemoveIndicatorFromChart (RAW type+params match per chart line) -> ChartIndicatorDelete  
+8. Layer 4 Working with file
+ [] Config_Setting.json to save and load Configuration (1 file JSON duy nhất). 
+  Từ V9 (SynIndicatorPlan.md, "Action" Step 2), TOÀN BỘ việc đọc/ghi file này thuộc về CGUIPannel (Layer 2) 
+  - Layer 1 (CTimeSeriesEngine) không còn biết gì về JSON nữa, kể cả tên file. Lý do: mọi input hàm Save/Load cần đều đã nằm sẵn trong m_indicator_template_setting[]/m_symbol_tf_Setting[] - 2 mảng CGUIPannel tự hold và Layer 2 sẽ chủ động gọi các Method của Layer 1- nên không
+     cần hỏi Layer 1 gì cả; free function parse (ParseIndicatorConfigFile) nằm ở JSONConfig.mqh,
+     không phải code riêng của Layer 1.
+   - Mỗi hàm Save chỉ được BUILD MỚI đúng (các) section mình sở hữu, còn lại phải đọc file cũ và
+     PRESERVE nguyên văn (raw text) section không sở hữu trước khi ghi đè cả file - quy tắc này
+     giờ áp dụng GIỮA CÁC HÀM SAVE con của chính CGUIPannel (không còn là giữa Layer 1/Layer 2 nữa).
+   - Bảng sở hữu section (tên key chính thức, đều là method của CGUIPannel):
+     - SaveGUIConfigToJSON / LoadSymbolTFSettingFromJSON / LoadIndicatorTemplateSettingFromJSON sở hữu:
        - "Symbols_TFs_List"
        - "Indicator_Templates"
-     - Layer 2 (CGUIPannel::SavePatternAlertConfigToJSON, SaveMarkerSettingsToJSON) sở hữu:
-       - "Markers_Setting"
+     - SavePatternAlertConfigToJSON / LoadPatternAlertConfigFromJSON sở hữu:
        - "Pattern_Alerts_Setting"
+     - SaveMarkerSettingsToJSON / LoadMarkerSettingsFromJSON sở hữu:
+       - "Markers_Setting"
        - "Sound_Settings"
    - Quy tắc preserve: trước khi FileOpen(FILE_WRITE) ghi đè file, hàm Save phải 
    - IndicatorConfig_ReadWholeFile()
    - IndicatorConfig_ExtractRawSection() 
-   cho TỪNG section mình không sở hữu, rồi nối lại vào JSON output. Thiếu bước này ở bất kỳ hàm Save nào sẽ làm mất section của layer kia (đã từng xảy ra vì CTimeSeriesEngine::SaveConfigurationToJSON không preserve markers/pattern_alerts/sound_settings).
-
-7. Bug note
-  2027 0713 
-   [] CTradingLevelBubble: 
-     [] Rất khó di chuyển.
-     [v] ChartChange là mất.
-   [v] m_table_indicator bị duplicate BBand
-  
-8. Feature Note
+   cho TỪNG section mình không sở hữu, rồi nối lại vào JSON output. Thiếu bước này ở bất kỳ hàm Save nào sẽ làm mất section của hàm Save khác (đã từng xảy ra vì CTimeSeriesEngine::SaveConfigurationToJSON - nay đã xóa - không preserve markers/pattern_alerts/sound_settings).
+   - 

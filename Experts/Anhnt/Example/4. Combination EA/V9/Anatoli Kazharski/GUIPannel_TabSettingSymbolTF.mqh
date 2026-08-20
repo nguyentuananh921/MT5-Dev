@@ -135,8 +135,13 @@
     }
     m_table_indicator_SymbolTFSeting.Update(true);
   }
- // --- Fill every cell of one Symbol+TF row - Buy/Sell default OFF (opt-in, same convention
- // --- as m_table_indicator's col 2/3)
+ // --- Fill every cell of one Symbol+TF row. Buy/Sell read from m_symbol_tf_Setting[] (SynIndicatorPlan.md,
+ // --- "Action" Step 2, 2026-08-18 - single source of truth, same treatment as m_table_indicator's
+ // --- col 2/3) - matched by (sym,tf_text), same content-based lookup HasTableSymbolTFSettingRow
+ // --- already uses (this table supports IsSortMode(true), so row index never reliably maps to
+ // --- m_symbol_tf_Setting[] index). Falls back to true/true if somehow not found yet - by the time
+ // --- this runs the pair should already be there, seeded either by the top of OnInitEvent()
+ // --- (JSON load) or CGUIPannel::OnEvent's self-registration (CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE).
  void CGUIPannel::SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text)
   {
    uint delete_icon[] = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
@@ -156,12 +161,16 @@
      // --- Col 1: TF
       m_table_indicator_SymbolTFSeting.SetValue(1, row, "  " + tf_text);
      // --- Col 2/3: Buy / Sell
+      bool row_buy = true, row_sell = true;
+      for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
+        if(m_symbol_tf_Setting[i].symbol == sym && m_symbol_tf_Setting[i].tf == tf_text)
+          { row_buy = m_symbol_tf_Setting[i].buy; row_sell = m_symbol_tf_Setting[i].sell; break; }
       m_table_indicator_SymbolTFSeting.CellType(2, row, CELL_CHECKBOX);
       m_table_indicator_SymbolTFSeting.SetImages(2, row, chk);
-      m_table_indicator_SymbolTFSeting.ChangeImage(2, row, 1);
+      m_table_indicator_SymbolTFSeting.ChangeImage(2, row, row_buy ? 0 : 1);
       m_table_indicator_SymbolTFSeting.CellType(3, row, CELL_CHECKBOX);
       m_table_indicator_SymbolTFSeting.SetImages(3, row, chk);
-      m_table_indicator_SymbolTFSeting.ChangeImage(3, row, 1);
+      m_table_indicator_SymbolTFSeting.ChangeImage(3, row, row_sell ? 0 : 1);
   }
  // --- True when (sym, tf_text) already has a row (trimmed match against col0/col1 text)
  bool CGUIPannel::HasTableSymbolTFSettingRow(const string sym, const string tf_text)
@@ -178,63 +187,6 @@
     }
    return false;
   }
- // --- Called ONCE right after the initial PopulateTableSymbolTFSetting() (see CreateGUIPannel) -
- // --- pulls the Buy/Sell state SetLoadedIndicatorSettings seeded from Config_Setting.json and
- // --- applies it to the matching rows, so a saved Buy/Sell setting survives an EA restart
- // --- instead of resetting to OFF.
- void CGUIPannel::ApplyLoadedSymbolTFSettings(void)
-  {
-   // --- Reads m_symbol_tf_Setting[] (seeded ONCE by SetLoadedIndicatorSettings(), called from
-   // --- EA's OnInit right after Layer 1 parses Config_Setting.json) instead of
-   // --- CTimeSeriesEngine::GetLoadedSymbolTFSettings() - Layer 1 no longer stores this
-   // --- (SeparateLayer_Plan.md, 2026-08-16).
-   int loaded_total = ArraySize(m_symbol_tf_Setting);
-   int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
-   for(int i = 0; i < loaded_total; i++)
-    {
-     for(int row = 0; row < rows; row++)
-      {
-       string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
-       StringTrimLeft(sym);
-       if(sym != m_symbol_tf_Setting[i].symbol) continue;
-       string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
-       StringTrimLeft(tf);
-       if(tf != m_symbol_tf_Setting[i].tf) continue;
-       m_table_indicator_SymbolTFSeting.ChangeImage(2, row, m_symbol_tf_Setting[i].buy  ? 0 : 1);
-       m_table_indicator_SymbolTFSeting.ChangeImage(3, row, m_symbol_tf_Setting[i].sell ? 0 : 1);
-       break;
-      }
-    }
-   m_table_indicator_SymbolTFSeting.Update(true);
-  }
- // --- Buy/Sell lookup arrays for SaveGUIConfigToJSON, read off m_table_indicator_SymbolTFSeting's
- // --- current checkbox state (col 2/3).
- void CGUIPannel::BuildSymbolTFBuySellArrays(string &symbols[], string &tfs[], bool &buys[], bool &sells[])
-  {
-   ArrayResize(symbols, 0);
-   ArrayResize(tfs, 0);
-   ArrayResize(buys, 0);
-   ArrayResize(sells, 0);
-   int rows = (int)m_table_indicator_SymbolTFSeting.RowsTotal();
-   int total = 0;
-   for(int row = 0; row < rows; row++)
-    {
-     string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row);
-     StringTrimLeft(sym);
-     if(sym == "") continue;
-     string tf = m_table_indicator_SymbolTFSeting.GetValue(1, row);
-     StringTrimLeft(tf);
-     ArrayResize(symbols, total + 1);
-     ArrayResize(tfs, total + 1);
-     ArrayResize(buys, total + 1);
-     ArrayResize(sells, total + 1);
-     symbols[total] = sym;
-     tfs[total]     = tf;
-     buys[total]    = (m_table_indicator_SymbolTFSeting.SelectedImageIndex(2, row) == 0);
-     sells[total]   = (m_table_indicator_SymbolTFSeting.SelectedImageIndex(3, row) == 0);
-     total++;
-    }
-  }
  // --- True for the ONE row matching this chart's own symbol/TF - CTimeSeriesEngine::OnInitEvent
  // --- creates that series unconditionally and everything else (RefreshIndicatorTable,
  // --- BuildAndWriteSignalBridge...) assumes it always exists, so that row must never be deletable.
@@ -242,13 +194,21 @@
   {
    return (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
   }
-// --- Checkbox click stub (col 2 = Buy, col 3 = Sell) - the table already auto-toggled the
-// --- icon before this event fires (see Table.mqh CheckPressedCheckBox), so no manual image
-// --- flip needed here. Intentionally empty for now - no Tang 1 trading data model exists
-// --- yet to apply this to (see PopulateTableSymbolTFSetting note); wire real behavior here
-// --- once that's decided.
+// --- Checkbox click (col 2 = Buy, col 3 = Sell) - the table already auto-toggled the icon
+// --- before this event fires (see Table.mqh CheckPressedCheckBox), so no manual image flip
+// --- needed here. Writes straight into m_symbol_tf_Setting[] (SynIndicatorPlan.md, "Action"
+// --- Step 2, 2026-08-18) - matched by (sym,tf_text), same content-based lookup used everywhere
+// --- else in this file (row index never reliably maps to array index - IsSortMode(true)).
 void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col)
  {
-    
+  for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
+    if(m_symbol_tf_Setting[i].symbol == sym && m_symbol_tf_Setting[i].tf == tf_text)
+     {
+      if(col == 2)
+        m_symbol_tf_Setting[i].buy  = ((int)m_table_indicator_SymbolTFSeting.SelectedImageIndex(2, row) == 0);
+      else
+        m_symbol_tf_Setting[i].sell = ((int)m_table_indicator_SymbolTFSeting.SelectedImageIndex(3, row) == 0);
+      break;
+     }
  }
 #endif // CGUIPANNEL_TABSETTINGSYMBOLTF_MQH

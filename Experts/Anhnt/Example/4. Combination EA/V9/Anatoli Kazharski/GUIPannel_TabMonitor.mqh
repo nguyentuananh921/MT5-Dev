@@ -148,7 +148,9 @@
        m_table_indicator_SymbolTFValue.ChangeImage(1, row, 2);
        m_table_indicator_SymbolTFValue.SetValue(1, row, TimeframeDescription(ind.Timeframe()));
       // Col 2: signal icon + Indicator name — TextXOffset=22 pushes name past 16px icon
-       string ind_label = BuildIndicatorLabel(ind, catalog);
+       MqlParam ind_params[];
+       ind.GetMqlParams(ind_params);
+       string ind_label = BuildIndicatorTextLabel(ind.TypeIndicator(), ind_params, catalog);
        m_table_indicator_SymbolTFValue.SetImages(2, row, val_img);
        m_table_indicator_SymbolTFValue.ChangeImage(2, row, 2);
        m_table_indicator_SymbolTFValue.SetValue(2, row, ind_label);
@@ -178,8 +180,10 @@
     ::ArrayResize(row_of, count);
     for(int i = 0; i < count; i++)
      {
+      MqlParam want_params[];
+      all_inds[i].GetMqlParams(want_params);
       string want = all_syms[i] + "|" + TimeframeDescription(all_inds[i].Timeframe()) + "|" +
-                    BuildIndicatorLabel(all_inds[i], catalog);
+                    BuildIndicatorTextLabel(all_inds[i].TypeIndicator(), want_params, catalog);
       row_of[i] = -1;
       for(int row = 0; row < count; row++)
       {

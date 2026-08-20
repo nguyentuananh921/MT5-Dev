@@ -68,28 +68,12 @@
         ::ObjectDelete(m_chart_id, obj_name);
     }
   }    
- // --- SynIndicatorPlan.md, Dot 3d, 2026-08-18: ptr source switched from m_table_indicator_ptrs[]
- // --- (SẼ XOÁ, Dot 3e) to GetIndicatorForRow(row); buy/sell read from the live
- // --- m_indicator_template_setting[row] (kept current by OnClickToggleBuy/SellSignal) instead of
- // --- the CTable icon directly - same data, one source of truth. The Bridge's own ArrayCopy'd
- // --- copy (m_template_ptrs[]/buy[]/sell[]) is untouched here - that architecture change is Dot 4.
+ // --- CSignalBridgeWriter now stores its own RAW copy of m_indicator_template_setting[]
+ // --- (type_enum/raw_params/buy/sell) instead of live CIndicatorDE* pointers - no
+ // --- GetIndicatorForRow() needed here at all anymore, straight array hand-off.
  void CGUIPannel::SyncIndicatorTemplateSettingToBridge(void)
   {
-    int tmpl_total = ArraySize(m_indicator_template_setting);
-    CIndicatorDE *tmpl_ptrs[];
-    bool tmpl_buy[], tmpl_sell[];
-
-    ArrayResize(tmpl_ptrs, tmpl_total);
-    ArrayResize(tmpl_buy,  tmpl_total);
-    ArrayResize(tmpl_sell, tmpl_total);
-
-    for(int row = 0; row < tmpl_total; row++)
-     {
-      tmpl_ptrs[row] = GetIndicatorForRow(row);
-      tmpl_buy[row]  = m_indicator_template_setting[row].buy;
-      tmpl_sell[row] = m_indicator_template_setting[row].sell;
-     }
-    m_bridge_writer.SetTemplateBuySell(tmpl_ptrs, tmpl_buy, tmpl_sell);
+   m_bridge_writer.SetTemplateSetting(m_indicator_template_setting);
   }
 #endif // CGUIPANNEL_SIGNALMARKERS_MQH
 

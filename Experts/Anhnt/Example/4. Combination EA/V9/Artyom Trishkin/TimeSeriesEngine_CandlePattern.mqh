@@ -97,5 +97,4 @@
      }  
     return true;
   }
-
 #endif // CTIMESERIESENGINE_CANDLEPATTERN_MQH

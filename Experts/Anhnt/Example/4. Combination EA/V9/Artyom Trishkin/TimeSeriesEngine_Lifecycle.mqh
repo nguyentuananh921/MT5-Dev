@@ -5,8 +5,7 @@
 #define CTIMESERIESENGINE_LIFECYCLE_MQH
 #include "TimeSeriesEngine.mqh"
  //Life cycle management
- bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period,
-                                     SJsonIndicatorEntry &out_entries[], SJsonSymbolTF &out_symbols_tf[])
+ bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period)
   {
     if(m_symbol_collection == NULL) return false;
    // Step 1: build collection (first init only)
@@ -41,24 +40,11 @@
    //For Candle Pattern
     RegisterAllCandlePatterns();
     SeriesApplyPatternRegistry(symbol, period);
-   // Step 4: load indicators — AFTER CreateSeries, so series exists for Apply to find
-   // Guard: only on first startup (no indicators yet). Skip on CHARTCHANGE re-init.
-    CArrayObj * ind_list = m_IndicatorsCollection.GetList();
-    int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
-    if(ind_total == 0)
-      {
-       // --- Order matters: SymbolTF first (creates the Series), 
-       // Template second (needs those Series to attach indicators to) - 
-       // see LoadIndicatorTemplateFromJSON's header comment.
-        LoadSymbolTFFromJSON("Config_Setting.json", out_symbols_tf);
-        LoadIndicatorTemplateFromJSON("Config_Setting.json", out_entries);
-      }
-    else
-        AddAllIndicatorsToNewSeries(symbol, period);      // subsequent new series via CHARTCHANGE
     return true;
   }
  bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
-                                const double& dparam, const string& sparam)
+                                const double& dparam, const string& sparam,
+                                SJsonIndicatorEntry &m_indicator_template_setting[])
   {
     if(id != CHARTEVENT_CHART_CHANGE) return false;
     string sym          = ::Symbol();
@@ -74,7 +60,7 @@
         this.SeriesApplyPatternRegistry(sym, curr);
         // Direction 2: replicate the already-established indicator template (from JSON or
         // earlier symbols/TFs) into this brand new series
-        this.AddAllIndicatorsToNewSeries(sym, curr);
+        this.AddAllIndicatorsToNewSeries(sym, curr, m_indicator_template_setting);
       }
     else
      {

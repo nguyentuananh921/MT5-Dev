@@ -1,9 +1,12 @@
 //+------------------------------------------------------------------+
-//|                                      IndicatorConfigLoader.mqh   |
+//|                                                 JSONConfig.mqh   |
 //| Minimal parser for this EA's indicator startup config file.      |
-//| Supports only the one shape this EA needs:                       |
-//|   {                                                               |
-//|     "symbols_tf": [ { "symbol": "<sym>", "tf": "<M1|...>",        |
+//+------------------------------------------------------------------+
+
+//+--------------------------------------------------------------------+
+//| Supports only the one shape this EA needs:                         |
+//|   {                                                                |
+//|     "symbols_tf": [ { "symbol": "<sym>", "tf": "<M1|...>",         |
 //|                       "buy": <true|false>, "sell": <true|false> }, ], |
 //|     "templates":  [ { "type": "<catalog name>",                  |
 //|                        "buy": <true|false>, "sell": <true|false>,|
@@ -18,27 +21,30 @@
 //| is our own format (used only by LoadConfigurationFromJSON), not      |
 //| meant to be read by other JSON tools.                            |
 //+------------------------------------------------------------------+
-#ifndef __INDICATORCONFIGLOADER_MQH__
-#define __INDICATORCONFIGLOADER_MQH__
-  struct SJsonIndicatorEntry
-    {
-     string type;
-     string params[];      // raw token text - unquoted content for strings, digits as-is for numbers
+
+#ifndef JSONCONFIG_MQH
+#define JSONCONFIG_MQH
+ struct SJsonIndicatorEntry
+   {
+     string          type;
+     string          params[];      // raw token text - unquoted content for strings, digits as-is for numbers
+     ENUM_INDICATOR  type_enum;     // raw - CGUIPannel::LoadIndicatorTemplateSettingFromJSON populates from type+catalog
+     MqlParam        raw_params[];  // raw - CGUIPannel::LoadIndicatorTemplateSettingFromJSON populates from params[]+schema
      bool   buy;
      bool   sell;
      bool   sound;         // per-template alert sound opt-in (2026-07-17, m_table_indicator col 5)
      bool   message;       // per-template Journal message opt-in (col 6)
-    };
-  struct SJsonSymbolTF
-    {
+   };
+ struct SJsonSymbolTF
+   {
      string symbol;
      string tf;            // "M1", "H1", ... (TimestampByDescription() format)
      bool   buy;
      bool   sell;
-    };
-  //--- strip "//" line comments before scanning
-  string IndicatorConfig_StripComments(const string &raw)
-    {
+   };  
+ //--- strip "//" line comments before scanning
+ string IndicatorConfig_StripComments(const string &raw)
+  {
      string lines[];
      int n = StringSplit(raw, '\n', lines);
      string result = "";
@@ -51,8 +57,8 @@
         result += line + "\n";
        }
      return result;
-    }
-  //--- skip whitespace/commas/colons starting at pos
+   }
+ //--- skip whitespace/commas/colons starting at pos
   int IndicatorConfig_SkipSpace(const string &s, int pos)
     {
      int len = StringLen(s);
@@ -203,11 +209,13 @@
   int IndicatorConfig_ReadEntry(const string &s, int pos, SJsonIndicatorEntry &entry)
     {
      entry.type    = "";
+     entry.type_enum = IND_CUSTOM;   // not resolved here - JSONConfig.mqh has no catalog access
      entry.buy     = false;
      entry.sell    = false;
      entry.sound   = false;
      entry.message = false;
      ArrayResize(entry.params, 0);
+     ArrayResize(entry.raw_params, 0);
      pos = IndicatorConfig_SkipSpace(s, pos);
      if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '{')
        return pos;
@@ -466,5 +474,9 @@
      }
     return false;
    }
+#endif // SONCONFIG_MQH
+  
+  
+  
 
-#endif // __INDICATORCONFIGLOADER_MQH__
+

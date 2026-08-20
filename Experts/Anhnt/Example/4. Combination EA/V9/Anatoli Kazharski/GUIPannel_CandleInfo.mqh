@@ -239,6 +239,9 @@
         {
          CIndicatorDE *ind = ind_list.At(ii);
          if(ind == NULL) continue;
+         ENUM_INDICATOR ind_type = ind.TypeIndicator();
+         MqlParam ind_params[];
+         ind.GetMqlParams(ind_params);
          // signal is BORROWED - CSignalsCollection owns it
           CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
           if(signal == NULL) continue;
@@ -257,7 +260,7 @@
              ArrayResize(row_time, count + 1);
              ArrayResize(row_source, count + 1);
             //row_ind[count]  = ind;
-             row_label[count] = BuildIndicatorLabel(ind, catalog);
+             row_label[count] = BuildIndicatorTextLabel(ind_type, ind_params, catalog);
              row_tf[count]   = tf_text;
              row_dir[count]  = signal.HistoryDir(h);
              row_time[count] = ht;
@@ -288,7 +291,7 @@
                 ArrayResize(row_time, count + 1);
                 ArrayResize(row_source, count + 1);
                //row_ind[count]  = ind;
-                row_label[count] = BuildIndicatorLabel(ind, catalog)+ ((li == BBAND_LINE_UPPER) ? " Upper" : " Lower");
+                row_label[count] = BuildIndicatorTextLabel(ind_type, ind_params, catalog)+ ((li == BBAND_LINE_UPPER) ? " Upper" : " Lower");
                 row_tf[count]   = tf_text;
                 row_dir[count]  = bb.LineHistoryDir(li, h);
                 row_time[count] = ht;

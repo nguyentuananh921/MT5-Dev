@@ -20,25 +20,15 @@
   class CGUIPannel : public CWndEvents
    {
     private:
-      CNewBarObj                  m_newbar;                            //--- NewBar detector
-      CTimeCounter                m_gui_timecounter;                   //--- Time counters
+      CTimeCounter                m_gui_timecounter;                   //--- Time counters - configured (SetParameters) but not consumed anywhere yet
       CKeys                       m_keys;                              //For Keyboard
      //Layer 1 Pure Data
-      // Private Pointer variables    
+      // Private Pointer variables
        CSymbolsCollection         *m_symbol_collection;                //CTradingEngine owns
-       CBarTimeSeriesCollection   *m_BarTimeSeriesCollection;          //CBarTimeSeriesCollection owns      
+       CBarTimeSeriesCollection   *m_BarTimeSeriesCollection;          //CBarTimeSeriesCollection owns
        CBarPatternsControl        *m_BarPatterns_Control;              // borrowed from EA
        CIndicatorsCollection      *m_IndicatorsCollection;             // CTimeSeriesEngine owns
-       CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance
-       CTickSeriesCollection      *m_tick_series;                      // Collection of tick series      
-       CIndicatorDE               *m_table_indicator_ptrs[];           // BORROWED per-row pointers - CIndicatorsCollection owns them; rebuilt on every SetValuesToIndicatorTable, so never delete through these
-     //Layer 2 owns Buy/Sell/Sound/Message settings (Anhnt, 2026-08-16 - SeparateLayer_Plan.md):
-     //seeded ONCE from SetLoadedIndicatorSettings() (EA's OnInit, right after Layer 1 parses
-     //Config_Setting.json), read by ApplyLoadedIndicatorBuySell()/SymbolTF's seed function to
-     //pre-check the tables' checkboxes. Matched back to real indicators by (type,params_key)/
-     //(symbol,tf) - Layer 1 never stores these itself anymore.
-       SJsonIndicatorEntry         m_indicator_template_setting[];
-       SJsonSymbolTF               m_symbol_tf_Setting[];
+       CTimeSeriesEngine          *m_time_series_engine;               // EA owns - Tang 1 entry point for AddIndicatorInstance     
      //For Layer 2 GUI Control Elements
       //For Main window m_window_main implementation in GUIPannel_MainWindows.mqh
         CWindow                   m_window_main;
@@ -73,8 +63,7 @@
       //For TAB_TAB_MAIN_SETTINGS configuration at m_tabs_main implemenation in GUIPannel_TabSettingIndicator.mqh
        CTabs                 m_tabs_main_setting_config;       
        // Indicator TreeViews at the Left
-         CTreeView           m_treeview_indicator;
-         string              m_table_indicator_names[];         
+         CTreeView           m_treeview_indicator;                  
          int                 m_type_node_li[];      // list_index của từng node Type (level 1)
          ENUM_INDICATOR      m_type_node_value[];   // ENUM_INDICATOR tương ứng   
        // For Indicator Add Form display on click m_treeview_indicator node
@@ -84,25 +73,29 @@
          CButton             m_btn_add_indicator;                         //CButton to Add Indicator
          CButton             m_btn_save_indicator;                        //CButton to Save Indicator to JSON
          ENUM_INDICATOR      m_current_param_type;     // which type the form is currently showing
-         int                 m_current_param_type_li;  // its tree list_index (for tree-node insertion later) 
-       //Table to display indicator template at Layer 1, check box to show/hide on Layer 3 (Chart)         
-         CTable              m_table_indicator_template;
-         // Settings table col-4 "Show" dirty cache - parallel with m_table_indicator_ptrs
-           int                 m_settings_cache_state[];
-       // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event - 
-       // rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
-         int                 m_pending_remove_row;
+       
+       //Table to display indicator-template this template concept exist in Layer 1, Layer 2 and Layer 3
+       //Seeded ONCE at the top of OnInitEvent() (EA's OnInit) - Layer 2 CGUIPanne writes straight into these fields
+       // no copy step. Matched back to real indicators by (type,params_key)       
+          SJsonIndicatorEntry         m_indicator_template_setting[]; //Data for m_table_indicator_template
+          SJsonSymbolTF               m_symbol_tf_Setting[];                    
+          bool                        m_bool_table_indicator_template_cache_show[]; // Data for m_table_indicator_template col-4 "Show/Hide"
+         //Combination view m_indicator_template_setting and m_bool_table_indicator_template_cache_show
+          CTable                      m_table_indicator_template;
+         // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event -
+         // rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
+          int                         m_pending_remove_row;
       //TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config implementation in GUIPannel_TabSettingSymbolTF.mqh
-         CTable              m_table_indicator_SymbolTFSeting;
-         CButton             m_btn_save_SymbolTF;
-         CTextLabel          m_label_symboltf_note;   // "takes effect after EA restart" note
+         CTable                      m_table_indicator_SymbolTFSeting;
+         CButton                     m_btn_save_SymbolTF;
+         CTextLabel                  m_label_symboltf_note;   // "takes effect after EA restart" note
         // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
-         int                 m_pending_remove_row_symboltf;
+         int                         m_pending_remove_row_symboltf;
       //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh
-         CTable              m_table_CandlePatternsSetting;         
-         ENUM_PATTERN_TYPE   m_pattern_types[];
-         string              m_pattern_display_names[]; 
-         CButton             m_btn_save_pattern_config;      
+         CTable                      m_table_CandlePatternsSetting;         
+         ENUM_PATTERN_TYPE           m_pattern_types[];
+         string                      m_pattern_display_names[]; 
+         CButton                     m_btn_save_pattern_config;      
       //For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER at m_tabs_main_setting_config implementation in GUIPannel_TabSettingMarker.mqh
        //For Marker 8 independent shapes to display at each Candle on Chart see SignalMarkers.mq5        
          CComboBox           m_combo_shape_single_indicator_buy;  //candle only have single indicator, buy or sell base on indicator signal
@@ -154,25 +147,9 @@
        int                   m_pattern_bitmap_scale;              // CHART_SCALE the shown bitmap was built at - forces rebuild on zoom change
        CTooltip              m_tooltip_candle_info;               // Alt+hover pattern-name label, replaces the raw OBJ_TEXT ShowCandlePatternTooltipInfo used
       //For use in GUIPannel_SoundAndMessageAlerts.mqh
-       //For indicator
-        // --- Live-bar path (CheckIndicatorAlerts): per-row (m_table_indicator_ptrs index - fine
-        // --- here, this array is transient/session-only, never persisted) last-seen
-        // --- GetCurrentSignal() direction for the still-forming bar 0. A still-forming bar can
-        // --- flip back and forth several times before it closes ("uốn lượn như rắn", Anhnt
-        // --- 2026-07-17) - each real change fires Sound+Message+CSV immediately with
-        // --- TimeCurrent(), unlike the closed-bar path which never sounds an alert (the chart
-        // --- Marker already shows closed-bar flips visually - Sound/Message is only for
-        // --- catching a live move before it commits).
+       //For indicator        
           ENUM_SIGNAL_DIR      m_live_signal_last_seen[];
-        // --- BBands-only (IND_BANDS): Live-bar-0 tracker for CSignalBollinger's 2 remaining
-        // --- independent line histories (Upper/Lower - see ProcessBandLine/SignalBands.mqh
-        // --- Layer 1). MidBand is NOT tracked here anymore (Anhnt, 2026-07-19): it was folded
-        // --- into the primary signal itself (CSignalBollinger::ComputeAt IS the MidBand cross
-        // --- now), so Mid's Live/Closed events already come from the generic
-        // --- m_live_signal_last_seen / signal.HistoryDir() path below, with Sound included -
-        // --- keeping a separate Mid tracker here would have double-fired every Mid cross.
-        // --- Transient like the array above - only the LIVE side needs this; the Closed side
-        // --- reads CSignalBollinger's own real persisted LineHistoryXxx() instead.
+        // --- BBands-only (IND_BANDS): Live-bar-0 tracker for CSignalBollinger's 2 remaining        
           ENUM_SIGNAL_DIR      m_upper_last_seen[];
           ENUM_SIGNAL_DIR      m_lower_last_seen[]; 
        //For candle at bar 0 [timeframe_index][pattern_type]track last state per pattern type
@@ -201,7 +178,6 @@
         // --- that was tried and reliably stomped any Live sound that had already played earlier
         // --- the same pass, since NewBar.wav would then always fire last - see
         // --- FeatureNote/SoundBugNote.md). Reset false at the top of OnTickEvent.
-        //bool                       m_closebar_sound_played;
      // Layer-3 observer (README: 3-layer sync). OWNED here. Watches every open chart's
      // --- windows + their indicators and emits CHART_OBJ_EVENT_CHART_WND_IND_ADD/DEL/CHANGE,
      // --- so Layer 2 keeps its "Show" column truthful even when the user adds/removes an
@@ -213,8 +189,7 @@
         CSignalBridgeWriter        m_bridge_writer;
         bool                       m_signal_log_watermarks_loaded; 
      // For guard on GUI.
-       bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA 
-     //CPatternRenderer           *m_renderer;           //EA owns PatternRenderer for display New Patterns
+       bool                       m_gui_created;        // guard thay cho s_gui_ready trong EA
       CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()
     private: 
      //For Main Window m_window_main Implementation in GUIPannel_MainWindow.mqh
@@ -233,9 +208,9 @@
       bool                            CreateGUIPannel();      
      //Calculation for multi module implemented in GUIPannel_MultiModule.mqh 
       double                          DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0);               
-      // //For indicator
+      // //For indicator - both free functions in the Library (TimeseriesDELib.mqh), not CGUIPannel members
       //   void                         BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key);
-      //   string                       BuildIndicatorLabel(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[]);
+      //   string                       BuildIndicatorTextLabel(const ENUM_INDICATOR type, MqlParam &params[], SIndicatorCatalogItem &catalog[]);
      // For m_table_indicator_SymbolTFValue implemented in GUIPannel_TabMonitor.mqh     
         bool                         CreateTableIndicatorSymbolTFValue(const int x, const int y);
         void                         SetValuesToTableIndicatorSymbolTFValue(void);
@@ -281,9 +256,11 @@
          void                         SaveGUIConfigToJSON(void);
          void                         SavePatternAlertConfigToJSON(void);
          void                         SaveMarkerSettingsToJSON(void);
-        //For Load 
-         void                         LoadPatternAlertConfigFromJSON(void);         
-         void                         LoadMarkerSettingsFromJSON(void);   
+        //For Load
+         void                         LoadSymbolTFSettingFromJSON(void);
+         void                         LoadIndicatorTemplateSettingFromJSON(void);
+         void                         LoadPatternAlertConfigFromJSON(void);
+         void                         LoadMarkerSettingsFromJSON(void);
      //Implementation in GUIPannel_SoundAndMessageAlerts.mqh
       //Per-indicator Sound/Message opt-in (m_table_indicator col 5/6) - fires on a genuinely NEW Signal
        void                         CheckIndicatorAlerts(void);
@@ -308,59 +285,52 @@
        //For Indicator Table m_table_indicator at bottom show list of indicator in template.
         bool                         CreateTabbleIndicator(const int x, const int y);
         void                         RefreshTableIndicator(void);
-        // --- old_setting[]: LOCAL snapshot of m_indicator_template_setting[] taken by the caller
-        // --- BEFORE resizing it for the new row set (SynIndicatorPlan.md, Dot 3b, 2026-08-17) -
-        // --- searched here to carry forward this row's buy/sell/sound/message (from JSON on the
-        // --- very first build, or from the user's own prior live toggles on any later rebuild).
-        // --- Pass an empty array (ArraySize==0) when there's nothing to carry forward (brand new
-        // --- row from the Add button) - every lookup then falls through to the false default.
-        void                         SetIndicatorTableRow(const int row, CIndicatorDE *indicator, SJsonIndicatorEntry &old_setting[]);
-        void                         RefreshIndicatorTableShowColumn(void);
-       // --- On-demand replacement for direct m_table_indicator_ptrs[row] access (SynIndicatorPlan.md,
-       // --- Dot 3a, 2026-08-17) - resolves the CURRENT CHART's own CIndicatorDE instance for a row
-       // --- of m_indicator_template_setting[] by matching (type,params), instead of a cached pointer
-       // --- that goes stale on CHARTCHANGE.
-        CIndicatorDE                *GetIndicatorForRow(const int row);
+        // --- Paints row from m_indicator_template_setting[row] directly - the single source of
+        // --- truth. Pure Data, no Layer 1 instance needed at all: display label
+        // --- (BuildIndicatorTextLabel, RAW type+params) and group (catalog[] lookup) both
+        // --- derive straight from (type_enum,raw_params) - no GetIndicatorForRow() call here.
+        void                         SetIndicatorTableRow(const int row);
+        void                         RefreshIndicatorTableShowColumn(void);            
+      // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS implementation GUIPannel_TabSettingIndicator.mqh            
+      //For TreeView m_treeview_indicator on Left Pannel
        //For Indicator Add, ParaInfor at top of m_tabs_main_setting_config
          //Helper
           static void                  SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw);
           int                          GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[]);
          //Handler for TreeView m_treeview_indicator.
+          bool                         CreateAddIndicatorParaInfor(const int x_gap, const int y_gap);
           void                         ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li);
           void                         HideParamSlots(void);
-          void                         OnClickAddIndicator(void);
-          bool                         CreateAddIndicatorParaInfor(const int x_gap, const int y_gap); 
-          // --- DEAD (SynIndicatorPlan.md, "3 Layer Task breakdown", 2026-08-18): commented out,
-          // --- not deleted yet. 0 call sites left - all 3 former callers now call Layer 1 directly.
-          // void                         AddIndicatorInstance(const int type_li, const ENUM_INDICATOR type, MqlParam &params[]);
-      // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS implementation GUIPannel_TabSettingIndicator.mqh            
-      //For TreeView m_treeview_indicator on Left Pannel  
-       //Handler for TreeView m_treeview_indicator.                  
-      //For Indicator Table m_table_indicator 
-         bool                         IsIndicatorShownOnChart(CIndicatorDE *indicator);
-         bool                         LineRepresentsIndicator(const int line_handle, CIndicatorDE *indicator);
-         CIndicatorDE                 *OwnedInstanceOfLine(const int line_handle);
-         void                         DetachIndicatorFromChart(CIndicatorDE *indicator);
-         // --- Reverse of GetIndicatorForRow() - identity (type_key,params_key) -> row (SynIndicatorPlan.md,
-         // --- "3 Layer Task breakdown", 2026-08-18), needed by RemoveIndicatorInstance() below since
-         // --- Layer 1's own delete is identity-based but CTable's row-oriented API still needs a row.
-         int                          GetRowForIdentity(const string type_key, const string params_key);
-         // --- L2's identity-based Delete counterpart to AddIndicatorInstance() (L2.Task2/Add) - calls
-         // --- Layer 1's RemoveIndicatorFromAllSeries (L1.Task1) instead of touching m_IndicatorsCollection
-         // --- directly. Reusable from any caller that already has (type,params), not just row-based UI
-         // --- clicks - OnClickRemoveIndicator() below is now a thin row->identity wrapper around it.
-         void                         RemoveIndicatorInstance(const ENUM_INDICATOR type, MqlParam &params[]);
-         void                         ImportForeignChartIndicators(void);
-         // --- DEAD (SynIndicatorPlan.md, Dot 3b, 2026-08-17): commented out, not deleted yet
-         // --- (Anhnt's safety convention). ApplyLoadedIndicatorBuySell's job is now done inline
-         // --- in SetIndicatorTableRow() (matches against the OLD m_indicator_template_setting[]
-         // --- snapshot passed in as a parameter) - no separate "apply JSON onto the table"
-         // --- pass needed once the table row and the live setting write happen together.
-         // void                         ApplyLoadedIndicatorBuySell(void);
-         // --- DEAD (same reason) - Save now reads m_indicator_template_setting[] directly
-         // --- instead of re-deriving from live CTable checkbox icons.
-         // void                         BuildTemplateBuySellSoundMessageArrays(int &handles[], bool &buys[], bool &sells[],
-         //                                                                     bool &sounds[], bool &messages[]);
+          void                         OnClickAddIndicator(void);          
+      //For Indicator Table m_table_indicator_template
+         bool                         IsIndicatorShownOnChart(const ENUM_INDICATOR type, MqlParam &params[]);
+         bool                         IsIndicatorInTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
+        //Modify Indicator-Template-Setting in Layer 2
+         void                         RemoveIndicatorFromTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
+         void                         AddIndicatorToTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
+        //Update Chart Layer 3
+         void                         RemoveIndicatorFromChart(const ENUM_INDICATOR type, MqlParam &params[]);
+        //Event Handler for m_table_indicator_template
+        void                          OnClickToggleShowIndicatorOnChart(const int row);
+        void                          OnClickToggleBuySignal(const int row);
+        void                          OnClickToggleSellSignal(const int row);
+        // --- New (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - cols 5/6 never had a dedicated
+        // --- handler before (comment used to say "wiring TBD"); now needed so every checkbox
+        // --- column writes straight into m_indicator_template_setting[row], not just 2/3.
+        void                          OnClickToggleSoundAlert(const int row);
+        void                          OnClickToggleMessageAlert(const int row);
+        void                          OnClickRemoveIndicator(const int row);
+        
+        
+       // --- catalog[] type->group lookup, shared by every call site that needs a Group for
+       // --- ChartIndicatorAdd's sub_window calc (Show/Add/Replace) - no live CIndicatorDE needed,
+       // --- catalog[] already carries the type->group mapping (README.md muc 7.b).
+         ENUM_INDICATOR_GROUP         GetIndicatorGroupForType(const ENUM_INDICATOR type);
+         void                         ScanIndicatorOnChart(void);
+         // --- ApplyLoadedIndicatorBuySell/BuildTemplateBuySellSoundMessageArrays deleted
+         // --- (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - SetIndicatorTableRow() paints Buy/Sell/
+         // --- Sound/Message straight from m_indicator_template_setting[row] (Anhnt, 2026-08-18);
+         // --- Save already read that same array directly, so there's nothing left to "apply".
          void                         PurgeSignalArrowObjects(const string sym, const string tf_string);
      //----Unfininished         
        //For Symbol/TF Setting Table m_table_indicator_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
@@ -370,12 +340,9 @@
          void                         SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text);
          bool                         IsCurrentChartSymbolTFRow(const string sym, const string tf_text);
          void                         SyncTableSymbolTFSettingCurrentChartIcon(void);
-         void                         ApplyLoadedSymbolTFSettings(void);         
-         void                         BuildSymbolTFBuySellArrays(string &symbols[], string &tfs[], bool &buys[], bool &sells[]);
-         void                         OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col);     
+         void                         OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col);
        
-       //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh
-         //void                         DiscoverPatterns(void);
+       //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh         
          void                         BuildCandlePatternListFromRegistry(void);
          void                         RegisterPatterns(void);
          void                         InitializeTableCandlePatternSetting(void);
@@ -399,24 +366,14 @@
          string                       ColorLabelForValue(const color clr);
          color                        ColorForLabel(const string label, const color default_color);
         //For Buy/Sell alert sound file pickers (Marker tab) - plain combobox, folder scanned via FileFindFirst
-         void                         ScanSoundFolder(string &files[]);
-         //void                         OnClickChangeSoundFolder(void);
-       //Event Handler for m_table_indicator
-        void                          OnClickToggleShowIndicatorOnChart(const string sname, const int row);
-        void                          OnClickToggleBuySignal(const string sname, const int row);
-        void                          OnClickToggleSellSignal(const string sname, const int row);
-        // --- New (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - cols 5/6 never had a dedicated
-        // --- handler before (comment used to say "wiring TBD"); now needed so every checkbox
-        // --- column writes straight into m_indicator_template_setting[row], not just 2/3.
-        void                          OnClickToggleSoundAlert(const string sname, const int row);
-        void                          OnClickToggleMessageAlert(const string sname, const int row);
-        void                          OnClickRemoveIndicator(const string sname, const int row);
+         void                         ScanSoundFolder(string &files[]);         
+       
         // --- Anhnt, 2026-08-18: single entry point for all 3 Layer3(Chart)->Layer1/2 UseCases -
         // --- re-Insert an existing/hidden template (no-op, checkbox re-truths itself), style-only
         // --- edit (never reaches here - Library-level non-event), real param edit (replace
         // --- template). Former HandleChartIndicatorChange() body now lives inside it (its only
-        // --- caller), ImportForeignChartIndicators() stays a separate method (also called alone
-        // --- from OnInitEvent's startup full-chart-sweep, which has no event id to dispatch on).
+        // --- caller), ScanIndicatorOnChart() stays a separate method (also called alone from
+        // --- OnInitEvent's startup full-chart-sweep, which has no event id to dispatch on).
         void                          SynIndicatorOnChart(const long id);
      
     public:
@@ -429,6 +386,10 @@
       void                           OnTickEvent(void);
       void                           OnTradeEvent(void);   // ported from V1 - refreshes m_table_positions on a genuinely new deal
       virtual void                   OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
+      // --- Thin forward to CTimeSeriesEngine::OnChartEvent (Layer 1) - EA.mq5 can't pass
+      // --- m_indicator_template_setting[] itself (private, and MQL5 can't return an array by
+      // --- reference), so this runs INSIDE CGUIPannel where the field is directly reachable.
+      bool                           ForwardChartEventToLayer1(const int id, const long &lparam, const double &dparam, const string &sparam);
       //For GUI
        void                          UpdateGUI(const bool redraw = false);        
        CWindow *                     GetMainWindowPointer(void) { return &m_window_main; }
@@ -438,20 +399,10 @@
        void                           SetPatternsControl(CBarPatternsControl* ctrl) { m_BarPatterns_Control = ctrl; } 
        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind;}
        void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_time_series_engine = engine;}
-      // --- Called ONCE from EA's OnInit, right after Layer 1 (CTimeSeriesEngine) parses
-      // --- Config_Setting.json - hands Layer 2 its own buy/sell/sound/message straight from
-      // --- the parsed rows, BEFORE this.OnInitEvent() runs (ApplyLoadedIndicatorBuySell needs
-      // --- it seeded already). Implementation in GUIPannel_JSONConfig.mqh.
-       void                           SetLoadedIndicatorSettings(SJsonIndicatorEntry &entries[], SJsonSymbolTF &symbols_tf[]);
        void                           SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
        void                           SetTradingControl(CTradingControl *trading_control) { m_trading_bubble.SetTradingControl(trading_control); }
-     //----------------------------------
-     //void  SetPatternRenderer(CPatternRenderer* renderer) { m_renderer = renderer; }
-       //void  SetTickSeriesCollection(CTickSeriesCollection *ticks) { m_tick_series = ticks; }             
-     //For Layer 4 Working with file        
-      void SyncIndicatorTemplateSettingToBridge(void); //Move to SignalMarker
-     // ITemplateBuySellProvider implementation
-      bool                           TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell); 
+     //For Layer 4 Working with file
+      void SyncIndicatorTemplateSettingToBridge(void); //Move to SignalMarker      
    };
 #endif // CGUIPannel_MQH_DECLARATION
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION

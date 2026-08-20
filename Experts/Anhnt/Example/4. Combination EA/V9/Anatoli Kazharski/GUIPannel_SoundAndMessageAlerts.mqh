@@ -9,24 +9,17 @@
  //| Check and play sound when a new bar opens on any timeframe       |
  //+------------------------------------------------------------------+
  void CGUIPannel::PlaySoundCloseBar(void)
-  {
-   // --- Read-only check (Anhnt, 2026-08-16): CBarSeriesDE::IsNewBar() is consume-once - it
-   // --- updates its own internal "last seen" state as a side effect of returning true, so
-   // --- calling it here directly used to race with (and permanently starve) the SAME check
-   // --- CTimeSeriesEngine::OnTickEvent() needs to populate its own new-bar event queue (the
-   // --- one CommitClosedBar/SignalBridgeWriter/CheckIndicatorAlerts all depend on). IsEvent()
-   // --- just reads the flag that call already set for THIS tick's current-symbol refresh -
-   // --- MUST run after timeSeriesEngine.OnTickEvent() (see EA .mq5 OnTick ordering).
+  {   
     if(m_BarTimeSeriesCollection.IsEvent())
       ::PlaySound("NewBar.wav");
   }
  //PlaySound for Live only for Close Bar only Play NewBar.wav 
  void CGUIPannel::PlaySoundForDirection(const bool is_buy)
-    {
-     string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
-     if(file == "") return;
-     ::PlaySound(file);
-    }
+  {
+   string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
+   if(file == "") return;
+   ::PlaySound(file);
+  }
  //Every TF Share the same Template in Layer 1 similar to Template on Chart.
  //Alert change in Direction in Every Indicator + TF at Live
  void CGUIPannel::CheckIndicatorAlerts(void)
@@ -41,19 +34,18 @@
       m_signal_logger.LoadSignalLogWatermarks();
       m_signal_log_watermarks_loaded = true;
     }   
-    string sym = ::Symbol();
-    CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
-    CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
-    int series_total = (series_list != NULL) ? series_list.Total() : 0;
-    if(series_total == 0) return;
+   string sym = ::Symbol();
+   CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
+   CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
+   int series_total = (series_list != NULL) ? series_list.Total() : 0;
+   if(series_total == 0) return;
 
-    SIndicatorCatalogItem catalog[];
-    GetIndicatorCatalog(catalog);
-   // --- Precompute each template row's match key once - shared by every TF below.
-   // --- SynIndicatorPlan.md, Dot 3d, 2026-08-18: read straight off m_indicator_template_setting[row]
-   // --- (type IS the type_key already, params[] joined by comma reproduces params_key - same
-   // --- round-trip GetIndicatorForRow() relies on) instead of rebuilding via BuildTemplateMatchKey
-   // --- from a live pointer every call.
+   SIndicatorCatalogItem catalog[];
+   GetIndicatorCatalog(catalog);
+   // --- Precompute each template row's TEXT key once - shared by every TF below. NOT used for
+   // --- matching anymore (that's RAW type_enum/raw_params now) - this is display-text only,
+   // --- for the watermark key (CSignalLogger persists to a JSON file - genuinely needs text)
+   // --- and the debug Print.
     string tmpl_type_key[], tmpl_params_key[];
     ArrayResize(tmpl_type_key, rows);
     ArrayResize(tmpl_params_key, rows);
@@ -96,15 +88,17 @@
         bool message_on = m_indicator_template_setting[row].message;
         if(!sound_on && !message_on) continue;
 
-        // --- Find THIS TF's own instance of the template (row).
+        // --- Find THIS TF's own instance of the template (row) - RAW compare
+        // --- (type_enum/raw_params), tmpl_type_key/tmpl_params_key below are TEXT kept
+        // --- only for the watermark key/debug log, not used for matching anymore.
         CIndicatorDE *ind = NULL;
         for(int ii = 0; ii < ind_total; ii++)
          {
           CIndicatorDE *cand = ind_list.At(ii);
-          if(cand == NULL) continue;
-          string ck_type, ck_params;
-          BuildTemplateMatchKey(cand, catalog, ck_type, ck_params);
-          if(ck_type == tmpl_type_key[row] && ck_params == tmpl_params_key[row]) { ind = cand; break; }
+          if(cand == NULL || cand.TypeIndicator() != m_indicator_template_setting[row].type_enum) continue;
+          MqlParam cand_params[];
+          cand.GetMqlParams(cand_params);
+          if(IsEqualMqlParamArrays(cand_params, m_indicator_template_setting[row].raw_params)) { ind = cand; break; }
          }
         if(ind == NULL)
          {
@@ -119,7 +113,9 @@
         if(signal == NULL) continue;
 
         int index = ti * rows + row;
-        string label   = BuildIndicatorLabel(ind, catalog);
+        MqlParam label_params[];
+        ind.GetMqlParams(label_params);
+        string label   = BuildIndicatorTextLabel(ind.TypeIndicator(), label_params, catalog);
         int digits = (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS);
        // --- TF-qualify the watermark key - a template is shared across every tracked TF, but
        // --- each TF's own flip history must never share a watermark record with another TF's
@@ -231,8 +227,8 @@
             CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
             m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
          }
-      }
-    }
+       }
+     }
   }
  void CGUIPannel::CheckCandlePatternAlerts(void)
   {

@@ -12,34 +12,37 @@
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Indicators\IndicatorDE.mqh>
 //#include "..\TradingEngine\TimeSeriesEngine.mqh"
+#include "..\Anatoli Kazharski\JSONConfig.mqh" // SJsonIndicatorEntry - reused AS-IS, same pattern CSignalLogger already uses
  #ifndef CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #define CSIGNALBRIDGEWRITER_MQH_DECLARATION
   class CSignalBridgeWriter
   {
     private:
-     //Pointer from Layer 1, CTimeSeriesEngine hold      
-     CSignalsCollection        *m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)     
+     //Pointer from Layer 1, CTimeSeriesEngine hold
+     CSignalsCollection        *m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
      CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
-     CIndicatorDE              *m_template_ptrs[];     
      CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;          //Timeseries collection
-    
+
      static string              m_bridge_folder;  // ← Static property (scoped to class)
-    //Seting from CGUIPannel base on Selection on Checkbox 
-     bool                       m_template_buy[];
-     bool                       m_template_sell[]; 
-         
+    //Set from CGUIPannel::SyncIndicatorTemplateSettingToBridge - RAW copy of
+    //m_indicator_template_setting[] (type_enum/raw_params/buy/sell), no live CIndicatorDE*
+    //needed: TemplateBuySellFor() below only ever reads type+params+buy+sell off this, never
+    //anything instance-specific (Handle/Group/etc) - a stale/dangling pointer here used to be
+    //an actual crash (see SynIndicatorActionPlan.md); RAW data can't dangle.
+     SJsonIndicatorEntry        m_template_setting[];
+
      string                     m_signal_bridge_symbol;
      datetime                   m_signal_bridge_last_time;
-     
+
      bool                       TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
-     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count);     
+     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count);
 
     public:
      CSignalBridgeWriter(void);
     ~CSignalBridgeWriter(void);
-                              
+
      void                       Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars);
-     void                       SetTemplateBuySell(CIndicatorDE *&tmpl_ptrs[], bool &tmpl_buy[], bool &tmpl_sell[]);
+     void                       SetTemplateSetting(SJsonIndicatorEntry &setting[]);
      void                       BuildAndWriteSignalBridge(void);
      void                       ResetSignalBridge(void);
      static void                SetFolder(const string folder) { m_bridge_folder = folder; }
@@ -55,9 +58,7 @@
     : m_SignalsCollection(NULL), m_IndicatorsCollection(NULL), m_BarTimeSeriesCollection(NULL),
       m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
   {
-    ArrayResize(m_template_ptrs, 0);
-    ArrayResize(m_template_buy, 0);
-    ArrayResize(m_template_sell, 0);
+    ArrayResize(m_template_setting, 0);
   }
 
   //+------------------------------------------------------------------+
@@ -77,11 +78,15 @@
     m_BarTimeSeriesCollection = bars;
    }
   
-  void CSignalBridgeWriter::SetTemplateBuySell(CIndicatorDE *&tmpl_ptrs[], bool &tmpl_buy[], bool &tmpl_sell[])
+  // --- ArrayCopy() can't be used here - SJsonIndicatorEntry holds string/dynamic-array
+  // --- members, not POD. Per-element struct assignment (=) works fine though (same reason
+  // --- CGUIPannel::LoadIndicatorTemplateSettingFromJSON does this instead of ArrayCopy).
+  void CSignalBridgeWriter::SetTemplateSetting(SJsonIndicatorEntry &setting[])
    {
-    ArrayCopy(m_template_ptrs, tmpl_ptrs);
-    ArrayCopy(m_template_buy, tmpl_buy);
-    ArrayCopy(m_template_sell, tmpl_sell);
+    int n = ArraySize(setting);
+    ArrayResize(m_template_setting, n);
+    for(int i = 0; i < n; i++)
+       m_template_setting[i] = setting[i];
    }
   bool CSignalBridgeWriter::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
    {
@@ -93,17 +98,13 @@
     MqlParam params[];
     ind.GetMqlParams(params);
 
-    for(int row = 0; row < ArraySize(m_template_ptrs); row++)
+    for(int row = 0; row < ArraySize(m_template_setting); row++)
     {
-      CIndicatorDE *row_ind = m_template_ptrs[row];
-      if(row_ind == NULL || row_ind.TypeIndicator() != type) continue;
+      if(m_template_setting[row].type_enum != type) continue;
+      if(!IsEqualMqlParamArrays(params, m_template_setting[row].raw_params)) continue;
 
-      MqlParam row_params[];
-      row_ind.GetMqlParams(row_params);
-      if(!IsEqualMqlParamArrays(params, row_params)) continue;
-
-      buy  = ((int)m_template_buy[row] != 0);
-      sell = ((int)m_template_sell[row] != 0);
+      buy  = m_template_setting[row].buy;
+      sell = m_template_setting[row].sell;
       return true;
     }
 
