@@ -90,7 +90,7 @@
  //| intent elsewhere); Layer 2 decides, Layer 1 obeys, this never scans                |
  //| Layer 1's live collection itself.                                                  |
  //+------------------------------------------------------------------------------------+
- // --- Append happens at the point of intent in OnClickAddIndicator/SynIndicatorOnChart's
+ // --- Append happens at the point of intent in OnClickAddIndicatorBtn/SynIndicatorOnChart's
  // --- CHANGE branch/ScanIndicatorOnChart, right after each one decides a new template
  // --- exists; shrink happens in RemoveIndicatorFromTemplateSetting() before it calls back in here.
  void CGUIPannel::RefreshTableIndicator(void)
@@ -272,6 +272,7 @@
       int subwindows = (int)ChartGetInteger(0, CHART_WINDOWS_TOTAL);
       ENUM_INDICATOR_GROUP group = GetIndicatorGroupForType(m_indicator_template_setting[row].type_enum);
       int sub_window = (group == INDICATOR_GROUP_TREND) ? 0 : subwindows;
+      ::Print("MY DEBUG CGUIPannel::OnClickToggleShowIndicatorOnChart: ChartIndicatorAdd handle=", handle, " row=", row);
       ChartIndicatorAdd(0, sub_window, handle);
      }
         ChartRedraw();

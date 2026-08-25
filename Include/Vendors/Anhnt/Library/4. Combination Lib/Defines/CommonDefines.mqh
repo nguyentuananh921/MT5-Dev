@@ -464,6 +464,9 @@
     OBJECT_DE_TYPE_SIGNAL_ENVELOPES,                               // "Envelopes signal" object type
     OBJECT_DE_TYPE_SIGNAL_TWOLINECROSS,                            // "Two-line cross signal" object type
     OBJECT_DE_TYPE_TRADING_LEVEL_BUBBLE,                           // "Trading level bubble (SL/TP drag overlay)" object type
+    OBJECT_DE_TYPE_INDICATOR_SETTING,                              // "Indicator template config row (CIndicatorSetting)" object type
+    OBJECT_DE_TYPE_SYMBOLTF_SETTING,                               // "Symbol+TF config row (CSymbolTFSetting)" object type
+
   };
  //+------------------------------------------------------------------+
  //| Search and sorting data                                          |

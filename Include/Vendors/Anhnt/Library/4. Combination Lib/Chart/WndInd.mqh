@@ -40,6 +40,10 @@
       int               Index(void)                   const { return this.m_index;        }
       int               Handle(void)                  const { return this.m_handle;       }
       int               WindowNum(void)               const { return this.m_window_num;   }
+     //--- Resolve this line's real (type,params) identity - thin wrap over the built-in
+     //--- IndicatorParameters(), symmetric to Handle()/Name() above.
+      bool              GetIdentity(ENUM_INDICATOR &type, MqlParam &params[]) const
+                          { return ::IndicatorParameters(this.m_handle, type, params) >= 0; }
      //--- Set (1) subwindow name, (2) window index on the chart, (3) handle, (4) index
       void              SetName(const string name)          { this.m_name=name;           }
       void              SetIndex(const int index)           { this.m_index=index;         }

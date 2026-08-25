@@ -155,11 +155,18 @@
       m_bridge_writer.SetFolder(ea_folder);
      //Create main GUI windows and sub windows.
       if(!CreateGUIPannel()) return false;
-      m_gui_created = true;     
-      
+      m_gui_created = true;  
      // Snapshot every open chart (windows + indicators) once - Refresh() in OnTimerEvent
      // then diffs against this baseline and emits CHART_OBJ_EVENT_* on changes
       m_chart_obj_collection.CreateCollection();
+     // Startup reconcile: adopt any indicator the user attached while the EA was off.
+     // MUST run AFTER LoadIndicatorTemplateSettingFromJSON (line ~140) - ScanIndicatorOnChartOnInit's
+     // dedup check (IsIndicatorInTemplateSetting, against m_indicator_template_setting[]) needs it
+     // already populated from JSON; running before that would re-add every JSON template as a
+     // duplicate row. Runs BEFORE UpdateGUI on purpose (Anhnt, 2026-08-20): m_indicator_template_setting[]
+     // is fully merged (JSON + chart-discovered) by the time UpdateGUI paints the table, so it paints
+     // the correct final row set in one pass instead of painting once then Scan repainting again.
+      ScanIndicatorOnChartOnInit();
       UpdateGUI(true);
      // --- ApplyLoadedIndicatorBuySell() deleted (SynIndicatorPlan.md, Dot 3b, 2026-08-17):
      // --- UpdateGUI(true) above already runs RefreshTableIndicator(), which now paints each row's
@@ -172,12 +179,17 @@
      // --- the user manually toggles a Buy/Sell checkbox at least once (Anhnt, 2026-08-16 -
      // --- this call used to run every OnTimerEvent tick, which also seeded it "for free";
      // --- removing that polling call below dropped the only startup seed too).
-       SyncIndicatorTemplateSettingToBridge();
-     // Startup reconcile: adopt any indicator the user attached while the EA was off.
-     // MUST run AFTER UpdateGUI - ScanIndicatorOnChart's dedup check (IsIndicatorInTemplateSetting,
-     // against m_indicator_template_setting[]) needs it already populated from JSON; running before
-     // it would re-add every JSON template as a duplicate row.
-       ScanIndicatorOnChart();
+       SyncIndicatorTemplateSettingToBridge();     
+     // --- Single Layer 1 create pass (Anhnt, 2026-08-20): LoadIndicatorTemplateSettingFromJSON and
+     // --- ScanIndicatorOnChartOnInit() above are both PureData-only now - m_indicator_template_setting[]
+     // --- is fully merged (JSON-sourced + chart-discovered) by this point, so AddAllIndicatorsToNewSeries
+     // --- runs exactly once per series here, covering everything in one pass instead of 2 separate
+     // --- Layer 1 creation mechanisms running at different times.
+      if(m_time_series_engine != NULL)
+         for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
+            m_time_series_engine.AddAllIndicatorsToNewSeries(m_symbol_tf_Setting[i].symbol,
+                                                               TimestampByDescription(m_symbol_tf_Setting[i].tf),
+                                                               m_indicator_template_setting);
      // Debug helper (kept available, call disabled after the 4807 hunt closed): dump the
      // instance->handle map right after startup
      //m_time_series_engine.PrintIndicatorsInventory();
@@ -510,7 +522,7 @@
    //Handle Add Indicator
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_add_indicator.Id())
      {
-      OnClickAddIndicator();
+      OnClickAddIndicatorBtn();
       return;
      }
    //Handle Save Indicator config to JSON
@@ -750,7 +762,9 @@
       // --- Anhnt, 2026-08-18: single entry point for all 3 UseCases (re-Insert existing/hidden
       // --- template = no-op + Show re-truth; style-only edit = non-event, never reaches here;
       // --- real param edit = replace template). See SynIndicatorOnChart's own doc comment.
-       SynIndicatorOnChart(id);
+      // --- dparam = window index (CChartWnd::SendEvent packs it there for IND_ADD/DEL/CHANGE) -
+      // --- only ADD actually needs it (to resolve CChartObj::GetLastAddedIndicator(win_num)).
+       SynIndicatorOnChart(id, (int)dparam);
        return;
       }
    //--- Layer 3 -> Layer 2: symbol/TF actually changed on this chart (CChartObjCollection,

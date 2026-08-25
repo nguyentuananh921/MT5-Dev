@@ -1,7 +1,7 @@
 {
 	"folders": [
 		{
-			"path": "../../Example/4. Combination EA/V8"
+			"path": "../../Example/4. Combination EA/V10"
 		},
 		{
 			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
@@ -25,8 +25,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/V8",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/V8/Include"
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/V10",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/V10/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

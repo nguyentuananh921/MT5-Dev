@@ -4,16 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_JSONCONFIG_MQH
 #define CGUIPANNEL_JSONCONFIG_MQH
- #include "GUIPannel.mqh"
- //+----------------------------------------------------------------------------+
- //| Loads Config_Setting.json's "Symbols_TFs_List" section into                |
- //| m_symbol_tf_Setting[], self-registering the CURRENT chart's symbol/TF      |
- //| if the JSON never saved it (README.md muc 7.b), then hands the array       |
- //| to Layer 1 (CTimeSeriesEngine::ApplySymbolTFSetting) to create the         |
- //| actual Series. MUST run before LoadIndicatorTemplateSettingFromJSON -      |
- //| indicators attach to the Series this creates.                              |
- //| Called ONCE from the top of CGUIPannel::OnInitEvent (EA's OnInit).         |
- //+----------------------------------------------------------------------------+
+ #include "GUIPannel.mqh" 
  void CGUIPannel::LoadSymbolTFSettingFromJSON(void)
   {
    if(m_time_series_engine == NULL) return;

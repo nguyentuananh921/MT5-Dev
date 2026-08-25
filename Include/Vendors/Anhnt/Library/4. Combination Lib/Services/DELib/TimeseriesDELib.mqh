@@ -98,6 +98,14 @@
    for(int i = 0; i < total; i++)
       out[i] = indicator_list[i];
   }
+ ENUM_INDICATOR_GROUP GetIndicatorGroupForType(const ENUM_INDICATOR type)
+  {
+   SIndicatorCatalogItem catalog[];
+   GetIndicatorCatalog(catalog);
+   for(int c = 0; c < ArraySize(catalog); c++)
+     if(catalog[c].ind_type == type) return catalog[c].group;
+   return INDICATOR_GROUP_OSCILLATOR;
+  }
  //+----------------------------------------------------------------------------+
  //|How many data buffers this indicator type allocates - required by           |
  //|CIndicatorsCollection::AddIndicatorToList() to actually register the created|

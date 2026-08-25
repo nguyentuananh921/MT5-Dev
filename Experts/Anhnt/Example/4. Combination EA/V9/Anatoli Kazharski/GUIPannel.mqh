@@ -301,7 +301,7 @@
           bool                         CreateAddIndicatorParaInfor(const int x_gap, const int y_gap);
           void                         ShowIndicatorParameterForm(const ENUM_INDICATOR type, const int type_li);
           void                         HideParamSlots(void);
-          void                         OnClickAddIndicator(void);          
+          void                         OnClickAddIndicatorBtn(void);
       //For Indicator Table m_table_indicator_template
          bool                         IsIndicatorShownOnChart(const ENUM_INDICATOR type, MqlParam &params[]);
          bool                         IsIndicatorInTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
@@ -319,14 +319,34 @@
         // --- column writes straight into m_indicator_template_setting[row], not just 2/3.
         void                          OnClickToggleSoundAlert(const int row);
         void                          OnClickToggleMessageAlert(const int row);
-        void                          OnClickRemoveIndicator(const int row);
-        
+        void                          OnClickRemoveIndicator(const int row);       
         
        // --- catalog[] type->group lookup, shared by every call site that needs a Group for
        // --- ChartIndicatorAdd's sub_window calc (Show/Add/Replace) - no live CIndicatorDE needed,
        // --- catalog[] already carries the type->group mapping (README.md muc 7.b).
          ENUM_INDICATOR_GROUP         GetIndicatorGroupForType(const ENUM_INDICATOR type);
-         void                         ScanIndicatorOnChart(void);
+       // --- Reacts to exactly the ONE indicator the Library's IND_ADD event already identified
+       // --- (CChartObj::GetLastAddedIndicator(win_num)) - no blind re-scan of every window/line.
+         void                         ScanIndicatorOnChart(const int win_num);
+       // --- Startup-only, distinct name (not an overload) to avoid confusion with the two above:
+       // --- no single ADD event to key off of at OnInit time (possibly several indicators got
+       // --- hand-attached while the EA was off) - full window/line scan.
+         void                         ScanIndicatorOnChartOnInit(void);
+       // --- Reads 1 chart line's identity (CWndInd) and appends a new row into
+       // --- m_indicator_template_setting[] (Single Source of Truth) if genuinely new. Mutates
+       // --- Data ONLY - Layer 1 create is the caller's job AFTER, reading type_enum/raw_params
+       // --- straight off the just-appended row ("Layer 2 decides, Layer 1 obeys", same order
+       // --- AddIndicatorToTemplateSetting uses). ScanIndicatorOnChart(win_num) and
+       // --- ScanIndicatorOnChartOnInit() both call this.
+         bool                         ScanIndicatorOnChartIntoTemplateSetting(CWndInd *wnd_ind);
+       // --- Anhnt, 2026-08-18: single entry point for all 3 Layer3(Chart)->Layer1/2 UseCases -
+        // --- re-Insert an existing/hidden template (no-op, checkbox re-truths itself), style-only
+        // --- edit (never reaches here - Library-level non-event), real param edit (replace
+        // --- template). Former HandleChartIndicatorChange() body now lives inside it (its only
+        // --- caller), ScanIndicatorOnChartOnInit() stays a separate method (also called alone from
+        // --- OnInitEvent's startup full-chart-sweep, which has no event id to dispatch on).
+        void                          SynIndicatorOnChart(const long id, const int win_num);
+       
          // --- ApplyLoadedIndicatorBuySell/BuildTemplateBuySellSoundMessageArrays deleted
          // --- (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - SetIndicatorTableRow() paints Buy/Sell/
          // --- Sound/Message straight from m_indicator_template_setting[row] (Anhnt, 2026-08-18);
@@ -368,13 +388,7 @@
         //For Buy/Sell alert sound file pickers (Marker tab) - plain combobox, folder scanned via FileFindFirst
          void                         ScanSoundFolder(string &files[]);         
        
-        // --- Anhnt, 2026-08-18: single entry point for all 3 Layer3(Chart)->Layer1/2 UseCases -
-        // --- re-Insert an existing/hidden template (no-op, checkbox re-truths itself), style-only
-        // --- edit (never reaches here - Library-level non-event), real param edit (replace
-        // --- template). Former HandleChartIndicatorChange() body now lives inside it (its only
-        // --- caller), ScanIndicatorOnChart() stays a separate method (also called alone from
-        // --- OnInitEvent's startup full-chart-sweep, which has no event id to dispatch on).
-        void                          SynIndicatorOnChart(const long id);
+        
      
     public:
      // Lifecycle method implemented in GUIPannel_Lifecycle.mqh
