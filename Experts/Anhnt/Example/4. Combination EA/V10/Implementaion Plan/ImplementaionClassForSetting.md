@@ -66,10 +66,10 @@ CGUIPannel::OnEvent nhận được
    Manager làm xong → tự SendEvent(CHART_OBJ_EVENT_TEMPLATE_CHANGED)   [EVENT MỚI, cần thêm]
         ↓
 CGUIPannel::OnEvent nhận event MỚI này
-   → chỉ lo phần GUI: RefreshTableIndicator() + ChartRedraw()
+   → chỉ lo phần GUI: InitializeTable_IndicatorTemplateSetting() + ChartRedraw()
 ```
 
-Mục đích: tách rạch ròi "ai sửa Data" khỏi "ai vẽ lại GUI" bằng chuỗi event, thay vì gọi hàm lồng nhau trực tiếp trong cùng 1 hàm như `SynIndicatorOnChart` hiện tại (mutate Data và gọi `RefreshTableIndicator()` nằm chung 1 khối). Đúng kiểu bậc thang Layer3 → Layer2-Data → Layer2-GUI đã có sẵn cho các event khác (`CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE`...).
+Mục đích: tách rạch ròi "ai sửa Data" khỏi "ai vẽ lại GUI" bằng chuỗi event, thay vì gọi hàm lồng nhau trực tiếp trong cùng 1 hàm như `SynIndicatorOnChart` hiện tại (mutate Data và gọi `InitializeTable_IndicatorTemplateSetting()` nằm chung 1 khối). Đúng kiểu bậc thang Layer3 → Layer2-Data → Layer2-GUI đã có sẵn cho các event khác (`CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE`...).
 
 Việc cần làm thêm ở `EventDefines.mqh`: thêm 1 giá trị mới vào `ENUM_CHART_OBJ_EVENT` (tạm đặt tên `CHART_OBJ_EVENT_TEMPLATE_CHANGED`, tên chính thức quyết sau).
 
@@ -116,7 +116,7 @@ void CTimeSeriesEngine::AddAllIndicatorsToNewSeries(const string symbol, const E
 
 ## 4d. 2 loại Text - Save (JSON) vs Display (Table + Message Alert)
 
-Đối chiếu code cũ: `BuildIndicatorTextLabel()` (làm tròn 2 chữ số) được CẢ `SetIndicatorTableRow` (Table col 0) LẪN `CheckIndicatorAlerts` (Message Alert, `GUIPannel_SoundAndMessageAlerts.mqh:118`) gọi TRỰC TIẾP, tính FRESH mỗi lần, KHÔNG lưu thành field ở đâu cả. Nên thực ra chỉ có 2 loại text (không phải 3):
+Đối chiếu code cũ: `BuildIndicatorTextLabel()` (làm tròn 2 chữ số) được CẢ `UpdateRow_IndicatorTemplateSetting` (Table col 0) LẪN `CheckIndicatorAlerts` (Message Alert, `GUIPannel_SoundAndMessageAlerts.mqh:118`) gọi TRỰC TIẾP, tính FRESH mỗi lần, KHÔNG lưu thành field ở đâu cả. Nên thực ra chỉ có 2 loại text (không phải 3):
 1. `TypeText()`/`GetParamsText()` (đã có, field lưu trữ) — full precision (8 chữ số), chỉ dùng khi Save JSON.
 2. `DisplayLabel()` (MỚI thêm, method TÍNH TOÁN không lưu field) — gọi `BuildIndicatorTextLabel(m_type_enum, raw_params, catalog)` bên trong, dùng chung cho Table + Message Alert.
 
@@ -152,7 +152,7 @@ Code hiện tại (`CIndicatorSetting::MatchesIdentity`, `CIndicatorTemplateMana
 ## 5. Việc còn treo / chưa quyết
 
 - **Wire `m_show_on_chart` vào JSON** - `ReadTemplateEntry()`/`BuildJsonSection()` (`IndicatorTemplateManager.mqh`) chưa đọc/ghi key `"show"` - hiện field này tồn tại nhưng không persist.
-- Port nốt `CreateAddIndicatorParaInfor` (form nhập tham số) + `CreateTabbleIndicator` (bảng Indicator, đọc qua `CIndicatorTemplateManager`) - còn comment trong `CreateGUIPannel()`.
+- Port nốt `CreateAddIndicatorParaInfor` (form nhập tham số) + `CreateTable_IndicatorTemplateSetting` (bảng Indicator, đọc qua `CIndicatorTemplateManager`) - còn comment trong `CreateGUIPannel()`.
 - Tên chính xác các method còn lại của `CIndicatorTemplateManager` (Scan/SaveToJSON section merge với các section khác...).
 - Tên event mới trong `ENUM_CHART_OBJ_EVENT` — chưa chốt, chưa thêm vào Library.
 - `m_symbol_tf_Setting[]` (struct `SJsonSymbolTF`, cũng không phải POD vì có `string`) có nên đi theo cùng hướng (class + Manager riêng, hay gộp chung 1 Manager) — chưa bàn tới.

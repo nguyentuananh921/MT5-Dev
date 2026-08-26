@@ -68,7 +68,7 @@
     int tmpl_total = ArraySize(entries);
     ArrayResize(m_indicator_template_setting, tmpl_total);
     // --- m_settings_cache_state[] (per-row "Show" column dirty-check cache) is NOT resized here -
-    // --- RefreshIndicatorTableShowColumn() self-heals its own size on next use, so no caller needs
+    // --- SyncTable_IndicatorTemplateSetting() self-heals its own size on next use, so no caller needs
     // --- to remember keeping it in lockstep (see that function's own comment).
     for(int i = 0; i < tmpl_total; i++)
        m_indicator_template_setting[i] = entries[i];
@@ -131,7 +131,7 @@
      }
    // --- PureData-only (Anhnt, 2026-08-20): this function's job ends at populating
    // --- m_indicator_template_setting[] (.type_enum/.raw_params[] included). Layer 1 create used
-   // --- to run right here per-series, but startup also needs ScanIndicatorOnChartOnInit() to merge in
+   // --- to run right here per-series, but startup also needs InitializeIndicatorTemplateManagerOnInit() to merge in
    // --- any hand-attached-while-EA-was-off indicator FIRST - so the single AddAllIndicatorsToNewSeries
    // --- pass now runs once, after BOTH sources are merged, from OnInitEvent (GUIPannel_Lifecycle.mqh).
   }

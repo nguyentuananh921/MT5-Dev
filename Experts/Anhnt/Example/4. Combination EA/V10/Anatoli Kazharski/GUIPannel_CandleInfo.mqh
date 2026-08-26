@@ -148,14 +148,14 @@
      m_table_candle_information_atBar.TextAlign(al);
     // --- y=WINDOW_CAPTION_HEIGHT, not 0 - CWindow's child coordinate space starts at the
     // --- window's absolute top-left, INCLUDING the caption bar (same convention as every
-    // --- other table placed directly on a CWindow, e.g. CreateTableSymbolTFSetting(0,22));
+    // --- other table placed directly on a CWindow, e.g. CreateTable_SymbolTFSetting(0,22));
     // --- y=0 here made the table paint straight over the "Signals at Bar" title.
      if(!m_table_candle_information_atBar.CreateTable(0, WINDOW_CAPTION_HEIGHT)) return (false);
      m_table_candle_information_atBar.SetHeaderText(0, "Time");
      m_table_candle_information_atBar.SetHeaderText(1, "TF");
      m_table_candle_information_atBar.SetHeaderText(2, "Information");
     // --- Collapse the TableSize() padding down to a single blank baseline row, same
-    // --- convention as CreateTableSymbolTFSetting.
+    // --- convention as CreateTable_SymbolTFSetting.
      m_table_candle_information_atBar.DeleteAllRows();
      CWndContainer::AddToElementsArray(WindowIdx(m_window_candle_infomation), m_table_candle_information_atBar);
     // --- Alt+hover pattern-name tooltip (ShowCandlePatternInfo) - MainPointer/ElementPointer

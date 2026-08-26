@@ -382,8 +382,8 @@
  //+------------------------------------------------------------------+
  bool CTreeView::CreateItems(void) 
   {
-    // --- Coordinates
-     int x=1,y=1;
+   // --- Coordinates
+    int x=1,y=1;
     int items_total=::ArraySize(m_items);
     for(int i=0; i<items_total; i++)
      {

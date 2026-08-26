@@ -86,7 +86,7 @@
     // Layer 1: AddAllIndicatorsToNewSeries READS m_indicator_template_setting[] (CGUIPannel's array, passed by reference 
     // Layer 1 keeps no copy of its own). AddNewIndicatorToAllSeries/RemoveIndicatorFromAllSeries are purely mechanical now.
     // CGUIPannel is the only one that touches m_indicator_template_setting[] during Live (checks existence itself via
-    // IsIndicatorInTemplateSetting BEFORE calling Add, and RefreshTableIndicator() re-syncs the
+    // IsIndicatorInTemplateSetting BEFORE calling Add, and InitializeTable_IndicatorTemplateSetting() re-syncs the
     // array from the live indicator list AFTER either call) - Layer 1 does the instance
     // create/delete only, no array involved.
         void                        AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe,

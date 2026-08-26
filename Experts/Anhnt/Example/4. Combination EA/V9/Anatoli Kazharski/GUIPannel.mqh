@@ -214,6 +214,11 @@
      // For m_table_indicator_SymbolTFValue implemented in GUIPannel_TabMonitor.mqh     
         bool                         CreateTableIndicatorSymbolTFValue(const int x, const int y);
         void                         SetValuesToTableIndicatorSymbolTFValue(void);
+      //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh
+            CTable                      m_table_CandlePatternsSetting;         
+            ENUM_PATTERN_TYPE           m_pattern_types[];
+            string                      m_pattern_display_names[]; 
+            CButton                     m_btn_save_pattern_config;    
      // For TAB_TAB_MAIN_POSITIONS implementation in GUIPannel_TabPosition.mqh
        //For Pre-Trade-Plan area (TAB_TAB_MAIN_POSITIONS), sits above m_table_positions - symbol
        //picker + single-row order-setup table. Skeleton only (Anhnt 2026-07-20): Buy/Sell cells

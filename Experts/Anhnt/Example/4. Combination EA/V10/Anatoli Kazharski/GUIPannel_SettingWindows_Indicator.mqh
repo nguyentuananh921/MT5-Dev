@@ -70,7 +70,7 @@
     return (true);
   } 
  // For TreeView Indicator m_treeview_indicator on the left m_window_setting 
-  bool CGUIPannel::CreateTreeView_Indicator(const int x_gap, const int y_gap)
+  bool CGUIPannel::CreateTreeView_IndicatorTemplateSetting(const int x_gap, const int y_gap)
    {
     m_treeview_indicator.MainPointer(m_tabs_main_setting_config);
     m_treeview_indicator.AutoXResizeMode(false);
@@ -84,7 +84,7 @@
     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_treeview_indicator);       
     return true;
    }
-  void CGUIPannel::PopulateIndicatorTree(void)
+  void CGUIPannel::PopulateTreeView_IndicatorTemplateSetting(void)
    {    
     //Seting Root Node for m_treeview_indicator base on ENUM_INDICATOR_GROUP in TimeseriesDefines.mqh
     ENUM_INDICATOR_GROUP group_values[4] = {INDICATOR_GROUP_TREND, 
@@ -124,7 +124,7 @@
      }
    }
   // For Syn and Highlight active Indicator in Template
-  void CGUIPannel::SyncIndicatorTreeViewIcons(void)
+  void CGUIPannel::SyncTreeView_IndicatorTemplateSetting(void)
    {
     if(m_indicator_template_manager == NULL) return;
     // Reset every Group node to inactive FIRST - the loop below only ever SETS a group's icon
@@ -163,7 +163,7 @@
   //| Creates m_table_indicator_template (7 columns: Indicator+delete icon,      |
   //| Group, Buy, Sell, Show-on-chart, Sound, Message).                          |
   //+----------------------------------------------------------------------------+
-  bool CGUIPannel::CreateTabbleIndicator(const int x, const int y)
+  bool CGUIPannel::CreateTable_IndicatorTemplateSetting(const int x, const int y)
    {
     m_table_indicator_template.MainPointer(m_tabs_main_setting_config);
     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator_template);
@@ -217,18 +217,13 @@
     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_table_indicator_template);
     return true;
    }   
-  void CGUIPannel::RefreshTableIndicator(void)
+  void CGUIPannel::InitializeTable_IndicatorTemplateSetting(void)
    {
     if(m_indicator_template_manager == NULL) return;
     int count        = m_indicator_template_manager.Total();
     int current_rows = (int)m_table_indicator_template.RowsTotal();
     if(count == 0)
-     {
-      // --- KHÔNG dùng current_rows<=1 để đoán "đã ở baseline rỗng" - baseline rỗng và
-      // --- "còn đúng 1 row DATA THẬT chưa kịp xoá" (vd vừa Remove nốt row cuối cùng) đều
-      // --- cho RowsTotal()==1, không phân biệt được -> từng khiến dòng cuối "xoá không đi".
-      // --- Reset luôn mỗi khi count==0, kể cả khi thừa (rẻ, và branch này chỉ chạy đúng 1
-      // --- lần tại thời điểm chuyển sang rỗng vì hàm chỉ được gọi khi có event ADDED/DELETE).
+     {      
       m_table_indicator_template.DeleteAllRows();
       m_table_indicator_template.AddRow(0);
       m_table_indicator_template.DeleteRow(1);
@@ -242,7 +237,34 @@
          m_table_indicator_template.AddRow(i, i == count - 2);
      }
     for(int row = 0; row < count; row++)
-      SetIndicatorTableRow(row);
+      UpdateRow_IndicatorTemplateSetting(row);
+    m_table_indicator_template.Update(true);
+   }
+  //+------------------------------------------------------------------------------------+
+  //| Appends exactly 1 new row at the end - m_indicator_template_manager.Add_IndicatorTemplateSetting() always |
+  //| appends its new entry at Total()-1, so the table's new last physical row lines up  |
+  //| with it directly. AddRow(row,false) only grows the row arrays - CTable::AddRow      |
+  //| only calls RecalculateAndResizeTable() (the thing that actually resizes the canvas  |
+  //| and draws the row) when redraw=true, and Update(false) never calls it either (it    |
+  //| just flushes what's already drawn) - so a genuinely-new row stays invisible forever |
+  //| with redraw=false throughout (confirmed on the SymbolTF table's identical pattern   |
+  //| via MY DEBUG log: RowsTotal grew correctly, row never appeared on screen). Values   |
+  //| are painted into the row (UpdateRow_IndicatorTemplateSetting) BEFORE the single     |
+  //| Update(true) below, so this is exactly one full redraw pass, not two - paid only    |
+  //| when a row is genuinely added (rare, user-triggered), unrelated to the old per-tick |
+  //| flicker bug FeatureNote/FixMainWindowFlicker.md fixed.                              |
+  //+------------------------------------------------------------------------------------+
+  void CGUIPannel::AddRow_IndicatorTemplateSetting(void)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    int row = (int)m_table_indicator_template.RowsTotal();
+    string first_col0 = m_table_indicator_template.GetValue(0, 0); StringTrimLeft(first_col0);
+    bool placeholder_only = (row == 1 && first_col0 == "");   // reuse the blank baseline row
+    if(placeholder_only)
+       row = 0;
+    else
+       m_table_indicator_template.AddRow(row, false);
+    UpdateRow_IndicatorTemplateSetting(row);
     m_table_indicator_template.Update(true);
    }
   //+------------------------------------------------------------------------------------+
@@ -251,7 +273,7 @@
   //| label (BuildIndicatorTextLabel) and group both derive from (type_enum,raw_params)  |
   //| + catalog[] alone.                                                                  |
   //+------------------------------------------------------------------------------------+
-  void CGUIPannel::SetIndicatorTableRow(const int row)
+  void CGUIPannel::UpdateRow_IndicatorTemplateSetting(const int row)
    {
     if(m_indicator_template_manager == NULL) return;
     CIndicatorSetting *entry = m_indicator_template_manager.At(row);
@@ -282,7 +304,7 @@
      m_table_indicator_template.SetImages(6, row, chk);
      m_table_indicator_template.ChangeImage(6, row, entry.MessageAlert() ? 0 : 1);
     //Col 7 (hidden, width=0): real m_indicator_template_manager index - "row" here is only
-    //correct at paint time (called from RefreshTableIndicator's 0..count-1 loop); once the
+    //correct at paint time (called from InitializeTable_IndicatorTemplateSetting's 0..count-1 loop); once the
     //user sorts by a header, CTable::Swap() carries this cell along with the rest of the
     //row, so click handlers can always recover the true index via GetValue(7,row).
      m_table_indicator_template.SetValue(7, row, IntegerToString(row));
@@ -292,15 +314,15 @@
     if(m_indicator_template_manager == NULL) return;
     int real_index = (int)StringToInteger(m_table_indicator_template.GetValue(7, row));   // row = vị trí hiển thị sau sort, không phải index thật
     int new_state = (int)m_table_indicator_template.SelectedImageIndex(4, row);
-    // Data only - EA reacts to TEMPLATE_MANAGER_EVENT_SHOW_CHANGED to attach/detach
+    // Data only - EA reacts to INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED to attach/detach
     // on chart (CGUIPannel no longer holds CChartObjCollection).
-    m_indicator_template_manager.SetShowOnChart(real_index, new_state != INDICATOR_HIDE_ON_CHART);
+    m_indicator_template_manager.UpdateRow_IndicatorTemplateSetting_ShowColumn(real_index, new_state != INDICATOR_HIDE_ON_CHART);
    }
-  void CGUIPannel::RefreshIndicatorTableShowColumn(void)
+  void CGUIPannel::SyncTable_IndicatorTemplateSetting(void)
    {
     // Data only - reads entry.ShowOnChart() straight from the Manager (Single Source
     // of Truth) and repaints the icon. The live scan against real chart state now
-    // happens in EA (owns CChartObjCollection) via Manager::SetShowOnChart() -
+    // happens in EA (owns CChartObjCollection) via Manager::UpdateRow_IndicatorTemplateSetting_ShowColumn() -
     // CGUIPannel never touches the chart directly anymore.
     if(m_indicator_template_manager == NULL) return;
     int tmpl_total = m_indicator_template_manager.Total();
@@ -327,10 +349,10 @@
     if(entry == NULL) return;
     ENUM_INDICATOR type = entry.TypeEnum();
     MqlParam params[]; entry.GetRawParams(params);
-    // Data only - fires TEMPLATE_MANAGER_EVENT_DELETE(+TYPE_DELETE). EA (owns
+    // Data only - fires INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE(+TYPE_DELETE). EA (owns
     // ChartObjCollection) reacts via Manager::GetLastRemoved() to detach from chart;
     // GUIPannel_Lifecycle.mqh already reacts to refresh Table/TreeView.
-    m_indicator_template_manager.RemoveByIdentityFromTemplate(type, params);
+    m_indicator_template_manager.Delete_IndicatorTemplateSetting(type, params);
    }
   void CGUIPannel::OnClickToggleBuySignal(const int row)
    {

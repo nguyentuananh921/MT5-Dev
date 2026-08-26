@@ -47,7 +47,7 @@
        void              SetParamsText(string &params[]);
 
        //--- display label (Table col 0 + Message Alert - SAME text both already use, GUIPannel_
-       //--- SoundAndMessageAlerts.mqh:118 and the old SetIndicatorTableRow both called
+       //--- SoundAndMessageAlerts.mqh:118 and the old UpdateRow_IndicatorTemplateSetting both called
        //--- BuildIndicatorTextLabel() fresh, never stored it - computed here, not cached, rounds
        //--- doubles to 2 decimals (display-only; JSON save always uses TypeText()/GetParamsText()
        //--- above, full precision - never mix the two).

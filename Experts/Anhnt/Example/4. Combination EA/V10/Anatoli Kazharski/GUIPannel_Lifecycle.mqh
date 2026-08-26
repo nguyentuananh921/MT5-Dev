@@ -55,21 +55,30 @@
          return (false);
         }
       // For TreeView on the left panel of setting window m_treeview_indicator
-       PopulateIndicatorTree();
-       if(!CreateTreeView_Indicator(TABS_CONFIG_X_GAP, m_window_setting.CaptionHeight() + 3)) return false;
+       PopulateTreeView_IndicatorTemplateSetting();
+       if(!CreateTreeView_IndicatorTemplateSetting(TABS_CONFIG_X_GAP, m_window_setting.CaptionHeight() + 3)) return false;
       //For Add Indicator form
        if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;          
-       if(!CreateTabbleIndicator(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;       
+       if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;       
       //For Symbol TF setting on Tab Config
-       //Create m_treeview_SymbolTF in left panel m_window_main        
-        PopulateSymbolTFTree();
-        if(!CreateTreeView_SymbolTF(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22
-        SynSymbolTFTreeViewIcons();
-       //Table m_table_indicator_SymbolTFSeting on the right of the Symbol TF sub-tab - offset
+       //Create m_treeview_SymbolTF in left panel m_window_main
+      // --- CreateTreeView_SymbolTFSetting() MUST run first - it's the one that calls
+      // --- MainPointer() (sets m_chart_id + wires m_scrollv), so InitializeTreeView...()'s
+      // --- own AddTreeItem() calls have a live tree to actually draw into. Calling it before
+      // --- crashed ("invalid pointer access", CScrollV::MainPointer never set) once enough
+      // --- rows queued up to touch the scrollbar - see MQL5\Logs, 2026-08-26 01:02.
+       PopulateTreeView_SymbolTFSetting();
+       if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22        
+        SyncTreeView_SymbolTFSetting();
+       //Table m_table_SymbolTFSeting on the right of the Symbol TF sub-tab - offset
        //past the TreeView's own width, same convention as INDICATOR_TABLE_X does for the
        //Indicator sub-tab (tree width + 10px padding), not the tree's own x_gap.
-        if(!CreateTableSymbolTFSetting(M_TREEVIEW_SYMBOLTF_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
-        RefreshTableSymbolTF();
+        if(!CreateTable_SymbolTFSetting(M_TREEVIEW_SYMBOLTF_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
+        PopulateTable_SymbolTFSetting();
+        SyncTable_SymbolTFSetting();
+
+
+
        //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
          //if(!CreateTableIndicatorSymbolTFValue(0, 0)) return false;
     //Finalize GUI Creation
@@ -135,7 +144,10 @@
      m_gui_timecounter.SetParameters(16, 500);
     //   m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
     //   m_pending_remove_row     = -1;
-       m_pending_remove_row_symboltf = -1;
+       m_pending_remove_sym_symboltf = "";
+       m_pending_remove_tf_symboltf  = "";
+       m_treeview_symboltf_need_sync = false;
+       m_treeview_indicator_need_sync = false;
     //   m_candle_info_shown_bar  = 0;
     //   m_pattern_bitmap_shown   = NULL;
     //   m_pattern_bitmap_scale   = -1;
@@ -271,21 +283,36 @@
           if(m_indicator_template_manager != NULL && remove_row < (int)m_table_indicator_template.RowsTotal())
             OnClickRemoveIndicator(remove_row);
         }
-      //--- Deferred delete for m_table_indicator_SymbolTFSeting - GUI-only removal (no Layer 1
-      //--- series stopped yet - it keeps running this session, the pair just won't be
-      //--- recreated on the next EA attach/restart once the user actually saves). Data only -
-      //--- drops the row from m_SymbolTFManager (Single Source of Truth), matched by (sym,tf).
-        if(m_pending_remove_row_symboltf >= 0)
+      //--- Deferred delete - Data only (no Layer 1 series stopped yet - it keeps running this
+      //--- session, the pair just won't be recreated on the next EA attach/restart once the
+      //--- user actually saves). Table-side removal happens in the SYMBOLTF_MANAGER_EVENT_DELETE
+      //--- listener below, reacting to the Manager's own event - same split ADDED already uses.
+        if(m_pending_remove_sym_symboltf != "")
         {
-          int remove_row = m_pending_remove_row_symboltf;
-          m_pending_remove_row_symboltf = -1;
-          if(m_SymbolTFManager != NULL && remove_row < (int)m_table_indicator_SymbolTFSeting.RowsTotal())
-          {
-            string sym = m_table_indicator_SymbolTFSeting.GetValue(0, remove_row); StringTrimLeft(sym);
-            string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, remove_row); StringTrimLeft(tf);
-            m_SymbolTFManager.RemoveByIdentity(sym, TimestampByDescription(tf));
-            m_table_indicator_SymbolTFSeting.DeleteRow(remove_row, true);
-          }
+          string remove_sym = m_pending_remove_sym_symboltf;
+          string remove_tf  = m_pending_remove_tf_symboltf;
+          m_pending_remove_sym_symboltf = "";
+          m_pending_remove_tf_symboltf  = "";
+          if(m_SymbolTFManager != NULL)
+             m_SymbolTFManager.Delete_SymbolTFSetting(remove_sym, TimestampByDescription(remove_tf));
+        }
+      //--- Deferred TreeView sync for m_treeview_SymbolTF - the ONE place that actually calls
+      //--- SyncTreeView_SymbolTFSetting(). Every reactive call site just sets the flag; by the
+      //--- time this timer tick runs, any same-tick SYMBOLTF_MANAGER_EVENT_ADDED (queued custom
+      //--- event) has already been dispatched and PopulateTreeView_SymbolTFSetting() has
+      //--- already created the new node, so Sync always sees final state - and N flag-sets
+      //--- within one timer interval still cost exactly 1 real redraw.
+        if(m_treeview_symboltf_need_sync)
+        {
+          m_treeview_symboltf_need_sync = false;
+          SyncTreeView_SymbolTFSetting();
+          SyncTable_SymbolTFSetting();   // same flag - Table needs the same self-healing resync
+        }
+      //--- Deferred TreeView sync for m_treeview_indicator - same pattern, see UpdateGUI().
+        if(m_treeview_indicator_need_sync)
+        {
+          m_treeview_indicator_need_sync = false;
+          SyncTreeView_IndicatorTemplateSetting();
         }
      //--- Handling the elements
       //ulong t0 = ::GetMicrosecondCount();
@@ -383,16 +410,33 @@
         return;
       }
    //Handle CIndicatorTemplateManager's own events - Data changed for real, refresh our own GUI
-     if(id == CHARTEVENT_CUSTOM + TEMPLATE_MANAGER_EVENT_ADDED || id == CHARTEVENT_CUSTOM + TEMPLATE_MANAGER_EVENT_DELETE)
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
       {
-       RefreshTableIndicator();
+       // Manager.Add_IndicatorTemplateSetting() always appends at the end - fast path, no full rebuild.
+       AddRow_IndicatorTemplateSetting();
        return;
       }
-     if(id == CHARTEVENT_CUSTOM + TEMPLATE_MANAGER_EVENT_TYPE_ADDED || id == CHARTEVENT_CUSTOM + TEMPLATE_MANAGER_EVENT_TYPE_DELETE)
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
       {
-       SyncIndicatorTreeViewIcons();
+       // TODO: still full-rebuild here - DeleteRow_IndicatorTemplateSetting(index) needs an
+       // index, but callers of Delete_IndicatorTemplateSetting other than OnClickRemoveIndicator
+       // (e.g. EA's CHART_OBJ_EVENT_CHART_WND_IND_CHANGE handler) don't have a table row/index
+       // to give it - revisit once that's resolved.
+       InitializeTable_IndicatorTemplateSetting();
        return;
       }
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED || id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE)
+      {
+       SyncTreeView_IndicatorTemplateSetting();
+       return;
+      }
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED)
+      {
+       // e.g. ShowOnChart flipped by EA reacting to a chart-native indicator add/remove -
+       // re-read the row and repaint whatever's out of sync (dirty-checked internally).
+       SyncTable_IndicatorTemplateSetting();
+       return;
+      }   
    // Handle m_table_indicator event
      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
           && lparam == m_table_indicator_template.Id())
@@ -408,28 +452,132 @@
           else if(col == 5)    OnClickToggleSoundAlert(row);
           else if(col == 6)    OnClickToggleMessageAlert(row);
           return;
-      }
-   //Handle m_table_indicator_SymbolTFSeting event
+      }      
+   //Handle Symbol TF Setting event
      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-          && lparam == m_table_indicator_SymbolTFSeting.Id())
+          && lparam == m_table_SymbolTFSeting.Id())
       {
         string parts[];
         if(StringSplit(sparam, '_', parts) != 2) return;
         int col = (int)StringToInteger(parts[0]);
         int row = (int)StringToInteger(parts[1]);
-        if(row < 0 || row >= (int)m_table_indicator_SymbolTFSeting.RowsTotal()) return;
-        string sym = m_table_indicator_SymbolTFSeting.GetValue(0, row); StringTrimLeft(sym);
-        string tf  = m_table_indicator_SymbolTFSeting.GetValue(1, row); StringTrimLeft(tf);
-
+        if(row < 0 || row >= (int)m_table_SymbolTFSeting.RowsTotal()) return;
+        string sym = m_table_SymbolTFSeting.GetValue(0, row); StringTrimLeft(sym);
+        string tf  = m_table_SymbolTFSeting.GetValue(1, row); StringTrimLeft(tf);
         // --- Delete is DEFERRED to OnTimerEvent - same CTable crash reason as m_table_indicator's col 0.
         // --- col 0 on the current-chart's own row shows the "start" icon (IsCurrentChartSymbolTFRow) -
         // --- not deletable, ignore the click.
         if(col == 0 && !IsCurrentChartSymbolTFRow(sym, tf))
-        m_pending_remove_row_symboltf = row;
-        else if(col == 2 || col == 3)
+         {
+          m_pending_remove_sym_symboltf = sym;
+          m_pending_remove_tf_symboltf  = tf;
+         }
+        else if(col == 2 || col == 3 || col == 4 || col == 5)
         OnCheckTableSymbolTFSetting(sym, tf, row, col);
         return;
-      }   
+      }
+    //Handle CSymbolTFManager's own events - Data changed for real, refresh our own GUI
+     if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ADDED)
+      {
+       // Data-only pass over the whole Manager - cheap (skips any row/node already present),
+       // and matches PopulateTreeView_SymbolTFSetting()'s own same-shape call just below.
+         PopulateTable_SymbolTFSetting();
+         PopulateTreeView_SymbolTFSetting();
+       // Just flag it - OnTimerEvent is the one place that calls SyncTreeView/SyncTable, after
+       // this row/node now exists (see m_treeview_symboltf_need_sync).
+         m_treeview_symboltf_need_sync = true;
+       return;
+      }
+     if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_DELETE)
+      {
+       // Row is already gone from Manager by the time this (async) event is processed - read
+       // the snapshot GetLastRemoved() cached BEFORE the delete instead of trying to look it up.
+       string removed_sym; ENUM_TIMEFRAMES removed_tf;
+       if(m_SymbolTFManager != NULL)
+         m_SymbolTFManager.GetLastRemoved(removed_sym, removed_tf);
+       DeleteRow_SymbolTFSetting(removed_sym, TimeframeDescription(removed_tf));
+       return;
+      }
+    //Handle Symbol TF Settings
+     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_CHANGE ||
+          id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_TF_CHANGE ||
+          id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE)
+      {
+       // lparam carries the chart_id of whichever chart actually changed (see ChartObj.mqh's
+       // own SendEvent - "pass the chart ID to lparam" for all 3 of these events). Each EA
+       // instance's own m_ChartObjCollection tracks EVERY open chart, not just its own, and
+       // always reports back to m_chart_id_main - so without this filter, changing the TF on
+       // ANY open chart tab fires this in EVERY OTHER chart's EA instance too, each one
+       // redundantly reprocessing its own (unchanged) _Symbol/_Period - the actual cause of
+       // the "nháy loạn xạ" flicker across tabs (Anhnt, 2026-08-26).
+        if(lparam != ::ChartID()) return;
+       // Data only - self-register the chart's own (sym,tf) into m_SymbolTFManager (Single
+       // Source of Truth) if not already tracked. Everything below is CGUIPannel's own GUI
+       // concern - reflect whatever the Manager now holds, same split as the Indicator side.
+        string sym_now = _Symbol;
+        ENUM_TIMEFRAMES tf_now = (ENUM_TIMEFRAMES)_Period;
+        Print("MY DEBUG CGUIPannel::OnEvent CHART_OBJ_EVENT_CHART_..._CHANGE: id=", id,
+              " sparam(old_sym)=", sparam, " dparam(old_tf raw)=", dparam,
+              " old_tf_desc=", TimeframeDescription((ENUM_TIMEFRAMES)(int)dparam),
+              " sym_now=", sym_now, " tf_now=", TimeframeDescription(tf_now));
+        if(m_SymbolTFManager != NULL && !m_SymbolTFManager.Exists(sym_now, tf_now))
+          m_SymbolTFManager.Add_SymbolTFSetting(sym_now, tf_now);
+        // Just flag it, whether this pair was already tracked or brand new - OnTimerEvent is
+        // the one place that calls SyncTreeView_SymbolTFSetting(). Used to branch on
+        // already-tracked-or-not to dodge a double Sync with the ADDED listener above; the flag
+        // makes that unnecessary - any number of flag-sets before the next timer tick still cost
+        // exactly 1 real redraw (root cause of the "nháy loạn" whole-window flicker, 2026-08-26).
+         m_treeview_symboltf_need_sync = true;
+        // Table refresh (which 2 rows need their icon flipped) used to happen right here,
+        // targeted, using this native event's own sparam/dparam for the "old" identity - removed
+        // (Anhnt, 2026-08-26): that native event silently doesn't fire at all for any chart
+        // switch WE trigger ourselves (SetActiveChartSymbolTF's resulting reinit resets
+        // CreateCollection()'s un-guarded diff baseline), so rows kept getting stuck. Same flag
+        // above now also drives SyncTable_SymbolTFSetting() (full rescan, self-healing same as
+        // the Tree), so nothing further needed here.
+         UpdateGUI(false);   // dirty-check refresh only - no manual redraw, MT5 already redraws natively on chart change
+         return;
+      }
+    // Handle Symbol TF TreeView Click ON_CLICK_BUTTON
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON  && lparam == m_treeview_SymbolTF.Id())
+      {
+       int li = (int)dparam;
+       Print("MY DEBUG CGUIPannel::OnEvent ON_CLICK_BUTTON SymbolTF: li=", li,
+             " ItemsTotal=", m_treeview_SymbolTF.ItemsTotal());
+       if(li < 0 || li >= m_treeview_SymbolTF.ItemsTotal()) return;
+       CTreeItem *item = m_treeview_SymbolTF.ItemPointer(li);
+       if(item == NULL) return;
+       int parent_pos = m_treeview_SymbolTF.ItemPrevNode(li);
+       Print("MY DEBUG CGUIPannel::OnEvent ON_CLICK_BUTTON SymbolTF: item_label=", item.LabelText(),
+             " item_type=", EnumToString(item.ItemType()), " parent_pos=", parent_pos);
+       if(parent_pos == -1 && item.ItemType() == TI_SIMPLE)   // Symbol "note" - not tracked yet
+        {
+         // Data only - CGUIPannel's job stops at m_SymbolTFManager; nothing chart-related here.
+         // Table/TreeView refresh for the new row happens in the SYMBOLTF_MANAGER_EVENT_ADDED
+         // listener - CGUIPannel reacts to its own Manager, no direct call needed here.
+         if(m_SymbolTFManager != NULL && !m_SymbolTFManager.Exists(item.LabelText(), (ENUM_TIMEFRAMES)_Period))
+            m_SymbolTFManager.Add_SymbolTFSetting(item.LabelText(), (ENUM_TIMEFRAMES)_Period);
+        }
+       else if(parent_pos != -1)   // TF child - already tracked, pure navigation, no Data change
+        {
+         // Not a row mutation, so m_SymbolTFManager itself just broadcasts the intent
+         // (NotifySettingChanged - no Add/Delete involved) - CGUIPannel's job still stops at
+         // the Manager, EA is the one that decides whether/how to react on the chart.
+         CTreeItem *parent = m_treeview_SymbolTF.ItemPointer(parent_pos);
+         if(parent != NULL && m_SymbolTFManager != NULL)
+          {
+           ENUM_TIMEFRAMES target_tf = TimestampByDescription(item.LabelText());
+           m_SymbolTFManager.NotifySettingChanged(parent.LabelText(), target_tf);
+          }
+         // Flag it - nothing else in this branch schedules a resync, so without this the
+         // tree only happens to update if some unrelated event later sets the flag too.
+         m_treeview_symboltf_need_sync = true;
+        }
+
+         return;
+      }
+   //Handle Saving to JSON Need check
+
      
     // Handle Save Indicator config to JSON
       //  if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
@@ -630,7 +778,7 @@
     //Handle Other tab combo selection - live-updates the preview immediately (BEFORE Save),
     //so the user sees what they're about to pick, not just its number/name. Reads directly off
     //the just-clicked combo's own SelectedItemIndex() - m_marker_* only changes on Save.
-      // if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
+     // if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
       // {
       //   int codes[]; string shape_labels[];
       //   GetMarkerArrowCodeChoices(codes, shape_labels);
@@ -745,72 +893,8 @@
     //--- SymbolTF tree + indicator table on a real change. Replaces the old CHARTEVENT_CHART_CHANGE
     //--- handler, which duplicated this same refresh AND called ChartRedraw() a second time right
     //--- after OnInitEvent's REASON_CHARTCHANGE already did - that double-redraw was the
-    //--- m_window_main flicker on every TF/symbol switch (fixed 2026-07-14).
-      // if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_CHANGE ||
-      //     id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_TF_CHANGE ||
-      //     id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE)
-      //   {
-      //   // --- CGUIPannel owns m_symbol_tf_Setting[] (SynIndicatorPlan.md, "Action" Step 2,
-      //   // --- 2026-08-18) - self-register here, the ONE place that reliably catches every real
-      //   // --- Symbol/TF change regardless of cause (treeview click, native MT5 symbol box,
-      //   // --- keyboard shortcut...), same reasoning as PopulateTableSymbolTFSetting() below.
-      //   // --- CTimeSeriesEngine::OnChartEvent() already created the series on its own - no call
-      //   // --- into Layer 1 needed here, just keeping Layer 2's own array in sync.
-      //   // --- Buy/Sell default true (Anhnt, 2026-08-18) - wired to SignalBridge later.
-      //     string sym_now = _Symbol;
-      //     string tf_now  = TimeframeDescription(_Period);
-      //     bool sym_tf_found = false;
-      //     for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
-      //       if(m_symbol_tf_Setting[i].symbol == sym_now && m_symbol_tf_Setting[i].tf == tf_now) { sym_tf_found = true; break; }
-      //     if(!sym_tf_found)
-      //       {
-      //       int n = ArraySize(m_symbol_tf_Setting);
-      //       ArrayResize(m_symbol_tf_Setting, n + 1);
-      //       m_symbol_tf_Setting[n].symbol = sym_now;
-      //       m_symbol_tf_Setting[n].tf     = tf_now;
-      //       m_symbol_tf_Setting[n].buy    = true;
-      //       m_symbol_tf_Setting[n].sell   = true;
-      //       }
-      //   PopulateSymbolTFTree();
-      //   SynSymbolTFTreeViewIcons();
-      //   PopulateTableSymbolTFSetting();   // additive-only: picks up any newly tracked Symbol+TF pair
-      //   SyncTableSymbolTFSettingCurrentChartIcon();   // "current chart" row just moved
-      //   UpdateGUI(false);   // dirty-check refresh only - no manual redraw, MT5 already redraws natively on chart change
-      //   return;
-      //   }
-    //Handle Symbol TF TreeView Click ON_CLICK_BUTTON
-      // if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON  && lparam == m_treeview_SymbolTF.Id())
-      // {
-      //   int li = (int)dparam;
-      //   // ADDED: guard against stale/out-of-range list_index from event queue.
-      //   // ItemPointer() clamps silently so item != NULL even for invalid li;
-      //   // this early return prevents navigating to the wrong node.
-      //   if(li < 0 || li >= m_treeview_SymbolTF.ItemsTotal()) return;
-      //   CTreeItem *item = m_treeview_SymbolTF.ItemPointer(li);         
-      //   //--------------------------------
-      //   if(item == NULL) return;
-      //   int parent_pos = m_treeview_SymbolTF.ItemPrevNode(li);
-      //   if(parent_pos == -1)  // Symbol node
-      //     {
-      //     if(item.ItemType() == TI_SIMPLE) //No TF Found
-      //       {              
-      //       ChartSetSymbolPeriod(0, item.LabelText(), _Period);
-      //       } 
-      //     }
-      //   else // TF node → navigate to exact sym + tf
-      //     {
-      //       CTreeItem *parent = m_treeview_SymbolTF.ItemPointer(parent_pos);
-      //       if(parent != NULL)
-      //       {
-      //         ENUM_TIMEFRAMES target_tf = TimestampByDescription(item.LabelText());
-      //         ChartSetSymbolPeriod(0,parent.LabelText(),target_tf);
-      //       }
-      //     }
-      //   return;
-      // }
-    // --- CHARTEVENT_CHART_CHANGE: symbol/TF tree rebuild moved to CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE
-    // --- above (2026-07-14) - this native event still fires on every scroll/zoom too, so it was never
-    // --- a reliable "did symbol/TF really change" signal on its own; the CChartObjCollection event is.
+    //--- m_window_main flicker on every TF/symbol switch (fixed 2026-07-14).     
+    
   }
  //+------------------------------------------------------------------+
  //| Update GUI                                                       |
@@ -820,11 +904,16 @@
       // // No unconditional full-canvas Update(true) here - repainting the whole treeview and
       // // the whole Settings table on every CHARTCHANGE was exactly the m_window_main blink.
       // // Each call below repaints only the cells/icons it actually changed (dirty-check),
-      // // and PopulateSymbolTFTree (CHARTEVENT_CHART_CHANGE handler) already updates the tree
+      // // and PopulateTreeView_SymbolTFSetting (CHARTEVENT_CHART_CHANGE handler) already updates the tree
       // when the symbol/TF really changed.
-         RefreshTableIndicator();
+         InitializeTable_IndicatorTemplateSetting();
       //   SetValuesToTableIndicatorSymbolTFValue();
-         SyncIndicatorTreeViewIcons();
+       // Just flag it - UpdateGUI() itself is called from 2+ places on the very same real
+       // symbol/TF change (OnInitEvent's REASON_CHARTCHANGE branch AND the CHART_OBJ_EVENT_CHART_
+       // ..._CHANGE handler), so calling SyncTreeView_IndicatorTemplateSetting() directly here was
+       // the same double-redraw risk already fixed for m_treeview_SymbolTF (2026-08-26) - OnTimerEvent
+       // is the ONE place that actually calls it now.
+         m_treeview_indicator_need_sync = true;
          if(redraw) m_chart.Redraw();
-  }  
+  }
 #endif // CGUIPANNEL_LIFECYCLE_MQH

@@ -23,6 +23,9 @@
        ENUM_TIMEFRAMES  m_tf_enum;     // IDENTITY (raw) - never text, same principle as CIndicatorSetting.TypeEnum()
        bool             m_buy_signal;  // opt-in: count this Symbol+TF's Buy cross into the Signal Bridge
        bool             m_sell_signal; // opt-in: count this Symbol+TF's Sell cross into the Signal Bridge
+       bool             m_sound_alert;
+       bool             m_message_alert;
+              
 
      public:
                          CSymbolTFSetting(void);
@@ -45,6 +48,10 @@
        void              BuySignal(const bool v)    { m_buy_signal = v;     }
        bool              SellSignal(void)     const { return m_sell_signal; }
        void              SellSignal(const bool v)   { m_sell_signal = v;    }
+       bool              SoundAlert(void)     const { return m_sound_alert;   }
+       void              SoundAlert(const bool v)   { m_sound_alert = v;      }
+       bool              MessageAlert(void)   const { return m_message_alert; }
+       void              MessageAlert(const bool v) { m_message_alert = v;    }
 
        virtual void      Print(const bool full_prop=false, const bool dash=false);
    };
@@ -52,7 +59,9 @@
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
  CSymbolTFSetting::CSymbolTFSetting(void) : m_tf_enum(PERIOD_CURRENT),
-                                             m_buy_signal(true), m_sell_signal(true)
+                                             m_buy_signal(true), m_sell_signal(true),
+                                             m_sound_alert(true),m_message_alert(true)
+
    {
      this.m_type = OBJECT_DE_TYPE_SYMBOLTF_SETTING;
    }

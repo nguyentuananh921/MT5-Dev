@@ -17,15 +17,15 @@
   {
    private:
     //Private variables
-      // --- Objects for creating a table
-        CRectCanvas       m_headers;
-        CRectCanvas       m_table;
-        CScrollV          m_scrollv;
-        CScrollH          m_scrollh;
-        CTextEdit         m_edit;
-        CComboBox         m_combobox;
-        CPointer          m_column_resize;
-      // --- Table cell properties
+     // --- Objects for creating a table
+      CRectCanvas       m_headers;
+      CRectCanvas       m_table;
+      CScrollV          m_scrollv;
+      CScrollH          m_scrollh;
+      CTextEdit         m_edit;
+      CComboBox         m_combobox;
+      CPointer          m_column_resize;
+     // --- Table cell properties
       struct CTCell
        {
         ENUM_TYPE_CELL    m_type;           // Cell type
@@ -1245,25 +1245,24 @@
     // --- Index adjustment in case of out of range
       int checked_row_index=(row_index>=(int)m_rows_total)?(int)m_rows_total-1 : row_index;
     // --- Shift other rows (move from the specified index to the last row)
-      for(int c=0; c<(int)m_columns_total; c++)
+     for(int c=0; c<(int)m_columns_total; c++)
+      {
+       for(int r=checked_row_index; r<array_size-1; r++)
         {
-         for(int r=checked_row_index; r<array_size-1; r++)
-           {
-            // --- Next line index
-            uint next_r=r+1;
-            // --- Move data from the cell of the next row to the cell of the current one
-            CellCopy(c,r,c,next_r);
-           }
+         // --- Next line index
+          uint next_r=r+1;
+         // --- Move data from the cell of the next row to the cell of the current one
+          CellCopy(c,r,c,next_r);
         }
+      }
     // --- Reduce the size of the string array by one element
       m_rows_total=array_size-1;
     // --- Set size to arrays of rows
-      for(uint i=0; i<m_columns_total; i++)
-        {
-         ::ArrayResize(m_rows,m_rows_total);
-         ::ArrayResize(m_columns[i].m_rows,m_rows_total);
-        }
-    //Modify Library note Add here to fix 
+     for(uint i=0; i<m_columns_total; i++)
+      {
+        ::ArrayResize(m_rows,m_rows_total);
+        ::ArrayResize(m_columns[i].m_rows,m_rows_total);
+      }
     // --- Reset hover/focus row indices - the rows just shrank and these may point past the
     //     new row count; next mouse move re-detects the hovered row via CheckRowFocus()
       m_item_index_focus      =WRONG_VALUE;
@@ -1941,22 +1940,22 @@
   bool CTable::OnSelectRow(const int row_index)
    {
     // --- If you clicked on an already selected row
-      if(row_index==m_selected_item)
+     if(row_index==m_selected_item)
+      {
+       // --- Deselect if not disabled
+        if(!m_is_without_deselect)
          {
-         // --- Deselect if not disabled
-         if(!m_is_without_deselect)
-            {
-            m_prev_selected_item =m_selected_item;
-            m_selected_item      =WRONG_VALUE;
-            m_selected_item_text ="";
-            }
-         return(true);
+          m_prev_selected_item =m_selected_item;
+          m_selected_item      =WRONG_VALUE;
+          m_selected_item_text ="";
          }
+        return(true);
+      }
     // --- Save the row index and the row of the first cell
-      m_prev_selected_item =(m_selected_item==WRONG_VALUE)? row_index : m_selected_item;
-      m_selected_item      =row_index;
-      m_selected_item_text =m_columns[0].m_rows[row_index].m_full_text;
-      return(true);
+     m_prev_selected_item =(m_selected_item==WRONG_VALUE)? row_index : m_selected_item;
+     m_selected_item      =row_index;
+     m_selected_item_text =m_columns[0].m_rows[row_index].m_full_text;
+     return(true);
    }
   //+------------------------------------------------------------------+
   // | Handling clicks on the table |
@@ -2321,59 +2320,59 @@
   //+------------------------------------------------------------------+
   void CTable::QuickSort(uint beg,uint end,uint column,const ENUM_CSORT_MODE mode=SORT_ASCEND)
    {
-      uint   r1         =beg;
-      uint   r2         =end;
-      uint   c          =column;
-      string temp       =NULL;
-      string value      =NULL;
-      uint   data_total =m_rows_total-1;
+    uint   r1         =beg;
+    uint   r2         =end;
+    uint   c          =column;
+    string temp       =NULL;
+    string value      =NULL;
+    uint   data_total =m_rows_total-1;
     // --- Execute the algorithm as long as the left index is less than the rightmost index
-      while(r1<end)
+     while(r1<end)
+      {
+       // --- Get the value from the middle of the row
+        value=m_columns[c].m_rows[(beg+end)>>1].m_full_text;
+       // --- Execute the algorithm as long as the left index is less than the found right index
+        while(r1<r2)
          {
-         // --- Get the value from the middle of the row
-         value=m_columns[c].m_rows[(beg+end)>>1].m_full_text;
-         // --- Execute the algorithm as long as the left index is less than the found right index
-         while(r1<r2)
+          // --- Shift the index to the right while we find the value according to the specified condition
+           while(CheckSortCondition(c,r1,value,(mode==SORT_ASCEND)? false : true))
             {
-            // --- Shift the index to the right while we find the value according to the specified condition
-            while(CheckSortCondition(c,r1,value,(mode==SORT_ASCEND)? false : true))
-               {
-               // --- Control of overflow of array boundaries
-               if(r1==data_total)
-                  break;
-               r1++;
-               }
-            // --- Shift the index to the left while we find the value according to the specified condition
-            while(CheckSortCondition(c,r2,value,(mode==SORT_ASCEND)? true : false))
-               {
-               // --- Control of overflow of array boundaries
-               if(r2==0)
-                  break;
-               r2--;
-               }
-            // --- If the left index is not yet greater than the right one
-            if(r1<=r2)
-               {
-               // --- Swap values
-               Swap(r1,r2);
-               // --- If you reach the limit on the left
-               if(r2==0)
-                  {
-                  r1++;
-                  break;
-                  }
-               //---
-               r1++;
-               r2--;
-               }
+             // --- Control of overflow of array boundaries
+              if(r1==data_total)
+               break;
+             r1++;
             }
-         // --- Recursive continuation of the algorithm until we reach the beginning of the range
-         if(beg<r2)
-            QuickSort(beg,r2,c,mode);
-         // --- Narrowing the range for the next iteration
-         beg=r1;
-         r2=end;
+          // --- Shift the index to the left while we find the value according to the specified condition
+           while(CheckSortCondition(c,r2,value,(mode==SORT_ASCEND)? true : false))
+            {
+             // --- Control of overflow of array boundaries
+              if(r2==0)
+               break;
+              r2--;
+            }
+          // --- If the left index is not yet greater than the right one
+           if(r1<=r2)
+            {
+             // --- Swap values
+              Swap(r1,r2);
+             // --- If you reach the limit on the left
+             if(r2==0)
+              {
+               r1++;
+               break;
+              }
+             //---
+             r1++;
+             r2--;
+            }
          }
+       // --- Recursive continuation of the algorithm until we reach the beginning of the range
+        if(beg<r2)
+         QuickSort(beg,r2,c,mode);
+       // --- Narrowing the range for the next iteration
+        beg=r1;
+        r2=end;
+      }
    }
   //+------------------------------------------------------------------+
   // | Comparing values ​​by specified sorting condition |
@@ -2382,44 +2381,41 @@
   //+------------------------------------------------------------------+
   bool CTable::CheckSortCondition(uint column_index,uint row_index,const string check_value,const bool direction)
    {
-      bool condition=false;
+    bool condition=false;
     //---
-      switch(m_columns[column_index].m_data_type)
-         {
-         case TYPE_STRING :
-            {
-            string v1=m_columns[column_index].m_rows[row_index].m_full_text;
-            string v2=check_value;
-            condition=(direction)? v1>v2 : v1<v2;
-            break;
-            }
-         //---
-         case TYPE_DOUBLE :
-            {
-            double v1=double(m_columns[column_index].m_rows[row_index].m_full_text);
-            double v2=double(check_value);
-            condition=(direction)? v1>v2 : v1<v2;
-            break;
-            }
-         //---
-         case TYPE_DATETIME :
-            {
-            datetime v1=::StringToTime(m_columns[column_index].m_rows[row_index].m_full_text);
-            datetime v2=::StringToTime(check_value);
-            condition=(direction)? v1>v2 : v1<v2;
-            break;
-            }
-         //---
-         default :
-            {
-            long v1=(long)m_columns[column_index].m_rows[row_index].m_full_text;
-            long v2=(long)check_value;
-            condition=(direction)? v1>v2 : v1<v2;
-            break;
-            }
-         }
+     switch(m_columns[column_index].m_data_type)
+      {
+       case TYPE_STRING :
+        {
+         string v1=m_columns[column_index].m_rows[row_index].m_full_text;
+         string v2=check_value;
+         condition=(direction)? v1>v2 : v1<v2;
+         break;
+        }
+       case TYPE_DOUBLE :
+        {
+         double v1=double(m_columns[column_index].m_rows[row_index].m_full_text);
+         double v2=double(check_value);
+         condition=(direction)? v1>v2 : v1<v2;
+         break;
+        }
+       case TYPE_DATETIME :
+        {
+         datetime v1=::StringToTime(m_columns[column_index].m_rows[row_index].m_full_text);
+         datetime v2=::StringToTime(check_value);
+         condition=(direction)? v1>v2 : v1<v2;
+         break;
+        }
+       default :
+        {
+         long v1=(long)m_columns[column_index].m_rows[row_index].m_full_text;
+         long v2=(long)check_value;
+         condition=(direction)? v1>v2 : v1<v2;
+         break;
+        }
+      }
     //---
-      return(condition);
+    return(condition);
    }
   //+------------------------------------------------------------------+
   // | Swaps elements |
@@ -2887,16 +2883,16 @@
     // --- Indentation taking into account the mode of changing the column width
       int sep_x_offset=(m_column_resize_mode)? m_sep_x_offset : 0;
     // --- Drawing the background of the headers
-      for(uint i=0; i<m_columns_total; i++)
-         {
-         // --- Let's check the focus
-         if(is_header_focus=x>m_columns[i].m_x+((i!=0)? sep_x_offset : 0) && x<=m_columns[i].m_x2+sep_x_offset)
-            m_prev_header_index_focus=(int)i;
-         // --- Define the title color
-         uint clr=(i==m_column_resize_control)? ::ColorToARGB(m_headers_color_hover,m_alpha) : HeaderColorCurrent(is_header_focus);
-         // ---Draw header background
-         m_headers.FillRectangle(m_columns[i].m_x,y1,m_columns[i].m_x2,y2,clr);
-         }
+     for(uint i=0; i<m_columns_total; i++)
+      {
+       // --- Let's check the focus
+       if(is_header_focus=x>m_columns[i].m_x+((i!=0)? sep_x_offset : 0) && x<=m_columns[i].m_x2+sep_x_offset)
+        m_prev_header_index_focus=(int)i;
+       // --- Define the title color
+       uint clr=(i==m_column_resize_control)? ::ColorToARGB(m_headers_color_hover,m_alpha) : HeaderColorCurrent(is_header_focus);
+       // ---Draw header background
+       m_headers.FillRectangle(m_columns[i].m_x,y1,m_columns[i].m_x2,y2,clr);
+      }
    }
   //+------------------------------------------------------------------+
   // | Draws a table header grid |
@@ -2914,7 +2910,7 @@
     // --- Dividing lines
       x2=x1=m_columns[0].m_width;
       for(uint i=1; i<m_columns_total; i++)
-         m_headers.Line(m_columns[i].m_x,y1,m_columns[i].m_x,y2,clr);
+        m_headers.Line(m_columns[i].m_x,y1,m_columns[i].m_x,y2,clr);
    }
   //+------------------------------------------------------------------+
   // | Draws a sign that a table can be sorted |
@@ -2922,36 +2918,36 @@
   void CTable::DrawSignSortedData(void)
    {
     // --- Exit if (1) sorting is disabled or (2) has not yet been performed
-      if(!m_is_sort_mode || m_is_sorted_column_index==WRONG_VALUE)
-         return;
+     if(!m_is_sort_mode || m_is_sorted_column_index==WRONG_VALUE)
+      return;
     // --- Quit if there are input fields or combo boxes in cells
-      if(m_edit_state && m_combobox_state)
-         return;
+     if(m_edit_state && m_combobox_state)
+      return;
     // --- Exit if array is out of bounds
-      if(m_is_sorted_column_index>=::ArraySize(m_columns))
-         return;
+     if(m_is_sorted_column_index>=::ArraySize(m_columns))
+      return;
     // --- Calculation of coordinates
-      int x =m_columns[m_is_sorted_column_index].m_x2-m_sort_arrow_x_gap;
-      int y =m_sort_arrow_y_gap;
+     int x =m_columns[m_is_sorted_column_index].m_x2-m_sort_arrow_x_gap;
+     int y =m_sort_arrow_y_gap;
     // --- Selected picture by sorting direction
       int image_index=(m_last_sort_direction==SORT_ASCEND)? 0 : 1;
     // --- Draw
-      for(uint ly=0,i=0; ly<m_sort_arrows[image_index].Height(); ly++)
-         {
-         for(uint lx=0; lx<m_sort_arrows[image_index].Width(); lx++,i++)
-            {
-            // ---If there is no color, move to the next pixel
-            if(m_sort_arrows[image_index].Data(i)<1)
+     for(uint ly=0,i=0; ly<m_sort_arrows[image_index].Height(); ly++)
+      {
+       for(uint lx=0; lx<m_sort_arrows[image_index].Width(); lx++,i++)
+        {
+         // ---If there is no color, move to the next pixel
+          if(m_sort_arrows[image_index].Data(i)<1)
                continue;
-            // --- Get the color of the bottom layer (header background) and the color of the specified pixel in the image
-            uint background  =m_headers.PixelGet(x+lx,y+ly);
-            uint pixel_color =m_sort_arrows[image_index].Data(i);
-            // --- Mix colors
-            uint foreground=::ColorToARGB(m_clr.BlendColors(background,pixel_color));
-            // --- Drawing a pixel of the layered image
-            m_headers.PixelSet(x+lx,y+ly,foreground);
-            }
-         }
+         // --- Get the color of the bottom layer (header background) and the color of the specified pixel in the image
+          uint background  =m_headers.PixelGet(x+lx,y+ly);
+          uint pixel_color =m_sort_arrows[image_index].Data(i);
+         // --- Mix colors
+          uint foreground=::ColorToARGB(m_clr.BlendColors(background,pixel_color));
+         // --- Drawing a pixel of the layered image
+          m_headers.PixelSet(x+lx,y+ly,foreground);
+        }
+      }
    }
   //+------------------------------------------------------------------+
   // | Draws table header text |

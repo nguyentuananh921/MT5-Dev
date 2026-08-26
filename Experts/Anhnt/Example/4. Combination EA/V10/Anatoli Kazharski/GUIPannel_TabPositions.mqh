@@ -16,7 +16,7 @@
  //+------------------------------------------------------------------+
  //+------------------------------------------------------------------+
  //| Pre-trade-plan symbol picker - Market Watch symbols, alphabetical |
- //| (same sort convention as PopulateSymbolTFTree), default-selects   |
+ //| (same sort convention as PopulateTreeView_SymbolTFSetting), default-selects   |
  //| the current chart symbol.                                        |
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreatePreTradePlanSymbolCombo(const int x, const int y)

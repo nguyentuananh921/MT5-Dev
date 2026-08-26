@@ -491,8 +491,8 @@
       ::Print(__FUNCTION__, " > rejected: this template already exists");
       return;
      }
-    // Data only - EA reacts to TEMPLATE_MANAGER_EVENT_ADDED to attach it on chart
+    // Data only - EA reacts to INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED to attach it on chart
     // (CGUIPannel no longer holds CChartObjCollection).
-    m_indicator_template_manager.Add(m_current_param_type, params);
+    m_indicator_template_manager.Add_IndicatorTemplateSetting(m_current_param_type, params);
  }
 #endif // GUIPANNEL_ADDINDICATORFORM_MQH

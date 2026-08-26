@@ -53,12 +53,12 @@ Populate: `LoadGUIConfigFromJSON` parse text→raw theo schema NGAY TRONG THÂN 
 
 ## 4. Các hàm đã viết lại hôm nay (2026-08-19) - CGUIPannel
 
-- `RefreshTableIndicator()` — thuần vẽ lại `m_table_indicator_template` từ `m_indicator_template_setting[]`, không quét Layer 1 nữa (row count = `ArraySize(m_indicator_template_setting)`).
-- `SetIndicatorTableRow(row)` — paint 1 row từ Data; `GetIndicatorForRow(row)` chỉ dùng cho cosmetics cần live instance (Label, Group, Show).
+- `InitializeTable_IndicatorTemplateSetting()` — thuần vẽ lại `m_table_indicator_template` từ `m_indicator_template_setting[]`, không quét Layer 1 nữa (row count = `ArraySize(m_indicator_template_setting)`).
+- `UpdateRow_IndicatorTemplateSetting(row)` — paint 1 row từ Data; `GetIndicatorForRow(row)` chỉ dùng cho cosmetics cần live instance (Label, Group, Show).
 - `AddIndicatorToTemplate(type, params)` — check tồn tại → gọi Layer 1 tạo → append Data → `ChartIndicatorAdd` hiện ngay trên chart → resync table. Dùng cho `OnClickAddIndicator` + `SynIndicatorOnChart` nhánh CHANGE.
 - `RemoveIndicatorFromTemplate(type, params)` (đổi tên từ `RemoveIndicatorInstance`) — detach chart (qua `GetIndicatorForRow`, không quét `m_IndicatorsCollection` nữa) → xóa Data TRƯỚC → gọi Layer 1 xóa SAU (Layer 2 quyết, Layer 1 chấp hành).
-- `ScanIndicatorOnChart(void)` (đổi tên từ `ImportForeignChartIndicators`) — quét Chart, indicator MỚI (chưa có trong Data) thì gọi `AddNewIndicatorToAllSeries` (Layer 1) RỒI MỚI append Data; indicator ĐÃ CÓ (re-Insert) thì chỉ `RefreshIndicatorTableShowColumn()`, không đụng gì cả. **SỬA LẠI 2026-08-19** (bản đầu "KHÔNG gọi Layer 1" SAI - đã test thật: row không có object Layer 1 backing thì `GetIndicatorForRow` luôn NULL, khiến Remove/Show-toggle/Label silently no-op cho MỌI row đến từ đường này - xem `SynIndicatorActionPlan.md` mục sự cố).
-- `RefreshIndicatorTableShowColumn()` — dirty-check cột Show, dùng `m_bool_table_indicator_template_cache_show[]` (đổi từ `int` sang `bool`, bỏ sentinel `-1` vì `SetIndicatorTableRow` luôn ghi cache trước khi hàm này có cơ hội thấy size lệch).
+- `ScanIndicatorOnChart(void)` (đổi tên từ `ImportForeignChartIndicators`) — quét Chart, indicator MỚI (chưa có trong Data) thì gọi `AddNewIndicatorToAllSeries` (Layer 1) RỒI MỚI append Data; indicator ĐÃ CÓ (re-Insert) thì chỉ `SyncTable_IndicatorTemplateSetting()`, không đụng gì cả. **SỬA LẠI 2026-08-19** (bản đầu "KHÔNG gọi Layer 1" SAI - đã test thật: row không có object Layer 1 backing thì `GetIndicatorForRow` luôn NULL, khiến Remove/Show-toggle/Label silently no-op cho MỌI row đến từ đường này - xem `SynIndicatorActionPlan.md` mục sự cố).
+- `SyncTable_IndicatorTemplateSetting()` — dirty-check cột Show, dùng `m_bool_table_indicator_template_cache_show[]` (đổi từ `int` sang `bool`, bỏ sentinel `-1` vì `UpdateRow_IndicatorTemplateSetting` luôn ghi cache trước khi hàm này có cơ hội thấy size lệch).
 - `GetIndicatorForRow(row)` / `GetRowForIdentity(type_key, params_key)` / `IndicatorTemplateSettingExists(type_key, params_key)` — không đổi logic, chỉ uncomment lại khai báo.
 
 - `LoadGUIConfigFromJSON` — sau khi copy `entries[]` vào `m_indicator_template_setting[]`, parse text→raw NGAY TẠI CHỖ (inline, không tách hàm) để điền `.type_enum`/`.raw_params[]`; sau đó gọi `AddAllIndicatorsToNewSeries` 1 lần/Series thay vì `ApplyIndicatorTemplateSetting` (đã xóa).

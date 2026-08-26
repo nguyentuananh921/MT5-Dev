@@ -14,6 +14,27 @@
   - CTimeSeriesEngine CBarTimeSeriesCollection  -> m_BarTimeSeriesCollection;
   - CGUIPannel        CWindow                   -> m_window_main;
   - CTradingEngine    CSymbolsCollection        -> m_symbol_collection;
+ [] Tên của các method liên quan đến Table và TreeView, SymbolTFSetting,IndicatorTemplateSetting
+  -Create: Create<Which>_<Which>
+    CreateTable_IndicatorTemplateSetting(),
+    CreateTable_SymbolTFSetting()
+    CreateTreeView_IndicatorTemplateSetting()
+    CreateTreeView_SymbolTFSetting()
+  -Update lần đầu InitializeTabble>_<Which>,InitializeTable_IndicatorTemplateSetting()
+    
+  - Modify số lượng nhỏ.
+   AddRow_<Which>,DeleteRow_<Which>,HighLightRow_<Which>, UpdateRow_<Which>
+  - Hành vi sửa hàng loạt:   SyncTable_<Which>,
+ [] Với Table SymbolTFSetting chỉ có 3 method
+  - PopulateTable_SymbolTFSetting
+  - CreateTable_SymbolTFSetting
+  - SyncTable_SymbolTFSetting()
+  
+ [] Với TreeView không tách bạch được việc sửa 1 đơn vị nhỏ và sync hàng loạt nên chỉ có 3 method cần đặt theo thứ tự
+   - PopulateTreeView chuẩn bị data
+   - CreateTreeView
+   - SyncTreeView dựa trên cờ cần sync hay không
+   
  [] Biến Pointer sẽ phải trùng tên và note rõ class nào hold nó ví dụ
   - CSymbolsCollection         *m_symbol_collection; //CTradingEngine owns
  [] Tận dụng triệt đê method
@@ -32,10 +53,7 @@
 2. Version Update
  [v] Từ bản V8 thì Layer 2 được tách biệt việc implemenation ra các module khác nhau theo nguyên tắc chức năng của các GUI Control theo Tab
  [v] Từ bản V9 thì CGUIPannel trực tiếp làm việc với JSONConfig.
- [] V10 đang Update Struct thành Class và rất nhiều phần khác trong EA, CGUIPanel đang được tạm remove để rà soát trong lúc chỉ tập trung việc Synindicator giữa các Layer.
- Layer 1: PureData C
-  = IndicatorSetting.mqh
-  - IndicatorTemplateManager.mqh
+ [] V10 đang Update Struct thành Class và rất nhiều phần khác trong EA, CGUIPanel đang được tạm remove để rà soát trong lúc chỉ tập trung việc Synindicator giữa các Layer. 
 3. Feature
  [v] CTreeView  m_treeview_SymbolTF;
     [v] Display Symbol + TF 
@@ -66,6 +84,11 @@
    []: CTimeSeriesEngine
    []: CTradingEngine   
    -Cả 2 vốn tách từ CEngine
+   PureData Có 2 thứ để Config Indicator và Symbol-Tf  
+  = IndicatorSetting.mqh
+  - IndicatorTemplateManager.mqh
+  - SymbolTFSetting.mqh
+  - SymbolTFManager.mqh
    [] CIndicatorSetting: dùng để Seting cho mỗi indicator có trong CIndicatorTemplateManager
    [] CIndicatorTemplateManager: dùng để Setting cho một template. Khái niệm template có trên Chart, có trên Table, Indicator TreeView của CGUIPannel, và List các Indicator có trong một symbol + tf
    [] CIndicatorTemplateManager sẽ bắn Event để các component khác tự bắt Event và xử lý.   

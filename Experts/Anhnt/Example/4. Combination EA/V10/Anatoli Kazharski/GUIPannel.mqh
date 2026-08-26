@@ -1,4 +1,4 @@
-//+------------------------------------------------------------------+
+﻿//+------------------------------------------------------------------+
 //|                                                    GUIPannel.mqh |
 //|EA Code Base on https://www.mql5.com/en/articles/4727             |
 //|Library base on Link https://www.mql5.com/en/code/19703           |
@@ -34,6 +34,7 @@
           CTreeView                m_treeview_indicator;
           int                      m_type_node_li[];      // list_index for Type of indicator
           ENUM_INDICATOR           m_type_node_value[];   //  ENUM_INDICATOR for Type of indicator
+          bool                     m_treeview_indicator_need_sync; //Dirty flag for m_treeview_indicator 
        // For Indicator Add Form display on click m_treeview_indicator node
         CTextLabel                 m_param_labels[INDICATOR_PARAM_SLOTS_MAX];
         CTextEdit                  m_param_edits[INDICATOR_PARAM_SLOTS_MAX];    // plain numeric params
@@ -47,12 +48,17 @@
        //For Symbol/TF Setting Tab
         //For CTreeView left pannel of the Tab 
          CTreeView                   m_treeview_SymbolTF;
-        //  Table m_table_indicator_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
-         CTable                      m_table_indicator_SymbolTFSeting;
+        //  Table m_table_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
+         CTable                      m_table_SymbolTFSeting;
          CButton                     m_btn_save_SymbolTF;
+         bool                        m_treeview_symboltf_need_sync;//Dirty flag for m_treeview_SymbolTF  
          CTextLabel                  m_label_symboltf_note;   // "takes effect after EA restart" note
-         // row whose delete icon was clicked - same deferred-delete pattern as m_pending_remove_row
-          int                         m_pending_remove_row_symboltf;
+         // (sym,tf) whose delete icon was clicked - same deferred-delete pattern as
+         // m_pending_remove_row, but stores identity (not a physical row position) captured
+         // right at click time, so it can never go stale even if the table gets re-sorted
+         // between the click and the deferred OnTimerEvent processing.
+          string                      m_pending_remove_sym_symboltf;
+          string                      m_pending_remove_tf_symboltf;
     //For Single Source of Truth
        CIndicatorTemplateManager  *m_indicator_template_manager;   // EA owns
        CSymbolTFManager           *m_SymbolTFManager;              // EA owns
@@ -72,8 +78,8 @@
           void                           ShowSettingWindow(void);
           void                           HideSettingWindow(void);
        // For TreeView m_treeview_indicator on Left Pannel of Config Indicator Tab
-            bool                          CreateTreeView_Indicator(const int x_gap, const int y_gap);
-            void                          PopulateIndicatorTree(void);            
+            bool                          CreateTreeView_IndicatorTemplateSetting(const int x_gap, const int y_gap);
+            void                          PopulateTreeView_IndicatorTemplateSetting(void);
         //Helper
           static void                     SetLayoutSlot(SIndicatorLayout &out[], int idx, int r, int c, int tw, int fw);
           int                             GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[]);
@@ -86,8 +92,8 @@
           bool                            CreateTabSettingConfig(const int x_gap, const int y_gap);
        // For Indicator Table m_table_indicator_template at bottom show list of indicator in template.
           //ENUM_INDICATOR_GROUP            GetIndicatorGroupForType(const ENUM_INDICATOR type); //Move to Deblib
-          bool                            CreateTabbleIndicator(const int x, const int y);          
-          void                            SetIndicatorTableRow(const int row);
+          bool                            CreateTable_IndicatorTemplateSetting(const int x, const int y);          
+          void                            UpdateRow_IndicatorTemplateSetting(const int row);
          //Event Handler for m_table_indicator_template           
           void                            OnClickToggleShowIndicatorOnChart(const int row);          
           void                            OnClickToggleBuySignal(const int row);
@@ -96,24 +102,23 @@
           void                            OnClickToggleMessageAlert(const int row);
           void                            OnClickRemoveIndicator(const int row);
        //For TreeView m_treeview_SymbolTF on Left Pannel of m_tabs_main_setting_config (Symbol TF Tab)
-          bool                            CreateTreeView_SymbolTF(const int x_gap, const int y_gap);               
-          void                            PopulateSymbolTFTree(void);
-          void                            SynSymbolTFTreeViewIcons(void);  
-      //For Symbol/TF Setting Table m_table_indicator_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
-          bool                            CreateTableSymbolTFSetting(const int x, const int y);
-          void                            RefreshTableSymbolTF(void);
-          bool                            HasTableSymbolTFSettingRow(const string sym, const string tf_text);
-          void                            SetTableSymbolTFSettingRow(const int row, const string sym, const string tf_text);
+          bool                            CreateTreeView_SymbolTFSetting(const int x_gap, const int y_gap);               
+          void                            PopulateTreeView_SymbolTFSetting(void);
+          void                            SyncTreeView_SymbolTFSetting(void);  
+      //For Symbol/TF Setting Table m_table_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
+          bool                            CreateTable_SymbolTFSetting(const int x, const int y);
+          void                            PopulateTable_SymbolTFSetting(void);
+          void                            SyncTable_SymbolTFSetting(void);
+          void                            DeleteRow_SymbolTFSetting(const string sym, const string tf_text);
+          int                             FindTableRowBySymbolTF(const string &sym, const string &tf_text);
           bool                            IsCurrentChartSymbolTFRow(const string sym, const string tf_text);
-          void                            SyncTableSymbolTFSettingCurrentChartIcon(void);
           void                            OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col);
       //Calculation for multi module implemented in GUIPannel_MultiModule.mqh 
           double                          DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0); 
       //
           CTradingLevelBubble         m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()`
       //Temporary comment out
-       //Private Properties
-        //     
+       //Private Properties        
         
         //   // Main Tab on Right of m_window_main
         //     CTabs                     m_tabs_main;
@@ -139,28 +144,7 @@
         //     CTable               m_table_pre_Trade_plan;
         //     CTable               m_table_positions;
         //     datetime             m_last_deal_time;   // IsLastDealTicket's own HistorySelect watermark
-        //     ulong                m_last_deal_ticket;
-        //   //For TAB_TAB_MAIN_SETTINGS configuration at m_tabs_main implemenation in GUIPannel_TabSettingIndicator.mqh          
-        //   //Table to display indicator-template this template concept exist in Layer 1, Layer 2 and Layer 3
-        //   //Seeded ONCE at the top of OnInitEvent() (EA's OnInit) - Layer 2 CGUIPanne writes straight into these fields
-        //   // no copy step. Matched back to real indicators by (type,params_key)       
-        //       SJsonIndicatorEntry         m_indicator_template_setting[]; //Data for m_table_indicator_template
-        //       SJsonSymbolTF               m_symbol_tf_Setting[];                    
-        //       bool                        m_bool_table_indicator_template_cache_show[]; // Data for m_table_indicator_template col-4 "Show/Hide"
-        //     //Combination view m_indicator_template_setting and m_bool_table_indicator_template_cache_show
-        //       
-        //     // row whose delete icon was clicked; executed in OnTimerEvent, NOT inside the click event -
-        //     // rebuilding the table while CTable is still processing its own click leaves its focus/press indices on freed rows (array out of range in Table.mqh)
-        
-        //   //TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF at m_tabs_main_setting_config implementation in GUIPannel_TabSettingSymbolTF.mqh
-        
-        //     // same deferred-delete pattern as m_pending_remove_row, for m_table_indicator_SymbolTFSeting
-        //     int                         m_pending_remove_row_symboltf;
-        //   //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh
-        //     CTable                      m_table_CandlePatternsSetting;         
-        //     ENUM_PATTERN_TYPE           m_pattern_types[];
-        //     string                      m_pattern_display_names[]; 
-        //     CButton                     m_btn_save_pattern_config;      
+        //     ulong                m_last_deal_ticket;  
         //   //For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER at m_tabs_main_setting_config implementation in GUIPannel_TabSettingMarker.mqh
         //   //For Marker 8 independent shapes to display at each Candle on Chart see SignalMarkers.mq5        
         //     CComboBox           m_combo_shape_single_indicator_buy;  //candle only have single indicator, buy or sell base on indicator signal
@@ -335,12 +319,12 @@
         //   // --- ChartIndicatorAdd's sub_window calc (Show/Add/Replace) - no live CIndicatorDE needed,
         //   // --- catalog[] already carries the type->group mapping (README.md muc 7.b). 
         //     // --- ApplyLoadedIndicatorBuySell/BuildTemplateBuySellSoundMessageArrays deleted
-        //     // --- (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - SetIndicatorTableRow() paints Buy/Sell/
+        //     // --- (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - UpdateRow_IndicatorTemplateSetting() paints Buy/Sell/
         //     // --- Sound/Message straight from m_indicator_template_setting[row] (Anhnt, 2026-08-18);
         //     // --- Save already read that same array directly, so there's nothing left to "apply".
         //     void                         PurgeSignalArrowObjects(const string sym, const string tf_string);
         // //----Unfininished         
-        //   //For Symbol/TF Setting Table m_table_indicator_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
+        //   //For Symbol/TF Setting Table m_table_SymbolTFSeting (Settings tab, Symbol TF sub-tab)
         
           
         //   //TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN implementation in GUIPannel_TabSettingCandlePattern.mqh         
@@ -383,17 +367,13 @@
          virtual void                   OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
         //For GUI 
          void                          UpdateGUI(const bool redraw = false);        
-         CWindow *                     GetMainWindowPointer(void) { return &m_window_main; }
-       //-----------------------------
-        // // --- Thin forward to CTimeSeriesEngine::OnChartEvent (Layer 1) - EA.mq5 can't pass
-        // // --- m_indicator_template_setting[] itself (private, and MQL5 can't return an array by
-        // // --- reference), so this runs INSIDE CGUIPannel where the field is directly reachable.
-        // bool                           ForwardChartEventToLayer1(const int id, const long &lparam, const double &dparam, const string &sparam);
+         CWindow *                     GetMainWindowPointer(void) { return &m_window_main; }       
       //For Indicator Template Table
-       void                            RefreshIndicatorTableShowColumn(void);
-       void                            RefreshTableIndicator(void);
+       void                            SyncTable_IndicatorTemplateSetting(void);
+       void                            InitializeTable_IndicatorTemplateSetting(void);
+       void                            AddRow_IndicatorTemplateSetting(void);
       //For Indicator Template Tree View
-       void                            SyncIndicatorTreeViewIcons(void);
+       void                            SyncTreeView_IndicatorTemplateSetting(void);
       // For Pointer SetPointer
         void                           SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_indicator_template_manager = manager; }     
         void                           SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbol_collection = symbols; }      
@@ -417,7 +397,7 @@
  #include "GUIPannel_MainWindows.mqh" //Implementation of function Main Windows m_window_main
  #include "GUIPannel_SettingWindows_Indicator.mqh" //Implementation of function Setting Windows m_window_setting
  #include "GUIPannel_AddIndicatorForm.mqh"
- #include "GUIPannel_TabSettingSymbolTF.mqh"
+ #include "GUIPannel_SettingWindows_SymbolTF.mqh"
   //  #include "GUIPannel_TabMonitor.mqh"  
   //  #include "GUIPannel_TabPositions.mqh" 
     

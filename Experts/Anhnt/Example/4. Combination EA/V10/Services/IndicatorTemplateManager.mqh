@@ -28,14 +28,14 @@
  //| Type Delete = fired ALONGSIDE Added/Delete only when this is the first/last row of  |
  //| that ENUM_INDICATOR type (TreeView listens - Table listens to Added/Delete too).    |
  //+------------------------------------------------------------------------------------+
- enum ENUM_TEMPLATE_MANAGER_EVENT
+ enum ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT
   {
-   TEMPLATE_MANAGER_EVENT_NO_EVENT = WF_CONTROL_EVENTS_NEXT_CODE,
-   TEMPLATE_MANAGER_EVENT_ADDED,        // a row (type,params) was genuinely added
-   TEMPLATE_MANAGER_EVENT_DELETE,       // a row (type,params) was genuinely removed
-   TEMPLATE_MANAGER_EVENT_TYPE_ADDED,   // first row of this type just appeared
-   TEMPLATE_MANAGER_EVENT_TYPE_DELETE,  // last row of this type just disappeared
-   TEMPLATE_MANAGER_EVENT_SHOW_CHANGED, // an existing row's ShowOnChart preference was toggled
+   INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT = WF_CONTROL_EVENTS_NEXT_CODE,
+   INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED,        // a row (type,params) was genuinely added
+   INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE,       // a row (type,params) was genuinely removed
+   INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED,   // first row of this type just appeared
+   INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE,  // last row of this type just disappeared
+   INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, // an existing row's setting (any field) was mutated - lparam=index, listener re-reads the row itself to see what changed
   };
  //+------------------------------------------------------------------------------------+
  //| CIndicatorTemplateManager - Center Point of Data (Single Source of Truth).         |
@@ -45,20 +45,29 @@
    {
      private:
        CArrayObj   m_list;   //List of CIndicatorSetting* in Template
-       bool        m_suppress_event;   // true while ScanIndicatorOnChartOnInit() bulk-loads - avoids an event storm
+       bool        m_suppress_event;   // true while InitializeIndicatorTemplateManagerOnInit() bulk-loads - avoids an event storm
        // --- Snapshot of the identity just removed - captured BEFORE m_list.Delete() so a
        // --- DELETE listener can still recover (type,params) even though the row itself is
        // --- gone by the time the (async) event is actually dispatched. Same "Last X" snapshot
        // --- convention CChartWnd::GetLastAddedIndicator()/GetLastDeletedIndicator() already use.
        ENUM_INDICATOR m_last_removed_type;
        MqlParam       m_last_removed_params[];
+       // --- true once LoadFromJSON() has run once for this object's lifetime - same guard
+       // --- CSymbolTFManager::m_loaded_from_json uses. A chart's own Symbol/TF change
+       // --- (REASON_CHARTCHANGE) makes MT5 call OnDeinit+OnInit again on the SAME already-
+       // --- loaded EA module - m_list here survives that reinit in memory, same as m_gui_created
+       // --- proved. Without this guard, OnInitEvent() below was calling LoadFromJSON() (which
+       // --- does m_list.Clear()) on EVERY reinit - wiping any indicator template added/changed
+       // --- during the session but not yet saved, every single time the user navigated to a
+       // --- new chart/TF (Anhnt, 2026-08-26).
+       bool           m_loaded_from_json;
        int         ReadTemplateEntry(const string &s, int pos, CIndicatorSetting *&out_row);
        int         ReadTemplateEntryArray(const string &s, int pos);
        int         IndexOfIdentity(const ENUM_INDICATOR type, MqlParam &params[]) const;
        bool        ExistsTypeInTemplate(const ENUM_INDICATOR type) const;   // true if ANY row of this type is present, regardless of params
 
      public:
-                     CIndicatorTemplateManager(void) : m_suppress_event(false), m_last_removed_type(IND_CUSTOM) {}
+                     CIndicatorTemplateManager(void) : m_suppress_event(false), m_last_removed_type(IND_CUSTOM), m_loaded_from_json(false) {}
                     ~CIndicatorTemplateManager(void) {}
 
       //--- Lifecycle - same convention as CTimeSeriesEngine::OnInitEvent/CGUIPannel::OnInitEvent.       
@@ -72,23 +81,23 @@
        bool                Exists(const ENUM_INDICATOR type, MqlParam &params[])        const { return FindByIdentity(type, params) != NULL; }
 
       //--Add,Remove in Template base on indicator identity
-       CIndicatorSetting  *Add(const ENUM_INDICATOR type, MqlParam &params[]);   // NULL if identity already exists
-       bool                RemoveByIdentityFromTemplate(const ENUM_INDICATOR type, MqlParam &params[]);
+       CIndicatorSetting  *Add_IndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);   // NULL if identity already exists
+       bool                Delete_IndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
 
       //--- Data only - mutates an EXISTING row's ShowOnChart preference and fires
-      //--- TEMPLATE_MANAGER_EVENT_SHOW_CHANGED so EA (owns ChartObjCollection) can
+      //--- INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED so EA (owns ChartObjCollection) can
       //--- react by attaching/detaching the indicator on chart.
-       bool                SetShowOnChart(const int index, const bool show);
+       bool                UpdateRow_IndicatorTemplateSetting_ShowColumn(const int index, const bool show);
 
-      //--- Identity of the row most recently removed by RemoveByIdentityFromTemplate()
+      //--- Identity of the row most recently removed by Delete_IndicatorTemplateSetting()
       //--- (see m_last_removed_type/params) - a DELETE listener reads this instead of
       //--- looking the row up in m_list, since it's already gone by then.
        void                GetLastRemoved(ENUM_INDICATOR &type, MqlParam &out_params[]) const;
 
        //--- JSON - reads/builds ONLY the "Indicator_Templates" section, does NOT FileOpen/write -
-       bool                         LoadFromJSON(const string full_path);       
+       bool                         LoadFromJSON(const string full_path);
        void                         BuildJsonSection(string &out_json)                    const;
-       void                         ScanIndicatorOnChartOnInit(CChartObjCollection *chart_obj);
+       void                         InitializeIndicatorTemplateManagerOnInit(CChartObjCollection *chart_obj);
        virtual void                 Print(const bool full_prop=false, const bool dash=false);
    };
  //+------------------------------------------------------------------+
@@ -132,7 +141,7 @@
  //+------------------------------------------------------------------+
  //| Append a new row - Data only, NULL if the identity already exists |
  //+------------------------------------------------------------------+
- CIndicatorSetting *CIndicatorTemplateManager::Add(const ENUM_INDICATOR type, MqlParam &params[])
+ CIndicatorSetting *CIndicatorTemplateManager::Add_IndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
    {
      if(Exists(type, params)) return NULL;
      bool is_new_type = !ExistsTypeInTemplate(type);   // check BEFORE insert - "first row of this type"
@@ -159,16 +168,16 @@
        // lparam = index of the row just inserted (m_list.Total()-1) - lets a
        // receiver do At(index) to get the exact (type, raw_params) that was Added,
        // no separate id/lookup mechanism needed.
-       ::EventChartCustom(::ChartID(), (ushort)TEMPLATE_MANAGER_EVENT_ADDED, (long)(m_list.Total() - 1), 0.0, "");
+       ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED, (long)(m_list.Total() - 1), 0.0, "");
        if(is_new_type)
-          ::EventChartCustom(::ChartID(), (ushort)TEMPLATE_MANAGER_EVENT_TYPE_ADDED, (long)type, 0.0, "");
+          ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED, (long)type, 0.0, "");
       }
      return row;
    }
  //+------------------------------------------------------------------+
  //| Remove a row by identity - Data only                              |
  //+------------------------------------------------------------------+
- bool CIndicatorTemplateManager::RemoveByIdentityFromTemplate(const ENUM_INDICATOR type, MqlParam &params[])
+ bool CIndicatorTemplateManager::Delete_IndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
    {
      CIndicatorSetting *found = FindByIdentity(type, params);
      if(found == NULL)
@@ -186,9 +195,9 @@
 
      if(!m_suppress_event)
       {
-       ::EventChartCustom(::ChartID(), (ushort)TEMPLATE_MANAGER_EVENT_DELETE, (long)type, 0.0, "");
+       ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE, (long)type, 0.0, "");
        if(!ExistsTypeInTemplate(type))   // check AFTER delete - "last row of this type just left"
-          ::EventChartCustom(::ChartID(), (ushort)TEMPLATE_MANAGER_EVENT_TYPE_DELETE, (long)type, 0.0, "");
+          ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE, (long)type, 0.0, "");
       }
      return true;
    }
@@ -205,15 +214,15 @@
    }
  //+------------------------------------------------------------------+
  //| Toggle an existing row's ShowOnChart preference - Data only, fires|
- //| SHOW_CHANGED so EA can attach/detach on chart in reaction.        |
+ //| SETTING_CHANGED so EA can attach/detach on chart in reaction.     |
  //+------------------------------------------------------------------+
- bool CIndicatorTemplateManager::SetShowOnChart(const int index, const bool show)
+ bool CIndicatorTemplateManager::UpdateRow_IndicatorTemplateSetting_ShowColumn(const int index, const bool show)
    {
      CIndicatorSetting *row = m_list.At(index);
      if(row == NULL) return false;
      row.ShowOnChart(show);
      if(!m_suppress_event)
-        ::EventChartCustom(::ChartID(), (ushort)TEMPLATE_MANAGER_EVENT_SHOW_CHANGED, (long)index, 0.0, "");
+        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, (long)index, 0.0, "");
      return true;
    }
  //+------------------------------------------------------------------+
@@ -344,9 +353,13 @@
  //+------------------------------------------------------------------+
  bool CIndicatorTemplateManager::OnInitEvent(void)
    {
+     if(m_loaded_from_json)   // skip on a CHARTCHANGE reinit - see m_loaded_from_json declaration
+       return true;
      string full_path = g_ea_folder + "/Config_Setting.json";
-     return LoadFromJSON(full_path);
-   } 
+     bool ok = LoadFromJSON(full_path);
+     m_loaded_from_json = true;
+     return ok;
+   }
  //+------------------------------------------------------------------+
  //| Load Config_Setting.json's "Indicator_Templates" section straight |
  //| into m_list - clears whatever was there first. Mirrors the        |
@@ -391,13 +404,13 @@
  //| own overlay, never part of the Template) is skipped, never added |
  //| to m_list.                                                        |
  //+------------------------------------------------------------------+
- void CIndicatorTemplateManager::ScanIndicatorOnChartOnInit(CChartObjCollection *chart_obj)
+ void CIndicatorTemplateManager::InitializeIndicatorTemplateManagerOnInit(CChartObjCollection *chart_obj)
   {
    if(chart_obj == NULL) return;
    CChartObj *chart = chart_obj.GetChart(::ChartID());
    if(chart == NULL) return;
-   // --- Bulk load - suppress Add()'s per-row event storm, nothing is listening this early
-   // --- in OnInit anyway (EA's own Set*() pointer wiring hasn't even run yet).
+   // --- Bulk load - suppress Add_IndicatorTemplateSetting()'s per-row event storm, nothing is
+   // --- listening this early in OnInit anyway (EA's own Set*() pointer wiring hasn't even run yet).
    m_suppress_event = true;
    SIndicatorCatalogItem catalog[];
    GetIndicatorCatalog(catalog);
@@ -420,7 +433,7 @@
         if(existing != NULL)
            existing.ShowOnChart(true);   // already tracked - re-truth Show to match reality on chart
         else
-           Add(type, params);            // new row - ctor already defaults ShowOnChart=true
+           Add_IndicatorTemplateSetting(type, params);   // new row - ctor already defaults ShowOnChart=true
        }
     }
    m_suppress_event = false;
