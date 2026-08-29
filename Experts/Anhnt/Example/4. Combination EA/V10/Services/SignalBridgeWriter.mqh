@@ -6,13 +6,12 @@
 #ifndef __SIGNALBRIDGEWRITER_MQH__
 #define __SIGNALBRIDGEWRITER_MQH__
 
-//#include "..\TradingEngine\Indicators\IndicatorDE.mqh"
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BarTimeSeriesCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Indicators\IndicatorDE.mqh>
-//#include "..\TradingEngine\TimeSeriesEngine.mqh"
-#include "..\Anatoli Kazharski\JSONConfig.mqh" // SJsonIndicatorEntry - reused AS-IS, same pattern CSignalLogger already uses
+#include "IndicatorTemplateManager.mqh"   // CIndicatorTemplateManager - EA-owned, read LIVE (no copy needed)
+#include "SymbolTFManager.mqh"            // CSymbolTFManager - EA-owned, read LIVE (no copy needed)
  #ifndef CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #define CSIGNALBRIDGEWRITER_MQH_DECLARATION
   class CSignalBridgeWriter
@@ -23,18 +22,30 @@
      CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
      CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;          //Timeseries collection
 
+     // --- Both EA-owned Service-layer Managers (not GUI) - safe to hold LIVE pointers, any
+     // --- change the user makes is visible here immediately, no copy/event plumbing needed
+     // --- (Anhnt, 2026-08-26).
+     CIndicatorTemplateManager *m_indicator_template_manager;
+     CSymbolTFManager          *m_symbol_tf_manager;
+
+     // --- Candle Pattern Buy/Sell has NO Manager (fixed 28-pattern catalog, plain arrays on
+     // --- CGUIPannel) - CGUIPannel is the View layer, so this writer never holds a pointer to
+     // --- it; EA pushes a fresh snapshot via SetPatternSignals() instead, right when the user
+     // --- toggles a checkbox (GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED).
+     ENUM_PATTERN_TYPE           m_pattern_types[];
+     bool                        m_pattern_signal_buy[];
+     bool                        m_pattern_signal_sell[];
+
      static string              m_bridge_folder;  // ← Static property (scoped to class)
-    //Set from CGUIPannel::SyncIndicatorTemplateSettingToBridge - RAW copy of
-    //m_indicator_template_setting[] (type_enum/raw_params/buy/sell), no live CIndicatorDE*
-    //needed: TemplateBuySellFor() below only ever reads type+params+buy+sell off this, never
-    //anything instance-specific (Handle/Group/etc) - a stale/dangling pointer here used to be
-    //an actual crash (see SynIndicatorActionPlan.md); RAW data can't dangle.
-     SJsonIndicatorEntry        m_template_setting[];
 
      string                     m_signal_bridge_symbol;
      datetime                   m_signal_bridge_last_time;
 
-     bool                       TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell);
+     // --- Identity-only (type, raw_params) - no live CIndicatorDE* needed, matches the RAW-match
+     // --- convention already established across the codebase (SynIndicatorPlan.md).
+     bool                       GetIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &raw_params[], bool &buy, bool &sell);
+     bool                       GetSymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf, bool &buy, bool &sell);
+     bool                       GetCandlePatternSetting(const ENUM_PATTERN_TYPE type, bool &buy, bool &sell);
      void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count);
 
     public:
@@ -42,7 +53,8 @@
     ~CSignalBridgeWriter(void);
 
      void                       Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars);
-     void                       SetTemplateSetting(SJsonIndicatorEntry &setting[]);
+     void                       SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr);
+     void                       SetPatternSignals(ENUM_PATTERN_TYPE &types[], bool &buy[], bool &sell[]);
      void                       BuildAndWriteSignalBridge(void);
      void                       ResetSignalBridge(void);
      static void                SetFolder(const string folder) { m_bridge_folder = folder; }
@@ -56,9 +68,12 @@
   string CSignalBridgeWriter::m_bridge_folder = "";
   CSignalBridgeWriter::CSignalBridgeWriter(void)
     : m_SignalsCollection(NULL), m_IndicatorsCollection(NULL), m_BarTimeSeriesCollection(NULL),
+      m_indicator_template_manager(NULL), m_symbol_tf_manager(NULL),
       m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
   {
-    ArrayResize(m_template_setting, 0);
+    ArrayResize(m_pattern_types, 0);
+    ArrayResize(m_pattern_signal_buy, 0);
+    ArrayResize(m_pattern_signal_sell, 0);
   }
 
   //+------------------------------------------------------------------+
@@ -77,45 +92,85 @@
     m_IndicatorsCollection = ind;
     m_BarTimeSeriesCollection = bars;
    }
-  
-  // --- ArrayCopy() can't be used here - SJsonIndicatorEntry holds string/dynamic-array
-  // --- members, not POD. Per-element struct assignment (=) works fine though (same reason
-  // --- CGUIPannel::LoadIndicatorTemplateSettingFromJSON does this instead of ArrayCopy).
-  void CSignalBridgeWriter::SetTemplateSetting(SJsonIndicatorEntry &setting[])
+  //+------------------------------------------------------------------+
+  //| SetManagers                                                      |
+  //+------------------------------------------------------------------+
+  void CSignalBridgeWriter::SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr)
    {
-    int n = ArraySize(setting);
-    ArrayResize(m_template_setting, n);
-    for(int i = 0; i < n; i++)
-       m_template_setting[i] = setting[i];
+    m_indicator_template_manager = tmpl_mgr;
+    m_symbol_tf_manager = symtf_mgr;
    }
-  bool CSignalBridgeWriter::TemplateBuySellFor(CIndicatorDE *ind, bool &buy, bool &sell)
+  //+------------------------------------------------------------------+
+  //| SetPatternSignals - EA pushes a fresh snapshot here whenever      |
+  //| CGUIPannel fires GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED.          |
+  //+------------------------------------------------------------------+
+  void CSignalBridgeWriter::SetPatternSignals(ENUM_PATTERN_TYPE &types[], bool &buy[], bool &sell[])
+   {
+    int n = ArraySize(types);
+    ArrayResize(m_pattern_types,       n);
+    ArrayResize(m_pattern_signal_buy,  n);
+    ArrayResize(m_pattern_signal_sell, n);
+    for(int i = 0; i < n; i++)
+     {
+      m_pattern_types[i]       = types[i];
+      m_pattern_signal_buy[i]  = buy[i];
+      m_pattern_signal_sell[i] = sell[i];
+     }
+   }
+  //+------------------------------------------------------------------+
+  //| GetIndicatorTemplateSetting - identity-only lookup against the LIVE        |
+  //| CIndicatorTemplateManager (EA-owned Service layer).                |
+  //+------------------------------------------------------------------+
+  bool CSignalBridgeWriter::GetIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &raw_params[], bool &buy, bool &sell)
    {
     buy = false;
     sell = false;
-    if(ind == NULL) return false;
-
-    ENUM_INDICATOR type = ind.TypeIndicator();
-    MqlParam params[];
-    ind.GetMqlParams(params);
-
-    for(int row = 0; row < ArraySize(m_template_setting); row++)
-    {
-      if(m_template_setting[row].type_enum != type) continue;
-      if(!IsEqualMqlParamArrays(params, m_template_setting[row].raw_params)) continue;
-
-      buy  = m_template_setting[row].buy;
-      sell = m_template_setting[row].sell;
-      return true;
-    }
-
+    if(m_indicator_template_manager == NULL) return false;
+    CIndicatorSetting *entry = m_indicator_template_manager.FindByIdentity(type, raw_params);
+    if(entry == NULL) return false;
+    buy  = entry.BuySignal();
+    sell = entry.SellSignal();
+    return true;
+   }
+  //+------------------------------------------------------------------+
+  //| GetSymbolTFSetting - Symbol+TF-level gate, applies equally to         |
+  //| Indicator- and Pattern-sourced signals on that (symbol,tf).       |
+  //+------------------------------------------------------------------+
+  bool CSignalBridgeWriter::GetSymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf, bool &buy, bool &sell)
+   {
+    buy = false;
+    sell = false;
+    if(m_symbol_tf_manager == NULL) return false;
+    CSymbolTFSetting *entry = m_symbol_tf_manager.FindByIdentity(sym, tf);
+    if(entry == NULL) return false;
+    buy  = entry.BuySignal();
+    sell = entry.SellSignal();
+    return true;
+   }
+  //+------------------------------------------------------------------+
+  //| GetCandlePatternSetting - lookup against the pushed snapshot            |
+  //| (m_pattern_types/signal_buy/signal_sell, see SetPatternSignals).  |
+  //+------------------------------------------------------------------+
+  bool CSignalBridgeWriter::GetCandlePatternSetting(const ENUM_PATTERN_TYPE type, bool &buy, bool &sell)
+   {
+    buy = false;
+    sell = false;
+    int n = ArraySize(m_pattern_types);
+    for(int i = 0; i < n; i++)
+      if(m_pattern_types[i] == type)
+       {
+        buy  = m_pattern_signal_buy[i];
+        sell = m_pattern_signal_sell[i];
+        return true;
+       }
     return false;
    }
-  
+
   //+------------------------------------------------------------------+
   //| BuildAndWriteSignalBridge                                        |
   //+------------------------------------------------------------------+
   void CSignalBridgeWriter::BuildAndWriteSignalBridge(void)
-   {    
+   {
     if(m_SignalsCollection == NULL || m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL)
       return;
     string sym = ::Symbol();
@@ -130,6 +185,8 @@
       {
        CBarSeriesDE *s = series_list.At(ti);
        if(s == NULL) continue;
+       bool symtf_buy_wm, symtf_sell_wm;
+       GetSymbolTFSetting(sym, s.Timeframe(), symtf_buy_wm, symtf_sell_wm);
        CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
        ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, s.Timeframe(), EQUAL);
        int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
@@ -137,10 +194,13 @@
          {
           CIndicatorDE *ind = ind_list.At(ii);
           if(ind == NULL) continue;
+          MqlParam params[];
+          ind.GetMqlParams(params);
           bool buy_on, sell_on;
-          //if(!m_provider.TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-          if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-          //CSignalBase *signal = m_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+          if(!GetIndicatorTemplateSetting(ind.TypeIndicator(), params, buy_on, sell_on)) continue;
+          buy_on  = buy_on  && symtf_buy_wm;
+          sell_on = sell_on && symtf_sell_wm;
+          if(!buy_on && !sell_on) continue;
           CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
           if(signal == NULL) continue;
           int ht = signal.HistoryTotal();
@@ -192,6 +252,8 @@
       CBarSeriesDE *s = series_list.At(ti);
       if(s == NULL) continue;
       ENUM_TIMEFRAMES tf = s.Timeframe();
+      bool symtf_buy, symtf_sell;
+      GetSymbolTFSetting(sym, tf, symtf_buy, symtf_sell);
       CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
       ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
       int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
@@ -199,10 +261,13 @@
         {
          CIndicatorDE *ind = ind_list.At(ii);
          if(ind == NULL) continue;
+         MqlParam params[];
+         ind.GetMqlParams(params);
          bool buy_on, sell_on;
-         //if(!m_provider.TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
-         //CSignalBase *signal = m_engine.GetSignalsCollection().GetOrCreateSignal(ind);
-         if(!TemplateBuySellFor(ind, buy_on, sell_on) || (!buy_on && !sell_on)) continue;
+         if(!GetIndicatorTemplateSetting(ind.TypeIndicator(), params, buy_on, sell_on)) continue;
+         buy_on  = buy_on  && symtf_buy;
+         sell_on = sell_on && symtf_sell;
+         if(!buy_on && !sell_on) continue;
          CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
          if(signal == NULL) continue;
          int hist_total = signal.HistoryTotal();
@@ -253,6 +318,9 @@
     // Phase 2b: Collect pattern signals (Anhnt, 2026-08-08) - same format as indicator signals
     // Only closed bars: GetListAllPatterns() returns patterns from CBarSeriesDE.AddPatterns(),
     // which only adds completed bars' patterns. Live bar 0 patterns excluded automatically.
+    // Phase 2c (Anhnt, 2026-08-26): now gated the same 2-layer way as Indicator signals -
+    // SymbolTF(sym,pat.Timeframe()) AND GetCandlePatternSetting(pat.TypePattern()), both must allow
+    // the signal's own direction.
     CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
     if(all_patterns != NULL)
      {
@@ -266,6 +334,13 @@
         ENUM_SIGNAL_DIR pdir_signal = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
                                       (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
         if(pdir_signal == SIGNAL_NONE) continue;
+
+        bool symtf_buy, symtf_sell;
+        GetSymbolTFSetting(sym, pat.Timeframe(), symtf_buy, symtf_sell);
+        bool pat_buy, pat_sell;
+        if(!GetCandlePatternSetting(pat.TypePattern(), pat_buy, pat_sell)) continue;
+        if(pdir_signal == SIGNAL_BUY  && !(pat_buy  && symtf_buy))  continue;
+        if(pdir_signal == SIGNAL_SELL && !(pat_sell && symtf_sell)) continue;
 
         ArrayResize(row_time,   count + 1);
         ArrayResize(row_tf,     count + 1);

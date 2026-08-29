@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #ifndef __SIGNALLOGGER_MQH__
 #define __SIGNALLOGGER_MQH__
-#include "..\Anatoli Kazharski\JSONConfig.mqh" // Working with JSON Config file
+#include "JSONConfig.mqh" // Working with JSON Config file
  #ifndef CSIGNALLOGGER_MQH_DECLARATION
  #define CSIGNALLOGGER_MQH_DECLARATION
  class CSignalLogger
@@ -17,8 +17,10 @@
 
      static string     m_signal_log_folder;  // ← Static property (scoped to class)
 
+     // --- Only this class needs "time" (int) out of a JSON watermark record - kept private
+     // --- here rather than in the shared JSONConfig.mqh. JSONConfig_StringValue is NOT duplicated
+     // --- here (Marker/Sound also need it) - the call below resolves to the shared global.
      bool              JsonIntValue(const string content, const string key, int &value);
-     bool              JsonStringValue(const string content, const string key, string &value);
 
    public:
                      CSignalLogger(void);
@@ -119,7 +121,7 @@
     // --- (see CGUIPannel::CheckIndicatorAlerts) to keep entries from different TFs apart.
     string base_fname = "Signal_Log_Watermark_" + ::Symbol() + ".json";
     string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
-    string content = IndicatorConfig_ReadWholeFile(fname);
+    string content = JSONConfig_ReadWholeFile(fname);
     if(content == "") return;
 
     int pos = ::StringFind(content, "\"watermarks\"");
@@ -138,7 +140,7 @@
       string obj = ::StringSubstr(content, obj_start, obj_end - obj_start + 1);
 
       string type_key, params_key; int t;
-      if(JsonStringValue(obj, "type", type_key) && JsonStringValue(obj, "params", params_key) && JsonIntValue(obj, "time", t))
+      if(JSONConfig_StringValue(obj, "type", type_key) && JSONConfig_StringValue(obj, "params", params_key) && JsonIntValue(obj, "time", t))
         {
          int n = ArraySize(m_wm_type);
          ArrayResize(m_wm_type,   n + 1);
@@ -199,23 +201,6 @@
     string num = ::StringSubstr(content, start, i - start);
     if(num == "") return false;
     value = (int)::StringToInteger(num);
-    return true;
-   }
-  //+------------------------------------------------------------------+
-  //| JsonStringValue                                                  |
-  //+------------------------------------------------------------------+
-  bool CSignalLogger::JsonStringValue(const string content, const string key, string &value)
-   {
-    int pos = ::StringFind(content, "\"" + key + "\"");
-    if(pos < 0) return false;
-    int colon = ::StringFind(content, ":", pos);
-    if(colon < 0) return false;
-    int q1 = ::StringFind(content, "\"", colon + 1);
-    if(q1 < 0) return false;
-    int q2 = ::StringFind(content, "\"", q1 + 1);
-    if(q2 < 0) return false;
-    value = ::StringSubstr(content, q1 + 1, q2 - q1 - 1);
-    ::StringReplace(value, "\\\\", "\\");
     return true;
    }
  #endif // CSIGNALLOGGER_MQH_IMPLEMENTATION

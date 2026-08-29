@@ -6,20 +6,6 @@
 #include "GUIPannel.mqh"
  bool CGUIPannel::CreateTable_SymbolTFSetting(const int x, const int y)
   {
-   //--- Note (own row, on top): Delete/Buy/Sell edits here only take effect in
-   //--- indicators_config.json - the running EA keeps today's live series/indicators
-   //--- until it's restarted. Colored to stand out from the Save button below it.
-    m_label_symboltf_note.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_label_symboltf_note);
-   // --- CTextLabel::InitializeProperties defaults XSize to 100px when unset - too narrow for
-   // --- this sentence (and CTextLabel never checks AutoXResizeMode, unlike CTable/CTreeView),
-   // --- so XSize must be set explicitly, wide enough to clear the tab's own right edge.
-    m_label_symboltf_note.XSize(M_TABS_MAIN_WIDTH - x - 5);
-    m_label_symboltf_note.Font("Calibri Bold");   // CElement::DrawText hardcodes FW_NORMAL - request a bold face by name instead
-    if(!m_label_symboltf_note.CreateTextLabel("Delete Symbol+TF here apply after the EA is restarted", x, y)) return false;
-    m_label_symboltf_note.LabelColor(clrDodgerBlue);
-    m_label_symboltf_note.Draw();
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_label_symboltf_note);
    //--- Save button, same convention as m_btn_save_indicator
     m_btn_save_SymbolTF.MainPointer(m_tabs_main_setting_config);
     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_btn_save_SymbolTF);
@@ -213,9 +199,17 @@
    CSymbolTFSetting *entry = m_SymbolTFManager.FindByIdentity(sym, TimestampByDescription(tf_text));
    if(entry == NULL) return;
    if(col == 2)
+    {
      entry.BuySignal((int)m_table_SymbolTFSeting.SelectedImageIndex(2, row) == CHECKBOX_STATE_ON);
+     // Fire directly (no Manager method needed, same style as GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED) -
+     // EA listens for this to force an immediate CSignalBridgeWriter rewrite (Anhnt, 2026-08-28).
+     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ROW_CHANGED, 0, 0.0, "");
+    }
    else if(col == 3)
+    {
      entry.SellSignal((int)m_table_SymbolTFSeting.SelectedImageIndex(3, row) == CHECKBOX_STATE_ON);
+     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ROW_CHANGED, 0, 0.0, "");
+    }
    else if(col == 4)
      entry.SoundAlert((int)m_table_SymbolTFSeting.SelectedImageIndex(4, row) == CHECKBOX_STATE_ON);
    else if(col == 5)
@@ -432,12 +426,23 @@
        CTreeItem *parent_item = m_treeview_SymbolTF.ItemPointer(parent_pos);
        bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
        bool highlight = (parent_is_active && item.LabelText() == chart_tf);
+       // --- Orphaned leaf (2026-08-28): CTreeView/CWndContainer has no per-item removal API
+       // --- (confirmed gap, see project notes), so a row Delete_SymbolTFSetting()'d out of
+       // --- m_SymbolTFManager still leaves this leaf sitting in the tree forever - can't remove
+       // --- it, but CAN flag it red so it reads as "no longer real" instead of looking like any
+       // --- other just-not-active leaf. Same icon as the Table's own delete button (col 0), for
+       // --- visual consistency between the two.
+       bool still_exists = (m_SymbolTFManager != NULL && parent_item != NULL &&
+                             m_SymbolTFManager.Exists(parent_item.LabelText(), TimestampByDescription(item.LabelText())));
        Print("MY DEBUG CGUIPannel::SyncTreeView_SymbolTFSetting: i=", i, " parent_pos=", parent_pos,
              " parent_label=", (parent_item != NULL ? parent_item.LabelText() : "NULL"),
              " _Symbol=", _Symbol, " item_label=", item.LabelText(), " chart_tf=", chart_tf,
-             " parent_is_active=", parent_is_active, " highlight=", highlight);
-       item.IconFile(highlight ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
-                                      : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
+             " parent_is_active=", parent_is_active, " highlight=", highlight, " still_exists=", still_exists);
+       if(!still_exists)
+          item.IconFile(IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG);   // orphaned - same icon as the Table's delete button
+       else
+          item.IconFile(highlight ? IMAGE_RESOURCE_BMP16_BAR_CHART_BMP
+                                         : IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP);
       }
     }
    m_treeview_SymbolTF.RedrawTreeList();

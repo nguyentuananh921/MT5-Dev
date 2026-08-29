@@ -349,6 +349,7 @@
    #undef I
    #undef E
   }
+//Plan to remove
  //+------------------------------------------------------------------+
  //| Build the Col2 display label ("ShortName  (params)") for an      |
  //| indicator - shared by the row-rebuild path and the row-identity  |
@@ -425,26 +426,7 @@
  //| registering the template into its live m_indicator_template[] mirror, which only has             |
  //| (type, params[]) on hand, not an indicator object). The CIndicatorDE overload below just         |
  //| extracts type+params and delegates here - single source for the actual key format.               |
- //+--------------------------------------------------------------------------------------------------+
- void BuildTemplateMatchKey(const ENUM_INDICATOR type, MqlParam &params[], SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
-  {
-    type_key = "";
-    for(int c = 0; c < ArraySize(catalog); c++)
-      if(catalog[c].ind_type == type) { type_key = catalog[c].name; break; }
-
-    string params_text[];
-    BuildIndicatorParamsText(type, params, params_text);
-    params_key = "";
-    for(int p = 0; p < ArraySize(params_text); p++)
-      params_key += (p > 0 ? "," : "") + params_text[p];
-  }
- void BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key)
-  {
-    MqlParam params[];
-    ind.GetMqlParams(params);
-    BuildTemplateMatchKey(ind.TypeIndicator(), params, catalog, type_key, params_key);
-  }
- 
+ //+--------------------------------------------------------------------------------------------------+ 
  //+------------------------------------------------------------------+
  //| Return description of the line style                             |
  //+------------------------------------------------------------------+

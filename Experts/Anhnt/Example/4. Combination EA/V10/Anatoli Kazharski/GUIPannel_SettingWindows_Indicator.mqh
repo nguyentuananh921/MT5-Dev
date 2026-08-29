@@ -241,7 +241,7 @@
     m_table_indicator_template.Update(true);
    }
   //+------------------------------------------------------------------------------------+
-  //| Appends exactly 1 new row at the end - m_indicator_template_manager.Add_IndicatorTemplateSetting() always |
+  //| Appends exactly 1 new row at the end - m_indicator_template_manager.AddIndicatorToIndicatorTemplateSetting() always |
   //| appends its new entry at Total()-1, so the table's new last physical row lines up  |
   //| with it directly. AddRow(row,false) only grows the row arrays - CTable::AddRow      |
   //| only calls RecalculateAndResizeTable() (the thing that actually resizes the canvas  |
@@ -346,13 +346,16 @@
     if(m_indicator_template_manager == NULL) return;
     int real_index = (int)StringToInteger(m_table_indicator_template.GetValue(7, row));   // row = vị trí hiển thị sau sort, không phải index thật
     CIndicatorSetting *entry = m_indicator_template_manager.At(real_index);
+    //Print Debug
+      ::Print("MY DEBUG CGUIPannel::OnClickRemoveIndicator: row=", row, " real_index=", real_index,
+              " entry=", (entry == NULL ? "NULL" : entry.DisplayLabel()));
     if(entry == NULL) return;
     ENUM_INDICATOR type = entry.TypeEnum();
     MqlParam params[]; entry.GetRawParams(params);
     // Data only - fires INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE(+TYPE_DELETE). EA (owns
     // ChartObjCollection) reacts via Manager::GetLastRemoved() to detach from chart;
     // GUIPannel_Lifecycle.mqh already reacts to refresh Table/TreeView.
-    m_indicator_template_manager.Delete_IndicatorTemplateSetting(type, params);
+    m_indicator_template_manager.DeleteIndicatorFromIndicatorTemplateSetting(type, params);
    }
   void CGUIPannel::OnClickToggleBuySignal(const int row)
    {
@@ -361,9 +364,11 @@
     CIndicatorSetting *entry = m_indicator_template_manager.At(real_index);
     if(entry == NULL) return;
     entry.BuySignal((int)m_table_indicator_template.SelectedImageIndex(2, row) == 0);
-    // TODO: Signal Bridge sync (SyncIndicatorTemplateSettingToBridge/ResetSignalBridge) not
-    // wired to the Manager yet - needs its own design pass, same as Layer 1.
-    Print("MY DEBUG CGUIPannel::OnClickToggleBuySignal: Need update - Bridge sync not wired");
+    // Fire directly (no Manager method needed) - EA listens for this to force an immediate
+    // CSignalBridgeWriter rewrite. Reuses the SAME generic SETTING_CHANGED event
+    // UpdateRow_IndicatorTemplateSetting_ShowColumn already fires, lparam=index so EA's
+    // existing Show-column listener there stays correct too (Anhnt, 2026-08-28).
+    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, (long)real_index, 0.0, "");
    }
   void CGUIPannel::OnClickToggleSellSignal(const int row)
    {
@@ -372,9 +377,8 @@
     CIndicatorSetting *entry = m_indicator_template_manager.At(real_index);
     if(entry == NULL) return;
     entry.SellSignal((int)m_table_indicator_template.SelectedImageIndex(3, row) == 0);
-    // TODO: Signal Bridge sync (SyncIndicatorTemplateSettingToBridge/ResetSignalBridge) not
-    // wired to the Manager yet - needs its own design pass, same as Layer 1.
-    Print("MY DEBUG CGUIPannel::OnClickToggleSellSignal: Need update - Bridge sync not wired");
+    // Fire directly (no Manager method needed) - same reasoning as OnClickToggleBuySignal above.
+    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, (long)real_index, 0.0, "");
    }
   void CGUIPannel::OnClickToggleSoundAlert(const int row)
    {

@@ -6,6 +6,7 @@
 #ifndef CTIMESERIESENGINE_INDICATOR_MQH
 #define CTIMESERIESENGINE_INDICATOR_MQH
 #include "TimeSeriesEngine.mqh"
+#include "..\Services\IndicatorTemplateManager.mqh"   // CIndicatorTemplateManager - AddAllIndicatorsToNewSeries reads it LIVE
  //+------------------------------------------------------------------+
  //| Layer 1: apply one indicator type+params to every (symbol,        |
  //| timeframe) series that already exists right now. Called when     |
@@ -38,8 +39,8 @@
           if(handle == INVALID_HANDLE) continue;
           created_any = true;
           // 'indicator' may be dangling here (AddIndicatorToList deletes it on a duplicate) -
-          // never touch it again; re-acquire the canonical instance by handle.
-           CIndicatorDE *canonical = GetIndicatorByHandle(handle);
+          // never touch it again; re-acquire the canonical instance by IDENTITY (Anhnt, 2026-08-28).
+           CIndicatorDE *canonical = GetIndicatorByIdentity(s.Symbol(), s.Timeframe(), type, params);
            if(canonical != NULL)
              m_SignalsCollection.GetOrCreateSignal(canonical);
          }
@@ -72,11 +73,8 @@
        // --- Release the Signal FIRST: CSignalsCollection borrows this indicator's
        // --- pointer (m_indicator_list[] + the signal's own m_indicator), so deleting
        // --- the indicator before its signal would leave both dangling.
-        int debug_released_handle = indicator.Handle();
         m_SignalsCollection.DeleteSignal(indicator);
         list.Delete(i);   // CArrayObj FreeMode -> ~CIndicatorDE -> IndicatorRelease(handle)
-        // Print("MY DEBUG CTimeSeriesEngine::RemoveIndicatorFromAllSeries: released handle=", debug_released_handle,
-        //       " GetIndicatorByHandle-after=", (GetIndicatorByHandle(debug_released_handle) != NULL ? "FOUND(bug!)" : "NULL(expected)"));
       }
   }
  //+------------------------------------------------------------------+
@@ -113,25 +111,23 @@
  //| template set (old pattern - fragile ordering assumption, and the |
  //| exact bug class just found/fixed in SaveConfigurationToJSON).     |
  //+------------------------------------------------------------------+
- // --- Reads .type_enum/.raw_params[] straight off each entry (Anhnt, 2026-08-19) - populated by
- // --- CGUIPannel::LoadIndicatorTemplateSettingFromJSON (called once per Series at startup - "every Series is new" -
- // --- no separate "Apply" path anymore) or by AddIndicatorToTemplateSetting/ScanIndicatorOnChart (live-append
- // --- path). No more "find a representative instance elsewhere + BuildTemplateMatchKey" dance - the
- // --- array itself now carries everything needed to create the indicator directly. An entry whose
- // --- raw_params[] never got populated (empty) is skipped.
+ // --- Reads CIndicatorTemplateManager directly (Single Source of Truth, Anhnt 2026-08-27) - no
+ // --- more SJsonIndicatorEntry[] copy/reference dance. An entry whose raw_params[] never got
+ // --- populated (empty) is skipped.
  void CTimeSeriesEngine::AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe,
-                                                      SJsonIndicatorEntry &m_indicator_template_setting[])
+                                                      CIndicatorTemplateManager *manager)
   {
     // Source symbol/timeframe from the CBarSeriesDE object itself (m_BarTimeSeriesCollection),
     // not from the symbol/timeframe parameters (which trace back to a raw ::Symbol()/
     // ::Period() call chain in OnInit/OnChartEvent). CBarSeriesDE::Symbol() has never been
     // observed to drift; CIndicatorDE::Symbol() has, whenever it was fed a string sourced
     // from that raw call chain instead of a stable object's own accessor.
+     if(manager == NULL) return;
      if(!m_BarTimeSeriesCollection.IsAvailable(symbol, timeframe)) return;
      CBarSeriesDE *target_series = m_BarTimeSeriesCollection.GetSeries(symbol, timeframe);
      string safe_symbol = target_series.Symbol();
-     int tmpl_total = ArraySize(m_indicator_template_setting);
-     if(tmpl_total == 0) return; // nothing in PureData yet - LoadIndicatorsFromJson seeds it first
+     int tmpl_total = manager.Total();
+     if(tmpl_total == 0) return; // nothing tracked yet
      // NOTE: no "does it already exist" guard here on purpose. The caller (OnInitEvent /
      // OnChartEvent) only reaches this function after confirming via m_BarTimeSeriesCollection.IsAvailable()
      // that (symbol, timeframe) is brand new, so every template entry below is guaranteed absent.
@@ -141,17 +137,23 @@
       int created_count = 0, failed_create = 0, skipped_no_raw = 0;
       for(int i = 0; i < tmpl_total; i++)
        {
-        if(ArraySize(m_indicator_template_setting[i].raw_params) == 0) { skipped_no_raw++; continue; }
-        int buffers_total = GetIndicatorBuffersTotal(m_indicator_template_setting[i].type_enum);
-        CIndicatorDE *new_ind = m_IndicatorsCollection.CreateIndicator(m_indicator_template_setting[i].type_enum,
-                                                                        m_indicator_template_setting[i].raw_params,
+        CIndicatorSetting *entry = manager.At(i);
+        if(entry == NULL) continue;
+        MqlParam raw_params[];
+        entry.GetRawParams(raw_params);
+        if(ArraySize(raw_params) == 0) { skipped_no_raw++; continue; }
+        int buffers_total = GetIndicatorBuffersTotal(entry.TypeEnum());
+        CIndicatorDE *new_ind = m_IndicatorsCollection.CreateIndicator(entry.TypeEnum(), raw_params,
                                                                         safe_symbol, target_series.Timeframe());
         if(new_ind == NULL) { failed_create++; continue; }
         int add_result = m_IndicatorsCollection.AddIndicatorToList(new_ind, WRONG_VALUE, buffers_total);
         if(add_result == INVALID_HANDLE) { failed_create++; continue; }
         // 'new_ind' may be dangling here (deleted by AddIndicatorToList on duplicates) -
-        // never touch it again; work with the canonical instance re-acquired by handle
-         CIndicatorDE *canonical = GetIndicatorByHandle(add_result);
+        // never touch it again; work with the canonical instance re-acquired by IDENTITY
+        // (Anhnt, 2026-08-28 - was GetIndicatorByHandle(add_result), a V9 leftover; handle
+        // numbers are program-wide slots that get reused, so a numeric-handle scan risked
+        // matching a stale unrelated instance - identity match cannot collide like that).
+         CIndicatorDE *canonical = GetIndicatorByIdentity(safe_symbol, target_series.Timeframe(), entry.TypeEnum(), raw_params);
          if(canonical != NULL)
             m_SignalsCollection.GetOrCreateSignal(canonical);
          created_count++;
@@ -160,23 +162,26 @@
             " for ", safe_symbol, " ", EnumToString(target_series.Timeframe()),
             skipped_no_raw > 0 ? (" (" + IntegerToString(skipped_no_raw) + " skipped: no raw_params)") : "");
   }
- //+-------------------------------------------------------------------------+
- //| Similary to CBarTimeSeriesCollection properties CListObj m_list         |
- //| CIndicatorsCollection also have properties CListObj m_list              |
- //|Two colllection don't have method to delete so we need this method.      |
- //|                                                                         |
- //+-------------------------------------------------------------------------+
- CIndicatorDE *CTimeSeriesEngine::GetIndicatorByHandle(const int handle)
+ //+------------------------------------------------------------------+
+ //| Re-acquire a just-added-or-deduped indicator by its RAW identity  |
+ //| (symbol, tf, type, params) - NOT by handle (V9 leftover, removed  |
+ //| 2026-08-28, see declaration comment in TimeSeriesEngine.mqh).     |
+ //+------------------------------------------------------------------+
+ CIndicatorDE *CTimeSeriesEngine::GetIndicatorByIdentity(const string symbol, const ENUM_TIMEFRAMES tf,
+                                                          const ENUM_INDICATOR type, MqlParam &params[])
   {
-   if(handle == INVALID_HANDLE) return NULL;
-    CArrayObj *all = m_IndicatorsCollection.GetList();
-    if(all == NULL) return NULL;
-    for(int i = all.Total() - 1; i >= 0; i--)
-      {
-       CIndicatorDE *indicator = all.At(i);
-       if(indicator != NULL && indicator.Handle() == handle) return indicator;
-      }
-    return NULL;
+   CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(symbol);
+   ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+   int total = (ind_list != NULL) ? ind_list.Total() : 0;
+   for(int i = 0; i < total; i++)
+     {
+      CIndicatorDE *ind = ind_list.At(i);
+      if(ind == NULL || ind.TypeIndicator() != type) continue;
+      MqlParam ind_params[];
+      ind.GetMqlParams(ind_params);
+      if(IsEqualMqlParamArrays(ind_params, params)) return ind;
+     }
+   return NULL;
   }
  void CTimeSeriesEngine::ProcessNewBarSignalEvents(void)
   {

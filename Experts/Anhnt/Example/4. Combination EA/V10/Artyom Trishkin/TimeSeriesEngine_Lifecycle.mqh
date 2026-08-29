@@ -4,47 +4,60 @@
 #ifndef CTIMESERIESENGINE_LIFECYCLE_MQH
 #define CTIMESERIESENGINE_LIFECYCLE_MQH
 #include "TimeSeriesEngine.mqh"
+#include "..\Services\SymbolTFManager.mqh"   // CSymbolTFManager/CSymbolTFSetting - bulk-sync loop reads it LIVE
  //Life cycle management
- bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period)
+ bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period,
+                                      CSymbolTFManager *manager, CIndicatorTemplateManager *templateManager)
   {
-    if(m_symbol_collection == NULL) return false;
-   // Step 1: build collection (first init only)
-     if(this.m_BarTimeSeriesCollection.GetList().Total() == 0)
-        this.m_BarTimeSeriesCollection.CreateCollection(m_symbol_collection.GetList());
-   // Step 2: guard — series already exists (CHARTCHANGE same TF)
-    bool already_available = this.m_BarTimeSeriesCollection.IsAvailable(symbol, period);
-    if(already_available)
-        return true;
-   // Step 3: create the current chart's series
-    bool created = this.m_BarTimeSeriesCollection.CreateSeries(symbol, period);
-    if(!created) return false;
-   // DOM setup - ONE BookAdd() attempt per symbol per run, and only for symbols that can actually support it. 
-   // TicksBookdepth() wraps native SYMBOL_TICKS_BOOKDEPTH, which MT5 documents as zero for symbols 
-   // with no Depth of Market at all (many CFDs, e.g. XAUUSDm on this broker) - 
-   // skip those entirely instead of calling BookAdd() and logging a failure every time. 
-   // For symbols that DO support it, BookdepthSubscription() alone still can't gate retries 
-   // (reads false both for "never tried" and "tried, refused"), so m_dom_attempted tracks "already asked this run" regardless of outcome.
+   if(m_symbol_collection == NULL) return false;
+
+   // DOM setup - chay MOI lan goi (symbol cua chart co the doi qua tung reinit), tu guard
+   // theo tung symbol qua m_dom_attempted[] - khong nam trong co init_complete ben duoi.
     if(this.m_MBookSeriesCollection.DataTotal() == 0)
-        this.m_MBookSeriesCollection.CreateCollection(m_symbol_collection.GetList());
+       this.m_MBookSeriesCollection.CreateCollection(m_symbol_collection.GetList());
     bool dom_already_attempted = false;
     for(int di = 0; di < ArraySize(m_dom_attempted); di++)
-        if(m_dom_attempted[di] == symbol) { dom_already_attempted = true; break; }
+       if(m_dom_attempted[di] == symbol) { dom_already_attempted = true; break; }
     if(!dom_already_attempted)
-        {
-        CSymbol *book_sym = m_symbol_collection.GetSymbolObjByName(symbol);
-        if(book_sym != NULL && book_sym.TicksBookdepth() > 0) book_sym.BookAdd();
-        int dom_n = ArraySize(m_dom_attempted);
-        ArrayResize(m_dom_attempted, dom_n + 1);
-        m_dom_attempted[dom_n] = symbol;
-        }
-   //For Candle Pattern
-    RegisterAllCandlePatterns();
-    SeriesApplyPatternRegistry(symbol, period);
+     {
+      CSymbol *book_sym = m_symbol_collection.GetSymbolObjByName(symbol);
+      if(book_sym != NULL && book_sym.TicksBookdepth() > 0) book_sym.BookAdd();
+      int dom_n = ArraySize(m_dom_attempted);
+      ArrayResize(m_dom_attempted, dom_n + 1);
+      m_dom_attempted[dom_n] = symbol;
+     }
+
+   // Bulk-sync - DUNG 1 LAN cho ca doi EA, khong lap lai moi lan REASON_CHARTCHANGE - sau
+   // lan nay, Symbol+TF/Indicator moi hoan toan do 2 handler reactive lo (SYMBOLTF_MANAGER_
+   // EVENT_ADDED/INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED o EA.mq5), khong quay lai day nua.
+    if(!m_time_series_engine_init_complete)
+     {
+      this.m_BarTimeSeriesCollection.CreateCollection(m_symbol_collection.GetList());
+      this.m_BarPatterns_Control.RegisterAllKnownPatterns();
+      if(manager != NULL)
+       {
+        int sf_total = manager.Total();
+        for(int s = 0; s < sf_total; s++)
+         {
+          CSymbolTFSetting *entry = manager.At(s);
+          if(entry == NULL) continue;
+          string sym = entry.Symbol();
+          ENUM_TIMEFRAMES tf = entry.TFEnum();
+          if(sym == "" || this.m_BarTimeSeriesCollection.IsAvailable(sym, tf)) continue;
+          if(this.m_BarTimeSeriesCollection.CreateSeries(sym, tf))
+           {
+            SeriesApplyPatternRegistry(sym, tf);
+            AddAllIndicatorsToNewSeries(sym, tf, templateManager);
+           }
+         }
+       }
+      m_time_series_engine_init_complete = true;
+     }
     return true;
   }
  bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
                                 const double& dparam, const string& sparam,
-                                SJsonIndicatorEntry &m_indicator_template_setting[])
+                                CIndicatorTemplateManager *manager)
   {
     if(id != CHARTEVENT_CHART_CHANGE) return false;
     string sym          = ::Symbol();
@@ -58,9 +71,9 @@
         // (Anhnt, 2026-08-10: was commented out - new TFs switched to on the chart never
         // got pattern detection wired, same bug as the JSON-load path).
         this.SeriesApplyPatternRegistry(sym, curr);
-        // Direction 2: replicate the already-established indicator template (from JSON or
-        // earlier symbols/TFs) into this brand new series
-        this.AddAllIndicatorsToNewSeries(sym, curr, m_indicator_template_setting);
+        // Direction 2: replicate the already-established indicator template (from
+        // CIndicatorTemplateManager, Single Source of Truth) into this brand new series
+        this.AddAllIndicatorsToNewSeries(sym, curr, manager);
       }
     else
      {

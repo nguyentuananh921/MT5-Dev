@@ -5,46 +5,46 @@
 #ifndef CGUIPANNEL_JSONCONFIG_MQH
 #define CGUIPANNEL_JSONCONFIG_MQH
  #include "GUIPannel.mqh" 
- void CGUIPannel::LoadSymbolTFSettingFromJSON(void)
-  {
-   if(m_time_series_engine == NULL) return;
-   ::Print(__FUNCTION__, " > Starting load config");
-   string full_path = g_ea_folder + "/Config_Setting.json";
-   SJsonIndicatorEntry entries[];
-   SJsonSymbolTF       symbols_tf[];
-   if(!ParseIndicatorConfigFile(full_path, entries, symbols_tf))
-    {
-     ::Print(__FUNCTION__, " > failed to read/parse ", full_path);
-     return;
-    }
-   // --- ArrayCopy() can't be used here - structs holding a string/dynamic-array member aren't
-   // --- POD, MQL5's built-in refuses them. Per-element struct assignment (=) works fine though.
-    int sf_total = ArraySize(symbols_tf);
-    ArrayResize(m_symbol_tf_Setting, sf_total);
-    for(int i = 0; i < sf_total; i++)
-       m_symbol_tf_Setting[i] = symbols_tf[i];
-   // --- CTimeSeriesEngine::OnInitEvent (called right before this) unconditionally creates the
-   // --- CURRENT chart's own Series regardless of whether it's in the JSON - if the EA is attached
-   // --- to a Symbol/TF never saved before, m_symbol_tf_Setting[] would be permanently missing it
-   // --- otherwise: m_chart_obj_collection's baseline snapshot (taken later in OnInitEvent) already
-   // --- reflects this symbol/TF as "existing", so OnEvent's CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE
-   // --- self-registration never fires for it. Self-register here too, same as OnEvent does.
-    string cur_sym = _Symbol;
-    string cur_tf  = TimeframeDescription(_Period);
-    bool cur_found = false;
-    for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
-      if(m_symbol_tf_Setting[i].symbol == cur_sym && m_symbol_tf_Setting[i].tf == cur_tf) { cur_found = true; break; }
-    if(!cur_found)
-     {
-      int n = ArraySize(m_symbol_tf_Setting);
-      ArrayResize(m_symbol_tf_Setting, n + 1);
-      m_symbol_tf_Setting[n].symbol = cur_sym;
-      m_symbol_tf_Setting[n].tf     = cur_tf;
-      m_symbol_tf_Setting[n].buy    = true;
-      m_symbol_tf_Setting[n].sell   = true;
-     }
-   m_time_series_engine.ApplySymbolTFSetting(m_symbol_tf_Setting);
-  }
+//  void CGUIPannel::LoadSymbolTFSettingFromJSON(void)
+//   {
+//    if(m_time_series_engine == NULL) return;
+//    ::Print(__FUNCTION__, " > Starting load config");
+//    string full_path = g_ea_folder + "/Config_Setting.json";
+//    SJsonIndicatorEntry entries[];
+//    SJsonSymbolTF       symbols_tf[];
+//    if(!ParseIndicatorConfigFile(full_path, entries, symbols_tf))
+//     {
+//      ::Print(__FUNCTION__, " > failed to read/parse ", full_path);
+//      return;
+//     }
+//    // --- ArrayCopy() can't be used here - structs holding a string/dynamic-array member aren't
+//    // --- POD, MQL5's built-in refuses them. Per-element struct assignment (=) works fine though.
+//     int sf_total = ArraySize(symbols_tf);
+//     ArrayResize(m_symbol_tf_Setting, sf_total);
+//     for(int i = 0; i < sf_total; i++)
+//        m_symbol_tf_Setting[i] = symbols_tf[i];
+//    // --- CTimeSeriesEngine::OnInitEvent (called right before this) unconditionally creates the
+//    // --- CURRENT chart's own Series regardless of whether it's in the JSON - if the EA is attached
+//    // --- to a Symbol/TF never saved before, m_symbol_tf_Setting[] would be permanently missing it
+//    // --- otherwise: m_chart_obj_collection's baseline snapshot (taken later in OnInitEvent) already
+//    // --- reflects this symbol/TF as "existing", so OnEvent's CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE
+//    // --- self-registration never fires for it. Self-register here too, same as OnEvent does.
+//     string cur_sym = _Symbol;
+//     string cur_tf  = TimeframeDescription(_Period);
+//     bool cur_found = false;
+//     for(int i = 0; i < ArraySize(m_symbol_tf_Setting); i++)
+//       if(m_symbol_tf_Setting[i].symbol == cur_sym && m_symbol_tf_Setting[i].tf == cur_tf) { cur_found = true; break; }
+//     if(!cur_found)
+//      {
+//       int n = ArraySize(m_symbol_tf_Setting);
+//       ArrayResize(m_symbol_tf_Setting, n + 1);
+//       m_symbol_tf_Setting[n].symbol = cur_sym;
+//       m_symbol_tf_Setting[n].tf     = cur_tf;
+//       m_symbol_tf_Setting[n].buy    = true;
+//       m_symbol_tf_Setting[n].sell   = true;
+//      }
+//    m_time_series_engine.ApplySymbolTFSetting(m_symbol_tf_Setting);
+//   }
  //+----------------------------------------------------------------------------+
  //| Loads Config_Setting.json's "Indicator_Templates" section into             |
  //| m_indicator_template_setting[], resolving .type_enum/.raw_params[]         |
@@ -54,175 +54,89 @@
  //| MUST run after it.                                                         |
  //| Called ONCE from the top of CGUIPannel::OnInitEvent (EA's OnInit).         |
  //+----------------------------------------------------------------------------+
- void CGUIPannel::LoadIndicatorTemplateSettingFromJSON(void)
-  {
-   if(m_time_series_engine == NULL) return;
-   string full_path = g_ea_folder + "/Config_Setting.json";
-   SJsonIndicatorEntry entries[];
-   SJsonSymbolTF       symbols_tf[];
-   if(!ParseIndicatorConfigFile(full_path, entries, symbols_tf))
-    {
-     ::Print(__FUNCTION__, " > failed to read/parse ", full_path);
-     return;
-    }
-    int tmpl_total = ArraySize(entries);
-    ArrayResize(m_indicator_template_setting, tmpl_total);
-    // --- m_settings_cache_state[] (per-row "Show" column dirty-check cache) is NOT resized here -
-    // --- SyncTable_IndicatorTemplateSetting() self-heals its own size on next use, so no caller needs
-    // --- to remember keeping it in lockstep (see that function's own comment).
-    for(int i = 0; i < tmpl_total; i++)
-       m_indicator_template_setting[i] = entries[i];
-   // --- CTimeSeriesEngine does NOT work with JSON/text at all (Anhnt, 2026-08-19) - Layer 2 resolves
-   // --- .type_enum/.raw_params[] HERE, before handing the array to Layer 1, so
-   // --- AddAllIndicatorsToNewSeries below just reads them directly, no catalog/schema on its side.
-    SIndicatorCatalogItem catalog[];
-    GetIndicatorCatalog(catalog);
-    for(int i = 0; i < tmpl_total; i++)
-     {
-      bool type_found = false;
-      m_indicator_template_setting[i].type_enum = IND_CUSTOM;
-      for(int c = 0; c < ArraySize(catalog); c++)
-       {
-        if(catalog[c].name == m_indicator_template_setting[i].type)
-         {
-          m_indicator_template_setting[i].type_enum = catalog[c].ind_type;
-          type_found = true;
-          break;
-         }
-       }
-      if(!type_found)
-       {
-        ::Print(__FUNCTION__, " > unknown indicator type \"", m_indicator_template_setting[i].type, "\", skipped");
-        continue;
-       }
-      SIndicatorParam schema[];
-      int schema_total = GetIndicatorParamSchema(m_indicator_template_setting[i].type_enum, schema);
-      if(schema_total == 0 || ArraySize(m_indicator_template_setting[i].params) < schema_total)
-       {
-        ::Print(__FUNCTION__, " > \"", m_indicator_template_setting[i].type, "\" param count/schema mismatch, skipped");
-        continue;
-       }
-      ArrayResize(m_indicator_template_setting[i].raw_params, schema_total);
-      for(int p = 0; p < schema_total; p++)
-       {
-        m_indicator_template_setting[i].raw_params[p].type = schema[p].data_type;
-        string raw = m_indicator_template_setting[i].params[p];
-        if(schema[p].choices != "")
-         {
-          // --- Enum-like param: raw is the choice TEXT (e.g. "EMA") saved by SaveGUIConfigToJSON -
-          // --- the matching CommonDELib.mqh XxxByDescription() resolves it to the real MQL5 enum
-          // --- value, dispatched by comparing schema[p].choices against the 4 known constants.
-          if(schema[p].choices == PRICE_CHOICES)
-             m_indicator_template_setting[i].raw_params[p].integer_value = (long)AppliedPriceByDescription(raw);
-          else if(schema[p].choices == CALCULATION_METHOD_CHOICES)
-             m_indicator_template_setting[i].raw_params[p].integer_value = (long)AveragingMethodByDescription(raw);
-          else if(schema[p].choices == VOLUME_CHOICES)
-             m_indicator_template_setting[i].raw_params[p].integer_value = (long)AppliedVolumeByDescription(raw);
-          else if(schema[p].choices == STOCH_PRICE_CHOICES)
-             m_indicator_template_setting[i].raw_params[p].integer_value = (long)StochPriceByDescription(raw);
-          else
-             m_indicator_template_setting[i].raw_params[p].integer_value = (long)StringToInteger(raw); // back-compat
-         }
-        else if(schema[p].data_type == TYPE_DOUBLE)
-           m_indicator_template_setting[i].raw_params[p].double_value = StringToDouble(raw);
-        else
-           m_indicator_template_setting[i].raw_params[p].integer_value = StringToInteger(raw);
-       }
-     }
-   // --- PureData-only (Anhnt, 2026-08-20): this function's job ends at populating
-   // --- m_indicator_template_setting[] (.type_enum/.raw_params[] included). Layer 1 create used
-   // --- to run right here per-series, but startup also needs InitializeIndicatorTemplateManagerOnInit() to merge in
-   // --- any hand-attached-while-EA-was-off indicator FIRST - so the single AddAllIndicatorsToNewSeries
-   // --- pass now runs once, after BOTH sources are merged, from OnInitEvent (GUIPannel_Lifecycle.mqh).
-  }
- //+----------------------------------------------------------------------------+
- //| Loads the "Markers_Setting"/"Sound_Settings" sections of                   |
- //| Config_Setting.json. Always sets sane defaults first so a                  |
- //| missing/partial file (or one with no "Markers_Setting" key yet)            |
- //| still leaves the EA in a working state.                                    |
- //+----------------------------------------------------------------------------+
- void CGUIPannel::LoadMarkerSettingsFromJSON(void)
-  {
-   //For default value reference at https://www.mql5.com/en/docs/constants/objectconstants/wingdings
-   //Marker for indicator
-    m_marker_single_indicator_buy_code  = 217;
-    m_marker_single_indicator_sell_code = 218;
-    m_marker_multi_indicator_buy_code   = 67;   // Thumb Up
-    m_marker_multi_indicator_sell_code  = 68;   // Thumb Down
-   //Marker for Pattern
-    m_marker_pattern_buy_code  = 39;   //Candle
-    m_marker_pattern_sell_code = 39;   //Candle
-   //Marker for Combo
-    m_marker_combo_buy_code    = 83;  // Bomb
-    m_marker_combo_sell_code   = 83;  // Bomb
-   //For default color
-    m_marker_buy_color        = clrLime;
-    m_marker_sell_color       = clrRed;
-    m_marker_nonrelated_color = clrGray;
-   //For sound
-    m_marker_buy_sound_file   = "";
-    m_marker_sell_sound_file  = "";
-    // m_marker_sound_folder     = "Sounds";
-   //For Config_Setting.json
-    //string content = IndicatorConfig_ReadWholeFile("Config_Setting.json");
-    string full_path = g_ea_folder + "/Config_Setting.json";
-    string content = IndicatorConfig_ReadWholeFile(full_path);
-    if(content == "") return;
-    // --- Read back the human-readable labels SaveMarkerSettingsToJSON now writes ("83 Bomb",
-    // --- "Dodger Blue") - reverse-lookup via ArrowCodeForLabel/ColorForLabel against the SAME
-    // --- GetMarker*Choices catalogs, falling back to the default already set above if the
-    // --- label is missing/unrecognized (e.g. older JSON, or a hand-edited typo).
-    string sv;
-    if(::JsonStringValue(content, "single_indicator_buy_arrow_code",  sv)) m_marker_single_indicator_buy_code  = ArrowCodeForLabel(sv, m_marker_single_indicator_buy_code);
-    if(::JsonStringValue(content, "single_indicator_sell_arrow_code", sv)) m_marker_single_indicator_sell_code = ArrowCodeForLabel(sv, m_marker_single_indicator_sell_code);
-    if(::JsonStringValue(content, "multi_indicator_buy_arrow_code",   sv)) m_marker_multi_indicator_buy_code   = ArrowCodeForLabel(sv, m_marker_multi_indicator_buy_code);
-    if(::JsonStringValue(content, "multi_indicator_sell_arrow_code",  sv)) m_marker_multi_indicator_sell_code  = ArrowCodeForLabel(sv, m_marker_multi_indicator_sell_code);
-    if(::JsonStringValue(content, "pattern_buy_arrow_code",  sv)) m_marker_pattern_buy_code  = ArrowCodeForLabel(sv, m_marker_pattern_buy_code);
-    if(::JsonStringValue(content, "pattern_sell_arrow_code", sv)) m_marker_pattern_sell_code = ArrowCodeForLabel(sv, m_marker_pattern_sell_code);
-    if(::JsonStringValue(content, "combo_buy_arrow_code",    sv)) m_marker_combo_buy_code    = ArrowCodeForLabel(sv, m_marker_combo_buy_code);
-    if(::JsonStringValue(content, "combo_sell_arrow_code",   sv)) m_marker_combo_sell_code   = ArrowCodeForLabel(sv, m_marker_combo_sell_code);
-    if(::JsonStringValue(content, "buy_color",        sv)) m_marker_buy_color        = ColorForLabel(sv, m_marker_buy_color);
-    if(::JsonStringValue(content, "sell_color",       sv)) m_marker_sell_color       = ColorForLabel(sv, m_marker_sell_color);
-    if(::JsonStringValue(content, "nonrelated_color", sv)) m_marker_nonrelated_color = ColorForLabel(sv, m_marker_nonrelated_color);
-    if(::JsonStringValue(content, "buy_sound_file",  sv)) m_marker_buy_sound_file  = sv;
-    if(::JsonStringValue(content, "sell_sound_file", sv)) m_marker_sell_sound_file = sv;
-    //if(::JsonStringValue(content, "sound_folder",    sv)) m_marker_sound_folder    = sv;
-  }
- //+----------------------------------------------------------------------------+
- //| Loads the "Pattern_Alerts_Setting" section of Config_Setting.json          |
- //| into the Candle Pattern tab's Sound/Message checkboxes.                    |
- //+----------------------------------------------------------------------------+
- void CGUIPannel::LoadPatternAlertConfigFromJSON(void)
-  {
-    //string content = IndicatorConfig_ReadWholeFile("Config_Setting.json");
-    string full_path = g_ea_folder + "/Config_Setting.json";    
-    string content = IndicatorConfig_ReadWholeFile(full_path);
-    if(content == "") return;
-    string pattern_alerts_section = IndicatorConfig_ExtractRawSection(content, "Pattern_Alerts_Setting");
-    if(pattern_alerts_section == "") return;
-    int pattern_count = ArraySize(m_pattern_types);
-    for(int i = 0; i < pattern_count; i++)
-     {
-      string pattern_name = m_pattern_display_names[i];
-      int pos = StringFind(pattern_alerts_section, "\"" + pattern_name + "\"");
-      if(pos < 0) continue;
-      int brace = StringFind(pattern_alerts_section, "{", pos);
-      if(brace < 0) continue;
-      int close_brace = StringFind(pattern_alerts_section, "}", brace);
-      if(close_brace < 0) continue;
-      string pattern_obj = StringSubstr(pattern_alerts_section, brace, close_brace - brace + 1);
-      bool sound_enabled = false;
-      bool message_enabled = false;
-      if(::JsonBoolValue(pattern_obj, "sound", sound_enabled))
-        {
-          m_table_CandlePatternsSetting.ChangeImage(3, i, sound_enabled ? 0 : 1);
-        }
-      if(::JsonBoolValue(pattern_obj, "message", message_enabled))
-        {
-          m_table_CandlePatternsSetting.ChangeImage(4, i, message_enabled ? 0 : 1);
-        }
-     }
-  }
+//  void CGUIPannel::LoadIndicatorTemplateSettingFromJSON(void)
+//   {
+//    if(m_time_series_engine == NULL) return;
+//    string full_path = g_ea_folder + "/Config_Setting.json";
+//    SJsonIndicatorEntry entries[];
+//    SJsonSymbolTF       symbols_tf[];
+//    if(!ParseIndicatorConfigFile(full_path, entries, symbols_tf))
+//     {
+//      ::Print(__FUNCTION__, " > failed to read/parse ", full_path);
+//      return;
+//     }
+//     int tmpl_total = ArraySize(entries);
+//     ArrayResize(m_indicator_template_setting, tmpl_total);
+//     // --- m_settings_cache_state[] (per-row "Show" column dirty-check cache) is NOT resized here -
+//     // --- SyncTable_IndicatorTemplateSetting() self-heals its own size on next use, so no caller needs
+//     // --- to remember keeping it in lockstep (see that function's own comment).
+//     for(int i = 0; i < tmpl_total; i++)
+//        m_indicator_template_setting[i] = entries[i];
+//    // --- CTimeSeriesEngine does NOT work with JSON/text at all (Anhnt, 2026-08-19) - Layer 2 resolves
+//    // --- .type_enum/.raw_params[] HERE, before handing the array to Layer 1, so
+//    // --- AddAllIndicatorsToNewSeries below just reads them directly, no catalog/schema on its side.
+//     SIndicatorCatalogItem catalog[];
+//     GetIndicatorCatalog(catalog);
+//     for(int i = 0; i < tmpl_total; i++)
+//      {
+//       bool type_found = false;
+//       m_indicator_template_setting[i].type_enum = IND_CUSTOM;
+//       for(int c = 0; c < ArraySize(catalog); c++)
+//        {
+//         if(catalog[c].name == m_indicator_template_setting[i].type)
+//          {
+//           m_indicator_template_setting[i].type_enum = catalog[c].ind_type;
+//           type_found = true;
+//           break;
+//          }
+//        }
+//       if(!type_found)
+//        {
+//         ::Print(__FUNCTION__, " > unknown indicator type \"", m_indicator_template_setting[i].type, "\", skipped");
+//         continue;
+//        }
+//       SIndicatorParam schema[];
+//       int schema_total = GetIndicatorParamSchema(m_indicator_template_setting[i].type_enum, schema);
+//       if(schema_total == 0 || ArraySize(m_indicator_template_setting[i].params) < schema_total)
+//        {
+//         ::Print(__FUNCTION__, " > \"", m_indicator_template_setting[i].type, "\" param count/schema mismatch, skipped");
+//         continue;
+//        }
+//       ArrayResize(m_indicator_template_setting[i].raw_params, schema_total);
+//       for(int p = 0; p < schema_total; p++)
+//        {
+//         m_indicator_template_setting[i].raw_params[p].type = schema[p].data_type;
+//         string raw = m_indicator_template_setting[i].params[p];
+//         if(schema[p].choices != "")
+//          {
+//           // --- Enum-like param: raw is the choice TEXT (e.g. "EMA") saved by SaveGUIConfigToJSON -
+//           // --- the matching CommonDELib.mqh XxxByDescription() resolves it to the real MQL5 enum
+//           // --- value, dispatched by comparing schema[p].choices against the 4 known constants.
+//           if(schema[p].choices == PRICE_CHOICES)
+//              m_indicator_template_setting[i].raw_params[p].integer_value = (long)AppliedPriceByDescription(raw);
+//           else if(schema[p].choices == CALCULATION_METHOD_CHOICES)
+//              m_indicator_template_setting[i].raw_params[p].integer_value = (long)AveragingMethodByDescription(raw);
+//           else if(schema[p].choices == VOLUME_CHOICES)
+//              m_indicator_template_setting[i].raw_params[p].integer_value = (long)AppliedVolumeByDescription(raw);
+//           else if(schema[p].choices == STOCH_PRICE_CHOICES)
+//              m_indicator_template_setting[i].raw_params[p].integer_value = (long)StochPriceByDescription(raw);
+//           else
+//              m_indicator_template_setting[i].raw_params[p].integer_value = (long)StringToInteger(raw); // back-compat
+//          }
+//         else if(schema[p].data_type == TYPE_DOUBLE)
+//            m_indicator_template_setting[i].raw_params[p].double_value = StringToDouble(raw);
+//         else
+//            m_indicator_template_setting[i].raw_params[p].integer_value = StringToInteger(raw);
+//        }
+//      }
+//    // --- PureData-only (Anhnt, 2026-08-20): this function's job ends at populating
+//    // --- m_indicator_template_setting[] (.type_enum/.raw_params[] included). Layer 1 create used
+//    // --- to run right here per-series, but startup also needs InitializeIndicatorTemplateManagerOnInit() to merge in
+//    // --- any hand-attached-while-EA-was-off indicator FIRST - so the single AddAllIndicatorsToNewSeries
+//    // --- pass now runs once, after BOTH sources are merged, from OnInitEvent (GUIPannel_Lifecycle.mqh).
+//   }
+ 
+ 
  //+----------------------------------------------------------------------------+
  //| Writes Config_Setting.json's "Symbols_TFs_List" + "Indicator_Templates"    |
  //| sections straight from CGUIPannel's own m_symbol_tf_Setting[]/             |

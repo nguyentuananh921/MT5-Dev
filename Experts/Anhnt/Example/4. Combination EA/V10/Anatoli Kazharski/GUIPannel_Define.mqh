@@ -17,8 +17,11 @@
    #include "..\Services\IndicatorTemplateManager.mqh"
    #include "..\Services\SymbolTFManager.mqh"
    #include "..\Services\SignalLogger.mqh"
-   #include "..\Services\SignalBridgeWriter.mqh"
-   
+   // SignalBridgeWriter.mqh NOT included here anymore (Anhnt, 2026-08-26) - it moved to EA
+   // ownership, and including it here (BEFORE CGUIPannel's own class declaration below) would
+   // make a circular reference impossible if it ever needed a CGUIPannel type. EA.mq5 includes
+   // it directly, AFTER "Anatoli Kazharski\GUIPannel.mqh", where CGUIPannel is already known.
+
   // For indicator catalog/schema + CTimeSeriesEngine itself - JSON loading and
   // indicator creation live there now, GUIPannel only reads + renders (EA-local, not the Library)
    #include "..\Artyom Trishkin\TimeSeriesEngine.mqh"
@@ -35,6 +38,18 @@
     {
       CHECKBOX_STATE_ON  = 0,
       CHECKBOX_STATE_OFF = 1,
+    };
+  // --- CGUIPannel's own event(s) - Candle Pattern Buy/Sell has no Manager (fixed 28-pattern
+  // --- catalog, plain arrays on CGUIPannel, Anhnt 2026-08-26), so CGUIPannel fires this itself
+  // --- whenever the user toggles a Buy/Sell checkbox, same "fire on real change" convention as
+  // --- every Manager's own EVENT_* enum. Continues numbering from SymbolTFManager's own chain -
+  // --- MUST chain off its LAST value (SYMBOLTF_MANAGER_EVENT_ROW_CHANGED, added 2026-08-28), not
+  // --- SETTING_CHANGED - chaining off a non-last value collides with whatever was appended after it.
+  enum ENUM_GUIPANNEL_EVENT
+    {
+      GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED = SYMBOLTF_MANAGER_EVENT_ROW_CHANGED + 1,
+      GUIPANNEL_EVENT_MARKER_SETTING_CHANGED, // Marker style (shape/color) was saved - EA reacts
+                                               // by re-attaching SignalMarkers.mq5 with the new inputs
     };
  // Define GUI control
   // --- Main panel window m_window_main

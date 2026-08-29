@@ -7,8 +7,12 @@
 //| refresh) and EA (future Layer 1 series management) can react      |
 //| independently, same split already established for indicators.    |
 //+------------------------------------------------------------------+
-#ifndef __SYMBOLTFMANAGER_MQH__
-#define __SYMBOLTFMANAGER_MQH__
+//+------------------------------------------------------------------------------------+
+//| CSymbolTFManager - Center Point of Data (Single Source of Truth).                  |
+//| Owns the CArrayObj list + "Symbols_TFs_List" JSON section.                         |
+//+------------------------------------------------------------------------------------+
+#ifndef CSYMBOLTFMANAGER_MQH
+#define CSYMBOLTFMANAGER_MQH
  #include <Arrays\ArrayObj.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib\Base\BaseObj.mqh>
  #include "SymbolTFSetting.mqh"
@@ -16,14 +20,12 @@
  // JSONConfig.mqh, reused here same as IndicatorTemplateManager.mqh does. This file owns
  // ONLY the "Symbols_TFs_List" domain-specific entry parsing - no SJsonSymbolTF struct
  // middleman (same "no struct middleman" principle IndicatorTemplateManager.mqh follows).
- #include "..\Anatoli Kazharski\JSONConfig.mqh"
+ #include "JSONConfig.mqh"
  // Chains this Manager's own events right after CIndicatorTemplateManager's (which itself
  // chains off Trishkin's whole DoEasy event chain, WF_CONTROL_EVENTS_NEXT_CODE) - same
  // "no Library file touched, just keep appending" convention.
  #include "IndicatorTemplateManager.mqh"
  extern string g_ea_folder;  // From EA - same pattern IndicatorTemplateManager.mqh uses
- #ifndef CSYMBOLTFMANAGER_MQH_DECLARATION
- #define CSYMBOLTFMANAGER_MQH_DECLARATION
  //+------------------------------------------------------------------------------------+
  //| Events CSymbolTFManager fires whenever Data genuinely changes - same principle as   |
  //| ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT (row-level only, no "type" grouping concept   |
@@ -36,11 +38,15 @@
    SYMBOLTF_MANAGER_EVENT_DELETE,          // a (symbol,tf) row was genuinely removed
    SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, // GUI-side intent (e.g. navigate) - not a Data
                                             // mutation, no row involved - lparam=tf, sparam=symbol
+   SYMBOLTF_MANAGER_EVENT_ROW_CHANGED,     // an existing row's Buy/Sell signal setting was
+                                            // toggled - fired directly by CGUIPannel (no Manager
+                                            // method needed, same style as GUIPANNEL_EVENT_
+                                            // PATTERN_SIGNAL_CHANGED), no payload - EA's own
+                                            // reaction (CSignalBridgeWriter::ResetSignalBridge)
+                                            // does a full re-read, not a per-row lookup (Anhnt, 2026-08-28)
   };
- //+------------------------------------------------------------------------------------+
- //| CSymbolTFManager - Center Point of Data (Single Source of Truth).                  |
- //| Owns the CArrayObj list + "Symbols_TFs_List" JSON section.                         |
- //+------------------------------------------------------------------------------------+
+#ifndef CSYMBOLTFMANAGER_MQH_DECLARATION
+#define CSYMBOLTFMANAGER_MQH_DECLARATION
  class CSymbolTFManager : public CBaseObj
    {
      private:
@@ -106,10 +112,180 @@
        void                NotifySettingChanged(const string sym, const ENUM_TIMEFRAMES tf);
 
        //--- JSON - reads/builds ONLY the "Symbols_TFs_List" section, does NOT FileOpen/write -
-       bool                         LoadFromJSON(const string full_path);
+       bool                         LoadSymbolTFSettingFromJSON(const string full_path);
        void                         BuildJsonSection(string &out_json)          const;
+       //--- Full save - THIS Manager owns FileOpen/write for Config_Setting.json: reads the file
+       //--- back first, carries every OTHER top-level section through unchanged (raw text), and
+       //--- overwrites only "Symbols_TFs_List" with fresh BuildJsonSection() output.
+       bool                         SaveSymbolTFSettingToJSON(void);
        virtual void                 Print(const bool full_prop=false, const bool dash=false);
    };
+#endif // CSYMBOLTFMANAGER_MQH_DECLARATION
+#ifndef CSYMBOLTFMANAGER_MQH_IMPLEMENTATION
+#define CSYMBOLTFMANAGER_MQH_IMPLEMENTATION
+ //Working with JSON
+  //+------------------------------------------------------------------+
+  //| Parse one { "symbol": "...", "tf": "...", "buy": ..., "sell": ... } |
+  //| object straight into a fresh CSymbolTFSetting - malformed/empty     |
+  //| symbol slot skipped, same as the old struct-array loader did.       |
+  //+------------------------------------------------------------------+
+  int CSymbolTFManager::ReadSymbolTFEntry(const string &s, int pos, CSymbolTFSetting *&out_row)
+   {
+     out_row = NULL;
+     pos = JSONConfig_SkipSpace(s, pos);
+     if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '{') return pos;
+     pos++; // skip '{'
+     pos = JSONConfig_SkipSpace(s, pos);
+
+     string symbol = "", tf_text = "";
+     bool   buy = true, sell = true, sound = true, message = true;
+     while(pos < StringLen(s) && StringGetCharacter(s, pos) != '}')
+      {
+       string key;
+       pos = JSONConfig_ReadString(s, pos, key);
+       pos = JSONConfig_SkipSpace(s, pos);
+       if(pos < StringLen(s) && StringGetCharacter(s, pos) == ':') pos++;
+       pos = JSONConfig_SkipSpace(s, pos);
+       if(key == "m_symbol")
+          pos = JSONConfig_ReadString(s, pos, symbol);
+       else if(key == "tf_text")   // NOT "m_tf_enum" - no stored text field exists (see CSymbolTFSetting's
+                                    // own design-decision comment); this is TFText()'s derived value, text-named to match.
+          pos = JSONConfig_ReadString(s, pos, tf_text);
+       else if(key == "m_buy_signal")
+          pos = IndicatorConfig_ReadBool(s, pos, buy);
+       else if(key == "m_sell_signal")
+          pos = IndicatorConfig_ReadBool(s, pos, sell);
+       else if(key == "m_sound_alert")
+          pos = IndicatorConfig_ReadBool(s, pos, sound);
+       else if(key == "m_message_alert")
+          pos = IndicatorConfig_ReadBool(s, pos, message);
+       else
+          pos = JSONConfig_SkipValue(s, pos);   // unrecognized key - skip its value, keep pos in sync
+       pos = JSONConfig_SkipSpace(s, pos);
+      }
+     if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}') pos++;
+
+     if(symbol == "") return pos;   // malformed/empty slot - skip
+
+     out_row = new CSymbolTFSetting();
+     out_row.Symbol(symbol);
+     out_row.TFEnum(TimestampByDescription(tf_text));
+     out_row.BuySignal(buy);
+     out_row.SellSignal(sell);
+     out_row.SoundAlert(sound);
+     out_row.MessageAlert(message);
+     return pos;
+   }
+  //+------------------------------------------------------------------+
+  //| Parse the "Symbols_TFs_List" array, appending 1 row per entry     |
+  //+------------------------------------------------------------------+
+  int CSymbolTFManager::ReadSymbolTFEntryArray(const string &s, int pos)
+   {
+     pos = JSONConfig_SkipSpace(s, pos);
+     if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '[') return pos;
+     pos++; // skip '['
+     pos = JSONConfig_SkipSpace(s, pos);
+     while(pos < StringLen(s) && StringGetCharacter(s, pos) != ']')
+      {
+       CSymbolTFSetting *row = NULL;
+       pos = ReadSymbolTFEntry(s, pos, row);
+       if(row != NULL && !m_list.Add(row)) delete row;
+       pos = JSONConfig_SkipSpace(s, pos);
+      }
+     if(pos < StringLen(s) && StringGetCharacter(s, pos) == ']') pos++;
+     return pos;
+   }
+  //+------------------------------------------------------------------+
+  //| Load Config_Setting.json's "Symbols_TFs_List" section straight    |
+  //| into m_list - clears whatever was there first.                    |
+  //+------------------------------------------------------------------+
+  bool CSymbolTFManager::LoadSymbolTFSettingFromJSON(const string full_path)
+   {
+     string content = JSONConfig_ReadWholeFile(full_path);
+     if(content == "") return false;
+     string clean = JSONConfig_StripComments(content);
+     m_list.Clear();
+
+     int pos = JSONConfig_SkipSpace(clean, 0);
+     if(pos >= StringLen(clean) || StringGetCharacter(clean, pos) != '{')
+      {
+       ::Print(__FUNCTION__, " > top-level JSON must be an object");
+       return false;
+      }
+     pos++; // skip '{'
+     pos = JSONConfig_SkipSpace(clean, pos);
+     while(pos < StringLen(clean) && StringGetCharacter(clean, pos) != '}')
+      {
+       string key;
+       pos = JSONConfig_ReadString(clean, pos, key);
+       pos = JSONConfig_SkipSpace(clean, pos);
+       if(pos < StringLen(clean) && StringGetCharacter(clean, pos) == ':') pos++;
+       pos = JSONConfig_SkipSpace(clean, pos);
+       if(key == "Symbols_TFs_List")
+          pos = ReadSymbolTFEntryArray(clean, pos);
+       else
+          pos = JSONConfig_SkipValue(clean, pos);   // not this Manager's key - e.g. "Indicator_Templates"
+       pos = JSONConfig_SkipSpace(clean, pos);
+      }
+     ::Print(__FUNCTION__, " > loaded ", m_list.Total(), " symbol/TF pair(s) from ", full_path);
+     return true;
+   }
+  //+------------------------------------------------------------------+
+  //| Build ONLY the "Symbols_TFs_List": [...] text - caller still owns |
+  //| FileOpen/write + preserving the OTHER sections, same "each Save   |
+  //| builds only its own section" rule the Indicator side follows.     |
+  //+------------------------------------------------------------------+
+  void CSymbolTFManager::BuildJsonSection(string &out_json) const
+   {
+     out_json = "[\n";
+     int saved = 0;
+     for(int i = 0; i < m_list.Total(); i++)
+      {
+       CSymbolTFSetting *row = m_list.At(i);
+       if(row == NULL || row.Symbol() == "") continue;
+       if(saved > 0) out_json += ",\n";
+       saved++;
+       out_json += "  { \"m_symbol\": \"" + row.Symbol() + "\", \"tf_text\": \"" + row.TFText() +
+                   "\", \"m_buy_signal\": " + (row.BuySignal() ? "true" : "false") +
+                   ", \"m_sell_signal\": " + (row.SellSignal() ? "true" : "false") +
+                   ", \"m_sound_alert\": " + (row.SoundAlert() ? "true" : "false") +
+                   ", \"m_message_alert\": " + (row.MessageAlert() ? "true" : "false") + " }";
+      }
+     out_json += "\n ]";
+   }
+  //+------------------------------------------------------------------+
+  //| Full save - owns FileOpen/write for Config_Setting.json. Reads the |
+  //| file back first so "Indicator_Templates" (and any future section  |
+  //| this Manager doesn't know about) survives untouched as raw text - |
+  //| only "Symbols_TFs_List" gets overwritten with fresh data.          |
+  //+------------------------------------------------------------------+
+  bool CSymbolTFManager::SaveSymbolTFSettingToJSON(void)
+   {
+     string full_path = g_ea_folder + "/Config_Setting.json";
+     string existing = JSONConfig_ReadWholeFile(full_path);
+     string indicator_templates = JSONConfig_ExtractRawSection(existing, "Indicator_Templates");
+     string markers        = JSONConfig_ExtractRawSection(existing, "Markers_Setting");
+     string pattern_alerts = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
+     string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
+     string own_section;
+     BuildJsonSection(own_section);
+     string json = "{\n \"Symbols_TFs_List\": " + own_section +
+                   ",\n \"Indicator_Templates\": " + (indicator_templates == "" ? "[\n ]" : indicator_templates);
+     if(markers != "")        json += ",\n \"Markers_Setting\": " + markers;
+     if(pattern_alerts != "") json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
+     if(sound_settings != "") json += ",\n \"Sound_Settings\": " + sound_settings;
+     json += "\n}\n";
+     int fh = ::FileOpen(full_path, FILE_WRITE | FILE_TXT | FILE_ANSI);
+     if(fh == INVALID_HANDLE)
+      {
+       ::Print(__FUNCTION__, " > cannot open ", full_path, " for writing, err=", ::GetLastError());
+       return false;
+      }
+     ::FileWriteString(fh, json);
+     ::FileClose(fh);
+     ::Print(__FUNCTION__, " > saved ", m_list.Total(), " symbol/TF pair(s) to ", full_path);
+     return true;
+   } 
  //+------------------------------------------------------------------+
  //| Identity-based lookup - returns the row itself, not an index      |
  //+------------------------------------------------------------------+
@@ -204,74 +380,7 @@
              " new_sym=", sym, " new_tf=", EnumToString(tf), " packed_sym=", packed_sym, " packed_tf=", packed_tf);
      ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, packed_tf, 0.0, packed_sym);
    }
- //+------------------------------------------------------------------+
- //| Parse one { "symbol": "...", "tf": "...", "buy": ..., "sell": ... } |
- //| object straight into a fresh CSymbolTFSetting - malformed/empty     |
- //| symbol slot skipped, same as the old struct-array loader did.       |
- //+------------------------------------------------------------------+
- int CSymbolTFManager::ReadSymbolTFEntry(const string &s, int pos, CSymbolTFSetting *&out_row)
-   {
-     out_row = NULL;
-     pos = IndicatorConfig_SkipSpace(s, pos);
-     if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '{') return pos;
-     pos++; // skip '{'
-     pos = IndicatorConfig_SkipSpace(s, pos);
-
-     string symbol = "", tf_text = "";
-     bool   buy = true, sell = true, sound = true, message = true;
-     while(pos < StringLen(s) && StringGetCharacter(s, pos) != '}')
-      {
-       string key;
-       pos = IndicatorConfig_ReadString(s, pos, key);
-       pos = IndicatorConfig_SkipSpace(s, pos);
-       if(pos < StringLen(s) && StringGetCharacter(s, pos) == ':') pos++;
-       pos = IndicatorConfig_SkipSpace(s, pos);
-       if(key == "symbol")
-          pos = IndicatorConfig_ReadString(s, pos, symbol);
-       else if(key == "tf")
-          pos = IndicatorConfig_ReadString(s, pos, tf_text);
-       else if(key == "buy")
-          pos = IndicatorConfig_ReadBool(s, pos, buy);
-       else if(key == "sell")
-          pos = IndicatorConfig_ReadBool(s, pos, sell);
-       else if(key == "sound")
-          pos = IndicatorConfig_ReadBool(s, pos, sound);
-       else if(key == "message")
-          pos = IndicatorConfig_ReadBool(s, pos, message);
-       pos = IndicatorConfig_SkipSpace(s, pos);
-      }
-     if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}') pos++;
-
-     if(symbol == "") return pos;   // malformed/empty slot - skip
-
-     out_row = new CSymbolTFSetting();
-     out_row.Symbol(symbol);
-     out_row.TFEnum(TimestampByDescription(tf_text));
-     out_row.BuySignal(buy);
-     out_row.SellSignal(sell);
-     out_row.SoundAlert(sound);
-     out_row.MessageAlert(message);
-     return pos;
-   }
- //+------------------------------------------------------------------+
- //| Parse the "Symbols_TFs_List" array, appending 1 row per entry     |
- //+------------------------------------------------------------------+
- int CSymbolTFManager::ReadSymbolTFEntryArray(const string &s, int pos)
-   {
-     pos = IndicatorConfig_SkipSpace(s, pos);
-     if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '[') return pos;
-     pos++; // skip '['
-     pos = IndicatorConfig_SkipSpace(s, pos);
-     while(pos < StringLen(s) && StringGetCharacter(s, pos) != ']')
-      {
-       CSymbolTFSetting *row = NULL;
-       pos = ReadSymbolTFEntry(s, pos, row);
-       if(row != NULL && !m_list.Add(row)) delete row;
-       pos = IndicatorConfig_SkipSpace(s, pos);
-      }
-     if(pos < StringLen(s) && StringGetCharacter(s, pos) == ']') pos++;
-     return pos;
-   }
+ 
  //+------------------------------------------------------------------+
  //| Lifecycle - same convention as CIndicatorTemplateManager::        |
  //| OnInitEvent. EA.mq5 calls this from its own OnInit().             |
@@ -282,7 +391,7 @@
      if(!m_loaded_from_json)   // skip on a CHARTCHANGE reinit - see m_loaded_from_json declaration
       {
        string full_path = g_ea_folder + "/Config_Setting.json";
-       ok = LoadFromJSON(full_path);
+       ok = LoadSymbolTFSettingFromJSON(full_path);
        m_loaded_from_json = true;
       }
      string cur_sym = ::Symbol();
@@ -298,64 +407,7 @@
       }
      return ok;
    }
- //+------------------------------------------------------------------+
- //| Load Config_Setting.json's "Symbols_TFs_List" section straight    |
- //| into m_list - clears whatever was there first.                    |
- //+------------------------------------------------------------------+
- bool CSymbolTFManager::LoadFromJSON(const string full_path)
-   {
-     string content = IndicatorConfig_ReadWholeFile(full_path);
-     if(content == "") return false;
-     string clean = IndicatorConfig_StripComments(content);
-     m_list.Clear();
-
-     int pos = IndicatorConfig_SkipSpace(clean, 0);
-     if(pos >= StringLen(clean) || StringGetCharacter(clean, pos) != '{')
-      {
-       ::Print(__FUNCTION__, " > top-level JSON must be an object");
-       return false;
-      }
-     pos++; // skip '{'
-     pos = IndicatorConfig_SkipSpace(clean, pos);
-     while(pos < StringLen(clean) && StringGetCharacter(clean, pos) != '}')
-      {
-       string key;
-       pos = IndicatorConfig_ReadString(clean, pos, key);
-       pos = IndicatorConfig_SkipSpace(clean, pos);
-       if(pos < StringLen(clean) && StringGetCharacter(clean, pos) == ':') pos++;
-       pos = IndicatorConfig_SkipSpace(clean, pos);
-       if(key == "Symbols_TFs_List")
-          pos = ReadSymbolTFEntryArray(clean, pos);
-       else
-          pos = IndicatorConfig_SkipValue(clean, pos);   // not this Manager's key - e.g. "Indicator_Templates"
-       pos = IndicatorConfig_SkipSpace(clean, pos);
-      }
-     ::Print(__FUNCTION__, " > loaded ", m_list.Total(), " symbol/TF pair(s) from ", full_path);
-     return true;
-   }
- //+------------------------------------------------------------------+
- //| Build ONLY the "Symbols_TFs_List": [...] text - caller still owns |
- //| FileOpen/write + preserving the OTHER sections, same "each Save   |
- //| builds only its own section" rule the Indicator side follows.     |
- //+------------------------------------------------------------------+
- void CSymbolTFManager::BuildJsonSection(string &out_json) const
-   {
-     out_json = "[\n";
-     int saved = 0;
-     for(int i = 0; i < m_list.Total(); i++)
-      {
-       CSymbolTFSetting *row = m_list.At(i);
-       if(row == NULL || row.Symbol() == "") continue;
-       if(saved > 0) out_json += ",\n";
-       saved++;
-       out_json += "  { \"symbol\": \"" + row.Symbol() + "\", \"tf\": \"" + row.TFText() +
-                   "\", \"buy\": " + (row.BuySignal() ? "true" : "false") +
-                   ", \"sell\": " + (row.SellSignal() ? "true" : "false") +
-                   ", \"sound\": " + (row.SoundAlert() ? "true" : "false") +
-                   ", \"message\": " + (row.MessageAlert() ? "true" : "false") + " }";
-      }
-     out_json += "\n ]";
-   }
+ 
  //+------------------------------------------------------------------+
  //| Debug dump - README Working Rule Print Debug format                |
  //+------------------------------------------------------------------+
@@ -368,5 +420,6 @@
        if(row != NULL) row.Print(full_prop, true);
       }
    }
- #endif // CSYMBOLTFMANAGER_MQH_DECLARATION
-#endif // __SYMBOLTFMANAGER_MQH__
+#endif // CSYMBOLTFMANAGER_MQH_IMPLEMENTATION
+#endif // CSYMBOLTFMANAGER_MQH
+

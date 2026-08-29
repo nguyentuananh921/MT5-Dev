@@ -192,7 +192,8 @@
  //+------------------------------------------------------------------+
  bool CGUIPannel::RefreshCandleInfoWindow(const datetime bar_time)
   {
-   if(m_IndicatorsCollection == NULL || m_time_series_engine == NULL || m_BarTimeSeriesCollection == NULL)
+   if(m_IndicatorsCollection == NULL || m_time_series_engine == NULL || m_BarTimeSeriesCollection == NULL ||
+      m_indicator_template_manager == NULL || m_SymbolTFManager == NULL)
       return false;
    datetime next_bar_time = bar_time + ::PeriodSeconds();
    string sym = ::Symbol();
@@ -232,6 +233,11 @@
        CBarSeriesDE *s = series_list.At(order[ti]);
        if(s == NULL) continue;
        string tf_text = TimeframeDescription(s.Timeframe());
+       // --- Symbol+TF-level Buy/Sell gate (same 2-layer gate CSignalBridgeWriter uses) -
+       // --- computed once per TF, applied to every Indicator/Pattern row below (Anhnt, 2026-08-28).
+        CSymbolTFSetting *symtf_entry = m_SymbolTFManager.FindByIdentity(sym, s.Timeframe());
+        bool symtf_buy  = (symtf_entry != NULL) ? symtf_entry.BuySignal()  : false;
+        bool symtf_sell = (symtf_entry != NULL) ? symtf_entry.SellSignal() : false;
        CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(sym);
        ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, s.Timeframe(), EQUAL);
        int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
@@ -242,6 +248,10 @@
          ENUM_INDICATOR ind_type = ind.TypeIndicator();
          MqlParam ind_params[];
          ind.GetMqlParams(ind_params);
+         // --- Indicator-level Buy/Sell gate - combines with symtf_buy/sell above (Anhnt, 2026-08-28).
+          CIndicatorSetting *ind_entry = m_indicator_template_manager.FindByIdentity(ind_type, ind_params);
+          bool ind_buy  = (ind_entry != NULL) ? ind_entry.BuySignal()  : false;
+          bool ind_sell = (ind_entry != NULL) ? ind_entry.SellSignal() : false;
          // signal is BORROWED - CSignalsCollection owns it
           CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
           if(signal == NULL) continue;
@@ -253,6 +263,10 @@
             if(ht >= next_bar_time) continue;
             if(ht < bar_time) break;
 
+            ENUM_SIGNAL_DIR d = signal.HistoryDir(h);
+            if(d == SIGNAL_BUY  && !(ind_buy  && symtf_buy))  continue;
+            if(d == SIGNAL_SELL && !(ind_sell && symtf_sell)) continue;
+
             //ArrayResize(row_ind,  count + 1);
              ArrayResize(row_label,  count + 1);
              ArrayResize(row_tf,   count + 1);
@@ -262,7 +276,7 @@
             //row_ind[count]  = ind;
              row_label[count] = BuildIndicatorTextLabel(ind_type, ind_params, catalog);
              row_tf[count]   = tf_text;
-             row_dir[count]  = signal.HistoryDir(h);
+             row_dir[count]  = d;
              row_time[count] = ht;
              row_source[count] = 0; // Indicator
              count++;
@@ -284,6 +298,10 @@
                if(ht >= next_bar_time) continue;
                if(ht < bar_time) break;
 
+               ENUM_SIGNAL_DIR ld = bb.LineHistoryDir(li, h);
+               if(ld == SIGNAL_BUY  && !(ind_buy  && symtf_buy))  continue;
+               if(ld == SIGNAL_SELL && !(ind_sell && symtf_sell)) continue;
+
                //ArrayResize(row_ind,  count + 1);
                 ArrayResize(row_label, count + 1);
                 ArrayResize(row_tf,   count + 1);
@@ -293,7 +311,7 @@
                //row_ind[count]  = ind;
                 row_label[count] = BuildIndicatorTextLabel(ind_type, ind_params, catalog)+ ((li == BBAND_LINE_UPPER) ? " Upper" : " Lower");
                 row_tf[count]   = tf_text;
-                row_dir[count]  = bb.LineHistoryDir(li, h);
+                row_dir[count]  = ld;
                 row_time[count] = ht;
                 row_source[count] = 0; // Indicator
                 count++;
@@ -322,6 +340,16 @@
            ENUM_SIGNAL_DIR dir = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
                                  (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
            if(dir == SIGNAL_NONE) continue;
+           // --- Same 2-layer Buy/Sell gate as the Indicator loop above, but Pattern-scoped
+           // --- (Anhnt, 2026-08-28): SymbolTF-level (re-looked-up here, pt's own TF may differ
+           // --- from the outer `ti` loop's series) AND Pattern-level (PatternSignalBuy/Sell).
+            CSymbolTFSetting *pat_symtf = m_SymbolTFManager.FindByIdentity(sym, ptf);
+            bool pat_symtf_buy  = (pat_symtf != NULL) ? pat_symtf.BuySignal()  : false;
+            bool pat_symtf_sell = (pat_symtf != NULL) ? pat_symtf.SellSignal() : false;
+            bool pat_buy  = PatternSignalBuy(pat.TypePattern());
+            bool pat_sell = PatternSignalSell(pat.TypePattern());
+            if(dir == SIGNAL_BUY  && !(pat_buy  && pat_symtf_buy))  continue;
+            if(dir == SIGNAL_SELL && !(pat_sell && pat_symtf_sell)) continue;
            // Format pattern label, e.g. "[2B] Bullish Engulfing"
            uint candles = pat.Candles();
            string candle_prefix = (candles > 0) ? "[" + IntegerToString(candles) + "B] " : "";

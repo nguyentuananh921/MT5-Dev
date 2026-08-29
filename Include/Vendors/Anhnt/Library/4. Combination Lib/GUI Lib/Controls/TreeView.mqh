@@ -1328,14 +1328,14 @@
    // mode is activated
     if ((!CElementBase::MouseFocus() && !spin_buttons_focus) ||
       m_x_resize.State()) 
-    {
+     {
       // --- Send a message about the change in the graphical interface
-      if (m_timer_counter != SPIN_DELAY_MSC)
-        ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
+       if (m_timer_counter != SPIN_DELAY_MSC)
+         ::EventChartCustom(m_chart_id, ON_CHANGE_GUI, CElementBase::Id(), 0, "");
       // --- Let's return the counter to its original value
-      m_timer_counter = SPIN_DELAY_MSC;
-      return;
-    }
+       m_timer_counter = SPIN_DELAY_MSC;
+       return;
+     }
    // ---If the mouse button is released
     if (!m_mouse.IsLeftBtn()) 
       {

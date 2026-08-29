@@ -20,8 +20,7 @@
     CreateTable_SymbolTFSetting()
     CreateTreeView_IndicatorTemplateSetting()
     CreateTreeView_SymbolTFSetting()
-  -Update lần đầu InitializeTabble>_<Which>,InitializeTable_IndicatorTemplateSetting()
-    
+  -Update lần đầu InitializeTabble>_<Which>,InitializeTable_IndicatorTemplateSetting()    
   - Modify số lượng nhỏ.
    AddRow_<Which>,DeleteRow_<Which>,HighLightRow_<Which>, UpdateRow_<Which>
   - Hành vi sửa hàng loạt:   SyncTable_<Which>,
@@ -101,6 +100,10 @@
     [v] Quản lý Event bởi CChartObjCollection
     [v] Đã rà soát CSubChart trong GUI LIb (không dùng được)
   [] Layer 4: Working with file 
-
-   
-   - 
+   -JSONConfig.mqh: Chứa các Method dùng ở nhiều Module riêng lẻ khác nhau.
+    -Các method dùng riêng trong module nào thì khai đặc thù trong module đó.
+     -Cụ thể dùng trong 
+      + CIndicatorTemplateManager thì move sang IndicatorTemplateManager.mqh
+      + CSymbolTFManager thì move sang SymbolTFManager.mqh
+      + Setting Marker->
+      + Setting Sound ->

@@ -56,7 +56,7 @@
         }
       // For TreeView on the left panel of setting window m_treeview_indicator
        PopulateTreeView_IndicatorTemplateSetting();
-       if(!CreateTreeView_IndicatorTemplateSetting(TABS_CONFIG_X_GAP, m_window_setting.CaptionHeight() + 3)) return false;
+       if(!CreateTreeView_IndicatorTemplateSetting(TABS_CONFIG_X_GAP, PARAM_FORM_Y)) return false;
       //For Add Indicator form
        if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;          
        if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;       
@@ -76,14 +76,33 @@
         if(!CreateTable_SymbolTFSetting(M_TREEVIEW_SYMBOLTF_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
         PopulateTable_SymbolTFSetting();
         SyncTable_SymbolTFSetting();
-
-
-
+       //For Candle Pattern Setting
+        BuildCandlePatternListFromRegistry();
+        LoadCandlePatternSetting_FromJSON();
+        if(!CreateTable_CandlePatternSetting(0, 0)) return false;
+        InitializeTable_CandlePatternSetting();
+       // For Marker Setting
+       LoadMarkerSettingsFromJSON();
+       if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
+       // For Sound Setting
+       if(!CreateTabSettingConfig_Sound(0, WINDOW_CAPTION_HEIGHT)) return false;
        //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
          //if(!CreateTableIndicatorSymbolTFValue(0, 0)) return false;
+       //Create m_window_candle_infomation Information window at to display signal on chart
+        if (!CreateWindowCandleInfo())
+         {
+          Print(__FUNCTION__, " > Failed to create candle info popup!");
+          return (false);
+         }
+        m_window_candle_infomation.Hide(); 
     //Finalize GUI Creation
-     CWndEvents::CompletedGUI();     
-    
+     CWndEvents::CompletedGUI();
+    // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
+    // --- inside CompletedGUI) registers only VISIBLE elements into m_available_elements[],
+    // --- which CComboBox's click-open mechanism depends on. Hiding before CompletedGUI
+    // --- would exclude them permanently even after Show() - confirmed by reading
+    // --- FormAvailableElementsArray()'s IsVisible() filter.
+     HideAddIndicatorForm();
     //  //Create m_tabs_main in right panel m_window_main 
     //   if (!CreateTab_Main(M_TABS_MAIN_X, M_TABS_MAIN_Y))
     //    {
@@ -97,20 +116,12 @@
     
     
     
-    //   //Create m_window_candle_infomation Information window at to display signal on chart
-    //    if (!CreateWindowCandleInfo())
-    //     {
-    //       Print(__FUNCTION__, " > Failed to create candle info popup!");
-    //       return (false);
-    //     }
-    //    m_window_candle_infomation.Hide();  
+     
     
     //    //DiscoverPatterns();
     //    RegisterPatterns();
-    //    if(!CreateTableCandlePatternSetting(0, 0)) return false;
-    //    InitializeTableCandlePatternSetting();
-    //   //For Other sub-tab at m_tabs_main_setting_config (marker shape/color settings)
-    //   if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
+    
+    
     //   //For Trade Tab at m_tabs_main
     //   //For Positions Tab at m_tabs_main symbol combo, then the Distance/Lot mode+value
     //   //--- controls in one horizontal row, then the order-setup table, m_table_positions
@@ -124,33 +135,25 @@
     //   // --- OnPoll()/OnChartEvent(), only once HasAnyLevel() is true (avoid creating a
     //   // --- full-screen canvas + hiding native SL/TP lines when there is nothing to show).
     //    m_trading_bubble.MousePointer(m_mouse);
-    //    m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));      
-         
-    //   // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
-    //   // --- inside CompletedGUI) registers only VISIBLE elements into m_available_elements[],
-    //   // --- which CComboBox's click-open mechanism depends on. Hiding before CompletedGUI
-    //   // --- would exclude them permanently even after Show() - confirmed by reading
-    //   // --- FormAvailableElementsArray()'s IsVisible() filter.
-    
-    //   // --- Same reasoning as HideParamSlots above: hide only AFTER CompletedGUI so
-    //   // --- FormAvailableElementsArray() still registers its labels as available.
+    //    m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));
         return true;
   }
 //Public Method
  //| Constructor/Destructor                                          | 
  CGUIPannel::CGUIPannel(void)
   {
-    //--- Setting parameters for the time counters
-     m_gui_timecounter.SetParameters(16, 500);
-    //   m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
-    //   m_pending_remove_row     = -1;
-       m_pending_remove_sym_symboltf = "";
-       m_pending_remove_tf_symboltf  = "";
-       m_treeview_symboltf_need_sync = false;
-       m_treeview_indicator_need_sync = false;
-    //   m_candle_info_shown_bar  = 0;
-    //   m_pattern_bitmap_shown   = NULL;
-    //   m_pattern_bitmap_scale   = -1;
+   //--- Setting parameters for the time counters
+    m_gui_timecounter.SetParameters(16, 500);
+   //   m_int_table_indicator_SymbolTFValue_table_row_count  = 0;
+    m_pending_remove_row     = -1;
+    m_pending_remove_sym_symboltf = "";
+    m_pending_remove_tf_symboltf  = "";
+    m_treeview_symboltf_need_sync = false;
+    m_treeview_indicator_need_sync = false;
+    m_table_indicator_need_sync = false;
+    m_candle_info_shown_bar  = 0;
+    m_pattern_bitmap_shown   = NULL;
+    m_pattern_bitmap_scale   = -1;
     m_gui_created     = false;
   }
  CGUIPannel::~CGUIPannel(void)
@@ -233,18 +236,7 @@
     }
    else if(uninit_reason == REASON_CHARTCHANGE)
     {
-      //  // No manual redraw here (2026-07-14) - MT5 already redraws the chart natively on
-      //  // symbol/TF change, and CHART_OBJ_EVENT_CHART_SYMB_TF_CHANGE (OnEvent) does the
-      //  // same content refresh moments later. Two ChartRedraw() calls back-to-back was
-      //  // the m_window_main flicker on every TF switch.
-         UpdateGUI(false);
-      //  // --- No explicit bubble lazy-init call needed here (2026-07-14, BugNote "ChartChange
-      //  // --- là mất") - CTradingLevelBubble now self-manages via EnsureCreated(), called from
-      //  // --- its own OnPoll()/OnChartEvent() every time either is invoked, so the very next
-      //  // --- OnEvent()/OnTimerEvent() call after this reinit already covers it.
-      //  // --- Defensive re-check (cheap, idempotent) - the indicator itself already survives a
-      //  // --- symbol/TF change on its own, this just covers the case where it got removed by hand.
-      //   EnsureMarkerIndicatorAttached();
+      UpdateGUI(false);      
     }
    return true;
   }; 
@@ -258,11 +250,6 @@
        {
         m_trading_bubble.OnDeinitEvent();
         CWndEvents::Destroy();
-        
-        //  PurgeSignalArrowObjects(::Symbol(), EnumToString((ENUM_TIMEFRAMES)::Period()));
-        // // --- ChartIndicatorAdd() makes SignalMarkers.mq5 an independent chart program - it
-        // // --- keeps running/drawing even after this EA is gone unless explicitly detached here.
-        //  RemoveMarkerIndicator();
          ::ChartRedraw(m_chart_id);
        }
   }
@@ -276,13 +263,13 @@
           return;
       //--- Deferred indicator delete (queued by the col-0 click in OnEvent) - safe here,
       //--- the table finished its own click processing on the previous chart event
-        if(m_pending_remove_row >= 0)
-        {
-          int remove_row = m_pending_remove_row;
-          m_pending_remove_row = -1;
-          if(m_indicator_template_manager != NULL && remove_row < (int)m_table_indicator_template.RowsTotal())
-            OnClickRemoveIndicator(remove_row);
-        }
+      if(m_pending_remove_row >= 0)
+       {
+         int remove_row = m_pending_remove_row;
+         m_pending_remove_row = -1;
+         if(m_indicator_template_manager != NULL && remove_row < (int)m_table_indicator_template.RowsTotal())
+           OnClickRemoveIndicator(remove_row);
+       }
       //--- Deferred delete - Data only (no Layer 1 series stopped yet - it keeps running this
       //--- session, the pair just won't be recreated on the next EA attach/restart once the
       //--- user actually saves). Table-side removal happens in the SYMBOLTF_MANAGER_EVENT_DELETE
@@ -296,23 +283,40 @@
           if(m_SymbolTFManager != NULL)
              m_SymbolTFManager.Delete_SymbolTFSetting(remove_sym, TimestampByDescription(remove_tf));
         }
-      //--- Deferred TreeView sync for m_treeview_SymbolTF - the ONE place that actually calls
-      //--- SyncTreeView_SymbolTFSetting(). Every reactive call site just sets the flag; by the
-      //--- time this timer tick runs, any same-tick SYMBOLTF_MANAGER_EVENT_ADDED (queued custom
-      //--- event) has already been dispatched and PopulateTreeView_SymbolTFSetting() has
-      //--- already created the new node, so Sync always sees final state - and N flag-sets
-      //--- within one timer interval still cost exactly 1 real redraw.
-        if(m_treeview_symboltf_need_sync)
+      //--- Deferred rebuild+sync for m_treeview_SymbolTF/m_table_SymbolTFSeting - the ONE place
+      //--- that actually calls Populate/Sync. Every reactive call site (SYMBOLTF_MANAGER_EVENT_ADDED
+      //--- included) just sets the flag now (2026-08-28) - PureData (m_SymbolTFManager) is free to
+      //--- change as often as it likes; N flag-sets within one timer interval still cost exactly
+      //--- 1 real rebuild+redraw here, instead of each event handler repainting immediately inline.
+      //--- Populate MUST run before Sync - it creates the row/node structure Sync then paints icons
+      //--- onto; both no-op cheaply if nothing actually changed since the last pass.
+      //--- Gated on the active sub-tab (Anhnt, 2026-08-26): repainting a sub-tab the user isn't
+      //--- even looking at is pure waste - the flag is left set (not consumed) until the user
+      //--- actually switches to it, so nothing is ever lost, just deferred.
+        if(m_treeview_symboltf_need_sync && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF)
         {
           m_treeview_symboltf_need_sync = false;
+          PopulateTable_SymbolTFSetting();
+          PopulateTreeView_SymbolTFSetting();
           SyncTreeView_SymbolTFSetting();
           SyncTable_SymbolTFSetting();   // same flag - Table needs the same self-healing resync
         }
       //--- Deferred TreeView sync for m_treeview_indicator - same pattern, see UpdateGUI().
-        if(m_treeview_indicator_need_sync)
+        if(m_treeview_indicator_need_sync && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR)
         {
           m_treeview_indicator_need_sync = false;
           SyncTreeView_IndicatorTemplateSetting();
+        }
+      //--- Deferred Table rebuild for m_table_indicator_template - same pattern, see UpdateGUI().
+      //--- UpdateGUI() itself runs from 2+ places on the very same real symbol/TF change
+      //--- (OnInitEvent's REASON_CHARTCHANGE branch AND CHART_OBJ_EVENT_CHART_..._CHANGE), so a
+      //--- direct InitializeTable_IndicatorTemplateSetting() call there fired its full
+      //--- DeleteAllRows/AddRow+Update(true) rebuild twice back-to-back per TF switch - the
+      //--- SettingWindows flicker (Anhnt, 2026-08-26).
+        if(m_table_indicator_need_sync && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR)
+        {
+          m_table_indicator_need_sync = false;
+          InitializeTable_IndicatorTemplateSetting();
         }
      //--- Handling the elements
       //ulong t0 = ::GetMicrosecondCount();
@@ -412,7 +416,7 @@
    //Handle CIndicatorTemplateManager's own events - Data changed for real, refresh our own GUI
      if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
       {
-       // Manager.Add_IndicatorTemplateSetting() always appends at the end - fast path, no full rebuild.
+       // Manager.AddIndicatorToIndicatorTemplateSetting() always appends at the end - fast path, no full rebuild.
        AddRow_IndicatorTemplateSetting();
        return;
       }
@@ -479,12 +483,11 @@
     //Handle CSymbolTFManager's own events - Data changed for real, refresh our own GUI
      if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ADDED)
       {
-       // Data-only pass over the whole Manager - cheap (skips any row/node already present),
-       // and matches PopulateTreeView_SymbolTFSetting()'s own same-shape call just below.
-         PopulateTable_SymbolTFSetting();
-         PopulateTreeView_SymbolTFSetting();
-       // Just flag it - OnTimerEvent is the one place that calls SyncTreeView/SyncTable, after
-       // this row/node now exists (see m_treeview_symboltf_need_sync).
+       // Just flag it (2026-08-28) - PureData (m_SymbolTFManager) already has the new row, no
+       // rush to repaint inline. OnTimerEvent is the one place that calls Populate then Sync,
+       // batching every reactive mark within one timer interval into exactly 1 real rebuild -
+       // avoids a redundant extra repaint pass when this event fires mid-OnInit (REASON_CHARTCHANGE
+       // adding a not-yet-tracked Symbol+TF), same tick UpdateGUI()'s own deferred pass already covers.
          m_treeview_symboltf_need_sync = true;
        return;
       }
@@ -492,10 +495,16 @@
       {
        // Row is already gone from Manager by the time this (async) event is processed - read
        // the snapshot GetLastRemoved() cached BEFORE the delete instead of trying to look it up.
-       string removed_sym; ENUM_TIMEFRAMES removed_tf;
+       string removed_sym = ""; ENUM_TIMEFRAMES removed_tf = PERIOD_CURRENT;
        if(m_SymbolTFManager != NULL)
          m_SymbolTFManager.GetLastRemoved(removed_sym, removed_tf);
        DeleteRow_SymbolTFSetting(removed_sym, TimeframeDescription(removed_tf));
+       // Mark it (2026-08-28) - the TreeView leaf for this (sym,tf) can't actually be removed
+       // (no per-item removal API), but SyncTreeView_SymbolTFSetting()'s Exists() check needs to
+       // re-run so it re-paints that leaf red (orphaned) - without this the leaf just kept
+       // whatever icon it had before the delete, forever, until some UNRELATED trigger happened
+       // to fire a Sync pass.
+         m_treeview_symboltf_need_sync = true;
        return;
       }
     //Handle Symbol TF Settings
@@ -573,110 +582,256 @@
          // tree only happens to update if some unrelated event later sets the flag too.
          m_treeview_symboltf_need_sync = true;
         }
-
          return;
       }
-   //Handle Saving to JSON Need check
+    //Handle Save Symbol/TF config to JSON - CSymbolTFManager owns FileOpen/write now
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_SymbolTF.Id())
+      {
+        if(m_SymbolTFManager != NULL) m_SymbolTFManager.SaveSymbolTFSettingToJSON();
+        return;
+      }
+    //Handle Save marker style/color settings
+    //Handle Other tab combo selection - live-updates the preview immediately (BEFORE Save),    
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
+      {
+       int codes[]; string shape_labels[];
+       GetMarkerArrowCodeChoices(codes, shape_labels);
+       int n_shapes = ArraySize(codes);
+       color mcolors[]; string color_labels[];
+       GetMarkerColorChoices(mcolors, color_labels);
+       int n_colors = ArraySize(mcolors);
+       if(lparam == m_combo_shape_single_indicator_buy.Id())
+        {
+         int sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_BUY, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_single_indicator_sell.Id())
+        {
+         int sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_SELL, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_multi_indicator_buy.Id())
+        {
+         int sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_BUY, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_multi_indicator_sell.Id())
+        {
+         int sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_SELL, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_pattern_buy.Id())
+        {
+         int sel = (int)m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_BUY, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_pattern_sell.Id())
+        {
+         int sel = (int)m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_SELL, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_combo_buy.Id())
+        {
+         int sel = (int)m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_COMBO_BUY, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_shape_combo_sell.Id())
+        {
+         int sel = (int)m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_COMBO_SELL, codes[sel]);
+         return;
+        }
+       if(lparam == m_combo_color_buy.Id())
+        {
+         int sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_colors) UpdateColorPreview(0, mcolors[sel]);
+         return;
+        }
+       if(lparam == m_combo_color_sell.Id())
+        {
+         int sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_colors) UpdateColorPreview(1, mcolors[sel]);
+         return;
+        }
+       if(lparam == m_combo_color_nonrelated.Id())
+        {
+         int sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+         if(sel >= 0 && sel < n_colors) UpdateColorPreview(2, mcolors[sel]);
+         return;
+        }
+       if(lparam == m_combo_buy_sound.Id())
+        {
+         int sel = (int)m_combo_buy_sound.GetListViewPointer().SelectedItemIndex();
+         string files[];
+         ScanSoundFolder(files);
+         if(sel >= 0 && sel < ArraySize(files))
+            m_marker_buy_sound_file = files[sel];
+         return;
+        }
+       if(lparam == m_combo_sell_sound.Id())
+        {
+         int sel = (int)m_combo_sell_sound.GetListViewPointer().SelectedItemIndex();
+         string files[];
+         ScanSoundFolder(files);
+         if(sel >= 0 && sel < ArraySize(files))
+            m_marker_sell_sound_file = files[sel];
+         return;
+        }
+      }
+    //Handle Save marker style/color settings - commits the currently-selected combo items into
+    //m_marker_*_code/m_marker_*_color (previews above only update DISPLAY, not these fields),
+    //then writes them out.
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.Id())
+      {
+       int codes[]; string shape_labels[];
+       GetMarkerArrowCodeChoices(codes, shape_labels);
+       int n_shapes = ArraySize(codes);
+       color mcolors[]; string color_labels[];
+       GetMarkerColorChoices(mcolors, color_labels);
+       int n_colors = ArraySize(mcolors);
+       int sel;
+       sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_buy_code  = codes[sel];
+       sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_sell_code = codes[sel];
+       sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_buy_code   = codes[sel];
+       sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_sell_code  = codes[sel];
+       sel = (int)m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_pattern_buy_code  = codes[sel];
+       sel = (int)m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_pattern_sell_code = codes[sel];
+       sel = (int)m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_combo_buy_code  = codes[sel];
+       sel = (int)m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_shapes) m_marker_combo_sell_code = codes[sel];
+       sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
+       sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
+       sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+       if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
+       SaveMarkerSettingsToJSON();
+       // EA has no Manager for Marker style (fixed GUI-only fields) - fire so it can
+       // re-attach SignalMarkers.mq5 with the new shape/color inputs (Anhnt, 2026-08-28).
+       ::EventChartCustom(::ChartID(), (ushort)GUIPANNEL_EVENT_MARKER_SETTING_CHANGED, 0, 0.0, "");
+        return;
+      }
+    //Handle Save sound settings - m_marker_*_sound_file already committed live by the
+    //ON_CLICK_COMBOBOX_ITEM handler above, just write them out.
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_sound_settings.Id())
+       {
+         SaveSoundSettingsToJSON();
+         return;
+       }       
+    // Handle Save Indicator config to JSON - CIndicatorTemplateManager owns FileOpen/write now
+       if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
+        {
+         if(m_indicator_template_manager != NULL) m_indicator_template_manager.SaveIndicatorTemplateToJSON();
+         return;
+        }
+    //Handle on Candle Infor
+     if(id == CHARTEVENT_MOUSE_MOVE)
+      {
+        bool popup_shown = (m_candle_info_shown_bar != 0);
+        if(popup_shown && MouseOverCandleInfoWindow())
+         {
+            // --- Stay open, don't touch bar_time - let the table's native dispatch (now
+            // --- routed to it via m_active_window_index) handle the scrollbar/clicks.
+         }
+        else if(popup_shown && !MouseOverCandleInfoWindow())
+         {
+            // --- Mouse left the popup rect -> hide it, reset to m_window_main dispatch.
+            HideCandleInfoPopup();
+            m_candle_info_shown_bar = 0;
+         }
+        else if(m_keys.KeyShiftState())
+         {
+          datetime t; double price; int sub_window;
+          if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
+            {
+            string sym = ::Symbol();
+            ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+            int shift = ::iBarShift(sym, tf, t, false);
+            if(shift >= 0)
+              {
+              datetime bar_time = ::iTime(sym, tf, shift);
+              if(bar_time != m_candle_info_shown_bar)
+                {
+                bool has_signal = RefreshCandleInfoWindow(bar_time);
+                if(has_signal)
+                  {
+                    m_candle_info_shown_bar = bar_time;
+                    ShowCandleInfoPopup(m_mouse.X(), m_mouse.Y());
+                  }
+                else if(popup_shown)
+                  {
+                    HideCandleInfoPopup();
+                    m_candle_info_shown_bar = 0;
+                  }
+                }
+              }
+            }
+          else if(popup_shown)
+            {
+            HideCandleInfoPopup();
+            m_candle_info_shown_bar = 0;
+            }
+         }
+        // --- Alt + hover pattern bitmap - independent of the Shift popup above (Anhnt,
+        // --- 2026-08-14): while Alt is held, shows the CGCnvPatternBitmap for whatever
+        // --- pattern is confirmed at the hovered bar; releasing Alt or moving off a bar
+        // --- with no pattern hides it again (ShowPatternBitmapAtBar/HidePatternBitmapShown
+        // --- both no-op cheaply when there's nothing to do).
+        if(m_keys.KeyAltState())
+         {
+          datetime t; double price; int sub_window;
+          if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
+          {
+            string sym = ::Symbol();
+            ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+            int shift = ::iBarShift(sym, tf, t, false);
+            if(shift >= 0)
+            {
+              datetime bar_time = ::iTime(sym, tf, shift);
+              ShowPatternBitmapAtBar(bar_time);
+            }
+          }
+          else
+            HidePatternBitmapAtBar();
+         }
+        else
+          HidePatternBitmapAtBar();
+      }
+    //Handle Save Pattern Config to JSON
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_pattern_config.Id())
+       {
+        SaveCandlePatternSettingToJSON();
+        return;
+       }
+    // Handle m_table_CandlePatternsSetting event (Buy/Sell/Sound/Message checkbox toggle)
+      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+        && lparam == m_table_CandlePatternsSetting.Id())
+       {
+        string parts[];
+        if(StringSplit(sparam, '_', parts) != 2) return;
+        int col = (int)StringToInteger(parts[0]);
+        int row = (int)StringToInteger(parts[1]);
+        if(col == 2 || col == 3 || col == 5 || col == 6)
+          OnCheckTableCandlePatternSetting(row, col);
+        return;
+       }
 
-     
-    // Handle Save Indicator config to JSON
-      //  if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
-      //   {
-      //    SaveGUIConfigToJSON();
-      //    return;
-      //   }
     
-      m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
-    // --- Shift + hover candle info popup (BugNote 7.2, redesigned 2026-07-16). m_mouse is already
-    // --- refreshed for this event by CWndEvents::InitChartEventsParams() before OnEvent() is
-    // --- called, so X()/Y() here are current.  
-    // --- Use case 
-    //  1. Shift + hover a candle with NO signal at all -> popup does not appear.
-    //  2. Shift + hover a candle WITH a signal -> popup appears; cursor is already inside its
-    //     rect the instant it appears (CANDLE_INFO_CURSOR_INSET), zero distance to cross.
-    //  3. Mouse moves further into the popup/table to drag the scrollbar - MouseOverCandle-
-    //     InfoWindow() being true is the ONLY thing keeping it open past this point; Shift no
-    //     longer matters once inside.
-    //  4. Mouse leaves the popup's rect -> it hides and native dispatch reverts to m_window_main.   
-    // --- ShowCandleInfoPopup()/HideCandleInfoPopup() also swap m_active_window_index so
-    // --- CWndEvents::CheckElementsEvents() natively dispatches to the table (scrollbar
-    // --- included) while shown - see those methods for why m_window_main going quiet during
-    // --- that window isn't a real trade-off (mouse can't be on both at once).
-      // if(id == CHARTEVENT_MOUSE_MOVE)
-      // {
-      //   bool popup_shown = (m_candle_info_shown_bar != 0);
-      //   if(popup_shown && MouseOverCandleInfoWindow())
-      //   {
-      //       // --- Stay open, don't touch bar_time - let the table's native dispatch (now
-      //       // --- routed to it via m_active_window_index) handle the scrollbar/clicks.
-      //   }
-      //   else if(popup_shown && !MouseOverCandleInfoWindow())
-      //   {
-      //       // --- Mouse left the popup rect -> hide it, reset to m_window_main dispatch.
-      //       HideCandleInfoPopup();
-      //       m_candle_info_shown_bar = 0;
-      //   }
-      //   else if(m_keys.KeyShiftState())
-      //   {
-      //     datetime t; double price; int sub_window;
-      //     if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
-      //       {
-      //       string sym = ::Symbol();
-      //       ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-      //       int shift = ::iBarShift(sym, tf, t, false);
-      //       if(shift >= 0)
-      //         {
-      //         datetime bar_time = ::iTime(sym, tf, shift);
-      //         if(bar_time != m_candle_info_shown_bar)
-      //           {
-      //           bool has_signal = RefreshCandleInfoWindow(bar_time);
-      //           if(has_signal)
-      //             {
-      //               m_candle_info_shown_bar = bar_time;
-      //               ShowCandleInfoPopup(m_mouse.X(), m_mouse.Y());
-      //             }
-      //           else if(popup_shown)
-      //             {
-      //               HideCandleInfoPopup();
-      //               m_candle_info_shown_bar = 0;
-      //             }
-      //           }
-      //         }
-      //       }
-      //     else if(popup_shown)
-      //       {
-      //       HideCandleInfoPopup();
-      //       m_candle_info_shown_bar = 0;
-      //       }
-      //   }
-      //   // --- Alt + hover pattern bitmap - independent of the Shift popup above (Anhnt,
-      //   // --- 2026-08-14): while Alt is held, shows the CGCnvPatternBitmap for whatever
-      //   // --- pattern is confirmed at the hovered bar; releasing Alt or moving off a bar
-      //   // --- with no pattern hides it again (ShowPatternBitmapAtBar/HidePatternBitmapShown
-      //   // --- both no-op cheaply when there's nothing to do).
-      //   if(m_keys.KeyAltState())
-      //   {
-      //     datetime t; double price; int sub_window;
-      //     if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
-      //     {
-      //       string sym = ::Symbol();
-      //       ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-      //       int shift = ::iBarShift(sym, tf, t, false);
-      //       if(shift >= 0)
-      //       {
-      //         datetime bar_time = ::iTime(sym, tf, shift);
-      //         ShowPatternBitmapAtBar(bar_time);
-      //       }
-      //     }
-      //     else
-      //       HidePatternBitmapAtBar();
-      //   }
-      //   else
-      //     HidePatternBitmapAtBar();
-      // }
-    // --- Re-hide param slots after CTabs::ShowTabElements() shows them on tab switch.
-    //     ShowTabElements() runs inside CTabs::OnEvent() (before our OnEvent is called),
-    //     so by this point the slots are already visible — we undo that.
+      m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);    
       // if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main.Id())
       // {
       //   HideParamSlots();
@@ -707,52 +862,8 @@
       //   m_treeview_SymbolTF.Hide();
       //   HideParamSlots();
       //   return;
-      // }
+      // } 
     
-    //Handle Save Symbol/TF config to JSON
-      // if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_SymbolTF.Id())
-      // {
-      //   SaveGUIConfigToJSON();
-      //   return;
-      // }
-    //Handle Save marker style/color settings
-      // if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.Id())
-      // {
-      //   // --- Commit current combobox/color selections into m_marker_* BEFORE saving - the
-      //   // --- ON_CLICK_COMBOBOX_ITEM handler above only ever updated the live preview
-      //   // --- (UpdateShapePreview/UpdateColorPreview), never m_marker_* itself, so Save silently
-      //   // --- re-serialized the same old defaults no matter what the user picked
-      //   // --- (BugNote_MarkerMissingDespitePattern.md, 2026-08-15 - Anhnt picked Yellow, Save
-      //   // --- kept writing Lime). Mirrors how the sound-file combos already commit directly.
-      //   int codes[]; string shape_labels[];
-      //   GetMarkerArrowCodeChoices(codes, shape_labels);
-      //   int n_shapes = ArraySize(codes);
-      //   color mcolors[]; string color_labels[];
-      //   GetMarkerColorChoices(mcolors, color_labels);
-      //   int n_colors = ArraySize(mcolors);
-      //   int sel;
-      //   sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_buy_code  = codes[sel];
-      //   sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_sell_code = codes[sel];
-      //   sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_buy_code   = codes[sel];
-      //   sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_sell_code  = codes[sel];
-      //   sel = (int)m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_pattern_buy_code  = codes[sel];
-      //   sel = (int)m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_pattern_sell_code = codes[sel];
-      //   sel = (int)m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_combo_buy_code  = codes[sel];
-      //   sel = (int)m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_shapes) m_marker_combo_sell_code = codes[sel];
-      //   sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
-      //   sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
-      //   sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
-      //   if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
 
       //   SaveGUIConfigToJSON();
       //   // --- Save alone only persists m_marker_* to JSON - the already-running SignalMarkers
@@ -762,138 +873,7 @@
       //   // --- with the just-saved m_marker_* values so Save actually takes effect immediately.
       //   ReattachSignalMarkersIndicator();
       //   return;
-      // }
-    //  //Handle "Refresh" next to the sound folder path - re-scans and re-populates both combos
-    //   if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_refresh_sound_folder.Id())
-    //    {
-    //     OnClickChangeSoundFolder();
-    //     return;
-    //    }
-    //Handle Save Pattern Config to JSON
-      // if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_pattern_config.Id())
-      // {
-      //   SaveGUIConfigToJSON();
-      //   return;
-      // }
-    //Handle Other tab combo selection - live-updates the preview immediately (BEFORE Save),
-    //so the user sees what they're about to pick, not just its number/name. Reads directly off
-    //the just-clicked combo's own SelectedItemIndex() - m_marker_* only changes on Save.
-     // if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
-      // {
-      //   int codes[]; string shape_labels[];
-      //   GetMarkerArrowCodeChoices(codes, shape_labels);
-      //   int n_shapes = ArraySize(codes);
-      //   color mcolors[]; string color_labels[];
-      //   GetMarkerColorChoices(mcolors, color_labels);
-      //   int n_colors = ArraySize(mcolors);
-      //   if(lparam == m_combo_shape_single_indicator_buy.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_BUY, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_single_indicator_sell.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_SELL, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_multi_indicator_buy.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_BUY, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_multi_indicator_sell.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_SELL, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_pattern_buy.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_BUY, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_pattern_sell.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_SELL, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_combo_buy.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_COMBO_BUY, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_shape_combo_sell.Id())
-      //     {
-      //     int sel = (int)m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_shapes) UpdateShapePreview(SHAPE_PREVIEW_COMBO_SELL, codes[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_color_buy.Id())
-      //     {
-      //     int sel = (int)m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_colors) UpdateColorPreview(0, mcolors[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_color_sell.Id())
-      //     {
-      //     int sel = (int)m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_colors) UpdateColorPreview(1, mcolors[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_color_nonrelated.Id())
-      //     {
-      //     int sel = (int)m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
-      //     if(sel >= 0 && sel < n_colors) UpdateColorPreview(2, mcolors[sel]);
-      //     return;
-      //     }
-      //   if(lparam == m_combo_buy_sound.Id())
-      //     {
-      //     int sel = (int)m_combo_buy_sound.GetListViewPointer().SelectedItemIndex();
-      //     string files[];
-      //     ScanSoundFolder(files);
-      //     if(sel >= 0 && sel < ArraySize(files))
-      //         m_marker_buy_sound_file = files[sel];
-      //     return;
-      //     }
-      //   if(lparam == m_combo_sell_sound.Id())
-      //     {
-      //     int sel = (int)m_combo_sell_sound.GetListViewPointer().SelectedItemIndex();
-      //     string files[];
-      //     ScanSoundFolder(files);
-      //     if(sel >= 0 && sel < ArraySize(files))
-      //         m_marker_sell_sound_file = files[sel];
-      //     return;
-      //     }
-      // }
-    
-    // Handle m_table_CandlePatternsSetting event (Bull/Bear checkbox toggle)
-      // if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-      //   && lparam == m_table_CandlePatternsSetting.Id())
-      // {
-      //   string parts[];
-      //   if(StringSplit(sparam, '_', parts) != 2) return;
-      //   int col = (int)StringToInteger(parts[0]);
-      //   int row = (int)StringToInteger(parts[1]);
-      //   // col 3 = Sound, col 4 = Message - library already auto-toggled the image before this fires
-      //   // Wire real behavior here (e.g. save to JSON, update Layer 1) when needed
-      //   return;
-      // } 
-    //--- Layer 3 -> Layer 2 state sync: an indicator was added/removed/param-changed on some
-    //--- chart window (possibly BY HAND on the chart) - re-truth the "Show" column. Events
-    //--- come from m_chart_obj_collection.Refresh() polled in OnTimerEvent.
-      
-    //--- Layer 3 -> Layer 2: symbol/TF actually changed on this chart (CChartObjCollection,
-    //--- same poll/diff pattern as IND_ADD/DEL/CHANGE above) - single place that rebuilds the
-    //--- SymbolTF tree + indicator table on a real change. Replaces the old CHARTEVENT_CHART_CHANGE
-    //--- handler, which duplicated this same refresh AND called ChartRedraw() a second time right
-    //--- after OnInitEvent's REASON_CHARTCHANGE already did - that double-redraw was the
-    //--- m_window_main flicker on every TF/symbol switch (fixed 2026-07-14).     
+      // }   
     
   }
  //+------------------------------------------------------------------+
@@ -906,14 +886,14 @@
       // // Each call below repaints only the cells/icons it actually changed (dirty-check),
       // // and PopulateTreeView_SymbolTFSetting (CHARTEVENT_CHART_CHANGE handler) already updates the tree
       // when the symbol/TF really changed.
-         InitializeTable_IndicatorTemplateSetting();
       //   SetValuesToTableIndicatorSymbolTFValue();
        // Just flag it - UpdateGUI() itself is called from 2+ places on the very same real
        // symbol/TF change (OnInitEvent's REASON_CHARTCHANGE branch AND the CHART_OBJ_EVENT_CHART_
-       // ..._CHANGE handler), so calling SyncTreeView_IndicatorTemplateSetting() directly here was
-       // the same double-redraw risk already fixed for m_treeview_SymbolTF (2026-08-26) - OnTimerEvent
-       // is the ONE place that actually calls it now.
+       // ..._CHANGE handler), so calling SyncTreeView_IndicatorTemplateSetting()/
+       // InitializeTable_IndicatorTemplateSetting() directly here was the same double-redraw risk -
+       // OnTimerEvent is the ONE place that actually calls either now (Anhnt, 2026-08-26).
          m_treeview_indicator_need_sync = true;
+         m_table_indicator_need_sync = true;
          if(redraw) m_chart.Redraw();
   }
 #endif // CGUIPANNEL_LIFECYCLE_MQH

@@ -1,8 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                              IndicatorSetting.mqh |
 //|                                     Copyright 2026, Anhnt        |
-//| Replaces struct SJsonIndicatorEntry (Anatoli Kazharski\JSONConfig.mqh) with a class -  |
-//| see Implementaion Plan\ImplementaionClassForSetting.md for the full discussion.        |
+//| Replaces struct SJsonIndicatorEntry (formerly in JSONConfig.mqh, since removed) with a |
+//| class - see Implementaion Plan\ImplementaionClassForSetting.md for the full discussion.|
 //| 1 instance = 1 indicator (config row) - held in CIndicatorTemplateManager's list.       |
 //+------------------------------------------------------------------+
 #ifndef __INDICATORSETTING_MQH__
@@ -20,9 +20,9 @@
  class CIndicatorSetting : public CBaseObj
    {
      private:
-       string          m_indicator_type;      // display text (catalog name) - JSON + table label
-       string          m_indicator_params[];  // display text per schema, full precision
-       ENUM_INDICATOR  m_type_enum;           // real enum value - IDENTITY
+       ENUM_INDICATOR  m_type_enum;           // real enum value - IDENTITY (SOLE source of truth -
+                                               // no stored text mirror; both display and JSON text
+                                               // are derived on demand from this + m_raw_params below)
        MqlParam        m_raw_params[];        // real params - IDENTITY + input straight for Layer 1
        bool            m_buy_signal;          // opt-in: count this indicator's Buy cross into the Signal Bridge
        bool            m_sell_signal;         // opt-in: count this indicator's Sell cross into the Signal Bridge
@@ -40,17 +40,13 @@
        void              GetRawParams(MqlParam &out[])            const;
        void              SetRawParams(MqlParam &params[]);
        bool              MatchesIdentity(const ENUM_INDICATOR type, MqlParam &params[]) const;
-      //--- save text (JSON round-trip, FULL precision - 8 decimals)
-       string            TypeText(void)                          const { return m_indicator_type; }
-       void              TypeText(const string type)                   { m_indicator_type = type; }
-       void              GetParamsText(string &out[])              const;
-       void              SetParamsText(string &params[]);
 
        //--- display label (Table col 0 + Message Alert - SAME text both already use, GUIPannel_
        //--- SoundAndMessageAlerts.mqh:118 and the old UpdateRow_IndicatorTemplateSetting both called
        //--- BuildIndicatorTextLabel() fresh, never stored it - computed here, not cached, rounds
-       //--- doubles to 2 decimals (display-only; JSON save always uses TypeText()/GetParamsText()
-       //--- above, full precision - never mix the two).
+       //--- doubles to 2 decimals (display-only - JSON save needs full precision instead, see
+       //--- CIndicatorTemplateManager::BuildJsonSection, which calls BuildIndicatorParamsText()
+       //--- directly on GetRawParams() - no stored/cached text field for that either).
        string            DisplayLabel(void) const;
 
        //--- toggles - mirror table columns 2/3/5/6 directly
@@ -114,26 +110,6 @@
      return IsEqualMqlParamArrays(raw, params);
    }
  //+------------------------------------------------------------------+
- //| Copy out the display-text params                                  |
- //+------------------------------------------------------------------+
- void CIndicatorSetting::GetParamsText(string &out[]) const
-   {
-     int total = ::ArraySize(m_indicator_params);
-     ::ArrayResize(out, total);
-     for(int i = 0; i < total; i++)
-        out[i] = m_indicator_params[i];
-   }
- //+------------------------------------------------------------------+
- //| Replace the display-text params                                   |
- //+------------------------------------------------------------------+
- void CIndicatorSetting::SetParamsText(string &params[])
-   {
-     int total = ::ArraySize(params);
-     ::ArrayResize(m_indicator_params, total);
-     for(int i = 0; i < total; i++)
-        m_indicator_params[i] = params[i];
-   }
- //+------------------------------------------------------------------+
  //| Human-readable label (2-decimal rounded) - Table col 0 + Message  |
  //| Alert share this exact computation, see the declaration comment.  |
  //+------------------------------------------------------------------+
@@ -150,7 +126,7 @@
  //+------------------------------------------------------------------+
  void CIndicatorSetting::Print(const bool full_prop=false, const bool dash=false)
    {
-     ::Print((dash ? " - " : ""), "CIndicatorSetting::Print type=", m_indicator_type,
+     ::Print((dash ? " - " : ""), "CIndicatorSetting::Print label=", DisplayLabel(),
              " buy=", m_buy_signal, " sell=", m_sell_signal, " sound=", m_sound_alert,
              " message=", m_message_alert, " show=", m_show_on_chart);
    }

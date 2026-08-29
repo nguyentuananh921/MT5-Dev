@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                              SymbolTFSetting.mqh |
 //|                                     Copyright 2026, Anhnt        |
-//| Replaces struct SJsonSymbolTF (Anatoli Kazharski\JSONConfig.mqh) with a class -        |
+//| Replaces struct SJsonSymbolTF (formerly in JSONConfig.mqh, since removed) with a class -|
 //| same pattern as CIndicatorSetting/IndicatorSetting.mqh, far fewer fields.               |
 //| 1 instance = 1 Symbol+TF pair (config row) - held in CSymbolTFManager's list.           |
 //+------------------------------------------------------------------+
@@ -24,8 +24,7 @@
        bool             m_buy_signal;  // opt-in: count this Symbol+TF's Buy cross into the Signal Bridge
        bool             m_sell_signal; // opt-in: count this Symbol+TF's Sell cross into the Signal Bridge
        bool             m_sound_alert;
-       bool             m_message_alert;
-              
+       bool             m_message_alert;             
 
      public:
                          CSymbolTFSetting(void);

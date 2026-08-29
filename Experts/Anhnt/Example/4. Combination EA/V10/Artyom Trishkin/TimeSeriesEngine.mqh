@@ -17,25 +17,15 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BookSeriesCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\TickSeriesCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Services\DELib\TimeseriesDELib.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Services\TimeCounter.mqh>
- // Tang 1 (PureData) indicator metadata + JSON template loader - EA-local, not part of the shared Library
-  #include "..\Anatoli Kazharski\JSONConfig.mqh"
 #ifndef CTIMESERIESENGINE_MQH_DECLARATION
 #define CTIMESERIESENGINE_MQH_DECLARATION
- extern string g_ea_folder;  // From EA
- // --- Symbol/TF identity (symbol+tf) no longer has its own mirror here (SynIndicatorPlan.md,
- // --- "Action" Step 1, 2026-08-18 - same treatment as the Indicator-Template merge below):
- // --- CGUIPannel::m_symbol_tf_Setting[] (SJsonSymbolTF - already a superset: symbol+tf+buy+sell)
- // --- is the ONE live array. It was write-only here (LoadSymbolTFFromJSON populated it, nothing
- // --- in Layer 1 ever read it back) - genuinely redundant, not just chart-scoped like the
- // --- Indicator-Template case.
- // --- Indicator-Template identity (type+params) no longer has its own mirror here
- // --- (SynIndicatorPlan.md, "Action" Step 1, 2026-08-18): CGUIPannel::m_indicator_template_setting[]
- // --- (SJsonIndicatorEntry - already a superset: type+params[]+buy+sell+sound+message) is now the
- // --- ONE live array, owned by Layer 2. Layer 1 never keeps its own copy - every method below that
- // --- used to read/write m_indicator_template[] now takes m_indicator_template_setting[] as a
- // --- reference parameter instead, matching the pattern SaveConfigurationToJSON already used.
+ extern string g_ea_folder;  // From EA 
+ class CSymbolTFManager;
+ class CIndicatorTemplateManager;
+ class CIndicatorSetting;
  class CTimeSeriesEngine
   {
     private:
@@ -53,6 +43,13 @@
       // symbol with no DOM support on this server would retry (and fail) forever on every new TF
       // switch without this - see DOM setup in OnInitEvent.
        string                    m_dom_attempted[];
+      // true after OnInitEvent()'s bulk Symbol+TF/Indicator sync has run once - NOT a "whole
+      // Layer 1" flag (CTradingEngine has its own separate lifecycle), scoped to THIS class only.
+      // Same "only really do this once" convention as CSymbolTFManager/CIndicatorTemplateManager's
+      // own m_loaded_from_json - every REASON_CHARTCHANGE reinit calls OnInitEvent again, but the
+      // bulk-sync must NOT re-run each time; new Symbol+TF/Indicator rows after this point arrive
+      // via SYMBOLTF_MANAGER_EVENT_ADDED/INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED instead (Anhnt, 2026-08-28).
+       bool                      m_time_series_engine_init_complete;
     //Borrow
       CSymbolsCollection        *m_symbol_collection;    // Symbol collection
     //For Signal - freeze bar 1 of any (symbol,TF) that just got a SERIES_EVENTS_NEW_BAR event
@@ -62,17 +59,23 @@
     //Internal-only (README.md muc 7.b: Layer 2 never calls this - it reads its own Data instead,
     //via GetIndicatorForRow). AddIndicatorToList DELETES the passed object when an equal one is
     //already in the collection and silently switches to the canonical instance, so the caller's
-    //pointer may be dangling after it returns. Always re-acquire by handle via this helper
-    //before handing the indicator to CSignalsCollection.
-      CIndicatorDE             *GetIndicatorByHandle(const int handle);
+    //pointer may be dangling after it returns. Always re-acquire by (type,params,symbol,tf)
+    //IDENTITY via this helper before handing the indicator to CSignalsCollection - NOT by raw
+    //handle number (GetIndicatorByHandle, V9 leftover, removed 2026-08-28): MQL5 handles are
+    //program-wide slots that get REUSED after release (see project's own 4807-hunt finding), so
+    //a linear scan matching on the numeric handle risks returning a stale, unrelated instance
+    //whose old handle value just got recycled - identity match can never collide like that.
+      CIndicatorDE             *GetIndicatorByIdentity(const string symbol, const ENUM_TIMEFRAMES tf,
+                                  const ENUM_INDICATOR type, MqlParam &params[]);
     public:
     //CTimeSeriesEngine Lifecycle ->Implementation in TimeSeriesEngine_Lifecycle.mqh
         bool  OnTimerEvent(void);        
-        bool  OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period);        
+        bool  OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period,
+                          CSymbolTFManager *manager, CIndicatorTemplateManager *templateManager);
         bool  OnTickEvent(const string symbol, SDataCalculate &data_calc);
         bool  OnChartEvent(const int id, const long& lparam,
                            const double& dparam, const string& sparam,
-                           SJsonIndicatorEntry &m_indicator_template_setting[]);
+                           CIndicatorTemplateManager *manager);
     // Gateway
           CBarTimeSeriesCollection    *GetTimeSeriesCollection(void)                      { return &this.m_BarTimeSeriesCollection; }
           void                        SetSymbolsCollection(CSymbolsCollection *symbols)   { m_symbol_collection = symbols; }
@@ -81,16 +84,12 @@
           CSignalsCollection          *GetSignalsCollection()                             { return &this.m_SignalsCollection; }
           //CTickSeriesCollection       *GetTickSeries()                                    { return &this.m_tick_series; }
           CBarPatternsControl         *GetPatternsControl()                               { return &m_BarPatterns_Control; }
-    //Applies a parsed "Symbols_TFs_List" implementation in TimeSeriesEngine_SymbolTF.mqh    
-        void  ApplySymbolTFSetting(SJsonSymbolTF &m_symbol_tf_Setting[]);
-    // Layer 1: AddAllIndicatorsToNewSeries READS m_indicator_template_setting[] (CGUIPannel's array, passed by reference 
-    // Layer 1 keeps no copy of its own). AddNewIndicatorToAllSeries/RemoveIndicatorFromAllSeries are purely mechanical now.
-    // CGUIPannel is the only one that touches m_indicator_template_setting[] during Live (checks existence itself via
-    // IsIndicatorInTemplateSetting BEFORE calling Add, and InitializeTable_IndicatorTemplateSetting() re-syncs the
-    // array from the live indicator list AFTER either call) - Layer 1 does the instance
-    // create/delete only, no array involved.
+    // Layer 1: AddAllIndicatorsToNewSeries reads CIndicatorTemplateManager directly (Single
+    // Source of Truth, Anhnt 2026-08-27) - Layer 1 keeps no copy of its own, just a borrowed
+    // pointer for the duration of this one call. AddNewIndicatorToAllSeries/RemoveIndicatorFromAllSeries
+    // remain purely mechanical (type+params only, no Manager needed there).
         void                        AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe,
-                                      SJsonIndicatorEntry &m_indicator_template_setting[]);
+                                      CIndicatorTemplateManager *manager);
         bool                        AddNewIndicatorToAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);    
         void                        RemoveIndicatorFromAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);
     // Layer 2 query: handle of the live indicator matching (symbol,tf,type,params), or
@@ -98,16 +97,14 @@
     // dereferencing a live CIndicatorDE* (README.md muc 7.b).
         int                         GetIndicatorHandle(const string symbol, const ENUM_TIMEFRAMES tf,
                                       const ENUM_INDICATOR type, MqlParam &params[]);
-    // For Candle Pattern at Layer 1
-        void                        RegisterAllCandlePatterns(void);        
+    // For Candle Pattern at Layer 1               
         bool                        SeriesApplyPatternRegistry(const string symbol, const ENUM_TIMEFRAMES timeframe);
   };
 #endif // CTIMESERIESENGINE_MQH_DECLARATION
 #ifndef CTIMESERIESENGINE_MQH_IMPLEMENTATION
 #define CTIMESERIESENGINE_MQH_IMPLEMENTATION
  #include "TimeSeriesEngine_Lifecycle.mqh"
- #include "TimeSeriesEngine_SymbolTF.mqh"
- #include "TimeSeriesEngine_CandlePattern.mqh" 
+ #include "TimeSeriesEngine_CandlePattern.mqh"
  #include "TimeSeriesEngine_Indicator.mqh"
 #endif // CTIMESERIESENGINE_MQH_IMPLEMENTATION
 #endif // CTIMESERIESENGINE_MQH
