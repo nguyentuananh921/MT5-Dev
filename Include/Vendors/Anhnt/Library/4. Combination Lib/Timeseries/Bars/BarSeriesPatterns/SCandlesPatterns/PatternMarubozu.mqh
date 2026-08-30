@@ -1,0 +1,41 @@
+//+------------------------------------------------------------------+
+//|                                           PatternMarubozu.mqh    |
+//|                           Copyright 2023, MetaQuotes Ltd.        |
+//|                                   https://www.mql5.com           |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property strict    // Necessary for mql4
+#ifndef __PATTERNMARUBOZU_MQH__
+#define __PATTERNMARUBOZU_MQH__
+ #include "..\BarPattern.mqh"
+ #ifndef CMARUBOZU_MQH_DECLARATION
+ #define CMARUBOZU_MQH_DECLARATION
+  //+------------------------------------------------------------------+
+  //| Marubozu (1-candle: full body, little/no shadow either side)     |
+  //+------------------------------------------------------------------+
+  class CPatternMarubozu : public CBarPattern
+    {
+      public:
+          virtual bool      SupportProperty(ENUM_PATTERN_PROP_INTEGER property) { return true; }
+          virtual bool      SupportProperty(ENUM_PATTERN_PROP_DOUBLE  property) { return true; }
+          virtual bool      SupportProperty(ENUM_PATTERN_PROP_STRING  property) { return true; }
+          virtual string    StatusDescription(void) const { return CMessage::Text(MSG_LIB_TEXT_PATTERN_STATUS_PA); }
+          virtual string    TypeDescription(void)   const { return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_MARUBOZU);                  }
+                            CPatternMarubozu(const uint id, const string symbol, const ENUM_TIMEFRAMES timeframe,
+                                   MqlRates &rates, const ENUM_PATTERN_DIRECTION direct);
+    };
+  #endif // CMARUBOZU_MQH_DECLARATION
+  #ifndef CMARUBOZU_MQH_IMPLEMENTATION
+  #define CMARUBOZU_MQH_IMPLEMENTATION
+   CPatternMarubozu::CPatternMarubozu(const uint id, const string symbol, const ENUM_TIMEFRAMES timeframe,
+                    MqlRates &rates, const ENUM_PATTERN_DIRECTION direct) :
+    CBarPattern(PATTERN_STATUS_PA, PATTERN_TYPE_MARUBOZU, id, direct, symbol, timeframe, rates)
+    {
+      this.SetProperty(PATTERN_PROP_NAME,    "Marubozu");
+      this.SetProperty(PATTERN_PROP_CANDLES, 1);
+      this.m_bars_formation = (int)this.GetProperty(PATTERN_PROP_CANDLES);
+    }
+  #endif // CMARUBOZU_MQH_IMPLEMENTATION
+#endif // __PATTERNMARUBOZU_MQH__

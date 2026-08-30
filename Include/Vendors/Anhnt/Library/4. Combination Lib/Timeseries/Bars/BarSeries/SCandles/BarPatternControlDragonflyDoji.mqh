@@ -48,6 +48,9 @@
                                                                      const MqlParam &param[]) :
     CBarPatternControlDoji(symbol, timeframe, list_series, list_patterns, param)
     {
+    // --- CBarPatternControlDoji's own constructor hardcodes PATTERN_TYPE_DOJI - fix up this
+    // --- instance's real identity (Anhnt, 2026-08-29).
+    this.SetTypePattern(PATTERN_TYPE_DRAGONFLY_DOJI);
     this.m_ratio_larger_shadow_to_candle_size  = PATTERN_DEF_DEEP_SHADOW;
     this.m_ratio_smaller_shadow_to_candle_size = PATTERN_DEF_DOJI_BODY;
     this.m_object_id = this.CreateObjectID();

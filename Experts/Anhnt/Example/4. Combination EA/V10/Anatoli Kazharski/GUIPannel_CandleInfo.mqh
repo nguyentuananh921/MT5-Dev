@@ -85,18 +85,28 @@
  void CGUIPannel::ShowCandleInfoPopup(const int cursor_x, const int cursor_y)
   {
      RepositionCandleInfoWindow(cursor_x, cursor_y);
+     // --- Remember whoever was active before the popup steals dispatch, so Hide can hand it
+     // --- back correctly - hardcoding m_window_main here was wrong whenever e.g. the Setting
+     // --- Window was the real owner: a hover-then-leave while Setting was open used to strand
+     // --- active dispatch on m_window_main forever, leaving Setting's checkboxes dead until it
+     // --- was manually reopened (Anhnt, 2026-08-29). Guarded so a re-show while already shown
+     // --- (moving to a different bar without leaving the popup) doesn't overwrite the saved
+     // --- value with CandleInfo itself.
+     if(m_active_window_index != WindowIdx(m_window_candle_infomation))
+        m_active_window_index_before_candle_info = m_active_window_index;
      m_active_window_index = WindowIdx(m_window_candle_infomation);
      Show(m_active_window_index);
      FormAvailableElementsArray();
   }
  //+------------------------------------------------------------------+
- //| Hides the popup and hands native dispatch back to m_window_main.  |
+ //| Hides the popup and hands native dispatch back to whichever       |
+ //| window was actually active before the popup stole it.             |
  //+------------------------------------------------------------------+
  void CGUIPannel::HideCandleInfoPopup(void)
   {
      m_window_candle_infomation.Hide();
      m_table_candle_information_atBar.Hide();
-     m_active_window_index = WindowIdx(m_window_main);
+     m_active_window_index = m_active_window_index_before_candle_info;
      FormAvailableElementsArray();
   }
  //+------------------------------------------------------------------+
@@ -192,7 +202,7 @@
  //+------------------------------------------------------------------+
  bool CGUIPannel::RefreshCandleInfoWindow(const datetime bar_time)
   {
-   if(m_IndicatorsCollection == NULL || m_time_series_engine == NULL || m_BarTimeSeriesCollection == NULL ||
+   if(m_IndicatorsCollection == NULL || m_timeSeriesEngine == NULL || m_BarTimeSeriesCollection == NULL ||
       m_indicator_template_manager == NULL || m_SymbolTFManager == NULL)
       return false;
    datetime next_bar_time = bar_time + ::PeriodSeconds();
@@ -253,7 +263,7 @@
           bool ind_buy  = (ind_entry != NULL) ? ind_entry.BuySignal()  : false;
           bool ind_sell = (ind_entry != NULL) ? ind_entry.SellSignal() : false;
          // signal is BORROWED - CSignalsCollection owns it
-          CSignalBase *signal = m_time_series_engine.GetSignalsCollection().GetOrCreateSignal(ind);
+          CSignalBase *signal = m_timeSeriesEngine.GetSignalsCollection().GetOrCreateSignal(ind);
           if(signal == NULL) continue;
          // --- history is oldest->newest; walk backward and stop once we're before the span -
          // --- collect EVERY flip inside the span (usually 0 or 1, but never assume 1).
@@ -434,6 +444,12 @@
    CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
    if(all_patterns == NULL) { HidePatternBitmapAtBar(); return; }
 
+   // --- Symbol+TF-level Buy/Sell gate, same 2-layer gate CSignalBridgeWriter/
+   // --- RefreshCandleInfoWindow already use (Anhnt, 2026-08-29).
+    CSymbolTFSetting *symtf_entry = (m_SymbolTFManager != NULL) ? m_SymbolTFManager.FindByIdentity(sym, tf) : NULL;
+    bool symtf_buy  = (symtf_entry != NULL) ? symtf_entry.BuySignal()  : false;
+    bool symtf_sell = (symtf_entry != NULL) ? symtf_entry.SellSignal() : false;
+
    CBarPattern *best = NULL;
    int best_candles = 0;
    int total = all_patterns.Total();
@@ -443,6 +459,14 @@
      if(p == NULL || p.Symbol() != sym || p.Timeframe() != tf) continue;
      datetime pt = p.Time();
      if(pt < bar_time || pt >= next_bar_time) continue;
+     // --- Pattern-level Buy/Sell gate, direction-aware - a pattern the user turned off (or
+     // --- whose direction isn't opted into) never becomes a candidate to draw.
+      ENUM_PATTERN_DIRECTION pdir = p.Direction();
+      bool is_buy  = (pdir == PATTERN_DIRECTION_BULLISH);
+      bool is_sell = (pdir == PATTERN_DIRECTION_BEARISH);
+      if(is_buy  && !(PatternSignalBuy(p.TypePattern())  && symtf_buy))  continue;
+      if(is_sell && !(PatternSignalSell(p.TypePattern()) && symtf_sell)) continue;
+      if(!is_buy && !is_sell) continue; // neither BULLISH nor BEARISH - not a directional signal
      int n = (int)p.Candles();
      if(best == NULL || n > best_candles) { best = p; best_candles = n; }
     }

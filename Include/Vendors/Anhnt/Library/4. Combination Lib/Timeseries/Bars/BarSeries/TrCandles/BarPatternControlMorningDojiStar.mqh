@@ -57,6 +57,9 @@
                                                                          const MqlParam &param[]) :
     CBarPatternControlMorningStar(symbol, timeframe, list_series, list_patterns, param)
     {
+    // --- CBarPatternControlMorningStar's own constructor hardcodes PATTERN_TYPE_MORNING_STAR
+    // --- - fix up this instance's real identity (Anhnt, 2026-08-29).
+    this.SetTypePattern(PATTERN_TYPE_MORNING_DOJI_STAR);
     this.m_ratio_larger_shadow_to_candle_size = PATTERN_DEF_DOJI_BODY;
     this.m_object_id                          = this.CreateObjectID();
     }

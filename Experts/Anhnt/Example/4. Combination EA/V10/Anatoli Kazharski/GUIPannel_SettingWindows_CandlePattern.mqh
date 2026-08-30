@@ -5,7 +5,7 @@
 #ifndef CGUIPANNEL_SETTINGWINDOWS_CANDLE_PATTERN_MQH
 #define CGUIPANNEL_SETTINGWINDOWS_CANDLE_PATTERN_MQH
  #define SETTING_BTN_SAVE_CANDLE_PATTERN_X_GAP 10
- #define SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP 20 
+ #define SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP 20
  #include "GUIPannel.mqh"
  //--- Extract bool value (true/false literal) from JSON key - only this file needs it
  //--- (Pattern_Alerts_Setting's per-pattern buy/sell/sound/message flags), so it lives
@@ -31,24 +31,40 @@
      }
     return false;
   }
+ //+------------------------------------------------------------------+
+ //| Index-based lookup into m_BarPatterns_Control.GetListControls() - |
+ //| every Candle Pattern method below reads/writes straight on the    |
+ //| CBarPatternControl this returns - it IS the Single Source of      |
+ //| Truth (type, display name, Buy/Sell/Sound/Message all live here), |
+ //| no parallel arrays anywhere (Anhnt, 2026-08-29).                  |
+ //+------------------------------------------------------------------+
+ CBarPatternControl *CGUIPannel::PatternControlAt(const int i) const
+  {
+   if(m_BarPatterns_Control == NULL) return NULL;
+   CArrayObj *controls = m_BarPatterns_Control.GetListControls();
+   return (controls != NULL) ? controls.At(i) : NULL;
+  }
  //+----------------------------------------------------------------------------+
  //| Loads the "Pattern_Alerts_Setting" section of Config_Setting.json into    |
- //| m_pattern_signal_buy/sell/alert_sound/message[] - data-only, does NOT     |
- //| touch the Table. Must run AFTER BuildCandlePatternListFromRegistry() (so  |
- //| the arrays are sized) and BEFORE InitializeTable_CandlePatternSetting()   |
- //| (which paints the Table from these same arrays).                         |
+ //| each CBarPatternControl's Buy/Sell/Sound/Message fields - data-only, does |
+ //| NOT touch the Table. Must run BEFORE InitializeTable_CandlePatternSetting()|
+ //| (which paints the Table from these same Control objects).                 |
  //+----------------------------------------------------------------------------+
  void CGUIPannel::LoadCandlePatternSetting_FromJSON(void)
   {
+    if(m_BarPatterns_Control == NULL) return;
     string full_path = g_ea_folder + "/Config_Setting.json";
     string content = JSONConfig_ReadWholeFile(full_path);
     if(content == "") return;
     string pattern_alerts_section = JSONConfig_ExtractRawSection(content, "Pattern_Alerts_Setting");
     if(pattern_alerts_section == "") return;
-    int pattern_count = ArraySize(m_pattern_types);
+    CArrayObj *controls = m_BarPatterns_Control.GetListControls();
+    int pattern_count = (controls != NULL) ? controls.Total() : 0;
     for(int i = 0; i < pattern_count; i++)
      {
-      string pattern_name = m_pattern_display_names[i];
+      CBarPatternControl *c = controls.At(i);
+      if(c == NULL) continue;
+      string pattern_name = PatternTypeDescription(c.TypePattern());
       int pos = StringFind(pattern_alerts_section, "\"" + pattern_name + "\"");
       if(pos < 0) continue;
       int brace = StringFind(pattern_alerts_section, "{", pos);
@@ -57,17 +73,17 @@
       if(close_brace < 0) continue;
       string pattern_obj = StringSubstr(pattern_alerts_section, brace, close_brace - brace + 1);
       bool v;
-      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_signal_buy",   v)) m_pattern_signal_buy[i]    = v;
-      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_signal_sell",  v)) m_pattern_signal_sell[i]   = v;
-      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_alert_sound",  v)) m_pattern_alert_sound[i]   = v;
-      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_alert_message",v)) m_pattern_alert_message[i] = v;
+      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_signal_buy",   v)) c.BuySignal(v);
+      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_signal_sell",  v)) c.SellSignal(v);
+      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_alert_sound",  v)) c.SoundAlert(v);
+      if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_alert_message",v)) c.MessageAlert(v);
      }
-  } 
+  }
   //+------------------------------------------------------------------+
  //| Writes the "Pattern_Alerts_Setting" section of Config_Setting.    |
- //| json straight from m_pattern_*[] (Single Source of Truth) -       |
- //| preserves the 4 sections owned elsewhere (Symbols_TFs_List,       |
- //| Indicator_Templates, Markers_Setting, Sound_Settings).            |
+ //| json straight from each CBarPatternControl (Single Source of      |
+ //| Truth) - preserves the 4 sections owned elsewhere (Symbols_TFs_   |
+ //| List, Indicator_Templates, Markers_Setting, Sound_Settings).      |
  //+------------------------------------------------------------------+
  void CGUIPannel::SaveCandlePatternSettingToJSON(void)
   {
@@ -84,15 +100,20 @@
    if(markers        != "") json += " \"Markers_Setting\": "   + markers        + ",\n";
    if(sound_settings != "") json += " \"Sound_Settings\": "    + sound_settings + ",\n";
 
-   int pattern_count = ArraySize(m_pattern_types);
+   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
+   int pattern_count = (controls != NULL) ? controls.Total() : 0;
    json += " \"Pattern_Alerts_Setting\": {\n";
+   int written = 0;
    for(int i = 0; i < pattern_count; i++)
     {
-     if(i > 0) json += ",\n";
-     json += "  \"" + m_pattern_display_names[i] + "\": { \"m_pattern_signal_buy\": " + (m_pattern_signal_buy[i] ? "true" : "false") +
-             ", \"m_pattern_signal_sell\": " + (m_pattern_signal_sell[i] ? "true" : "false") +
-             ", \"m_pattern_alert_sound\": " + (m_pattern_alert_sound[i] ? "true" : "false") +
-             ", \"m_pattern_alert_message\": " + (m_pattern_alert_message[i] ? "true" : "false") + " }";
+     CBarPatternControl *c = controls.At(i);
+     if(c == NULL) continue;
+     if(written > 0) json += ",\n";
+     json += "  \"" + PatternTypeDescription(c.TypePattern()) + "\": { \"m_pattern_signal_buy\": " + (c.BuySignal() ? "true" : "false") +
+             ", \"m_pattern_signal_sell\": " + (c.SellSignal() ? "true" : "false") +
+             ", \"m_pattern_alert_sound\": " + (c.SoundAlert() ? "true" : "false") +
+             ", \"m_pattern_alert_message\": " + (c.MessageAlert() ? "true" : "false") + " }";
+     written++;
     }
    json += "\n }\n}";
 
@@ -104,44 +125,10 @@
     }
    ::FileWriteString(fh, json);
    ::FileClose(fh);
-   ::Print(__FUNCTION__, " > saved ", pattern_count, " pattern alert setting(s) to ", full_path);
-  }
- void CGUIPannel::BuildCandlePatternListFromRegistry(void)
-  {
-    ArrayFree(m_pattern_types);
-    ArrayFree(m_pattern_display_names);
-    ArrayFree(m_pattern_signal_buy);
-    ArrayFree(m_pattern_signal_sell);
-    ArrayFree(m_pattern_alert_sound);
-    ArrayFree(m_pattern_alert_message);
-    // Hardcode all 28 patterns from Layer 1 RegisterAllCandlePatterns
-    ENUM_PATTERN_TYPE all_patterns[28] = {
-      PATTERN_TYPE_HAMMER, PATTERN_TYPE_HANGING_MAN, PATTERN_TYPE_INVERTED_HAMMER, PATTERN_TYPE_SHOOTING_STAR,
-      PATTERN_TYPE_DOJI, PATTERN_TYPE_DRAGONFLY_DOJI, PATTERN_TYPE_GRAVESTONE_DOJI, PATTERN_TYPE_HARAMI,
-      PATTERN_TYPE_HARAMI_CROSS, PATTERN_TYPE_ENGULFING, PATTERN_TYPE_TWEEZER, PATTERN_TYPE_PIERCING_LINE,
-      PATTERN_TYPE_DARK_CLOUD_COVER, PATTERN_TYPE_RAILS, PATTERN_TYPE_MORNING_STAR, PATTERN_TYPE_MORNING_DOJI_STAR,
-      PATTERN_TYPE_EVENING_STAR, PATTERN_TYPE_EVENING_DOJI_STAR, PATTERN_TYPE_THREE_WHITE_SOLDIERS, PATTERN_TYPE_THREE_BLACK_CROWS,
-      PATTERN_TYPE_THREE_STARS, PATTERN_TYPE_THREE_INSIDE_UP, PATTERN_TYPE_THREE_INSIDE_DOWN, PATTERN_TYPE_ABANDONED_BABY,
-      PATTERN_TYPE_PIVOT_POINT_REVERSAL, PATTERN_TYPE_OUTSIDE_BAR, PATTERN_TYPE_INSIDE_BAR, PATTERN_TYPE_PIN_BAR
-    };
-    ArrayResize(m_pattern_types, 28);
-    ArrayResize(m_pattern_display_names, 28);
-    ArrayResize(m_pattern_signal_buy, 28);
-    ArrayResize(m_pattern_signal_sell, 28);
-    ArrayResize(m_pattern_alert_sound, 28);
-    ArrayResize(m_pattern_alert_message, 28);
-    for(int i = 0; i < 28; i++)
-     {
-        m_pattern_types[i] = all_patterns[i];
-        m_pattern_display_names[i] = EnumToString(all_patterns[i]);
-        m_pattern_signal_buy[i]    = true;   // opt-in mặc định, giống CSymbolTFSetting
-        m_pattern_signal_sell[i]   = true;
-        m_pattern_alert_sound[i]   = true;
-        m_pattern_alert_message[i] = true;
-     }
+   ::Print(__FUNCTION__, " > saved ", written, " pattern alert setting(s) to ", full_path);
   }
  //+------------------------------------------------------------------+
- //| Create Save button + m_table_CandlePatternsSetting (Settings tab, | 
+ //| Create Save button + m_table_CandlePatternsSetting (Settings tab, |
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreateTable_CandlePatternSetting(const int x, const int y)
   {
@@ -167,7 +154,8 @@
     m_table_CandlePatternsSetting.ShowHeaders(true);
     m_table_CandlePatternsSetting.SelectableRow(true);
     m_table_CandlePatternsSetting.IsSortMode(true);
-    m_table_CandlePatternsSetting.TableSize(8, ArraySize(m_pattern_types));
+    CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
+    m_table_CandlePatternsSetting.TableSize(8, (controls != NULL) ? controls.Total() : 0);
     int widths[8]    = {155, 30, 30, 30, 20, 30, 30, 20};
     int img_x_off[8] = {0, 0, 10, 10, 7, 7, 7, 7};
     int img_y_off[8] = {0, 0, 3, 3, 3, 4, 4, 3};
@@ -203,11 +191,13 @@
     return true;
   }
  //+------------------------------------------------------------------+
- //| Data-only paint pass - grows/repaints every row from m_pattern_*[] |
+ //| Data-only paint pass - grows/repaints every row straight from     |
+ //| m_BarPatterns_Control.GetListControls() (Single Source of Truth). |
  //+------------------------------------------------------------------+
  void CGUIPannel::InitializeTable_CandlePatternSetting(void)
   {
-   int n = ArraySize(m_pattern_types);
+   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
+   int n = (controls != NULL) ? controls.Total() : 0;
    if(n == 0) return;
    m_table_CandlePatternsSetting.DeleteAllRows();
    for(int i = 0; i < n - 1; i++)
@@ -219,27 +209,32 @@
                     IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_BMP};
    for(int i = 0; i < n; i++)
     {
-      m_table_CandlePatternsSetting.SetValue(0, i, m_pattern_display_names[i]);
-      m_table_CandlePatternsSetting.SetValue(1, i, string(CandlesForPatternType(m_pattern_types[i])));// "1", "2", "3"
+      CBarPatternControl *c = controls.At(i);
+      ENUM_PATTERN_TYPE type = (c != NULL) ? c.TypePattern() : PATTERN_TYPE_NONE;
+      m_table_CandlePatternsSetting.SetValue(0, i, PatternTypeDescription(type));
+      // --- Candles() reads straight off the Control object (CBarPatternControl seeds it from
+      // --- the Library's own static table at construction, no per-call GUIPannel lookup needed
+      // --- - Anhnt, 2026-08-29).
+      m_table_CandlePatternsSetting.SetValue(1, i, (c != NULL) ? string(c.Candles()) : "");// "1", "2", "3"
 
       m_table_CandlePatternsSetting.CellType(2, i, CELL_CHECKBOX);
       m_table_CandlePatternsSetting.SetImages(2, i, chk);
-      m_table_CandlePatternsSetting.ChangeImage(2, i, m_pattern_signal_buy[i] ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
+      m_table_CandlePatternsSetting.ChangeImage(2, i, (c != NULL && c.BuySignal()) ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
 
       m_table_CandlePatternsSetting.CellType(3, i, CELL_CHECKBOX);
       m_table_CandlePatternsSetting.SetImages(3, i, chk);
-      m_table_CandlePatternsSetting.ChangeImage(3, i, m_pattern_signal_sell[i] ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
+      m_table_CandlePatternsSetting.ChangeImage(3, i, (c != NULL && c.SellSignal()) ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
 
       m_table_CandlePatternsSetting.CellType(4, i, CELL_BUTTON);
       m_table_CandlePatternsSetting.SetImages(4, i, arrow_up);   // ▲ static green
 
       m_table_CandlePatternsSetting.CellType(5, i, CELL_CHECKBOX);
       m_table_CandlePatternsSetting.SetImages(5, i, chk);
-      m_table_CandlePatternsSetting.ChangeImage(5, i, m_pattern_alert_sound[i] ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
+      m_table_CandlePatternsSetting.ChangeImage(5, i, (c != NULL && c.SoundAlert()) ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
 
       m_table_CandlePatternsSetting.CellType(6, i, CELL_CHECKBOX);
       m_table_CandlePatternsSetting.SetImages(6, i, chk);
-      m_table_CandlePatternsSetting.ChangeImage(6, i, m_pattern_alert_message[i] ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
+      m_table_CandlePatternsSetting.ChangeImage(6, i, (c != NULL && c.MessageAlert()) ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
 
       m_table_CandlePatternsSetting.CellType(7, i, CELL_BUTTON);
       m_table_CandlePatternsSetting.SetImages(7, i, arrow_dn);
@@ -249,69 +244,71 @@
    // not done yet, see GUIPannel_SoundAndMessageAlerts.mqh) - revisit together when that's wired.
   }
  //+------------------------------------------------------------------+
- //| Row -> array index lookup by content (col 0 = Pattern display    |
- //| name) - same reasoning as SymbolTF's FindTableRowBySymbolTF:      |
- //| IsSortMode(true) means row position drifts from array index      |
- //| after a header-click sort, so raw row can't be used as the array |
- //| index directly.                                                   |
+ //| Row -> Control index lookup by content (col 0 = Pattern display  |
+ //| name, recomputed on the fly via PatternTypeDescription()) - same |
+ //| reasoning as SymbolTF's FindTableRowBySymbolTF: IsSortMode(true)  |
+ //| means row position drifts from array index after a header-click  |
+ //| sort, so raw row can't be used as the array index directly.       |
  //+------------------------------------------------------------------+
  int CGUIPannel::FindPatternIndexByRow(const int row)
   {
    string name = m_table_CandlePatternsSetting.GetValue(0, row);
-   int n = ArraySize(m_pattern_display_names);
+   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
+   int n = (controls != NULL) ? controls.Total() : 0;
    for(int i = 0; i < n; i++)
-     if(m_pattern_display_names[i] == name) return i;
+    {
+     CBarPatternControl *c = controls.At(i);
+     if(c != NULL && PatternTypeDescription(c.TypePattern()) == name) return i;
+    }
    return -1;
   }
  //+------------------------------------------------------------------+
  //| Checkbox toggle handler for m_table_CandlePatternsSetting - col   |
- //| 2=Buy, 3=Sell, 5=Sound, 6=Message. Commits straight into the      |
- //| backing arrays (Single Source of Truth), Table cell already      |
+ //| 2=Buy, 3=Sell, 5=Sound, 6=Message. Commits straight onto the row's |
+ //| CBarPatternControl (Single Source of Truth), Table cell already   |
  //| shows the new state via CTable's own checkbox toggle.             |
  //+------------------------------------------------------------------+
  void CGUIPannel::OnCheckTableCandlePatternSetting(const int row, const int col)
   {
    int idx = FindPatternIndexByRow(row);
+   ::Print("MY DEBUG CGUIPannel::OnCheckTableCandlePatternSetting: row=", row, " col=", col, " idx=", idx,
+           " table_name_at_row=", m_table_CandlePatternsSetting.GetValue(0, row));
    if(idx < 0) return;
+   CBarPatternControl *c = PatternControlAt(idx);
+   ::Print("MY DEBUG CGUIPannel::OnCheckTableCandlePatternSetting: c=", (c != NULL ? "OK type=" + EnumToString(c.TypePattern()) : "NULL"));
+   if(c == NULL) return;
    if(col == 2)
-    {
-     m_pattern_signal_buy[idx] = ((int)m_table_CandlePatternsSetting.SelectedImageIndex(2, row) == CHECKBOX_STATE_ON);
-     // --- No Manager owns Candle Pattern Buy/Sell (fixed 28-pattern catalog, plain arrays here) -
-     // --- CGUIPannel fires this itself so EA can push a fresh snapshot into CSignalBridgeWriter
-     // --- (EA-owned) right away, same "push on real change" convention every Manager already
-     // --- follows for its own data (Anhnt, 2026-08-26).
-     ::EventChartCustom(::ChartID(), (ushort)GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED, 0, 0.0, "");
-    }
+     // --- No manual event fire anymore (Anhnt, 2026-08-30) - the setter itself dirty-checks and
+     // --- fires BARPATTERN_CONTROL_EVENT_BUYSELL_CHANGED now (BarPatternControl.mqh).
+     c.BuySignal((int)m_table_CandlePatternsSetting.SelectedImageIndex(2, row) == CHECKBOX_STATE_ON);
    else if(col == 3)
-    {
-     m_pattern_signal_sell[idx] = ((int)m_table_CandlePatternsSetting.SelectedImageIndex(3, row) == CHECKBOX_STATE_ON);
-     ::EventChartCustom(::ChartID(), (ushort)GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED, 0, 0.0, "");
-    }
+     c.SellSignal((int)m_table_CandlePatternsSetting.SelectedImageIndex(3, row) == CHECKBOX_STATE_ON);
    else if(col == 5)
-     m_pattern_alert_sound[idx]   = ((int)m_table_CandlePatternsSetting.SelectedImageIndex(5, row) == CHECKBOX_STATE_ON);
+     c.SoundAlert((int)m_table_CandlePatternsSetting.SelectedImageIndex(5, row) == CHECKBOX_STATE_ON);
    else if(col == 6)
-     m_pattern_alert_message[idx] = ((int)m_table_CandlePatternsSetting.SelectedImageIndex(6, row) == CHECKBOX_STATE_ON);
+     c.MessageAlert((int)m_table_CandlePatternsSetting.SelectedImageIndex(6, row) == CHECKBOX_STATE_ON);
   }
- 
+
  bool CGUIPannel::PatternSignalBuy(const ENUM_PATTERN_TYPE type) const
   {
-   int n = ArraySize(m_pattern_types);
+   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
+   int n = (controls != NULL) ? controls.Total() : 0;
    for(int i = 0; i < n; i++)
-    if(m_pattern_types[i] == type) return m_pattern_signal_buy[i];
+    {
+     CBarPatternControl *c = controls.At(i);
+     if(c != NULL && c.TypePattern() == type) return c.BuySignal();
+    }
    return false;
   }
  bool CGUIPannel::PatternSignalSell(const ENUM_PATTERN_TYPE type) const
   {
-   int n = ArraySize(m_pattern_types);
+   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
+   int n = (controls != NULL) ? controls.Total() : 0;
    for(int i = 0; i < n; i++)
-    if(m_pattern_types[i] == type) return m_pattern_signal_sell[i];
+    {
+     CBarPatternControl *c = controls.At(i);
+     if(c != NULL && c.TypePattern() == type) return c.SellSignal();
+    }
    return false;
   }
- void CGUIPannel::GetPatternSignalArrays(ENUM_PATTERN_TYPE &types[], bool &buy[], bool &sell[]) const
-  {
-   ArrayCopy(types, m_pattern_types);
-   ArrayCopy(buy,   m_pattern_signal_buy);
-   ArrayCopy(sell,  m_pattern_signal_sell);
-  }
 #endif // CGUIPANNEL_SETTINGWINDOWS_CANDLE_PATTERN_MQH
-

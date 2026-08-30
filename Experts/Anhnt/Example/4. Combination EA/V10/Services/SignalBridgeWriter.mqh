@@ -6,12 +6,15 @@
 #ifndef __SIGNALBRIDGEWRITER_MQH__
 #define __SIGNALBRIDGEWRITER_MQH__
 
+#include <Arrays\ArrayObj.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BarTimeSeriesCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Indicators\IndicatorDE.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh>
 #include "IndicatorTemplateManager.mqh"   // CIndicatorTemplateManager - EA-owned, read LIVE (no copy needed)
 #include "SymbolTFManager.mqh"            // CSymbolTFManager - EA-owned, read LIVE (no copy needed)
+#include "SignalBridgeRow.mqh"            // CSignalBridgeRow - 1 output row, held in a CArrayObj (Anhnt, 2026-08-29)
  #ifndef CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #define CSIGNALBRIDGEWRITER_MQH_DECLARATION
   class CSignalBridgeWriter
@@ -28,13 +31,10 @@
      CIndicatorTemplateManager *m_indicator_template_manager;
      CSymbolTFManager          *m_symbol_tf_manager;
 
-     // --- Candle Pattern Buy/Sell has NO Manager (fixed 28-pattern catalog, plain arrays on
-     // --- CGUIPannel) - CGUIPannel is the View layer, so this writer never holds a pointer to
-     // --- it; EA pushes a fresh snapshot via SetPatternSignals() instead, right when the user
-     // --- toggles a checkbox (GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED).
-     ENUM_PATTERN_TYPE           m_pattern_types[];
-     bool                        m_pattern_signal_buy[];
-     bool                        m_pattern_signal_sell[];
+     // --- Candle Pattern Buy/Sell now lives on CBarPatternControl itself (same registry
+     // --- CGUIPannel borrows via SetPatternsControl()) - read LIVE, same as the 2 Managers
+     // --- above, no more EA-pushed snapshot (Anhnt, 2026-08-29).
+     CBarPatternsControl        *m_patterns_control;
 
      static string              m_bridge_folder;  // ← Static property (scoped to class)
 
@@ -46,15 +46,14 @@
      bool                       GetIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &raw_params[], bool &buy, bool &sell);
      bool                       GetSymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf, bool &buy, bool &sell);
      bool                       GetCandlePatternSetting(const ENUM_PATTERN_TYPE type, bool &buy, bool &sell);
-     void                       WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count);
+     void                       WriteSignalBridgeFile(CArrayObj &rows);
 
     public:
      CSignalBridgeWriter(void);
     ~CSignalBridgeWriter(void);
 
      void                       Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars);
-     void                       SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr);
-     void                       SetPatternSignals(ENUM_PATTERN_TYPE &types[], bool &buy[], bool &sell[]);
+     void                       SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr, CBarPatternsControl *patterns_ctrl);
      void                       BuildAndWriteSignalBridge(void);
      void                       ResetSignalBridge(void);
      static void                SetFolder(const string folder) { m_bridge_folder = folder; }
@@ -68,12 +67,9 @@
   string CSignalBridgeWriter::m_bridge_folder = "";
   CSignalBridgeWriter::CSignalBridgeWriter(void)
     : m_SignalsCollection(NULL), m_IndicatorsCollection(NULL), m_BarTimeSeriesCollection(NULL),
-      m_indicator_template_manager(NULL), m_symbol_tf_manager(NULL),
+      m_indicator_template_manager(NULL), m_symbol_tf_manager(NULL), m_patterns_control(NULL),
       m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
   {
-    ArrayResize(m_pattern_types, 0);
-    ArrayResize(m_pattern_signal_buy, 0);
-    ArrayResize(m_pattern_signal_sell, 0);
   }
 
   //+------------------------------------------------------------------+
@@ -95,27 +91,11 @@
   //+------------------------------------------------------------------+
   //| SetManagers                                                      |
   //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr)
+  void CSignalBridgeWriter::SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr, CBarPatternsControl *patterns_ctrl)
    {
     m_indicator_template_manager = tmpl_mgr;
     m_symbol_tf_manager = symtf_mgr;
-   }
-  //+------------------------------------------------------------------+
-  //| SetPatternSignals - EA pushes a fresh snapshot here whenever      |
-  //| CGUIPannel fires GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED.          |
-  //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::SetPatternSignals(ENUM_PATTERN_TYPE &types[], bool &buy[], bool &sell[])
-   {
-    int n = ArraySize(types);
-    ArrayResize(m_pattern_types,       n);
-    ArrayResize(m_pattern_signal_buy,  n);
-    ArrayResize(m_pattern_signal_sell, n);
-    for(int i = 0; i < n; i++)
-     {
-      m_pattern_types[i]       = types[i];
-      m_pattern_signal_buy[i]  = buy[i];
-      m_pattern_signal_sell[i] = sell[i];
-     }
+    m_patterns_control = patterns_ctrl;
    }
   //+------------------------------------------------------------------+
   //| GetIndicatorTemplateSetting - identity-only lookup against the LIVE        |
@@ -148,21 +128,26 @@
     return true;
    }
   //+------------------------------------------------------------------+
-  //| GetCandlePatternSetting - lookup against the pushed snapshot            |
-  //| (m_pattern_types/signal_buy/signal_sell, see SetPatternSignals).  |
+  //| GetCandlePatternSetting - identity-only lookup against the LIVE   |
+  //| m_patterns_control (same registry CGUIPannel borrows), same        |
+  //| pattern as GetIndicatorTemplateSetting/GetSymbolTFSetting above    |
+  //| (Anhnt, 2026-08-29).                                                |
   //+------------------------------------------------------------------+
   bool CSignalBridgeWriter::GetCandlePatternSetting(const ENUM_PATTERN_TYPE type, bool &buy, bool &sell)
    {
     buy = false;
     sell = false;
-    int n = ArraySize(m_pattern_types);
+    if(m_patterns_control == NULL) return false;
+    CArrayObj *controls = m_patterns_control.GetListControls();
+    int n = (controls != NULL) ? controls.Total() : 0;
     for(int i = 0; i < n; i++)
-      if(m_pattern_types[i] == type)
-       {
-        buy  = m_pattern_signal_buy[i];
-        sell = m_pattern_signal_sell[i];
-        return true;
-       }
+     {
+      CBarPatternControl *c = controls.At(i);
+      if(c == NULL || c.TypePattern() != type) continue;
+      buy  = c.BuySignal();
+      sell = c.SellSignal();
+      return true;
+     }
     return false;
    }
 
@@ -245,8 +230,8 @@
        return;
     m_signal_bridge_symbol = sym;
 
-    datetime row_time[]; int row_tf[]; int row_dir[]; int row_source[];
-    int count = 0;
+    CArrayObj rows;
+    rows.FreeMode(true); // owns the CSignalBridgeRow* it holds - deleted when rows goes out of scope
     for(int ti = 0; ti < series_total; ti++)
      {
       CBarSeriesDE *s = series_list.At(ti);
@@ -277,15 +262,7 @@
             if(dir == SIGNAL_NONE) continue;
             if(dir == SIGNAL_BUY  && !buy_on)  continue;
             if(dir == SIGNAL_SELL && !sell_on) continue;
-            ArrayResize(row_time,   count + 1);
-            ArrayResize(row_tf,     count + 1);
-            ArrayResize(row_dir,    count + 1);
-            ArrayResize(row_source, count + 1);
-            row_time[count]   = signal.HistoryTime(h);
-            row_tf[count]     = (int)tf;
-            row_dir[count]    = (dir == SIGNAL_BUY) ? 1 : -1;
-            row_source[count] = 0; // Indicator
-            count++;
+            rows.Add(new CSignalBridgeRow(signal.HistoryTime(h), (int)tf, dir, 0)); // 0 = Indicator
            }
          if(ind.TypeIndicator() == IND_BANDS)
            {
@@ -300,15 +277,7 @@
                   if(dir == SIGNAL_NONE) continue;
                   if(dir == SIGNAL_BUY  && !buy_on)  continue;
                   if(dir == SIGNAL_SELL && !sell_on) continue;
-                  ArrayResize(row_time,   count + 1);
-                  ArrayResize(row_tf,     count + 1);
-                  ArrayResize(row_dir,    count + 1);
-                  ArrayResize(row_source, count + 1);
-                  row_time[count]   = bb.LineHistoryTime(li, h);
-                  row_tf[count]     = (int)tf;
-                  row_dir[count]    = (dir == SIGNAL_BUY) ? 1 : -1;
-                  row_source[count] = 0; // Indicator
-                  count++;
+                  rows.Add(new CSignalBridgeRow(bb.LineHistoryTime(li, h), (int)tf, dir, 0)); // 0 = Indicator
                  }
               }
            }
@@ -342,30 +311,24 @@
         if(pdir_signal == SIGNAL_BUY  && !(pat_buy  && symtf_buy))  continue;
         if(pdir_signal == SIGNAL_SELL && !(pat_sell && symtf_sell)) continue;
 
-        ArrayResize(row_time,   count + 1);
-        ArrayResize(row_tf,     count + 1);
-        ArrayResize(row_dir,    count + 1);
-        ArrayResize(row_source, count + 1);
-        row_time[count]   = pat.Time();
-        row_tf[count]     = (int)pat.Timeframe();
-        row_dir[count]    = (pdir_signal == SIGNAL_BUY) ? 1 : -1;
-        row_source[count] = 1; // Pattern
-        count++;
+        rows.Add(new CSignalBridgeRow(pat.Time(), (int)pat.Timeframe(), pdir_signal, 1)); // 1 = Pattern
        }
      }
 
-    for(int a = 0; a < count - 1; a++)
-      for(int b = a + 1; b < count; b++)
-         if(row_time[b] < row_time[a])
-           {
-            datetime tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
-            int      tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
-            int      d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
-            int      src_ = row_source[a]; row_source[a] = row_source[b]; row_source[b] = src_;
-           }
+    // --- Was a hand-rolled O(n^2) bubble sort over 4 parallel arrays - with thousands of
+    // --- accumulated historical rows (and ResetSignalBridge() forcing a FULL rebuild on every
+    // --- single Buy/Sell/Show toggle in the Symbol+TF/Indicator/Candle Pattern tabs), that was
+    // --- millions of comparisons run synchronously on the UI thread - the real cause of the
+    // --- EA freezing solid on any settings change. CArrayObj::Sort() uses CSignalBridgeRow's own
+    // --- Compare() (quicksort, O(n log n)) instead (Anhnt, 2026-08-29).
+    rows.Sort();
 
-    WriteSignalBridgeFile(row_time, row_tf, row_dir, row_source, count);
+    WriteSignalBridgeFile(rows);
     m_signal_bridge_last_time = newest_seen;
+    // --- Rebuild is only slow enough to notice right after a Buy/Sell/Show toggle - this
+    // --- confirms in the Experts log exactly when the new bridge file is ready, so the user
+    // --- isn't left guessing whether SignalMarkers has caught up yet (Anhnt, 2026-08-29).
+    ::Print(__FUNCTION__, " > wrote ", rows.Total(), " signal row(s) to SignalBridge_", sym, ".dat");
    }
 
   //+------------------------------------------------------------------+
@@ -379,7 +342,7 @@
   //+------------------------------------------------------------------+
   //| WriteSignalBridgeFile                                            |
   //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::WriteSignalBridgeFile(const datetime &row_time[], const int &row_tf[], const int &row_dir[], const int &row_source[], const int count)
+  void CSignalBridgeWriter::WriteSignalBridgeFile(CArrayObj &rows)
     {
       string base_name   = "SignalBridge_" + m_signal_bridge_symbol;
       string final_name = (m_bridge_folder != "") ? (m_bridge_folder + "/" + base_name + ".dat") : (base_name + ".dat");
@@ -390,18 +353,22 @@
 
      // SIGNAL_BRIDGE_MAGIC v2 (Anhnt, 2026-08-08): added source field (0=indicator, 1=pattern)
      // File format: magic(int) + update(long) + count(int) + count×{time(long), tf(int), dir(int), source(int)}
+     // - unchanged by the CArrayObj refactor (Anhnt, 2026-08-29), only the in-memory build path did.
      #ifndef SIGNAL_BRIDGE_MAGIC
       #define SIGNAL_BRIDGE_MAGIC 20260808
      #endif
+     int count = rows.Total();
      ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
      ::FileWriteLong(fh, (long)::TimeCurrent());
      ::FileWriteInteger(fh, count, INT_VALUE);
      for(int i = 0; i < count; i++)
        {
-         ::FileWriteLong(fh, (long)row_time[i]);
-         ::FileWriteInteger(fh, row_tf[i],     INT_VALUE);
-         ::FileWriteInteger(fh, row_dir[i],    INT_VALUE);
-         ::FileWriteInteger(fh, row_source[i], INT_VALUE);
+         CSignalBridgeRow *row = rows.At(i);
+         if(row == NULL) continue;
+         ::FileWriteLong(fh, (long)row.Time());
+         ::FileWriteInteger(fh, row.TF(),                             INT_VALUE);
+         ::FileWriteInteger(fh, (row.Dir() == SIGNAL_BUY) ? 1 : -1,    INT_VALUE);
+         ::FileWriteInteger(fh, row.Source(),                         INT_VALUE);
        }
      ::FileClose(fh);
      ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);

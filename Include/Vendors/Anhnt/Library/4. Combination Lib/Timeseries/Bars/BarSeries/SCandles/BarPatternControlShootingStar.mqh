@@ -42,6 +42,9 @@
                                                                    const MqlParam &param[]) :
     CBarPatternControlInvertedHammer(symbol, timeframe, list_series, list_patterns, param)
     {
+     // --- CBarPatternControlInvertedHammer's own constructor hardcodes PATTERN_TYPE_INVERTED_HAMMER
+     // --- - fix up this instance's real identity (Anhnt, 2026-08-29).
+     this.SetTypePattern(PATTERN_TYPE_SHOOTING_STAR);
     }
    ENUM_PATTERN_DIRECTION CBarPatternControlShootingStar::FindPattern(const datetime series_bar_time,
                                                                         MqlRates &mother_bar_data) const

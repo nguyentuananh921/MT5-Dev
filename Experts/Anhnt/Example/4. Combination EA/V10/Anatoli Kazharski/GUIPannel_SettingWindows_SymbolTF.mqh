@@ -201,14 +201,14 @@
    if(col == 2)
     {
      entry.BuySignal((int)m_table_SymbolTFSeting.SelectedImageIndex(2, row) == CHECKBOX_STATE_ON);
-     // Fire directly (no Manager method needed, same style as GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED) -
+     // Fire directly (no Manager method needed) -
      // EA listens for this to force an immediate CSignalBridgeWriter rewrite (Anhnt, 2026-08-28).
-     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ROW_CHANGED, 0, 0.0, "");
+     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED, 0, 0.0, "");
     }
    else if(col == 3)
     {
      entry.SellSignal((int)m_table_SymbolTFSeting.SelectedImageIndex(3, row) == CHECKBOX_STATE_ON);
-     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ROW_CHANGED, 0, 0.0, "");
+     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED, 0, 0.0, "");
     }
    else if(col == 4)
      entry.SoundAlert((int)m_table_SymbolTFSeting.SelectedImageIndex(4, row) == CHECKBOX_STATE_ON);

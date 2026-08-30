@@ -56,6 +56,9 @@
                                                                   const MqlParam &param[]) :
     CBarPatternControlHarami(symbol, timeframe, list_series, list_patterns, param)
     {
+    // --- CBarPatternControlHarami's own constructor hardcodes PATTERN_TYPE_HARAMI - fix up this
+    // --- instance's real identity (Anhnt, 2026-08-29).
+    this.SetTypePattern(PATTERN_TYPE_HARAMI_CROSS);
     this.m_ratio_larger_shadow_to_candle_size = PATTERN_DEF_DOJI_BODY;
     this.m_object_id                          = this.CreateObjectID();
     }

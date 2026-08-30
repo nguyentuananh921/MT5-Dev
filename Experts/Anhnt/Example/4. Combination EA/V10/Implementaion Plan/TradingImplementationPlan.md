@@ -11,12 +11,11 @@ Sources: Nguồn thực hiện Trading
   SYMBOL_TRADE_STOPS_LEVEL
   SYMBOL_BID/SYMBOL_ASK 
   SYMBOL_POINT
-  SYMBOL_TRADE_TICK_VALUE->Bước nhẩy nhỏ nhất của giá.
+  SYMBOL_TRADE_TICK_VALUE-> Bước nhẩy nhỏ nhất của giá.
 -Lot size: Cần Combobox ->Cái này CTable có hỗ trợ đặt một Combobox vào trong cell (chưa Implementation)
     SYMBOL_VOLUME_MIN
     SYMBOL_VOLUME_MAX
-    SYMBOL_VOLUME_STEP 
-  
+    SYMBOL_VOLUME_STEP   
 - Set SL on ->CTextEdit ->Set m_slPip
  - Min SL (Price) = SYMBOL_TRADE_STOPS_LEVEL * SYMBOL_POINT
  - Fix SL: //FixPip=50
@@ -34,7 +33,6 @@ Sources: Nguồn thực hiện Trading
           return sum / 5.0;
        }
      - slPips = atrAvg * ATR_Multiplier / Pip(); //ATR_Multiplier=1.2 set ở trên.
-
 - Set Trailling on
    
 Khi gửi một lệnh trading lên Server, chúng ta cần

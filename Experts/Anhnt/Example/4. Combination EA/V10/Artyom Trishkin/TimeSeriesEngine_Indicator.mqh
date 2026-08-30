@@ -78,28 +78,6 @@
       }
   }
  //+------------------------------------------------------------------+
- //| Layer 2 query: handle of the live indicator matching             |
- //| (symbol, tf, type, params), or INVALID_HANDLE if none exists     |
- //| yet - lets Layer 2 ask for a handle without holding/deref'ing    |
- //| a live CIndicatorDE* (README.md muc 7.b).                        |
- //+------------------------------------------------------------------+
- int CTimeSeriesEngine::GetIndicatorHandle(const string symbol, const ENUM_TIMEFRAMES tf,
-                                             const ENUM_INDICATOR type, MqlParam &params[])
-  {
-   CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(symbol);
-   ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-   int total = (ind_list != NULL) ? ind_list.Total() : 0;
-   for(int i = 0; i < total; i++)
-     {
-      CIndicatorDE *ind = ind_list.At(i);
-      if(ind == NULL || ind.TypeIndicator() != type) continue;
-      MqlParam ind_params[];
-      ind.GetMqlParams(ind_params);
-      if(IsEqualMqlParamArrays(ind_params, params))
-         return ind.Handle();
-     }
-   return INVALID_HANDLE;
-  }
  //| Tang 1: new Series created -> copy ALL indicators from template. |
  //| When a (symbol, timeframe) series is freshly created, push every |
  //| indicator from the current live template (= JSON-loaded set +    |

@@ -45,6 +45,9 @@
                                                                const MqlParam &param[]) :
     CBarPatternControlHammer(symbol, timeframe, list_series, list_patterns, param)
     {
+     // --- CBarPatternControlHammer's own constructor hardcodes PATTERN_TYPE_HAMMER - fix up
+     // --- this instance's real identity (Anhnt, 2026-08-29).
+     this.SetTypePattern(PATTERN_TYPE_HANGING_MAN);
     }
    //+------------------------------------------------------------------+
    //| Same shape as Hammer; return BEARISH                             |

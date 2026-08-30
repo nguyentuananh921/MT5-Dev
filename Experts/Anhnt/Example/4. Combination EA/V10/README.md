@@ -8,6 +8,7 @@
     //Print Debug
       ->Căn lề từ đây.
     Tức là khi Print Debug phải có class và Method để còn lựa mà xóa đi.
+  -Khi EA lớn lên thì print debug thẳng ra file với tên file là class và dong
  [] Hạn chế dùng number thay vì đó dùng Enum ví dụ thay vì 1 hay 2 nữa mà thay vì thế trong code mình sẽ phải là PRICE_CLOSE và PRICE_OPEN
  [] Log có sẵn trong workspace
  [] Tên của các Properties sẽ dựa trên class thống nhất giữa các layer và class ví dụ
@@ -39,7 +40,7 @@
  [] Tận dụng triệt đê method
    - Ưu tiên method của Library thay vì Buildin.
    - Tránh trùng lặp giữa các method cùng function chỉ khác name
- [] Tránh thêm các Method không cần trong khi Library có sẵn. 
+ [] Tránh thêm các Method,Properties không cần trong khi Library có sẵn. 
    - Cụ thể: Library đã có PrintParameters mà vẫn muốn thêm trong Deblib
  [] Mọi thay đổi trong Library cần trao đổi thống nhất làm rõ. Và ko tự thay đổi.
  [] Mọi sự thay đổi trong code cần trao đổi trước.
@@ -54,6 +55,9 @@
  [v] Từ bản V9 thì CGUIPannel trực tiếp làm việc với JSONConfig.
  [] V10 đang Update Struct thành Class và rất nhiều phần khác trong EA, CGUIPanel đang được tạm remove để rà soát trong lúc chỉ tập trung việc Synindicator giữa các Layer. 
 3. Feature
+ [x] Candle Pattern ->Chỉ tính hình dạng nến chưa tính đến Trend
+   -PATTERN_TYPE_THREE_STARS
+   -PATTERN_TYPE_ABANDONED_BABY 
  [v] CTreeView  m_treeview_SymbolTF;
     [v] Display Symbol + TF 
     [v] Highlight node base on Current Chart on Layer 3

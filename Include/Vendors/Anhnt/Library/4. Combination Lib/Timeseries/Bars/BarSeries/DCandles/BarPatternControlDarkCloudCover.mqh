@@ -42,6 +42,9 @@
                                                                        const MqlParam &param[]) :
     CBarPatternControlPiercingLine(symbol, timeframe, list_series, list_patterns, param)
     {
+     // --- CBarPatternControlPiercingLine's own constructor hardcodes PATTERN_TYPE_PIERCING_LINE
+     // --- - fix up this instance's real identity (Anhnt, 2026-08-29).
+     this.SetTypePattern(PATTERN_TYPE_DARK_CLOUD_COVER);
     }
    //+------------------------------------------------------------------+
    //| bar0: large bullish; bar1: bearish, closes below midpoint bar0   |

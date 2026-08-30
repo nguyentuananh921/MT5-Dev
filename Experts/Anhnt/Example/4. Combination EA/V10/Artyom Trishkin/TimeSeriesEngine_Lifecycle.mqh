@@ -46,7 +46,14 @@
           if(sym == "" || this.m_BarTimeSeriesCollection.IsAvailable(sym, tf)) continue;
           if(this.m_BarTimeSeriesCollection.CreateSeries(sym, tf))
            {
-            SeriesApplyPatternRegistry(sym, tf);
+            // --- CBarPatternsControl already carries its own symbol/timeframe - self-register
+            // --- directly instead of a separate SeriesApplyPatternRegistry() lookup (Anhnt, 2026-08-29).
+            {
+             CBarTimeSeriesDE *bts_s = this.m_BarTimeSeriesCollection.GetTimeseries(sym);
+             CBarSeriesDE *s_obj = (bts_s != NULL) ? bts_s.GetSeries(tf) : NULL;
+             CBarPatternsControl *ctrl_s = (s_obj != NULL) ? s_obj.GetPatternsCtrlObj() : NULL;
+             if(ctrl_s != NULL) ctrl_s.RegisterAllKnownPatterns();
+            }
             AddAllIndicatorsToNewSeries(sym, tf, templateManager);
            }
          }
@@ -57,11 +64,38 @@
   }
  bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
                                 const double& dparam, const string& sparam,
-                                CIndicatorTemplateManager *manager)
+                                CSymbolTFManager *manager, CIndicatorTemplateManager *templateManager)
   {
+    // --- "tay nao lo viec tay ay" (Anhnt, 2026-08-30): moved out of EA::OnChartEvent's
+    // --- INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED handler, which used to call
+    // --- AddNewIndicatorToAllSeries() inline - that's purely this class's own Layer 1 business.
+    // --- The other half of that same EA block (ShowIndicatorOnChart via m_ChartObjCollection)
+    // --- stays in the EA - CChartObjCollection is a Library class and can't depend on
+    // --- CIndicatorTemplateManager (EA-level), so that part can't be pushed down the same way.
+    if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
+     {
+      if(templateManager == NULL) return false;
+      CIndicatorSetting *entry = templateManager.At((int)lparam);
+      if(entry == NULL) return false;
+      ENUM_INDICATOR type = entry.TypeEnum();
+      MqlParam params[];
+      entry.GetRawParams(params);
+      this.AddNewIndicatorToAllSeries(type, params);
+      return true;
+     }
     if(id != CHARTEVENT_CHART_CHANGE) return false;
     string sym          = ::Symbol();
     ENUM_TIMEFRAMES curr = (ENUM_TIMEFRAMES)::ChartPeriod(0);
+    // --- "tay nao lo viec tay ay" (Anhnt, 2026-08-30): this handler used to only touch its own
+    // --- Layer 1 Series, silently relying on OnInit()'s REASON_CHARTCHANGE reinit to register the
+    // --- pair into SymbolTFManager elsewhere. But CHARTEVENT_CHART_CHANGE also fires for lighter
+    // --- chart-state changes that never trigger a full reinit (e.g. switching focus between
+    // --- already-open chart tabs) - in those cases nothing else was ensuring the Symbol+TF Settings
+    // --- row exists, silently leaving Buy/Sell gated off (FindByIdentity returns NULL) despite
+    // --- Layer 1 data being tracked. Registering here too is exactly Add_SymbolTFSetting's own
+    // --- "NULL if identity already exists" idempotency doing the work - safe to call unconditionally.
+    if(manager != NULL && !manager.Exists(sym, curr))
+       manager.Add_SymbolTFSetting(sym, curr);
     // Step 1: Ensure series exists
     bool is_new_series = !this.m_BarTimeSeriesCollection.IsAvailable(sym, curr);
     if(is_new_series)
@@ -70,10 +104,18 @@
         // Step 2: Apply the full Candle Pattern registry to the newly created series
         // (Anhnt, 2026-08-10: was commented out - new TFs switched to on the chart never
         // got pattern detection wired, same bug as the JSON-load path).
-        this.SeriesApplyPatternRegistry(sym, curr);
+        // --- Inlined (Anhnt, 2026-08-29): CBarPatternsControl already carries its own
+        // --- symbol/timeframe, so it can self-register directly - no need to look the series
+        // --- back up via a separate SeriesApplyPatternRegistry() helper.
+        {
+         CBarTimeSeriesDE *bts = this.m_BarTimeSeriesCollection.GetTimeseries(sym);
+         CBarSeriesDE *s = (bts != NULL) ? bts.GetSeries(curr) : NULL;
+         CBarPatternsControl *ctrl = (s != NULL) ? s.GetPatternsCtrlObj() : NULL;
+         if(ctrl != NULL) ctrl.RegisterAllKnownPatterns();
+        }
         // Direction 2: replicate the already-established indicator template (from
         // CIndicatorTemplateManager, Single Source of Truth) into this brand new series
-        this.AddAllIndicatorsToNewSeries(sym, curr, manager);
+        this.AddAllIndicatorsToNewSeries(sym, curr, templateManager);
       }
     else
      {

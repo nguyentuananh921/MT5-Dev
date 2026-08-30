@@ -21,7 +21,7 @@
    CSymbolTFManager  m_SymbolTFManager;
   //--- Writes SignalBridge_<SYMBOL>.dat so SignalMarkers.mq5 can paint markers on chart per the
   //--- GUI's Buy/Sell settings. EA-owned (moved from CGUIPannel, Anhnt 2026-08-26) - reads
-  //--- m_IndicatorTemplateManager/m_SymbolTFManager LIVE via SetManagers(), no copy needed.
+  //--- m_IndicatorTemplateManager/m_SymbolTFManager/Pattern registry LIVE via SetManagers(), no copy needed.
   #include "Services\SignalBridgeWriter.mqh"
    CSignalBridgeWriter  m_signal_bridge_writer;
   //--- Layer 3 observer (Layer 3: Display On Chart, control by EA - README). Watches every open
@@ -31,6 +31,10 @@
    CChartObjCollection  m_ChartObjCollection;
   //--- Global folder path (centralized for all components)
    string g_ea_folder = "";
+  //--- SIGNALMARKERS_PROGRAM_PATH/SIGNALMARKERS_NAME_TAG moved to IndicatorTemplateManager.mqh
+  //--- (Anhnt, 2026-08-30) - that Manager now owns filtering it out of its own OnChartEvent();
+  //--- still visible here too (EnsureMarkerIndicatorAttached/RemoveMarkerIndicator use it) since
+  //--- that header is #included above, before this point.
   //--- true once OnInit() has fully finished wiring every module - false while EA is still
   //--- initializing (including every REASON_CHARTCHANGE reinit, MT5 calls OnInit again on
   //--- every Symbol/TF change). Every Manager checks this before firing its own EventChartCustom -
@@ -72,14 +76,13 @@
         m_timeSeriesEngine.OnInitEvent(::Symbol(), (ENUM_TIMEFRAMES)::Period(), &m_SymbolTFManager, &m_IndicatorTemplateManager);
 
       // --- SignalBridgeWriter: wire AFTER Layer 1 is ready (needs live Signals/Indicators/
-      // --- BarTimeSeries collections) - reads the 2 Managers LIVE from here on, no copy
-      // --- needed. Pattern snapshot seeded further below, AFTER m_GUIPannel.OnInitEvent()
-      // --- has actually built m_pattern_types[]/m_pattern_signal_buy[]/sell[] (Anhnt, 2026-08-28).
+      // --- BarTimeSeries collections) - reads the 2 Managers + the Pattern registry LIVE from
+      // --- here on, no copy/snapshot needed (Anhnt, 2026-08-29).
         CSignalBridgeWriter::SetFolder(g_ea_folder);
         m_signal_bridge_writer.Initialize(m_timeSeriesEngine.GetSignalsCollection(),
                                            m_timeSeriesEngine.GetIndicatorsCollection(),
                                            m_timeSeriesEngine.GetTimeSeriesCollection());
-        m_signal_bridge_writer.SetManagers(&m_IndicatorTemplateManager, &m_SymbolTFManager);
+        m_signal_bridge_writer.SetManagers(&m_IndicatorTemplateManager, &m_SymbolTFManager, m_timeSeriesEngine.GetPatternsControl());
 
       //For GUI. Set pointers before GUI init - SetTimeSeriesEngine MUST run before
         m_GUIPannel.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
@@ -93,14 +96,9 @@
         //   mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
         m_GUIPannel.SetTradingControl(m_tradingEngine.GetTradingControl());        
         m_GUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE
-      // --- Pattern Buy/Sell has no Manager (fixed catalog, plain arrays on CGUIPannel) - push a
-      // --- fresh snapshot now that OnInitEvent above has actually built it, then seed the bridge
-      // --- file for the very first time this session (Anhnt, 2026-08-28).
-        {
-         ENUM_PATTERN_TYPE p_types[]; bool p_buy[]; bool p_sell[];
-         m_GUIPannel.GetPatternSignalArrays(p_types, p_buy, p_sell);
-         m_signal_bridge_writer.SetPatternSignals(p_types, p_buy, p_sell);
-        }
+      // --- Seed the bridge file for the very first time this session - m_signal_bridge_writer
+      // --- now reads Pattern Buy/Sell straight off m_patterns_control (live), no snapshot push
+      // --- needed first (Anhnt, 2026-08-29).
         m_signal_bridge_writer.ResetSignalBridge();
       // --- Idempotent (checks m_ChartObjCollection's own cached window/indicator list first) -
       // --- safe to call unconditionally on both a fresh attach and a REASON_CHARTCHANGE reinit,
@@ -128,8 +126,7 @@
  //+------------------------------------------------------------------+
  void OnTick(void)
   {
-    m_tradingEngine.OnTickEvent();
-    //For Bar
+    m_tradingEngine.OnTickEvent();    
     //  Refresh pattern renderer on new bar
       SDataCalculate data_calc;
       MqlRates rates[1];
@@ -161,7 +158,6 @@
     // cheap to call unconditionally every tick, picks up naturally-arriving new bars/patterns
     // without needing its own dirty flag (Anhnt, 2026-08-28).
     m_signal_bridge_writer.BuildAndWriteSignalBridge();
-
     ulong t2 = GetMicrosecondCount();
     ulong t3 = GetMicrosecondCount();
   }
@@ -179,150 +175,25 @@
  void OnChartEvent(const int id, const long &lparam, const double &dparam,
                   const string &sparam)
   {
-    if(MQLInfoInteger(MQL_TESTER)) return;    
+    if(MQLInfoInteger(MQL_TESTER)) return;
     m_GUIPannel.ChartEvent(id, lparam, dparam, sparam);
-    //Handle events from the Chart Window indicator objects (for manual changes)
-     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_ADD)
-      {
-       int handle = (int)lparam;
-       //Print Debug
-         ::Print("MY DEBUG EA::OnChartEvent ADD: fired - handle=", handle);
-       ENUM_INDICATOR type; MqlParam params[];
-       if(::IndicatorParameters(handle, type, params) < 0)
-        {
-         //Print Debug
-           ::Print("MY DEBUG EA::OnChartEvent ADD: bail - IndicatorParameters(handle=", handle, ") failed, err=", ::GetLastError());
-         return;
-        }
-       // SignalMarkers.mq5 is EA's own Layer-3 marker-display program (attached by
-       // EnsureMarkerIndicatorAttached), NOT a Template indicator - its own ChartIndicatorAdd()
-       // triggers this very ADD event via CChartObjCollection::Refresh()'s diff detection, so it
-       // must be identified and excluded by NAME here, not by a blanket "type==IND_CUSTOM" skip -
-       // a future custom indicator we DO want tracked in the Template would still need to pass
-       // through below (Anhnt, 2026-08-28).
-       if(type == IND_CUSTOM && ArraySize(params) > 0 && ::StringFind(params[0].string_value, "SignalMarkers") >= 0)
-        {
-         //Print Debug
-           ::Print("MY DEBUG EA::OnChartEvent ADD: bail - handle=", handle, " is our own SignalMarkers, not a Template indicator");
-         return;
-        }
-       CIndicatorSetting *entry = m_IndicatorTemplateManager.FindByIdentity(type, params);
-       if(entry != NULL)  //Add An Indicator exist in Indicator Template due to hide on Chart
-        {
-         // Go through the Manager's own setter (not a direct entry.ShowOnChart(true) mutation)
-         // so it fires INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED - CGUIPannel now
-         // listens to that itself to refresh its Table icon, EA no longer calls it directly.
-         if(!entry.ShowOnChart())
-          {
-           for(int row = 0; row < m_IndicatorTemplateManager.Total(); row++)
-            {
-             CIndicatorSetting *e = m_IndicatorTemplateManager.At(row);
-             if(e == entry)
-              {
-               m_IndicatorTemplateManager.UpdateRow_IndicatorTemplateSetting_ShowColumn(row, true);
-               break;
-              }
-            }
-          }
-         return;
-        }
-       // Manager.AddIndicatorToIndicatorTemplateSetting() below fires INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED
-       // (+TYPE_ADDED if this is the first row of its type) - GUIPannel_Lifecycle.mqh already
-       // reacts to those by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(), no need to call them here too.
-       m_IndicatorTemplateManager.AddIndicatorToIndicatorTemplateSetting(type, params);
-       return;
-      }
-     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_CHANGE)
-      {       
-       int old_handle = (int)lparam;
-       int win_num    = (int)dparam;
-       int win_index  = (int)StringToInteger(sparam);
-       //Print Debug
-         ::Print("MY DEBUG EA::OnChartEvent CHANGE: fired - old_handle=", old_handle, " win_num=", win_num, " win_index=", win_index);
-
-       ENUM_INDICATOR old_type; MqlParam old_params[];
-       if(::IndicatorParameters(old_handle, old_type, old_params) < 0)
-        {
-         //Print Debug
-           ::Print("MY DEBUG EA::OnChartEvent CHANGE: bail - IndicatorParameters(old_handle=", old_handle, ") failed, err=", ::GetLastError());
-         return;   //Get Old value
-        }
-       //Print Debug
-         ::Print("MY DEBUG EA::OnChartEvent CHANGE: old handle=", old_handle, " old_type=", EnumToString(old_type), " win_num=", win_num, " index=", win_index);
-
-       CWndInd *new_ind = m_ChartObjCollection.GetIndicator(::ChartID(), win_num, win_index);
-       if(new_ind == NULL)
-        {
-         //Print Debug
-           ::Print("MY DEBUG EA::OnChartEvent CHANGE: bail - GetIndicator(win_num=", win_num, ", win_index=", win_index, ") returned NULL");
-         return;
-        }
-       //Print Debug
-         ::Print("MY DEBUG EA::OnChartEvent CHANGE: new name=", new_ind.Name(), " handle=", new_ind.Handle());
-
-       ENUM_INDICATOR new_type; MqlParam new_params[];
-       if(!new_ind.GetIdentity(new_type, new_params))
-        {
-         //Print Debug
-           ::Print("MY DEBUG EA::OnChartEvent CHANGE: bail - new_ind.GetIdentity() failed for name=", new_ind.Name());
-         return; //Get New value
-        }
-
-       // --- Check TRUOC khi Remove: neu new_type/new_params da trung 1 identity KHAC
-       // --- dang co san trong Template (vd user sua tham so indicator A trung het voi
-       // --- indicator B da co), thi khong the Add duoc nua (Manager tu chan trung) -
-       // --- neu cu Remove old truoc thi ket qua la MAT han A khoi Template ma khong co
-       // --- gi thay the. Bail o day, giu nguyen old, khong dung gi ca.
-       if(m_IndicatorTemplateManager.Exists(new_type, new_params))
-        {
-         //Print Debug
-           ::Print("MY DEBUG EA::OnChartEvent CHANGE: bail - new params trung 1 identity khac da co trong Template - bo qua, giu nguyen old");
-         return;
-        }
-
-       // Both fire their own INDICATOR_TEMPLATE_MANAGER_EVENT_* below - GUIPannel_Lifecycle.mqh
-       // already reacts by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(),
-       // no need to call them here too (and TYPE_ADDED/TYPE_DELETE correctly stay silent
-       // when old_type == new_type, unlike the old unconditional Sync call).
-       //Print Debug
-         ::Print("MY DEBUG EA::OnChartEvent CHANGE: -> Delete old_type=", EnumToString(old_type), " then Add new_type=", EnumToString(new_type));
-       m_IndicatorTemplateManager.DeleteIndicatorFromIndicatorTemplateSetting(old_type, old_params); //Remove Old value
-       m_IndicatorTemplateManager.AddIndicatorToIndicatorTemplateSetting(new_type, new_params); //Add New value
-       return;
-      }
-     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_DEL)
-      {
-        //Print Debug
-          ::Print("MY DEBUG EA::OnChartEvent DEL: win_num=", (int)dparam);
-        // EA itself just called RemoveIndicatorFromChart (Show-toggle/row-delete reacting to
-        // OUR OWN Data change) - this native DEL is the expected side effect, not a surprise.
-        // Skip the defensive rescan below entirely; see g_suppress_del_rescan declaration.
-        if(g_suppress_del_rescan)
-         {
-          g_suppress_del_rescan = false;
-          //Print Debug
-            ::Print("MY DEBUG EA::OnChartEvent DEL: self-triggered, skipping rescan");
-          return;
-         }
-        // Native DEL event doesn't say WHICH indicator was removed - live-scan every
-        // row against real chart state and push the truth into Manager (EA owns
-        // ChartObjCollection, CGUIPannel no longer can). SyncTable_IndicatorTemplateSetting()
-        // below then just repaints from Manager's now-correct field.
-        for(int row = 0; row < m_IndicatorTemplateManager.Total(); row++)
-         {
-          CIndicatorSetting *entry = m_IndicatorTemplateManager.At(row);
-          if(entry == NULL) continue;
-          MqlParam params[];
-          entry.GetRawParams(params);
-          bool shown = m_ChartObjCollection.IsIndicatorShownOnChart(::ChartID(), entry.TypeEnum(), params);
-          if(shown != entry.ShowOnChart())
-             m_IndicatorTemplateManager.UpdateRow_IndicatorTemplateSetting_ShowColumn(row, shown);
-         }
-        // No direct m_GUIPannel call here anymore - UpdateRow_IndicatorTemplateSetting_ShowColumn()
-        // above fires INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED per changed row, and
-        // CGUIPannel now listens to that itself to refresh its Table icon.
-        return;
-      }
+    // --- Broadcast to CTimeSeriesEngine (Anhnt, 2026-08-30): "tay nao lo viec tay ay" - EA just
+    // --- forwards the raw event, CTimeSeriesEngine::OnChartEvent() filters for CHARTEVENT_CHART_CHANGE
+    // --- internally and owns its own reaction (create the new Series if this Symbol/TF hasn't been
+    // --- seen yet). Was previously dead code - nothing called it, so a native chart Symbol/TF switch
+    // --- (as opposed to adding a row via the GUI's own Symbol-TF tab, or the initial OnInit load)
+    // --- never created its Series. IsAvailable()-gated internally, safe to call unconditionally
+    // --- even during a REASON_CHARTCHANGE reinit alongside OnInitEvent()'s own CreateSeries pass.
+     m_timeSeriesEngine.OnChartEvent(id, lparam, dparam, sparam, &m_SymbolTFManager, &m_IndicatorTemplateManager);
+    // --- Broadcast to CIndicatorTemplateManager (Anhnt, 2026-08-30): same "tay nao lo viec tay ay"
+    // --- pattern - CIndicatorTemplateManager::OnChartEvent() filters for
+    // --- CHART_OBJ_EVENT_CHART_WND_IND_ADD/CHANGE/DEL internally and owns the whole reaction
+    // --- (resolve handle->type/params, skip its own SignalMarkers infrastructure indicator,
+    // --- otherwise mark an existing row Shown / add a brand new one / swap old identity for new /
+    // --- rescan Show state after a native delete). chart_obj is passed through for CHANGE's own
+    // --- GetIndicator() lookup and DEL's rescan. Moved out of this function, which used to do all
+    // --- of this inline.
+     m_IndicatorTemplateManager.OnChartEvent(id, lparam, dparam, sparam, &m_ChartObjCollection);
     //Manager's own Data-changed notification - EA owns ChartObjCollection, so EA (not
     //CGUIPannel) is the one that attaches a newly-Added template row onto the chart.
     //IsIndicatorShownOnChart guards the case where this Add() came FROM a manual
@@ -335,15 +206,19 @@
        ENUM_INDICATOR type = entry.TypeEnum();
        MqlParam params[];
        entry.GetRawParams(params);
-      // Layer 1: backfill this new indicator onto every already-tracked Series (Anhnt, 2026-08-28).
-       m_timeSeriesEngine.AddNewIndicatorToAllSeries(type, params);
+      // Layer 1 backfill (AddNewIndicatorToAllSeries) moved to CTimeSeriesEngine::OnChartEvent()
+      // (Anhnt, 2026-08-30) - reached via this same broadcast event, no separate call needed here.
        if(!m_ChartObjCollection.IsIndicatorShownOnChart(::ChartID(), type, params))
           m_ChartObjCollection.ShowIndicatorOnChart(::ChartID(), type, params);
        return;
       }
     //User toggled the Table's Show-on-Chart icon for an existing row - Manager
     //already updated entry.ShowOnChart(), EA attaches/detaches to match.
-     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED)
+    // --- Own dedicated event now (Anhnt, 2026-08-30), split out of the old generic
+    // --- SETTING_CHANGED - "tay nao lo viec tay ay": this handler only cares about Show, so it
+    // --- no longer wakes up (and no-ops through) on every unrelated Buy/Sell toggle, and no
+    // --- longer force-rebuilds SignalBridge for a Show-only change that never touched Buy/Sell.
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED)
       {
        CIndicatorSetting *entry = m_IndicatorTemplateManager.At((int)lparam);
        Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: lparam(index)=", lparam, " entry=", (entry == NULL ? "NULL" : entry.DisplayLabel()));
@@ -367,9 +242,12 @@
        else
          Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: -> no-op (already matches)");
        ChartRedraw();
-       // This event is generic ("any field mutated") - also covers Buy/Sell toggles now, so
-       // force an immediate bridge rewrite regardless of which field actually changed
-       // (Anhnt, 2026-08-28).
+       return;
+      }
+    //User toggled Buy or Sell on the Table for an existing row - only SignalBridge needs to
+    //react (Anhnt, 2026-08-30, split out of the old generic SETTING_CHANGED).
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED)
+      {
        m_signal_bridge_writer.ResetSignalBridge();
        return;
       }
@@ -394,18 +272,11 @@
       {
        CSymbolTFSetting *entry = m_SymbolTFManager.At((int)lparam);
        if(entry == NULL) return;
-       // --- Create just THIS one Layer 1 Series (not a whole-Manager rescan) so this new
-       // --- (symbol,tf) gets tracked even if it never becomes the active chart, then apply
-       // --- the full Indicator Template onto it (Anhnt, 2026-08-28).
-       CBarTimeSeriesCollection *bar_series = m_timeSeriesEngine.GetTimeSeriesCollection();
-       if(!bar_series.IsAvailable(entry.Symbol(), entry.TFEnum()))
-        {
-         if(bar_series.CreateSeries(entry.Symbol(), entry.TFEnum()))
-          {
-           m_timeSeriesEngine.SeriesApplyPatternRegistry(entry.Symbol(), entry.TFEnum());
-           m_timeSeriesEngine.AddAllIndicatorsToNewSeries(entry.Symbol(), entry.TFEnum(), &m_IndicatorTemplateManager);
-          }
-        }
+       // --- Manual Series-creation block removed (Anhnt, 2026-08-30) - SetActiveChartSymbolTF()
+       // --- below calls ::ChartSetSymbolPeriod(), which is itself a full chart reinit that fires
+       // --- native CHARTEVENT_CHART_CHANGE; CTimeSeriesEngine::OnChartEvent() already reacts to
+       // --- that by creating the Series (+ patterns + indicator template) if not yet available,
+       // --- so doing it here too was pure duplication of that same logic.
        SetActiveChartSymbolTF(entry.Symbol(), entry.TFEnum());
        return;
       }
@@ -432,27 +303,26 @@
     //A Symbol+TF row's Buy/Sell setting was toggled - fired directly by CGUIPannel (no
     //Manager method, no payload - see SymbolTFManager.mqh's enum comment). Force an
     //immediate bridge rewrite; ResetSignalBridge() re-reads the Manager live, no row lookup needed.
-     if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ROW_CHANGED)
+     if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED)
       {
        m_signal_bridge_writer.ResetSignalBridge();
        return;
       }
-    //Candle Pattern Buy/Sell was toggled - CGUIPannel has no Manager for patterns (fixed
-    //catalog, plain arrays), so EA must actively pull a fresh snapshot and push it in,
-    //unlike the 2 Manager-backed sources above which SignalBridgeWriter reads live.
-     if(id == CHARTEVENT_CUSTOM + GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED)
+    //Candle Pattern Buy/Sell was toggled - CBarPatternControl now fires this itself (Anhnt,
+    //2026-08-30, own event chain in BarPatternControl.mqh - no longer via CGUIPannel). It IS the
+    //same registry SignalBridgeWriter reads live (SetManagers()'s 3rd pointer), same as the 2
+    //Manager-backed sources above - just force an immediate rewrite (Anhnt, 2026-08-29).
+     if(id == CHARTEVENT_CUSTOM + BARPATTERN_CONTROL_EVENT_BUYSELL_CHANGED)
       {
-       ENUM_PATTERN_TYPE p_types[]; bool p_buy[]; bool p_sell[];
-       m_GUIPannel.GetPatternSignalArrays(p_types, p_buy, p_sell);
-       m_signal_bridge_writer.SetPatternSignals(p_types, p_buy, p_sell);
        m_signal_bridge_writer.ResetSignalBridge();
        return;
       }
     //Marker style (shape/color) was saved - detach + re-attach SignalMarkers.mq5 with the
     //new inputs (no live-input-update API for a running custom indicator).
      if(id == CHARTEVENT_CUSTOM + GUIPANNEL_EVENT_MARKER_SETTING_CHANGED)
-      {
-       ReattachSignalMarkersIndicator();
+      {       
+       RemoveMarkerIndicator();
+       EnsureMarkerIndicatorAttached();
        return;
       }
   }
@@ -509,7 +379,7 @@
         for(int i = 0; i < total; i++)
          {
           CWndInd *ind = wnd.GetIndicatorByIndex(i);
-          if(ind != NULL && ::StringFind(ind.Name(), "SignalMarkers") == 0)
+          if(ind != NULL && ::StringFind(ind.Name(), SIGNALMARKERS_NAME_TAG) == 0)
             return; // already attached
          }
      }
@@ -519,7 +389,7 @@
                                   pattern_buy, pattern_sell, combo_buy, combo_sell,
                                   buy_clr, sell_clr, nonrelated_clr);
 
-    int h = ::iCustom(NULL, 0, "Vendors\\Anhnt\\Custom Buildin\\SignalMarkers",
+    int h = ::iCustom(NULL, 0, SIGNALMARKERS_PROGRAM_PATH,
                       single_buy, single_sell, multi_buy, multi_sell,
                       pattern_buy, pattern_sell, combo_buy, combo_sell,
                       buy_clr, sell_clr, nonrelated_clr,
@@ -543,17 +413,8 @@
   //+------------------------------------------------------------------+
   void RemoveMarkerIndicator(void)
    {
-    ::ChartIndicatorDelete(::ChartID(), 0, "SignalMarkers(" + ::Symbol() + ")");
-   }
-  //+------------------------------------------------------------------+
-  //| Detach + re-attach with CURRENT marker settings - no live-input-  |
-  //| update API for a running indicator, style change means recreate.  |
-  //+------------------------------------------------------------------+
-  void ReattachSignalMarkersIndicator(void)
-   {
-    RemoveMarkerIndicator();
-    EnsureMarkerIndicatorAttached();
-   }
+    ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
+   }  
  
    
 

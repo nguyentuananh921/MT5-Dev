@@ -435,6 +435,8 @@ string PatternTypeDescription(const ENUM_PATTERN_TYPE type)
         case PATTERN_TYPE_INSIDE_BAR           : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_INSIDE_BAR);
         case PATTERN_TYPE_PIN_BAR              : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_PIN_BAR);
         case PATTERN_TYPE_RAILS                : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_RAILS);
+        case PATTERN_TYPE_SPINNING_TOP         : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_SPINNING_TOP);
+        case PATTERN_TYPE_MARUBOZU             : return CMessage::Text(MSG_LIB_TEXT_PATTERN_TYPE_MARUBOZU);
         default                                : return CMessage::Text(MSG_LIB_TEXT_FRAME_STYLE_NONE);
       }
   }

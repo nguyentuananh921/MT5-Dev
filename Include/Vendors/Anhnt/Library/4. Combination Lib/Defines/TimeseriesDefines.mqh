@@ -140,6 +140,8 @@
       PATTERN_TYPE_DOJI                =  0x800,               // Doji
       PATTERN_TYPE_DRAGONFLY_DOJI      =  0x1000,              // Dragonfly Doji
       PATTERN_TYPE_GRAVESTONE_DOJI     =  0x2000,              // Gravestone Doji
+      PATTERN_TYPE_SPINNING_TOP        =  0x10000000,          // Spinning Top
+      PATTERN_TYPE_MARUBOZU            =  0x20000000,          // Marubozu
     //Double Candlestick Patterns
       PATTERN_TYPE_HARAMI              =  0x1,                 // Harami
       PATTERN_TYPE_HARAMI_CROSS        =  0x2,                 // Harami Cross
@@ -169,7 +171,7 @@
       PATTERN_TYPE_PIVOT_POINT_REVERSAL= 0x100000
    
   };
- #define PATTERNS_TOTAL              (29)                    // Total number of patterns (including the missing one)
+ #define PATTERNS_TOTAL              (31)                    // Total number of patterns (including the missing one)
  //+------------------------------------------------------------------+
  //| Pattern integer properties                                       |
  //+------------------------------------------------------------------+

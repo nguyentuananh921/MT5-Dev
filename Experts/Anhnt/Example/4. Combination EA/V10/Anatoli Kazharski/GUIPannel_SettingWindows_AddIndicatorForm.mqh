@@ -1,8 +1,8 @@
 //+------------------------------------------------------------------+
-//|                                   GUIPannel_AddIndicatorForm.mqh |
+//|                    GUIPannel_SettingWindows_AddIndicatorForm.mqh |
 //+------------------------------------------------------------------+
-#ifndef GUIPANNEL_ADDINDICATORFORM_MQH
-#define GUIPANNEL_ADDINDICATORFORM_MQH
+#ifndef GUIPANNEL_SETTINGWINDOWS_ADDINDICATORFORM_MQH
+#define GUIPANNEL_SETTINGWINDOWS_ADDINDICATORFORM_MQH
 #include "GUIPannel.mqh"
 //+-------------------------------------------------------------------------+
 //| To Add Indicator                                                        |
@@ -495,4 +495,4 @@
     // (CGUIPannel no longer holds CChartObjCollection).
     m_indicator_template_manager.AddIndicatorToIndicatorTemplateSetting(m_current_param_type, params);
  }
-#endif // GUIPANNEL_ADDINDICATORFORM_MQH
+#endif // GUIPANNEL_SETTINGWINDOWS_ADDINDICATORFORM_MQH

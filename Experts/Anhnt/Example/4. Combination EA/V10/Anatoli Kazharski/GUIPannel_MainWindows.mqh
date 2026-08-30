@@ -89,10 +89,12 @@
     static double s_deposit_val = 0;
     static double s_profit_val = 0;
 
-    double deposit_val = DepositLoad(false);
-    double profit_val = AccountInfoDouble(ACCOUNT_PROFIT);
+    CAccount *acc = (m_tradingEngine != NULL) ? m_tradingEngine.GetCurrentAccount() : NULL;
+    double deposit_val = (acc != NULL) ? acc.Margin() : ::AccountInfoDouble(ACCOUNT_MARGIN);
+    double deposit_pct = (acc != NULL && acc.Balance() != 0.0) ? (acc.Margin() / acc.Balance() * 100) : 0.0;
+    double profit_val = (m_tradingEngine != NULL) ? m_tradingEngine.CalcProfit() : ::AccountInfoDouble(ACCOUNT_PROFIT);
     string new_deposit = "Deposit load: " + ::DoubleToString(deposit_val, 2) + "/" +
-                          ::DoubleToString(DepositLoad(true), 2) + "%";
+                          ::DoubleToString(deposit_pct, 2) + "%";
     string new_time = ::TimeToString(::TimeTradeServer(), TIME_DATE | TIME_SECONDS);
     string new_profit = "Profit: " + ::DoubleToString(profit_val, 2);
     // Check if values changed, if changed, update the status bar item and redraw it. Only update when value changes to reduce CPU usage.
@@ -161,38 +163,38 @@
       return (true);
    } 
   //Need update later
-    // // For Main Tabs m_tabs_main on the right of Main Window m_window_main  
-    //   bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
-    //    {      
-    //     string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Monitor", "Positions", "History", "Settings","Bar Events"};
-    //     string texts[TAB_TAB_MAIN_TOTAL] = 
-    //      {
-    //       "[ Account Info Tab ]",
-    //       "[ Symbol Info Tab ]",
-    //       "[ Monitor Tab ]",
-    //       "[ Positions Tab ]",
-    //       "[ History Tab ]",
-    //       "[ Settings Tab ]",
-    //       "[ Bar Events Tab ]"
-    //      };
-    //     //--- Store the pointer to the main control
-    //      m_tabs_main.MainPointer(m_window_main);
-    //     //--- Properties
-    //      m_tabs_main.IsCenterText(true);
-    //      m_tabs_main.PositionMode(TABS_TOP);
-    //      m_tabs_main.AutoXResizeMode(true);
-    //      m_tabs_main.AutoYResizeMode(true);
-    //      m_tabs_main.AutoXResizeRightOffset(3);
-    //      m_tabs_main.AutoYResizeBottomOffset(25);
-    //     //--- Add tabs with the specified properties
-    //      for (int i = 0; i < TAB_TAB_MAIN_TOTAL; i++)
-    //       {
-    //        m_tabs_main.AddTab(tabs_names[i], 100);            
-    //       }
-    //     //--- Create Tab before create other control element inside
-    //      if (!m_tabs_main.CreateTabs(x_gap, y_gap))
-    //       return (false);
-    //     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);
-    //     return (true);
-    //    }  
+ // For Main Tabs m_tabs_main on the right of Main Window m_window_main  
+  bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
+   {      
+    string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Monitor", "Positions", "History", "Settings","Bar Events"};
+    string texts[TAB_TAB_MAIN_TOTAL] = 
+    {
+      "[ Account Info Tab ]",
+      "[ Symbol Info Tab ]",
+      "[ Monitor Tab ]",
+      "[ Positions Tab ]",
+      "[ History Tab ]",
+      "[ Settings Tab ]",
+      "[ Bar Events Tab ]"
+    };
+    //--- Store the pointer to the main control
+     m_tabs_main.MainPointer(m_window_main);
+    //--- Properties
+     m_tabs_main.IsCenterText(true);
+     m_tabs_main.PositionMode(TABS_TOP);
+     m_tabs_main.AutoXResizeMode(true);
+     m_tabs_main.AutoYResizeMode(true);
+     m_tabs_main.AutoXResizeRightOffset(3);
+     m_tabs_main.AutoYResizeBottomOffset(25);
+    //--- Add tabs with the specified properties
+     for (int i = 0; i < TAB_TAB_MAIN_TOTAL; i++)
+      {
+       m_tabs_main.AddTab(tabs_names[i], 100);            
+      }
+    //--- Create Tab before create other control element inside
+     if (!m_tabs_main.CreateTabs(x_gap, y_gap))
+       return (false);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);
+    return (true);
+   }  
 #endif // CGUIPANNEL_MAINWINDOWS_MQH

@@ -475,27 +475,5 @@
             return false;
       }
     return true;
-  }  
- //+------------------------------------------------------------------+
- //| Return the number of candles for a given pattern type            |
- //+------------------------------------------------------------------+
- int CandlesForPatternType(const ENUM_PATTERN_TYPE type)
-  {
-    // Single Candlestick (1 bar) 8 pattern
-    if(type==PATTERN_TYPE_SHOOTING_STAR || type==PATTERN_TYPE_HAMMER ||
-      type==PATTERN_TYPE_INVERTED_HAMMER || type==PATTERN_TYPE_HANGING_MAN ||
-      type==PATTERN_TYPE_DOJI || type==PATTERN_TYPE_DRAGONFLY_DOJI ||
-      type==PATTERN_TYPE_GRAVESTONE_DOJI || type==PATTERN_TYPE_PIN_BAR)
-        return 1;
-    // Double Candlestick (2 bars) 9 pattern
-    if(type==PATTERN_TYPE_HARAMI || type==PATTERN_TYPE_HARAMI_CROSS ||
-      type==PATTERN_TYPE_TWEEZER || type==PATTERN_TYPE_PIERCING_LINE ||
-      type==PATTERN_TYPE_DARK_CLOUD_COVER || type==PATTERN_TYPE_ENGULFING ||
-      type==PATTERN_TYPE_OUTSIDE_BAR || type==PATTERN_TYPE_INSIDE_BAR ||
-      type==PATTERN_TYPE_RAILS)
-        return 2;
-    return 3; // Triple (3 bars) 11 pattern
   }
- //+------------------------------------------------------------------+
-
 #endif // __TIMESERIES_DELIB_MQH__

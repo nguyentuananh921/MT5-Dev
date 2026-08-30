@@ -75,7 +75,7 @@
         bool  OnTickEvent(const string symbol, SDataCalculate &data_calc);
         bool  OnChartEvent(const int id, const long& lparam,
                            const double& dparam, const string& sparam,
-                           CIndicatorTemplateManager *manager);
+                           CSymbolTFManager *manager, CIndicatorTemplateManager *templateManager);
     // Gateway
           CBarTimeSeriesCollection    *GetTimeSeriesCollection(void)                      { return &this.m_BarTimeSeriesCollection; }
           void                        SetSymbolsCollection(CSymbolsCollection *symbols)   { m_symbol_collection = symbols; }
@@ -92,19 +92,11 @@
                                       CIndicatorTemplateManager *manager);
         bool                        AddNewIndicatorToAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);    
         void                        RemoveIndicatorFromAllSeries(const ENUM_INDICATOR type, MqlParam &params[]);
-    // Layer 2 query: handle of the live indicator matching (symbol,tf,type,params), or
-    // INVALID_HANDLE if none exists yet - lets Layer 2 ask for a handle without holding/
-    // dereferencing a live CIndicatorDE* (README.md muc 7.b).
-        int                         GetIndicatorHandle(const string symbol, const ENUM_TIMEFRAMES tf,
-                                      const ENUM_INDICATOR type, MqlParam &params[]);
-    // For Candle Pattern at Layer 1               
-        bool                        SeriesApplyPatternRegistry(const string symbol, const ENUM_TIMEFRAMES timeframe);
   };
 #endif // CTIMESERIESENGINE_MQH_DECLARATION
 #ifndef CTIMESERIESENGINE_MQH_IMPLEMENTATION
 #define CTIMESERIESENGINE_MQH_IMPLEMENTATION
  #include "TimeSeriesEngine_Lifecycle.mqh"
- #include "TimeSeriesEngine_CandlePattern.mqh"
  #include "TimeSeriesEngine_Indicator.mqh"
 #endif // CTIMESERIESENGINE_MQH_IMPLEMENTATION
 #endif // CTIMESERIESENGINE_MQH

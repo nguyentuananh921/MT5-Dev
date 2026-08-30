@@ -91,6 +91,8 @@
 #ifndef CTRADING_ENGINE_MQH_IMPLEMENTATION
 #define CTRADING_ENGINE_MQH_IMPLEMENTATION
 #include "TradingEngine_Lifecycle.mqh" 
+#include "TradingEngine_MultiModule.mqh" 
+
  //+------------------------------------------------------------------+
  //| Return the first launch flag, reset the flag                     |
  //+------------------------------------------------------------------+

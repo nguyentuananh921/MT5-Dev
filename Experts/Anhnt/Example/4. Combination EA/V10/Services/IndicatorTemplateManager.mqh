@@ -23,14 +23,43 @@
  #include "JSONConfig.mqh"
  #include <Vendors\Anhnt\Library\4. Combination Lib\Defines\EventDefines.mqh>
  extern string g_ea_folder;  // From EA - same pattern TimeSeriesEngine.mqh already uses
+ // From EA (Anhnt, 2026-08-30) - shared coordination flag: set true right before the EA itself
+ // calls m_ChartObjCollection.RemoveIndicatorFromChart() (reacting to OUR OWN Data change), so
+ // the resulting native DEL event's defensive full-table rescan below can skip itself instead of
+ // misreading other untouched rows as also gone (BugNote 2026-08-28, "Setting Window treo cung").
+ // Still set from 2 other EA::OnChartEvent blocks not yet migrated (SETTING_CHANGED/DELETE), so
+ // stays a plain extern global rather than becoming a class member of just this one Manager.
+ extern bool g_suppress_del_rescan;
+ //--- SignalMarkers.mq5's own identity - moved here from the EA (Anhnt, 2026-08-30) so
+ //--- OnChartEvent() below can filter it out itself ("tay nao lo viec tay ay" - the EA just
+ //--- broadcasts the raw CHART_OBJ_EVENT_CHART_WND_IND_ADD event, this Manager owns deciding
+ //--- whether it's a real Template indicator or just its own infrastructure). Still visible to
+ //--- the EA too (EnsureMarkerIndicatorAttached/RemoveMarkerIndicator use it) since this header
+ //--- is #included before those functions are defined. ENUM_INDICATOR can't carry a custom
+ //--- "SignalMarker" sub-type - MQL5 always reports IND_CUSTOM for every custom indicator - so
+ //--- identity still has to come from a name/path substring match.
+ #define SIGNALMARKERS_PROGRAM_PATH "Vendors\\Anhnt\\Custom Buildin\\SignalMarkers"
+ #define SIGNALMARKERS_NAME_TAG     "SignalMarkers"   // substring - matches both the program path AND the runtime "SignalMarkers(<symbol>)" short name
+ // --- Chains off BARPATTERN_CONTROL_EVENTS_NEXT_CODE, not WF_CONTROL_EVENTS_NEXT_CODE directly
+ // --- (Anhnt, 2026-08-30) - CBarPatternControl (BarPatternControl.mqh, pulled in by
+ // --- GUIPannel_Define.mqh BEFORE this file) now owns the first link off
+ // --- WF_CONTROL_EVENTS_NEXT_CODE with its own event chain; chaining off ITS last value here
+ // --- instead avoids both chains claiming the same starting number.
  enum ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT
   {
-   INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT = WF_CONTROL_EVENTS_NEXT_CODE,
+   INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT = BARPATTERN_CONTROL_EVENTS_NEXT_CODE,
    INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED,        // a row (type,params) was genuinely added
    INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE,       // a row (type,params) was genuinely removed
    INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED,   // first row of this type just appeared
    INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE,  // last row of this type just disappeared
-   INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, // an existing row's setting (any field) was mutated - lparam=index, listener re-reads the row itself to see what changed
+   // --- Split from a single generic SETTING_CHANGED (Anhnt, 2026-08-30) - "tay nao lo viec tay
+   // --- ay": each listener only cared about ONE specific field, but every toggle woke all of
+   // --- them up regardless (redundant IsIndicatorShownOnChart() scan on a Buy/Sell/Alert toggle,
+   // --- redundant full SignalBridge rebuild on a Show/Alert toggle). Sound/Message Alert toggles
+   // --- fire neither - nothing currently listens for those (they're read live at alert-fire time
+   // --- by CSignalLogger, not reactively).
+   INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED,     // ShowOnChart flipped - lparam=index
+   INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED,  // Buy or Sell signal flipped - lparam=index
   };
 #ifndef CINDICATORTEMPLATEMANAGER_MQH_DECLARATION
 #define CINDICATORTEMPLATEMANAGER_MQH_DECLARATION
@@ -69,6 +98,16 @@
       //--- (order matters: LoadFromJSON does m_list.Clear(), so scanning first would be wiped).
        bool                OnInitEvent(CChartObjCollection *chart_obj);
 
+      //--- "tay nao lo viec tay ay" (Anhnt, 2026-08-30): EA broadcasts every OnChartEvent here
+      //--- unconditionally, this Manager filters for CHART_OBJ_EVENT_CHART_WND_IND_ADD/CHANGE
+      //--- itself and owns the full reaction (resolve handle->type/params, skip if it's our own
+      //--- SignalMarkers infrastructure indicator, otherwise mark an existing row Shown / add a
+      //--- brand new one / swap old identity for new). chart_obj is needed for CHANGE only (to
+      //--- resolve the indicator now occupying the changed slot) - same pointer OnInitEvent already
+      //--- takes. Moved out of EA::OnChartEvent, which used to do all of this inline.
+       bool                OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam,
+                                        CChartObjCollection *chart_obj);
+
        int                 Total(void)                                          const { return m_list.Total();   }
        CIndicatorSetting  *At(const int index)                                  const { return m_list.At(index); }
 
@@ -81,7 +120,7 @@
        bool                DeleteIndicatorFromIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
 
       //--- Data only - mutates an EXISTING row's ShowOnChart preference and fires
-      //--- INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED so EA (owns ChartObjCollection) can
+      //--- INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED so EA (owns ChartObjCollection) can
       //--- react by attaching/detaching the indicator on chart.
        bool                UpdateRow_IndicatorTemplateSetting_ShowColumn(const int index, const bool show);
 
@@ -510,7 +549,7 @@
    }
  //+------------------------------------------------------------------+
  //| Toggle an existing row's ShowOnChart preference - Data only, fires|
- //| SETTING_CHANGED so EA can attach/detach on chart in reaction.     |
+ //| SHOW_CHANGED so EA can attach/detach on chart in reaction.        |
  //+------------------------------------------------------------------+
  bool CIndicatorTemplateManager::UpdateRow_IndicatorTemplateSetting_ShowColumn(const int index, const bool show)
    {
@@ -518,7 +557,7 @@
      if(row == NULL) return false;
      row.ShowOnChart(show);
      if(!m_suppress_event)
-        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, (long)index, 0.0, "");
+        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED, (long)index, 0.0, "");
      return true;
    }
   //+------------------------------------------------------------------+
@@ -584,7 +623,166 @@
             ::Print("MY DEBUG CIndicatorTemplateManager::OnInitEvent: [", dbg_i, "] ", dbg_row.DisplayLabel(), " ShowOnChart=", dbg_row.ShowOnChart());
         }
      return ok;
-  } 
+  }
+ //+------------------------------------------------------------------+
+ //| Handle events from the Chart Window indicator objects (manual     |
+ //| changes) - moved from EA::OnChartEvent (Anhnt, 2026-08-30).       |
+ //+------------------------------------------------------------------+
+ bool CIndicatorTemplateManager::OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam,
+                                              CChartObjCollection *chart_obj)
+  {
+    if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_CHANGE)
+     {
+      int old_handle = (int)lparam;
+      int win_num    = (int)dparam;
+      int win_index  = (int)StringToInteger(sparam);
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: fired - old_handle=", old_handle, " win_num=", win_num, " win_index=", win_index);
+
+      ENUM_INDICATOR old_type; MqlParam old_params[];
+      if(::IndicatorParameters(old_handle, old_type, old_params) < 0)
+       {
+        //Print Debug
+          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - IndicatorParameters(old_handle=", old_handle, ") failed, err=", ::GetLastError());
+        return false;   //Get Old value
+       }
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: old handle=", old_handle, " old_type=", EnumToString(old_type), " win_num=", win_num, " index=", win_index);
+
+      CWndInd *new_ind = (chart_obj != NULL) ? chart_obj.GetIndicator(::ChartID(), win_num, win_index) : NULL;
+      if(new_ind == NULL)
+       {
+        //Print Debug
+          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - GetIndicator(win_num=", win_num, ", win_index=", win_index, ") returned NULL");
+        return false;
+       }
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: new name=", new_ind.Name(), " handle=", new_ind.Handle());
+
+      ENUM_INDICATOR new_type; MqlParam new_params[];
+      if(!new_ind.GetIdentity(new_type, new_params))
+       {
+        //Print Debug
+          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - new_ind.GetIdentity() failed for name=", new_ind.Name());
+        return false; //Get New value
+       }
+
+      // SignalMarkers.mq5 renames itself (IndicatorSetString(INDICATOR_SHORTNAME,...)) right
+      // after EnsureMarkerIndicatorAttached()'s ChartIndicatorAdd() - Layer 3 catches that as a
+      // CHANGE on the same handle (same bug class the ADD handler above already guards against,
+      // just one event later - see BugNote 2026-08-28, "SignalMarkers rename -> CHANGE -> IND_CUSTOM
+      // added to Template -> AddNewIndicatorToAllSeries(IND_CUSTOM) fails on every background
+      // symbol"). Identify by NAME, not a blanket type==IND_CUSTOM skip, so a real custom
+      // indicator we DO want tracked still passes through below.
+      if(new_type == IND_CUSTOM && ::StringFind(new_ind.Name(), SIGNALMARKERS_NAME_TAG) >= 0)
+       {
+        //Print Debug
+          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - handle=", old_handle, " is our own SignalMarkers, not a Template indicator");
+        return false;
+       }
+
+      // --- Check TRUOC khi Remove: neu new_type/new_params da trung 1 identity KHAC
+      // --- dang co san trong Template (vd user sua tham so indicator A trung het voi
+      // --- indicator B da co), thi khong the Add duoc nua (Manager tu chan trung) -
+      // --- neu cu Remove old truoc thi ket qua la MAT han A khoi Template ma khong co
+      // --- gi thay the. Bail o day, giu nguyen old, khong dung gi ca.
+      if(Exists(new_type, new_params))
+       {
+        //Print Debug
+          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - new params trung 1 identity khac da co trong Template - bo qua, giu nguyen old");
+        return false;
+       }
+
+      // Both fire their own INDICATOR_TEMPLATE_MANAGER_EVENT_* below - GUIPannel_Lifecycle.mqh
+      // already reacts by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(),
+      // no need to call them here too (and TYPE_ADDED/TYPE_DELETE correctly stay silent
+      // when old_type == new_type, unlike the old unconditional Sync call).
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: -> Delete old_type=", EnumToString(old_type), " then Add new_type=", EnumToString(new_type));
+      DeleteIndicatorFromIndicatorTemplateSetting(old_type, old_params); //Remove Old value
+      AddIndicatorToIndicatorTemplateSetting(new_type, new_params); //Add New value
+      return true;
+     }
+    if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_DEL)
+     {
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent DEL: win_num=", (int)dparam);
+      // EA itself just called RemoveIndicatorFromChart (Show-toggle/row-delete reacting to
+      // OUR OWN Data change) - this native DEL is the expected side effect, not a surprise.
+      // Skip the defensive rescan below entirely; see g_suppress_del_rescan declaration.
+      if(g_suppress_del_rescan)
+       {
+        g_suppress_del_rescan = false;
+        //Print Debug
+          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent DEL: self-triggered, skipping rescan");
+        return true;
+       }
+      // Native DEL event doesn't say WHICH indicator was removed - live-scan every row against
+      // real chart state and push the truth into ourselves. CGUIPannel now listens to
+      // INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED itself to refresh its Table icon, no
+      // direct call needed here.
+      for(int row = 0; row < Total(); row++)
+       {
+        CIndicatorSetting *entry = At(row);
+        if(entry == NULL) continue;
+        MqlParam params[];
+        entry.GetRawParams(params);
+        bool shown = (chart_obj != NULL) ? chart_obj.IsIndicatorShownOnChart(::ChartID(), entry.TypeEnum(), params) : entry.ShowOnChart();
+        if(shown != entry.ShowOnChart())
+           UpdateRow_IndicatorTemplateSetting_ShowColumn(row, shown);
+       }
+      return true;
+     }
+    if(id != CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_ADD) return false;
+    int handle = (int)lparam;
+    //Print Debug
+      ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent ADD: fired - handle=", handle);
+    ENUM_INDICATOR type; MqlParam params[];
+    if(::IndicatorParameters(handle, type, params) < 0)
+     {
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent ADD: bail - IndicatorParameters(handle=", handle, ") failed, err=", ::GetLastError());
+      return false;
+     }
+    // SignalMarkers.mq5 is EA's own Layer-3 marker-display program (attached by
+    // EnsureMarkerIndicatorAttached), NOT a Template indicator - its own ChartIndicatorAdd()
+    // triggers this very ADD event via CChartObjCollection::Refresh()'s diff detection, so it
+    // must be identified and excluded by NAME here, not by a blanket "type==IND_CUSTOM" skip -
+    // a future custom indicator we DO want tracked in the Template would still need to pass
+    // through below (Anhnt, 2026-08-28).
+    if(type == IND_CUSTOM && ArraySize(params) > 0 && ::StringFind(params[0].string_value, SIGNALMARKERS_NAME_TAG) >= 0)
+     {
+      //Print Debug
+        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent ADD: bail - handle=", handle, " is our own SignalMarkers, not a Template indicator");
+      return false;
+     }
+    CIndicatorSetting *entry = FindByIdentity(type, params);
+    if(entry != NULL)  //Add An Indicator exist in Indicator Template due to hide on Chart
+     {
+      // Go through this Manager's own setter (not a direct entry.ShowOnChart(true) mutation)
+      // so it fires INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED - CGUIPannel listens to
+      // that itself to refresh its Table icon, no need to call it here too.
+      if(!entry.ShowOnChart())
+       {
+        for(int row = 0; row < Total(); row++)
+         {
+          CIndicatorSetting *e = At(row);
+          if(e == entry)
+           {
+            UpdateRow_IndicatorTemplateSetting_ShowColumn(row, true);
+            break;
+           }
+         }
+       }
+      return true;
+     }
+    // AddIndicatorToIndicatorTemplateSetting() below fires INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED
+    // (+TYPE_ADDED if this is the first row of its type) - GUIPannel_Lifecycle.mqh already
+    // reacts to those by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(),
+    // no need to call them here too.
+    AddIndicatorToIndicatorTemplateSetting(type, params);
+    return true;
+  }
  //+------------------------------------------------------------------+
  //| Debug dump - README Working Rule Print Debug format                |
  //+------------------------------------------------------------------+

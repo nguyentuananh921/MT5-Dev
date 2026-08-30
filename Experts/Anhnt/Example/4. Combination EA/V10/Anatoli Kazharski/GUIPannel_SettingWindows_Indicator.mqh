@@ -33,9 +33,13 @@
   }
  void CGUIPannel::ShowSettingWindow(void)
   {
-    m_active_window_index = WindowIdx(m_window_setting);
-    Show(m_active_window_index);
-    HideAddIndicatorForm();    
+    // --- OpenWindow() (not a manual Show()+m_active_window_index set) is what actually fires
+    // --- ON_OPEN_DIALOG_BOX - the Library's own CWndEvents::OnOpenDialogBox() is what locks
+    // --- every OTHER window (State(false)) while this W_DIALOG is up. Without it m_window_main
+    // --- stays fully clickable underneath - including its own Close (X) button, which was firing
+    // --- the "remove program from chart" confirm while Setting looked open on top (Anhnt, 2026-08-30).
+    m_window_setting.OpenWindow();
+    HideAddIndicatorForm();
     FormAvailableElementsArray();
     m_treeview_indicator.RedrawTreeList();   // force scrollbar recalc now that it's actually visible
   }
@@ -91,7 +95,6 @@
       INDICATOR_GROUP_OSCILLATOR, 
       INDICATOR_GROUP_VOLUMES, 
       INDICATOR_GROUP_ARROWS}; 
-
     SIndicatorCatalogItem catalog[];
     GetIndicatorCatalog(catalog);    
     for(int g = 0; g < 4; g++)
@@ -314,7 +317,7 @@
     if(m_indicator_template_manager == NULL) return;
     int real_index = (int)StringToInteger(m_table_indicator_template.GetValue(7, row));   // row = vị trí hiển thị sau sort, không phải index thật
     int new_state = (int)m_table_indicator_template.SelectedImageIndex(4, row);
-    // Data only - EA reacts to INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED to attach/detach
+    // Data only - EA reacts to INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED to attach/detach
     // on chart (CGUIPannel no longer holds CChartObjCollection).
     m_indicator_template_manager.UpdateRow_IndicatorTemplateSetting_ShowColumn(real_index, new_state != INDICATOR_HIDE_ON_CHART);
    }
@@ -364,11 +367,11 @@
     CIndicatorSetting *entry = m_indicator_template_manager.At(real_index);
     if(entry == NULL) return;
     entry.BuySignal((int)m_table_indicator_template.SelectedImageIndex(2, row) == 0);
-    // Fire directly (no Manager method needed) - EA listens for this to force an immediate
-    // CSignalBridgeWriter rewrite. Reuses the SAME generic SETTING_CHANGED event
-    // UpdateRow_IndicatorTemplateSetting_ShowColumn already fires, lparam=index so EA's
-    // existing Show-column listener there stays correct too (Anhnt, 2026-08-28).
-    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, (long)real_index, 0.0, "");
+    // Fire directly (no Manager method needed) - EA listens for BUYSELL_CHANGED to force an
+    // immediate CSignalBridgeWriter rewrite. Own dedicated event (Anhnt, 2026-08-30) - split out
+    // of the old generic SETTING_CHANGED so a Buy/Sell toggle no longer also wakes up the
+    // Show-column/Chart-reconciliation listener, which never needed to run for this.
+    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED, (long)real_index, 0.0, "");
    }
   void CGUIPannel::OnClickToggleSellSignal(const int row)
    {
@@ -378,7 +381,7 @@
     if(entry == NULL) return;
     entry.SellSignal((int)m_table_indicator_template.SelectedImageIndex(3, row) == 0);
     // Fire directly (no Manager method needed) - same reasoning as OnClickToggleBuySignal above.
-    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED, (long)real_index, 0.0, "");
+    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED, (long)real_index, 0.0, "");
    }
   void CGUIPannel::OnClickToggleSoundAlert(const int row)
    {

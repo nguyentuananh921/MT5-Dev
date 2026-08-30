@@ -33,15 +33,18 @@
  //+------------------------------------------------------------------------------------+
  enum ENUM_SYMBOLTF_MANAGER_EVENT
   {
-   SYMBOLTF_MANAGER_EVENT_NO_EVENT = INDICATOR_TEMPLATE_MANAGER_EVENT_SETTING_CHANGED + 1,
+   SYMBOLTF_MANAGER_EVENT_NO_EVENT = INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED + 1,
    SYMBOLTF_MANAGER_EVENT_ADDED,           // a (symbol,tf) row was genuinely added
    SYMBOLTF_MANAGER_EVENT_DELETE,          // a (symbol,tf) row was genuinely removed
    SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, // GUI-side intent (e.g. navigate) - not a Data
                                             // mutation, no row involved - lparam=tf, sparam=symbol
-   SYMBOLTF_MANAGER_EVENT_ROW_CHANGED,     // an existing row's Buy/Sell signal setting was
+   // --- Renamed from ROW_CHANGED (Anhnt, 2026-08-30) - this Manager has no Show column like
+   // --- CIndicatorTemplateManager, so Buy/Sell is its only per-row toggle; naming it explicitly
+   // --- matches that Manager's own BUYSELL_CHANGED convention.
+   SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED, // an existing row's Buy/Sell signal setting was
                                             // toggled - fired directly by CGUIPannel (no Manager
                                             // method needed, same style as GUIPANNEL_EVENT_
-                                            // PATTERN_SIGNAL_CHANGED), no payload - EA's own
+                                            // PATTERN_BUYSELL_CHANGED), no payload - EA's own
                                             // reaction (CSignalBridgeWriter::ResetSignalBridge)
                                             // does a full re-read, not a per-row lookup (Anhnt, 2026-08-28)
   };

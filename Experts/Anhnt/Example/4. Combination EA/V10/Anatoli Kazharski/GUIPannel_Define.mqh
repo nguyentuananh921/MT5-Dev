@@ -16,15 +16,12 @@
    #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Trading\TradingLevelBubble.mqh>
    #include "..\Services\IndicatorTemplateManager.mqh"
    #include "..\Services\SymbolTFManager.mqh"
-   #include "..\Services\SignalLogger.mqh"
-   // SignalBridgeWriter.mqh NOT included here anymore (Anhnt, 2026-08-26) - it moved to EA
-   // ownership, and including it here (BEFORE CGUIPannel's own class declaration below) would
-   // make a circular reference impossible if it ever needed a CGUIPannel type. EA.mq5 includes
-   // it directly, AFTER "Anatoli Kazharski\GUIPannel.mqh", where CGUIPannel is already known.
+   #include "..\Services\SignalLogger.mqh"  
 
   // For indicator catalog/schema + CTimeSeriesEngine itself - JSON loading and
   // indicator creation live there now, GUIPannel only reads + renders (EA-local, not the Library)
    #include "..\Artyom Trishkin\TimeSeriesEngine.mqh"
+   #include "..\Artyom Trishkin\TradingEngine.mqh"
  // For GUI controls Layer 2
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\WndEvents.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\Keys.mqh>
@@ -39,35 +36,38 @@
       CHECKBOX_STATE_ON  = 0,
       CHECKBOX_STATE_OFF = 1,
     };
-  // --- CGUIPannel's own event(s) - Candle Pattern Buy/Sell has no Manager (fixed 28-pattern
-  // --- catalog, plain arrays on CGUIPannel, Anhnt 2026-08-26), so CGUIPannel fires this itself
-  // --- whenever the user toggles a Buy/Sell checkbox, same "fire on real change" convention as
-  // --- every Manager's own EVENT_* enum. Continues numbering from SymbolTFManager's own chain -
-  // --- MUST chain off its LAST value (SYMBOLTF_MANAGER_EVENT_ROW_CHANGED, added 2026-08-28), not
-  // --- SETTING_CHANGED - chaining off a non-last value collides with whatever was appended after it.
+  // --- CGUIPannel's own event(s). Continues numbering from SymbolTFManager's own chain - MUST
+  // --- chain off its LAST value (SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED), not SETTING_CHANGED -
+  // --- chaining off a non-last value collides with whatever was appended after it.
+  // --- GUIPANNEL_EVENT_PATTERN_BUYSELL_CHANGED removed (Anhnt, 2026-08-30) - CBarPatternControl
+  // --- now owns Buy/Sell directly (moved off CGUIPannel's old parallel arrays) and fires its own
+  // --- BARPATTERN_CONTROL_EVENT_BUYSELL_CHANGED (BarPatternControl.mqh) instead; CGUIPannel no
+  // --- longer fires anything on this domain's behalf.
   enum ENUM_GUIPANNEL_EVENT
     {
-      GUIPANNEL_EVENT_PATTERN_SIGNAL_CHANGED = SYMBOLTF_MANAGER_EVENT_ROW_CHANGED + 1,
-      GUIPANNEL_EVENT_MARKER_SETTING_CHANGED, // Marker style (shape/color) was saved - EA reacts
+      GUIPANNEL_EVENT_MARKER_SETTING_CHANGED = SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED + 1, // Marker style (shape/color) was saved - EA reacts
                                                // by re-attaching SignalMarkers.mq5 with the new inputs
     };
  // Define GUI control
   // --- Main panel window m_window_main
-    #define M_WINDOW_MAIN_WIDTH         750
+    #define M_WINDOW_MAIN_WIDTH         550
     #define M_WINDOW_MAIN_HEIGHT        480
     #define M_WINDOW_MAIN_MIN_WIDTH     300
     #define M_WINDOW_MAIN_MIN_HEIGHT    200
    // --- Main panel window m_window_setting
-    #define M_WINDOW_SETTING_WIDTH         750
+    #define M_WINDOW_SETTING_WIDTH         700
     #define M_WINDOW_SETTING_HEIGHT        480
     #define M_WINDOW_SETTING_MIN_WIDTH     300
     #define M_WINDOW_SETTING_MIN_HEIGHT    200
+   // Menu
+    #define M_MENU_BAR_HEIGHT           22
+    #define M_TABS_MAIN_TAB_HEIGHT      22
    //Left pannel m_treeview_SymbolTF (fixed left strip, visible on all tabs)   
     #define M_CONTROL_BORDER_GAP        3  //Gap between border of two control
     #define M_TREEVIEW_SYMBOLTF_WIDTH   85    
    //Right Pannel m_tabs_main starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.        
-    #define M_TABS_MAIN_X               M_CONTROL_BORDER_GAP+M_TREEVIEW_SYMBOLTF_WIDTH +M_CONTROL_BORDER_GAP
-    #define M_TABS_MAIN_Y               43  //WINDOW_CAPTION_HEIGHT = 22
+    #define M_TABS_MAIN_X               M_CONTROL_BORDER_GAP
+    #define M_TABS_MAIN_Y               WINDOW_CAPTION_HEIGHT+M_MENU_BAR_HEIGHT+M_TABS_MAIN_TAB_HEIGHT 
     #define M_TABS_MAIN_WIDTH           (M_WINDOW_MAIN_WIDTH - M_TABS_MAIN_X - M_CONTROL_BORDER_GAP)
    // For Tab X Gap
     #define TABS_CONFIG_X_GAP   0

@@ -61,7 +61,12 @@
                        list_series, list_patterns, param)
     {
     this.m_min_body_size             = 0;
-    this.m_ratio_body_to_candle_size = 0.10;
+    // --- Was 0.10 (i.e. 0.10%) - every ratio in this codebase is on a 0-100 percent scale
+    // --- (CBar::CandleRatioBodyToCandleSize() = BodySize()*100.0/CandleSize()), so 0.10 required
+    // --- an essentially-zero-width body on all 3 candles and could never match real price data -
+    // --- this is why Three Stars never fired. Fixed to 10.0 (10%), matching the "default 0.10"
+    // --- doc comment's actual intent (Anhnt, 2026-08-29).
+    this.m_ratio_body_to_candle_size = 10.0;
     this.m_ratio_larger_shadow_to_candle_size  = 0;
     this.m_ratio_smaller_shadow_to_candle_size = 0;
     this.m_ratio_candle_sizes                  = 0;
