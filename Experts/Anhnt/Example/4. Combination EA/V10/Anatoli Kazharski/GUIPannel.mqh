@@ -29,13 +29,65 @@
         CMenuBar                   m_menu_bar;
       // Main Tabs
         CTabs                      m_tabs_main;
-        // For table 
-            CTable                    m_table_indicator_SymbolTFMonitor; 
+        // For Table at Tab Monitor
+            CTable                    m_table_indicator_SymbolTFMonitor;
+            CTable                    m_table_indicator_CurrentTFMonitor;
           // per-row dirty-check cache for Trade tab table           
             string                    m_string_table_indicator_SymbolTFMonitor_cache_val[];
             int                       m_int_table_indicator_SymbolTFMonitor_cache_sig_icon[];
             int                       m_int_table_indicator_SymbolTFMonitor_cache_dir_icon[];
             int                       m_int_table_indicator_SymbolTFMonitor_table_row_count;
+        //For Serverside information in TAB_TAB_MAIN_POSITIONS
+            CTable                    m_table_pre_Trade_serversideInfo;
+           //Cache for table m_table_pre_Trade_serversideInfo
+            string                    m_string_serversideInfo_cache_symbol[];
+            double                    m_double_serversideInfo_cache_price[];
+            int                       m_int_serversideInfo_cache_price_dir[];       // 0=up 1=down 2=flat
+            int                       m_int_serversideInfo_cache_spread_half[];     // (Ask-Bid)/Point/2, in points
+            int                       m_int_serversideInfo_cache_spread_half_dir[]; // 0=up 1=down 2=flat
+            bool                      m_bool_serversideInfo_cache_active[];        // this row's symbol == chart's ::Symbol()
+            int                       m_int_table_serversideInfo_table_row_count;
+        // For Position information 
+            CTable                    m_table_positions;
+            CTable                    m_table_total_positions;            
+            datetime                  m_last_deal_time;                            // IsLastDealTicket's own HistorySelect watermark
+            ulong                     m_last_deal_ticket;
+        // For Setup Order Information in TAB_TAB_MAIN_POSITIONS
+          //--- SL Setting (Anhnt, 2026-09-01): a Symbol-scoped policy - not a one-shot "distance
+          //--- for this new order" value - reused both when sending a new order AND when
+          //--- Applying/correcting SL on an already-open Position (even one opened outside the
+          //--- EA, e.g. Mobile App with no SL). Fixed = manual point distance; ATR = read live
+          //--- ATR value via the SAME SymbolTFManager x IndicatorTemplateManager x
+          //--- IndicatorsCollection lookup convention as SetValuesToTable_IndicatorSymbolTFMonitor
+          //--- (GUIPannel_MainWindows_TabMonitor.mqh) - never recomputes ATR independently.
+          //--- UI moved (Anhnt, 2026-09-01) from a standalone Positions-tab row (Symbol combo +
+          //--- ButtonsGroup, both plagued by a still-unresolved "invisible until some later
+          //--- redraw" rendering bug) into a per-row popup Window opened by clicking the SL
+          //--- column's gear icon in m_table_pre_Trade_serversideInfo - the row already carries
+          //--- the Symbol, so no separate Symbol combo is needed anymore.
+            CWindow              m_window_StopLost_Setting;
+            CButtonsGroup        m_buttonsGroup_SLMode;             // Fixed / ATR
+            CTextEdit            m_edit_StopLost_DistancePoints;    // Fixed mode: manual point input
+            CTextEdit            m_edit_StopLost_ATRPeriod;         // ATR mode: lookback bars
+            CTextEdit            m_edit_StopLost_ATRMultiplier;     // ATR mode: multiplier
+            CButton              m_btn_save_StopLost_Setting;
+            string               m_string_StopLost_setting_current_symbol; // which row's Symbol m_window_StopLost_Setting is currently editing
+          //--- Per-Symbol SL Setting store - parallel arrays, same convention as
+          //--- m_string_serversideInfo_cache_symbol[] below.
+            string               m_string_StopLost_cache_symbol[];
+            ENUM_SL_MODE         m_enum_StopLost_cache_mode[];
+            int                  m_int_StopLost_cache_distance_pts[];
+            int                  m_int_StopLost_cache_atr_period[];
+            double               m_double_StopLost_cache_atr_multiplier[];
+          //--- Order-setup row, single horizontal line (Anhnt 2026-07-20): Lot mode toggle +
+          //--- Lot-or-Risk% value (same edit box, meaning switches with m_group_pre_trade_lot_mode).
+          //--- ORPHANED as of 2026-08-31: the Risk/Plan calc that consumed these was removed from
+          //--- m_table_pre_Trade_serversideInfo when that table was repurposed to pure Server
+          //--- data (Symbol/Price/StopsLevel) - these controls are still created but nothing
+          //--- reads them yet, pending a separate Risk/Plan table (Anhnt, discussed 2026-08-31).
+            CTextLabel           m_label_pre_trade_lot;
+            CButtonsGroup        m_group_pre_trade_lot_mode;        // By Distance (manual) / By Risk %
+            CTextEdit            m_edit_pre_trade_lot_or_risk;
 
      // For Layer 2 GUI Control Elements implementation in GUIPannel_SettingWindows.mqh
         CWindow                    m_window_setting;
@@ -136,8 +188,7 @@
         ENUM_PATTERN_DIRECTION m_candle_pattern_last_seen[];
         ENUM_PATTERN_DIRECTION m_candle_pattern_closebar_last_dir[];
         CSignalLogger        m_signal_logger;
-        bool                 m_signal_log_watermarks_loaded;
-       
+        bool                 m_signal_log_watermarks_loaded;       
      //For Single Source of Truth
        CIndicatorTemplateManager  *m_indicator_template_manager;   // EA owns
        CSymbolTFManager           *m_SymbolTFManager;              // EA owns
@@ -241,20 +292,32 @@
       // --- index-based lookup into m_BarPatterns_Control.GetListControls() - NULL-safe, shared
       // --- by every Candle Pattern method that needs "row i's Control object" (Anhnt, 2026-08-29).
          CBarPatternControl            *PatternControlAt(const int i) const;
-      //For Candle info popup Implementation in GUIPannel_CandleInfo.mqh 
+      //For Candle info popup Implementation in GUIPannel_CandleInfo.mqh
           bool                          MouseOverCandleInfoWindow(void);
+       //--- True while (px,py) sits inside ANY of our own visible GUI windows (m_window_main,
+       //--- m_window_setting, m_window_candle_infomation, ...) - loops CWndContainer's own
+       //--- m_windows[] instead of hardcoding each window by name, so a window added later is
+       //--- covered automatically. Defaults to the cursor's own position (ChartXYToTimePrice(),
+       //--- CalculateAtCandle()'s own underlying call, has no concept of "obstructed by a GUI
+       //--- panel" - stops Alt-hover rendering a phantom pattern-bitmap/tooltip UNDER a panel);
+       //--- pass an explicit point for a screen position computed from a PRICE instead
+       //--- (ChartTimePriceToXY) (Anhnt, 2026-08-31).
+          bool                          MouseOverAnyGUIWindow(const int px = INT_MIN, const int py = INT_MIN);
+       //--- Resolves the bar under the cursor RIGHT NOW - 0 if the cursor isn't over any real
+       //--- candle (also doubles as the "MouseOverCandle" bool check: != 0). Shared by both the
+       //--- Shift (CandleInfo) and Alt (PatternBitmap) hover branches in OnEvent, which used to
+       //--- each redo ChartXYToTimePrice/iBarShift/iTime independently (Anhnt, 2026-08-31).
+          datetime                      CalculateAtCandle(void);
        //For Candle Info Window
-          void                          RepositionCandleInfoWindow(const int cursor_x, const int cursor_y);
-          void                          ShowCandleInfoPopup(const int cursor_x, const int cursor_y);
-          void                          HideCandleInfoPopup(void);
-          bool                          CreateWindowCandleInfo(void);
-          bool                          RefreshCandleInfoWindow(const datetime bar_time);
+          void                          RepositionWindow_CandleInfo(const int cursor_x, const int cursor_y);
+          void                          ShowWindow_CandleInfo(const int cursor_x, const int cursor_y);
+          void                          HideWindow_CandleInfo(void);
+          bool                          CreateWindow_CandleInfo(void);
+          bool                          RefreshWindow_CandleInfo(const datetime bar_time);
        //For Candle Pattern
           void                          ShowPatternBitmapAtBar(const datetime bar_time);
           void                          HidePatternBitmapAtBar(void);
-          void                          ShowCandlePatternTooltipInfo(CBarPattern *pat); 
-      //Calculation for multi module implemented in GUIPannel_MultiModule.mqh
-         //double                         DepositLoad(const bool percent_mode, const double price = 0.0, const string symbol = "", const double volume = 0.0); 
+          void                          ShowTooltip_CandlePatternInfo(CBarPattern *pat);
       //
           CTradingLevelBubble             m_trading_bubble;                    // OWNED - self-manages its own lazy-init via EnsureCreated()`
       //For Sound and Message Alerts Implementation in GUIPannel_SoundAndMessageAlerts.mqh
@@ -278,82 +341,27 @@
          void                         ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name,
                                          ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key,
                                          const string label, const string tf_text, const int digits,
-                                         const bool buy_on, const bool sell_on, const bool symtf_buy, const bool symtf_sell);
-      //Temporary comment out
-       //Private Properties        
-        
-        //   // Main Tab on Right of m_window_main
-        //     CTabs                     m_tabs_main;           
-        //   //For TAB_TAB_MAIN_MONITOR of m_tabs_main implementation in GUIPannel_TabMonitor.mqh
-        
-        //   //For TAB_TAB_MAIN_POSITIONS at m_tabs_main implementation in GUIPannel_TabPositions.mqh
-        //     CComboBox                 m_combo_pre_Trade_plan_symbol;
-        //   //--- Order-setup row, single horizontal line (Anhnt 2026-07-20): Distance mode toggle
-        //   //--- + Distance value, Lot mode toggle + Lot-or-Risk% value (same edit box, meaning
-        //   //--- switches with m_group_pre_trade_lot_mode - see SetValuesToPreTradePlanTable).
-        //     CTextLabel           m_label_pre_trade_distance;
-        //     CButtonsGroup        m_group_pre_trade_distance_mode;   // Fixed / ATR
-        //     CTextEdit            m_edit_pre_trade_distance_pts;
-        //     CTextLabel           m_label_pre_trade_lot;
-        //     CButtonsGroup        m_group_pre_trade_lot_mode;        // By Distance (manual) / By Risk %
-        //     CTextEdit            m_edit_pre_trade_lot_or_risk;
-        //     CTable               m_table_pre_Trade_plan;
-        //     CTable               m_table_positions;
-        //     datetime             m_last_deal_time;   // IsLastDealTicket's own HistorySelect watermark
-        //     ulong                m_last_deal_ticket;  
-        //   //For controls at TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER at m_tabs_main_setting_config implementation in GUIPannel_TabSettingMarker.mqh       
-      
-        
-        
-           
-       // private: 
-        //   // For Main Tab on the right of Main Window m_window_main
-        
-        //   // For Status bar on the bottom of m_window_main  
-        //   // //For indicator - both free functions in the Library (TimeseriesDELib.mqh), not CGUIPannel members
-        //   //   void                         BuildTemplateMatchKey(CIndicatorDE *ind, SIndicatorCatalogItem &catalog[], string &type_key, string &params_key);
-        //   //   string                       BuildIndicatorTextLabel(const ENUM_INDICATOR type, MqlParam &params[], SIndicatorCatalogItem &catalog[]);
-        
-        // // For TAB_TAB_MAIN_POSITIONS implementation in GUIPannel_TabPosition.mqh
-        //   //For Pre-Trade-Plan area (TAB_TAB_MAIN_POSITIONS), sits above m_table_positions - symbol
-        //   //picker + single-row order-setup table. Skeleton only (Anhnt 2026-07-20): Buy/Sell cells
-        //   //are plain CELL_BUTTON placeholders, NOT wired to send real orders yet - that needs the
-        //   //Distance(Fixed/ATR) and Lot(Manual/Risk%) mode toggles first (separate ButtonsGroup
-        //   //controls, not declared yet) to actually compute a price/lot worth sending.
-        //     bool                         CreatePreTradePlanSymbolCombo(const int x, const int y);
-        //     bool                         CreatePreTradePlanControls(const int x, const int y);
-        //     bool                         CreateTablePreTradePlan(const int x, const int y);
-        //     bool                         SetValuesToPreTradePlanTable(bool force = false);
-        //   //For Positions Table m_table_positions (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1,
-        //   //raw ::PositionsTotal()/::PositionGetX() loops (not Layer 1's CMarketCollection) - temporary,
-        //   //per user request to bring V1's table over as-is before any redesign.
-        //     bool                         CreateTablePositions(const int x_gap, const int y_gap);
-        //     void                         InitializePositionsTable(void);
-        //     bool                         SetValuesToPositionsTable(string &symbols_name[], bool force = false);
-        //     bool                         IsLastDealTicket(void);
-        //     int                          GetPositionsSymbols(string &symbols_name[]);
-        //     double                       PositionAveragePrice(const string symbol);
-        //     int                          PositionsTotal(const string symbol);
-        //     double                       PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
-        //     double                       PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
-             
-        // --- EnsureMarkerIndicatorAttached/RemoveMarkerIndicator/ReattachSignalMarkersIndicator
-        // --- moved to EA (Anhnt, 2026-08-28) - chart-level Layer 3 work, same reasoning as
-        // --- ShowIndicatorOnChart/RemoveIndicatorFromChart already living there, not CGUIPannel.
-        
-        
-        // // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS implementation GUIPannel_TabSettingIndicator.mqh    
-                 
-        //   // For nested config tabs (m_tabs_main_setting_config) inside TAB_TAB_MAIN_SETTINGS implementation GUIPannel_TabSettingIndicator.mqh            
-        
-        //   // --- catalog[] type->group lookup, shared by every call site that needs a Group for
-        //   // --- ChartIndicatorAdd's sub_window calc (Show/Add/Replace) - no live CIndicatorDE needed,
-        //   // --- catalog[] already carries the type->group mapping (README.md muc 7.b). 
-        //     // --- ApplyLoadedIndicatorBuySell/BuildTemplateBuySellSoundMessageArrays deleted
-        //     // --- (SynIndicatorPlan.md, Dot 3b, 2026-08-17) - UpdateRow_IndicatorTemplateSetting() paints Buy/Sell/
-        //     // --- Sound/Message straight from m_indicator_template_setting[row] (Anhnt, 2026-08-18);
-        //     // --- Save already read that same array directly, so there's nothing left to "apply".
-
+                                         const bool buy_on, const bool sell_on, const bool symtf_buy, const bool symtf_sell);       
+       // For TAB_TAB_MAIN_POSITIONS implementation in GUIPannel_MainWindows_TabPositions.mqh          
+            bool                         CreateWindowStopLostSetting(const string caption_text);
+            bool                         CreateButtonsGroup_SLMode(const int x, const int y);   // attaches to m_window_StopLost_Setting
+            void                         ShowWindowStopLostSetting(const string symbol);
+            void                         HideWindowStopLostSetting(void);
+            bool                         CreatePreTradePlanControls(const int x, const int y);
+            bool                         CreateTable_PreTradeServersideInfo(const int x, const int y);
+            bool                         SyncTable_PreTradeServersideInfo(bool force = false);
+          //For Positions Table m_table_positions (TAB_TAB_MAIN_POSITIONS) - ported verbatim from V1,
+          //raw ::PositionsTotal()/::PositionGetX() loops (not Layer 1's CMarketCollection) - temporary,
+          //per user request to bring V1's table over as-is before any redesign.
+            bool                         CreateTablePositions(const int x_gap, const int y_gap);
+            void                         InitializePositionsTable(void);
+            bool                         SetValuesToPositionsTable(string &symbols_name[], bool force = false);
+            bool                         IsLastDealTicket(void);
+            int                          GetPositionsSymbols(string &symbols_name[]);
+            double                       PositionAveragePrice(const string symbol);
+            int                          PositionsTotal(const string symbol);
+            double                       PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+            double                       PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
       public:
        // Lifecycle method implemented in GUIPannel_Lifecycle.mqh
                                         CGUIPannel(void);
@@ -384,13 +392,7 @@
         void                           SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
         void                           SetTradingControl(CTradingControl *trading_control) { m_trading_bubble.SetTradingControl(trading_control); }
         void                           SetSymbolTFManager(CSymbolTFManager *manager) { m_SymbolTFManager = manager; }
-       //For Layer 4 Working with file
-       //   void SyncIndicatorTemplateSettingToBridge(void); //Move to SignalMarker
-       // --- EA needs this to pass as iCustom inputs when attaching SignalMarkers.mq5 - fixed
-       // --- GUI-only catalog (no Manager), read-only accessor, must be public (Anhnt, 2026-08-28 -
-       // --- moved out of the private: section above, where EA couldn't actually call them).
-       // --- GetPatternSignalArrays() removed (Anhnt, 2026-08-29): CSignalBridgeWriter now reads
-       // --- Buy/Sell straight off m_BarPatterns_Control (live), no more EA-pushed snapshot.
+       //For Layer 4 Working with file       
         void                           GetMarkerSettings(int &single_buy, int &single_sell, int &multi_buy, int &multi_sell,
                                                            int &pattern_buy, int &pattern_sell, int &combo_buy, int &combo_sell,
                                                            color &buy_clr, color &sell_clr, color &nonrelated_clr) const;
@@ -403,8 +405,7 @@
 #ifndef CGUIPANNEL_MQH_IMPLEMENTATION
 #define CGUIPANNEL_MQH_IMPLEMENTATION
 //For implementation seperation in module
- #include "GUIPannel_Lifecycle.mqh"   //Implementation of Init, Deinit and other lifecycle events  
- //#include "GUIPannel_MultiModule.mqh" //Implementation of function using in multi module GUI Pannel
+ #include "GUIPannel_Lifecycle.mqh"   //Implementation of Init, Deinit and other lifecycle events   
  #include "GUIPannel_MainWindows.mqh" //Implementation of function Main Windows m_window_main
  #include "GUIPannel_SettingWindows_Indicator.mqh" //Implementation of function Setting Windows m_window_setting
  #include "GUIPannel_SettingWindows_AddIndicatorForm.mqh"
@@ -414,8 +415,7 @@
  #include "GUIPannel_SettingWindows_Sound.mqh"
  #include "GUIPannel_CandleInfo.mqh" 
  #include "GUIPannel_SoundAndMessageAlerts.mqh"
- #include "GUIPannel_MainWindows_TabMonitor.mqh"  
-  //  #include "GUIPannel_TabPositions.mqh"
-  
+ #include "GUIPannel_MainWindows_TabMonitor.mqh"
+ #include "GUIPannel_MainWindows_TabPositions.mqh"    
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__

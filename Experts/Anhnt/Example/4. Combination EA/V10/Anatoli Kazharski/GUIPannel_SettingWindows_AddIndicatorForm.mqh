@@ -324,7 +324,9 @@
   {
    m_current_param_type    = type;
    m_btn_add_indicator.Show();
-   m_btn_save_indicator.Show();
+   // --- m_btn_save_indicator NOT shown here (Anhnt, 2026-08-31) - its visibility is now driven
+   // --- by CIndicatorTemplateManager's own ADDED/DELETE/SHOW_CHANGED/BUYSELL_CHANGED events
+   // --- (see OnEvent), not by whether this form happens to be open.
    SIndicatorParam schema[];
    int total = GetIndicatorParamSchema(type, schema);
    // Layer 2 layout - decided BEFORE we touch a single control, separate
@@ -448,7 +450,9 @@
       m_param_combo[i].Hide();
     }
     m_btn_add_indicator.Hide();
-    m_btn_save_indicator.Hide();     
+    // --- m_btn_save_indicator NOT hidden here (Anhnt, 2026-08-31) - see ShowAddIndicatorForm();
+    // --- this is called on every tree-node/tab switch, which would otherwise wipe out a
+    // --- still-pending "unsaved change" indicator that has nothing to do with the form closing.
   } 
  //+-------------------------------------------------------------------------+  
  //| "Add" button click handler — converts text fields to MqlParam[]         |  

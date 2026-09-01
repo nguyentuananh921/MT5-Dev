@@ -374,8 +374,6 @@
        for(int c = 0; c < ArraySize(catalog); c++)
           if(catalog[c].ind_type == row.TypeEnum()) { type_key = catalog[c].name; break; }
        if(type_key == "") continue;
-       MqlParam raw_params[];
-       row.GetRawParams(raw_params);
        if(saved > 0) out_json += ",\n";
        saved++;
        // "show" is chart-live truth, never persisted - see ReadTemplateEntry's comment.
@@ -384,7 +382,7 @@
                    ", \"m_sound_alert\": " + (row.SoundAlert() ? "true" : "false") +
                    ", \"m_message_alert\": " + (row.MessageAlert() ? "true" : "false") + ", \"m_indicator_params\": [";
        string params_text[];
-       BuildIndicatorParamsText(row.TypeEnum(), raw_params, params_text);
+       row.JsonParamsText(params_text);
        for(int p = 0; p < ArraySize(params_text); p++)
         {
          if(p > 0) out_json += ", ";

@@ -348,6 +348,9 @@
     // --- Returns (1) the index and (2) the text of the selected row in the table
       int               SelectedItem(void)                const { return(m_selected_item);          }
       string            SelectedItemText(void)            const { return(m_selected_item_text);     }
+    // --- Returns the index of the hovered row and column (WRONG_VALUE if none)
+      int               HoveredRow(void)                  const { return(m_item_index_focus);       }
+      int               HoveredColumn(void);
     // --- Modes (1) row highlighting when hovering the mouse cursor, (2) sorted data mode
       void              LightsHover(const bool flag)            { m_lights_hover=flag;              }
       void              IsSortMode(const bool flag)             { m_is_sort_mode=flag;              }
@@ -4032,6 +4035,27 @@
    // --- Update
       Update(true);
    }
+   //+------------------------------------------------------------------+
+   // | Returns the column index under the mouse cursor (WRONG_VALUE if none) |
+   //+------------------------------------------------------------------+
+   int CTable::HoveredColumn(void)
+    {
+    // --- Must be in focus
+      if(!m_table.MouseFocus())
+         return(WRONG_VALUE);
+    // --- Get the relative X-coordinate under the mouse cursor
+      int x=m_mouse.RelativeX(m_table);
+    // --- Account for horizontal scroll offset
+      int xoffset=(int)::ObjectGetInteger(m_chart_id,m_table.ChartObjectName(),OBJPROP_XOFFSET);
+      x+=xoffset;
+    // --- Looking for which column the cursor falls in
+      for(uint i=0; i<m_columns_total; i++)
+       {
+         if(x>=m_columns[i].m_x && x<=m_columns[i].m_x2)
+            return((int)i);
+       }
+      return(WRONG_VALUE);
+    }
    //+------------------------------------------------------------------+
  #endif // CTABLE_MQH_IMPLEMENTATION
 #endif // __TABLE_MQH__

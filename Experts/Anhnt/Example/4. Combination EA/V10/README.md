@@ -2,7 +2,7 @@
  1. Working Rule:
  [] Trao đổi bằng tiếng Việt, Comment trong code bằng tiếng Anh. 
  [] Print Debug: Để tiện cho việc xóa Print Debug đi thì
-   - Print debug ra file lấy tên file là tên class.   
+   - Print debug ra file lấy tên file là tên class kèm Debug_<which>   
    - ::Print("MY DEBUG    CGUIPannel::LineRepresentsIndicator .....=", ....);
    - Print Debug cần được căn lề để khi fold cho tiện theo format 
     //Print Debug
@@ -28,8 +28,7 @@
  [] Với Table SymbolTFSetting chỉ có 3 method
   - PopulateTable_SymbolTFSetting
   - CreateTable_SymbolTFSetting
-  - SyncTable_SymbolTFSetting()
-  
+  - SyncTable_SymbolTFSetting()  
  [] Với TreeView không tách bạch được việc sửa 1 đơn vị nhỏ và sync hàng loạt nên chỉ có 3 method cần đặt theo thứ tự
    - PopulateTreeView chuẩn bị data
    - CreateTreeView
@@ -46,6 +45,8 @@
  [] Mọi sự thay đổi trong code cần trao đổi trước.
  [] Hạn chế tối đa Flicker ở Layer 2.
  [] Hạn chế viết method Inline, chỉ các method return ngắn gọn,mới dùng inline.
+ [] Hạn chế thêm Method thay vì sửa method cũ khiến cho việc dọn dẹp khó khăn.
+  -Thay vì thêm thì sửa method cũ hoặc đổi tên Method cũ.
  [] Thống nhất lại format của Comment ở mỗi đầu hàm theo format
    //+-------------------------------------------------------------------------+  
    //|                                                                         |
@@ -79,7 +80,19 @@
    - Scan Indicator on Chart on Init
    - Add Indicator ->User Manual Add Indicator
    - Modify Indicator on Chart ->Có thê thay đổi Parameter còn thay đổi Style các Layer không phải làm gì. 
-  
+  [] Trading
+   Buy -> Khi khớp khớp với Bid tính Profit với Bid
+   Sell -> Khi khớp khốp với Ask tính Profit với Ask
+    Symbol
+    SYMBOL_BID (ở dưới) /SYMBOL_ASK (ở trên)
+    SYMBOL_POINT -> Đơn vị thống nhất giữa các Symbol
+    SYMBOL_DIGITS
+    SYMBOL_TRADE_STOPS_LEVEL ->KHoảng cách tối thiểu với giá toàn bằng 0
+    SYMBOL_TRADE_TICK_VALUE-> Bước nhẩy nhỏ nhất của giá.  
+    SYMBOL_VOLUME_MIN/MAX/STEP
+    SYMBOL_TRADE_MODE
+    SYMBOL_FILLING_MODE
+    SYMBOL_TRADE_FREEZE_LEVEL
 4. EA gồm có 
  [] Layer 1:PureData Sử dụng Library của Artyom Trishkin
    - Library link Lib https://www.mql5.com/en/articles/14710
@@ -111,3 +124,4 @@
       + CSymbolTFManager thì move sang SymbolTFManager.mqh
       + Setting Marker->
       + Setting Sound ->
+  

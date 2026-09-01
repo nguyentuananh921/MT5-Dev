@@ -16,7 +16,7 @@
    #include <Vendors\Anhnt\Library\4. Combination Lib\Graph\Trading\TradingLevelBubble.mqh>
    #include "..\Services\IndicatorTemplateManager.mqh"
    #include "..\Services\SymbolTFManager.mqh"
-   #include "..\Services\SignalLogger.mqh"  
+   #include "..\Services\SignalLogger.mqh"
 
   // For indicator catalog/schema + CTimeSeriesEngine itself - JSON loading and
   // indicator creation live there now, GUIPannel only reads + renders (EA-local, not the Library)
@@ -88,7 +88,13 @@
       TAB_TAB_MAIN_EVENTS, //For Pattern Information      
       TAB_TAB_MAIN_TOTAL,
      };
-     //m_tabs_main_setting_config      
+     //For m_buttonsGroup_SLMode at TAB_TAB_MAIN_POSITIONS
+      enum ENUM_SL_MODE
+       {
+        SL_MODE_FIXED = 0,
+        SL_MODE_ATR,
+       };
+     //m_tabs_main_setting_config
       enum ENUM_TAB_MAIN_SETTINGS_CONFIG
        {
         TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR =0,
@@ -173,14 +179,17 @@
    #define SYMBOLTF_NOTE_H           20
    #define SYMBOLTF_BTN_Y            (SYMBOLTF_NOTE_H + 5)
    #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + BTN_HEIGHT + 10)
-  // --- Positions tab: pre-trade-plan area above m_table_positions (Anhnt 2026-07-20).
-  // --- Row 1 (y=POSITIONS_PLAN_Y): m_combo_pre_Trade_plan_symbol.
-  // --- Row 2 (y=POSITIONS_PLAN_CONTROLS_Y): Distance mode+value, Lot mode+value - one
-  // --- horizontal row per user request ("dàn hàng ngang").
-  // --- Row 3 (y=POSITIONS_PLAN_TABLE_Y): m_table_pre_Trade_plan.
+  // --- Positions tab (Anhnt 2026-09-01, rough first pass - to be rearranged together):
+  // --- m_table_pre_Trade_serversideInfo stays at (x=0, y=POSITIONS_PLAN_TABLE_Y) on the LEFT.
+  // --- Everything else sits to its RIGHT, starting at x=POSITIONS_PLAN_RIGHT_X, same
+  // --- row-level as the table's own top: m_combo_pre_Trade_plan_symbol, then
+  // --- m_buttonsGroup_SLMode beside it (+170) on the same row (Symbol picker and its
+  // --- SL Setting mode sit together since the mode is Symbol-scoped), then Lot mode+value
+  // --- (ORPHANED, ties to a future Risk/Plan table, not SL) on the row below (+25).
    #define POSITIONS_PLAN_Y             0
    #define POSITIONS_PLAN_CONTROLS_Y    25
    #define POSITIONS_PLAN_TABLE_Y       50
+   #define POSITIONS_PLAN_RIGHT_X       290
    #define POSITIONS_TABLE_Y            175
   // --- Candle info popup (BugNote 7.2): Ctrl+hover shows m_table_candle_information_atBar -
   // --- every tracked Indicator (current chart's symbol, every TF with a BarSeries) with its

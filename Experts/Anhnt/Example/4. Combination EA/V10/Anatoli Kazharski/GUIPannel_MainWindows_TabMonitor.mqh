@@ -7,7 +7,7 @@
 #include "GUIPannel.mqh"
  //To Monitor Indicator value Per Symbol + Tf Value
  //+------------------------------------------------------------------+
- //| Create Trade tab table: Symbol / TF / Indicator / Value / Buy / Sell / Trailing
+ //| Create Trade tab table: Symbol / TF / Signal / Indicator / Value / Buy / Sell / Trailing
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreateTable_IndicatorSymbolTFMonitor(const int x, const int y)
   {
@@ -21,16 +21,19 @@
     m_table_indicator_SymbolTFMonitor.SelectableRow(true);
     m_table_indicator_SymbolTFMonitor.LightsHover(true);
     m_table_indicator_SymbolTFMonitor.IsSortMode(true);
-    // 7 cols: Symbol | TF(+signal icon) | Indicator(+dir icon) | Value | Buy | Sell | Trailing
-    // Col 1 (TF): signal icon = trend direction; TextXOffset=22 clears 16px icon at x=3
-    // Col 2 (Indicator): dir icon = value slope (v0 vs v1); same TextXOffset=22
-    // Col 3 (Value): no icon, ALIGN_RIGHT, colored text only
-    m_table_indicator_SymbolTFMonitor.TableSize(7, 20);
-    int widths[7]    = {90,  60, INDICATOR_PARATEXT_WIDTH, 90, 40, 40, 55};
-    int img_x_off[7] = { 3,   3,   3,  0, 10, 10, 10};
-    int img_y_off[7] = { 3,   3,   3,  0,  3,  3,  3};
-    int txt_x_off[7] = {22,  22,  22,  5,  5,  5,  5};
-    ENUM_ALIGN_MODE al[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT,
+    // 8 cols: Symbol(+active-chart icon) | TF(+active-chart icon) | Signal(icon-only header) |
+    // Indicator(+dir icon) | Value | Buy | Sell | Trailing
+    // Col 0 (Symbol): active-chart icon = this row's symbol matches ::Symbol(); TextXOffset=22
+    // Col 1 (TF): active-chart icon = this row's TF matches ::Period(); TextXOffset=22
+    // Col 2 (Signal): icon-only column (no text) - the Signal system (Buy/Sell/neutral)
+    // Col 3 (Indicator): dir icon = value slope (v0 vs v1); TextXOffset=22
+    // Col 4 (Value): no icon, ALIGN_RIGHT, colored text only
+    m_table_indicator_SymbolTFMonitor.TableSize(8, 20);
+    int widths[8]    = {90,  60,  22, INDICATOR_PARATEXT_WIDTH, 90, 40, 40, 55};
+    int img_x_off[8] = { 3,   3,  3,   3,  0, 10, 10, 10};
+    int img_y_off[8] = { 3,   3,   3,   3,  0,  3,  3,  3};
+    int txt_x_off[8] = {22,  22,   5,  22,  5,  5,  5,  5};
+    ENUM_ALIGN_MODE al[8] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT,
                             ALIGN_RIGHT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
     m_table_indicator_SymbolTFMonitor.ColumnsWidth(widths);
     m_table_indicator_SymbolTFMonitor.ImageXOffset(img_x_off);
@@ -42,13 +45,18 @@
 
     m_table_indicator_SymbolTFMonitor.SetHeaderText(0, "Symbol");
     m_table_indicator_SymbolTFMonitor.SetHeaderText(1, "TF");
-    m_table_indicator_SymbolTFMonitor.SetHeaderText(2, "Indicator");
-    m_table_indicator_SymbolTFMonitor.SetHeaderText(3, "Value");
-    m_table_indicator_SymbolTFMonitor.SetHeaderText(4, "Buy");
-    m_table_indicator_SymbolTFMonitor.SetHeaderText(5, "Sell");
-    m_table_indicator_SymbolTFMonitor.SetHeaderText(6, "Trailing");
+    //Column 2 for Signal - icon-only header
+     uint resource_indices_signal[] = {IMAGE_RESOURCE_BMP16_SIGNAL_PNG};
+     m_table_indicator_SymbolTFMonitor.SetHeaderText(2, "");
+     m_table_indicator_SymbolTFMonitor.SetHeaderImage(2, resource_indices_signal);
+    m_table_indicator_SymbolTFMonitor.SetHeaderText(3, "Indicator");
+    m_table_indicator_SymbolTFMonitor.SetHeaderText(4, "Value");
+    m_table_indicator_SymbolTFMonitor.SetHeaderText(5, "Buy");
+    m_table_indicator_SymbolTFMonitor.SetHeaderText(6, "Sell");
+    m_table_indicator_SymbolTFMonitor.SetHeaderText(7, "Trailing");
 
     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_indicator_SymbolTFMonitor);
+
     return true;
   }
  //+------------------------------------------------------------------+
@@ -56,9 +64,11 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::SetValuesToTable_IndicatorSymbolTFMonitor(void)
   {
-   // Col 0 active-chart icon cache - only 2 states, local static (function-scoped, not a class
-   // member) is enough; no other method needs to see this, unlike the sig/dir/val caches above.
-    static int s_cache_sym_icon[];
+   // Whole-row "this is the chart's current Symbol+TF" cache - drives Col 0/1's icon (both
+   // together, not independently - a row only lights up when Symbol AND TF both match) and the
+   // row's background highlight. Local static (function-scoped, not a class member) is enough;
+   // no other method needs to see this, unlike the sig/dir/val caches above.
+    static bool s_cache_row_active[];
    if(m_IndicatorsCollection == NULL || m_SymbolTFManager == NULL || m_indicator_template_manager == NULL)
        return;
    // --- Manager-first row build (Anhnt, 2026-08-30): m_SymbolTFManager (which Symbol+TF pairs are
@@ -67,9 +77,10 @@
    // --- Layer 1 (m_IndicatorsCollection) is only consulted to find each combination's live
    // --- CIndicatorDE instance (by raw-param identity match); a combination with no Layer 1
    // --- instance yet (background sync still catching up) is simply skipped this pass.
-    CIndicatorDE *all_inds[];
-    string        all_syms[];
-    int           count = 0;
+    CIndicatorDE      *all_inds[];
+    string             all_syms[];
+    ENUM_TIMEFRAMES    all_tfs[];
+    int                count = 0;
 
     int symtf_total = m_SymbolTFManager.Total();
     int tmpl_total  = m_indicator_template_manager.Total();
@@ -108,8 +119,10 @@
 
         ::ArrayResize(all_inds, count + 1);
         ::ArrayResize(all_syms, count + 1);
-        all_inds[count] = ind;
-        all_syms[count] = sym;
+        ::ArrayResize(all_tfs,  count + 1);
+        all_inds[count]    = ind;
+        all_syms[count]    = sym;
+        all_tfs[count]     = tf;
         count++;
        }
      }
@@ -129,7 +142,7 @@
        ::ArrayResize(m_string_table_indicator_SymbolTFMonitor_cache_val,      0);
        ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_sig_icon, 0);
        ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_dir_icon, 0);
-       ::ArrayResize(s_cache_sym_icon, 0);
+       ::ArrayResize(s_cache_row_active, 0);
        m_int_table_indicator_SymbolTFMonitor_table_row_count = 0;
        m_table_indicator_SymbolTFMonitor.Update(true);
       }
@@ -153,10 +166,10 @@
      ::ArrayResize(m_string_table_indicator_SymbolTFMonitor_cache_val,      count);
      ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_sig_icon, count);
      ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_dir_icon, count);
-     ::ArrayResize(s_cache_sym_icon, count);
+     ::ArrayResize(s_cache_row_active, count);
      ::ArrayInitialize(m_int_table_indicator_SymbolTFMonitor_cache_sig_icon, -1);
      ::ArrayInitialize(m_int_table_indicator_SymbolTFMonitor_cache_dir_icon, -1);
-     ::ArrayInitialize(s_cache_sym_icon, -1);
+     ::ArrayInitialize(s_cache_row_active, false);
      for(int i = 0; i < count; i++) m_string_table_indicator_SymbolTFMonitor_cache_val[i] = "";
      // --- redraw=true on the LAST row only, same reasoning as RefreshIndicatorTable - see
      // --- README/BugNote 2026-07-14 black/smeared row-overflow bug.
@@ -170,38 +183,42 @@
        m_table_indicator_SymbolTFMonitor.SetImages(0, row, sym_img);
        m_table_indicator_SymbolTFMonitor.ChangeImage(0, row, 1);
        m_table_indicator_SymbolTFMonitor.SetValue(0, row, all_syms[row]);
-      // Col 1: signal icon (trend) + TF text — TextXOffset=22 clears icon
-       m_table_indicator_SymbolTFMonitor.SetImages(1, row, sig_img);
-       m_table_indicator_SymbolTFMonitor.ChangeImage(1, row, 2);
+      // Col 1: TF text + active-chart icon (colored = this row's TF matches the currently
+      // displayed chart TF, colorless otherwise) — same sym_img set, different match key
+       m_table_indicator_SymbolTFMonitor.SetImages(1, row, sym_img);
+       m_table_indicator_SymbolTFMonitor.ChangeImage(1, row, 1);
        m_table_indicator_SymbolTFMonitor.SetValue(1, row, TimeframeDescription(ind.Timeframe()));
-      // Col 2: signal icon + Indicator name — TextXOffset=22 pushes name past 16px icon
+      // Col 2: Signal icon only (no text) - the Signal system (Buy/Sell/neutral)
+       m_table_indicator_SymbolTFMonitor.SetImages(2, row, sig_img);
+       m_table_indicator_SymbolTFMonitor.ChangeImage(2, row, 2);
+      // Col 3: dir icon + Indicator name (full params) — TextXOffset=22 pushes name past 16px icon
        MqlParam ind_params[];
        ind.GetMqlParams(ind_params);
        string ind_label = BuildIndicatorTextLabel(ind.TypeIndicator(), ind_params, catalog);
-       m_table_indicator_SymbolTFMonitor.SetImages(2, row, val_img);
-       m_table_indicator_SymbolTFMonitor.ChangeImage(2, row, 2);
-       m_table_indicator_SymbolTFMonitor.SetValue(2, row, ind_label);
-      // Col 3: Value — ALIGN_RIGHT, no icon; direction shown by text color (red/green/gray)
-       m_table_indicator_SymbolTFMonitor.SetValue(3, row, "--");
-      // Cols 4-6: checkboxes
-       m_table_indicator_SymbolTFMonitor.CellType(4, row, CELL_CHECKBOX);
-       m_table_indicator_SymbolTFMonitor.SetImages(4, row, chk);
-       m_table_indicator_SymbolTFMonitor.ChangeImage(4, row, 1);
+       m_table_indicator_SymbolTFMonitor.SetImages(3, row, val_img);
+       m_table_indicator_SymbolTFMonitor.ChangeImage(3, row, 2);
+       m_table_indicator_SymbolTFMonitor.SetValue(3, row, ind_label);
+      // Col 4: Value — ALIGN_RIGHT, no icon; direction shown by text color (red/green/gray)
+       m_table_indicator_SymbolTFMonitor.SetValue(4, row, "--");
+      // Cols 5-7: checkboxes
        m_table_indicator_SymbolTFMonitor.CellType(5, row, CELL_CHECKBOX);
        m_table_indicator_SymbolTFMonitor.SetImages(5, row, chk);
        m_table_indicator_SymbolTFMonitor.ChangeImage(5, row, 1);
        m_table_indicator_SymbolTFMonitor.CellType(6, row, CELL_CHECKBOX);
        m_table_indicator_SymbolTFMonitor.SetImages(6, row, chk);
        m_table_indicator_SymbolTFMonitor.ChangeImage(6, row, 1);
+       m_table_indicator_SymbolTFMonitor.CellType(7, row, CELL_CHECKBOX);
+       m_table_indicator_SymbolTFMonitor.SetImages(7, row, chk);
+       m_table_indicator_SymbolTFMonitor.ChangeImage(7, row, 1);
      }
      m_int_table_indicator_SymbolTFMonitor_table_row_count = count;
      m_table_indicator_SymbolTFMonitor.Update(true);
      return;
     }
    // --- Re-derive each indicator's CURRENT visual row before writing anything. CTable's own
-   // header-click sort reorders its rows internally (Col 0/1/2 identity text moves together with
+   // header-click sort reorders its rows internally (Col 0/1/3 identity text moves together with
    // the row), independent of all_inds[]'s construction order - so after a user sorts, row index
-   // no longer says which indicator is which. Col 0/1/2 text is never touched below (only their
+   // no longer says which indicator is which. Col 0/1/3 text is never touched below (only their
    // icons/colors are), so it stays a reliable post-sort identity key to match back against.
     int row_of[];
     ::ArrayResize(row_of, count);
@@ -216,7 +233,7 @@
       {
         string have = m_table_indicator_SymbolTFMonitor.GetValue(0, row) + "|" +
                        m_table_indicator_SymbolTFMonitor.GetValue(1, row) + "|" +
-                       m_table_indicator_SymbolTFMonitor.GetValue(2, row);
+                       m_table_indicator_SymbolTFMonitor.GetValue(3, row);
          if(have == want) { row_of[i] = row; break; }
       }
      }
@@ -227,14 +244,24 @@
       int row = row_of[i];
       if(row < 0) continue; // identity not found this tick - next full rebuild will resync
       CIndicatorDE *ind = all_inds[i];
-      // Col 0 (Symbol): active-chart icon - reflects whether this row's symbol matches the
-      // currently displayed chart symbol (::Symbol() changes when the user switches chart tabs).
-       int sym_icon = (all_syms[i] == ::Symbol()) ? 0 : 1;
-       if(sym_icon != s_cache_sym_icon[row])
+      // Col 0/1 (Symbol/TF) + whole-row background: all driven by ONE combined condition, not
+      // two independent per-column matches - a row (and its Symbol/TF icons) only lights up when
+      // BOTH this row's symbol AND TF match the currently displayed chart (::Symbol()/::Period()).
+      // Otherwise a merely-same-TF-different-symbol row (e.g. BTCUSDm M15 while chart shows
+      // DXYm M15) would light up its TF icon too, reading as "partially active" - not the goal.
+       bool row_active = (all_syms[i] == ::Symbol() && all_tfs[i] == (ENUM_TIMEFRAMES)::Period());
+       if(row_active != s_cache_row_active[row])
         {
-         s_cache_sym_icon[row] = sym_icon;
-         m_table_indicator_SymbolTFMonitor.ChangeImage(0, row, sym_icon);
-         m_table_indicator_SymbolTFMonitor.BackColor(0, row, clrWhite, true);
+         s_cache_row_active[row] = row_active;
+         int icon_idx = row_active ? 0 : 1;
+         // redraw=true on ChangeImage itself (RedrawCell) repaints using whatever background
+         // BackColor last set for this cell - so painting icons first then background below
+         // (or either order) can't stomp on each other.
+         m_table_indicator_SymbolTFMonitor.ChangeImage(0, row, icon_idx, true);
+         m_table_indicator_SymbolTFMonitor.ChangeImage(1, row, icon_idx, true);
+         color row_clr = row_active ? C'235,247,255' : clrWhite;
+         for(int c = 0; c < 8; c++)
+            m_table_indicator_SymbolTFMonitor.BackColor(c, row, row_clr, true);
          any_changed = true;
         }
       double v0 = ind.GetDataBuffer(0, 0); // current bar (realtime via CopyBuffer)
@@ -246,16 +273,15 @@
        color txt_clr = (dir_icon == 0) ? C'0,160,0' :    // rising  → green text
                        (dir_icon == 1) ? C'200,0,0' :    // falling → red text
                                          clrGray;         // flat    → gray text
-      // Col 2 (Indicator): dir icon = value slope (v0 vs v1) - val_img, NOT the Signal system
+      // Col 3 (Indicator): dir icon = value slope (v0 vs v1) - val_img, NOT the Signal system
        bool dir_changed = (dir_icon != m_int_table_indicator_SymbolTFMonitor_cache_dir_icon[row]);
        if(dir_changed)
         {
          m_int_table_indicator_SymbolTFMonitor_cache_dir_icon[row] = dir_icon;
-         m_table_indicator_SymbolTFMonitor.ChangeImage(2, row, dir_icon);
-         m_table_indicator_SymbolTFMonitor.BackColor(2, row, clrWhite, true);
+         m_table_indicator_SymbolTFMonitor.ChangeImage(3, row, dir_icon, true);
          any_changed = true;
         }
-      // Col 3 (Value): ALIGN_RIGHT, colored text only — redraw via TextColor(true)
+      // Col 4 (Value): ALIGN_RIGHT, colored text only — redraw via TextColor(true)
        string val_str     = (v0 == EMPTY_VALUE) ? "--" : ::DoubleToString(v0, 5);
        bool   val_changed = (val_str != m_string_table_indicator_SymbolTFMonitor_cache_val[row]);
        if(val_changed || dir_changed)  // recolor on direction change too, even if the text itself didn't
@@ -263,12 +289,12 @@
          if(val_changed)
           {
            m_string_table_indicator_SymbolTFMonitor_cache_val[row] = val_str;
-           m_table_indicator_SymbolTFMonitor.SetValue(3, row, val_str);
+           m_table_indicator_SymbolTFMonitor.SetValue(4, row, val_str);
           }
-          m_table_indicator_SymbolTFMonitor.TextColor(3, row, txt_clr, true);
+          m_table_indicator_SymbolTFMonitor.TextColor(4, row, txt_clr, true);
           any_changed = true;
         }
-      // Col 1 (TF): sig_img - the actual Signal system, NOT value slope. GetOrCreateSignal itself
+      // Col 2 (Signal): sig_img - the actual Signal system, NOT value slope. GetOrCreateSignal itself
       // returns NULL for indicator types with no CSignalXXX wired yet, so this falls back to
       // dir_icon automatically - that fallback is the only place dir_icon and sig_icon are
       // allowed to share a value.
@@ -298,8 +324,7 @@
           if(sig_icon != m_int_table_indicator_SymbolTFMonitor_cache_sig_icon[row])
            {
             m_int_table_indicator_SymbolTFMonitor_cache_sig_icon[row] = sig_icon;
-            m_table_indicator_SymbolTFMonitor.ChangeImage(1, row, sig_icon);
-            m_table_indicator_SymbolTFMonitor.BackColor(1, row, clrWhite, true);
+            m_table_indicator_SymbolTFMonitor.ChangeImage(2, row, sig_icon, true);
             any_changed = true;
            }
         }

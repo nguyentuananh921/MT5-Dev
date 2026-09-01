@@ -40,12 +40,25 @@
     // --- the "remove program from chart" confirm while Setting looked open on top (Anhnt, 2026-08-30).
     m_window_setting.OpenWindow();
     HideAddIndicatorForm();
+    // --- Clear any Alt/Shift-hover state left showing on the chart (Anhnt, 2026-09-01) - these
+    // --- live outside the Tab/Window elements-array system entirely (see audit discussed with
+    // --- Anhnt), so nothing else hides them just because Setting now covers the chart. Known,
+    // --- self-controlled transition point (we call OpenWindow() ourselves) - no polling needed,
+    // --- same reasoning as the ON_CLICK_TAB fix already covering the m_tabs_main case.
+     HidePatternBitmapAtBar();
+     HideWindow_CandleInfo();
+     m_candle_info_shown_bar = 0;
     FormAvailableElementsArray();
     m_treeview_indicator.RedrawTreeList();   // force scrollbar recalc now that it's actually visible
   }
  void CGUIPannel::HideSettingWindow(void)
   {
     m_window_setting.Hide();
+    // --- Belt-and-suspenders (Anhnt, 2026-09-01): CTabs::Hide() already cascades down through
+    // --- m_tab[].elements[] (Tabs.mqh) and hides m_btn_save_indicator along with everything else
+    // --- registered on m_tabs_main_setting_config, since m_window_setting.Hide() cascades into
+    // --- it. Kept explicit here too since Hide() is a harmless no-op if already hidden.
+     m_btn_save_indicator.Hide();
     m_active_window_index = WindowIdx(m_window_main);
     FormAvailableElementsArray();
   }

@@ -7,11 +7,17 @@ Sources: Nguồn thực hiện Trading
 - Mobile app / mobile signal source
 - EA trên PC (Expert Advisor)
 - Có thể mở rộng thêm: web service, manual input, bot khác
-- Mục tiêu cần biết trước khi Push một trading command
-  SYMBOL_TRADE_STOPS_LEVEL
-  SYMBOL_BID/SYMBOL_ASK 
-  SYMBOL_POINT
-  SYMBOL_TRADE_TICK_VALUE-> Bước nhẩy nhỏ nhất của giá.
+- Mục tiêu cần biết trước khi Push một trading command ServerSide infor
+  Symbol
+  SYMBOL_BID (ở dưới) /SYMBOL_ASK (ở trên)
+  SYMBOL_POINT ->Đơn vị thống nhất giữa các Symbol
+  SYMBOL_DIGITS
+  SYMBOL_TRADE_STOPS_LEVEL ->KHoảng cách tối thiểu với giá toàn bằng 0
+  SYMBOL_TRADE_TICK_VALUE-> Bước nhẩy nhỏ nhất của giá.  
+  SYMBOL_VOLUME_MIN/MAX/STEP
+  SYMBOL_TRADE_MODE
+  SYMBOL_FILLING_MODE
+  SYMBOL_TRADE_FREEZE_LEVEL
 -Lot size: Cần Combobox ->Cái này CTable có hỗ trợ đặt một Combobox vào trong cell (chưa Implementation)
     SYMBOL_VOLUME_MIN
     SYMBOL_VOLUME_MAX

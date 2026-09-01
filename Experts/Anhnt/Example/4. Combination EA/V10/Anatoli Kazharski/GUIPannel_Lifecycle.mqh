@@ -87,7 +87,7 @@
        // For Sound Setting
        if(!CreateTabSettingConfig_Sound(0, WINDOW_CAPTION_HEIGHT)) return false;       
        //Create m_window_candle_infomation Information window at to display signal on chart
-        if (!CreateWindowCandleInfo())
+        if (!CreateWindow_CandleInfo())
          {
           Print(__FUNCTION__, " > Failed to create candle info popup!");
           return (false);
@@ -100,18 +100,29 @@
     // --- which CComboBox's click-open mechanism depends on. Hiding before CompletedGUI
     // --- would exclude them permanently even after Show() - confirmed by reading
     // --- FormAvailableElementsArray()'s IsVisible() filter.
-     HideAddIndicatorForm();   
-    
-    
-    
-    //   //For Trade Tab at m_tabs_main
-    //   //For Positions Tab at m_tabs_main symbol combo, then the Distance/Lot mode+value
-    //   //--- controls in one horizontal row, then the order-setup table, m_table_positions
-    //   //--- still shifted down to POSITIONS_TABLE_Y below all of it.
-    //    if(!CreatePreTradePlanSymbolCombo(0, POSITIONS_PLAN_Y)) return false;
-    //    if(!CreatePreTradePlanControls(0, POSITIONS_PLAN_CONTROLS_Y)) return false;
-    //    if(!CreateTablePreTradePlan(0, POSITIONS_PLAN_TABLE_Y)) return false;
-    //    if(!CreateTablePositions(0, POSITIONS_TABLE_Y)) return false;
+     HideAddIndicatorForm();
+    // --- m_btn_save_indicator's visibility is now decoupled from the Add-form (Anhnt,
+    // --- 2026-08-31, see below) - hidden once here at startup (no pending change yet),
+    // --- shown again only by the 4 CIndicatorTemplateManager events that mean "data changed".
+     m_btn_save_indicator.Hide();
+    //For Positions Tab at m_tabs_main - symbol combo, then the Distance/Lot mode+value
+    //--- controls in one horizontal row, then the order-setup table, m_table_positions
+    //--- still shifted down to POSITIONS_TABLE_Y below all of it.
+     if(!CreateTable_PreTradeServersideInfo(0, POSITIONS_PLAN_TABLE_Y)) return false;
+    //--- Everything else sits to the RIGHT of the table, same row-level as its top
+    //--- (Anhnt, 2026-09-01, per user request) - rough first pass, to be rearranged together.
+     if(!CreateCombobox_PreTradeSymbolPlan(POSITIONS_PLAN_RIGHT_X, POSITIONS_PLAN_TABLE_Y)) return false;
+     if(!CreateButtonsGroup_SLMode(POSITIONS_PLAN_RIGHT_X + 170, POSITIONS_PLAN_TABLE_Y)) return false;
+     if(!CreatePreTradePlanControls(POSITIONS_PLAN_RIGHT_X, POSITIONS_PLAN_TABLE_Y + 25)) return false;
+     //if(!CreateTablePositions(0, POSITIONS_TABLE_Y)) return false;
+    // --- Re-sync tab visibility now that ALL tab content exists (Anhnt, 2026-08-31) -
+    // --- CreateTab_Main()'s own CreateTabs() call ran its hide-non-selected-tabs cascade way
+    // --- back at the START of CreateGUIPannel(), before the Monitor/Positions tab elements
+    // --- above even existed yet - so they were never included in that first pass and defaulted
+    // --- to plain-visible (a freshly created element's own default), regardless of which tab
+    // --- was actually selected. Bug: "table_pre_Trade_serversideInfo showing at startup even
+    // --- though Account Info tab, not Positions, was selected".
+     CWndEvents::ShowTabElements(WindowIdx(m_window_main));
     //   // --- Trading bubble: just wire the mouse pointer now (cheap, no canvas yet) -
     //   // --- it lazily creates its own canvas via EnsureCreated(), called from its own
     //   // --- OnPoll()/OnChartEvent(), only once HasAnyLevel() is true (avoid creating a
@@ -133,6 +144,7 @@
     m_treeview_symboltf_need_sync = false;
     m_treeview_indicator_need_sync = false;
     m_table_indicator_need_sync = false;
+    m_current_sl_mode = SL_MODE_FIXED;
     m_candle_info_shown_bar  = 0;
     m_active_window_index_before_candle_info = WindowIdx(m_window_main);
     m_pattern_bitmap_shown   = NULL;
@@ -167,7 +179,7 @@
       //Create GUI Pannel
          if(!CreateGUIPannel()) return false;
          m_gui_created = true;
-         UpdateGUI(true);      
+         UpdateGUI(true);
     }
    else if(uninit_reason == REASON_CHARTCHANGE)
     {
@@ -256,7 +268,10 @@
           m_table_indicator_need_sync = false;
           InitializeTable_IndicatorTemplateSetting();
         }
-      //For m_table_indicator_SymbolTFMonitor
+      //For m_table_indicator_SymbolTFMonitor - runs every OnTimerEvent tick (16ms, EA's
+      //EventSetMillisecondTimer(16)), same rate V9's equivalent (SetValuesToTableIndicatorSymbolTFValue)
+      //always ran at without issue. The flicker earlier traced back to a leftover debug Print()
+      //firing every tick on EMPTY_VALUE rows, not to the 16ms rate itself - removed (Anhnt, 2026-08-31).
        SetValuesToTable_IndicatorSymbolTFMonitor();
      //--- Handling the elements
       //ulong t0 = ::GetMicrosecondCount();
@@ -291,22 +306,24 @@
         PlaySoundCloseBar();
         CheckIndicatorAlerts();
         CheckCandlePatternAlerts();    
-      //   string pos_symbols_name[];
-      //   int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
-      //   int pos_rows_total = (int)m_table_positions.RowsTotal();
-      //   if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
-      //   {
-      //     InitializePositionsTable();
-      //     redraw_needed = true;
-      //   }
-      //   else if(pos_symbols_total > 0)
-      //     redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
-      // // --- Status Bar (Deposit Load/Profit/Server Time), only update+redraw when a value    
-      
-      // // --- Pre-trade-plan table (Anhnt 2026-07-20): Entry/SL live off Bid/Ask, dirty-checked
-      // // --- per-cell same as everywhere else in this file.
-      //   if(SetValuesToPreTradePlanTable())
-      //     redraw_needed = true;
+      //--- Positions table (ported from V1/V9, see GUIPannel_MainWindows_TabPositions.mqh) - row
+      //--- count changed (position opened/closed on a symbol never seen before, or a symbol's
+      //--- last position just closed) needs a full rebuild; otherwise just refresh values.
+        // string pos_symbols_name[];
+        // int pos_symbols_total = GetPositionsSymbols(pos_symbols_name);
+        // int pos_rows_total = (int)m_table_positions.RowsTotal();
+        // if(pos_symbols_total > 0 && pos_symbols_total != pos_rows_total)
+        // {
+        //   InitializePositionsTable();
+        //   redraw_needed = true;
+        // }
+        // else if(pos_symbols_total > 0)
+        //   redraw_needed = SetValuesToPositionsTable(pos_symbols_name);
+
+      //--- Server-side info table (Anhnt 2026-08-31): Symbol/Price/StopsLevel, dirty-checked
+      //--- per-cell same as everywhere else in this file.
+        if(SyncTable_PreTradeServersideInfo())
+          redraw_needed = true;
     if(redraw_needed)
            ::ChartRedraw(); 
       
@@ -316,9 +333,9 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnTradeEvent(void)
   {
-      // if(IsLastDealTicket())
-      //   InitializePositionsTable();
-  }  
+      if(IsLastDealTicket())
+        InitializePositionsTable();
+  }
  //+------------------------------------------------------------------+
  //| OnEvent handler                                                  |
  //+------------------------------------------------------------------+
@@ -340,7 +357,7 @@
    // --- and runs on every event (not just mouse-move), so the very next interaction self-heals.
     if(m_active_window_index == WindowIdx(m_window_candle_infomation) && !MouseOverCandleInfoWindow())
      {
-      HideCandleInfoPopup();
+      HideWindow_CandleInfo();//CreateWindow_CandleInfo();
       m_candle_info_shown_bar = 0;
      }
    // --- Escape hatch (Anhnt, 2026-08-29): ESC always force-hides the Setting Window regardless
@@ -352,6 +369,32 @@
     if(id == CHARTEVENT_KEYDOWN && lparam == 27) // VK_ESCAPE
      {
       HideSettingWindow();
+      return;
+     }
+   // --- MY DEBUG (Anhnt, 2026-09-01, temporary - delete once no longer needed). Dumping EVERY
+   // --- chart object (previous version) drowned the 3 controls we actually care about in
+   // --- thousands of unrelated trade-history objects - print THESE BY NAME directly instead,
+   // --- reading straight off each CElement's own X()/Y()/XSize()/YSize()/IsVisible().
+    if(id == CHARTEVENT_KEYDOWN && lparam == 68) // 'D'
+     {
+      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
+          "m_combo_pre_Trade_plan_symbol: x=" + (string)m_combo_pre_Trade_plan_symbol.X() +
+          " y=" + (string)m_combo_pre_Trade_plan_symbol.Y() +
+          " xsize=" + (string)m_combo_pre_Trade_plan_symbol.XSize() +
+          " ysize=" + (string)m_combo_pre_Trade_plan_symbol.YSize() +
+          " visible=" + (string)m_combo_pre_Trade_plan_symbol.IsVisible());
+      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
+          "m_buttonsGroup_SLMode: x=" + (string)m_buttonsGroup_SLMode.X() +
+          " y=" + (string)m_buttonsGroup_SLMode.Y() +
+          " xsize=" + (string)m_buttonsGroup_SLMode.XSize() +
+          " ysize=" + (string)m_buttonsGroup_SLMode.YSize() +
+          " visible=" + (string)m_buttonsGroup_SLMode.IsVisible());
+      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
+          "m_edit_StopLost_DistancePoints: x=" + (string)m_edit_StopLost_DistancePoints.X() +
+          " y=" + (string)m_edit_StopLost_DistancePoints.Y() +
+          " xsize=" + (string)m_edit_StopLost_DistancePoints.XSize() +
+          " ysize=" + (string)m_edit_StopLost_DistancePoints.YSize() +
+          " visible=" + (string)m_edit_StopLost_DistancePoints.IsVisible());
       return;
      }
    // --- Setting Window's native Close (X) button (Anhnt, 2026-08-29): CWindow::CloseDialogBox()
@@ -403,6 +446,17 @@
       {
        // Manager.AddIndicatorToIndicatorTemplateSetting() always appends at the end - fast path, no full rebuild.
        AddRow_IndicatorTemplateSetting();
+       // Data genuinely changed - only actually Show() the button while Setting Window is the
+       // active window AND its immediate parent (the Indicator sub-tab) is the one currently
+       // selected (Anhnt, 2026-09-01). m_tabs_main_setting_config.IsVisible() alone is NOT
+       // reliable here - it's never registered into m_window_setting's own CElement cascade
+       // array (MainPointer() is just a plain pointer, no side effect - confirmed by grep, no
+       // such registration exists anywhere), so it stays stuck at its creation-time default
+       // forever, regardless of the window actually opening/closing. m_active_window_index IS
+       // real - the Library updates it via ON_OPEN_DIALOG_BOX/ON_CLOSE_DIALOG_BOX.
+       if(m_active_window_index == WindowIdx(m_window_setting)
+          && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR)
+          m_btn_save_indicator.Show();
        return;
       }
      if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
@@ -412,6 +466,9 @@
        // (e.g. EA's CHART_OBJ_EVENT_CHART_WND_IND_CHANGE handler) don't have a table row/index
        // to give it - revisit once that's resolved.
        InitializeTable_IndicatorTemplateSetting();
+       if(m_active_window_index == WindowIdx(m_window_setting)
+          && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR)
+          m_btn_save_indicator.Show();
        return;
       }
      if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED || id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE)
@@ -426,8 +483,29 @@
        // Own dedicated event now (Anhnt, 2026-08-30) - this only ever paints the Show column
        // (col 4), so it never needed to wake up on a Buy/Sell toggle either.
        SyncTable_IndicatorTemplateSetting();
+       if(m_active_window_index == WindowIdx(m_window_setting)
+          && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR)
+          m_btn_save_indicator.Show();
        return;
-      }   
+      }
+     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED)
+      {
+       // Buy/Sell checkbox toggle on the Indicator Template table - data changed (Anhnt,
+       // 2026-08-31). No table repaint needed here - the checkbox's own click handler
+       // already redrew itself; this only exists to surface the pending-save state.
+       if(m_active_window_index == WindowIdx(m_window_setting)
+          && m_tabs_main_setting_config.SelectedTab() == TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR)
+          m_btn_save_indicator.Show();
+       return;
+      }
+   //Handle m_buttonsGroup_SLMode - CButtonsGroup fires its own ON_CLICK_GROUP_BUTTON (not
+   //ON_CLICK_BUTTON) with dparam already carrying the newly-selected button index
+   //(ButtonsGroup.mqh CButtonsGroup::OnClickButton) - no need to re-query SelectedButtonIndex().
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_GROUP_BUTTON && lparam == m_buttonsGroup_SLMode.Id())
+      {
+       m_current_sl_mode = (ENUM_SL_MODE)(int)dparam;
+       return;
+      }
    // Handle m_table_indicator event
      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
           && lparam == m_table_indicator_template.Id())
@@ -455,9 +533,7 @@
         if(row < 0 || row >= (int)m_table_SymbolTFSeting.RowsTotal()) return;
         string sym = m_table_SymbolTFSeting.GetValue(0, row); StringTrimLeft(sym);
         string tf  = m_table_SymbolTFSeting.GetValue(1, row); StringTrimLeft(tf);
-        // --- Delete is DEFERRED to OnTimerEvent - same CTable crash reason as m_table_indicator's col 0.
-        // --- col 0 on the current-chart's own row shows the "start" icon (IsCurrentChartSymbolTFRow) -
-        // --- not deletable, ignore the click.
+        // --- Delete is DEFERRED to OnTimerEvent - same CTable crash reason as m_table_indicator's col 0.        
         if(col == 0 && !IsCurrentChartSymbolTFRow(sym, tf))
          {
           m_pending_remove_sym_symboltf = sym;
@@ -470,11 +546,8 @@
     //Handle CSymbolTFManager's own events - Data changed for real, refresh our own GUI
      if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ADDED)
       {
-       // Just flag it (2026-08-28) - PureData (m_SymbolTFManager) already has the new row, no
-       // rush to repaint inline. OnTimerEvent is the one place that calls Populate then Sync,
-       // batching every reactive mark within one timer interval into exactly 1 real rebuild -
-       // avoids a redundant extra repaint pass when this event fires mid-OnInit (REASON_CHARTCHANGE
-       // adding a not-yet-tracked Symbol+TF), same tick UpdateGUI()'s own deferred pass already covers.
+       // Just flag it PureData (m_SymbolTFManager) already has the new row, no rush to repaint inline. 
+       // OnTimerEvent is the one place that calls Populate then Sync.       
          m_treeview_symboltf_need_sync = true;
        return;
       }
@@ -571,14 +644,42 @@
         }
          return;
       }
-    //Handle Save Symbol/TF config to JSON - CSymbolTFManager owns FileOpen/write now
-      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_SymbolTF.Id())
-      {
-        if(m_SymbolTFManager != NULL) m_SymbolTFManager.SaveSymbolTFSettingToJSON();
+    // Handle m_table_pre_Trade_serversideInfo Symbol cell click - switch THIS chart's own Symbol
+    // (keep the current TF), reusing the EXACT SAME event chain the SymbolTF TreeView navigation
+    // above already uses (Anhnt, 2026-08-31): NotifySettingChanged() fires
+    // SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, which the EA already listens for and reacts to via
+    // SetActiveChartSymbolTF() - CGUIPannel never touches the Chart directly, per the established
+    // split, so no new event/EA-side code needed here. ON_CLICK_LIST_ITEM (not ON_CLICK_BUTTON) is
+    // CTable's own event for a plain SelectableRow click - see Table.mqh::OnClickTable().
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_LIST_ITEM && lparam == m_table_pre_Trade_serversideInfo.Id())
+       {
+        string parts[];
+        if(StringSplit(sparam, '_', parts) != 2) return;
+        int col = (int)StringToInteger(parts[0]);
+        int row = (int)StringToInteger(parts[1]);
+        if(col == 0)
+         {
+          string clicked_sym = m_table_pre_Trade_serversideInfo.GetValue(0, row);
+          if(m_SymbolTFManager != NULL && clicked_sym != "")
+             m_SymbolTFManager.NotifySettingChanged(clicked_sym, (ENUM_TIMEFRAMES)::Period());
+         }
         return;
-      }
+       }
+    // Handle m_table_CandlePatternsSetting event (Buy/Sell/Sound/Message checkbox toggle)
+      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+        && lparam == m_table_CandlePatternsSetting.Id())
+       {
+        string parts[];
+        ::Print("MY DEBUG CGUIPannel::OnEvent: CandlePatternsSetting id=", id, " sparam=", sparam);
+        if(StringSplit(sparam, '_', parts) != 2) return;
+        int col = (int)StringToInteger(parts[0]);
+        int row = (int)StringToInteger(parts[1]);
+        if(col == 2 || col == 3 || col == 5 || col == 6)
+          OnCheckTableCandlePatternSetting(row, col);
+        return;
+       }
     //Handle Save marker style/color settings
-    //Handle Other tab combo selection - live-updates the preview immediately (BEFORE Save),    
+    //Handle combo selection - live-updates the preview immediately (BEFORE Save)   
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
       {
        int codes[]; string shape_labels[];
@@ -672,9 +773,59 @@
          return;
         }
       }
-    //Handle Save marker style/color settings - commits the currently-selected combo items into
-    //m_marker_*_code/m_marker_*_color (previews above only update DISPLAY, not these fields),
-    //then writes them out.
+    // --- Re-enabled (Anhnt, 2026-08-30): these blocks were written but left commented out,
+    // --- still calling the old name HideParamSlots() (renamed to HideAddIndicatorForm() since).
+    // --- Without them, any tab switch/window expand force-shows m_param_labels/m_param_edits/
+    // --- m_param_combo[] via the Library's own ShowTabElements()->Reset() cascade, regardless of
+    // --- whether a tree indicator was ever clicked - this is exactly the stray empty combobox
+    // --- BugNote: seen sitting in the Indicator tab no matter which indicator was selected.
+    // --- 4th block for the OUTER m_tabs_main, re-added (Anhnt, 2026-08-31) - Monitor/Positions
+    // --- tabs are live now (Positions restored this session), and switching to/from them exposed
+    // --- a DIFFERENT stray-visual bug than the param-slot one below: m_tooltip_candle_info/the
+    // --- Alt-hover CGCnvPatternBitmap are chart-global, not tab-scoped, and only ever get hidden
+    // --- by our own MOUSE_MOVE logic (leaving a candle/panel) - a tab CLICK (not a mouse move)
+    // --- never ran that path, so a tooltip left showing near screen coords that the newly-selected
+    // --- tab's own table now occupies just sat there indefinitely, looking like stray garbled text
+    // --- baked into the table (BugNote "CandleWindow smear", Anhnt, 2026-08-31).
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main.Id())
+      {
+        HidePatternBitmapAtBar();
+        HideWindow_CandleInfo();
+        m_candle_info_shown_bar = 0;
+        return;
+      }
+    // --- Same issue on the NESTED m_tabs_main_setting_config (Indicator/Symbol TF sub-tabs) -
+    //     it's its own CTabs with its own ON_CLICK_TAB event, so switching between its 2 tabs
+    //     runs its own ShowTabElements() -> Reset() cascade, which force-shows m_param_labels/
+    //     m_param_edits/m_param_combo[] the same way the outer tab switch does.
+    //     m_btn_save_indicator is ALSO registered to this same CTabs, so Reset() force-shows it
+    //     too whenever the Indicator sub-tab is (re)selected, whether or not there's actually a
+    //     pending change - accepted as a harmless one-off (Anhnt, 2026-09-01): it only ever shows
+    //     up on the Indicator sub-tab itself (where it visually belongs), not floating over
+    //     unrelated tabs, and clears itself on the next real Save/tab-away/window-close.
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main_setting_config.Id())
+      {
+        HideAddIndicatorForm();
+        return;
+      }
+    // --- Same issue on window expand: OnWindowExpand() calls ShowTabElements() before
+    //     our OnEvent runs. Re-hide to keep param slots invisible until tree node clicked.
+      if(id == CHARTEVENT_CUSTOM + ON_WINDOW_EXPAND && lparam == m_window_main.Id())
+      {
+        HideAddIndicatorForm();
+        return;
+      }
+    // --- On window collapse: library OnWindowCollapse() may skip elements with Id()==0
+    //     (e.g. dynamic TreeItems). Explicitly hide both treeviews so their items
+    //     cascade-hide, eliminating gray canvas artifacts on the chart.
+      if(id == CHARTEVENT_CUSTOM + ON_WINDOW_COLLAPSE && lparam == m_window_main.Id())
+      {
+        m_treeview_indicator.Hide();
+        m_treeview_SymbolTF.Hide();
+        HideAddIndicatorForm();
+        return;
+      }
+    // Handle Save Marker style/color settings - commits the currently-selected combo items 
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.Id())
       {
        int codes[]; string shape_labels[];
@@ -712,248 +863,170 @@
        ::EventChartCustom(::ChartID(), (ushort)GUIPANNEL_EVENT_MARKER_SETTING_CHANGED, 0, 0.0, "");
         return;
       }
-    //Handle Save sound settings - m_marker_*_sound_file already committed live by the
-    //ON_CLICK_COMBOBOX_ITEM handler above, just write them out.
+    // Handle Save Sound settings
       if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_sound_settings.Id())
        {
          SaveSoundSettingsToJSON();
          return;
-       }       
-    // Handle Save Indicator config to JSON - CIndicatorTemplateManager owns FileOpen/write now
-       if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
-        {
-         if(m_indicator_template_manager != NULL) m_indicator_template_manager.SaveIndicatorTemplateToJSON();
-         return;
-        }
-    //Handle on Candle Infor
-     if(id == CHARTEVENT_MOUSE_MOVE)
-      {
-        bool popup_shown = (m_candle_info_shown_bar != 0);
-        if(popup_shown && MouseOverCandleInfoWindow())
-         {
-            // --- Stay open, don't touch bar_time - let the table's native dispatch (now
-            // --- routed to it via m_active_window_index) handle the scrollbar/clicks.
-         }
-        else if(popup_shown && !MouseOverCandleInfoWindow())
-         {
-            // --- Mouse left the popup rect -> hide it, reset to m_window_main dispatch.
-            HideCandleInfoPopup();
-            m_candle_info_shown_bar = 0;
-         }
-        else if(m_keys.KeyShiftState())
-         {
-          datetime t; double price; int sub_window;
-          if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
-            {
-            string sym = ::Symbol();
-            ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-            int shift = ::iBarShift(sym, tf, t, false);
-            if(shift >= 0)
-              {
-              datetime bar_time = ::iTime(sym, tf, shift);
-              if(bar_time != m_candle_info_shown_bar)
-                {
-                bool has_signal = RefreshCandleInfoWindow(bar_time);
-                if(has_signal)
-                  {
-                    m_candle_info_shown_bar = bar_time;
-                    ShowCandleInfoPopup(m_mouse.X(), m_mouse.Y());
-                  }
-                else if(popup_shown)
-                  {
-                    HideCandleInfoPopup();
-                    m_candle_info_shown_bar = 0;
-                  }
-                }
-              }
-            }
-          else if(popup_shown)
-            {
-            HideCandleInfoPopup();
-            m_candle_info_shown_bar = 0;
-            }
-         }
-        // --- Alt + hover pattern bitmap - independent of the Shift popup above (Anhnt,
-        // --- 2026-08-14): while Alt is held, shows the CGCnvPatternBitmap for whatever
-        // --- pattern is confirmed at the hovered bar; releasing Alt or moving off a bar
-        // --- with no pattern hides it again (ShowPatternBitmapAtBar/HidePatternBitmapShown
-        // --- both no-op cheaply when there's nothing to do).
-        if(m_keys.KeyAltState())
-         {
-          datetime t; double price; int sub_window;
-          if(::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
-          {
-            string sym = ::Symbol();
-            ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-            int shift = ::iBarShift(sym, tf, t, false);
-            if(shift >= 0)
-            {
-              datetime bar_time = ::iTime(sym, tf, shift);
-              // --- MY DEBUG: dump OHLC + the exact 3 ratios CBarPatternControlHammer::FindPattern()
-              // --- checks (body<=0.35, lower_shadow>=0.55, upper_shadow<=0.10, all as % of full
-              // --- High-Low range) - verifies whether a hovered candle SHOULD actually qualify
-              // --- as Hammer (Anhnt, 2026-08-29).
-              {
-               double o = ::iOpen(sym, tf, shift), h = ::iHigh(sym, tf, shift),
-                      l = ::iLow(sym, tf, shift),  cl = ::iClose(sym, tf, shift);
-               double full = h - l;
-               if(full > 0)
-                {
-                 double body  = ::MathAbs(cl - o);
-                 double lower = ::MathMin(o, cl) - l;
-                 double upper = h - ::MathMax(o, cl);
-                 ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
-                         " O=", o, " H=", h, " L=", l, " C=", cl,
-                         " body%=", ::DoubleToString(body/full*100, 1),
-                         " lower_shadow%=", ::DoubleToString(lower/full*100, 1),
-                         " upper_shadow%=", ::DoubleToString(upper/full*100, 1),
-                         " Hammer_needs(body<=35, lower>=55, upper<=10)");
-                }
-              }
-              // --- MY DEBUG: dump every REAL detected pattern instance at this exact bar (same
-              // --- source CheckCandlePatternAlerts()'s CloseBar path and the CSV log read) - lets
-              // --- us cross-check the ratio math above against what the real Alert pipeline
-              // --- actually sees (Anhnt, 2026-08-29). Each line is now tagged table_enabled=YES/NO
-              // --- (same PatternSignalBuy/Sell + Symbol-TF gate ShowPatternBitmapAtBar uses) and a
-              // --- final "=> Chart shows" line reproduces its exact best-of pick, so with only one
-              // --- row checked on the Setting table this collapses to a clean 1:1 against the Chart
-              // --- bitmap/tooltip - the point being to verify each pattern's name+math in isolation
-              // --- before ever turning several on at once for live use.
-              {
-               CArrayObj *all_pat_dbg = m_BarTimeSeriesCollection.GetListAllPatterns();
-               int found_dbg = 0;
-               CSymbolTFSetting *symtf_dbg = (m_SymbolTFManager != NULL) ? m_SymbolTFManager.FindByIdentity(sym, tf) : NULL;
-               bool symtf_buy_dbg  = (symtf_dbg != NULL) ? symtf_dbg.BuySignal()  : false;
-               bool symtf_sell_dbg = (symtf_dbg != NULL) ? symtf_dbg.SellSignal() : false;
-               CBarPattern *best_dbg = NULL;
-               int best_candles_dbg = 0;
-               if(all_pat_dbg != NULL)
-                {
-                 int total_dbg = all_pat_dbg.Total();
-                 for(int pi = 0; pi < total_dbg; pi++)
-                  {
-                   CBarPattern *p_dbg = all_pat_dbg.At(pi);
-                   if(p_dbg == NULL || p_dbg.Symbol() != sym || p_dbg.Timeframe() != tf || p_dbg.Time() != bar_time) continue;
-                   found_dbg++;
-                   ENUM_PATTERN_DIRECTION pdir_dbg = p_dbg.Direction();
-                   bool is_buy_dbg  = (pdir_dbg == PATTERN_DIRECTION_BULLISH);
-                   bool is_sell_dbg = (pdir_dbg == PATTERN_DIRECTION_BEARISH);
-                   bool enabled_dbg = (is_buy_dbg  && PatternSignalBuy(p_dbg.TypePattern())  && symtf_buy_dbg) ||
-                                      (is_sell_dbg && PatternSignalSell(p_dbg.TypePattern()) && symtf_sell_dbg);
-                   ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE real pattern #", found_dbg, ": type=", EnumToString(p_dbg.TypePattern()),
-                           " name=", p_dbg.GetProperty(PATTERN_PROP_NAME),
-                           " direction=", EnumToString(pdir_dbg),
-                           " table_enabled=", (enabled_dbg ? "YES" : "no"));
-                   if(enabled_dbg)
-                    {
-                     int n_dbg = (int)p_dbg.Candles();
-                     if(best_dbg == NULL || n_dbg > best_candles_dbg) { best_dbg = p_dbg; best_candles_dbg = n_dbg; }
-                    }
-                  }
-                }
-               if(found_dbg == 0)
-                 ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: no real detected pattern at this closed bar (may be live bar-0, or genuinely no match)");
-               ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE => Chart shows: ",
-                       (best_dbg != NULL) ? best_dbg.GetProperty(PATTERN_PROP_NAME) : "(none - no table-enabled pattern matches here)");
-              }
-              ShowPatternBitmapAtBar(bar_time);
-            }
-          }
-          else
-            HidePatternBitmapAtBar();
-         }
-        else
-          HidePatternBitmapAtBar();
-      }
-    //Handle Save Pattern Config to JSON
+       }
+    // Handle Save Pattern Config to JSON
       if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_pattern_config.Id())
        {
         SaveCandlePatternSettingToJSON();
         return;
        }
-    // Handle m_table_CandlePatternsSetting event (Buy/Sell/Sound/Message checkbox toggle)
-      if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-        && lparam == m_table_CandlePatternsSetting.Id())
-       {
-        string parts[];
-        ::Print("MY DEBUG CGUIPannel::OnEvent: CandlePatternsSetting id=", id, " sparam=", sparam);
-        if(StringSplit(sparam, '_', parts) != 2) return;
-        int col = (int)StringToInteger(parts[0]);
-        int row = (int)StringToInteger(parts[1]);
-        if(col == 2 || col == 3 || col == 5 || col == 6)
-          OnCheckTableCandlePatternSetting(row, col);
+    // Handle Save Symbol/TF config to JSON - CSymbolTFManager owns FileOpen/write now
+      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_SymbolTF.Id())
+      {
+        if(m_SymbolTFManager != NULL) m_SymbolTFManager.SaveSymbolTFSettingToJSON();
         return;
-       }
+      } 
+    // Handle Save Indicator config to JSON - CIndicatorTemplateManager owns FileOpen/write now
+       if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
+        {
+         if(m_indicator_template_manager != NULL) m_indicator_template_manager.SaveIndicatorTemplateToJSON();
+         // Saved - clear the pending-change indicator (Anhnt, 2026-09-01).
+         m_btn_save_indicator.Hide();
+         return;
+        }
+    //Handle on Mouse Move
+     if(id == CHARTEVENT_MOUSE_MOVE)
+      {
+       //Handle on Candle Infor
+        bool popup_shown = (m_candle_info_shown_bar != 0);
+        bool over_candle_info = MouseOverCandleInfoWindow();   // computed once, reused below - was called twice
+        if(popup_shown && over_candle_info)
+         {
+            // --- Stay open, don't touch bar_time - let the table's native dispatch (now
+            // --- routed to it via m_active_window_index) handle the scrollbar/clicks. Checked
+            // --- BEFORE the CalculateAtCandle() gate below on purpose (Anhnt, 2026-08-31): the
+            // --- popup window sits wherever it was positioned on screen, not necessarily over
+            // --- any candle - gating this on "over a candle" too would make it impossible to
+            // --- reach into the popup's own scrollbar/table without it vanishing first.
+         }
+        else if(popup_shown && !over_candle_info)
+         {
+            // --- Mouse left the popup rect -> hide it, reset to m_window_main dispatch.
+            HideWindow_CandleInfo();
+            m_candle_info_shown_bar = 0;
+         }
+        else if(id == CHARTEVENT_MOUSE_MOVE && CalculateAtCandle() != 0 && !MouseOverAnyGUIWindow())
+         {
+          // --- Popup isn't up right now (both branches above exhaustively handle
+          // --- popup_shown==true). Shift and Alt are mutually exclusive (Anhnt, 2026-08-31, per
+          // --- user design) - each one hides the OTHER's display when pressed; neither one
+          // --- hides itself just because its own key was released or the cursor moved off the
+          // --- candle (deliberate - CandleInfo already handles its own "stay open" above, and
+          // --- the PatternBitmap stays "pinned" until the user actively picks CandleInfo
+          // --- instead). CalculateAtCandle() is called again per key below (not reused from the
+          // --- gate above) - a deliberate trade-off so the Shift/Alt work only ever runs at all
+          // --- when the gate confirms we're over a real candle, not on every single mouse move.
+          // --- !MouseOverAnyGUIWindow() added (Anhnt, 2026-08-31): ChartXYToTimePrice() doesn't
+          // --- know our own panels are covering the chart there, so without this, hovering the
+          // --- Positions/Setting table while Alt is held rendered a phantom pattern-bitmap/tooltip
+          // --- UNDER the panel (the "black smear" bug).
+           if(m_keys.KeyShiftState())
+            {
+             HidePatternBitmapAtBar();
+             datetime bar_time = CalculateAtCandle();
+             bool has_signal = RefreshWindow_CandleInfo(bar_time);
+             if(has_signal)
+              {
+               m_candle_info_shown_bar = bar_time;
+               ShowWindow_CandleInfo(m_mouse.X(), m_mouse.Y());
+              }
+            }
+           else if(m_keys.KeyAltState())
+            {
+             HideWindow_CandleInfo();
+             datetime bar_time = CalculateAtCandle();
+             string sym = ::Symbol();
+             ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+             int shift = ::iBarShift(sym, tf, bar_time, true);
+           // --- MY DEBUG: dump OHLC + the exact 3 ratios CBarPatternControlHammer::FindPattern()
+           // --- checks (body<=0.35, lower_shadow>=0.55, upper_shadow<=0.10, all as % of full
+           // --- High-Low range) - verifies whether a hovered candle SHOULD actually qualify
+           // --- as Hammer (Anhnt, 2026-08-29).
+            {
+              double o = ::iOpen(sym, tf, shift), h = ::iHigh(sym, tf, shift),
+                     l = ::iLow(sym, tf, shift),  cl = ::iClose(sym, tf, shift);
+              double full = h - l;
+              if(full > 0)
+              {
+                double body  = ::MathAbs(cl - o);
+                double lower = ::MathMin(o, cl) - l;
+                double upper = h - ::MathMax(o, cl);
+                ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
+                     " O=", o, " H=", h, " L=", l, " C=", cl,
+                     " body%=", ::DoubleToString(body/full*100, 1),
+                     " lower_shadow%=", ::DoubleToString(lower/full*100, 1),
+                     " upper_shadow%=", ::DoubleToString(upper/full*100, 1),
+                     " Hammer_needs(body<=35, lower>=55, upper<=10)");
+              }
+             }
+          // --- MY DEBUG: dump every REAL detected pattern instance at this exact bar (same
+          // --- source CheckCandlePatternAlerts()'s CloseBar path and the CSV log read) - lets
+          // --- us cross-check the ratio math above against what the real Alert pipeline
+          // --- actually sees (Anhnt, 2026-08-29). Each line is now tagged table_enabled=YES/NO
+          // --- (same PatternSignalBuy/Sell + Symbol-TF gate ShowPatternBitmapAtBar uses) and a
+          // --- final "=> Chart shows" line reproduces its exact best-of pick, so with only one
+          // --- row checked on the Setting table this collapses to a clean 1:1 against the Chart
+          // --- bitmap/tooltip - the point being to verify each pattern's name+math in isolation
+          // --- before ever turning several on at once for live use.
+           {
+            CArrayObj *all_pat_dbg = m_BarTimeSeriesCollection.GetListAllPatterns();
+            int found_dbg = 0;
+            CSymbolTFSetting *symtf_dbg = (m_SymbolTFManager != NULL) ? m_SymbolTFManager.FindByIdentity(sym, tf) : NULL;
+            bool symtf_buy_dbg  = (symtf_dbg != NULL) ? symtf_dbg.BuySignal()  : false;
+            bool symtf_sell_dbg = (symtf_dbg != NULL) ? symtf_dbg.SellSignal() : false;
+            CBarPattern *best_dbg = NULL;
+            int best_candles_dbg = 0;
+            if(all_pat_dbg != NULL)
+             {
+              int total_dbg = all_pat_dbg.Total();
+              for(int pi = 0; pi < total_dbg; pi++)
+               {
+                CBarPattern *p_dbg = all_pat_dbg.At(pi);
+                if(p_dbg == NULL || p_dbg.Symbol() != sym || p_dbg.Timeframe() != tf || p_dbg.Time() != bar_time) continue;
+                found_dbg++;
+                ENUM_PATTERN_DIRECTION pdir_dbg = p_dbg.Direction();
+                bool is_buy_dbg  = (pdir_dbg == PATTERN_DIRECTION_BULLISH);
+                bool is_sell_dbg = (pdir_dbg == PATTERN_DIRECTION_BEARISH);
+                bool enabled_dbg = (is_buy_dbg  && PatternSignalBuy(p_dbg.TypePattern())  && symtf_buy_dbg) ||
+                                   (is_sell_dbg && PatternSignalSell(p_dbg.TypePattern()) && symtf_sell_dbg);
+                ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE real pattern #", found_dbg, ": type=", EnumToString(p_dbg.TypePattern()),
+                        " name=", p_dbg.GetProperty(PATTERN_PROP_NAME),
+                        " direction=", EnumToString(pdir_dbg),
+                        " table_enabled=", (enabled_dbg ? "YES" : "no"));
+                if(enabled_dbg)
+                 {
+                  int n_dbg = (int)p_dbg.Candles();
+                  if(best_dbg == NULL || n_dbg > best_candles_dbg) { best_dbg = p_dbg; best_candles_dbg = n_dbg; }
+                 }
+               }
+             }
+            if(found_dbg == 0)
+              ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: no real detected pattern at this closed bar (may be live bar-0, or genuinely no match)");
+            ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE => Chart shows: ",
+                    (best_dbg != NULL) ? best_dbg.GetProperty(PATTERN_PROP_NAME) : "(none - no table-enabled pattern matches here)");
+           }
+           ShowPatternBitmapAtBar(bar_time);
+          }
+         }
+      }
+    
 
     
       m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
-    // --- Re-enabled (Anhnt, 2026-08-30): these blocks were written but left commented out,
-    // --- still calling the old name HideParamSlots() (renamed to HideAddIndicatorForm() since).
-    // --- Without them, any tab switch/window expand force-shows m_param_labels/m_param_edits/
-    // --- m_param_combo[] via the Library's own ShowTabElements()->Reset() cascade, regardless of
-    // --- whether a tree indicator was ever clicked - this is exactly the stray empty combobox
-    // --- BugNote: seen sitting in the Indicator tab no matter which indicator was selected.
-    // --- A 4th block for the OUTER m_tabs_main was dropped (Anhnt, 2026-08-30) - that whole
-    // --- Monitor/Positions tab feature is disabled (GUIPannel_TabMonitor.mqh/TabPositions.mqh
-    // --- both commented out, m_tabs_main itself never declared), so it never compiled and would
-    // --- never have fired anyway.
-    // --- Same issue on the NESTED m_tabs_main_setting_config (Indicator/Symbol TF sub-tabs) -
-    //     it's its own CTabs with its own ON_CLICK_TAB event, so switching between its 2 tabs
-    //     runs its own ShowTabElements() -> Reset() cascade, which force-shows m_param_labels/
-    //     m_param_edits/m_param_combo[] the same way the outer tab switch does.
-      if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main_setting_config.Id())
-      {
-        HideAddIndicatorForm();
-        return;
-      }
-    // --- Same issue on window expand: OnWindowExpand() calls ShowTabElements() before
-    //     our OnEvent runs. Re-hide to keep param slots invisible until tree node clicked.
-      if(id == CHARTEVENT_CUSTOM + ON_WINDOW_EXPAND && lparam == m_window_main.Id())
-      {
-        HideAddIndicatorForm();
-        return;
-      }
-    // --- On window collapse: library OnWindowCollapse() may skip elements with Id()==0
-    //     (e.g. dynamic TreeItems). Explicitly hide both treeviews so their items
-    //     cascade-hide, eliminating gray canvas artifacts on the chart.
-      if(id == CHARTEVENT_CUSTOM + ON_WINDOW_COLLAPSE && lparam == m_window_main.Id())
-      {
-        m_treeview_indicator.Hide();
-        m_treeview_SymbolTF.Hide();
-        HideAddIndicatorForm();
-        return;
-      }
-    
-
-      //   SaveGUIConfigToJSON();
-      //   // --- Save alone only persists m_marker_* to JSON - the already-running SignalMarkers
-      //   // --- indicator (attached via iCustom) never re-reads input params on its own, so a
-      //   // --- style/color change here had no visible effect until the user manually removed +
-      //   // --- re-added it (BugNote_MarkerMissingDespitePattern.md, 2026-08-15). Recreate it now
-      //   // --- with the just-saved m_marker_* values so Save actually takes effect immediately.
-      //   ReattachSignalMarkersIndicator();
-      //   return;
-      // }   
-    
+        
   }
  //+------------------------------------------------------------------+
  //| Update GUI                                                       |
  //+------------------------------------------------------------------+ 
  void CGUIPannel::UpdateGUI(const bool redraw)
-  {
-      // // No unconditional full-canvas Update(true) here - repainting the whole treeview and
-      // // the whole Settings table on every CHARTCHANGE was exactly the m_window_main blink.
-      // // Each call below repaints only the cells/icons it actually changed (dirty-check),
-      // // and PopulateTreeView_SymbolTFSetting (CHARTEVENT_CHART_CHANGE handler) already updates the tree
-      // when the symbol/TF really changed.
-      //   SetValuesToTableIndicatorSymbolTFValue();
-       // Just flag it - UpdateGUI() itself is called from 2+ places on the very same real
-       // symbol/TF change (OnInitEvent's REASON_CHARTCHANGE branch AND the CHART_OBJ_EVENT_CHART_
-       // ..._CHANGE handler), so calling SyncTreeView_IndicatorTemplateSetting()/
-       // InitializeTable_IndicatorTemplateSetting() directly here was the same double-redraw risk -
-       // OnTimerEvent is the ONE place that actually calls either now (Anhnt, 2026-08-26).
-         m_treeview_indicator_need_sync = true;
-         m_table_indicator_need_sync = true;
-         if(redraw) m_chart.Redraw();
+  {      
+   m_treeview_indicator_need_sync = true;
+   m_table_indicator_need_sync = true;
+   if(redraw) m_chart.Redraw();
   }
 #endif // CGUIPANNEL_LIFECYCLE_MQH

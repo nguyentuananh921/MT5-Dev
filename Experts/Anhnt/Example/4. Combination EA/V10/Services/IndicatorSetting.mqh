@@ -30,6 +30,11 @@
        bool            m_message_alert;
        bool            m_show_on_chart;       // preference: default shown on a new chart - PureData, Layer 2 mirrors it
 
+       //--- shared enum-choice decode loop for DisplayLabel/JsonParamsText - same schema-based
+       //--- decode BuildIndicatorTextLabel/BuildIndicatorParamsText (TimeseriesDELib.mqh) used to
+       //--- do from outside; only the rounding precision differs between the two callers.
+       void            ParamTexts(const int decimals, string &out[]) const;
+
      public:
                          CIndicatorSetting(void);
                         ~CIndicatorSetting(void) {}
@@ -44,10 +49,16 @@
        //--- display label (Table col 0 + Message Alert - SAME text both already use, GUIPannel_
        //--- SoundAndMessageAlerts.mqh:118 and the old UpdateRow_IndicatorTemplateSetting both called
        //--- BuildIndicatorTextLabel() fresh, never stored it - computed here, not cached, rounds
-       //--- doubles to 2 decimals (display-only - JSON save needs full precision instead, see
-       //--- CIndicatorTemplateManager::BuildJsonSection, which calls BuildIndicatorParamsText()
-       //--- directly on GetRawParams() - no stored/cached text field for that either).
+       //--- doubles to 2 decimals (display-only - JSON save needs full precision, see
+       //--- JsonParamsText below). Self-contained (Anhnt, 2026-08-30) - no longer calls the
+       //--- Library's BuildIndicatorTextLabel(), builds straight off m_type_enum/m_raw_params via
+       //--- the private ParamTexts() helper shared with JsonParamsText (same decode, different
+       //--- rounding precision).
        string            DisplayLabel(void) const;
+       //--- full-precision per-param text for JSON persistence (was BuildIndicatorParamsText());
+       //--- same enum-choice decode as DisplayLabel, just 8 decimals instead of 2 - see
+       //--- CIndicatorTemplateManager::BuildJsonSection.
+       void              JsonParamsText(string &out[]) const;
 
        //--- toggles - mirror table columns 2/3/5/6 directly
        bool              BuySignal(void)      const { return m_buy_signal;    }
@@ -110,16 +121,69 @@
      return IsEqualMqlParamArrays(raw, params);
    }
  //+------------------------------------------------------------------+
+ //| Shared per-param text decode - schema-typed params (Applied      |
+ //| Price/MA Method/Applied Volume/Stoch Price) resolve to their      |
+ //| description text; everything else is just DoubleToString/         |
+ //| IntegerToString at the caller's requested precision. Same         |
+ //| decode BuildIndicatorTextLabel/BuildIndicatorParamsText used to    |
+ //| do from outside (TimeseriesDELib.mqh) - ported in directly since   |
+ //| m_type_enum/m_raw_params are already right here (Anhnt, 2026-08-30). |
+ //+------------------------------------------------------------------+
+ void CIndicatorSetting::ParamTexts(const int decimals, string &out[]) const
+   {
+     SIndicatorParam schema[];
+     GetIndicatorParamSchema(m_type_enum, schema);
+     int total = ArraySize(m_raw_params);
+     ArrayResize(out, total);
+     for(int p = 0; p < total; p++)
+      {
+       string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
+       if(choices == PRICE_CHOICES)
+         out[p] = AppliedPriceDescription((ENUM_APPLIED_PRICE)m_raw_params[p].integer_value);
+       else if(choices == CALCULATION_METHOD_CHOICES)
+         out[p] = AveragingMethodDescription((ENUM_MA_METHOD)m_raw_params[p].integer_value);
+       else if(choices == VOLUME_CHOICES)
+         out[p] = AppliedVolumeDescription((ENUM_APPLIED_VOLUME)m_raw_params[p].integer_value);
+       else if(choices == STOCH_PRICE_CHOICES)
+         out[p] = StochPriceDescription((ENUM_STO_PRICE)m_raw_params[p].integer_value);
+       else if(m_raw_params[p].type == TYPE_DOUBLE)
+         out[p] = ::DoubleToString(m_raw_params[p].double_value, decimals);
+       else
+         out[p] = ::IntegerToString((int)m_raw_params[p].integer_value);
+      }
+   }
+ //+------------------------------------------------------------------+
  //| Human-readable label (2-decimal rounded) - Table col 0 + Message  |
  //| Alert share this exact computation, see the declaration comment.  |
  //+------------------------------------------------------------------+
  string CIndicatorSetting::DisplayLabel(void) const
    {
+     // --- Same catalog-name-first-then-fallback lookup BuildJsonSection (IndicatorTemplateManager.mqh)
+     // --- already inlines for its type_key - kept consistent with what JSON persists as
+     // --- "m_indicator_type", not switched to IndicatorTypeDescription()'s raw enum-suffix text.
      SIndicatorCatalogItem catalog[];
      GetIndicatorCatalog(catalog);
-     MqlParam params[];
-     GetRawParams(params);
-     return BuildIndicatorTextLabel(m_type_enum, params, catalog);
+     string short_name = "";
+     for(int c = 0; c < ArraySize(catalog); c++)
+       if(catalog[c].ind_type == m_type_enum) { short_name = catalog[c].name; break; }
+     if(short_name == "") short_name = IndicatorTypeDescription(m_type_enum);
+     string vals[];
+     ParamTexts(2, vals);
+     string pvalues = "";
+     for(int i = 0; i < ArraySize(vals); i++)
+      {
+       if(i > 0) pvalues += ", ";
+       pvalues += vals[i];
+      }
+     return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
+   }
+ //+------------------------------------------------------------------+
+ //| Full-precision per-param text for JSON persistence (was the free  |
+ //| BuildIndicatorParamsText()) - see the declaration comment.        |
+ //+------------------------------------------------------------------+
+ void CIndicatorSetting::JsonParamsText(string &out[]) const
+   {
+     ParamTexts(8, out);
    }
  //+------------------------------------------------------------------+
  //| Debug dump                                                        |

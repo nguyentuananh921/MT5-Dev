@@ -22,92 +22,53 @@
           m_mouse.Y() >= y && m_mouse.Y() <= y + m_window_candle_infomation.YSize());
   }
  //+------------------------------------------------------------------+
- //| Snaps the popup so the cursor is ALREADY inside it the instant it |
- //| appears (CANDLE_INFO_CURSOR_INSET, not a gap) - BugNote            |
- //| 2026-07-16: first tried placing the popup NEAR the cursor with a  |
- //| small gap, but on a zoomed-out TF that gap still covers OTHER      |
- //| candles - crossing it to reach the popup flipped bar_time (and    |
- //| re-triggered this same reposition) along the way, so the popup    |
- //| kept jumping just out of reach. Zero distance to cross means      |
- //| MouseOverCandleInfoWindow() is already true before any movement.  |
- //| CWindow has no "MainPointer" parent, so its own Moving(x,y)       |
- //| overload takes absolute coords directly - but it only updates    |
- //| m_canvas, not the base m_x/m_y CElementBase stores (confirmed by  |
- //| reading Window.mqh), so those must be set explicitly here or      |
- //| MouseOverCandleInfoWindow()/future calls would read stale coords. |
- //| The table needs NO manual repositioning: it was created via       |
- //| MainPointer(m_window_candle_infomation), so CElement::Moving()    |
- //| (its own, argument-less overload) re-derives its position from    |
- //| m_main.X()/Y() - i.e. the window's now-updated position - on its  |
- //| own.                                                              |
+ //| True while (px,py) - default the cursor's own position - sits     |
+ //| inside ANY of our own visible GUI windows (m_window_main,          |
+ //| m_window_setting, m_window_candle_infomation, ...) - loops         |
+ //| CWndContainer's own m_windows[] instead of hardcoding each window  |
+ //| by name, so a window added later is covered automatically.        |
+ //| ChartXYToTimePrice() (CalculateAtCandle()'s own underlying call)   |
+ //| has no concept of "obstructed by a GUI panel" - it happily         |
+ //| resolves a valid bar/price even when the point sits on top of one  |
+ //| of our own windows, which used to let Alt-hover render a phantom   |
+ //| pattern-bitmap/tooltip UNDER the panel, both when the CURSOR sat   |
+ //| there and, separately, when a pattern's own PRICE-computed label   |
+ //| position did (ChartTimePriceToXY, independent of the cursor) -     |
+ //| explicit px/py covers that second case (Anhnt, 2026-08-31).        |
  //+------------------------------------------------------------------+
- void CGUIPannel::RepositionCandleInfoWindow(const int cursor_x, const int cursor_y)
+ bool CGUIPannel::MouseOverAnyGUIWindow(const int px, const int py)
   {
-   int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
-   int chart_h = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
-   // --- Cursor sits INSET pixels inside the popup's LEFT edge (popup extends mostly to the
-   // --- right of the cursor) - flip so cursor sits INSET pixels inside the RIGHT edge
-   // --- instead if that would run off the chart's right edge (popup extends to the left).
-   // --- Either way the cursor is ALREADY inside the rect - see CANDLE_INFO_CURSOR_INSET.
-   int x = cursor_x - CANDLE_INFO_CURSOR_INSET;
-   if(x + CANDLE_INFO_WINDOW_W > chart_w)
-      x = cursor_x - CANDLE_INFO_WINDOW_W + CANDLE_INFO_CURSOR_INSET;
-   if(x < 0) x = 0;
-   // --- Same idea vertically - cursor INSET pixels inside the top edge, flipping to sit
-   // --- inside the bottom edge if that would run off the chart's bottom.
-   int y = cursor_y - CANDLE_INFO_CURSOR_INSET;
-   if(y + CANDLE_INFO_WINDOW_H > chart_h)
-      y = cursor_y - CANDLE_INFO_WINDOW_H + CANDLE_INFO_CURSOR_INSET;
-   if(y < 0) y = 0;
-
-   m_window_candle_infomation.X(x);
-   m_window_candle_infomation.Y(y);
-   m_window_candle_infomation.Moving(x, y);
-   m_table_candle_information_atBar.Moving();
-  }
- // For candle info popup (BugNote 7.2)
- //+------------------------------------------------------------------+
- //| Shows the popup AND hands it native mouse/keyboard dispatch by    |
- //| making it the active window (BugNote 2026-07-16). CWndEvents::    |
- //| CheckElementsEvents() (WndEvents.mqh, protected - accessible from |
- //| this subclass, no Library edit needed) only ever routes           |
- //| CheckMouseFocus()/OnEvent() to m_active_window_index's elements,  |
- //| so without this the popup's table (its scrollbar included) never |
- //| receives a native event no matter how it's shown. m_window_main   |
- //| going quiet while this is active is not a real trade-off here:    |
- //| the ONLY thing that keeps this popup active is the cursor         |
- //| physically sitting inside it (see MouseOverCandleInfoWindow), so   |
- //| m_window_main can't be receiving meaningful mouse input at the    |
- //| same moment anyway. CWndEvents::Show(window_index) (also          |
- //| protected) cascades to m_main_elements - i.e. the table - on its   |
- //| own, so no manual table.Show() call is needed here either.        |
- //+------------------------------------------------------------------+
- void CGUIPannel::ShowCandleInfoPopup(const int cursor_x, const int cursor_y)
-  {
-     RepositionCandleInfoWindow(cursor_x, cursor_y);
-     // --- Remember whoever was active before the popup steals dispatch, so Hide can hand it
-     // --- back correctly - hardcoding m_window_main here was wrong whenever e.g. the Setting
-     // --- Window was the real owner: a hover-then-leave while Setting was open used to strand
-     // --- active dispatch on m_window_main forever, leaving Setting's checkboxes dead until it
-     // --- was manually reopened (Anhnt, 2026-08-29). Guarded so a re-show while already shown
-     // --- (moving to a different bar without leaving the popup) doesn't overwrite the saved
-     // --- value with CandleInfo itself.
-     if(m_active_window_index != WindowIdx(m_window_candle_infomation))
-        m_active_window_index_before_candle_info = m_active_window_index;
-     m_active_window_index = WindowIdx(m_window_candle_infomation);
-     Show(m_active_window_index);
-     FormAvailableElementsArray();
+   int check_x = (px == INT_MIN) ? m_mouse.X() : px;
+   int check_y = (py == INT_MIN) ? m_mouse.Y() : py;
+   int windows_total = CWndContainer::WindowsTotal();
+   for(int w = 0; w < windows_total; w++)
+    {
+     CWindow *win = m_windows[w];
+     if(win == NULL || !win.IsVisible()) continue;
+     int x = win.X();
+     int y = win.Y();
+     if(check_x >= x && check_x <= x + win.XSize() &&
+        check_y >= y && check_y <= y + win.YSize())
+        return true;
+    }
+   return false;
   }
  //+------------------------------------------------------------------+
- //| Hides the popup and hands native dispatch back to whichever       |
- //| window was actually active before the popup stole it.             |
+ //| Resolves the bar under the cursor right now - 0 if the cursor    |
+ //| isn't over any real candle (a real iTime() is never 0/epoch, so  |
+ //| that's a safe sentinel). Also doubles as the "is the mouse over  |
+ //| a candle at all" bool check via != 0 - MQL5 has no overload-by-  |
+ //| return-type, so one datetime-returning method covers both uses  |
+ //| instead of two same-named overloads (Anhnt, 2026-08-31).         |
  //+------------------------------------------------------------------+
- void CGUIPannel::HideCandleInfoPopup(void)
+ datetime CGUIPannel::CalculateAtCandle(void)
   {
-     m_window_candle_infomation.Hide();
-     m_table_candle_information_atBar.Hide();
-     m_active_window_index = m_active_window_index_before_candle_info;
-     FormAvailableElementsArray();
+   datetime t; double price; int sub_window;
+   if(!::ChartXYToTimePrice(m_chart_id, m_mouse.X(), m_mouse.Y(), sub_window, t, price))
+      return 0;
+   int shift = ::iBarShift(::Symbol(), (ENUM_TIMEFRAMES)::Period(), t, false);
+   if(shift < 0) return 0;
+   return ::iTime(::Symbol(), (ENUM_TIMEFRAMES)::Period(), shift);
   }
  //+------------------------------------------------------------------+
  //| Creates the Ctrl+hover "Signal at this bar" popup - fixed at the |
@@ -115,7 +76,7 @@
  //| CWindow has no simple move-to-XY API for that, only manual drag  |
  //| state gated behind IsMovable/mouse-button-held).                 |
  //+------------------------------------------------------------------+
- bool CGUIPannel::CreateWindowCandleInfo(void)
+ bool CGUIPannel::CreateWindow_CandleInfo(void)
   {
     CWndContainer::AddWindow(m_window_candle_infomation);
     int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
@@ -183,6 +144,93 @@
      return (true);
   }
  //+------------------------------------------------------------------+
+ //| Snaps the popup so the cursor is ALREADY inside it the instant it |
+ //| appears (CANDLE_INFO_CURSOR_INSET, not a gap) - BugNote            |
+ //| 2026-07-16: first tried placing the popup NEAR the cursor with a  |
+ //| small gap, but on a zoomed-out TF that gap still covers OTHER      |
+ //| candles - crossing it to reach the popup flipped bar_time (and    |
+ //| re-triggered this same reposition) along the way, so the popup    |
+ //| kept jumping just out of reach. Zero distance to cross means      |
+ //| MouseOverCandleInfoWindow() is already true before any movement.  |
+ //| CWindow has no "MainPointer" parent, so its own Moving(x,y)       |
+ //| overload takes absolute coords directly - but it only updates    |
+ //| m_canvas, not the base m_x/m_y CElementBase stores (confirmed by  |
+ //| reading Window.mqh), so those must be set explicitly here or      |
+ //| MouseOverCandleInfoWindow()/future calls would read stale coords. |
+ //| The table needs NO manual repositioning: it was created via       |
+ //| MainPointer(m_window_candle_infomation), so CElement::Moving()    |
+ //| (its own, argument-less overload) re-derives its position from    |
+ //| m_main.X()/Y() - i.e. the window's now-updated position - on its  |
+ //| own.                                                              |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::RepositionWindow_CandleInfo(const int cursor_x, const int cursor_y)
+  {
+   int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
+   int chart_h = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
+   // --- Cursor sits INSET pixels inside the popup's LEFT edge (popup extends mostly to the
+   // --- right of the cursor) - flip so cursor sits INSET pixels inside the RIGHT edge
+   // --- instead if that would run off the chart's right edge (popup extends to the left).
+   // --- Either way the cursor is ALREADY inside the rect - see CANDLE_INFO_CURSOR_INSET.
+   int x = cursor_x - CANDLE_INFO_CURSOR_INSET;
+   if(x + CANDLE_INFO_WINDOW_W > chart_w)
+      x = cursor_x - CANDLE_INFO_WINDOW_W + CANDLE_INFO_CURSOR_INSET;
+   if(x < 0) x = 0;
+   // --- Same idea vertically - cursor INSET pixels inside the top edge, flipping to sit
+   // --- inside the bottom edge if that would run off the chart's bottom.
+   int y = cursor_y - CANDLE_INFO_CURSOR_INSET;
+   if(y + CANDLE_INFO_WINDOW_H > chart_h)
+      y = cursor_y - CANDLE_INFO_WINDOW_H + CANDLE_INFO_CURSOR_INSET;
+   if(y < 0) y = 0;
+   m_window_candle_infomation.X(x);
+   m_window_candle_infomation.Y(y);
+   m_window_candle_infomation.Moving(x, y);
+   m_table_candle_information_atBar.Moving();
+  }
+ // For candle info popup (BugNote 7.2)
+ //+------------------------------------------------------------------+
+ //| Shows the popup AND hands it native mouse/keyboard dispatch by    |
+ //| making it the active window (BugNote 2026-07-16). CWndEvents::    |
+ //| CheckElementsEvents() (WndEvents.mqh, protected - accessible from |
+ //| this subclass, no Library edit needed) only ever routes           |
+ //| CheckMouseFocus()/OnEvent() to m_active_window_index's elements,  |
+ //| so without this the popup's table (its scrollbar included) never |
+ //| receives a native event no matter how it's shown. m_window_main   |
+ //| going quiet while this is active is not a real trade-off here:    |
+ //| the ONLY thing that keeps this popup active is the cursor         |
+ //| physically sitting inside it (see MouseOverCandleInfoWindow), so   |
+ //| m_window_main can't be receiving meaningful mouse input at the    |
+ //| same moment anyway. CWndEvents::Show(window_index) (also          |
+ //| protected) cascades to m_main_elements - i.e. the table - on its   |
+ //| own, so no manual table.Show() call is needed here either.        |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::ShowWindow_CandleInfo(const int cursor_x, const int cursor_y)
+  {
+     RepositionWindow_CandleInfo(cursor_x, cursor_y);
+     // --- Remember whoever was active before the popup steals dispatch, so Hide can hand it
+     // --- back correctly - hardcoding m_window_main here was wrong whenever e.g. the Setting
+     // --- Window was the real owner: a hover-then-leave while Setting was open used to strand
+     // --- active dispatch on m_window_main forever, leaving Setting's checkboxes dead until it
+     // --- was manually reopened (Anhnt, 2026-08-29). Guarded so a re-show while already shown
+     // --- (moving to a different bar without leaving the popup) doesn't overwrite the saved
+     // --- value with CandleInfo itself.
+     if(m_active_window_index != WindowIdx(m_window_candle_infomation))
+        m_active_window_index_before_candle_info = m_active_window_index;
+     m_active_window_index = WindowIdx(m_window_candle_infomation);
+     Show(m_active_window_index);
+     FormAvailableElementsArray();
+  }
+ //+------------------------------------------------------------------+
+ //| Hides the popup and hands native dispatch back to whichever       |
+ //| window was actually active before the popup stole it.             |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::HideWindow_CandleInfo(void)
+  {
+     m_window_candle_infomation.Hide();
+     m_table_candle_information_atBar.Hide();
+     m_active_window_index = m_active_window_index_before_candle_info;
+     FormAvailableElementsArray();
+  } 
+ //+------------------------------------------------------------------+
  //| Fills the popup with every (Indicator, TF, Time) flip that lands |
  //| inside the hovered CURRENT-CHART bar's time SPAN [bar_time,      |
  //| bar_time + PeriodSeconds()) - not just flips on the hovered bar's |
@@ -200,7 +248,7 @@
  //| something to show) - false means "nothing happened at this bar",  |
  //| telling the caller NOT to show the popup for it at all.           |
  //+------------------------------------------------------------------+
- bool CGUIPannel::RefreshCandleInfoWindow(const datetime bar_time)
+ bool CGUIPannel::RefreshWindow_CandleInfo(const datetime bar_time)
   {
    if(m_IndicatorsCollection == NULL || m_timeSeriesEngine == NULL || m_BarTimeSeriesCollection == NULL ||
       m_indicator_template_manager == NULL || m_SymbolTFManager == NULL)
@@ -290,7 +338,7 @@
              row_time[count] = ht;
              row_source[count] = 0; // Indicator
              count++;
-          }
+           }
          // --- BBands-only: also surface the Upper/Lower line-cross histories (Anhnt,
          // --- 2026-07-19) - same source BuildAndWriteSignalBridge now reads. Mid is
          // --- skipped here: it IS the primary signal now (CSignalBollinger::ComputeAt),
@@ -329,7 +377,7 @@
             }
           }
         }
-      }
+     }
       // --- Collect Candle Patterns forming in [bar_time, next_bar_time) - runs ONCE (not per
       // --- TF/series iteration above) since it only depends on sym/bar_time/next_bar_time,
       // --- not on the per-series `s`; being inside the `for ti` loop duplicated every matching
@@ -473,15 +521,21 @@
 
    if(best == NULL) { HidePatternBitmapAtBar(); return; }
 
+   // --- Same "computed position, not cursor position" check ShowTooltip_CandlePatternInfo
+   // --- already does for its own label (Anhnt, 2026-09-01, gap found in the show/hide audit
+   // --- discussed with Anhnt) - the BOX has the identical risk of landing under a panel, since
+   // --- its anchor comes from the pattern's own price/time, independent of where the cursor is.
+    int box_x = 0, box_y = 0;
+    ::ChartTimePriceToXY(m_chart_id, m_subwin, best.Time(), best.MotherBarHigh(), box_x, box_y);
+    if(MouseOverAnyGUIWindow(box_x, box_y)) { HidePatternBitmapAtBar(); return; }
+
    int curr_scale = (int)::ChartGetInteger(m_chart_id, CHART_SCALE);
    if(best == m_pattern_bitmap_shown && best.HasBitmap() && curr_scale == m_pattern_bitmap_scale)
     {
      if(!best.GetBitmap().IsVisible()) { best.GetBitmap().Show(); ::ChartRedraw(m_chart_id); }
      return;
     }
-
    HidePatternBitmapAtBar();
-
    // --- Always rebuild from scratch (never reuse a cached bitmap across hovers) - its pixel
    // --- geometry is baked in at creation time from CHART_SCALE/CHART_HEIGHT_IN_PIXELS/price
    // --- range (CGCnvPatternBitmap::CalcWidth/CalcHeight), so reusing one across an intervening
@@ -522,7 +576,7 @@
    m_pattern_bitmap_scale = curr_scale;
    best.GetBitmap().Show();
    m_pattern_bitmap_shown = best;
-   ShowCandlePatternTooltipInfo(best);
+   ShowTooltip_CandlePatternInfo(best);
    ::ChartRedraw(m_chart_id);
   }
  //+------------------------------------------------------------------+
@@ -533,7 +587,7 @@
  //| (BugNote 2026-08-14: user never saw it appear), so the label is   |
  //| rendered proactively instead of relying on that.                  |
  //+------------------------------------------------------------------+
- void CGUIPannel::ShowCandlePatternTooltipInfo(CBarPattern *pat)
+ void CGUIPannel::ShowTooltip_CandlePatternInfo(CBarPattern *pat)
   {
    if(pat == NULL) return;
    string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
@@ -553,11 +607,25 @@
 
    int x = 0, y = 0;
    ::ChartTimePriceToXY(m_chart_id, m_subwin, pat.Time(), price, x, y);
+   int tip_y = y - m_tooltip_candle_info.YSize();   // box sits ABOVE the anchor point
+
+   // --- The anchor point comes from the PATTERN's own price/time, not from where the cursor
+   // --- is - CalculateAtCandle()'s MouseOverAnyGUIWindow() gate (OnEvent) only stops a NEW
+   // --- phantom show while the cursor itself sits over a panel; it says nothing about whether
+   // --- THIS specific computed screen position happens to land under one (e.g. hovering a real,
+   // --- open-chart candle whose pattern's own price projects to a spot the panel is covering) -
+   // --- checked at both corners of the box, not just the anchor point (Anhnt, 2026-08-31,
+   // --- "CandleWindow smear" recurrence #3).
+   if(MouseOverAnyGUIWindow(x, tip_y) || MouseOverAnyGUIWindow(x + m_tooltip_candle_info.XSize(), y))
+    {
+     m_tooltip_candle_info.FadeOutTooltip();
+     return;
+    }
 
    m_tooltip_candle_info.ClearStrings();
    m_tooltip_candle_info.AddString(pat_name);
    m_tooltip_candle_info.HeaderColor(clr);
-   m_tooltip_candle_info.Moving(x, y - m_tooltip_candle_info.YSize());   // box sits ABOVE the anchor point
+   m_tooltip_candle_info.Moving(x, tip_y);
    m_tooltip_candle_info.ShowTooltip();   // ClearStrings() above already reset alpha, so this repaints even if still fully visible from the PREVIOUS pattern
   }
  //+------------------------------------------------------------------+
