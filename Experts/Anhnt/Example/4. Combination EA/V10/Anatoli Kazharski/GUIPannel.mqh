@@ -347,6 +347,8 @@
             bool                         CreateButtonsGroup_SLMode(const int x, const int y);   // attaches to m_window_StopLost_Setting
             void                         ShowWindowStopLostSetting(const string symbol);
             void                         HideWindowStopLostSetting(void);
+            int                          GetStopLostCacheIndex(const string symbol, const bool create_if_missing);
+            string                       FormatStopLostCacheValue(const string symbol);
             bool                         CreatePreTradePlanControls(const int x, const int y);
             bool                         CreateTable_PreTradeServersideInfo(const int x, const int y);
             bool                         SyncTable_PreTradeServersideInfo(bool force = false);
@@ -416,6 +418,7 @@
  #include "GUIPannel_CandleInfo.mqh" 
  #include "GUIPannel_SoundAndMessageAlerts.mqh"
  #include "GUIPannel_MainWindows_TabMonitor.mqh"
- #include "GUIPannel_MainWindows_TabPositions.mqh"    
+ #include "GUIPannel_MainWindows_TabPositions.mqh"
+ #include "GUIPannel_StopLostSettingWindow.mqh"
 #endif // CGUIPANNEL_MQH_IMPLEMENTATION
 #endif // __GUIPANNEL_MQH__

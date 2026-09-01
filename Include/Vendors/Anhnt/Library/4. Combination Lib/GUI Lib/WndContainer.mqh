@@ -48,156 +48,93 @@
  #define RESERVE_SIZE_ARRAY 1000
  class CWndContainer
   {
-   private:
-      // --- Element counter
-      int               m_counter_element_id;
-      //---
-   protected:
-      // --- An instance of a class for obtaining mouse parameters
-      //CMouse            m_mouse;
-       CMouseCombine m_mouse;
-      // ---Window Array
-      CWindow          *m_windows[];
-      // --- Structure of arrays of elements
-       struct WindowElements
-        {            
-         CElement         *m_elements[];              // --- General array of all elements
-         CElement         *m_main_elements[];         // ---Array of main elements
-         CElement         *m_timer_elements[];        // --- Elements with timer
-         CElement         *m_available_elements[];    // --- Visible and currently available elements
-         CElement         *m_auto_x_resize_elements[];// --- Elements with auto-resizing along the X axis
-         CElement         *m_auto_y_resize_elements[];// --- Elements with auto-resizing along the Y axis
-         // --- Personal arrays of elements:
-            CContextMenu     *m_context_menus[];    // Context menus
-            CComboBox        *m_combo_boxes[];      // Combo boxes
-            CSplitButton     *m_split_buttons[];    // Double buttons
-            CMenuBar         *m_menu_bars[];        // Main menus
-            CMenuItem        *m_menu_items[];       // Menu items
-            CElementBase     *m_drop_lists[];       // Dropdown lists
-            CElementBase     *m_scrolls[];          // Scroll bars
-            CElementBase     *m_tables[];           // Tables
-            CTabs            *m_tabs[];             // Tabs
-            CSlider          *m_sliders[];          // Sliders
-            CCalendar        *m_calendars[];        // Calendars
-            CDropCalendar    *m_drop_calendars[];   // Drop-down calendars
-            CStandardChart   *m_sub_charts[];       // Standard graphs
-            CTimeEdit        *m_time_edits[];       // Elements "Time"
-            CTextBox         *m_text_boxes[];       // Multiline input fields
-            CTreeView        *m_treeview_lists[];   // Tree lists
-            CFileNavigator   *m_file_navigators[];  // File navigators
-            CTooltip         *m_tooltips[];         // Tooltips
-            CPicturesSlider  *m_pictures_slider[];  // Picture sliders
-            CFrame           *m_frames[];           // Regions
-        };
-      // --- Array of arrays of elements for each window
-      WindowElements    m_wnd[];   
-         //  void PrintContainer(void) {
-         //    string out = 
-         //      " > m_elements (" + (string)ArraySize(m_wnd[0].m_elements) + ")\n" +
-         //      " > m_main_elements (" + (string)ArraySize(m_wnd[0].m_main_elements) + ")\n" +
-         //      
-         //      " > m_menu_bars (" + (string)ArraySize(m_wnd[0].m_menu_bars) + ")\n" +
-         //      " > m_menu_items (" + (string)ArraySize(m_wnd[0].m_menu_items) + ")\n" +
-         //      " > m_context_menus (" + (string)ArraySize(m_wnd[0].m_context_menus) + ")\n";
-         //      
-         //    Print(__FUNCTION__, ":");
-         //    Print(out);
-         //  }   
+   private:      
+    int               m_counter_element_id;  // --- Element counter      
+   protected:  
+    CMouseCombine     m_mouse;               // --- An instance of a class for obtaining mouse parameters    
+    CWindow          *m_windows[];           // ---Window Array    
+    struct WindowElements                    // --- Structure of arrays of elements
+     {            
+      CElement         *m_elements[];              // --- General array of all elements
+      CElement         *m_main_elements[];         // ---Array of main elements
+      CElement         *m_timer_elements[];        // --- Elements with timer
+      CElement         *m_available_elements[];    // --- Visible and currently available elements
+      CElement         *m_auto_x_resize_elements[];// --- Elements with auto-resizing along the X axis
+      CElement         *m_auto_y_resize_elements[];// --- Elements with auto-resizing along the Y axis
+      // --- Personal arrays of elements:
+       CContextMenu     *m_context_menus[];    // Context menus
+       CComboBox        *m_combo_boxes[];      // Combo boxes
+       CSplitButton     *m_split_buttons[];    // Double buttons
+       CMenuBar         *m_menu_bars[];        // Main menus
+       CMenuItem        *m_menu_items[];       // Menu items
+       CElementBase     *m_drop_lists[];       // Dropdown lists
+       CElementBase     *m_scrolls[];          // Scroll bars
+       CElementBase     *m_tables[];           // Tables
+       CTabs            *m_tabs[];             // Tabs
+       CSlider          *m_sliders[];          // Sliders
+       CCalendar        *m_calendars[];        // Calendars
+       CDropCalendar    *m_drop_calendars[];   // Drop-down calendars
+       CStandardChart   *m_sub_charts[];       // Standard graphs
+       CTimeEdit        *m_time_edits[];       // Elements "Time"
+       CTextBox         *m_text_boxes[];       // Multiline input fields
+       CTreeView        *m_treeview_lists[];   // Tree lists
+       CFileNavigator   *m_file_navigators[];  // File navigators
+       CTooltip         *m_tooltips[];         // Tooltips
+       CPicturesSlider  *m_pictures_slider[];  // Picture sliders
+       CFrame           *m_frames[];           // Regions
+     };      
+    WindowElements    m_wnd[]; // --- Array of arrays of elements for each window
    public:
                      CWndContainer(void);
                     ~CWndContainer(void);   
-   public:
-    // --- Number of windows in the interface
-      int               WindowsTotal(void) { return(::ArraySize(m_windows)); }
-    // --- Number of all elements
-      int               ElementsTotal(const int window_index);
-    // --- Number of main elements
-      int               MainElementsTotal(const int window_index);
-    // --- Number of elements with timers
-      int               TimerElementsTotal(const int window_index);
-    // --- Number of elements with auto-resize along the X axis
-      int               AutoXResizeElementsTotal(const int window_index);
-    // --- Number of elements with auto-resize along the Y axis
-      int               AutoYResizeElementsTotal(const int window_index);
-    // --- Number of items currently available
-      int               AvailableElementsTotal(const int window_index);
-    // --- Number of elements of the specified type
-      int               ElementsTotal(const int window_index,const ENUM_ELEMENT_TYPE type);      
+   public:    
+    int     WindowsTotal(void) { return(::ArraySize(m_windows)); } // Number of windows in the interface
+    int     ElementsTotal(const int window_index);                 //Number of all elements
+    int     MainElementsTotal(const int window_index);             //Number of main elements
+    int     TimerElementsTotal(const int window_index);            //Number of elements with timers
+    int     AutoXResizeElementsTotal(const int window_index);      //Number of elements with auto-resize along the X axis
+    int     AutoYResizeElementsTotal(const int window_index);      //Number of elements with auto-resize along the Y axis
+    int     AvailableElementsTotal(const int window_index);        //Number of items currently available
+    int     ElementsTotal(const int window_index,const ENUM_ELEMENT_TYPE type);    //Number of elements of the specified type
+      
    protected:
-    // --- Adds a window pointer to the interface element database
-      void              AddWindow(CWindow &object);
-    // --- Adds a pointer to an array of elements
-      void              AddToElementsArray(const int window_index,CElementBase &object);
-    // --- Adds a pointer to the array of elements with timers
-      void              AddTimerElement(const int window_index,CElement &object);
-    // --- Adds a pointer to an array of elements with auto-resizing along the X axis
-      void              AddAutoXResizeElement(const int window_index,CElement &object);
-    // --- Adds a pointer to an array of elements with auto-resizing along the Y axis
-      void              AddAutoYResizeElement(const int window_index,CElement &object);
-    // --- Adds a pointer to the array of currently available elements
-      void              AddAvailableElement(const int window_index,CElement &object);   
+    void     AddWindow(CWindow &object);                              //Adds a window pointer to the interface element database
+    void     AddToElementsArray(const int window_index,CElementBase &object); //Adds a pointer to an array of elements
+    void     AddTimerElement(const int window_index,CElement &object);          //Adds a pointer to the array of elements with timers
+    void     AddAutoXResizeElement(const int window_index,CElement &object);    //Adds a pointer to an array of elements with auto-resizing along the X axis
+    void     AddAutoYResizeElement(const int window_index,CElement &object);      //Adds a pointer to an array of elements with auto-resizing along the Y axis
+    void     AddAvailableElement(const int window_index,CElement &object);       //Adds a pointer to the array of currently available elements   
+   private:    
+    template<typename T> int               ResizeArray(T &array[]); // Increments the array by one element and returns the last index
+    template<typename T1,typename T2> void              AddToPersonalArray(T1 &object,T2 &array[]); // Template method for adding pointers to an array passed by reference      
    private:
-    // --- Increments the array by one element and returns the last index
-      template<typename T>
-      int               ResizeArray(T &array[]);
-    // --- Template method for adding pointers to an array passed by reference
-      template<typename T1,typename T2>
-      void              AddToPersonalArray(T1 &object,T2 &array[]);      
-   private:
-    // --- Checking out of range
-      int               CheckOutOfRange(const int window_index);
-    // --- Stores pointers to window objects
-      bool              AddWindowElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to context menu items
-      bool              AddContextMenuElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to main menu items
-      bool              AddMenuBarElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to menu item items
-      bool              AddMenuItemElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to elements of the status line
-      bool              AddStatusBarElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to double button elements
-      bool              AddSplitButtonElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to tab group items
-      bool              AddButtonsGroupElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to list objects
-      bool              AddListViewElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to scrollbar objects to the database
-      bool              AddScrollElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to drop-down list elements (combo box)
-      bool              AddComboBoxElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to button elements for calling the color palette
-      bool              AddColorButtonElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to table elements
-      bool              AddTableElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to tabs in a personal array
-      bool              AddTabsElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to calendar items
-      bool              AddCalendarElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to drop-down calendar items
-      bool              AddDropCalendarElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to color palette elements
-      bool              AddColorPickersElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to elements of graphic objects
-      bool              AddSubChartsElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to image slider elements
-      bool              AddPicturesSliderElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to Time elements
-      bool              AddTimeEditsElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to multiline input field objects
-      bool              AddTextBoxElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to text input field objects
-      bool              AddTextEditElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to slider objects
-      bool              AddSliderElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to elements of tree lists
-      bool              AddTreeViewListsElements(const int window_index,CElementBase &object);
-    // --- Saves pointers to navigator elements
-      bool              AddFileNavigatorElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to tooltip elements
-      bool              AddTooltipElements(const int window_index,CElementBase &object);
-    // --- Stores pointers to area elements
-      bool              AddFrameElements(const int window_index,CElementBase &object);
+    int      CheckOutOfRange(const int window_index); // Checking out of range
+    bool     AddWindowElements(const int window_index,CElementBase &object);
+    bool     AddContextMenuElements(const int window_index,CElementBase &object); // Saves pointers to context menu items
+    bool     AddMenuBarElements(const int window_index,CElementBase &object); // Saves pointers to main menu items
+    bool     AddMenuItemElements(const int window_index,CElementBase &object); // Stores pointers to menu item items
+    bool     AddStatusBarElements(const int window_index,CElementBase &object); // Stores pointers to elements of the status line
+    bool     AddSplitButtonElements(const int window_index,CElementBase &object); // Saves pointers to double button elements
+    bool     AddButtonsGroupElements(const int window_index,CElementBase &object); // Saves pointers to tab group items
+    bool     AddListViewElements(const int window_index,CElementBase &object); // Saves pointers to list objects
+    bool     AddScrollElements(const int window_index,CElementBase &object); // Saves pointers to scrollbar objects to the database
+    bool     AddComboBoxElements(const int window_index,CElementBase &object); // Saves pointers to drop-down list elements (combo box)
+    bool     AddColorButtonElements(const int window_index,CElementBase &object); // Saves pointers to button elements for calling the color palette
+    bool     AddTableElements(const int window_index,CElementBase &object); // Stores pointers to table elements
+    bool     AddTabsElements(const int window_index,CElementBase &object); // Saves pointers to tabs in a personal array
+    bool     AddCalendarElements(const int window_index,CElementBase &object); // Stores pointers to calendar items
+    bool     AddDropCalendarElements(const int window_index,CElementBase &object); // Saves pointers to drop-down calendar items
+    bool     AddColorPickersElements(const int window_index,CElementBase &object); // Stores pointers to color palette elements
+    bool     AddSubChartsElements(const int window_index,CElementBase &object); // Saves pointers to elements of graphic objects
+    bool     AddPicturesSliderElements(const int window_index,CElementBase &object); // Stores pointers to image slider elements
+    bool     AddTimeEditsElements(const int window_index,CElementBase &object); // Stores pointers to Time elements
+    bool     AddTextBoxElements(const int window_index,CElementBase &object); // Stores pointers to multiline input field objects
+    bool     AddTextEditElements(const int window_index,CElementBase &object); // Stores pointers to text input field objects
+    bool     AddSliderElements(const int window_index,CElementBase &object); // Stores pointers to slider objects
+    bool     AddTreeViewListsElements(const int window_index,CElementBase &object); // Stores pointers to elements of tree lists
+    bool     AddFileNavigatorElements(const int window_index,CElementBase &object); // Saves pointers to navigator elements
+    bool     AddTooltipElements(const int window_index,CElementBase &object); // Stores pointers to tooltip elements
+    bool     AddFrameElements(const int window_index,CElementBase &object); // Stores pointers to area elements
   };
  #ifndef CWNDCONTAINER_MQH_IMPLEMENTATION
  #define CWNDCONTAINER_MQH_IMPLEMENTATION
@@ -469,14 +406,14 @@
   //+------------------------------------------------------------------+
   int CWndContainer::CheckOutOfRange(const int window_index)
    {
-      int array_size=::ArraySize(m_wnd);
-      if(array_size<1)
-      {
-         ::Print(PREVENTING_OUT_OF_RANGE);
-         return(WRONG_VALUE);
-      }
+    int array_size=::ArraySize(m_wnd);
+    if(array_size<1)
+     {
+      ::Print(PREVENTING_OUT_OF_RANGE);
+      return(WRONG_VALUE);
+     }
     // --- Adjustment in case of leaving the range
-      int index=(window_index>=array_size)? array_size-1 : window_index;
+    int index=(window_index>=array_size)? array_size-1 : window_index;
     // --- Return window index
       return(index);
    }
@@ -486,33 +423,31 @@
   bool CWndContainer::AddWindowElements(const int window_index,CElementBase &object)
    {
     // --- Exit if this is not a text input field
-      if(dynamic_cast<CWindow *>(&object)==NULL)
+     if(dynamic_cast<CWindow *>(&object)==NULL)
          return(false);
     // --- Get a pointer to the element
-      CWindow *wnd=::GetPointer(object);
+     CWindow *wnd=::GetPointer(object);
     // --- Save the mouse pointer
-      object.MousePointer(m_mouse);
-    //---
-      for(int i=0; i<4; i++)
+     object.MousePointer(m_mouse);    
+     for(int i=0; i<4; i++)
       {
-         CButton *ib=NULL;
-         //---
-         if(i==0)
-            ib=wnd.GetCloseButtonPointer();
-         else if(i==1)
-            ib=wnd.GetFullscreenButtonPointer();
-         else if(i==2)
-            ib=wnd.GetCollapseButtonPointer();
-         else if(i==3)
-            ib=wnd.GetTooltipButtonPointer();
-         // --- Increasing the array of elements
-         int last_index=ResizeArray(m_wnd[window_index].m_elements);
-         // --- Add a close button to the database
-         m_wnd[window_index].m_elements[last_index]=ib;
-         // --- Save the mouse pointer
-         ib.MousePointer(m_mouse);
+       CButton *ib=NULL;         
+       if(i==0)
+        ib=wnd.GetCloseButtonPointer();
+       else if(i==1)
+        ib=wnd.GetFullscreenButtonPointer();
+       else if(i==2)
+        ib=wnd.GetCollapseButtonPointer();
+       else if(i==3)
+        ib=wnd.GetTooltipButtonPointer();
+       // --- Increasing the array of elements
+        int last_index=ResizeArray(m_wnd[window_index].m_elements);
+       // --- Add a close button to the database
+        m_wnd[window_index].m_elements[last_index]=ib;
+       // --- Save the mouse pointer
+        ib.MousePointer(m_mouse);
       }
-      return(true);
+     return(true);
    }
   //+------------------------------------------------------------------+
   // | Saves pointers to context menu objects |
@@ -520,21 +455,21 @@
   bool CWndContainer::AddContextMenuElements(const int window_index,CElementBase &object)
    {
     // --- Exit if this is not a context menu
-      if(dynamic_cast<CContextMenu *>(&object)==NULL)
+     if(dynamic_cast<CContextMenu *>(&object)==NULL)
          return(false);
     // --- Get a pointer to the context menu
-      CContextMenu *cm=::GetPointer(object);
+     CContextMenu *cm=::GetPointer(object);
     // --- Let's save pointers to its objects in the database
-      int items_total=cm.ItemsTotal();
-      for(int i=0; i<items_total; i++)
+     int items_total=cm.ItemsTotal();
+     for(int i=0; i<items_total; i++)
       {
-         // --- Save the pointer to an array
-         int last_index=ResizeArray(m_wnd[window_index].m_elements);
-         m_wnd[window_index].m_elements[last_index]=cm.GetItemPointer(i);
+       // --- Save the pointer to an array
+        int last_index=ResizeArray(m_wnd[window_index].m_elements);
+       m_wnd[window_index].m_elements[last_index]=cm.GetItemPointer(i);
       }
     // --- Save pointers to dividing lines
-      int lines_total=cm.SeparateLinesTotal();
-      for(int i=0; i<lines_total; i++)
+     int lines_total=cm.SeparateLinesTotal();
+     for(int i=0; i<lines_total; i++)
       {
          // --- Save the pointer to an array
          int last_index=ResizeArray(m_wnd[window_index].m_elements);

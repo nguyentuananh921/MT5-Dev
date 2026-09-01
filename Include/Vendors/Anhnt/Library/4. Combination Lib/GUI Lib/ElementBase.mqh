@@ -16,13 +16,10 @@
  #include "..\Services\Colors.mqh"  
  class CElementBase
   {
-   protected:
-    // --- An instance of the class for getting mouse parameters      
-      CMouseCombine *m_mouse;
-    // --- An instance of a class for working with color
-      CColors           m_clr;
-    // --- An instance of a class for working with a graph
-      CChart            m_chart;
+   protected:         
+    CMouseCombine *m_mouse;    // --- An instance of the class for getting mouse parameters
+    CColors        m_clr;      // --- An instance of a class for working with color
+    CChart         m_chart;    // --- An instance of a class for working with a graph
     // --- (1) Class name and (2) program name, (3) program type
       string            m_class_name;
       string            m_program_name;
@@ -70,8 +67,7 @@
       int               m_auto_yresize_bottom_offset;
     // --- Element anchor points on the right and bottom sides of the window
       bool              m_anchor_right_window_side;
-      bool              m_anchor_bottom_window_side;
-    //---
+      bool              m_anchor_bottom_window_side;    
    public:
                      CElementBase(void);
                     ~CElementBase(void);

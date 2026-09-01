@@ -59,6 +59,12 @@
     #define M_WINDOW_SETTING_HEIGHT        480
     #define M_WINDOW_SETTING_MIN_WIDTH     300
     #define M_WINDOW_SETTING_MIN_HEIGHT    200
+   // Set StopLost Window m_window_StopLost_Setting 
+    #define M_WINDOW_STOPLOST_SETTING_WIDTH    400
+    #define M_WINDOW_STOPLOST_SETTING_HEIGHT   300 
+    #define M_WINDOW_STOPLOST_SETTING_XGAP 60
+    #define M_WINDOW_STOPLOST_SETTING_YGAP 60
+
    // Menu
     #define M_MENU_BAR_HEIGHT           22
     #define M_TABS_MAIN_TAB_HEIGHT      22
@@ -92,7 +98,7 @@
       enum ENUM_SL_MODE
        {
         SL_MODE_FIXED = 0,
-        SL_MODE_ATR,
+        SL_MODE_INDICATOR,
        };
      //m_tabs_main_setting_config
       enum ENUM_TAB_MAIN_SETTINGS_CONFIG
@@ -179,13 +185,11 @@
    #define SYMBOLTF_NOTE_H           20
    #define SYMBOLTF_BTN_Y            (SYMBOLTF_NOTE_H + 5)
    #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + BTN_HEIGHT + 10)
-  // --- Positions tab (Anhnt 2026-09-01, rough first pass - to be rearranged together):
-  // --- m_table_pre_Trade_serversideInfo stays at (x=0, y=POSITIONS_PLAN_TABLE_Y) on the LEFT.
-  // --- Everything else sits to its RIGHT, starting at x=POSITIONS_PLAN_RIGHT_X, same
-  // --- row-level as the table's own top: m_combo_pre_Trade_plan_symbol, then
-  // --- m_buttonsGroup_SLMode beside it (+170) on the same row (Symbol picker and its
-  // --- SL Setting mode sit together since the mode is Symbol-scoped), then Lot mode+value
-  // --- (ORPHANED, ties to a future Risk/Plan table, not SL) on the row below (+25).
+  // --- Positions tab (Anhnt 2026-09-01): m_table_pre_Trade_serversideInfo sits at
+  // --- (x=0, y=POSITIONS_PLAN_TABLE_Y). Its own SL column now opens m_window_StopLost_Setting
+  // --- directly (no more standalone Symbol combo/ButtonsGroup row). Everything else at
+  // --- x=POSITIONS_PLAN_RIGHT_X is just Lot mode+value (ORPHANED, ties to a future Risk/Plan
+  // --- table, not SL).
    #define POSITIONS_PLAN_Y             0
    #define POSITIONS_PLAN_CONTROLS_Y    25
    #define POSITIONS_PLAN_TABLE_Y       50

@@ -157,7 +157,7 @@
        return (false);
      //--- Set icon for the Settings item (IconXGap/IconYGap Library đã tự set =3/4 bên trong CreateItems())
        CMenuItem *settings_item = m_menu_bar.GetItemPointer(MENU_ITEM_SETTINGS);
-       settings_item.IconFile(IMAGE_RESOURCE_BMP16_SETTING_PNG);     
+       settings_item.IconFile(IMAGE_RESOURCE_BMP16_SETTING_PNG);    
        
      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_menu_bar);
       return (true);

@@ -19,18 +19,18 @@
  //For GUIPannel    
  bool CGUIPannel::CreateGUIPannel(void) 
   {     
-    // Create Main Frame window implementation in GUIPannel_MainWindows.mqh
-      if (!CreateMainWindow("EXPERT PANEL Ver10 Synchronize Indicator"))
-       {
-         Print(__FUNCTION__, " > Failed to create panel!");
-         return (false);
-       }    
-     //Create Status Bar at m_window_main
-      if (!CreateStatusBar(1, 23))
-       {
-        Print(__FUNCTION__, " > Failed to create Status Bar!");
-        return (false);
-       }
+   // Create Main Frame window implementation in GUIPannel_MainWindows.mqh
+    if (!CreateMainWindow("EXPERT PANEL Ver10 Synchronize Indicator"))
+     {
+       Print(__FUNCTION__, " > Failed to create panel!");
+       return (false);
+     }    
+   //Create Status Bar at m_window_main
+    if (!CreateStatusBar(1, 23))
+      {
+       Print(__FUNCTION__, " > Failed to create Status Bar!");
+       return (false);
+      }
      //Create MenuBar right below the caption bar (22px) - always-visible slim strip
       if(!CreateMenuBar(1, 22))
        {
@@ -45,54 +45,60 @@
        }       
       //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
        if(!CreateTable_IndicatorSymbolTFMonitor(0, 0)) return false;
-    // Create Setting Windows implementation in GUIPannel_SettingWindows.mqh
-      if(!CreateWindowSetting("Setting"))
-       {
-        Print(__FUNCTION__, " > Failed to create Setting Windows!");
+   // Create Setting Windows implementation in GUIPannel_SettingWindows.mqh
+    if(!CreateWindowSetting("Setting"))
+     {
+      Print(__FUNCTION__, " > Failed to create Setting Windows!");
+      return (false);
+     }
+    //Hide Setting Windows       
+     HideSettingWindow();
+    //For Tab Group on the right panel of setting window m_tabs_main_setting_config 
+     if (!CreateTabSettingConfig(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT*2 + 3))
+      {
+        Print(__FUNCTION__, " > Failed to create Settings config tabs!");
         return (false);
-       }
-      //Hide Setting Windows       
-       HideSettingWindow();
-      //For Tab Group on the right panel of setting window m_tabs_main_setting_config 
-       if (!CreateTabSettingConfig(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT*2 + 3))
-        {
-         Print(__FUNCTION__, " > Failed to create Settings config tabs!");
-         return (false);
-        }
-      // For TreeView on the left panel of setting window m_treeview_indicator
-       PopulateTreeView_IndicatorTemplateSetting();
-       if(!CreateTreeView_IndicatorTemplateSetting(TABS_CONFIG_X_GAP, PARAM_FORM_Y)) return false;
-      //For Add Indicator form
-       if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;          
-       if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;       
-      //For Symbol TF setting on Tab Config      
-       PopulateTreeView_SymbolTFSetting();
-       if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22        
-        SyncTreeView_SymbolTFSetting();
-       //Table m_table_SymbolTFSeting on the right of the Symbol TF sub-tab - offset
-       //past the TreeView's own width, same convention as INDICATOR_TABLE_X does for the
-       //Indicator sub-tab (tree width + 10px padding), not the tree's own x_gap.
-        if(!CreateTable_SymbolTFSetting(M_TREEVIEW_SYMBOLTF_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
-        PopulateTable_SymbolTFSetting();
-        SyncTable_SymbolTFSetting();
-       //For Candle Pattern Setting - m_BarPatterns_Control (borrowed via SetPatternsControl(),
-       //already populated by CTimeSeriesEngine's RegisterAllKnownPatterns()) IS the Single
-       //Source of Truth now - no separate build-into-arrays step needed (Anhnt, 2026-08-29).
-        LoadCandlePatternSetting_FromJSON();
-        if(!CreateTable_CandlePatternSetting(0, 0)) return false;
-        InitializeTable_CandlePatternSetting();
-       // For Marker Setting
-       LoadMarkerSettingsFromJSON();
-       if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
-       // For Sound Setting
-       if(!CreateTabSettingConfig_Sound(0, WINDOW_CAPTION_HEIGHT)) return false;       
-       //Create m_window_candle_infomation Information window at to display signal on chart
-        if (!CreateWindow_CandleInfo())
-         {
-          Print(__FUNCTION__, " > Failed to create candle info popup!");
+      }
+    //For Indicator Setting TreeView on the left panel of setting window
+     PopulateTreeView_IndicatorTemplateSetting();
+     if(!CreateTreeView_IndicatorTemplateSetting(TABS_CONFIG_X_GAP, PARAM_FORM_Y)) return false;
+     //For Add Indicator form
+      if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;          
+      if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;       
+    //For Symbol TF setting on Tab Config      
+      PopulateTreeView_SymbolTFSetting();
+      if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22        
+      SyncTreeView_SymbolTFSetting();
+     //Table m_table_SymbolTFSeting on the right of the Symbol TF sub-tab 
+      if(!CreateTable_SymbolTFSetting(M_TREEVIEW_SYMBOLTF_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
+      PopulateTable_SymbolTFSetting();
+      SyncTable_SymbolTFSetting();
+    //For Candle Pattern Setting 
+     LoadCandlePatternSetting_FromJSON();
+     if(!CreateTable_CandlePatternSetting(0, 0)) return false;
+     InitializeTable_CandlePatternSetting();
+    //For Marker Setting
+     LoadMarkerSettingsFromJSON();
+     if(!CreateTabSettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
+    // For Sound Setting
+     if(!CreateTabSettingConfig_Sound(0, WINDOW_CAPTION_HEIGHT)) return false;       
+   //Create m_window_candle_infomation Information window at to display signal on chart
+     if (!CreateWindow_CandleInfo())
+      {
+       Print(__FUNCTION__, " > Failed to create candle info popup!");
           return (false);
          }
-        m_window_candle_infomation.Hide(); 
+        m_window_candle_infomation.Hide();
+    // --- m_window_StopLost_Setting (Anhnt/Claude, 2026-09-01): MUST be created before
+    // --- CompletedGUI() below, same as every other CWindow here (m_window_main, m_window_setting,
+    // --- m_window_candle_infomation). CompletedGUI() -> Update(true) is the ONLY thing that ever
+    // --- calls Draw() for a freshly created window/control (CreateWindow()/CreateCanvas() never
+    // --- draw content themselves) - a window created AFTER CompletedGUI() has already run its
+    // --- one-time Draw() pass never gets painted at all (no caption, no button/edit content),
+    // --- even though IsVisible()/OBJPROP_TIMEFRAMES are all correct. Root cause of "SL Setting
+    // --- window shows as a blank box, caption included". CTable self-redraws via AddRow/SetValue
+    // --- so it doesn't need this - only plain CWindow/CButtonsGroup/CTextEdit/CButton do.
+     if(!CreateWindowStopLostSetting("SL Setting")) return false;
     //Finalize GUI Creation
      CWndEvents::CompletedGUI();
     // --- Hide all slots ONLY AFTER CompletedGUI() - FormAvailableElementsArray() (called
@@ -105,15 +111,12 @@
     // --- 2026-08-31, see below) - hidden once here at startup (no pending change yet),
     // --- shown again only by the 4 CIndicatorTemplateManager events that mean "data changed".
      m_btn_save_indicator.Hide();
-    //For Positions Tab at m_tabs_main - symbol combo, then the Distance/Lot mode+value
-    //--- controls in one horizontal row, then the order-setup table, m_table_positions
-    //--- still shifted down to POSITIONS_TABLE_Y below all of it.
+    //For Positions Tab: table + SL Setting popup window (Anhnt, 2026-09-01) - moved off the
+    //--- standalone Symbol combo/ButtonsGroup row (both plagued by a still-unresolved rendering
+    //--- bug) - the table's own new SL column gear icon now opens m_window_StopLost_Setting,
+    //--- scoped to that row's Symbol, no separate Symbol combo needed anymore.
      if(!CreateTable_PreTradeServersideInfo(0, POSITIONS_PLAN_TABLE_Y)) return false;
-    //--- Everything else sits to the RIGHT of the table, same row-level as its top
-    //--- (Anhnt, 2026-09-01, per user request) - rough first pass, to be rearranged together.
-     if(!CreateCombobox_PreTradeSymbolPlan(POSITIONS_PLAN_RIGHT_X, POSITIONS_PLAN_TABLE_Y)) return false;
-     if(!CreateButtonsGroup_SLMode(POSITIONS_PLAN_RIGHT_X + 170, POSITIONS_PLAN_TABLE_Y)) return false;
-     if(!CreatePreTradePlanControls(POSITIONS_PLAN_RIGHT_X, POSITIONS_PLAN_TABLE_Y + 25)) return false;
+     if(!CreatePreTradePlanControls(POSITIONS_PLAN_RIGHT_X, POSITIONS_PLAN_TABLE_Y)) return false;
      //if(!CreateTablePositions(0, POSITIONS_TABLE_Y)) return false;
     // --- Re-sync tab visibility now that ALL tab content exists (Anhnt, 2026-08-31) -
     // --- CreateTab_Main()'s own CreateTabs() call ran its hide-non-selected-tabs cascade way
@@ -131,7 +134,6 @@
     //    m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));
         return true;
   }
-//Public Method
  //| Constructor/Destructor                                          | 
  CGUIPannel::CGUIPannel(void)
   {
@@ -144,7 +146,6 @@
     m_treeview_symboltf_need_sync = false;
     m_treeview_indicator_need_sync = false;
     m_table_indicator_need_sync = false;
-    m_current_sl_mode = SL_MODE_FIXED;
     m_candle_info_shown_bar  = 0;
     m_active_window_index_before_candle_info = WindowIdx(m_window_main);
     m_pattern_bitmap_shown   = NULL;
@@ -192,13 +193,13 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnDeinitEvent(const int reason)
   {    
-       ::ObjectDelete(m_chart_id, PATTERN_HOVER_LABEL_NAME);   // Alt+hover pattern label, harmless no-op if never created
-      if(reason != REASON_CHARTCHANGE)
-       {
-        m_trading_bubble.OnDeinitEvent();
-        CWndEvents::Destroy();
+    ::ObjectDelete(m_chart_id, PATTERN_HOVER_LABEL_NAME);   // Alt+hover pattern label, harmless no-op if never created
+    if(reason != REASON_CHARTCHANGE)
+     {
+      m_trading_bubble.OnDeinitEvent();
+      CWndEvents::Destroy();
          ::ChartRedraw(m_chart_id);
-       }
+     }
   }
  //+------------------------------------------------------------------+
  //| Timer                                                            |
@@ -342,6 +343,25 @@
  void CGUIPannel::OnEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
   {
+   // --- TEMP DEBUG (Anhnt/Claude, 2026-09-01): verify ON_OPEN_DIALOG_BOX actually reaches here for
+   // --- m_window_StopLost_Setting and that CWndEvents::OnOpenDialogBox() already updated
+   // --- m_active_window_index by the time we see it (it runs earlier in the same ChartEvent() pass,
+   // --- via ChartEventCustom() -> CheckElementsEvents() -> this OnEvent()). If match=true and
+   // --- active_window_index is already the StopLost window's own index here, then
+   // --- CWndEvents::Show(window_index) (WndEvents.mqh) already ran and should have Show()'d
+   // --- m_buttonsGroup_SLMode/m_btn_save_StopLost_Setting via m_main_elements - the grp/save
+   // --- IsVisible() below prove whether that actually happened. Delete once confirmed either way.
+    if(id == CHARTEVENT_CUSTOM + ON_OPEN_DIALOG_BOX)
+     {
+      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
+          "MY DEBUG ON_OPEN_DIALOG_BOX: lparam=" + (string)lparam +
+          " m_window_StopLost_Setting.Id()=" + (string)m_window_StopLost_Setting.Id() +
+          " match=" + (string)(lparam == m_window_StopLost_Setting.Id()) +
+          " active_window_index=" + (string)m_active_window_index +
+          " StopLost_window_index=" + (string)WindowIdx(m_window_StopLost_Setting) +
+          " grp_visible=" + (string)m_buttonsGroup_SLMode.IsVisible() +
+          " save_visible=" + (string)m_btn_save_StopLost_Setting.IsVisible());
+     }
    // --- Self-correcting safety net (Anhnt, 2026-08-29, widened 2026-08-30): m_active_window_index
    // --- (Library core - WndEvents.mqh - controls which window's elements receive dispatched
    // --- clicks) is only ever meant to point away from m_window_main while m_window_candle_infomation
@@ -369,32 +389,6 @@
     if(id == CHARTEVENT_KEYDOWN && lparam == 27) // VK_ESCAPE
      {
       HideSettingWindow();
-      return;
-     }
-   // --- MY DEBUG (Anhnt, 2026-09-01, temporary - delete once no longer needed). Dumping EVERY
-   // --- chart object (previous version) drowned the 3 controls we actually care about in
-   // --- thousands of unrelated trade-history objects - print THESE BY NAME directly instead,
-   // --- reading straight off each CElement's own X()/Y()/XSize()/YSize()/IsVisible().
-    if(id == CHARTEVENT_KEYDOWN && lparam == 68) // 'D'
-     {
-      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-          "m_combo_pre_Trade_plan_symbol: x=" + (string)m_combo_pre_Trade_plan_symbol.X() +
-          " y=" + (string)m_combo_pre_Trade_plan_symbol.Y() +
-          " xsize=" + (string)m_combo_pre_Trade_plan_symbol.XSize() +
-          " ysize=" + (string)m_combo_pre_Trade_plan_symbol.YSize() +
-          " visible=" + (string)m_combo_pre_Trade_plan_symbol.IsVisible());
-      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-          "m_buttonsGroup_SLMode: x=" + (string)m_buttonsGroup_SLMode.X() +
-          " y=" + (string)m_buttonsGroup_SLMode.Y() +
-          " xsize=" + (string)m_buttonsGroup_SLMode.XSize() +
-          " ysize=" + (string)m_buttonsGroup_SLMode.YSize() +
-          " visible=" + (string)m_buttonsGroup_SLMode.IsVisible());
-      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-          "m_edit_StopLost_DistancePoints: x=" + (string)m_edit_StopLost_DistancePoints.X() +
-          " y=" + (string)m_edit_StopLost_DistancePoints.Y() +
-          " xsize=" + (string)m_edit_StopLost_DistancePoints.XSize() +
-          " ysize=" + (string)m_edit_StopLost_DistancePoints.YSize() +
-          " visible=" + (string)m_edit_StopLost_DistancePoints.IsVisible());
       return;
      }
    // --- Setting Window's native Close (X) button (Anhnt, 2026-08-29): CWindow::CloseDialogBox()
@@ -500,10 +494,50 @@
       }
    //Handle m_buttonsGroup_SLMode - CButtonsGroup fires its own ON_CLICK_GROUP_BUTTON (not
    //ON_CLICK_BUTTON) with dparam already carrying the newly-selected button index
-   //(ButtonsGroup.mqh CButtonsGroup::OnClickButton) - no need to re-query SelectedButtonIndex().
+   //(ButtonsGroup.mqh CButtonsGroup::OnClickButton) - toggle which field set is visible.
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_GROUP_BUTTON && lparam == m_buttonsGroup_SLMode.Id())
       {
-       m_current_sl_mode = (ENUM_SL_MODE)(int)dparam;
+       if((ENUM_SL_MODE)(int)dparam == SL_MODE_FIXED)
+        {
+         m_edit_StopLost_DistancePoints.Show();
+         m_edit_StopLost_ATRPeriod.Hide();
+         m_edit_StopLost_ATRMultiplier.Hide();
+        }
+       else
+        {
+         m_edit_StopLost_DistancePoints.Hide();
+         m_edit_StopLost_ATRPeriod.Show();
+         m_edit_StopLost_ATRMultiplier.Show();
+        }
+       ::ChartRedraw();   // same "Hide()/Show() doesn't blit on its own" issue as ShowWindowStopLostSetting()
+       return;
+      }
+   //Handle m_btn_save_StopLost_Setting - commit the popup's fields into the per-Symbol cache
+   //for m_string_StopLost_setting_current_symbol, then reflect the result in the table's SL
+   //Value column for that row (Anhnt, 2026-09-01).
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_StopLost_Setting.Id())
+      {
+       string symbol = m_string_StopLost_setting_current_symbol;
+       int idx = GetStopLostCacheIndex(symbol, true);
+       m_enum_StopLost_cache_mode[idx]             = (ENUM_SL_MODE)m_buttonsGroup_SLMode.SelectedButtonIndex();
+       m_int_StopLost_cache_distance_pts[idx]      = (int)StringToInteger(m_edit_StopLost_DistancePoints.GetValue());
+       m_int_StopLost_cache_atr_period[idx]        = (int)StringToInteger(m_edit_StopLost_ATRPeriod.GetValue());
+       m_double_StopLost_cache_atr_multiplier[idx] = StringToDouble(m_edit_StopLost_ATRMultiplier.GetValue());
+       int total_rows = (int)m_table_pre_Trade_serversideInfo.RowsTotal();
+       for(int row = 0; row < total_rows; row++)
+          if(m_table_pre_Trade_serversideInfo.GetValue(0, row) == symbol)
+           {
+            m_table_pre_Trade_serversideInfo.SetValue(4, row, FormatStopLostCacheValue(symbol), 0, true);
+            break;
+           }
+       HideWindowStopLostSetting();
+       return;
+      }
+   //Handle m_window_StopLost_Setting's own Close (X) button - same ON_CLOSE_DIALOG_BOX
+   //convention already established for m_window_setting (see below).
+     if(id == CHARTEVENT_CUSTOM + ON_CLOSE_DIALOG_BOX && lparam == m_window_StopLost_Setting.Id())
+      {
+       HideWindowStopLostSetting();
        return;
       }
    // Handle m_table_indicator event
@@ -662,6 +696,13 @@
           string clicked_sym = m_table_pre_Trade_serversideInfo.GetValue(0, row);
           if(m_SymbolTFManager != NULL && clicked_sym != "")
              m_SymbolTFManager.NotifySettingChanged(clicked_sym, (ENUM_TIMEFRAMES)::Period());
+         }
+        // --- SL gear icon (Anhnt, 2026-09-01) - opens m_window_StopLost_Setting scoped to this
+        // --- row's own Symbol, same identity source (col0 text) as the col==0 branch above.
+        else if(col == 3)
+         {
+          string clicked_sym = m_table_pre_Trade_serversideInfo.GetValue(0, row);
+          if(clicked_sym != "") ShowWindowStopLostSetting(clicked_sym);
          }
         return;
        }

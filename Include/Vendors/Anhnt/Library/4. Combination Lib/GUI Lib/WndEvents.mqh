@@ -13,26 +13,80 @@
  class CWndEvents : public CWndContainer 
    {
     protected:      
-        CChart            m_chart;        // --- An instance of the class for managing the graph
+       CChart            m_chart;        // --- An instance of the class for managing the graph
       // --- Chart window ID and number
-        long              m_chart_id;
-        int               m_subwin;
-        string            m_program_name;        // --- Program name      
-        string            m_indicator_shortname; // --- Short name of the indicator
-        int               m_active_window_index; // --- Active window index
-        int               m_subwindow_handle;    // --- Expert subwindow handle
-        string            m_subwindow_shortname; // --- Expert subwindow name
-        int               m_subwindows_total;    // --- Number of subwindows on the chart after installing the Expert Advisor subwindow
-      //---
+       long              m_chart_id;
+       int               m_subwin;
+       string            m_program_name;        // --- Program name      
+       string            m_indicator_shortname; // --- Short name of the indicator
+       int               m_active_window_index; // --- Active window index
+       int               m_subwindow_handle;    // --- Expert subwindow handle
+       string            m_subwindow_shortname; // --- Expert subwindow name
+       int               m_subwindows_total;    // --- Number of subwindows on the chart after installing the Expert Advisor subwindow      
     private:
       // ---Event settings
-        int               m_id;
-        long              m_lparam;
-        double            m_dparam;
-        string            m_sparam;
-      //---
-    public:
-        CWndEvents(void);
+       int               m_id;
+       long              m_lparam;
+       double            m_dparam;
+       string            m_sparam; 
+    private:
+      void              ChartEventCustom(void);
+      void              ChartEventClick(void);
+      void              ChartEventMouseMove(void);
+      void              ChartEventObjectClick(void);
+      void              ChartEventEndEdit(void);
+      void              ChartEventChartChange(void);
+      void              CheckElementsEvents(void);            // Checking events in controls      
+      void              DetermineSubwindow(void);             // Determining the subwindow number
+      void              DeleteExpertSubwindow(void);          // Delete Expert Advisor subwindow
+      void              CheckExpertSubwindowNumber(void);     // Checking and updating the expert window number
+      void              CheckSubwindowNumber(void);           // Checking and updating the indicator window number
+      void              ResizeLockedWindow(void);             // Resizing a locked main form
+      void              InitChartEventsParams(const int id, const long lparam, const double dparam, const string sparam); // Initializing event parameters
+      void              MovingWindow(const bool moving_mode = false); // Moving the window
+      void              CheckElementsEventsTimer(void);       // Checking events of all elements using a timer
+      void              SetChartState(void);
+      bool              OnWindowEndDrag(void);          // Form drag and drop completed
+      bool              OnWindowCollapse(void);         // Collapse/expand form
+      bool              OnWindowExpand(void);           // Collapse/expand form
+      bool              OnWindowChangeXSize(void);      // Handling window resizing
+      bool              OnWindowChangeYSize(void);      // Handling window resizing
+      bool              OnWindowTooltips(void);         // Enable/disable tooltips
+      bool              OnHideBackContextMenus(void);   // Hiding all context menus from the initiator item
+      bool              OnHideContextMenus(void);       // Hiding all context menus
+      bool              OnOpenDialogBox(void);          // Opening a dialog box
+      bool              OnCloseDialogBox(void);         // Close the dialog box
+      bool              OnSetAvailable(void);           // Determine available elements
+      bool              OnSetLocked(void);              // Defining blocked elements
+      bool              OnChangeGUI(void);              // Changes in GUI 
+      int               ActivatedWindowIndex(void);       // Returns the index of the activated window
+      int               ActivatedMenuBarIndex(void);      // Returns the index of the activated main menu
+      int               ActivatedMenuItemIndex(void);     // Returns the index of the activated menu item
+      int               ActivatedSplitButtonIndex(void);  // Returns the index of the activated double button
+      int               ActivatedComboBoxIndex(void);     // Returns the index of the activated combo box
+      int               ActivatedDropCalendarIndex(void); // Returns the index of the activated dropdown calendar
+      int               ActivatedScrollIndex(void);       // Returns the index of the activated scrollbar
+      int               ActivatedTableIndex(void);        // Returns the index of the activated table
+      int               ActivatedSliderIndex(void);       // Returns the index of the activated slider
+      int               ActivatedTreeViewIndex(void);     // Returns the index of the activated tree list
+      int               ActivatedSubChartIndex(void);     // Returns the index of the activated standard chart
+      void              CheckContextMenu(CMenuItem &object); // Checks and makes the context menu available      
+    protected:        
+      void              Destroy(void);                        // Removing an interface        
+      void              ResetWindow(void);                    // Redrawing the window
+      void              Hide(void);                          // Hiding all elements
+      void              Show(const uint window_index);       // Show elements of the specified window
+      void              SetZorders(void);                    // Restoring left-click priorities
+      void              Update(const bool redraw = false);   // Redrawing elements
+      void              ResetTooltips(void);                 // Moves tooltips to the top layer
+      void              ShowTabElements(const uint window_index); // Shows items in selected tabs only
+      void              SetAvailable(const uint window_index, const bool state); // Sets the accessibility status of elements
+      void              FormTimerElementsArray(void);        // Forms an array of elements with a timer
+      void              FormAvailableElementsArray(void);    // Forms an array of available elements
+      void              FormAutoXResizeElementsArray(void);  // Forms an array of elements with auto-resize (X)
+      void              FormAutoYResizeElementsArray(void);  // Forms an array of elements with auto-resize (Y)        
+    public: 
+         CWndEvents(void);
         ~CWndEvents(void);
       // --- Virtual graph event handler
         virtual void      OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam) {}
@@ -41,91 +95,10 @@
       // ---Graph event handlers
         void              ChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);      
       // --- Returns the index of the activated window
-      int               GetActiveWindowIndex(void) {return(m_active_window_index); }
-      //---
-    private:
-        void              ChartEventCustom(void);
-        void              ChartEventClick(void);
-        void              ChartEventMouseMove(void);
-        void              ChartEventObjectClick(void);
-        void              ChartEventEndEdit(void);
-        void              ChartEventChartChange(void);
-      // --- Checking events in controls
-        void              CheckElementsEvents(void);
-      // --- Determining the subwindow number
-        void              DetermineSubwindow(void);
-      // --- Delete Expert Advisor subwindow
-        void              DeleteExpertSubwindow(void);
-      // --- Checking and updating the expert window number
-        void              CheckExpertSubwindowNumber(void);
-      // --- Checking and updating the indicator window number
-        void              CheckSubwindowNumber(void);
-      // --- Resizing a locked main form
-        void              ResizeLockedWindow(void);
-      // --- Initializing event parameters
-        void              InitChartEventsParams(const int id, const long lparam, const double dparam, const string sparam);
-      // --- Moving the window
-        void              MovingWindow(const bool moving_mode = false);
-      // --- Checking events of all elements using a timer
-        void              CheckElementsEventsTimer(void);
-      // --- Setting the chart state
-        void              SetChartState(void);
-      //---
-    protected:
-        // --- Removing an interface
-         void              Destroy(void);
-        // --- Redrawing the window
-         void              ResetWindow(void);
-        //---
-    public:
-        // --- Kernel initialization
-         void              InitializeCore(void);
-        // --- Completing GUI creation
-         void              CompletedGUI(void);
-        // ---Updating the position of elements
-         void              Moving(void);
-        //---
-    protected:        
-         void              Hide(void);                          // --- Hiding all elements
-         void              Show(const uint window_index);       // --- Show elements of the specified window
-         void              SetZorders(void);                    // --- Restoring left-click priorities
-         void              Update(const bool redraw = false);   // --- Redrawing elements
-         void              ResetTooltips(void);                 // --- Moves tooltips to the top layer
-         void              ShowTabElements(const uint window_index); // --- Shows items in selected tabs only
-         void              SetAvailable(const uint window_index, const bool state); // --- Sets the accessibility status of elements
-         void              FormTimerElementsArray(void);        // --- Forms an array of elements with a timer
-         void              FormAvailableElementsArray(void);    // --- Forms an array of available elements
-         void              FormAutoXResizeElementsArray(void);  // --- Forms an array of elements with auto-resize (X)
-         void              FormAutoYResizeElementsArray(void);  // --- Forms an array of elements with auto-resize (Y)
-        //---
-    private:    
-      bool              OnWindowEndDrag(void);          // --- Form drag and drop completed
-      bool              OnWindowCollapse(void);         // --- Collapse/expand form
-      bool              OnWindowExpand(void);           // --- Collapse/expand form
-      bool              OnWindowChangeXSize(void);      // --- Handling window resizing
-      bool              OnWindowChangeYSize(void);      // --- Handling window resizing
-      bool              OnWindowTooltips(void);         // --- Enable/disable tooltips
-      bool              OnHideBackContextMenus(void);   // --- Hiding all context menus from the initiator item
-      bool              OnHideContextMenus(void);       // --- Hiding all context menus
-      bool              OnOpenDialogBox(void);          // --- Opening a dialog box
-      bool              OnCloseDialogBox(void);         // --- Close the dialog box
-      bool              OnSetAvailable(void);           // --- Determine available elements
-      bool              OnSetLocked(void);              // --- Defining blocked elements
-      bool              OnChangeGUI(void);              // --- Changes in GUI
-      //---
-    private:
-       int               ActivatedWindowIndex(void);       // --- Returns the index of the activated window
-       int               ActivatedMenuBarIndex(void);      // --- Returns the index of the activated main menu
-       int               ActivatedMenuItemIndex(void);     // --- Returns the index of the activated menu item
-       int               ActivatedSplitButtonIndex(void);  // --- Returns the index of the activated double button
-       int               ActivatedComboBoxIndex(void);     // --- Returns the index of the activated combo box
-       int               ActivatedDropCalendarIndex(void); // --- Returns the index of the activated dropdown calendar
-       int               ActivatedScrollIndex(void);       // --- Returns the index of the activated scrollbar
-       int               ActivatedTableIndex(void);        // --- Returns the index of the activated table
-       int               ActivatedSliderIndex(void);       // --- Returns the index of the activated slider
-       int               ActivatedTreeViewIndex(void);     // --- Returns the index of the activated tree list
-       int               ActivatedSubChartIndex(void);     // --- Returns the index of the activated standard chart
-       void              CheckContextMenu(CMenuItem &object); // --- Checks and makes the context menu available
+      int               GetActiveWindowIndex(void) {return(m_active_window_index); }         
+      void              InitializeCore(void);                 // Kernel initialization        
+      void              CompletedGUI(void);                   // Completing GUI creation        
+      void              Moving(void);                         // Updating the position of elements    
    };
  #ifndef CWNDEVENTS_MQH_IMPLEMENTATION
  #define CWNDEVENTS_MQH_IMPLEMENTATION
@@ -152,23 +125,23 @@
   //+------------------------------------------------------------------+
   CWndEvents::~CWndEvents(void) 
    {
-      // --- Quit if this is not real time
-        if(::MQLInfoInteger(MQL_TESTER))
+    // --- Quit if this is not real time
+     if(::MQLInfoInteger(MQL_TESTER))
           return;
-      // --- Delete timer
-        ::EventKillTimer();
-      // --- Let's turn on the control
-        m_chart.MouseScroll(true);
-        m_chart.SetInteger(CHART_DRAG_TRADE_LEVELS, true);
-      // --- Disable tracking of mouse events
-        m_chart.EventMouseMove(false);
-      // --- Enable the command line call for the Space and Enter keys
-        m_chart.SetInteger(CHART_QUICK_NAVIGATION, true);
-      // ---Disconnect from schedule
-        m_chart.Detach();
-      // --- Remove the indicator subwindow
-        DeleteExpertSubwindow();
-      // --- Erase comment
+    // --- Delete timer
+      ::EventKillTimer();
+    // --- Let's turn on the control
+     m_chart.MouseScroll(true);
+     m_chart.SetInteger(CHART_DRAG_TRADE_LEVELS, true);
+    // --- Disable tracking of mouse events
+     m_chart.EventMouseMove(false);
+    // --- Enable the command line call for the Space and Enter keys
+     m_chart.SetInteger(CHART_QUICK_NAVIGATION, true);
+    // ---Disconnect from schedule
+     m_chart.Detach();
+    // --- Remove the indicator subwindow
+     DeleteExpertSubwindow();
+    // --- Erase comment
         ::Comment("");
    }
   //+------------------------------------------------------------------+
@@ -230,34 +203,36 @@
   void CWndEvents::CheckElementsEvents(void) 
    {
     // --- Handling the mouse cursor movement event
-      if(m_id == CHARTEVENT_MOUSE_MOVE) 
-        {
-          // --- Exit if the form is in another chart subwindow
-          if(!m_windows[m_active_window_index].CheckSubwindowNumber())
+     if(m_id == CHARTEVENT_MOUSE_MOVE) 
+      {
+       // --- Exit if the form is in another chart subwindow
+        if(!m_windows[m_active_window_index].CheckSubwindowNumber())
             return;
-          // --- We check only available elements
-          int available_elements_total = CWndContainer::AvailableElementsTotal(m_active_window_index);
-          for(int e = 0; e < available_elements_total; e++) {
-            CElement *el = m_wnd[m_active_window_index].m_available_elements[e];
-            // --- Checking focus on elements
-            el.CheckMouseFocus();
-            // --- Event processing
-            el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
-          }
-        }
+       // --- We check only available elements
+        int available_elements_total = CWndContainer::AvailableElementsTotal(m_active_window_index);
+        for(int e = 0; e < available_elements_total; e++) 
+         {
+          CElement *el = m_wnd[m_active_window_index].m_available_elements[e];
+          // --- Checking focus on elements
+           el.CheckMouseFocus();
+          // --- Event processing
+           el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
+         }
+      }
     // --- All events except mouse cursor movement
-      else 
-        {
-          int elements_total = CWndContainer::ElementsTotal(m_active_window_index);
-          for(int e = 0; e < elements_total; e++) {
-            // --- We check only available elements
-            CElement *el = m_wnd[m_active_window_index].m_elements[e];
-            if(!el.IsVisible() || !el.CElementBase::IsAvailable() || el.CElementBase::IsLocked())
+     else 
+      {
+        int elements_total = CWndContainer::ElementsTotal(m_active_window_index);
+        for(int e = 0; e < elements_total; e++) 
+          {
+           // --- We check only available elements
+           CElement *el = m_wnd[m_active_window_index].m_elements[e];
+           if(!el.IsVisible() || !el.CElementBase::IsAvailable() || el.CElementBase::IsLocked())
               continue;
-            // --- Handling the event in the element handler
-            el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
+           // --- Handling the event in the element handler
+           el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
           }
-        }
+      }
     // --- Direct event to application file
       OnEvent(m_id, m_lparam, m_dparam, m_sparam);
    }
@@ -266,44 +241,44 @@
   //+------------------------------------------------------------------+
   void CWndEvents::ChartEventCustom(void) 
    {
-      // --- If the signal is to determine the available elements
-        if(OnSetAvailable())
+    // --- If the signal is to determine the available elements
+     if(OnSetAvailable())
           return;
-      // --- If the change signal in the GUI
-        if(OnChangeGUI())
+    // --- If the change signal in the GUI
+     if(OnChangeGUI())
           return;
-      // --- If the signal is to detect blocked elements
-        if(OnSetLocked())
+    // --- If the signal is to detect blocked elements
+     if(OnSetLocked())
           return;
-      // --- If the signal indicates the end of dragging the form
-        if(OnWindowEndDrag())
+    // --- If the signal indicates the end of dragging the form
+     if(OnWindowEndDrag())
           return;
-      // ---If the signal is to collapse the form
-        if(OnWindowCollapse())
+    // ---If the signal is to collapse the form
+     if(OnWindowCollapse())
           return;
-      // ---If the signal is to expand the form
-        if(OnWindowExpand())
+    // ---If the signal is to expand the form
+     if(OnWindowExpand())
           return;
-      // ---If the signal is to change the size of the elements along the X axis
-        if(OnWindowChangeXSize())
+    // ---If the signal is to change the size of the elements along the X axis
+     if(OnWindowChangeXSize())
           return;
-      // ---If the signal is to change the size of elements along the Y axis
-        if(OnWindowChangeYSize())
+    // ---If the signal is to change the size of elements along the Y axis
+     if(OnWindowChangeYSize())
           return;
-      // --- If the signal is enabled/disabled, tooltips
-        if(OnWindowTooltips())
+    // --- If the signal is enabled/disabled, tooltips
+     if(OnWindowTooltips())
           return;
-      // --- If the signal is to hide context menus from the initiator item
-        if(OnHideBackContextMenus())
+    // --- If the signal is to hide context menus from the initiator item
+     if(OnHideBackContextMenus())
           return;
-      // --- If the signal is to hide all context menus
-        if(OnHideContextMenus())
+    // --- If the signal is to hide all context menus
+     if(OnHideContextMenus())
           return;
-      // --- If the signal to open the dialog box
-        if(OnOpenDialogBox())
+    // --- If the signal to open the dialog box
+     if(OnOpenDialogBox())
           return;
-      // --- If the signal to close the dialog box
-        if(OnCloseDialogBox())
+    // --- If the signal to close the dialog box
+     if(OnCloseDialogBox())
           return;
    }
   //+------------------------------------------------------------------+
@@ -317,13 +292,13 @@
   //+------------------------------------------------------------------+
   void CWndEvents::ChartEventMouseMove(void) 
    {
-      // --- Exit if this is not a cursor move event
-        if(m_id != CHARTEVENT_MOUSE_MOVE)
+    // --- Exit if this is not a cursor move event
+     if(m_id != CHARTEVENT_MOUSE_MOVE)
           return;
-      // --- Moving the window
-        MovingWindow();
-      // --- Setting the chart state
-        SetChartState();
+    // --- Moving the window
+     MovingWindow();
+    // --- Setting the chart state
+     SetChartState();
    }
   //+------------------------------------------------------------------+
   // | CHARTEVENT OBJECT CLICK event |
@@ -343,18 +318,18 @@
   void CWndEvents::ChartEventChartChange(void) 
    {
     // --- Chart properties change event
-      if(m_id != CHARTEVENT_CHART_CHANGE)
-        return;
+     if(m_id != CHARTEVENT_CHART_CHANGE)
+          return;
     // --- Checking and updating the expert window number
-      CheckExpertSubwindowNumber();
+     CheckExpertSubwindowNumber();
     // --- Checking and updating the indicator window number
-      CheckSubwindowNumber();
+     CheckSubwindowNumber();
     // --- Moving the window
-      MovingWindow(true);
+     MovingWindow(true);
     // --- Resizing a locked main window
-      ResizeLockedWindow();
+     ResizeLockedWindow();
     // --- Let's redraw the graph
-      m_chart.Redraw();
+     m_chart.Redraw();
    }
   //+------------------------------------------------------------------+
   // | Timer |
@@ -362,20 +337,20 @@
   void CWndEvents::OnTimerEvent(void) 
    {
     // --- Exit if the mouse cursor is at rest (difference between calls > 300 ms) and the left mouse button is released
-      if(m_mouse.GapBetweenCalls() > 300 && !m_mouse.IsLeftBtn()) {
-        int text_boxes_total = CWndContainer::ElementsTotal(m_active_window_index, E_TEXT_BOX);
-        for(int e = 0; e < text_boxes_total; e++)
-          m_wnd[m_active_window_index].m_text_boxes[e].OnEventTimer();
-        //---
-        return;
+     if(m_mouse.GapBetweenCalls() > 300 && !m_mouse.IsLeftBtn()) 
+      {
+       int text_boxes_total = CWndContainer::ElementsTotal(m_active_window_index, E_TEXT_BOX);
+       for(int e = 0; e < text_boxes_total; e++)
+          m_wnd[m_active_window_index].m_text_boxes[e].OnEventTimer();       
+       return;
       }
     // --- If the array is empty, exit
-      if(CWndContainer::WindowsTotal() < 1)
+     if(CWndContainer::WindowsTotal() < 1)
         return;
     // --- Checking events of all elements using a timer
-      CheckElementsEventsTimer();
+     CheckElementsEventsTimer();
     // --- Redraw the graph if the window is in moving mode
-      if(m_windows[m_active_window_index].ClampingAreaMouse() == PRESSED_INSIDE_HEADER)
+     if(m_windows[m_active_window_index].ClampingAreaMouse() == PRESSED_INSIDE_HEADER)
         m_chart.Redraw();
    }
   //+------------------------------------------------------------------+
@@ -384,16 +359,18 @@
   bool CWndEvents::OnWindowEndDrag(void) 
    {
     // ---If the signal is to collapse the form
-      if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_DRAG_END)
+     if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_DRAG_END)
         return(false);
     // --- If the window ID and subwindow number are the same
-      if(m_lparam == m_windows[0].Id() && (int)m_dparam == m_subwin) {
-        // ---Set display mode in all main elements
+     if(m_lparam == m_windows[0].Id() && (int)m_dparam == m_subwin)
+      {
+       // ---Set display mode in all main elements
         int main_total = MainElementsTotal(m_active_window_index);
-        for(int e = 0; e < main_total; e++) {
+        for(int e = 0; e < main_total; e++) 
+         {
           CElement *el = m_wnd[m_active_window_index].m_main_elements[e];
           el.Moving(false);
-        }
+         }
       }
     // --- Update the location of all elements
       m_chart.Redraw();
@@ -405,18 +382,20 @@
   bool CWndEvents::OnWindowCollapse(void) 
    {
     // ---If the signal is to collapse the form
-      if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_COLLAPSE)
+     if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_COLLAPSE)
         return(false);
     // --- If the window ID and subwindow number are the same
-      if(m_lparam == m_windows[0].Id() && (int)m_dparam == m_subwin) {
-        int elements_total = CWndContainer::ElementsTotal(0);
-        for(int e = 0; e < elements_total; e++) {
-          CElement *el = m_wnd[0].m_elements[e];
-          // --- Hide all elements except the form
-          if(el.Id() > 0)
+     if(m_lparam == m_windows[0].Id() && (int)m_dparam == m_subwin) 
+      {
+       int elements_total = CWndContainer::ElementsTotal(0);
+       for(int e = 0; e < elements_total; e++) 
+        {
+         CElement *el = m_wnd[0].m_elements[e];
+         // --- Hide all elements except the form
+         if(el.Id() > 0)
             el.Hide();
         }
-        // --- Reset form colors
+       // --- Reset form colors
         m_windows[0].ResetColors();
       }
     // --- Update the location of all elements
@@ -429,23 +408,23 @@
   bool CWndEvents::OnWindowExpand(void) 
    {
     // --- If the signal is "Expand form"
-      if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_EXPAND)
+     if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_EXPAND)
         return(false);
     // --- Active window index
-      int awi = m_active_window_index;
+     int awi = m_active_window_index;
     // --- If the window ID and subwindow number are the same
-      if(m_lparam != m_windows[awi].Id() || (int)m_dparam != m_subwin)
+     if(m_lparam != m_windows[awi].Id() || (int)m_dparam != m_subwin)
         return(true);
     // --- Change the height of the window if the mode is enabled
-      if(m_windows[awi].AutoYResizeMode())
-        m_windows[awi].ChangeWindowHeight(m_chart.HeightInPixels(m_subwin) - 3);
-    //---
-      int y_resize_total = CWndContainer::AutoYResizeElementsTotal(awi);
-      for(int e = 0; e < y_resize_total; e++) 
+     if(m_windows[awi].AutoYResizeMode())
+        m_windows[awi].ChangeWindowHeight(m_chart.HeightInPixels(m_subwin) - 3);   
+     int y_resize_total = CWndContainer::AutoYResizeElementsTotal(awi);
+     for(int e = 0; e < y_resize_total; e++) 
       {
-        CElement *el = m_wnd[awi].m_auto_y_resize_elements[e];
-        // --- If the mode is on, then adjust the height
-        if(el.AutoYResizeMode()) {
+       CElement *el = m_wnd[awi].m_auto_y_resize_elements[e];
+       // --- If the mode is on, then adjust the height
+       if(el.AutoYResizeMode()) 
+        {
           el.ChangeHeightByBottomWindowSide();
           el.Update();
         }
@@ -455,8 +434,8 @@
     // --- Show items in selected tabs only
       ShowTabElements(awi);
     // --- Refresh to show all changes
-      int elements_total = CWndContainer::ElementsTotal(awi);
-      for(int e = 0; e < elements_total; e++) 
+     int elements_total = CWndContainer::ElementsTotal(awi);
+     for(int e = 0; e < elements_total; e++) 
       {
         CElement *el = m_wnd[awi].m_elements[e];
         if(el.IsVisible())
@@ -472,18 +451,18 @@
   bool CWndEvents::OnWindowChangeXSize(void) 
    {
     // --- If the signal is "Resize elements"
-      if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_CHANGE_XSIZE)
+     if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_CHANGE_XSIZE)
         return(false);
     // --- Exit if window IDs do not match
-      if(m_lparam != m_windows[m_active_window_index].Id())
+     if(m_lparam != m_windows[m_active_window_index].Id())
         return(true);
     // --- Update element position
       Moving();
     // --- Refresh window
       m_windows[m_active_window_index].Update();
     // --- Change width
-      int x_resize_total = CWndContainer::AutoXResizeElementsTotal(m_active_window_index);
-      for(int e = 0; e < x_resize_total; e++) 
+     int x_resize_total = CWndContainer::AutoXResizeElementsTotal(m_active_window_index);
+     for(int e = 0; e < x_resize_total; e++) 
       {
         CElement *el = m_wnd[m_active_window_index].m_auto_x_resize_elements[e];
         el.ChangeWidthByRightWindowSide();
@@ -492,24 +471,25 @@
     // --- Update element position
       Moving();
     //---
-      for(int e = 0; e < x_resize_total; e++) 
+     for(int e = 0; e < x_resize_total; e++) 
       {
         CElement *el = m_wnd[m_active_window_index].m_auto_x_resize_elements[e];
         el.Moving(false);
       }
-      m_chart.Redraw();
-      for(int e = 0; e < x_resize_total; e++) 
+     m_chart.Redraw();
+     for(int e = 0; e < x_resize_total; e++) 
       {
         CElement *el = m_wnd[m_active_window_index].m_auto_x_resize_elements[e];
         el.Update();
       }
     // --- Refresh to show all changes in tree lists
-      int treeviews_total = ElementsTotal(m_active_window_index, E_TREE_VIEW);
-      for(int t = 0; t < treeviews_total; t++) {
+     int treeviews_total = ElementsTotal(m_active_window_index, E_TREE_VIEW);
+     for(int t = 0; t < treeviews_total; t++) 
+      {
         CTreeView *tv = m_wnd[m_active_window_index].m_treeview_lists[t];
         tv.RedrawContentList();
         tv.UpdateContentList();
-      }
+       }
     // --- Show cursor pointer if in manual width mode
       if(m_windows[m_active_window_index].ResizeState())
         m_windows[m_active_window_index].GetResizePointer().Reset();
@@ -523,43 +503,42 @@
   bool CWndEvents::OnWindowChangeYSize(void) 
    {
     // --- If the signal is "Resize elements"
-    if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_CHANGE_YSIZE)
+     if(m_id != CHARTEVENT_CUSTOM + ON_WINDOW_CHANGE_YSIZE)
       return(false);
     // --- Exit if window IDs do not match
-    if(m_lparam != m_windows[m_active_window_index].Id())
+     if(m_lparam != m_windows[m_active_window_index].Id())
       return(true);
     // --- Update element position
-    Moving();
+     Moving();
     // --- Refresh window
-    m_windows[m_active_window_index].Update();
+     m_windows[m_active_window_index].Update();
     // ---Change height
-    int y_resize_total = CWndContainer::AutoYResizeElementsTotal(m_active_window_index);
-    for(int e = 0; e < y_resize_total; e++) 
-    {
-      CElement *el = m_wnd[m_active_window_index].m_auto_y_resize_elements[e];
-      el.ChangeHeightByBottomWindowSide();
-      //el.Update();
-    }
+     int y_resize_total = CWndContainer::AutoYResizeElementsTotal(m_active_window_index);
+     for(int e = 0; e < y_resize_total; e++) 
+      {
+       CElement *el = m_wnd[m_active_window_index].m_auto_y_resize_elements[e];
+       el.ChangeHeightByBottomWindowSide();
+       //el.Update();
+      }
     // --- Update element position
-    Moving();
-    //---
+     Moving();    
     for(int e = 0; e < y_resize_total; e++) 
-    {
+     {
       CElement *el = m_wnd[m_active_window_index].m_auto_y_resize_elements[e];
       el.Moving(false);
-    }
-    m_chart.Redraw();
+     }
+     m_chart.Redraw();
     for(int e = 0; e < y_resize_total; e++) 
-    {
+     {
       CElement *el = m_wnd[m_active_window_index].m_auto_y_resize_elements[e];
       el.Update();
-    }
+     }
     // --- Show cursor pointer if in manual altitude mode
-    if(m_windows[m_active_window_index].ResizeState())
+     if(m_windows[m_active_window_index].ResizeState())
       m_windows[m_active_window_index].GetResizePointer().Reset();
     // --- Update the location of all elements
-    m_chart.Redraw();
-    return(true);
+     m_chart.Redraw();
+     return(true);
    }
   //+------------------------------------------------------------------+
   //| Event to enable/disable tooltips                                 |
@@ -607,31 +586,33 @@
     int awi = m_active_window_index;
     int context_menus_total = CWndContainer::ElementsTotal(awi, E_CONTEXT_MENU);
     for(int i = context_menus_total - 1; i >= 0; i--) 
-    {
+     {
       // --- Pointers to the context menu and its previous node
-      CContextMenu *cm = m_wnd[awi].m_context_menus[i];
-      CMenuItem    *mi = cm.PrevNodePointer();
+       CContextMenu *cm = m_wnd[awi].m_context_menus[i];
+       CMenuItem    *mi = cm.PrevNodePointer();
       // --- If there is nothing further beyond this point, then...
-      if(::CheckPointer(mi) == POINTER_INVALID)
+       if(::CheckPointer(mi) == POINTER_INVALID)
         continue;
       // --- If you reach the signal initiator point, then...
-      if(mi.Id() == m_lparam) 
-      {
-        // --- ...in case its context menu is without focus, hide it
-        if(!cm.MouseFocus()) {
-          cm.Hide();
-          mi.IsPressed(false);
-          mi.Update(true);
+       if(mi.Id() == m_lparam) 
+        {
+         // --- ...in case its context menu is without focus, hide it
+          if(!cm.MouseFocus()) 
+           {
+            cm.Hide();
+            mi.IsPressed(false);
+            mi.Update(true);
+           }
+         // --- Let's complete the cycle
+         break;
+        } 
+       else 
+        {
+         cm.Hide();
+         mi.IsPressed(false);
+         mi.Update(true);
         }
-        // --- Let's complete the cycle
-        break;
-      } else 
-      {
-        cm.Hide();
-        mi.IsPressed(false);
-        mi.Update(true);
-      }
-    }
+     }
     return(true);
    }
   //+------------------------------------------------------------------+
@@ -668,17 +649,18 @@
   bool CWndEvents::OnOpenDialogBox(void) 
    {
     // --- If the signal to open the dialog box
-      if(m_id != CHARTEVENT_CUSTOM + ON_OPEN_DIALOG_BOX)
+     if(m_id != CHARTEVENT_CUSTOM + ON_OPEN_DIALOG_BOX)
         return(false);
     // --- Exit if the message is from another program
-      if(m_sparam != m_program_name)
+     if(m_sparam != m_program_name)
         return(true);
     // --- Let's go through the array of windows
-      int window_total = CWndContainer::WindowsTotal();
-      for(int w = 0; w < window_total; w++) 
+     int window_total = CWndContainer::WindowsTotal();
+     for(int w = 0; w < window_total; w++) 
       {
-        // --- If the ID of the open window
-        if(m_windows[w].Id() == m_lparam) {
+       // --- If the ID of the open window
+        if(m_windows[w].Id() == m_lparam) 
+         {
           // --- Let's remember in this form the index of the window from which it was called
           m_windows[w].PrevActiveWindowIndex(m_active_window_index);
           // --- Activate the form
@@ -689,26 +671,27 @@
           m_active_window_index = w;
           // --- Show window
           Show(m_active_window_index);
-        }
+         }
         // --- Other forms will be blocked until the activated window is closed
-        else {
+        else 
+         {
           // --- Lock the form
           m_windows[w].State(false);
           // --- Reset the priorities of form elements when clicking the left mouse button
           int elements_total = CWndContainer::ElementsTotal(w);
           for(int e = 0; e < elements_total; e++)
             m_wnd[w].m_elements[e].ResetZorders();
-        }
+         }
       }
     // --- Hiding tooltips in the previous window
-      int prev_window_index = m_windows[m_active_window_index].PrevActiveWindowIndex();
-      int tooltips_total = CWndContainer::ElementsTotal(prev_window_index, E_TOOLTIP);
-      for(int t = 0; t < tooltips_total; t++)
-        m_wnd[prev_window_index].m_tooltips[t].FadeOutTooltip();
+     int prev_window_index = m_windows[m_active_window_index].PrevActiveWindowIndex();
+     int tooltips_total = CWndContainer::ElementsTotal(prev_window_index, E_TOOLTIP);
+     for(int t = 0; t < tooltips_total; t++)
+      m_wnd[prev_window_index].m_tooltips[t].FadeOutTooltip();
     // --- Show items in selected tabs only
-      ShowTabElements(m_active_window_index);
+     ShowTabElements(m_active_window_index);
     // --- Let's create an array of visible and accessible elements
-      FormAvailableElementsArray();
+     FormAvailableElementsArray();
     // --- Restoring priorities for left-clicking on an activated window
       SetZorders();
     // ---Move tooltips to top layer
@@ -721,13 +704,15 @@
   bool CWndEvents::OnCloseDialogBox(void) 
    {
     // --- If the signal to close the dialog box
-      if(m_id != CHARTEVENT_CUSTOM + ON_CLOSE_DIALOG_BOX)
+     if(m_id != CHARTEVENT_CUSTOM + ON_CLOSE_DIALOG_BOX)
         return(false);
     // --- Let's walk through the array of windows
-      int window_total = CWndContainer::WindowsTotal();
-      for(int w = 0; w < window_total; w++) {
+     int window_total = CWndContainer::WindowsTotal();
+     for(int w = 0; w < window_total; w++) 
+      {
         // --- If the ID of the open window
-        if(m_windows[w].Id() == m_lparam) {
+        if(m_windows[w].Id() == m_lparam) 
+         {
           // --- Lock the form
           m_windows[w].State(false);
           // --- Hide the form
@@ -739,13 +724,13 @@
           // --- Redrawing the graph
           m_chart.Redraw();
           break;
-        }
+         }
       }
     // --- Setting the index of the previous window
-      m_active_window_index = int(m_dparam);
+     m_active_window_index = int(m_dparam);
     // --- Restoring priorities for left-clicking on an activated window
-      SetZorders();
-      return(true);
+     SetZorders();
+     return(true);
    }
   //+------------------------------------------------------------------+
   // | Event to determine available controls |
@@ -753,27 +738,28 @@
   bool CWndEvents::OnSetAvailable(void) 
    {
     // --- If the signal indicates a change in the availability of elements
-      if(m_id != CHARTEVENT_CUSTOM + ON_SET_AVAILABLE)
+     if(m_id != CHARTEVENT_CUSTOM + ON_SET_AVAILABLE)
         return(false);
     // --- Signal to install/restore
-      bool is_restore = (bool)m_dparam;
+     bool is_restore = (bool)m_dparam;
     // --- Define active elements
-      int ww_index = ActivatedWindowIndex();
-      int mb_index = ActivatedMenuBarIndex();
-      int mi_index = ActivatedMenuItemIndex();
-      int sb_index = ActivatedSplitButtonIndex();
-      int cb_index = ActivatedComboBoxIndex();
-      int dc_index = ActivatedDropCalendarIndex();
-      int sc_index = ActivatedScrollIndex();
-      int tl_index = ActivatedTableIndex();
-      int sd_index = ActivatedSliderIndex();
-      int tv_index = ActivatedTreeViewIndex();
-      int ch_index = ActivatedSubChartIndex();
+     int ww_index = ActivatedWindowIndex();
+     int mb_index = ActivatedMenuBarIndex();
+     int mi_index = ActivatedMenuItemIndex();
+     int sb_index = ActivatedSplitButtonIndex();
+     int cb_index = ActivatedComboBoxIndex();
+     int dc_index = ActivatedDropCalendarIndex();
+     int sc_index = ActivatedScrollIndex();
+     int tl_index = ActivatedTableIndex();
+     int sd_index = ActivatedSliderIndex();
+     int tv_index = ActivatedTreeViewIndex();
+     int ch_index = ActivatedSubChartIndex();
     // --- If the signal is to determine available elements, first disable access
-      if(!is_restore)
+     if(!is_restore)
         SetAvailable(m_active_window_index, false);
     // --- We restore only if there are no activated elements
-      else {
+     else 
+      {
         if(ww_index == WRONG_VALUE && mb_index == WRONG_VALUE && mi_index == WRONG_VALUE &&
             sb_index == WRONG_VALUE && dc_index == WRONG_VALUE && cb_index == WRONG_VALUE &&
             sc_index == WRONG_VALUE && tl_index == WRONG_VALUE && sd_index == WRONG_VALUE &&
@@ -783,60 +769,72 @@
         }
       }
     // --- If (1) a signal to determine available items or (2) to restore for a drop-down calendar
-      if(!is_restore || (is_restore && dc_index != WRONG_VALUE)) {
-        CElement *el = NULL;
-        // --- Window
-        if(ww_index != WRONG_VALUE) {
+     if(!is_restore || (is_restore && dc_index != WRONG_VALUE)) 
+      {
+       CElement *el = NULL;
+       // --- Window
+        if(ww_index != WRONG_VALUE) 
+         {
           el = m_windows[m_active_window_index];
-        }
-        // --- Main menu
-        else if(mb_index != WRONG_VALUE) {
+         }
+       // --- Main menu
+        else if(mb_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_menu_bars[mb_index];
-        }
-        // --- Menu item
-        else if(mi_index != WRONG_VALUE) {
+         }
+       // --- Menu item
+        else if(mi_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_menu_items[mi_index];
-        }
-        // --- Double button
-        else if(sb_index != WRONG_VALUE) {
+         }
+       // --- Double button
+        else if(sb_index != WRONG_VALUE)   
+         {
           el = m_wnd[m_active_window_index].m_split_buttons[sb_index];
-        }
-        // --- Dropdown calendar without dropdown list
-        else if(dc_index != WRONG_VALUE && cb_index == WRONG_VALUE) {
+         }
+       // --- Dropdown calendar without dropdown list
+        else if(dc_index != WRONG_VALUE && cb_index == WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_drop_calendars[dc_index];
-        }
-        // --- Dropdown list
-        else if(cb_index != WRONG_VALUE) {
+         }
+       // --- Dropdown list
+        else if(cb_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_combo_boxes[cb_index];
-        }
-        // --- Scroll bar
-        else if(sc_index != WRONG_VALUE) {
+         }
+       // --- Scroll bar
+        else if(sc_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_scrolls[sc_index];
-        }
-        // --- Table
-        else if(tl_index != WRONG_VALUE) {
+         }
+       // --- Table
+        else if(tl_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_tables[tl_index];
-        }
-        // --- Slider
-        else if(sd_index != WRONG_VALUE) {
+         }
+       // --- Slider
+        else if(sd_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_sliders[sd_index];
-        }
-        // --- Tree list
-        else if(tv_index != WRONG_VALUE) {
+         }
+       // --- Tree list
+        else if(tv_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_treeview_lists[tv_index];
-        }
-        // --- Standard schedule
-        else if(ch_index != WRONG_VALUE) {
+         }
+       // --- Standard schedule
+        else if(ch_index != WRONG_VALUE) 
+         {
           el = m_wnd[m_active_window_index].m_sub_charts[ch_index];
-        }
-        // --- Exit if element pointer not obtained
+         }
+       // --- Exit if element pointer not obtained
         if(::CheckPointer(el) == POINTER_INVALID) 
-        {
+         {
           return(true);
-        }
-        // --- Block for the main menu
+         }
+       // --- Block for the main menu
         if(mb_index != WRONG_VALUE) 
-        {
+         {
           // --- Make the main menu and its visible context menus available
           el.IsAvailable(true);
           //---
@@ -848,35 +846,36 @@
             // --- Checks and makes the context menu available
             CheckContextMenu(mi);
           }
-        }
-        // --- Block for menu item
+         }
+       // --- Block for menu item
         if(mi_index != WRONG_VALUE) 
-        {
+         {
           CMenuItem *mi = dynamic_cast<CMenuItem*>(el);
           mi.IsAvailable(true);
           // --- Checks and makes the context menu available
           CheckContextMenu(mi);
-        }
-        // --- Block for scroll bars
+         }
+       // --- Block for scroll bars
         else if(sc_index != WRONG_VALUE) 
-        {
+         {
           // ---Make accessible starting from the main node
           el.MainPointer().IsAvailable(true);
-        }
-        // --- Block for tree list
+         }
+       // --- Block for tree list
         else if(tv_index != WRONG_VALUE) 
-        {
+         {
           // --- Lock all elements except the main one
           CTreeView *tv = dynamic_cast<CTreeView*>(el);
           tv.IsAvailable(true, true);
           int total = tv.ElementsTotal();
           for(int i = 0; i < total; i++)
             tv.Element(i).IsAvailable(false);
-        } else 
-        {
+         } 
+        else 
+         {
           // --- Make element available
           el.IsAvailable(true);
-        }
+         }
       }
     //---
       return(true);
@@ -953,14 +952,15 @@
   //+------------------------------------------------------------------+
   int CWndEvents::ActivatedMenuBarIndex(void) 
    {
-      int index = WRONG_VALUE;
-    //---
-      int total = ElementsTotal(m_active_window_index, E_MENU_BAR);
-      for(int i = 0; i < total; i++) {
-        CMenuBar *el = m_wnd[m_active_window_index].m_menu_bars[i];
-        if(el.State()) {
-          index = i;
-          break;
+    int index = WRONG_VALUE;      
+    int total = ElementsTotal(m_active_window_index, E_MENU_BAR);
+    for(int i = 0; i < total; i++) 
+     {
+      CMenuBar *el = m_wnd[m_active_window_index].m_menu_bars[i];
+      if(el.State()) 
+       {
+        index = i;
+        break;
         }
       }
       return(index);
@@ -1017,37 +1017,39 @@
     return(index);
    }
   //+------------------------------------------------------------------+
-  // | Returns the index of the activated dropdown calendar |
+  //| Returns the index of the activated dropdown calendar |
   //+------------------------------------------------------------------+
   int CWndEvents::ActivatedDropCalendarIndex(void) 
    {
-      int index = WRONG_VALUE;
-    //---
-      int total = ElementsTotal(m_active_window_index, E_DROP_CALENDAR);
-      for(int i = 0; i < total; i++) {
-        CDropCalendar *el = m_wnd[m_active_window_index].m_drop_calendars[i];
-        if(el.GetCalendarPointer().IsVisible()) {
-          index = i;
-          break;
-        }
-      }
-      return(index);
+    int index = WRONG_VALUE;    
+    int total = ElementsTotal(m_active_window_index, E_DROP_CALENDAR);
+    for(int i = 0; i < total; i++)
+     {
+      CDropCalendar *el = m_wnd[m_active_window_index].m_drop_calendars[i];
+      if(el.GetCalendarPointer().IsVisible()) 
+       {
+        index = i;
+        break;
+       }
+     }
+    return(index);
    }
   //+------------------------------------------------------------------+
-  // | Returns the index of the activated scrollbar |
+  //| Returns the index of the activated scrollbar                     |
   //+------------------------------------------------------------------+
   int CWndEvents::ActivatedScrollIndex(void) 
    {
-    int index = WRONG_VALUE;
-    //---
+    int index = WRONG_VALUE;    
     int total = ElementsTotal(m_active_window_index, E_SCROLL);
-    for(int i = 0; i < total; i++) {
+    for(int i = 0; i < total; i++) 
+     {
       CScroll *el = m_wnd[m_active_window_index].m_scrolls[i];
-      if(el.State()) {
+      if(el.State()) 
+       {
         index = i;
         break;
-      }
-    }
+       }
+     }
     return(index);
    }
   //+------------------------------------------------------------------+
@@ -1055,33 +1057,34 @@
   //+------------------------------------------------------------------+
   int CWndEvents::ActivatedTableIndex(void) 
    {
-    int index = WRONG_VALUE;
-    //---
+    int index = WRONG_VALUE;    
     int total = ElementsTotal(m_active_window_index, E_TABLE);
-    for(int i = 0; i < total; i++) {
+    for(int i = 0; i < total; i++) 
+     {
       CTable *el = m_wnd[m_active_window_index].m_tables[i];
       if(el.ColumnResizeControl()) {
         index = i;
         break;
       }
-    }
+     }
     return(index);
    }
   //+------------------------------------------------------------------+
-  // | Returns the index of the activated slider |
+  //| Returns the index of the activated slider                        |
   //+------------------------------------------------------------------+
   int CWndEvents::ActivatedSliderIndex(void) 
    {
-    int index = WRONG_VALUE;
-    //---
+    int index = WRONG_VALUE;    
     int total = ElementsTotal(m_active_window_index, E_SLIDER);
-    for(int i = 0; i < total; i++) {
+    for(int i = 0; i < total; i++) 
+     {
       CSlider *el = m_wnd[m_active_window_index].m_sliders[i];
-      if(el.State()) {
+      if(el.State()) 
+       {
         index = i;
         break;
-      }
-    }
+       }
+     }
     return(index);
    }
   //+------------------------------------------------------------------+
@@ -1089,21 +1092,22 @@
   //+------------------------------------------------------------------+
   int CWndEvents::ActivatedTreeViewIndex(void) 
    {
-      int index = WRONG_VALUE;
-    //---
-      int total = ElementsTotal(m_active_window_index, E_TREE_VIEW);
-      for(int i = 0; i < total; i++) {
-        CTreeView *el = m_wnd[m_active_window_index].m_treeview_lists[i];
-        // ---Go to next if tab mode is enabled
-        if(el.TabItemsMode())
-          continue;
-        // --- If the process of changing the width of lists
-        if(el.GetMousePointer().State()) {
-          index = i;
-          break;
-        }
-      }
-      return(index);
+    int index = WRONG_VALUE;    
+    int total = ElementsTotal(m_active_window_index, E_TREE_VIEW);
+    for(int i = 0; i < total; i++) 
+     {
+      CTreeView *el = m_wnd[m_active_window_index].m_treeview_lists[i];
+      // ---Go to next if tab mode is enabled
+      if(el.TabItemsMode())
+        continue;
+      // --- If the process of changing the width of lists
+      if(el.GetMousePointer().State())
+       {
+        index = i;
+        break;
+       }
+     }
+    return(index);
    }
   //+------------------------------------------------------------------+
   // | Returns the index of the activated standard chart |
@@ -1113,13 +1117,15 @@
     int index = WRONG_VALUE;
     //---
       int total = ElementsTotal(m_active_window_index, E_SUB_CHART);
-      for(int i = 0; i < total; i++) {
+      for(int i = 0; i < total; i++) 
+       {
         CStandardChart *el = m_wnd[m_active_window_index].m_sub_charts[i];
-        if(el.GetMousePointer().IsVisible()) {
+        if(el.GetMousePointer().IsVisible()) 
+         {
           index = i;
           break;
-        }
-      }
+         }
+       }
     return(index);
    }
   //+------------------------------------------------------------------+
