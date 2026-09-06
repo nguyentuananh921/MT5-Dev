@@ -1370,15 +1370,16 @@
     // --- Resize all locked form elements if one of the modes is enabled
     if(m_windows[0].CElementBase::IsLocked() && (m_windows[0].AutoXResizeMode() || m_windows[0].AutoXResizeMode())) 
     {
-      int elements_total = CWndContainer::ElementsTotal(0);
-      for(int e = 0; e < elements_total; e++) 
+     int elements_total = CWndContainer::ElementsTotal(0);
+     for(int e = 0; e < elements_total; e++) 
       {
         CElement *el = m_wnd[0].m_elements[e];
         // ---If this is a form
-        if(dynamic_cast<CWindow*>(el) != NULL) {
+        if(dynamic_cast<CWindow*>(el) != NULL) 
+         {
           el.OnEvent(m_id, m_lparam, m_dparam, m_sparam);
           continue;
-        }
+         }
         // --- Change the width of elements where this mode is enabled
         if(el.AutoXResizeMode())
           el.ChangeWidthByRightWindowSide();

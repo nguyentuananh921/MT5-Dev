@@ -1,26 +1,13 @@
 //+------------------------------------------------------------------+
-//|                                         GUIPannel_CandleInfo.mqh |
+//|                                 GUIPannel_CandleInfo_Windows.mqh |
 //| Implementation of function Candle Info                           |
 //| Window m_window_candle_infomation                               |
 //| CTooltip m_tooltip_candle_info
 //+------------------------------------------------------------------+
-#ifndef CGUIPANNEL_CANDLEINFO_MQH
-#define CGUIPANNEL_CANDLEINFO_MQH
+#ifndef CGUIPANNEL_CANDLEINFO_WINDOWS_MQH
+#define CGUIPANNEL_CANDLEINFO_WINDOWS_MQH
 #include "GUIPannel.mqh"
 //For m_window_candle_infomation
- //+------------------------------------------------------------------+
- //| True while the current mouse position is inside the candle info  |
- //| popup's own screen rect - used to suspend the Shift + hover bar  |
- //| re-derivation (see OnEvent) so scrolling/clicking the popup's own|
- //| table doesn't fight with it.                                     |
- //+------------------------------------------------------------------+
- bool CGUIPannel::MouseOverCandleInfoWindow(void)
-  {
-   int x = m_window_candle_infomation.X();
-   int y = m_window_candle_infomation.Y();
-   return(m_mouse.X() >= x && m_mouse.X() <= x + m_window_candle_infomation.XSize() &&
-          m_mouse.Y() >= y && m_mouse.Y() <= y + m_window_candle_infomation.YSize());
-  }
  //+------------------------------------------------------------------+
  //| True while (px,py) - default the cursor's own position - sits     |
  //| inside ANY of our own visible GUI windows (m_window_main,          |
@@ -93,11 +80,7 @@
     m_window_candle_infomation.FullscreenButtonIsUsed(false);
     if(!m_window_candle_infomation.CreateWindow(m_chart_id, m_subwin, "Signals at Bar", x, y))
        return (false);
-    // --- 3 cols: Time | TF (+ source icon: Indicator/Pattern) | Information (+ BUY/SELL arrow).
-    // --- No Symbol column - this popup is always scoped to the CURRENT chart's own symbol.
-    // --- Time is needed because this popup spans EVERY tracked TF of the symbol, not just the
-    // --- hovered bar's own TF - a lower-TF indicator can flip at a time inside the hovered
-    // --- bar's span without landing exactly on its open time (see RefreshCandleInfoWindow).
+    // --- 3 cols: Time | TF (+ source icon: Indicator/Pattern) | Information (+ BUY/SELL arrow).    
      m_table_candle_information_atBar.MainPointer(m_window_candle_infomation);
      m_table_candle_information_atBar.AutoXResizeMode(true);
      m_table_candle_information_atBar.AutoXResizeRightOffset(3);
@@ -117,66 +100,28 @@
      m_table_candle_information_atBar.ImageYOffset(img_y_off);
      m_table_candle_information_atBar.TextXOffset(txt_x_off);
      m_table_candle_information_atBar.TextAlign(al);
-    // --- y=WINDOW_CAPTION_HEIGHT, not 0 - CWindow's child coordinate space starts at the
-    // --- window's absolute top-left, INCLUDING the caption bar (same convention as every
-    // --- other table placed directly on a CWindow, e.g. CreateTable_SymbolTFSetting(0,22));
-    // --- y=0 here made the table paint straight over the "Signals at Bar" title.
      if(!m_table_candle_information_atBar.CreateTable(0, WINDOW_CAPTION_HEIGHT)) return (false);
      m_table_candle_information_atBar.SetHeaderText(0, "Time");
      m_table_candle_information_atBar.SetHeaderText(1, "TF");
      m_table_candle_information_atBar.SetHeaderText(2, "Information");
-    // --- Collapse the TableSize() padding down to a single blank baseline row, same
-    // --- convention as CreateTable_SymbolTFSetting.
      m_table_candle_information_atBar.DeleteAllRows();
      CWndContainer::AddToElementsArray(WindowIdx(m_window_candle_infomation), m_table_candle_information_atBar);
-    // --- Alt+hover pattern-name tooltip (ShowCandlePatternInfo) - MainPointer/ElementPointer
-    // --- only satisfy CTooltip::CreateTooltip()'s requirements; actual position is always
-    // --- overridden via Moving(x,y) before each show (arbitrary chart point per hover, not
-    // --- "below an anchor element" like a normal Library tooltip). NOT added to any
-    // --- elements array on purpose - stays outside native OnEvent auto show/hide dispatch,
-    // --- fully driven by our own Alt+hover logic below.
      m_tooltip_candle_info.MainPointer(m_window_main);
      m_tooltip_candle_info.ElementPointer(m_window_main);
      m_tooltip_candle_info.XSize(160);
      m_tooltip_candle_info.YSize(20);
      if(!m_tooltip_candle_info.CreateTooltip()) return (false);
-     m_tooltip_candle_info.Show();   // attach once (OBJ_ALL_PERIODS); ShowTooltip()/FadeOutTooltip() drive visible content from here on
+     m_tooltip_candle_info.Show();
      return (true);
-  }
- //+------------------------------------------------------------------+
- //| Snaps the popup so the cursor is ALREADY inside it the instant it |
- //| appears (CANDLE_INFO_CURSOR_INSET, not a gap) - BugNote            |
- //| 2026-07-16: first tried placing the popup NEAR the cursor with a  |
- //| small gap, but on a zoomed-out TF that gap still covers OTHER      |
- //| candles - crossing it to reach the popup flipped bar_time (and    |
- //| re-triggered this same reposition) along the way, so the popup    |
- //| kept jumping just out of reach. Zero distance to cross means      |
- //| MouseOverCandleInfoWindow() is already true before any movement.  |
- //| CWindow has no "MainPointer" parent, so its own Moving(x,y)       |
- //| overload takes absolute coords directly - but it only updates    |
- //| m_canvas, not the base m_x/m_y CElementBase stores (confirmed by  |
- //| reading Window.mqh), so those must be set explicitly here or      |
- //| MouseOverCandleInfoWindow()/future calls would read stale coords. |
- //| The table needs NO manual repositioning: it was created via       |
- //| MainPointer(m_window_candle_infomation), so CElement::Moving()    |
- //| (its own, argument-less overload) re-derives its position from    |
- //| m_main.X()/Y() - i.e. the window's now-updated position - on its  |
- //| own.                                                              |
- //+------------------------------------------------------------------+
+  } 
  void CGUIPannel::RepositionWindow_CandleInfo(const int cursor_x, const int cursor_y)
   {
    int chart_w = (int)::ChartGetInteger(m_chart_id, CHART_WIDTH_IN_PIXELS);
-   int chart_h = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);
-   // --- Cursor sits INSET pixels inside the popup's LEFT edge (popup extends mostly to the
-   // --- right of the cursor) - flip so cursor sits INSET pixels inside the RIGHT edge
-   // --- instead if that would run off the chart's right edge (popup extends to the left).
-   // --- Either way the cursor is ALREADY inside the rect - see CANDLE_INFO_CURSOR_INSET.
+   int chart_h = (int)::ChartGetInteger(m_chart_id, CHART_HEIGHT_IN_PIXELS);   
    int x = cursor_x - CANDLE_INFO_CURSOR_INSET;
    if(x + CANDLE_INFO_WINDOW_W > chart_w)
       x = cursor_x - CANDLE_INFO_WINDOW_W + CANDLE_INFO_CURSOR_INSET;
-   if(x < 0) x = 0;
-   // --- Same idea vertically - cursor INSET pixels inside the top edge, flipping to sit
-   // --- inside the bottom edge if that would run off the chart's bottom.
+   if(x < 0) x = 0;   
    int y = cursor_y - CANDLE_INFO_CURSOR_INSET;
    if(y + CANDLE_INFO_WINDOW_H > chart_h)
       y = cursor_y - CANDLE_INFO_WINDOW_H + CANDLE_INFO_CURSOR_INSET;
@@ -185,34 +130,12 @@
    m_window_candle_infomation.Y(y);
    m_window_candle_infomation.Moving(x, y);
    m_table_candle_information_atBar.Moving();
-  }
- // For candle info popup (BugNote 7.2)
- //+------------------------------------------------------------------+
- //| Shows the popup AND hands it native mouse/keyboard dispatch by    |
- //| making it the active window (BugNote 2026-07-16). CWndEvents::    |
- //| CheckElementsEvents() (WndEvents.mqh, protected - accessible from |
- //| this subclass, no Library edit needed) only ever routes           |
- //| CheckMouseFocus()/OnEvent() to m_active_window_index's elements,  |
- //| so without this the popup's table (its scrollbar included) never |
- //| receives a native event no matter how it's shown. m_window_main   |
- //| going quiet while this is active is not a real trade-off here:    |
- //| the ONLY thing that keeps this popup active is the cursor         |
- //| physically sitting inside it (see MouseOverCandleInfoWindow), so   |
- //| m_window_main can't be receiving meaningful mouse input at the    |
- //| same moment anyway. CWndEvents::Show(window_index) (also          |
- //| protected) cascades to m_main_elements - i.e. the table - on its   |
- //| own, so no manual table.Show() call is needed here either.        |
- //+------------------------------------------------------------------+
+  } 
  void CGUIPannel::ShowWindow_CandleInfo(const int cursor_x, const int cursor_y)
   {
-     RepositionWindow_CandleInfo(cursor_x, cursor_y);
-     // --- Remember whoever was active before the popup steals dispatch, so Hide can hand it
-     // --- back correctly - hardcoding m_window_main here was wrong whenever e.g. the Setting
-     // --- Window was the real owner: a hover-then-leave while Setting was open used to strand
-     // --- active dispatch on m_window_main forever, leaving Setting's checkboxes dead until it
-     // --- was manually reopened (Anhnt, 2026-08-29). Guarded so a re-show while already shown
-     // --- (moving to a different bar without leaving the popup) doesn't overwrite the saved
-     // --- value with CandleInfo itself.
+     RepositionWindow_CandleInfo(cursor_x, cursor_y);     
+     if(m_active_window_index != WindowIdx(m_window_candle_infomation))
+        m_active_window_index_before_candle_info = m_active_window_index;     
      if(m_active_window_index != WindowIdx(m_window_candle_infomation))
         m_active_window_index_before_candle_info = m_active_window_index;
      m_active_window_index = WindowIdx(m_window_candle_infomation);
@@ -229,25 +152,7 @@
      m_table_candle_information_atBar.Hide();
      m_active_window_index = m_active_window_index_before_candle_info;
      FormAvailableElementsArray();
-  } 
- //+------------------------------------------------------------------+
- //| Fills the popup with every (Indicator, TF, Time) flip that lands |
- //| inside the hovered CURRENT-CHART bar's time SPAN [bar_time,      |
- //| bar_time + PeriodSeconds()) - not just flips on the hovered bar's |
- //| own TF. This popup spans EVERY TF tracked for the symbol, and a  |
- //| lower-TF indicator can flip at a time that falls inside the      |
- //| hovered bar's span without landing exactly on its open time, so  |
- //| each qualifying flip becomes its OWN row (same indicator can     |
- //| appear more than once if it flipped twice within the span).      |
- //| Unlike BuildAndWriteSignalBridge/m_table_indicator_SymbolTFValue  |
- //| show the PERSISTED state carried forward from the last flip),    |
- //| this popup answers "what flipped DURING this bar" - anything     |
- //| outside the span is left out entirely.                           |
- //|                                                                    |
- //| Returns true if the bar has at least one flip (i.e. the popup has |
- //| something to show) - false means "nothing happened at this bar",  |
- //| telling the caller NOT to show the popup for it at all.           |
- //+------------------------------------------------------------------+
+  }  
  bool CGUIPannel::RefreshWindow_CandleInfo(const datetime bar_time)
   {
    if(m_IndicatorsCollection == NULL || m_timeSeriesEngine == NULL || m_BarTimeSeriesCollection == NULL ||
@@ -255,8 +160,6 @@
       return false;
    datetime next_bar_time = bar_time + ::PeriodSeconds();
    string sym = ::Symbol();
-   SIndicatorCatalogItem catalog[];
-   GetIndicatorCatalog(catalog);
    CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
    CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
    int series_total = (series_list != NULL) ? series_list.Total() : 0;
@@ -306,6 +209,9 @@
          ENUM_INDICATOR ind_type = ind.TypeIndicator();
          MqlParam ind_params[];
          ind.GetMqlParams(ind_params);
+         CIndicatorSetting ind_label_setting;
+         ind_label_setting.TypeEnum(ind_type);
+         ind_label_setting.SetRawParams(ind_params);
          // --- Indicator-level Buy/Sell gate - combines with symtf_buy/sell above (Anhnt, 2026-08-28).
           CIndicatorSetting *ind_entry = m_indicator_template_manager.FindByIdentity(ind_type, ind_params);
           bool ind_buy  = (ind_entry != NULL) ? ind_entry.BuySignal()  : false;
@@ -332,7 +238,7 @@
              ArrayResize(row_time, count + 1);
              ArrayResize(row_source, count + 1);
             //row_ind[count]  = ind;
-             row_label[count] = BuildIndicatorTextLabel(ind_type, ind_params, catalog);
+             row_label[count] = ind_label_setting.DisplayLabel();
              row_tf[count]   = tf_text;
              row_dir[count]  = d;
              row_time[count] = ht;
@@ -367,7 +273,7 @@
                 ArrayResize(row_time, count + 1);
                 ArrayResize(row_source, count + 1);
                //row_ind[count]  = ind;
-                row_label[count] = BuildIndicatorTextLabel(ind_type, ind_params, catalog)+ ((li == BBAND_LINE_UPPER) ? " Upper" : " Lower");
+                row_label[count] = ind_label_setting.DisplayLabel() + ((li == BBAND_LINE_UPPER) ? " Upper" : " Lower");
                 row_tf[count]   = tf_text;
                 row_dir[count]  = ld;
                 row_time[count] = ht;
@@ -378,84 +284,84 @@
           }
         }
      }
-      // --- Collect Candle Patterns forming in [bar_time, next_bar_time) - runs ONCE (not per
-      // --- TF/series iteration above) since it only depends on sym/bar_time/next_bar_time,
-      // --- not on the per-series `s`; being inside the `for ti` loop duplicated every matching
-      // --- pattern once per tracked series (Anhnt, 2026-08-10: 6 tracked TFs -> 6x duplicate rows).
-       CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
-       if(all_patterns != NULL)
+    // --- Collect Candle Patterns forming in [bar_time, next_bar_time) - runs ONCE (not per
+    // --- TF/series iteration above) since it only depends on sym/bar_time/next_bar_time,
+    // --- not on the per-series `s`; being inside the `for ti` loop duplicated every matching
+    // --- pattern once per tracked series (Anhnt, 2026-08-10: 6 tracked TFs -> 6x duplicate rows).
+     CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
+     if(all_patterns != NULL)
+      {
+       int pat_total = all_patterns.Total();
+       for(int p = 0; p < pat_total; p++)
         {
-         int pat_total = all_patterns.Total();
-         for(int p = 0; p < pat_total; p++)
-          {
-           CBarPattern *pat = all_patterns.At(p);
-           if(pat == NULL || pat.Symbol() != sym) continue;
-           datetime pt = pat.Time();
-           if(pt < bar_time || pt >= next_bar_time) continue;
-           ENUM_TIMEFRAMES ptf = pat.Timeframe();
-           string tf_text = TimeframeDescription(ptf);
-           ENUM_PATTERN_DIRECTION pdir = pat.Direction();
-           ENUM_SIGNAL_DIR dir = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
-                                 (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
-           if(dir == SIGNAL_NONE) continue;
-           // --- Same 2-layer Buy/Sell gate as the Indicator loop above, but Pattern-scoped
-           // --- (Anhnt, 2026-08-28): SymbolTF-level (re-looked-up here, pt's own TF may differ
-           // --- from the outer `ti` loop's series) AND Pattern-level (PatternSignalBuy/Sell).
-            CSymbolTFSetting *pat_symtf = m_SymbolTFManager.FindByIdentity(sym, ptf);
-            bool pat_symtf_buy  = (pat_symtf != NULL) ? pat_symtf.BuySignal()  : false;
-            bool pat_symtf_sell = (pat_symtf != NULL) ? pat_symtf.SellSignal() : false;
-            bool pat_buy  = PatternSignalBuy(pat.TypePattern());
-            bool pat_sell = PatternSignalSell(pat.TypePattern());
-            if(dir == SIGNAL_BUY  && !(pat_buy  && pat_symtf_buy))  continue;
-            if(dir == SIGNAL_SELL && !(pat_sell && pat_symtf_sell)) continue;
-           // Format pattern label, e.g. "[2B] Bullish Engulfing"
-           uint candles = pat.Candles();
-           string candle_prefix = (candles > 0) ? "[" + IntegerToString(candles) + "B] " : "";
-           string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
-           if(pat_name == "") pat_name = EnumToString(pat.TypePattern());
-           ArrayResize(row_label, count + 1);
-           ArrayResize(row_tf,    count + 1);
-           ArrayResize(row_dir,   count + 1);
-           ArrayResize(row_time,  count + 1);
-           ArrayResize(row_source, count + 1);
-           row_label[count] = candle_prefix + pat_name;
-           row_tf[count]    = tf_text;
-           row_dir[count]   = dir;
-           row_time[count]  = pt;
-           row_source[count] = 1; // Pattern
-           count++;
-          }
+         CBarPattern *pat = all_patterns.At(p);
+         if(pat == NULL || pat.Symbol() != sym) continue;
+         datetime pt = pat.Time();
+         if(pt < bar_time || pt >= next_bar_time) continue;
+         ENUM_TIMEFRAMES ptf = pat.Timeframe();
+         string tf_text = TimeframeDescription(ptf);
+         ENUM_PATTERN_DIRECTION pdir = pat.Direction();
+         ENUM_SIGNAL_DIR dir = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
+                               (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
+         if(dir == SIGNAL_NONE) continue;
+         // --- Same 2-layer Buy/Sell gate as the Indicator loop above, but Pattern-scoped
+         // --- (Anhnt, 2026-08-28): SymbolTF-level (re-looked-up here, pt's own TF may differ
+         // --- from the outer `ti` loop's series) AND Pattern-level (PatternSignalBuy/Sell).
+         CSymbolTFSetting *pat_symtf = m_SymbolTFManager.FindByIdentity(sym, ptf);
+         bool pat_symtf_buy  = (pat_symtf != NULL) ? pat_symtf.BuySignal()  : false;
+         bool pat_symtf_sell = (pat_symtf != NULL) ? pat_symtf.SellSignal() : false;
+         bool pat_buy  = PatternSignalBuy(pat.TypePattern());
+         bool pat_sell = PatternSignalSell(pat.TypePattern());
+         if(dir == SIGNAL_BUY  && !(pat_buy  && pat_symtf_buy))  continue;
+         if(dir == SIGNAL_SELL && !(pat_sell && pat_symtf_sell)) continue;
+         // Format pattern label, e.g. "[2B] Bullish Engulfing"
+         uint candles = pat.Candles();
+         string candle_prefix = (candles > 0) ? "[" + IntegerToString(candles) + "B] " : "";
+         string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
+         if(pat_name == "") pat_name = EnumToString(pat.TypePattern());
+         ArrayResize(row_label, count + 1);
+         ArrayResize(row_tf,    count + 1);
+         ArrayResize(row_dir,   count + 1);
+         ArrayResize(row_time,  count + 1);
+         ArrayResize(row_source, count + 1);
+         row_label[count] = candle_prefix + pat_name;
+         row_tf[count]    = tf_text;
+         row_dir[count]   = dir;
+         row_time[count]  = pt;
+         row_source[count] = 1; // Pattern
+         count++;
         }
-      if(count == 0)
-        {
-         m_table_candle_information_atBar.DeleteAllRows();
-         m_table_candle_information_atBar.Update(true);
-         return false;
-        }
-      // --- Sort all collected rows ascending by time (stable-ish bubble sort - count is
-      // --- small, same style as the TF order[] sort above).
-       for(int a = 0; a < count - 1; a++)
-         for(int b = a + 1; b < count; b++)
-           if(row_time[b] < row_time[a])
-             {
-              //CIndicatorDE   *ti_ = row_ind[a];  row_ind[a]  = row_ind[b];  row_ind[b]  = ti_;
-              string          lbl_ = row_label[a]; row_label[a] = row_label[b]; row_label[b] = lbl_;
-              string          tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
-              ENUM_SIGNAL_DIR d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
-              datetime        tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
-              int             src_ = row_source[a]; row_source[a] = row_source[b]; row_source[b] = src_;
-             }       
-       uint source_img[] = {IMAGE_RESOURCE_BMP16_INDICATOR_BMP, IMAGE_RESOURCE_BMP16_CANDLE_PNG};
-       uint dir_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
-                        IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
+      }
+     if(count == 0)
+      {
        m_table_candle_information_atBar.DeleteAllRows();
-      // --- redraw=true on the LAST row only - same black/smeared row-overflow reasoning as
-      // --- RefreshIndicatorTable (README/BugNote 2026-07-14).
-       for(int i = 0; i < count - 1; i++)
-         m_table_candle_information_atBar.AddRow(i, i == count - 2);
-       for(int row = 0; row < count; row++)
+       m_table_candle_information_atBar.Update(true);
+       return false;
+      }
+    // --- Sort all collected rows ascending by time (stable-ish bubble sort - count is
+    // --- small, same style as the TF order[] sort above).
+     for(int a = 0; a < count - 1; a++)
+      for(int b = a + 1; b < count; b++)
+       if(row_time[b] < row_time[a])
         {
-         //CIndicatorDE *ind = row_ind[row];
+         //CIndicatorDE   *ti_ = row_ind[a];  row_ind[a]  = row_ind[b];  row_ind[b]  = ti_;
+         string          lbl_ = row_label[a]; row_label[a] = row_label[b]; row_label[b] = lbl_;
+         string          tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;
+         ENUM_SIGNAL_DIR d_  = row_dir[a];  row_dir[a]  = row_dir[b];  row_dir[b]  = d_;
+         datetime        tm_ = row_time[a]; row_time[a] = row_time[b]; row_time[b] = tm_;
+         int             src_ = row_source[a]; row_source[a] = row_source[b]; row_source[b] = src_;
+        }       
+     uint source_img[] = {IMAGE_RESOURCE_BMP16_INDICATOR_BMP, IMAGE_RESOURCE_BMP16_CANDLE_PNG};
+     uint dir_img[] = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG,
+                        IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP};
+     m_table_candle_information_atBar.DeleteAllRows();
+    // --- redraw=true on the LAST row only - same black/smeared row-overflow reasoning as
+    // --- RefreshIndicatorTable (README/BugNote 2026-07-14).
+     for(int i = 0; i < count - 1; i++)
+         m_table_candle_information_atBar.AddRow(i, i == count - 2);
+      for(int row = 0; row < count; row++)
+       {
+        //CIndicatorDE *ind = row_ind[row];
          int src_idx = row_source[row]; // 0=Indicator(70), 1=Pattern(42)
          int dir_img_idx = (row_dir[row] == SIGNAL_BUY) ? 0 : 1; // row_dir is never SIGNAL_NONE here
 
@@ -466,9 +372,9 @@
          m_table_candle_information_atBar.SetValue(0, row, ::TimeToString(row_time[row], TIME_MINUTES));
          m_table_candle_information_atBar.SetValue(1, row, row_tf[row]);
          m_table_candle_information_atBar.SetValue(2, row, row_label[row]);
-        }
-      m_table_candle_information_atBar.Update(true);
-      return true;
+       }
+     m_table_candle_information_atBar.Update(true);
+     return true;
   }
  //+------------------------------------------------------------------+
  //| Alt + hover: shows the CGCnvPatternBitmap of the highest-priority |
@@ -518,9 +424,7 @@
      int n = (int)p.Candles();
      if(best == NULL || n > best_candles) { best = p; best_candles = n; }
     }
-
    if(best == NULL) { HidePatternBitmapAtBar(); return; }
-
    // --- Same "computed position, not cursor position" check ShowTooltip_CandlePatternInfo
    // --- already does for its own label (Anhnt, 2026-09-01, gap found in the show/hide audit
    // --- discussed with Anhnt) - the BOX has the identical risk of landing under a panel, since
@@ -621,7 +525,6 @@
      m_tooltip_candle_info.FadeOutTooltip();
      return;
     }
-
    m_tooltip_candle_info.ClearStrings();
    m_tooltip_candle_info.AddString(pat_name);
    m_tooltip_candle_info.HeaderColor(clr);
@@ -645,5 +548,139 @@
     }
    m_pattern_bitmap_shown = NULL;
   }
-
-#endif // CGUIPANNEL_CANDLEINFO_MQH
+ void CGUIPannel::OnEvent_Window_CandleInfor(const int id,const long &lparam, const double &dparam, const string &sparam)
+  {
+    m_window_candle_infomation.CheckMouseFocus();
+    if(m_active_window_index == WindowIdx(m_window_candle_infomation) && !m_window_candle_infomation.MouseFocus())
+     {
+      HideWindow_CandleInfo();//CreateWindow_CandleInfo();
+      m_candle_info_shown_bar = 0;
+     }
+   //Handle on Mouse Move
+     if(id == CHARTEVENT_MOUSE_MOVE)
+      {
+       //Handle on Candle Infor
+        bool popup_shown = (m_candle_info_shown_bar != 0);
+        m_window_candle_infomation.CheckMouseFocus();
+        bool over_candle_info = m_window_candle_infomation.MouseFocus();   // computed once, reused below - was called twice
+        if(popup_shown && over_candle_info)
+         {
+            // --- Stay open, don't touch bar_time - let the table's native dispatch (now
+            // --- routed to it via m_active_window_index) handle the scrollbar/clicks. Checked
+            // --- BEFORE the CalculateAtCandle() gate below on purpose (Anhnt, 2026-08-31): the
+            // --- popup window sits wherever it was positioned on screen, not necessarily over
+            // --- any candle - gating this on "over a candle" too would make it impossible to
+            // --- reach into the popup's own scrollbar/table without it vanishing first.
+         }
+        else if(popup_shown && !over_candle_info)
+         {
+            // --- Mouse left the popup rect -> hide it, reset to m_window_main dispatch.
+            HideWindow_CandleInfo();
+            m_candle_info_shown_bar = 0;
+         }
+        else if(id == CHARTEVENT_MOUSE_MOVE && CalculateAtCandle() != 0 && !MouseOverAnyGUIWindow())
+         {
+          // --- Popup isn't up right now (both branches above exhaustively handle
+          // --- popup_shown==true). Shift and Alt are mutually exclusive (Anhnt, 2026-08-31, per
+          // --- user design) - each one hides the OTHER's display when pressed; neither one
+          // --- hides itself just because its own key was released or the cursor moved off the
+          // --- candle (deliberate - CandleInfo already handles its own "stay open" above, and
+          // --- the PatternBitmap stays "pinned" until the user actively picks CandleInfo
+          // --- instead). CalculateAtCandle() is called again per key below (not reused from the
+          // --- gate above) - a deliberate trade-off so the Shift/Alt work only ever runs at all
+          // --- when the gate confirms we're over a real candle, not on every single mouse move.
+          // --- !MouseOverAnyGUIWindow() added (Anhnt, 2026-08-31): ChartXYToTimePrice() doesn't
+          // --- know our own panels are covering the chart there, so without this, hovering the
+          // --- Positions/Setting table while Alt is held rendered a phantom pattern-bitmap/tooltip
+          // --- UNDER the panel (the "black smear" bug).
+           if(m_keys.KeyShiftState())
+            {
+             HidePatternBitmapAtBar();
+             datetime bar_time = CalculateAtCandle();
+             bool has_signal = RefreshWindow_CandleInfo(bar_time);
+             if(has_signal)
+              {
+               m_candle_info_shown_bar = bar_time;
+               ShowWindow_CandleInfo(m_mouse.X(), m_mouse.Y());
+              }
+            }
+           else if(m_keys.KeyAltState())
+            {
+             HideWindow_CandleInfo();
+             datetime bar_time = CalculateAtCandle();
+             string sym = ::Symbol();
+             ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
+             int shift = ::iBarShift(sym, tf, bar_time, true);
+           // --- MY DEBUG: dump OHLC + the exact 3 ratios CBarPatternControlHammer::FindPattern()
+           // --- checks (body<=0.35, lower_shadow>=0.55, upper_shadow<=0.10, all as % of full
+           // --- High-Low range) - verifies whether a hovered candle SHOULD actually qualify
+           // --- as Hammer (Anhnt, 2026-08-29).
+            {
+              double o = ::iOpen(sym, tf, shift), h = ::iHigh(sym, tf, shift),
+                     l = ::iLow(sym, tf, shift),  cl = ::iClose(sym, tf, shift);
+              double full = h - l;
+              if(full > 0)
+              {
+                double body  = ::MathAbs(cl - o);
+                double lower = ::MathMin(o, cl) - l;
+                double upper = h - ::MathMax(o, cl);
+                ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
+                     " O=", o, " H=", h, " L=", l, " C=", cl,
+                     " body%=", ::DoubleToString(body/full*100, 1),
+                     " lower_shadow%=", ::DoubleToString(lower/full*100, 1),
+                     " upper_shadow%=", ::DoubleToString(upper/full*100, 1),
+                     " Hammer_needs(body<=35, lower>=55, upper<=10)");
+              }
+             }
+          // --- MY DEBUG: dump every REAL detected pattern instance at this exact bar (same
+          // --- source CheckCandlePatternAlerts()'s CloseBar path and the CSV log read) - lets
+          // --- us cross-check the ratio math above against what the real Alert pipeline
+          // --- actually sees (Anhnt, 2026-08-29). Each line is now tagged table_enabled=YES/NO
+          // --- (same PatternSignalBuy/Sell + Symbol-TF gate ShowPatternBitmapAtBar uses) and a
+          // --- final "=> Chart shows" line reproduces its exact best-of pick, so with only one
+          // --- row checked on the Setting table this collapses to a clean 1:1 against the Chart
+          // --- bitmap/tooltip - the point being to verify each pattern's name+math in isolation
+          // --- before ever turning several on at once for live use.
+           {
+            CArrayObj *all_pat_dbg = m_BarTimeSeriesCollection.GetListAllPatterns();
+            int found_dbg = 0;
+            CSymbolTFSetting *symtf_dbg = (m_SymbolTFManager != NULL) ? m_SymbolTFManager.FindByIdentity(sym, tf) : NULL;
+            bool symtf_buy_dbg  = (symtf_dbg != NULL) ? symtf_dbg.BuySignal()  : false;
+            bool symtf_sell_dbg = (symtf_dbg != NULL) ? symtf_dbg.SellSignal() : false;
+            CBarPattern *best_dbg = NULL;
+            int best_candles_dbg = 0;
+            if(all_pat_dbg != NULL)
+             {
+              int total_dbg = all_pat_dbg.Total();
+              for(int pi = 0; pi < total_dbg; pi++)
+               {
+                CBarPattern *p_dbg = all_pat_dbg.At(pi);
+                if(p_dbg == NULL || p_dbg.Symbol() != sym || p_dbg.Timeframe() != tf || p_dbg.Time() != bar_time) continue;
+                found_dbg++;
+                ENUM_PATTERN_DIRECTION pdir_dbg = p_dbg.Direction();
+                bool is_buy_dbg  = (pdir_dbg == PATTERN_DIRECTION_BULLISH);
+                bool is_sell_dbg = (pdir_dbg == PATTERN_DIRECTION_BEARISH);
+                bool enabled_dbg = (is_buy_dbg  && PatternSignalBuy(p_dbg.TypePattern())  && symtf_buy_dbg) ||
+                                   (is_sell_dbg && PatternSignalSell(p_dbg.TypePattern()) && symtf_sell_dbg);
+                ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE real pattern #", found_dbg, ": type=", EnumToString(p_dbg.TypePattern()),
+                        " name=", p_dbg.GetProperty(PATTERN_PROP_NAME),
+                        " direction=", EnumToString(pdir_dbg),
+                        " table_enabled=", (enabled_dbg ? "YES" : "no"));
+                if(enabled_dbg)
+                 {
+                  int n_dbg = (int)p_dbg.Candles();
+                  if(best_dbg == NULL || n_dbg > best_candles_dbg) { best_dbg = p_dbg; best_candles_dbg = n_dbg; }
+                 }
+               }
+             }
+            if(found_dbg == 0)
+              ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: no real detected pattern at this closed bar (may be live bar-0, or genuinely no match)");
+            ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE => Chart shows: ",
+                    (best_dbg != NULL) ? best_dbg.GetProperty(PATTERN_PROP_NAME) : "(none - no table-enabled pattern matches here)");
+           }
+           ShowPatternBitmapAtBar(bar_time);
+          }
+         }
+      }
+  }
+#endif // CGUIPANNEL_CANDLEINFO_WINDOWS_MQH

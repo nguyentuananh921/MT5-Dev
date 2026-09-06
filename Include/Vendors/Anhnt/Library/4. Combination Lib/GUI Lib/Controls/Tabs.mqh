@@ -534,9 +534,7 @@
           {
           for(int j=0; j<tab_elements_total; j++)
             {
-              CElement *el=m_tab[i].elements[j];
-              // Print("My Debug ShowTabElements RESET obj=", m_canvas.ChartObjectName(),
-              //       " i=", i, " target=", el.CanvasPointer().ChartObjectName());
+              CElement *el=m_tab[i].elements[j];              
               el.Reset();
               CTabs *tb=dynamic_cast<CTabs*>(el);
               if(tb!=NULL)
@@ -547,9 +545,7 @@
         else
          {
           for(int j=0; j<tab_elements_total; j++)
-            {
-              // Print("My Debug ShowTabElements HIDE obj=", m_canvas.ChartObjectName(),
-              //       " i=", i, " target=", m_tab[i].elements[j].CanvasPointer().ChartObjectName());
+            {              
               m_tab[i].elements[j].CElementBase::IsVisible(true);
               m_tab[i].elements[j].Hide();
             }

@@ -1,11 +1,11 @@
 //+------------------------------------------------------------------+
-//|                               GUIPannel_SettingWindows_Sound.mqh |
+//|                         GUIPannel_SettingWindows_Alert_Sound.mqh |
 //+------------------------------------------------------------------+
 //Bug Note: Sound in folder C:\Program Files\MetaTrader 5\Sounds
-#ifndef CGUIPANNEL_SETTINGWINDOWS_SOUND_MQH
-#define CGUIPANNEL_SETTINGWINDOWS_SOUND_MQH
+#ifndef CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH
+#define CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH
 #include "GUIPannel.mqh"
- //Tab Sound TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND of Tab m_tabs_main_setting_config
+ //Tab Sound ENUM_TAB_SETTING_MARKERANDSOUND_SOUND of Tab m_tabs_setting_markerAndSound
  // --- Split away from the Marker tab (Anhnt, 2026-08-26) - Buy/Sell alert sound file pickers
  // --- are an independent concern from marker shape/color, own tab.
  //+----------------------------------------------------------------------------+
@@ -49,7 +49,7 @@
     while(::FileFindNext(h, name));
     ::FileFindClose(h);
   }
- bool CGUIPannel::CreateTabSettingConfig_Sound(const int x, const int y)
+ bool CGUIPannel::CreateTab_SettingConfig_Sound(const int x, const int y)
   {
    //Define for GUI Layout in tab Sound
     #define SETTING_SOUND_BASE_X_GAP 10
@@ -61,13 +61,13 @@
     LoadSoundSettingsFromJSON(); // seed m_marker_*_sound_file from Config_Setting.json before building defaults
 
    // Row 0: Sound folder static label (read-only, shows where to drop .wav files)
-    if(!CreateMarkerTabCaption(11, "Sound Folder", x + SETTING_SOUND_BASE_X_GAP, y, TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND)) return false;
-    m_textLabel_sound_folder.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND, m_textLabel_sound_folder);
+    if(!CreateTextLabel_OtherCaption(11, "Sound Folder", x + SETTING_SOUND_BASE_X_GAP, y, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
+    m_textLabel_sound_folder.MainPointer(m_tabs_setting_markerAndSound);
+    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_SOUND, m_textLabel_sound_folder);
     m_textLabel_sound_folder.XSize(SETTING_SOUND_WIDTH);
     string lbl_text = ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\";
     if(!m_textLabel_sound_folder.CreateTextLabel(lbl_text, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_textLabel_sound_folder);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_textLabel_sound_folder);
 
    // --- Sound files scan
     string files[];
@@ -81,25 +81,25 @@
      }
 
    // Row 1: Buy Sound
-    if(!CreateMarkerTabCaption(12, "Buy Sound", x + SETTING_SOUND_BASE_X_GAP,
-                                y + SETTING_SOUND_ROW_HEIGHT + SETTING_SOUND_ROW_GAP, TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND)) return false;
-    if(!CreateMarkerTabComboBox(m_combo_buy_sound, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH,
-                                y + SETTING_SOUND_ROW_HEIGHT + SETTING_SOUND_ROW_GAP, SETTING_SOUND_WIDTH, files, sel_buy_sound, TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND)) return false;
+    if(!CreateTextLabel_OtherCaption(12, "Buy Sound", x + SETTING_SOUND_BASE_X_GAP,
+                                y + SETTING_SOUND_ROW_HEIGHT + SETTING_SOUND_ROW_GAP, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
+    if(!CreateCombobox_MarkerSelection(m_combo_buy_sound, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH,
+                                y + SETTING_SOUND_ROW_HEIGHT + SETTING_SOUND_ROW_GAP, SETTING_SOUND_WIDTH, files, sel_buy_sound, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
    // Row 2: Sell Sound
-    if(!CreateMarkerTabCaption(13, "Sell Sound", x + SETTING_SOUND_BASE_X_GAP,
-                                y + SETTING_SOUND_ROW_HEIGHT*2 + SETTING_SOUND_ROW_GAP*2, TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND)) return false;
-    if(!CreateMarkerTabComboBox(m_combo_sell_sound, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH,
-                                y + SETTING_SOUND_ROW_HEIGHT*2 + SETTING_SOUND_ROW_GAP*2, SETTING_SOUND_WIDTH, files, sel_sell_sound, TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND)) return false;
+    if(!CreateTextLabel_OtherCaption(13, "Sell Sound", x + SETTING_SOUND_BASE_X_GAP,
+                                y + SETTING_SOUND_ROW_HEIGHT*2 + SETTING_SOUND_ROW_GAP*2, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
+    if(!CreateCombobox_MarkerSelection(m_combo_sell_sound, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH,
+                                y + SETTING_SOUND_ROW_HEIGHT*2 + SETTING_SOUND_ROW_GAP*2, SETTING_SOUND_WIDTH, files, sel_sell_sound, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
 
    //For Button Save sound settings
-    m_btn_save_sound_settings.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND, m_btn_save_sound_settings);
+    m_btn_save_sound_settings.MainPointer(m_tabs_setting_markerAndSound);
+    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_SOUND, m_btn_save_sound_settings);
     m_btn_save_sound_settings.AutoXResizeMode(false);
     m_btn_save_sound_settings.XSize(80);
     m_btn_save_sound_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
     if(!m_btn_save_sound_settings.CreateButton("Save", x + SETTING_SOUND_BASE_X_GAP,
                                y + SETTING_SOUND_ROW_HEIGHT*3 + SETTING_SOUND_ROW_GAP*3)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_btn_save_sound_settings);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_btn_save_sound_settings);
 
     return true;
   }
@@ -143,4 +143,4 @@
    ::FileClose(fh);
    ::Print(__FUNCTION__, " > saved sound settings to ", full_path);
   }
-#endif // CGUIPANNEL_SETTINGWINDOWS_SOUND_MQH
+#endif // CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH

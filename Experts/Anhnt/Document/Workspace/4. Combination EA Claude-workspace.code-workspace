@@ -7,13 +7,16 @@
 			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
 		},
 		{
-			"path": "../../../Le Xuan Quy"
+			"path": "../../Example/6. Candle Pattern"
 		},
 		{
-			"path": "../../../Artyom Trishkin/4. 14862 Trailling Stop"
+			"path": "../../../../Include/Vendors/Artyom Trishkin/2. 14710 DoEasy-Service Functions"
 		},
 		{
 			"path": "../../Example/7. RiskManagement"
+		},
+		{
+			"path": "../../../Artyom Trishkin/4. 14862 Trailling Stop"
 		}
 	],
 	"settings": {

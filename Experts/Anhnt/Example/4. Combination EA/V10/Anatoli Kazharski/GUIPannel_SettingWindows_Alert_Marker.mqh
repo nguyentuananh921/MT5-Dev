@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
-//|                              GUIPannel_SettingWindows_Marker.mqh |
+//|                        GUIPannel_SettingWindows_Alert_Marker.mqh |
 //+------------------------------------------------------------------+
 //Bug Note: Sound in folder C:\Program Files\MetaTrader 5\Sounds
-#ifndef CGUIPANNEL_SETTINGWINDOWS_MARKER_MQH
-#define CGUIPANNEL_SETTINGWINDOWS_MARKER_MQH
+#ifndef CGUIPANNEL_SETTINGWINDOWS_ALERT_MARKER_MQH
+#define CGUIPANNEL_SETTINGWINDOWS_ALERT_MARKER_MQH
 #include "GUIPannel.mqh" 
  //+----------------------------------------------------------------------------+
  //| Loads the "Markers_Setting"/"Sound_Settings" sections of                   |
@@ -116,7 +116,7 @@
    ::FileClose(fh);
    ::Print(__FUNCTION__, " > saved marker settings to ", full_path);
   }
- bool CGUIPannel::CreateTabSettingConfig_Marker(const int x, const int y)
+ bool CGUIPannel::CreateTab_SettingConfig_Marker(const int x, const int y)
   {
    //Define for GUI Layout in tab Marker
     #define SETTING_MARKER_BASE_X_GAP 10
@@ -167,61 +167,61 @@
      }
     // For shape of Marker in Row 1: Single Buy Column 1, Single Sell Column 2
      //Column 1: Single Buy
-      if(!CreateMarkerTabCaption(0, "Single Indicator Buy", SETTING_MARKER_COL1_BASE_X, y)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_single_indicator_buy, SETTING_MARKER_COL1_COMBO_X, y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_single_buy)) return false;
-      if(!CreateShapePreview(0, SETTING_MARKER_COL1_PREVIEW_X, y, m_marker_single_indicator_buy_code)) return false;
+      if(!CreateTextLabel_OtherCaption(0, "Single Indicator Buy", SETTING_MARKER_COL1_BASE_X, y)) return false;
+      if(!CreateCombobox_MarkerSelection(m_combo_shape_single_indicator_buy, SETTING_MARKER_COL1_COMBO_X, y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_single_buy)) return false;
+      if(!CreateTextLabel_ShapePreview(0, SETTING_MARKER_COL1_PREVIEW_X, y, m_marker_single_indicator_buy_code)) return false;
      //Column 2: Single Sell
-      if(!CreateMarkerTabCaption(1, "Single Indicator Sell", SETTING_MARKER_COL2_BASE_X, y)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_single_indicator_sell, SETTING_MARKER_COL2_COMBO_X, y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_single_sell)) return false;
-      if(!CreateShapePreview(1, SETTING_MARKER_COL2_PREVIEW_X, y, m_marker_single_indicator_sell_code)) return false;
+      if(!CreateTextLabel_OtherCaption(1, "Single Indicator Sell", SETTING_MARKER_COL2_BASE_X, y)) return false;
+      if(!CreateCombobox_MarkerSelection(m_combo_shape_single_indicator_sell, SETTING_MARKER_COL2_COMBO_X, y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_single_sell)) return false;
+      if(!CreateTextLabel_ShapePreview(1, SETTING_MARKER_COL2_PREVIEW_X, y, m_marker_single_indicator_sell_code)) return false;
     // For shape of Marker in Row 2: Multi Buy Column 1, Multi Sell Column 2
      //Column 1: Multi Buy
-       if(!CreateMarkerTabCaption(2, "Multi Indicator Buy", SETTING_MARKER_COL1_BASE_X, 
+       if(!CreateTextLabel_OtherCaption(2, "Multi Indicator Buy", SETTING_MARKER_COL1_BASE_X, 
                                  y + SETTING_MARKER_ROW_HEIGHT+SETTING_MARKER_ROW_GAP)) return false;
-       if(!CreateMarkerTabComboBox(m_combo_shape_multi_indicator_buy, SETTING_MARKER_COL1_COMBO_X, 
+       if(!CreateCombobox_MarkerSelection(m_combo_shape_multi_indicator_buy, SETTING_MARKER_COL1_COMBO_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT+SETTING_MARKER_ROW_GAP, 
                                   SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_multi_buy)) return false;
-       if(!CreateShapePreview(2, SETTING_MARKER_COL1_PREVIEW_X, 
+       if(!CreateTextLabel_ShapePreview(2, SETTING_MARKER_COL1_PREVIEW_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT+SETTING_MARKER_ROW_GAP, 
                                   m_marker_multi_indicator_buy_code)) return false;
      //Column 2: Multi Sell 
-       if(!CreateMarkerTabCaption(3, "Multi Indicator Sell", SETTING_MARKER_COL2_BASE_X, 
+       if(!CreateTextLabel_OtherCaption(3, "Multi Indicator Sell", SETTING_MARKER_COL2_BASE_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT+SETTING_MARKER_ROW_GAP)) return false;
-       if(!CreateMarkerTabComboBox(m_combo_shape_multi_indicator_sell, SETTING_MARKER_COL2_COMBO_X, 
+       if(!CreateCombobox_MarkerSelection(m_combo_shape_multi_indicator_sell, SETTING_MARKER_COL2_COMBO_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT+SETTING_MARKER_ROW_GAP, 
                                   SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_multi_sell)) return false;
-       if(!CreateShapePreview(3, SETTING_MARKER_COL2_PREVIEW_X, 
+       if(!CreateTextLabel_ShapePreview(3, SETTING_MARKER_COL2_PREVIEW_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT+SETTING_MARKER_ROW_GAP, 
                                   m_marker_multi_indicator_sell_code)) return false;
     // For shape of Marker in Row 3: Pattern Buy Column 1, Pattern Sell Column 2
      //Column 1: Pattern Buy
-      if(!CreateMarkerTabCaption(4, "Pattern Buy", SETTING_MARKER_COL1_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(4, "Pattern Buy", SETTING_MARKER_COL1_BASE_X, 
                                  y + SETTING_MARKER_ROW_HEIGHT * 2 +SETTING_MARKER_ROW_GAP*2)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_pattern_buy, SETTING_MARKER_COL1_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_shape_pattern_buy, SETTING_MARKER_COL1_COMBO_X, 
                                  y + SETTING_MARKER_ROW_HEIGHT * 2+SETTING_MARKER_ROW_GAP*2, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_pattern_buy)) return false;
-      if(!CreateShapePreview(4, SETTING_MARKER_COL1_PREVIEW_X, 
+      if(!CreateTextLabel_ShapePreview(4, SETTING_MARKER_COL1_PREVIEW_X, 
                                  y + SETTING_MARKER_ROW_HEIGHT * 2+SETTING_MARKER_ROW_GAP*2, m_marker_pattern_buy_code)) return false;
      //Column 2: Pattern Sell 
-      if(!CreateMarkerTabCaption(5, "Pattern Sell", SETTING_MARKER_COL2_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(5, "Pattern Sell", SETTING_MARKER_COL2_BASE_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT * 2+SETTING_MARKER_ROW_GAP*2)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_pattern_sell, SETTING_MARKER_COL2_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_shape_pattern_sell, SETTING_MARKER_COL2_COMBO_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT * 2+SETTING_MARKER_ROW_GAP*2, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_pattern_sell)) return false;
-      if(!CreateShapePreview(5, SETTING_MARKER_COL2_PREVIEW_X, 
+      if(!CreateTextLabel_ShapePreview(5, SETTING_MARKER_COL2_PREVIEW_X, 
                               y + SETTING_MARKER_ROW_HEIGHT * 2+SETTING_MARKER_ROW_GAP*2, m_marker_pattern_sell_code)) return false;
     //For shape of Marker in Row 4: Combo Buy Column 1, Combo Sell Column 2
      //Column 1: Combo Buy
-      if(!CreateMarkerTabCaption(6, "Combo Buy", SETTING_MARKER_COL1_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(6, "Combo Buy", SETTING_MARKER_COL1_BASE_X, 
                                                  y + SETTING_MARKER_ROW_HEIGHT * 3+SETTING_MARKER_ROW_GAP*3)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_combo_buy, SETTING_MARKER_COL1_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_shape_combo_buy, SETTING_MARKER_COL1_COMBO_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT * 3+SETTING_MARKER_ROW_GAP*3, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_combo_buy)) return false;
-      if(!CreateShapePreview(6, SETTING_MARKER_COL1_PREVIEW_X, 
+      if(!CreateTextLabel_ShapePreview(6, SETTING_MARKER_COL1_PREVIEW_X, 
                                 y + SETTING_MARKER_ROW_HEIGHT*3+SETTING_MARKER_ROW_GAP*3, m_marker_combo_buy_code)) return false;
      //Column 2: Combo Sell 
-      if(!CreateMarkerTabCaption(7, "Combo Sell", SETTING_MARKER_COL2_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(7, "Combo Sell", SETTING_MARKER_COL2_BASE_X, 
                                  y + SETTING_MARKER_ROW_HEIGHT*3 + SETTING_MARKER_ROW_GAP*3)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_shape_combo_sell, SETTING_MARKER_COL2_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_shape_combo_sell, SETTING_MARKER_COL2_COMBO_X, 
                                  y + SETTING_MARKER_ROW_HEIGHT*3 + SETTING_MARKER_ROW_GAP*3, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel_combo_sell)) return false;
-      if(!CreateShapePreview(7, SETTING_MARKER_COL2_PREVIEW_X, y + SETTING_MARKER_ROW_HEIGHT*3 + SETTING_MARKER_ROW_GAP*3, m_marker_combo_sell_code)) return false;
+      if(!CreateTextLabel_ShapePreview(7, SETTING_MARKER_COL2_PREVIEW_X, y + SETTING_MARKER_ROW_HEIGHT*3 + SETTING_MARKER_ROW_GAP*3, m_marker_combo_sell_code)) return false;
     //For Color       
       int n_colors = ArraySize(mcolors);
       int sel_buy = 0, sel_sell = 0, sel_nonrelated = 0;
@@ -234,48 +234,48 @@
     //For color row 5 Buy Color on Left and Sell Color on Right
       int color_row0 = SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4;  
      //Column 1: Buy Color
-      if(!CreateMarkerTabCaption(8, "Buy Color", SETTING_MARKER_COL1_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(8, "Buy Color", SETTING_MARKER_COL1_BASE_X, 
                                    y + SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_color_buy, SETTING_MARKER_COL1_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_color_buy, SETTING_MARKER_COL1_COMBO_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4, 
                                   SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_buy)) return false;
-      if(!CreateColorPreview(0, SETTING_MARKER_COL1_COLOR_PREVIEW_X, 
+      if(!CreateColorButton_Preview(0, SETTING_MARKER_COL1_COLOR_PREVIEW_X, 
                             y + SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4, m_marker_buy_color)) return false;          
      //Col 2: Sell Color
-      if(!CreateMarkerTabCaption(9, "Sell Color", SETTING_MARKER_COL2_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(9, "Sell Color", SETTING_MARKER_COL2_BASE_X, 
                                 y +   SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_color_sell, SETTING_MARKER_COL2_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_color_sell, SETTING_MARKER_COL2_COMBO_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4, SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_sell)) return false;
-      if(!CreateColorPreview(1, SETTING_MARKER_COL2_COLOR_PREVIEW_X,
+      if(!CreateColorButton_Preview(1, SETTING_MARKER_COL2_COLOR_PREVIEW_X,
                               y + SETTING_MARKER_ROW_HEIGHT * 4 + SETTING_MARKER_ROW_GAP*4, m_marker_sell_color)) return false;
     //For color of row 6: Non Related Color on Left and ... on Right
-      if(!CreateMarkerTabCaption(10, "Non-Related Color", SETTING_MARKER_COL1_BASE_X, 
+      if(!CreateTextLabel_OtherCaption(10, "Non-Related Color", SETTING_MARKER_COL1_BASE_X, 
                                     y + SETTING_MARKER_ROW_HEIGHT * 5 + SETTING_MARKER_ROW_GAP*5)) return false;
-      if(!CreateMarkerTabComboBox(m_combo_color_nonrelated,SETTING_MARKER_COL1_COMBO_X, 
+      if(!CreateCombobox_MarkerSelection(m_combo_color_nonrelated,SETTING_MARKER_COL1_COMBO_X, 
                                     y + SETTING_MARKER_ROW_HEIGHT * 5 + SETTING_MARKER_ROW_GAP*5, SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel_nonrelated)) return false;
-      if(!CreateColorPreview(2, SETTING_MARKER_COL1_COLOR_PREVIEW_X, 
+      if(!CreateColorButton_Preview(2, SETTING_MARKER_COL1_COLOR_PREVIEW_X, 
                                   y + SETTING_MARKER_ROW_HEIGHT * 5 + SETTING_MARKER_ROW_GAP*5, m_marker_nonrelated_color)) return false;
     // Sound Folder/Buy Sound/Sell Sound moved to CreateTabSettingConfig_Sound()
     // (GUIPannel_SettingWindows_Sound.mqh) - own tab now, split away from Marker.
     //For Button Save marker settings
-      m_btn_save_marker_settings.MainPointer(m_tabs_main_setting_config);
-      m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_btn_save_marker_settings);
+      m_btn_save_marker_settings.MainPointer(m_tabs_setting_markerAndSound);
+      m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_btn_save_marker_settings);
       m_btn_save_marker_settings.AutoXResizeMode(false);
       m_btn_save_marker_settings.XSize(80);
       m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
       if(!m_btn_save_marker_settings.CreateButton("Save", x + SETTING_MARKER_BASE_X_GAP, 
                                  y + SETTING_MARKER_ROW_HEIGHT * 9 + SETTING_MARKER_ROW_GAP*9)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_btn_save_marker_settings);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_btn_save_marker_settings);
 
     return true;
   }
  // --- Shared recipe for every combobox on the Other tab (4 shape + 3 color) - same
  // --- creation/population steps as m_param_combo[]'s own recipe, just factored out since
  // --- 7 combos would otherwise repeat it verbatim.
- bool CGUIPannel::CreateMarkerTabComboBox(CComboBox &combo, const int x, const int y, const int combo_w, string &labels[], const int selected_index, const int tab_index)
+ bool CGUIPannel::CreateCombobox_MarkerSelection(CComboBox &combo, const int x, const int y, const int combo_w, string &labels[], const int selected_index, const int tab_index)
   {
-    combo.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(tab_index, combo);
+    combo.MainPointer(m_tabs_setting_markerAndSound);
+    m_tabs_setting_markerAndSound.AddToElementsArray(tab_index, combo);
     int n = ArraySize(labels);
     combo.XSize(combo_w);
     combo.YSize(SETTING_MARKER_ROW_HEIGHT);
@@ -288,7 +288,7 @@
     combo.GetButtonPointer().LabelYGap(4);
     combo.GetButtonPointer().IconYGap(3);
     if(!combo.CreateComboBox("", x, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), combo);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), combo);
 
     combo.GetListViewPointer().Rebuilding(n);
     for(int i = 0; i < n; i++)
@@ -298,41 +298,41 @@
     return true;
   }
  // --- Caption to the LEFT of a combo, e.g. "Single Buy:" - m_label_other_caption[row].
- bool CGUIPannel::CreateMarkerTabCaption(const int row, const string text, const int x, const int y, const int tab_index)
+ bool CGUIPannel::CreateTextLabel_OtherCaption(const int row, const string text, const int x, const int y, const int tab_index)
   {
-    m_label_other_caption[row].MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(tab_index, m_label_other_caption[row]);
+    m_label_other_caption[row].MainPointer(m_tabs_setting_markerAndSound);
+    m_tabs_setting_markerAndSound.AddToElementsArray(tab_index, m_label_other_caption[row]);
     m_label_other_caption[row].XSize(SETTING_MARKER_CAPTION_WIDTH);
     if(!m_label_other_caption[row].CreateTextLabel(text, x, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_label_other_caption[row]);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_label_other_caption[row]);
     return true;
   }
  // --- Preview to the RIGHT of a shape combo - renders the ACTUAL Wingdings glyph (not just
  // --- its numeric code) so the user can see what the shape looks like before saving.
- bool CGUIPannel::CreateShapePreview(const int row, const int x, const int y, const int arrow_code)
+ bool CGUIPannel::CreateTextLabel_ShapePreview(const int row, const int x, const int y, const int arrow_code)
   {
-    m_preview_shape[row].MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_shape[row]);
+    m_preview_shape[row].MainPointer(m_tabs_setting_markerAndSound);
+    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_preview_shape[row]);
     m_preview_shape[row].Font("Wingdings");
     m_preview_shape[row].FontSize(16);
     if(!m_preview_shape[row].CreateTextLabel(::ShortToString((ushort)arrow_code), x, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_preview_shape[row]);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_preview_shape[row]);
     return true;
   } 
- bool CGUIPannel::CreateColorPreview(const int row, const int x, const int y, const color clr)
+ bool CGUIPannel::CreateColorButton_Preview(const int row, const int x, const int y, const color clr)
   {
-   //CColorButton         m_preview_color[3];
-    m_preview_color[row].MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER, m_preview_color[row]);
-    m_preview_color[row].CurrentColor(clr);
+   //CColorButton         m_colorbutton[3];
+    m_colorbutton[row].MainPointer(m_tabs_setting_markerAndSound);
+    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_colorbutton[row]);
+    m_colorbutton[row].CurrentColor(clr);
    //Setting size by Using CElementBase method
-    m_preview_color[row].XSize(SETTING_MARKER_PREVIEW_WIDTH);
-    m_preview_color[row].YSize(SETTING_MARKER_ROW_HEIGHT);
-    m_preview_color[row].GetButtonPointer().XSize(SETTING_MARKER_COLOR_PREVIEW_WIDTH - 2);
-    m_preview_color[row].GetButtonPointer().XGap(1);
-    m_preview_color[row].GetButtonPointer().YSize(SETTING_MARKER_ROW_HEIGHT);
-    if(!m_preview_color[row].CreateColorButton("", x, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_preview_color[row]);
+    m_colorbutton[row].XSize(SETTING_MARKER_PREVIEW_WIDTH);
+    m_colorbutton[row].YSize(SETTING_MARKER_ROW_HEIGHT);
+    m_colorbutton[row].GetButtonPointer().XSize(SETTING_MARKER_COLOR_PREVIEW_WIDTH - 2);
+    m_colorbutton[row].GetButtonPointer().XGap(1);
+    m_colorbutton[row].GetButtonPointer().YSize(SETTING_MARKER_ROW_HEIGHT);
+    if(!m_colorbutton[row].CreateColorButton("", x, y)) return false;
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_colorbutton[row]);
     return true;
   }
  // --- Live-updates a shape preview as the user browses the combo, BEFORE clicking Save -
@@ -345,9 +345,9 @@
   }
  void CGUIPannel::UpdateColorPreview(const int row, const color clr)
   {
-    m_preview_color[row].CurrentColor(clr);
-    m_preview_color[row].Update(true);
-    m_preview_color[row].GetButtonPointer().Update(true);
+    m_colorbutton[row].CurrentColor(clr);
+    m_colorbutton[row].Update(true);
+    m_colorbutton[row].GetButtonPointer().Update(true);
   } 
  // --- Fixed catalog of common Wingdings arrow codes offered in all 4 marker-shape combos. 
  void CGUIPannel::GetMarkerArrowCodeChoices(int &codes[], string &labels[])
@@ -431,4 +431,4 @@
         ::ObjectDelete(m_chart_id, obj_name);
     }
  }
-#endif//CGUIPANNEL_SETTINGWINDOWS_MARKER_MQH
+#endif//CGUIPANNEL_SETTINGWINDOWS_ALERT_MARKER_MQH

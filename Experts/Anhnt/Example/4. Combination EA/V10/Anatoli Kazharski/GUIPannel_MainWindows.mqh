@@ -8,7 +8,7 @@
  //+------------------------------------------------------------------+
  //| Create Main Window                                               |
  //+------------------------------------------------------------------+
- bool CGUIPannel::CreateMainWindow(const string caption_text)
+ bool CGUIPannel::CreateWindow_Main(const string caption_text,const int x_gap, const int y_gap)
   {
     //--- Add a window pointer to the window array
       CWndContainer::AddWindow(m_window_main);
@@ -23,15 +23,15 @@
       m_window_main.TooltipsButtonIsUsed(true);
       m_window_main.FullscreenButtonIsUsed(true);
       // Allow shrinking horizontally down to 300px and vertically down to 200px
-      m_window_main.MinimumXSize(M_WINDOW_MAIN_MIN_WIDTH); 
-      m_window_main.MinimumYSize(M_WINDOW_MAIN_MIN_HEIGHT); 
+      m_window_main.MinimumXSize(M_WINDOW_MIN_WIDTH);
+      m_window_main.MinimumYSize(M_WINDOW_MIN_HEIGHT);
     //--- Set the tooltips
       m_window_main.GetCloseButtonPointer().Tooltip("Close");
       m_window_main.GetTooltipButtonPointer().Tooltip("Tooltips");
       m_window_main.GetFullscreenButtonPointer().Tooltip("Fullscreen");
       m_window_main.GetCollapseButtonPointer().Tooltip("Collapse/Expand");
     //--- Create the form default ENUM_WINDOW_TYPE W_MAIN
-      if (!m_window_main.CreateWindow(m_chart_id, m_subwin, caption_text, 1, 1))
+      if (!m_window_main.CreateWindow(m_chart_id, m_subwin, caption_text, x_gap, y_gap))
          return (false);
    return (true);
   }
@@ -139,30 +139,62 @@
        }
        return any_changed;
    } 
- //For Menu Bar
+ // For Menu Bar
   bool CGUIPannel::CreateMenuBar(const int x_gap, const int y_gap)
    {
     //--- Store the window pointer
      m_menu_bar.MainPointer(m_window_main);
-     m_menu_bar.MainPointer(m_window_main);
      m_menu_bar.IsCenterText(false);   
      m_menu_bar.LabelXGap(22);         
-    //--- Add items (placeholder text/width - tinh chỉnh sau khi quyết map tab->item)
-     //  m_menu_bar.AddItem(70, "Symbol TF");
-     //  m_menu_bar.AddItem(70, "Indicator");
+    //--- Add items (placeholder text/width 
      m_menu_bar.AddItem(70, "Settings");
-     //  m_menu_bar.AddItem(70, "Positions");
     //--- Create a control element
      if(!m_menu_bar.CreateMenuBar(x_gap, y_gap))
        return (false);
      //--- Set icon for the Settings item (IconXGap/IconYGap Library đã tự set =3/4 bên trong CreateItems())
        CMenuItem *settings_item = m_menu_bar.GetItemPointer(MENU_ITEM_SETTINGS);
-       settings_item.IconFile(IMAGE_RESOURCE_BMP16_SETTING_PNG);    
-       
+       settings_item.IconFile(IMAGE_RESOURCE_BMP16_SETTING_PNG);
+       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: settings_item X=", settings_item.X(),
+               " Y=", settings_item.Y(), " XSize=", settings_item.XSize(), " YSize=", settings_item.YSize(),
+               " LabelText=", settings_item.LabelText(), " IsVisible=", settings_item.IsVisible());
+       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: BEFORE dropdown creation - m_window_main.Id()=", m_window_main.Id(),
+               " m_menu_bar.Id()=", m_menu_bar.Id(), " settings_item.Id()=", settings_item.Id(),
+               " settings_item.Index()=", settings_item.Index(), " m_contextmenu_settings.Id()=", m_contextmenu_settings.Id(),
+               " m_contextmenu_settings.Index()=", m_contextmenu_settings.Index());
+    //--- Register m_menu_bar NOW (not at the end) - CElement::CheckMainPointer() stamps every new
+    //--- element's Id() as "owning window's LastId()+1", and LastId() only changes on an
+    //--- AddToElementsArray() call. With nothing in between, settings_item and the dropdown's own
+    //--- "Indicator" item (both Index()==0, one per container) computed the SAME Id and therefore
+    //--- the SAME chart object name (ElementName() = name_part+"_"+Index()+"__"+Id()) - "Indicator"
+    //--- silently reused/overwrote Settings' own canvas. Bumping LastId() here, before the dropdown
+    //--- items get created below, gives them a different Id and therefore a different name.
      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_menu_bar);
+     //--- Dropdown for "Settings": Indicator / Trading / Alert (only now that settings_item is real)
+       m_contextmenu_settings.MainPointer(m_menu_bar);
+       m_contextmenu_settings.PrevNodePointer(*settings_item);
+       m_contextmenu_settings.XSize(100);
+       m_contextmenu_settings.FixSide(FIX_BOTTOM);
+       m_contextmenu_settings.AddItem("Indicator", IMAGE_RESOURCE_BMP16_INDICATOR_ON_PNG, IMAGE_RESOURCE_BMP16_INDICATOR_OFF_PNG, MI_SIMPLE);
+       m_contextmenu_settings.AddItem("Trading",   IMAGE_RESOURCE_BMP16_TRADE_ON_PNG, IMAGE_RESOURCE_BMP16_TRADING_OFF_PNG, MI_SIMPLE);
+       m_contextmenu_settings.AddItem("Alert",     IMAGE_RESOURCE_BMP16_ALERT_ON_PNG, IMAGE_RESOURCE_BMP16_ALERT_OFF_PNG, MI_SIMPLE);
+       bool created_contextmenu_settings = m_contextmenu_settings.CreateContextMenu();
+       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: CreateContextMenu returned=", created_contextmenu_settings);
+       if(!created_contextmenu_settings) return false;
+       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: dropdown X=", m_contextmenu_settings.X(),
+               " Y=", m_contextmenu_settings.Y(), " XSize=", m_contextmenu_settings.XSize(),
+               " YSize=", m_contextmenu_settings.YSize());
+       for(int dbg_i = 0; dbg_i < m_contextmenu_settings.ItemsTotal(); dbg_i++)
+        {
+         CMenuItem *dbg_item = m_contextmenu_settings.GetItemPointer(dbg_i);
+         ::Print("MY DEBUG CGUIPannel::CreateMenuBar: dropdown item[", dbg_i, "] LabelText=", dbg_item.LabelText(),
+                 " X=", dbg_item.X(), " Y=", dbg_item.Y(), " IsVisible=", dbg_item.IsVisible());
+        }
+       m_contextmenu_settings.Hide();
+       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: after Hide, IsVisible=", m_contextmenu_settings.IsVisible());
+       m_menu_bar.AddContextMenuPointer(MENU_ITEM_SETTINGS, m_contextmenu_settings);
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_contextmenu_settings);
       return (true);
-   } 
-  //Need update later
+   }
  // For Main Tabs m_tabs_main on the right of Main Window m_window_main  
   bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
    {      
@@ -197,4 +229,18 @@
     CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_tabs_main);
     return (true);
    }  
+ void CGUIPannel::OnEvent_Window_Main(const int id,const long &lparam, const double &dparam, const string &sparam)
+  {
+   //Handle for Menu Item click
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CONTEXTMENU_ITEM)
+     {
+      if((int)dparam == MENU_ITEM_SETTINGS_INDICATOR)
+         OpenWindow_SettingTimeSeries();
+      else if((int)dparam == MENU_ITEM_SETTINGS_TRADING)
+         OpenWindow_SettingTrading();
+      else if((int)dparam == MENU_ITEM_SETTINGS_ALERT)
+         OpenWindow_SettingMarkerAndSound();      
+      return;
+     }
+  }
 #endif // CGUIPANNEL_MAINWINDOWS_MQH

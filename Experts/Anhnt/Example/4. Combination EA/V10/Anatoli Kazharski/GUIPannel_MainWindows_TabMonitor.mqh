@@ -126,8 +126,6 @@
         count++;
        }
      }
-    SIndicatorCatalogItem catalog[];
-    GetIndicatorCatalog(catalog);
    // --- All templates gone: purge the table down to ONE truly blank physical row.
    // --- DeleteAllRows only clears text - the surviving row would keep its icons
    // --- (SetImages rejects an empty array), so swap in a freshly CellInitialize'd
@@ -194,7 +192,10 @@
       // Col 3: dir icon + Indicator name (full params) — TextXOffset=22 pushes name past 16px icon
        MqlParam ind_params[];
        ind.GetMqlParams(ind_params);
-       string ind_label = BuildIndicatorTextLabel(ind.TypeIndicator(), ind_params, catalog);
+       CIndicatorSetting ind_label_setting;
+       ind_label_setting.TypeEnum(ind.TypeIndicator());
+       ind_label_setting.SetRawParams(ind_params);
+       string ind_label = ind_label_setting.DisplayLabel();
        m_table_indicator_SymbolTFMonitor.SetImages(3, row, val_img);
        m_table_indicator_SymbolTFMonitor.ChangeImage(3, row, 2);
        m_table_indicator_SymbolTFMonitor.SetValue(3, row, ind_label);
@@ -226,8 +227,11 @@
      {
       MqlParam want_params[];
       all_inds[i].GetMqlParams(want_params);
+      CIndicatorSetting want_label_setting;
+      want_label_setting.TypeEnum(all_inds[i].TypeIndicator());
+      want_label_setting.SetRawParams(want_params);
       string want = all_syms[i] + "|" + TimeframeDescription(all_inds[i].Timeframe()) + "|" +
-                    BuildIndicatorTextLabel(all_inds[i].TypeIndicator(), want_params, catalog);
+                    want_label_setting.DisplayLabel();
       row_of[i] = -1;
       for(int row = 0; row < count; row++)
       {

@@ -19,43 +19,29 @@
    string file = is_buy ? m_marker_buy_sound_file : m_marker_sell_sound_file;
    if(file == "") return;
    ::PlaySound(file);
-  }
- //+------------------------------------------------------------------+
- //| Every TF shares the same Template (Single Source of Truth =      |
- //| CIndicatorTemplateManager, NOT the old deleted                   |
- //| m_indicator_template_setting[] array). Alert on a genuinely NEW   |
- //| Signal, gated by BOTH the row's own Sound/Message opt-in AND the  |
- //| same 2-layer Buy/Sell gate CSignalBridgeWriter/GUIPannel_CandleInfo|
- //| already use (Indicator-level entry.BuySignal()/SellSignal() AND   |
- //| Symbol+TF-level via m_SymbolTFManager) - Anhnt, 2026-08-28.        |
- //+------------------------------------------------------------------+
+  } 
  void CGUIPannel::CheckIndicatorAlerts(void)
   {
    if(m_timeSeriesEngine == NULL || m_BarTimeSeriesCollection == NULL ||
       m_indicator_template_manager == NULL || m_SymbolTFManager == NULL) return;
    int rows = m_indicator_template_manager.Total();
-   if(rows == 0) return;
-   // --- SetFolder()/LoadSignalLogWatermarks() now called once at CGUIPannel::OnInitEvent()
-   // --- (Anhnt, 2026-08-29) - no lazy tick-triggered load needed here anymore.
+   if(rows == 0) return;   
    string sym = ::Symbol();
    CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
    CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
    int series_total = (series_list != NULL) ? series_list.Total() : 0;
    if(series_total == 0) return;
-
-   // --- Flattened per-(TF,template) state - mirrors CheckCandlePatternAlerts's own
-   // --- ti*pattern_count+row indexing.
-    int total_slots = series_total * rows;
-    int prev_size = ArraySize(m_live_signal_last_seen);
-    bool seeding = (prev_size != total_slots); // TF/row grid just changed shape - seed, don't fire
-    if(seeding)
+   int total_slots = series_total * rows;
+   int prev_size = ArraySize(m_live_signal_last_seen);
+   bool seeding = (prev_size != total_slots); // TF/row grid just changed shape - seed, don't fire
+   if(seeding)
      {
        ArrayResize(m_live_signal_last_seen, total_slots);
        ArrayResize(m_upper_last_seen, total_slots);
        ArrayResize(m_lower_last_seen, total_slots);
      }
-    for(int ti = 0; ti < series_total; ti++)
-     {
+   for(int ti = 0; ti < series_total; ti++)
+    {
       CBarSeriesDE *s = series_list.At(ti);
       if(s == NULL) continue;
       ENUM_TIMEFRAMES tf = s.Timeframe();
@@ -217,7 +203,7 @@
            m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
           }
        }
-     }
+    }
   }
  //+------------------------------------------------------------------+
  //| Sound/Message/CSV for Candle Patterns - Buy/Sell/Sound/Message    |
@@ -253,14 +239,6 @@
        for(int i = 0; i < min_required_size; i++)
          m_candle_pattern_last_seen[i] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
       }
-    // --- CloseBar direction-change tracker - separate from m_candle_pattern_last_seen above
-    // --- (that one is Live-only, reset every new bar); this one persists across bars.
-     if(min_required_size > 0 && ArraySize(m_candle_pattern_closebar_last_dir) < min_required_size)
-      {
-       ArrayResize(m_candle_pattern_closebar_last_dir, min_required_size);
-       for(int i = 0; i < min_required_size; i++)
-         m_candle_pattern_closebar_last_dir[i] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
-      }
    // Detect new bar on each TF of current symbol - reset pattern state for that TF
     for(int ti = 0; ti < series_total; ti++)
      {
@@ -275,12 +253,7 @@
           m_candle_pattern_last_seen[index] = (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
          }
        }
-     }
-   // --- CLOSED bar path: fires Sound+Message+CSV (status "CloseBar", source "Candle") for
-   // --- every committed pattern newer than a per-(pattern type, TF) watermark - same shape
-   // --- as CheckIndicatorAlerts's own Closed-bar loop. Reads directly from
-   // --- m_BarTimeSeriesCollection.GetListAllPatterns() (Layer 1's real per-series data, same
-   // --- source CSignalBridgeWriter/the CandleInfo popup already use).
+     }   
     CArrayObj *all_patterns_cb = m_BarTimeSeriesCollection.GetListAllPatterns();
     if(all_patterns_cb != NULL)
      {
@@ -291,7 +264,6 @@
         if(bar_series_cb == NULL) continue;
         ENUM_TIMEFRAMES tf_cb = bar_series_cb.Timeframe();
         string tf_text_cb = TimeframeDescription(tf_cb);
-
         // --- Symbol+TF-level Buy/Sell gate, computed once per TF.
          CSymbolTFSetting *symtf_cb = m_SymbolTFManager.FindByIdentity(sym, tf_cb);
          bool symtf_buy_cb  = (symtf_cb != NULL) ? symtf_cb.BuySignal()  : false;
@@ -348,11 +320,6 @@
              if(is_buy_cb  && !(PatternSignalBuy(pattern_cb)  && symtf_buy_cb))  continue;
              if(!is_buy_cb && !(PatternSignalSell(pattern_cb) && symtf_sell_cb)) continue;
 
-             // --- m_candle_pattern_closebar_last_dir kept updated even though CloseBar no longer
-             // --- gates Sound on it (CloseBar Sound is just "NewBar.wav" via PlaySoundCloseBar
-             // --- now, no longer per-flip) - state still maintained for possible future use.
-             int index_cb = ti * pattern_count + row;
-             m_candle_pattern_closebar_last_dir[index_cb] = pdir_cb;
              string dir_text_cb = is_buy_cb ? "Buy" : "Sell";
              uint candles_cb = pat_cb.Candles();
              string pat_name_cb = pat_cb.GetProperty(PATTERN_PROP_NAME);
@@ -559,18 +526,7 @@
         }
      }
     return (ENUM_PATTERN_DIRECTION)WRONG_VALUE;
-  }
- //+------------------------------------------------------------------+
- //| BBands-only: processes ONE line's REAL persisted history from     |
- //| CSignalBollinger (Layer 1) - Closed-bar catch-up mirrors the       |
- //| primary signal's own loop exactly (log-only, watermark keyed by    |
- //| params_key+"|"+line_name so it never collides with the primary     |
- //| signal's own watermark entry), then a Live-bar check (transient    |
- //| last_seen[] vs LineCurrentSignal()) fires Message+CSV (deliberately|
- //| no Sound, matching the earlier scoped-down decision) on every real |
- //| change. buy_on/sell_on/symtf_buy/symtf_sell: same 2-layer gate the |
- //| caller already computed for the primary signal (Anhnt, 2026-08-28).|
- //+------------------------------------------------------------------+
+  } 
  void CGUIPannel::ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name,
                                    ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key,
                                    const string label, const string tf_text, const int digits,

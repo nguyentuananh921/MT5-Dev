@@ -271,7 +271,7 @@
    {
       int windows_total=::ArraySize(m_windows);
     // --- If there are no forms for controls in the database
-      if(windows_total<1)
+     if(windows_total<1)
       {
          ::Print(__FUNCTION__," > Перед созданием элемента управления нужно создать форму "
                "и добавить её в базу с помощью метода CWndContainer::AddWindow(CWindow &object).");

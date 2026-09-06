@@ -35,11 +35,6 @@
        void              Symbol(const string sym)                     { m_symbol = sym;   }
        ENUM_TIMEFRAMES   TFEnum(void)                          const { return m_tf_enum; }
        void              TFEnum(const ENUM_TIMEFRAMES tf)             { m_tf_enum = tf;   }
-       bool              MatchesIdentity(const string sym, const ENUM_TIMEFRAMES tf) const { return m_symbol == sym && m_tf_enum == tf; }
-
-      //--- display text ("M1","H1",...) - derived on demand via the Library's own
-      //--- TimeframeDescription(), no separate stored/text field needed (unlike
-      //--- CIndicatorSetting's params, a TF has no schema/precision to preserve).
        string            TFText(void)                          const { return TimeframeDescription(m_tf_enum); }
 
       //--- toggles - mirror table columns 2/3 directly

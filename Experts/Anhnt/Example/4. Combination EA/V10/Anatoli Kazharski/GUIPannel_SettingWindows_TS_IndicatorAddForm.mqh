@@ -13,14 +13,7 @@
    out[idx].col         = c;
    out[idx].total_width = tw;
    out[idx].field_width = fw;
-  } 
- //+-------------------------------------------------------------------------+  
- //| Builds the per-param layout for `type`. element_type is always carried  |
- //| straight from Tang 1's schema (choices!="" -> E_COMBO_BOX) - Tang 2 does|
- //| not re-decide that fact, only how/where to render it. row/col/field_width|
- //| are explicitly curated per type below (this is the per-indicator layout  |
- //| the user asked to control directly, not a blanket formula).             |
- //+-------------------------------------------------------------------------+  
+  }
  int CGUIPannel::GetIndicatorGuiLayout(const ENUM_INDICATOR type, SIndicatorLayout &out[])
   {
     SIndicatorParam schema[];
@@ -254,23 +247,23 @@
    const int default_y = y_gap;
    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
     {
-     m_param_labels[i].MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_labels[i]);
+     m_param_labels[i].MainPointer(m_tabs_setting_timeseries);
+     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_param_labels[i]);
      if(!m_param_labels[i].CreateTextLabel("", default_x, default_y)) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_param_labels[i]);
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_param_labels[i]);
 
-     m_param_edits[i].MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_edits[i]);
+     m_param_edits[i].MainPointer(m_tabs_setting_timeseries);
+     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_param_edits[i]);
      m_param_edits[i].XSize(INDICATOR_PARAM_FIELD_W);
      // --- Inner CTextBox defaults its LOCAL x-offset to the outer box's x_size at
      // --- creation time unless told otherwise BEFORE CreateTextEdit() - confirmed via
      // --- debug log (inner canvas sitting ~90px right of the outer frame after resize).
      m_param_edits[i].GetTextBoxPointer().XGap(1);
      if(!m_param_edits[i].CreateTextEdit("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_param_edits[i]);
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_param_edits[i]);
 
-     m_param_combo[i].MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_param_combo[i]);
+     m_param_combo[i].MainPointer(m_tabs_setting_timeseries);
+     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_param_combo[i]);
      m_param_combo[i].XSize(INDICATOR_PARAM_FIELD_W);
      m_param_combo[i].YSize(20);
      m_param_combo[i].ItemsTotal(7);          // room for the largest choice list (PRICE_CHOICES)
@@ -282,32 +275,26 @@
      m_param_combo[i].GetButtonPointer().LabelYGap(4);
      m_param_combo[i].GetButtonPointer().IconYGap(3);
      if(!m_param_combo[i].CreateComboBox("", default_x + INDICATOR_PARAM_LABEL_W, default_y)) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_param_combo[i]);
-     // --- Do NOT call Hide() here - CompletedGUI() (called after this function)
-     // --- runs FormAvailableElementsArray() which only includes VISIBLE elements
-     // --- in m_available_elements[]. Hiding early means MOUSE_MOVE events never
-     // --- reach the combo button later (even after Show()), so the dropdown arrow
-     // --- click silently does nothing. ShowIndicatorParameterForm() manages
-      // --- show/hide correctly AFTER CompletedGUI has already registered everything.
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_param_combo[i]);     
     }
     //For Button Add
-     m_btn_add_indicator.MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_add_indicator);
+     m_btn_add_indicator.MainPointer(m_tabs_setting_timeseries);
+     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_btn_add_indicator);
      m_btn_add_indicator.AutoXResizeMode(false);
      m_btn_add_indicator.XSize(80);
      m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);            
      bool created = m_btn_add_indicator.CreateButton("Add", x_gap, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
      if(!created) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_btn_add_indicator);
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_btn_add_indicator);
     //For Button Save
-     m_btn_save_indicator.MainPointer(m_tabs_main_setting_config);
-     m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_btn_save_indicator);
+     m_btn_save_indicator.MainPointer(m_tabs_setting_timeseries);
+     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_btn_save_indicator);
      m_btn_save_indicator.AutoXResizeMode(false);
      m_btn_save_indicator.XSize(80);
      m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);          
      bool created_save = m_btn_save_indicator.CreateButton("Save", x_gap + 85, y_gap + INDICATOR_PARAM_ROWS * 30 + 10);
      if(!created_save) return false;
-     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_btn_save_indicator);
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_btn_save_indicator);
      for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
       {
        m_param_labels[i].Update(true);
@@ -323,17 +310,11 @@
  void CGUIPannel::ShowAddIndicatorForm(const ENUM_INDICATOR type, const int type_li)
   {
    m_current_param_type    = type;
-   m_btn_add_indicator.Show();
-   // --- m_btn_save_indicator NOT shown here (Anhnt, 2026-08-31) - its visibility is now driven
-   // --- by CIndicatorTemplateManager's own ADDED/DELETE/SHOW_CHANGED/BUYSELL_CHANGED events
-   // --- (see OnEvent), not by whether this form happens to be open.
+   m_btn_add_indicator.Show();   
    SIndicatorParam schema[];
-   int total = GetIndicatorParamSchema(type, schema);
-   // Layer 2 layout - decided BEFORE we touch a single control, separate
-   // from Layer 1's data schema. Drives both position AND which control renders.
+   int total = GetIndicatorParamSchema(type, schema);   
     SIndicatorLayout layout[];
     GetIndicatorGuiLayout(type, layout);
-   // x_gap offsets right of the 150px indicator tree; y_gap from the tab's top.
     const int x_gap = PARAM_FORM_X, y_gap = PARAM_FORM_Y;
     for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
      {
@@ -375,14 +356,7 @@
             m_param_combo[i].CanvasPointer().XSize(cw);
             m_param_combo[i].CanvasPointer().Resize(cw, m_param_combo[i].CanvasPointer().YSize());
            // --- Use built-in ChangeSize to properly resize the button and its image group gap (dropdown arrow position)
-            m_param_combo[i].GetButtonPointer().ChangeSize(cw, m_param_combo[i].GetButtonPointer().YSize());
-           // --- ComboBox.mqh's CreateButton() computes IconXGap ONCE at creation
-           // --- time as (x_size-18), using whatever x_size the button had THEN
-           // --- (90, from INDICATOR_PARAM_FIELD_W) - it never re-tracks later
-           // --- resizes. Left stale, the dropdown arrow icon stays pinned at the
-           // --- OLD x=72 regardless of how narrow/wide the button becomes now,
-           // --- which is what made the box look like it had no closed right edge.
-           // --- Recompute it here using the Library's own formula every resize.
+            m_param_combo[i].GetButtonPointer().ChangeSize(cw, m_param_combo[i].GetButtonPointer().YSize());           
             m_param_combo[i].GetButtonPointer().IconXGap(cw - 18);
            // --- Also resize the dropdown list view to match the combo width
             m_param_combo[i].GetListViewPointer().ChangeSize(cw, m_param_combo[i].GetListViewPointer().YSize());
@@ -394,12 +368,7 @@
             m_param_edits[i].Hide();
           }
          else
-          {
-           // --- is_size_adjustment=false: SetValue() defaults to TRUE, which
-           // --- calls CorrectSize() and shrinks the box to fit the value text
-           // --- (a 1-digit default like "8" collapses the box to almost
-           // --- nothing, looking like a stray checkbox icon). Keep our explicit
-           // --- per-layout field_width instead.
+          {           
             m_param_edits[i].SetValue(schema[i].default_value, false);
             int ew = layout[i].field_width;
             m_param_edits[i].XSize(ew);
@@ -409,16 +378,7 @@
             m_param_edits[i].GetTextBoxPointer().ChangeSize(ew, m_param_edits[i].GetTextBoxPointer().YSize());
             m_param_edits[i].XGap(fx); m_param_edits[i].CanvasPointer().XGap(fx);
             m_param_edits[i].YGap(y);  m_param_edits[i].CanvasPointer().YGap(y);
-            m_param_edits[i].Draw();
-           // --- The visible VALUE text is painted by the inner CTextBox
-           // --- (m_edit), which has its own separate canvas - NOT by the outer
-           // --- CTextEdit's Draw()/Update(). Normally SetValue()'s default
-           // --- CorrectSize() path repaints it as a side effect of resizing;
-           // --- since we pass is_size_adjustment=false (to stop the auto-shrink
-           // --- bug), we must explicitly force that inner repaint ourselves,
-           // --- or the box keeps showing whatever value the PREVIOUSLY selected
-           // --- indicator left behind (confirmed: stale "0.02"/"0.2" from PSAR
-           // --- still showing after switching to MA).
+            m_param_edits[i].Draw();           
             m_param_edits[i].GetTextBoxPointer().Update(true);
             m_param_edits[i].Update(true);
             m_param_edits[i].Show();
@@ -450,16 +410,13 @@
       m_param_combo[i].Hide();
     }
     m_btn_add_indicator.Hide();
-    // --- m_btn_save_indicator NOT hidden here (Anhnt, 2026-08-31) - see ShowAddIndicatorForm();
-    // --- this is called on every tree-node/tab switch, which would otherwise wipe out a
-    // --- still-pending "unsaved change" indicator that has nothing to do with the form closing.
   } 
  //+-------------------------------------------------------------------------+  
  //| "Add" button click handler — converts text fields to MqlParam[]         |  
  //| Called after any ShowTabElements() that overrides our Hide()            |  
  //+-------------------------------------------------------------------------+
  void CGUIPannel::OnClickAddIndicatorBtnOnForm(void)
- {
+  {
     SIndicatorParam schema[];
     int total = GetIndicatorParamSchema(m_current_param_type, schema);
     if(total == 0) return;
@@ -498,5 +455,5 @@
     // Data only - EA reacts to INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED to attach it on chart
     // (CGUIPannel no longer holds CChartObjCollection).
     m_indicator_template_manager.AddIndicatorToIndicatorTemplateSetting(m_current_param_type, params);
- }
+  }
 #endif // GUIPANNEL_SETTINGWINDOWS_ADDINDICATORFORM_MQH

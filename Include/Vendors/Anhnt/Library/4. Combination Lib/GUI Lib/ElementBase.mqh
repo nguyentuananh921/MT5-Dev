@@ -21,23 +21,23 @@
     CColors        m_clr;      // --- An instance of a class for working with color
     CChart         m_chart;    // --- An instance of a class for working with a graph
     // --- (1) Class name and (2) program name, (3) program type
-      string            m_class_name;
-      string            m_program_name;
-      ENUM_PROGRAM_TYPE m_program_type;
+     string            m_class_name;
+     string            m_program_name;
+     ENUM_PROGRAM_TYPE m_program_type;
     // --- (1) Part of the name (element type), (2) element name
-      string            m_name_part;
-      string            m_element_name;
+     string            m_name_part;
+     string            m_element_name;
     // --- Chart window ID and number
-      long              m_chart_id;
-      int               m_subwin;
-    // --- ID of the last created control
-      int               m_last_id;
+     long              m_chart_id;
+     int               m_subwin;
+    // --- ID of the last created control    
+     int               m_last_id;
     // --- Element ID and index
-      int               m_id;
-      int               m_index;
+     int               m_id;
+     int               m_index;
     // ---Coordinates and boundaries
-      int               m_x;
-      int               m_y;
+     int               m_x;
+     int               m_y;
     // --- Size
       int               m_x_size;
       int               m_y_size;

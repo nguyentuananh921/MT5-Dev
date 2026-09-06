@@ -85,7 +85,7 @@
    Sell -> Khi khớp khốp với Ask tính Profit với Ask
     Symbol
     SYMBOL_BID (ở dưới) /SYMBOL_ASK (ở trên)
-    SYMBOL_POINT -> Đơn vị thống nhất giữa các Symbol
+    SYMBOL_POINT -> Đơn vị thống nhất giữa các Symbol vàng là 130 point
     SYMBOL_DIGITS
     SYMBOL_TRADE_STOPS_LEVEL ->KHoảng cách tối thiểu với giá toàn bằng 0
     SYMBOL_TRADE_TICK_VALUE-> Bước nhẩy nhỏ nhất của giá.  
@@ -93,6 +93,12 @@
     SYMBOL_TRADE_MODE
     SYMBOL_FILLING_MODE
     SYMBOL_TRADE_FREEZE_LEVEL
+   Setting SL: Việc setting SL sẽ phải theo Symbol. Và Setting cái StopLost Distance so với giá theo đơn vị point.
+    Có 2 cách set SL được thực hiện bởi CButtonsGroup
+    Fixed/ATR (Distance-based): chọn Distance (point) trước → SL = giá_tham_chiếu ∓ Distance × Point.
+   Trailling: MA/PSAR (Level-based, offset nhỏ): lấy indicator_value làm gốc → SL = indicator_value ∓ Offset × Point.
+    
+
 4. EA gồm có 
  [] Layer 1:PureData Sử dụng Library của Artyom Trishkin
    - Library link Lib https://www.mql5.com/en/articles/14710

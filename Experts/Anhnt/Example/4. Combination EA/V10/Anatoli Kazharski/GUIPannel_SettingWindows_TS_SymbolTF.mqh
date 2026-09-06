@@ -1,23 +1,24 @@
 //+------------------------------------------------------------------+
-//|                            GUIPannel_SettingWindows_SymbolTF.mqh |
+//|                         GUIPannel_SettingWindows_TS_SymbolTF.mqh |
+//| The library for the signal markers on chart                      |
 //+------------------------------------------------------------------+
-#ifndef CGUIPANNEL_SETTINGWINDOWS_SYMBOLTF_MQH
-#define CGUIPANNEL_SETTINGWINDOWS_SYMBOLTF_MQH
-#include "GUIPannel.mqh"
+#ifndef CGUIPANNEL_SETTINGWINDOWS_TS_SYMBOLTF_MQH_IMPLEMENTATION
+#define CGUIPANNEL_SETTINGWINDOWS_TS_SYMBOLTF_MQH_IMPLEMENTATION
+ #include "GUIPannel.mqh" 
  bool CGUIPannel::CreateTable_SymbolTFSetting(const int x, const int y)
   {
    //--- Save button, same convention as m_btn_save_indicator
-    m_btn_save_SymbolTF.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_btn_save_SymbolTF);
+    m_btn_save_SymbolTF.MainPointer(m_tabs_setting_timeseries);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF, m_btn_save_SymbolTF);
     m_btn_save_SymbolTF.AutoXResizeMode(false);
     m_btn_save_SymbolTF.XSize(80);
     m_btn_save_SymbolTF.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
     if(!m_btn_save_SymbolTF.CreateButton("Save", x, y + SYMBOLTF_BTN_Y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_btn_save_SymbolTF);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_btn_save_SymbolTF);
    //--- Table: col 0 merges the red delete icon with the Symbol label (same CTable
    //--- click-detection trick as m_table_indicator col 0 - see Table.mqh CheckPressedButton).
-    m_table_SymbolTFSeting.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_table_SymbolTFSeting);
+    m_table_SymbolTFSeting.MainPointer(m_tabs_setting_timeseries);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF, m_table_SymbolTFSeting);
     m_table_SymbolTFSeting.AutoXResizeMode(true);
     m_table_SymbolTFSeting.AutoXResizeRightOffset(3);
     m_table_SymbolTFSeting.AutoYResizeMode(true);
@@ -26,11 +27,6 @@
     m_table_SymbolTFSeting.SelectableRow(true);
     m_table_SymbolTFSeting.LightsHover(true);
     m_table_SymbolTFSeting.IsSortMode(true);
-    // --- 6 columns (Symbol/TF/Buy/Sell/Sound/Message) - no hidden index column here (unlike
-    // --- m_table_indicator_template's col 7): every click handler on this table already reads
-    // --- (sym,tf) fresh off the row's own col0/col1 content at the time it acts, never a cached
-    // --- row position, so it's already immune to sort-driven reordering without needing a
-    // --- Manager-index cell to recover.
     m_table_SymbolTFSeting.TableSize(6, 10);
     int widths[6]    = {150, 70, 40, 40, 40, 40};
     int img_x_off[6] = {3,   0,  10, 10, 10, 10};
@@ -64,12 +60,9 @@
    // --- PopulateTable_SymbolTFSetting() reuses that one row for its very first entry.
     m_table_SymbolTFSeting.DeleteAllRows();
 
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_table_SymbolTFSeting);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_table_SymbolTFSeting);
     return true;
-  }
- // --- Data-only pass: ensure every Manager entry has a row (grow + write identity into
- // --- col0/col1). No painting here - SyncTable_SymbolTFSetting (run right after, same as
- // --- PopulateTreeView/SyncTreeView's split) paints the actual icon/checkboxes.
+  } 
  void CGUIPannel::PopulateTable_SymbolTFSetting(void)
   {
    if(m_SymbolTFManager == NULL) return;
@@ -100,14 +93,7 @@
      m_table_SymbolTFSeting.SetValue(1, row, "  " + tf_text);
      m_table_SymbolTFSeting.Update(true);
     }
-  }
- // --- Full rescan, recomputing every cell for every row fresh - same self-healing philosophy
- // --- as SyncTreeView_SymbolTFSetting(): the old "only touch the 2 known rows (via native
- // --- event's sparam/dparam)" approach depended entirely on that native
- // --- CHART_OBJ_EVENT_CHART_..._CHANGE firing correctly, which it silently doesn't for any
- // --- chart switch WE ourselves trigger (SetActiveChartSymbolTF -> CreateCollection() resets
- // --- the diff baseline on the resulting reinit, un-guarded Library gap) - leaving stale
- // --- "current" icons stuck on rows that were actually left behind (Anhnt, 2026-08-26).
+  } 
  void CGUIPannel::SyncTable_SymbolTFSetting(void)
   {
    if(m_SymbolTFManager == NULL) return;
@@ -131,12 +117,7 @@
       if(is_current)
        m_table_SymbolTFSeting.SetImages(0, row, start_icon);
       else
-       m_table_SymbolTFSeting.SetImages(0, row, delete_icon);
-      // --- ChangeImage(0,row,0) here would be a no-op: SetImages() above always resets
-      // --- m_selected_image to 0 itself, so ChangeImage's own early-return
-      // --- (image_index==m_selected_image, Table.mqh:1536) would fire every time - RedrawCell()
-      // --- would never run, so the icon would never actually repaint despite the data being
-      // --- correct. SetValue's own redraw=true has no such trap - use it to force the repaint.
+       m_table_SymbolTFSeting.SetImages(0, row, delete_icon);      
        m_table_SymbolTFSeting.SetValue(0, row, "        " + sym, 0, true);
        // --- Col 1: TF
         m_table_SymbolTFSeting.SetValue(1, row, "  " + tf_text);
@@ -215,11 +196,11 @@
    else if(col == 5)
      entry.MessageAlert((int)m_table_SymbolTFSeting.SelectedImageIndex(5, row) == CHECKBOX_STATE_ON);
   }
- // For m_treeview_SymbolTF on the left of the Symbol TF sub-tab, m_tabs_main_setting_config -
+ // For m_treeview_SymbolTF on the left of the Symbol TF sub-tab, m_tabs_setting_timeseries -
  // same positioning pattern as CreateTreeView_IndicatorTemplateSetting (Settings window, not m_window_main).
  bool CGUIPannel::CreateTreeView_SymbolTFSetting(const int x_gap, const int y_gap)
   {
-    m_treeview_SymbolTF.MainPointer(m_tabs_main_setting_config);
+    m_treeview_SymbolTF.MainPointer(m_tabs_setting_timeseries);
     m_treeview_SymbolTF.AutoXResizeMode(false);  // fixed width
     m_treeview_SymbolTF.XSize(M_TREEVIEW_SYMBOLTF_WIDTH);
     m_treeview_SymbolTF.AutoYResizeMode(true);
@@ -227,34 +208,21 @@
     m_treeview_SymbolTF.LightsHover(true);
     m_treeview_SymbolTF.AutoYResizeBottomOffset(25);
     if(!m_treeview_SymbolTF.CreateTreeView(x_gap, y_gap)) return false;
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF, m_treeview_SymbolTF);
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_treeview_SymbolTF);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF, m_treeview_SymbolTF);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_treeview_SymbolTF);
     return true;
   }
  void CGUIPannel::PopulateTreeView_SymbolTFSetting(void)
   {
     if(m_SymbolTFManager == NULL) return;
-    int mw_total = ::SymbolsTotal(true);
-    // --- SymbolName(i,true)'s own index order is Market Watch's internal/insertion order,
-    // --- NOT the alphabetically-sorted order the Market Watch grid displays (Anhnt,
-    // --- 2026-07-19) - a brand new symbol node only ever gets APPENDED (AddTreeItem always
-    // --- uses ItemsTotal() as the new list_index, there's no "insert at position"), so the
-    // --- only way to make first-time node creation come out sorted is to visit symbols in
-    // --- sorted order here. Symbol nodes are found by scanning the tree's OWN items for a
-    // --- LabelText match (Step 1 below) instead of a raw-index shadow array (2026-08-10).
+    int mw_total = ::SymbolsTotal(true);    
     int order[];
     ArrayResize(order, mw_total);
     for(int i = 0; i < mw_total; i++) order[i] = i;
     for(int a = 0; a < mw_total - 1; a++)
       for(int b = a + 1; b < mw_total; b++)
         if(::SymbolName(order[b], true) < ::SymbolName(order[a], true))
-          { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
-    // --- FormTreeList() silently drops any item whose item_index is not monotonically
-    // --- increasing within its node_level, in the order items were created/appended
-    // --- (Anhnt, 2026-07-19) - since we visit symbols in ALPHABETICAL order, raw index is
-    // --- NOT monotonic across creation order any more. sym_item_seq tracks "how many sym
-    // --- nodes exist so far" and is used as item_index instead, so it always increases by
-    // --- exactly 1 per new node, regardless of which symbol that node happens to be.
+          { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }    
     int sym_item_seq = 0;
     int sym_total0 = m_treeview_SymbolTF.ItemsTotal();
     for(int j = 0; j < sym_total0; j++)
@@ -289,21 +257,11 @@
                                             false      //is_folder m_t_is_folder[]=false
                                             );
         sym_item_seq++;
-       }
-      // Step 1b: this symbol's own item_index (its creation-rank among sym nodes) - needed
-      // below for children to correctly reference their parent. NOT `oi` (Market Watch loop
-      // index over ALL symbols, unrelated) - the Library exposes no getter for a node's own
-      // stored item_index, so recompute it by counting sym nodes with a smaller li (= creation
-      // order, since AddTreeItem always appends at ItemsTotal()). Passing `oi` here was the
-      // actual bug: FormTreeList()'s parent-match check (m_t_prev_node_item_index[child] ==
-      // m_t_item_index[parent]) failed for dynamically-added children, so they rendered but
-      // silently dropped out of click detection (Anhnt, 2026-08-26).
+       }      
       int sym_own_item_index = 0;
       for(int j = 0; j < sym_li; j++)
         if(m_treeview_SymbolTF.ItemPrevNode(j) == -1) sym_own_item_index++;
-      // Step 2: This symbol's TF entries from the Manager, sorted by TF rank
-      // (IndexEnumTimeframe) so slot k below (positionally matched against existing
-      // children[k]) ends up ascending M1..MN1, same reasoning as the symbol-level sort.
+      // Step 2: This symbol's TF entries from the Manager, sorted by TF rank      
       int tf_indexes[];
       for(int i = 0; i < total; i++)
        {
@@ -393,11 +351,10 @@
           // was correct for every OTHER case but wrong for this one (Anhnt, 2026-08-26).
            CTreeItem *new_item = m_treeview_SymbolTF.ItemPointer(m_treeview_SymbolTF.ItemsTotal() - 1);
            if(new_item != NULL)
-             CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), *new_item);
+             CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), *new_item);
          }
        }      
-     } 
-       
+     }        
   }
  void CGUIPannel::SyncTreeView_SymbolTFSetting(void)
   {
@@ -425,13 +382,7 @@
       {
        CTreeItem *parent_item = m_treeview_SymbolTF.ItemPointer(parent_pos);
        bool parent_is_active  = (parent_item != NULL && parent_item.LabelText() == _Symbol);
-       bool highlight = (parent_is_active && item.LabelText() == chart_tf);
-       // --- Orphaned leaf (2026-08-28): CTreeView/CWndContainer has no per-item removal API
-       // --- (confirmed gap, see project notes), so a row Delete_SymbolTFSetting()'d out of
-       // --- m_SymbolTFManager still leaves this leaf sitting in the tree forever - can't remove
-       // --- it, but CAN flag it red so it reads as "no longer real" instead of looking like any
-       // --- other just-not-active leaf. Same icon as the Table's own delete button (col 0), for
-       // --- visual consistency between the two.
+       bool highlight = (parent_is_active && item.LabelText() == chart_tf);       
        bool still_exists = (m_SymbolTFManager != NULL && parent_item != NULL &&
                              m_SymbolTFManager.Exists(parent_item.LabelText(), TimestampByDescription(item.LabelText())));
        Print("MY DEBUG CGUIPannel::SyncTreeView_SymbolTFSetting: i=", i, " parent_pos=", parent_pos,
@@ -448,4 +399,5 @@
    m_treeview_SymbolTF.RedrawTreeList();
    m_treeview_SymbolTF.UpdateTreeList(true);
   }
-#endif // CGUIPANNEL_SETTINGWINDOWS_SYMBOLTF_MQH
+ 
+#endif //CGUIPANNEL_SETTINGWINDOWS_TS_SYMBOLTF_MQH_IMPLEMENTATION

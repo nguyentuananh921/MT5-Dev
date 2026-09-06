@@ -3,280 +3,167 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_MAINWINDOWS_TABPOSITION_MQH
 #define CGUIPANNEL_MAINWINDOWS_TABPOSITION_MQH
- #include "GUIPannel.mqh"
+ #include "GUIPannel.mqh"  
  //+------------------------------------------------------------------+
- //| Server-side info table (Anhnt 2026-08-31, renamed/repurposed from|
- //| the old Dir/Entry/SL/Distance/Lot/Risk plan table - Risk is OUR   |
- //| OWN calculation, not Server data, so it doesn't belong here; the  |
- //| plan/risk section moves to its own table later). 3 cols: Symbol  |
- //| (+active-chart icon, same convention as m_table_indicator_        |
- //| SymbolTFMonitor's col0 - clicking a Symbol cell switches this     |
- //| chart's own Symbol, see OnEvent's ON_CLICK_LIST_ITEM handling) |  |
- //| Mid (Bid+Ask)/2 - deliberately NOT raw Bid (Anhnt, 2026-08-31):   |
- //| Bid alone only serves the Buy side (Buy SL references Bid, Sell   |
- //| SL references Ask) - Mid ± Spread/2 gives BOTH Bid and Ask        |
- //| symmetrically, matching col2's Spread/2 | Spread/2 (icon-only     |
- //| header, IMAGE_RESOURCE_BMP16_SPREADRED_PNG, value in points).     |
- //| StopsLevel column dropped (Anhnt, 2026-08-31) - confirmed via     |
- //| debug Print to be a genuine 0 from this broker, not worth a       |
- //| dedicated column.                                                  |
+ //| New Order form (Anhnt/Claude, 2026-09-03) - Symbol/Lot/Direction/  |
+ //| Order Type + Send button, below the SL Setting form. First draft   |
+ //| per user request ("lựa create... rồi mình điều chỉnh") - always    |
+ //| visible (no Hide()/Show() gating like the SL form has). Actual     |
+ //| OrderSend wiring not done yet - controls + Send button's adaptive  |
+ //| text/color only.                                                    |
  //+------------------------------------------------------------------+
- bool CGUIPannel::CreateTable_PreTradeServersideInfo(const int x, const int y)
+ bool CGUIPannel::CreateTradingForm(const int x_gap, const int y_gap)
   {
-    #define COLUMNS3_TOTAL 5
-    m_table_pre_Trade_serversideInfo.MainPointer(m_tabs_main);
-    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_table_pre_Trade_serversideInfo);
-    // --- Col3 (SL) / Col4 (SL Value) added (Anhnt, 2026-09-01) - clicking the gear icon in
-    // --- col3 opens m_window_StopLost_Setting scoped to that row's own Symbol (see OnEvent),
-    // --- col4 shows the committed result after Save. Replaces the old standalone Symbol combo +
-    // --- ButtonsGroup row entirely - this table's own row already carries the Symbol.
-    int width[COLUMNS3_TOTAL]           = {90, 90, 70, 30, 80};
-    ENUM_ALIGN_MODE align[COLUMNS3_TOTAL] = {ALIGN_LEFT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_LEFT, ALIGN_RIGHT};
-    int text_x_offset[COLUMNS3_TOTAL]   = {22, 5, 5, 5, 5}; // col0: clear the Symbol active-chart icon
-    int image_x_offset[COLUMNS3_TOTAL]  = { 3, 3, 3, 5, 3};
-    int image_y_offset[COLUMNS3_TOTAL]  = { 3, 3, 3, 3, 3};
-     // --- Fixed viewport height (Anhnt, 2026-08-31) - without an explicit YSize(), CTable
-     // --- auto-fills all the way down to the parent Tab's own bottom edge (InitializeProperties'
-     // --- m_y_size<1 branch), regardless of actual row count - its mostly-empty canvas then sits
-     // --- UNDER/behind m_table_positions (POSITIONS_TABLE_Y=175 below this), which is what looked
-     // --- like the two tables overlapping. Row count here is DISTINCT SYMBOLS (grows with Market
-     // --- Watch), unbounded in principle, so a fixed height + scrollbar (same as any other table
-     // --- with more rows than fit) is the correct long-term shape, not a taller fixed value.
-     m_table_pre_Trade_serversideInfo.YSize(POSITIONS_TABLE_Y - POSITIONS_PLAN_TABLE_Y - 5);
-     // --- Fixed width too (Anhnt, 2026-08-31), same reasoning as YSize just above -
-     // --- AutoXResizeMode(true) was filling the whole Tab's width instead of just the columns'
-     // --- own sum (90+90+70+30+80=360) + room for the vertical scrollbar.
-     m_table_pre_Trade_serversideInfo.XSize(360 + 20);
-     m_table_pre_Trade_serversideInfo.TableSize(COLUMNS3_TOTAL, 20);
-     m_table_pre_Trade_serversideInfo.ColumnsWidth(width);
-     m_table_pre_Trade_serversideInfo.TextAlign(align);
-     m_table_pre_Trade_serversideInfo.TextXOffset(text_x_offset);
-     m_table_pre_Trade_serversideInfo.ImageXOffset(image_x_offset);
-     m_table_pre_Trade_serversideInfo.ImageYOffset(image_y_offset);
-     m_table_pre_Trade_serversideInfo.ShowHeaders(true);
-     m_table_pre_Trade_serversideInfo.SelectableRow(true);
-     m_table_pre_Trade_serversideInfo.LightsHover(true);
-     m_table_pre_Trade_serversideInfo.IsSortMode(true);
-     if(!m_table_pre_Trade_serversideInfo.CreateTable(x, y)) return false;
-       m_table_pre_Trade_serversideInfo.SetHeaderText(0, "Symbol");
-       m_table_pre_Trade_serversideInfo.SetHeaderText(1, "Mid");
-       uint spread_header_img[] = {IMAGE_RESOURCE_BMP16_SPREADRED_PNG};
-       m_table_pre_Trade_serversideInfo.SetHeaderText(2, "");
-       m_table_pre_Trade_serversideInfo.SetHeaderImage(2, spread_header_img);
-       uint sl_header_img[] = {IMAGE_RESOURCE_BMP16_STOPLOSTRED_PNG};
-       m_table_pre_Trade_serversideInfo.SetHeaderText(3, "");
-       m_table_pre_Trade_serversideInfo.SetHeaderImage(3, sl_header_img);
-       m_table_pre_Trade_serversideInfo.SetHeaderText(4, "SL Value");
-       CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_table_pre_Trade_serversideInfo);
-       SyncTable_PreTradeServersideInfo(true);
-       return true;
-  }
- //+------------------------------------------------------------------+
- //| Live refresh for m_table_pre_Trade_serversideInfo (Anhnt 2026-08- |
- //| 31). One row per DISTINCT symbol from CSymbolsCollection (Layer 1,|
- //| m_symbol_collection) union the native Market Watch list - per the |
- //| "triệt để tận dụng method của Library" instruction, every value   |
- //| is read through CSymbol's own methods (Bid/Ask/Point/Digits) via  |
- //| GetSymbolObjByName(); ::SymbolInfoXxx() is only a fallback for a  |
- //| Market-Watch-only symbol that has no CSymbol object yet.          |
- //| Price/Spread2 each color green/red/gray on change, same up/down/  |
- //| flat convention as SetValuesToTable_IndicatorSymbolTFMonitor's    |
- //| Value column.                                                     |
- //+------------------------------------------------------------------+
- bool CGUIPannel::SyncTable_PreTradeServersideInfo(bool force = false)
-  {
-   if(m_symbol_collection == NULL) return false;
-   // --- Distinct Symbol list: CSymbolsCollection (Layer 1) union native Market Watch, deduped,
-   // --- sorted alphabetically.
-    string all_syms[];
-    int count = 0;
-    int col_total = m_symbol_collection.GetSymbolsCollectionTotal();
-    CArrayObj *col_list = m_symbol_collection.GetList();
-    for(int i = 0; i < col_total; i++)
-     {
-      CSymbol *s = col_list.At(i);
-      if(s == NULL) continue;
-      string nm = s.Name();
-      bool dup = false;
-      for(int j = 0; j < count; j++) if(all_syms[j] == nm) { dup = true; break; }
-      if(!dup) { ::ArrayResize(all_syms, count + 1); all_syms[count] = nm; count++; }
-     }
-    int mw_total = ::SymbolsTotal(true);
-    for(int i = 0; i < mw_total; i++)
-     {
-      string nm = ::SymbolName(i, true);
-      bool dup = false;
-      for(int j = 0; j < count; j++) if(all_syms[j] == nm) { dup = true; break; }
-      if(!dup) { ::ArrayResize(all_syms, count + 1); all_syms[count] = nm; count++; }
-     }
-    for(int a = 0; a < count - 1; a++)
-     for(int b = a + 1; b < count; b++)
-       if(all_syms[b] < all_syms[a]) { string t = all_syms[a]; all_syms[a] = all_syms[b]; all_syms[b] = t; }
-    if(count == 0) return false;
-
-   // --- Full rebuild when row count changes
-   if(count != m_int_table_serversideInfo_table_row_count)
+   int row0_y = y_gap;                          // Symbol
+   int row1_y = y_gap + M_CONTROL_YDISTANCE;    // Lot
+   int row2_y = y_gap + 2*M_CONTROL_YDISTANCE;  // Direction + Order Type
+   int row3_y = y_gap + 3*M_CONTROL_YDISTANCE;  // Use SL Setting checkbox
+   int row4_y = y_gap + 4*M_CONTROL_YDISTANCE;  // Send button
+  //--- Symbol - same tracked-Symbol list as m_table_stoplostsetting's own rows (already built by
+  //--- CreateTable_PreTradeSymbolInfo, called before this), read straight off the table instead
+  //--- of re-deriving the Layer1-union-MarketWatch list a second time.
+   m_combobox_symbol_toTrade.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_combobox_symbol_toTrade);
+   m_combobox_symbol_toTrade.XSize(150);
+   m_combobox_symbol_toTrade.YSize(M_CONTROL_HEIGHT);
+   m_combobox_symbol_toTrade.GetButtonPointer().XGap(1);
+   m_combobox_symbol_toTrade.GetButtonPointer().XSize(150);
+   if(!m_combobox_symbol_toTrade.CreateComboBox("", x_gap, row0_y)) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_combobox_symbol_toTrade);
     {
-     uint sym_img[] = {IMAGE_RESOURCE_BMP16_BAR_CHART_BMP, IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP};
-     m_table_pre_Trade_serversideInfo.DeleteAllRows();
-     ::ArrayResize(m_string_serversideInfo_cache_symbol,       count);
-     ::ArrayResize(m_double_serversideInfo_cache_price,        count);
-     ::ArrayResize(m_int_serversideInfo_cache_price_dir,       count);
-     ::ArrayResize(m_int_serversideInfo_cache_spread_half,     count);
-     ::ArrayResize(m_int_serversideInfo_cache_spread_half_dir, count);
-     ::ArrayResize(m_bool_serversideInfo_cache_active,         count);
-     ::ArrayInitialize(m_double_serversideInfo_cache_price,        -1);
-     ::ArrayInitialize(m_int_serversideInfo_cache_price_dir,        2);
-     ::ArrayInitialize(m_int_serversideInfo_cache_spread_half,     -1);
-     ::ArrayInitialize(m_int_serversideInfo_cache_spread_half_dir,  2);
-     ::ArrayInitialize(m_bool_serversideInfo_cache_active,      false);
-     for(int i = 0; i < count - 1; i++)
-        m_table_pre_Trade_serversideInfo.AddRow(i, i == count - 2);
-     for(int row = 0; row < count; row++)
-      {
-       string sym_name = all_syms[row];
-       m_string_serversideInfo_cache_symbol[row] = sym_name;
-       bool active = (sym_name == ::Symbol());
-       m_bool_serversideInfo_cache_active[row] = active;
-       m_table_pre_Trade_serversideInfo.SetImages(0, row, sym_img);
-       m_table_pre_Trade_serversideInfo.ChangeImage(0, row, active ? 0 : 1);
-       m_table_pre_Trade_serversideInfo.SetValue(0, row, sym_name);
-
-       CSymbol *sym = m_symbol_collection.GetSymbolObjByName(sym_name);
-       double bid    = (sym != NULL) ? sym.Bid()   : ::SymbolInfoDouble(sym_name, SYMBOL_BID);
-       double ask    = (sym != NULL) ? sym.Ask()    : ::SymbolInfoDouble(sym_name, SYMBOL_ASK);
-       double point  = (sym != NULL) ? sym.Point()  : ::SymbolInfoDouble(sym_name, SYMBOL_POINT);
-       int    digits = (sym != NULL) ? sym.Digits() : (int)::SymbolInfoInteger(sym_name, SYMBOL_DIGITS);
-       int    spread_half_pts = (point > 0) ? (int)::MathRound((ask - bid) / point / 2.0) : 0;
-       double mid = (bid + ask) / 2.0;
-
-       m_table_pre_Trade_serversideInfo.SetValue(1, row, ::DoubleToString(mid, digits));
-       m_double_serversideInfo_cache_price[row] = mid;
-       m_table_pre_Trade_serversideInfo.SetValue(2, row, (string)spread_half_pts);
-       m_int_serversideInfo_cache_spread_half[row] = spread_half_pts;
-
-       uint sl_gear_img[] = {IMAGE_RESOURCE_BMP16_SETTING_RED_PNG};
-       m_table_pre_Trade_serversideInfo.SetImages(3, row, sl_gear_img);
-       m_table_pre_Trade_serversideInfo.ChangeImage(3, row, 0);
-       m_table_pre_Trade_serversideInfo.SetValue(4, row, FormatStopLostCacheValue(sym_name));
-      }
-     m_int_table_serversideInfo_table_row_count = count;
-     m_table_pre_Trade_serversideInfo.Update(true);
-     return true;
+     int sym_total = (int)m_table_stoplostsetting.RowsTotal();
+     m_combobox_symbol_toTrade.ItemsTotal(sym_total);
+     int list_h = 18 * ::MathMax(sym_total, 1) + 4;
+     if(list_h > 300) list_h = 300;
+     m_combobox_symbol_toTrade.GetListViewPointer().YSize(list_h);
+     m_combobox_symbol_toTrade.GetListViewPointer().Rebuilding(sym_total);
+     for(int i = 0; i < sym_total; i++)
+        m_combobox_symbol_toTrade.SetValue(i, m_table_stoplostsetting.GetValue(0, i));
+     if(sym_total > 0) m_combobox_symbol_toTrade.SelectItem(0);
+     m_combobox_symbol_toTrade.GetListViewPointer().Update(true);
+     m_combobox_symbol_toTrade.GetListViewPointer().Hide();
+     m_combobox_symbol_toTrade.GetButtonPointer().IsPressed(false);
     }
 
-   // --- Re-derive each symbol's current visual row (CTable's own sort can reorder rows) - Col0
-   // --- (Symbol) text is never touched below, reliable post-sort identity key.
-    int row_of[];
-    ::ArrayResize(row_of, count);
-    for(int i = 0; i < count; i++)
-     {
-      row_of[i] = -1;
-      for(int row = 0; row < count; row++)
-        if(m_table_pre_Trade_serversideInfo.GetValue(0, row) == all_syms[i]) { row_of[i] = row; break; }
-     }
+  //--- Lot - placeholder preset list (Anhnt, 2026-09-03) - not yet derived from SYMBOL_VOLUME_MIN/
+  //--- STEP per Symbol or from the Risk%/Distance calc above; revisit once that's wired.
+   m_combobox_lot_toTrade.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_combobox_lot_toTrade);
+   m_combobox_lot_toTrade.XSize(150);
+   m_combobox_lot_toTrade.YSize(M_CONTROL_HEIGHT);
+   m_combobox_lot_toTrade.GetButtonPointer().XGap(1);
+   m_combobox_lot_toTrade.GetButtonPointer().XSize(150);
+   if(!m_combobox_lot_toTrade.CreateComboBox("", x_gap, row1_y)) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_combobox_lot_toTrade);
+    {
+     string lot_presets[] = {"0.01", "0.05", "0.1", "0.5", "1.0"};
+     int lot_total = ::ArraySize(lot_presets);
+     m_combobox_lot_toTrade.ItemsTotal(lot_total);
+     m_combobox_lot_toTrade.GetListViewPointer().Rebuilding(lot_total);
+     for(int i = 0; i < lot_total; i++)
+        m_combobox_lot_toTrade.SetValue(i, lot_presets[i]);
+     m_combobox_lot_toTrade.SelectItem(0);
+     m_combobox_lot_toTrade.GetListViewPointer().Update(true);
+     m_combobox_lot_toTrade.GetListViewPointer().Hide();
+     m_combobox_lot_toTrade.GetButtonPointer().IsPressed(false);
+    }
 
-    bool any_changed = false;
-    for(int i = 0; i < count; i++)
-     {
-      int row = row_of[i];
-      if(row < 0) continue; // identity not found this tick - next full rebuild will resync
-      string sym_name = all_syms[i];
+  //--- Direction (Buy/Sell) - drives m_btn_send_toTrade's color (Anhnt, 2026-09-03: "Nếu lệnh Buy
+  //--- nó mầu xanh, lệnh Sell nó mầu đỏ").
+   m_combobox_direction.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_combobox_direction);
+   m_combobox_direction.XSize(70);
+   m_combobox_direction.YSize(M_CONTROL_HEIGHT);
+   m_combobox_direction.GetButtonPointer().XGap(1);
+   m_combobox_direction.GetButtonPointer().XSize(70);
+   if(!m_combobox_direction.CreateComboBox("", x_gap, row2_y)) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_combobox_direction);
+   m_combobox_direction.ItemsTotal(2);
+   m_combobox_direction.GetListViewPointer().Rebuilding(2);
+   m_combobox_direction.SetValue(0, "Buy");
+   m_combobox_direction.SetValue(1, "Sell");
+   m_combobox_direction.SelectItem(0);
+   m_combobox_direction.GetListViewPointer().Update(true);
+   m_combobox_direction.GetListViewPointer().Hide();
+   m_combobox_direction.GetButtonPointer().IsPressed(false);
 
-      // --- Col0: active-chart icon
-       bool active = (sym_name == ::Symbol());
-       if(active != m_bool_serversideInfo_cache_active[row])
-        {
-         m_bool_serversideInfo_cache_active[row] = active;
-         m_table_pre_Trade_serversideInfo.ChangeImage(0, row, active ? 0 : 1, true);
-         any_changed = true;
-        }
+  //--- Order Type (Market/Limit/Stop/Stop Limit) - drives m_btn_send_toTrade's text suffix (Anhnt,
+  //--- 2026-09-03: "Market thì text Buy/Sell thông thường, khác đi thì Buy Limit, Sell Limit...").
+   m_combobox_order_type.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_combobox_order_type);
+   m_combobox_order_type.XSize(80);
+   m_combobox_order_type.YSize(M_CONTROL_HEIGHT);
+   m_combobox_order_type.GetButtonPointer().XGap(1);
+   m_combobox_order_type.GetButtonPointer().XSize(80);
+   if(!m_combobox_order_type.CreateComboBox("", m_combobox_direction.X2() + M_CONTROL_YDISTANCE, row2_y)) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_combobox_order_type);
+   m_combobox_order_type.ItemsTotal(4);
+   m_combobox_order_type.GetListViewPointer().Rebuilding(4);
+   m_combobox_order_type.SetValue(0, "Market");
+   m_combobox_order_type.SetValue(1, "Limit");
+   m_combobox_order_type.SetValue(2, "Stop");
+   m_combobox_order_type.SetValue(3, "Stop Limit");
+   m_combobox_order_type.SelectItem(0);
+   m_combobox_order_type.GetListViewPointer().Update(true);
+   m_combobox_order_type.GetListViewPointer().Hide();
+   m_combobox_order_type.GetButtonPointer().IsPressed(false);
 
-      CSymbol *sym = m_symbol_collection.GetSymbolObjByName(sym_name);
-      double bid    = (sym != NULL) ? sym.Bid()   : ::SymbolInfoDouble(sym_name, SYMBOL_BID);
-      double ask    = (sym != NULL) ? sym.Ask()    : ::SymbolInfoDouble(sym_name, SYMBOL_ASK);
-      double point  = (sym != NULL) ? sym.Point()  : ::SymbolInfoDouble(sym_name, SYMBOL_POINT);
-      int    digits = (sym != NULL) ? sym.Digits() : (int)::SymbolInfoInteger(sym_name, SYMBOL_DIGITS);
-      int    spread_half_pts = (point > 0) ? (int)::MathRound((ask - bid) / point / 2.0) : 0;
-      double mid = (bid + ask) / 2.0;
+  //--- Use SL Setting - whether to apply the per-Symbol Distance from the form above to this order.
+   m_checkbox_use_StopLostSetting.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_checkbox_use_StopLostSetting);
+  //--- CCheckBox defaults to YSize=14 (CheckBox.mqh:96), the one Library control that doesn't
+  //--- match everything else's 20 - force M_CONTROL_HEIGHT so this row lines up with the rest.
+   m_checkbox_use_StopLostSetting.YSize(M_CONTROL_HEIGHT);
+   if(!m_checkbox_use_StopLostSetting.CreateCheckBox("Use SL Setting", x_gap, row3_y)) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_checkbox_use_StopLostSetting);
+  //--- CreateCanvas() (CheckBox.mqh) unconditionally sets the ON icon to CHECKBOX_ON_BMP, which
+  //--- doesn't match the OFF icon's own "_G_" style (CHECKBOX_OFF_G_PNG) - the mismatch made the
+  //--- 2 states hard to tell apart (Anhnt, 2026-09-04: "khó nhận biết trạng thái"). Override with
+  //--- the matching ON_G_PNG AFTER CreateCheckBox(), since CreateCanvas() sets its default
+  //--- unconditionally (setting this before creation would just get overwritten).
+   m_checkbox_use_StopLostSetting.IconFilePressed(IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG);
+   m_checkbox_use_StopLostSetting.IsPressed(true);
 
-      // --- Col1 (Mid): green=up / red=down / gray=flat vs last written (Bid+Ask)/2
-       double prev_mid = m_double_serversideInfo_cache_price[row];
-       if(force || mid != prev_mid)
-        {
-         int dir = (prev_mid < 0) ? 2 : (mid > prev_mid) ? 0 : (mid < prev_mid) ? 1 : 2;
-         color txt_clr = (dir == 0) ? C'0,160,0' : (dir == 1) ? C'200,0,0' : clrGray;
-         m_table_pre_Trade_serversideInfo.SetValue(1, row, ::DoubleToString(mid, digits), 0, true);
-         m_table_pre_Trade_serversideInfo.TextColor(1, row, txt_clr, true);
-         m_double_serversideInfo_cache_price[row]  = mid;
-         m_int_serversideInfo_cache_price_dir[row] = dir;
-         any_changed = true;
-        }
-
-      // --- Col2 (Spread/2): same up/down/flat color convention
-       int prev_spread = m_int_serversideInfo_cache_spread_half[row];
-       if(force || spread_half_pts != prev_spread)
-        {
-         int dir = (prev_spread < 0) ? 2 : (spread_half_pts > prev_spread) ? 0 : (spread_half_pts < prev_spread) ? 1 : 2;
-         color txt_clr = (dir == 0) ? C'0,160,0' : (dir == 1) ? C'200,0,0' : clrGray;
-         m_table_pre_Trade_serversideInfo.SetValue(2, row, (string)spread_half_pts, 0, true);
-         m_table_pre_Trade_serversideInfo.TextColor(2, row, txt_clr, true);
-         m_int_serversideInfo_cache_spread_half[row]     = spread_half_pts;
-         m_int_serversideInfo_cache_spread_half_dir[row] = dir;
-         any_changed = true;
-        }
-     }
-   if(any_changed) m_table_pre_Trade_serversideInfo.Update(false);
-   return any_changed;
+  //--- Send button - color/text adapt to Direction+Order Type. Actual OrderSend wiring not done
+  //--- yet - first draft, controls only.
+   m_btn_send_toTrade.MainPointer(m_tabs_main);
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_btn_send_toTrade);
+   m_btn_send_toTrade.XSize(150);
+   m_btn_send_toTrade.YSize(M_CONTROL_HEIGHT);
+   if(!m_btn_send_toTrade.CreateButton("Buy", x_gap, row4_y)) return false;
+   CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_btn_send_toTrade);
+   UpdateSendButtonAppearance();
+   return true;
+ }
+ //+------------------------------------------------------------------+
+ //| Refreshes m_btn_send_toTrade's text/color from m_combobox_        |
+ //| direction/m_combobox_order_type's CURRENT selection (Anhnt,       |
+ //| 2026-09-03).                                                        |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::UpdateSendButtonAppearance(void)
+  {
+   int dir_idx  = (int)m_combobox_direction.GetListViewPointer().SelectedItemIndex();
+   int type_idx = (int)m_combobox_order_type.GetListViewPointer().SelectedItemIndex();
+   bool is_buy = (dir_idx != 1); // default to Buy if nothing selected yet (dir_idx<0)
+   string dir_text = is_buy ? "Buy" : "Sell";
+   string type_suffix = "";
+   switch(type_idx)
+    {
+     case 1: type_suffix = " Limit";      break;
+     case 2: type_suffix = " Stop";       break;
+     case 3: type_suffix = " Stop Limit"; break;
+     default: break; // Market - no suffix
+    }
+   m_btn_send_toTrade.LabelText(dir_text + type_suffix);
+   m_btn_send_toTrade.BackColor(is_buy ? C'0,160,0' : C'200,0,0'); // same green/red convention as
+                                                                     // the Mid/Spread up-down colors
+   m_btn_send_toTrade.Draw();
+   m_btn_send_toTrade.Update(true);
   }
- // ============================================================================
- // Positions Table (TAB_TAB_MAIN_POSITIONS) - ported VERBATIM from V1
- // (Anatoli Kazharski\GUIPannel.mqh), 2026-07-19, per user request: bring it over
- // as-is before any redesign against Layer 1 (CTradingEngine/CMarketCollection).
- // Deliberately still raw ::PositionsTotal()/::PositionGetX() loops, same as V1 -
- // NOT wired to CMarketCollection/CTradingSelect yet.
- // ============================================================================
+ 
  //+------------------------------------------------------------------+
  //| Create a position table                                          |
  //+------------------------------------------------------------------+
- //+------------------------------------------------------------------+
- //| Pre-trade-plan order-setup controls - Lot mode+value (Anhnt      |
- //| 2026-07-20). ORPHANED as of 2026-08-31 - nothing reads these     |
- //| controls now that m_table_pre_Trade_serversideInfo was           |
- //| repurposed to pure Server data, pending a separate Risk/Plan     |
- //| table (Anhnt, discussed 2026-08-31).                              |
- //+------------------------------------------------------------------+
- bool CGUIPannel::CreatePreTradePlanControls(const int x, const int y)
-  {
-   //--- "Lot" caption + By Distance(manual)/By Risk % toggle
-    int lot_label_x = x;
-    m_label_pre_trade_lot.MainPointer(m_tabs_main);
-    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_label_pre_trade_lot);
-    m_label_pre_trade_lot.XSize(25);
-    if(!m_label_pre_trade_lot.CreateTextLabel("Lot", lot_label_x, y + 4)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_label_pre_trade_lot);
-
-    int lot_group_x = lot_label_x + 25;
-    m_group_pre_trade_lot_mode.MainPointer(m_tabs_main);
-    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_group_pre_trade_lot_mode);
-    m_group_pre_trade_lot_mode.RadioButtonsMode(true);
-   //--- x_gap is absolute, not accumulated - same bug/fix as m_buttonsGroup_SLMode above.
-    m_group_pre_trade_lot_mode.AddButton(0, 0, "By Distance", 80);
-    m_group_pre_trade_lot_mode.AddButton(80, 0, "By Risk %", 80);
-    if(!m_group_pre_trade_lot_mode.CreateButtonsGroup(lot_group_x, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_group_pre_trade_lot_mode);
-
-   //--- Lot-or-Risk% value - same edit box, meaning switches with the toggle above
-    int lot_edit_x = lot_group_x + 165;
-    m_edit_pre_trade_lot_or_risk.MainPointer(m_tabs_main);
-    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_POSITIONS, m_edit_pre_trade_lot_or_risk);
-    m_edit_pre_trade_lot_or_risk.XSize(50);
-    m_edit_pre_trade_lot_or_risk.GetTextBoxPointer().XGap(1);
-    if(!m_edit_pre_trade_lot_or_risk.CreateTextEdit("0.01", lot_edit_x, y)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_edit_pre_trade_lot_or_risk);
-    return true;
-  } 
- 
  bool CGUIPannel::CreateTablePositions(const int x_gap, const int y_gap)
   {
       #define COLUMNS2_TOTAL 10
@@ -306,7 +193,7 @@
        int image_y_offset[COLUMNS2_TOTAL];
        ::ArrayInitialize(image_y_offset, 2);
       //--- Fixed viewport size (Anhnt, 2026-09-01), same reasoning as
-      //--- m_table_pre_Trade_serversideInfo's own YSize/XSize fix - AutoXResizeMode/
+      //--- m_table_stoplostsetting's own YSize/XSize fix - AutoXResizeMode/
       //--- AutoYResizeMode leave m_x_size/m_y_size unset, which InitializeProperties then
       //--- auto-fills to "rest of the parent Tab" rather than sizing to this table's own
       //--- content. The 10 columns above sum to 738px (wider than the ~550px panel itself),
@@ -658,6 +545,11 @@
      }
     //--- Return the result
       return(profit_counter);
-  }
+  } 
+ 
+ 
+ 
+ 
+ 
 #endif // CGUIPANNEL_MAINWINDOWS_TABPOSITION_MQH
 

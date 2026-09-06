@@ -1,95 +1,15 @@
 //+------------------------------------------------------------------+
-//|                           GUIPannel_SettingWindows_Indicator.mqh |
+//|                        GUIPannel_SettingWindows_TS_Indicator.mqh |
 //| The library for the signal markers on chart                      |
 //+------------------------------------------------------------------+
-#ifndef CGUIPANNEL_SettingWindows_Indicator_MQH
-#define CGUIPANNEL_SettingWindows_Indicator_MQH 
-#include "GUIPannel.mqh" 
-// For Setting Windows m_window_setting
- bool CGUIPannel::CreateWindowSetting(const string caption_text)
-  {
-   //--- Add a window pointer to the window array
-    CWndContainer::AddWindow(m_window_setting);
-   //Setting Properties
-    m_window_setting.XSize(M_WINDOW_SETTING_WIDTH);
-    m_window_setting.YSize(M_WINDOW_SETTING_HEIGHT);
-    m_window_setting.FontSize(9);
-    m_window_setting.IsMovable(true);
-    m_window_setting.ResizeMode(true);
-    m_window_setting.CloseButtonIsUsed(true);
-    m_window_setting.CollapseButtonIsUsed(true);
-    m_window_setting.TooltipsButtonIsUsed(true);
-    m_window_setting.FullscreenButtonIsUsed(true);
-    m_window_setting.MinimumXSize(M_WINDOW_SETTING_MIN_WIDTH);
-    m_window_setting.MinimumYSize(M_WINDOW_SETTING_MIN_HEIGHT);
-    m_window_setting.WindowType(W_DIALOG);    
-   //Show Window at 30,30
-    if(!m_window_setting.CreateWindow(m_chart_id, m_subwin, caption_text, 30, 30))
-       return (false);
-   //Set Icon after Create
-    m_window_setting.IconFile(IMAGE_RESOURCE_BMP16_SETTING_PNG );
-    m_window_setting.IconFileLocked(IMAGE_RESOURCE_BMP16_SETTING_PNG );
-    return (true);
-  }
- void CGUIPannel::ShowSettingWindow(void)
-  {
-    // --- OpenWindow() (not a manual Show()+m_active_window_index set) is what actually fires
-    // --- ON_OPEN_DIALOG_BOX - the Library's own CWndEvents::OnOpenDialogBox() is what locks
-    // --- every OTHER window (State(false)) while this W_DIALOG is up. Without it m_window_main
-    // --- stays fully clickable underneath - including its own Close (X) button, which was firing
-    // --- the "remove program from chart" confirm while Setting looked open on top (Anhnt, 2026-08-30).
-    m_window_setting.OpenWindow();
-    HideAddIndicatorForm();
-    // --- Clear any Alt/Shift-hover state left showing on the chart (Anhnt, 2026-09-01) - these
-    // --- live outside the Tab/Window elements-array system entirely (see audit discussed with
-    // --- Anhnt), so nothing else hides them just because Setting now covers the chart. Known,
-    // --- self-controlled transition point (we call OpenWindow() ourselves) - no polling needed,
-    // --- same reasoning as the ON_CLICK_TAB fix already covering the m_tabs_main case.
-     HidePatternBitmapAtBar();
-     HideWindow_CandleInfo();
-     m_candle_info_shown_bar = 0;
-    FormAvailableElementsArray();
-    m_treeview_indicator.RedrawTreeList();   // force scrollbar recalc now that it's actually visible
-  }
- void CGUIPannel::HideSettingWindow(void)
-  {
-    m_window_setting.Hide();
-    // --- Belt-and-suspenders (Anhnt, 2026-09-01): CTabs::Hide() already cascades down through
-    // --- m_tab[].elements[] (Tabs.mqh) and hides m_btn_save_indicator along with everything else
-    // --- registered on m_tabs_main_setting_config, since m_window_setting.Hide() cascades into
-    // --- it. Kept explicit here too since Hide() is a harmless no-op if already hidden.
-     m_btn_save_indicator.Hide();
-    m_active_window_index = WindowIdx(m_window_main);
-    FormAvailableElementsArray();
-  }
-//For Tab Group on the left Setting Windows m_tabs_main_setting_config 
- //+----------------------------------------------------------------------------------------------+
- //| Create a tab group m_tabs_main_setting_config for Settings at Setting m_window_setting       |
- //+----------------------------------------------------------------------------------------------+
- bool CGUIPannel::CreateTabSettingConfig(const int x_gap, const int y_gap)
-  {
-    string tabs_names[TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL] = {"Indicator", "Symbol TF","Candle Pattern", "Marker", "Sound"};    
-    m_tabs_main_setting_config.MainPointer(m_window_setting);
-    //--- Properties
-    m_tabs_main_setting_config.IsCenterText(true);
-    m_tabs_main_setting_config.PositionMode(TABS_TOP);
-    m_tabs_main_setting_config.AutoXResizeMode(true);
-    m_tabs_main_setting_config.AutoYResizeMode(true);
-    m_tabs_main_setting_config.AutoXResizeRightOffset(3);
-    m_tabs_main_setting_config.AutoYResizeBottomOffset(3);
-    //--- Add tabs with the specified properties
-    for(int i = 0; i < TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL; i++)
-        m_tabs_main_setting_config.AddTab(tabs_names[i], 100);
-    //--- Create Tab before create other control element inside
-     if(!m_tabs_main_setting_config.CreateTabs(x_gap, y_gap))
-        return (false);
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_tabs_main_setting_config);    
-    return (true);
-  } 
+#ifndef CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION
+#define CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION
+ #include "GUIPannel.mqh" 
+ //For Tab Group on the left Setting Windows m_tabs_setting_timeseries
  // For TreeView Indicator m_treeview_indicator on the left m_window_setting 
   bool CGUIPannel::CreateTreeView_IndicatorTemplateSetting(const int x_gap, const int y_gap)
    {
-    m_treeview_indicator.MainPointer(m_tabs_main_setting_config);
+    m_treeview_indicator.MainPointer(m_tabs_setting_timeseries);
     m_treeview_indicator.AutoXResizeMode(false);
     m_treeview_indicator.XSize(150);
     m_treeview_indicator.AutoYResizeMode(true);
@@ -97,8 +17,8 @@
     m_treeview_indicator.LightsHover(true);
     //Create treeview
     if(!m_treeview_indicator.CreateTreeView(x_gap, y_gap)) return false;
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_treeview_indicator);
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_treeview_indicator);       
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_treeview_indicator);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_treeview_indicator);       
     return true;
    }
   void CGUIPannel::PopulateTreeView_IndicatorTemplateSetting(void)
@@ -181,8 +101,8 @@
   //+----------------------------------------------------------------------------+
   bool CGUIPannel::CreateTable_IndicatorTemplateSetting(const int x, const int y)
    {
-    m_table_indicator_template.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR, m_table_indicator_template);
+    m_table_indicator_template.MainPointer(m_tabs_setting_timeseries);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_table_indicator_template);
     //Resize Properties
      m_table_indicator_template.AutoXResizeMode(true);
      m_table_indicator_template.AutoXResizeRightOffset(3);
@@ -230,7 +150,7 @@
      uint resource_indices_message[] = {IMAGE_RESOURCE_BMP16_MESSAGE_PNG};
      m_table_indicator_template.SetHeaderImage(6, resource_indices_message);
      m_table_indicator_template.SetHeaderText(6, "");  //On to show message alert
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_table_indicator_template);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_table_indicator_template);
     return true;
    }   
   void CGUIPannel::InitializeTable_IndicatorTemplateSetting(void)
@@ -414,4 +334,4 @@
     entry.MessageAlert((int)m_table_indicator_template.SelectedImageIndex(6, row) == 0);
     Print("MY DEBUG CGUIPannel::OnClickToggleMessageAlert: Need update");
    }
-#endif //CGUIPANNEL_SettingWindows_Indicator_MQH,
+#endif // CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION

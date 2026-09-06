@@ -15,8 +15,6 @@
      string            m_wm_params[];
      datetime          m_wm_time[];
 
-     static string     m_signal_log_folder;  // ← Static property (scoped to class)
-
      // --- Only this class needs "time" (int) out of a JSON watermark record - kept private
      // --- here rather than in the shared JSONConfig.mqh. JSONConfig_StringValue is NOT duplicated
      // --- here (Marker/Sound also need it) - the call below resolves to the shared global.
@@ -31,7 +29,6 @@
      void              SetSignalLogWatermark(const string type_key, const string params_key, const datetime t);
      void              LoadSignalLogWatermarks(void);
      void              SaveSignalLogWatermarksToFile(void);
-     static void       SetFolder(const string folder) {m_signal_log_folder = folder;}
   };
  #endif // CSIGNALLOGGER_MQH_DECLARATION
  #ifndef CSIGNALLOGGER_MQH_IMPLEMENTATION
@@ -39,7 +36,6 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
-  string CSignalLogger::m_signal_log_folder = ""; // ← Initialize static member HERE
   CSignalLogger::CSignalLogger(void)
    {    
     ArrayResize(m_wm_type, 0);
@@ -55,17 +51,11 @@
   
   //+------------------------------------------------------------------+
   //| WriteSignalLogRow                                                |
-  //+------------------------------------------------------------------+
-  // Column order (Anhnt, 2026-08-10): Time; Source(Indicator/Candle); TF; Status(Live/CloseBar);
-  // Direction(Buy/Sell); Name(indicator label, or "[nB] PatternName" for candle patterns);
-  // Price; Cross - matches the popup CandleInfo window's Time/TF/Information layout, with
-  // Price/Cross kept as extra trailing columns so nothing already tracked gets lost.
-  // One file PER SYMBOL (Signal_Log_<SYMBOL>.csv), same convention as the watermark file -
-  // ::Symbol() is always the current chart's own symbol, same as every WriteSignalLogRow caller.
+  //+------------------------------------------------------------------+  
   void CSignalLogger::WriteSignalLogRow(const string time_text, const string source_type, const string tf, const string status, const string direction, const string name, const string price_text, const string cross_text)
    {
     string base_fname = "Signal_Log_" + ::Symbol() + ".csv";
-    string filepath = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
+    string filepath = (g_ea_folder != "") ? (g_ea_folder + "/" + base_fname) : base_fname;
     int fh = ::FileOpen(filepath, FILE_READ|FILE_WRITE|FILE_CSV|FILE_ANSI, ';');
     if(fh == INVALID_HANDLE) return;
     bool is_new = (::FileSize(fh) == 0);
@@ -120,7 +110,7 @@
     // --- the symbol (Anhnt, 2026-08-10), so params_key already carries its own "|<TF>" suffix
     // --- (see CGUIPannel::CheckIndicatorAlerts) to keep entries from different TFs apart.
     string base_fname = "Signal_Log_Watermark_" + ::Symbol() + ".json";
-    string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
+    string fname = (g_ea_folder != "") ? (g_ea_folder + "/" + base_fname) : base_fname;
     string content = JSONConfig_ReadWholeFile(fname);
     if(content == "") return;
 
@@ -161,7 +151,7 @@
    {
     // --- One file per SYMBOL - see LoadSignalLogWatermarks (Anhnt, 2026-08-10).
     string base_fname = "Signal_Log_Watermark_" + ::Symbol() + ".json";
-    string fname = (m_signal_log_folder != "") ? (m_signal_log_folder + "/" + base_fname) : base_fname;
+    string fname = (g_ea_folder != "") ? (g_ea_folder + "/" + base_fname) : base_fname;
     string json = "{\n \"watermarks\": [\n";
     int n = ArraySize(m_wm_type);
     for(int i = 0; i < n; i++)

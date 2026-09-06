@@ -467,6 +467,7 @@
     OBJECT_DE_TYPE_INDICATOR_SETTING,                              // "Indicator template config row (CIndicatorSetting)" object type
     OBJECT_DE_TYPE_SYMBOLTF_SETTING,                               // "Symbol+TF config row (CSymbolTFSetting)" object type
     OBJECT_DE_TYPE_SIGNAL_BRIDGE_ROW,                              // "Signal Bridge output row (CSignalBridgeRow)" object type
+    OBJECT_DE_TYPE_TRADING_SETUP_SETTING,                          // "Per-Symbol StopLost+Trailing config row (CTradingSetupSetting)" object type
 
   };
  //+------------------------------------------------------------------+

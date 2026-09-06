@@ -1,15 +1,12 @@
 //+------------------------------------------------------------------+
-//|                       GUIPannel_SettingWindows_CandlePattern.mqh |
-//| The Module for CandlePattern Setting                             |
+//|                    GUIPannel_SettingWindows_TS_CandlePattern.mqh |
+//| The library for the signal markers on chart                      |
 //+------------------------------------------------------------------+
-#ifndef CGUIPANNEL_SETTINGWINDOWS_CANDLE_PATTERN_MQH
-#define CGUIPANNEL_SETTINGWINDOWS_CANDLE_PATTERN_MQH
+#ifndef CGUIPANNEL_SETTINGWINDOWS_TS_CANDLE_PATTERN_MQH
+#define CGUIPANNEL_SETTINGWINDOWS_TS_CANDLE_PATTERN_MQH
  #define SETTING_BTN_SAVE_CANDLE_PATTERN_X_GAP 10
  #define SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP 20
- #include "GUIPannel.mqh"
- //--- Extract bool value (true/false literal) from JSON key - only this file needs it
- //--- (Pattern_Alerts_Setting's per-pattern buy/sell/sound/message flags), so it lives
- //--- here rather than in the shared JSONConfig.mqh.
+ #include "GUIPannel.mqh" 
  bool JSONConfig_CandlePattern_BoolValue(const string content, const string key, bool &value)
   {
    int pos = StringFind(content, "\"" + key + "\"");
@@ -30,26 +27,7 @@
       return true;
      }
     return false;
-  }
- //+------------------------------------------------------------------+
- //| Index-based lookup into m_BarPatterns_Control.GetListControls() - |
- //| every Candle Pattern method below reads/writes straight on the    |
- //| CBarPatternControl this returns - it IS the Single Source of      |
- //| Truth (type, display name, Buy/Sell/Sound/Message all live here), |
- //| no parallel arrays anywhere (Anhnt, 2026-08-29).                  |
- //+------------------------------------------------------------------+
- CBarPatternControl *CGUIPannel::PatternControlAt(const int i) const
-  {
-   if(m_BarPatterns_Control == NULL) return NULL;
-   CArrayObj *controls = m_BarPatterns_Control.GetListControls();
-   return (controls != NULL) ? controls.At(i) : NULL;
-  }
- //+----------------------------------------------------------------------------+
- //| Loads the "Pattern_Alerts_Setting" section of Config_Setting.json into    |
- //| each CBarPatternControl's Buy/Sell/Sound/Message fields - data-only, does |
- //| NOT touch the Table. Must run BEFORE InitializeTable_CandlePatternSetting()|
- //| (which paints the Table from these same Control objects).                 |
- //+----------------------------------------------------------------------------+
+  } 
  void CGUIPannel::LoadCandlePatternSetting_FromJSON(void)
   {
     if(m_BarPatterns_Control == NULL) return;
@@ -79,12 +57,6 @@
       if(::JSONConfig_CandlePattern_BoolValue(pattern_obj, "m_pattern_alert_message",v)) c.MessageAlert(v);
      }
   }
-  //+------------------------------------------------------------------+
- //| Writes the "Pattern_Alerts_Setting" section of Config_Setting.    |
- //| json straight from each CBarPatternControl (Single Source of      |
- //| Truth) - preserves the 4 sections owned elsewhere (Symbols_TFs_   |
- //| List, Indicator_Templates, Markers_Setting, Sound_Settings).      |
- //+------------------------------------------------------------------+
  void CGUIPannel::SaveCandlePatternSettingToJSON(void)
   {
    string full_path = g_ea_folder + "/Config_Setting.json";
@@ -127,25 +99,31 @@
    ::FileClose(fh);
    ::Print(__FUNCTION__, " > saved ", written, " pattern alert setting(s) to ", full_path);
   }
+ CBarPatternControl *CGUIPannel::PatternControlAt(const int i) const
+  {
+   if(m_BarPatterns_Control == NULL) return NULL;
+   CArrayObj *controls = m_BarPatterns_Control.GetListControls();
+   return (controls != NULL) ? controls.At(i) : NULL;
+  } 
  //+------------------------------------------------------------------+
  //| Create Save button + m_table_CandlePatternsSetting (Settings tab, |
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreateTable_CandlePatternSetting(const int x, const int y)
   {
    // Step 1: Create Save Button ABOVE the table
-    m_btn_save_pattern_config.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN, m_btn_save_pattern_config);
+    m_btn_save_pattern_config.MainPointer(m_tabs_setting_timeseries);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN, m_btn_save_pattern_config);
     m_btn_save_pattern_config.AutoXResizeMode(false);
     m_btn_save_pattern_config.XSize(80);
-    m_btn_save_pattern_config.YSize(BTN_HEIGHT);
+    m_btn_save_pattern_config.YSize(M_CONTROL_HEIGHT);
     m_btn_save_pattern_config.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
     if(!m_btn_save_pattern_config.CreateButton("Save", x+SETTING_BTN_SAVE_CANDLE_PATTERN_X_GAP, y+SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP)) return false;
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_btn_save_pattern_config);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_btn_save_pattern_config);
 
    // Step 2: Create Table BELOW button
-    int table_y = y + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP + BTN_HEIGHT + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP;
-    m_table_CandlePatternsSetting.MainPointer(m_tabs_main_setting_config);
-    m_tabs_main_setting_config.AddToElementsArray(TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN, m_table_CandlePatternsSetting);
+    int table_y = y + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP + M_CONTROL_HEIGHT + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP;
+    m_table_CandlePatternsSetting.MainPointer(m_tabs_setting_timeseries);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN, m_table_CandlePatternsSetting);
     m_table_CandlePatternsSetting.AutoXResizeMode(true);
     m_table_CandlePatternsSetting.AutoXResizeRightOffset(3);
     m_table_CandlePatternsSetting.AutoYResizeMode(true);
@@ -187,13 +165,9 @@
      m_table_CandlePatternsSetting.SetHeaderText(6, "");
      m_table_CandlePatternsSetting.SetHeaderImage(6, resource_indices_message);
      m_table_CandlePatternsSetting.SetHeaderText(7, "");   // ▼ static direction legend
-    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting), m_table_CandlePatternsSetting);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_table_CandlePatternsSetting);
     return true;
   }
- //+------------------------------------------------------------------+
- //| Data-only paint pass - grows/repaints every row straight from     |
- //| m_BarPatterns_Control.GetListControls() (Single Source of Truth). |
- //+------------------------------------------------------------------+
  void CGUIPannel::InitializeTable_CandlePatternSetting(void)
   {
    CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
@@ -212,11 +186,7 @@
       CBarPatternControl *c = controls.At(i);
       ENUM_PATTERN_TYPE type = (c != NULL) ? c.TypePattern() : PATTERN_TYPE_NONE;
       m_table_CandlePatternsSetting.SetValue(0, i, PatternTypeDescription(type));
-      // --- Candles() reads straight off the Control object (CBarPatternControl seeds it from
-      // --- the Library's own static table at construction, no per-call GUIPannel lookup needed
-      // --- - Anhnt, 2026-08-29).
       m_table_CandlePatternsSetting.SetValue(1, i, (c != NULL) ? string(c.Candles()) : "");// "1", "2", "3"
-
       m_table_CandlePatternsSetting.CellType(2, i, CELL_CHECKBOX);
       m_table_CandlePatternsSetting.SetImages(2, i, chk);
       m_table_CandlePatternsSetting.ChangeImage(2, i, (c != NULL && c.BuySignal()) ? CHECKBOX_STATE_ON : CHECKBOX_STATE_OFF);
@@ -239,9 +209,6 @@
       m_table_CandlePatternsSetting.CellType(7, i, CELL_BUTTON);
       m_table_CandlePatternsSetting.SetImages(7, i, arrow_dn);
     }
-   // NOTE: live-tracking seed (m_candle_pattern_last_seen) deliberately omitted here -
-   // that field is still commented out in GUIPannel.mqh (Sound/Message alert live-wiring
-   // not done yet, see GUIPannel_SoundAndMessageAlerts.mqh) - revisit together when that's wired.
   }
  //+------------------------------------------------------------------+
  //| Row -> Control index lookup by content (col 0 = Pattern display  |
@@ -288,7 +255,6 @@
    else if(col == 6)
      c.MessageAlert((int)m_table_CandlePatternsSetting.SelectedImageIndex(6, row) == CHECKBOX_STATE_ON);
   }
-
  bool CGUIPannel::PatternSignalBuy(const ENUM_PATTERN_TYPE type) const
   {
    CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
@@ -311,4 +277,4 @@
     }
    return false;
   }
-#endif // CGUIPANNEL_SETTINGWINDOWS_CANDLE_PATTERN_MQH
+#endif  //CGUIPANNEL_SETTINGWINDOWS_TS_CANDLE_PATTERN_MQH

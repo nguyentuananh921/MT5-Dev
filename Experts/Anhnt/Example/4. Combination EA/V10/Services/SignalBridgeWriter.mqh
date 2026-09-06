@@ -14,49 +14,48 @@
 #include <Vendors\Anhnt\Library\4. Combination Lib\Timeseries\Bars\BarSeries\BarPatternsControl.mqh>
 #include "IndicatorTemplateManager.mqh"   // CIndicatorTemplateManager - EA-owned, read LIVE (no copy needed)
 #include "SymbolTFManager.mqh"            // CSymbolTFManager - EA-owned, read LIVE (no copy needed)
-#include "SignalBridgeRow.mqh"            // CSignalBridgeRow - 1 output row, held in a CArrayObj (Anhnt, 2026-08-29)
+#include "SignalBridgeRow.mqh"            // CSignalBridgeRow - 1 output row, held in a CArrayObj 
+
+// SIGNAL_BRIDGE_MAGIC v2 (Anhnt, 2026-08-08): added source field (0=indicator, 1=pattern)
+// File format: magic(int) + update(long) + count(int) + count×{time(long), tf(int), dir(int), source(int)}
+#ifndef SIGNAL_BRIDGE_MAGIC
+ #define SIGNAL_BRIDGE_MAGIC 20260808
+#endif
+
  #ifndef CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #define CSIGNALBRIDGEWRITER_MQH_DECLARATION
   class CSignalBridgeWriter
   {
     private:
      //Pointer from Layer 1, CTimeSeriesEngine hold
-     CSignalsCollection        *m_SignalsCollection;     // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
-     CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
-     CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;          //Timeseries collection
+      CSignalsCollection        *m_SignalsCollection;              // 1-1 CIndicatorDE<->CSignalXXX linkage (EA-local)
+      CIndicatorsCollection     *m_IndicatorsCollection;           //Indicator collection
+      CBarTimeSeriesCollection  *m_BarTimeSeriesCollection;        //Timeseries collection         
+      CIndicatorTemplateManager *m_indicator_template_manager;
+      CSymbolTFManager          *m_symbol_tf_manager;     
+      CBarPatternsControl        *m_patterns_control;
 
-     // --- Both EA-owned Service-layer Managers (not GUI) - safe to hold LIVE pointers, any
-     // --- change the user makes is visible here immediately, no copy/event plumbing needed
-     // --- (Anhnt, 2026-08-26).
-     CIndicatorTemplateManager *m_indicator_template_manager;
-     CSymbolTFManager          *m_symbol_tf_manager;
-
-     // --- Candle Pattern Buy/Sell now lives on CBarPatternControl itself (same registry
-     // --- CGUIPannel borrows via SetPatternsControl()) - read LIVE, same as the 2 Managers
-     // --- above, no more EA-pushed snapshot (Anhnt, 2026-08-29).
-     CBarPatternsControl        *m_patterns_control;
-
-     static string              m_bridge_folder;  // ← Static property (scoped to class)
-
-     string                     m_signal_bridge_symbol;
-     datetime                   m_signal_bridge_last_time;
-
-     // --- Identity-only (type, raw_params) - no live CIndicatorDE* needed, matches the RAW-match
-     // --- convention already established across the codebase (SynIndicatorPlan.md).
+     // Per-Symbol watermark was 2 scalars (m_signal_bridge_symbol/m_signal_bridge_last_time), 
+     // so switching the active chart between 2+ already-tracked Symbols made EVERY switch look 
+     // "fresh" for whichever Symbol wasn't the last one written, forcing a full unconditional 
+     // rewrite even though nothing about that Symbol's own signal history had changed. Parallel 
+     // arrays let each Symbol keep its own watermark.
+      string                     m_bridge_wm_symbol[];
+      datetime                   m_bridge_wm_time[];
+     int                        FindWatermarkIndex(const string sym);
      bool                       GetIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &raw_params[], bool &buy, bool &sell);
      bool                       GetSymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf, bool &buy, bool &sell);
      bool                       GetCandlePatternSetting(const ENUM_PATTERN_TYPE type, bool &buy, bool &sell);
-     void                       WriteSignalBridgeFile(CArrayObj &rows);
+     void                       AppendSignalBridgeFile(CArrayObj &rows, const string sym, const bool full_rebuild);
 
     public:
      CSignalBridgeWriter(void);
     ~CSignalBridgeWriter(void);
 
-     void                       Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars);
-     void                       SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr, CBarPatternsControl *patterns_ctrl);
-     void                       BuildAndWriteSignalBridge(void);
-     void                       ResetSignalBridge(void);
-     static void                SetFolder(const string folder) { m_bridge_folder = folder; }
+     void                       OnInitEvent(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars,
+                                            CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr, CBarPatternsControl *patterns_ctrl);
+     void                       BuildAndWriteSignalBridge(const bool force_full_rebuild = false);
+     bool                       OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
   };
  #endif // CSIGNALBRIDGEWRITER_MQH_DECLARATION
  #ifndef CSIGNALBRIDGEWRITER_MQH_IMPLEMENTATION
@@ -64,35 +63,33 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
-  string CSignalBridgeWriter::m_bridge_folder = "";
   CSignalBridgeWriter::CSignalBridgeWriter(void)
     : m_SignalsCollection(NULL), m_IndicatorsCollection(NULL), m_BarTimeSeriesCollection(NULL),
-      m_indicator_template_manager(NULL), m_symbol_tf_manager(NULL), m_patterns_control(NULL),
-      m_signal_bridge_symbol(""), m_signal_bridge_last_time(0)
+      m_indicator_template_manager(NULL), m_symbol_tf_manager(NULL), m_patterns_control(NULL)
   {
   }
+  //+------------------------------------------------------------------+
+  //| FindWatermarkIndex - -1 if this Symbol has never been built yet   |
+  //+------------------------------------------------------------------+
+  int CSignalBridgeWriter::FindWatermarkIndex(const string sym)
+   {
+    for(int i = 0; i < ::ArraySize(m_bridge_wm_symbol); i++)
+       if(m_bridge_wm_symbol[i] == sym) return i;
+    return -1;
+   }
 
   //+------------------------------------------------------------------+
   //| Destructor                                                       |
   //+------------------------------------------------------------------+
   CSignalBridgeWriter::~CSignalBridgeWriter(void)
    {
-   }
-
-  //+------------------------------------------------------------------+
-  //| Initialize                                                       |
-  //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::Initialize(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars)
+   }  
+  void CSignalBridgeWriter::OnInitEvent(CSignalsCollection *signals, CIndicatorsCollection *ind, CBarTimeSeriesCollection *bars,
+                                        CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr, CBarPatternsControl *patterns_ctrl)
    {
     m_SignalsCollection = signals;
     m_IndicatorsCollection = ind;
     m_BarTimeSeriesCollection = bars;
-   }
-  //+------------------------------------------------------------------+
-  //| SetManagers                                                      |
-  //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::SetManagers(CIndicatorTemplateManager *tmpl_mgr, CSymbolTFManager *symtf_mgr, CBarPatternsControl *patterns_ctrl)
-   {
     m_indicator_template_manager = tmpl_mgr;
     m_symbol_tf_manager = symtf_mgr;
     m_patterns_control = patterns_ctrl;
@@ -154,12 +151,14 @@
   //+------------------------------------------------------------------+
   //| BuildAndWriteSignalBridge                                        |
   //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::BuildAndWriteSignalBridge(void)
+  void CSignalBridgeWriter::BuildAndWriteSignalBridge(const bool force_full_rebuild)
    {
     if(m_SignalsCollection == NULL || m_IndicatorsCollection == NULL || m_BarTimeSeriesCollection == NULL)
       return;
     string sym = ::Symbol();
-    bool fresh = (sym != m_signal_bridge_symbol);
+    int wm_idx = FindWatermarkIndex(sym);
+    bool fresh = (wm_idx < 0);
+    datetime prev_watermark = fresh ? 0 : m_bridge_wm_time[wm_idx];
 
     CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
     CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
@@ -207,12 +206,6 @@
            }
          }
       }
-
-    // Fix (2026-08-10): newest_seen above only scanned indicator/BBand signal history, so a
-    // NEW PATTERN with no accompanying new indicator signal never advanced the watermark - the
-    // early-return below then skipped writing the bridge, and the pattern marker only showed up
-    // after a re-attach reset m_signal_bridge_symbol (forcing fresh=true). Patterns must also
-    // count toward newest_seen. See FeatureNote/UpdateCandlePattern.md.
     CArrayObj *all_patterns_wm = m_BarTimeSeriesCollection.GetListAllPatterns();
     if(all_patterns_wm != NULL)
      {
@@ -226,9 +219,17 @@
        }
      }
 
-    if(!fresh && newest_seen <= m_signal_bridge_last_time)
+    if(!fresh && !force_full_rebuild && newest_seen <= prev_watermark)
        return;
-    m_signal_bridge_symbol = sym;
+    if(fresh)
+     {
+      wm_idx = ::ArraySize(m_bridge_wm_symbol);
+      ::ArrayResize(m_bridge_wm_symbol, wm_idx + 1);
+      ::ArrayResize(m_bridge_wm_time, wm_idx + 1);
+      m_bridge_wm_symbol[wm_idx] = sym;
+     }
+    bool do_full_rebuild = fresh || force_full_rebuild;
+    datetime since_time = do_full_rebuild ? 0 : prev_watermark;
 
     CArrayObj rows;
     rows.FreeMode(true); // owns the CSignalBridgeRow* it holds - deleted when rows goes out of scope
@@ -258,11 +259,13 @@
          int hist_total = signal.HistoryTotal();
          for(int h = 0; h < hist_total; h++)
            {
+            datetime h_time = signal.HistoryTime(h);
+            if(h_time <= since_time) continue;
             ENUM_SIGNAL_DIR dir = signal.HistoryDir(h);
             if(dir == SIGNAL_NONE) continue;
             if(dir == SIGNAL_BUY  && !buy_on)  continue;
             if(dir == SIGNAL_SELL && !sell_on) continue;
-            rows.Add(new CSignalBridgeRow(signal.HistoryTime(h), (int)tf, dir, 0)); // 0 = Indicator
+            rows.Add(new CSignalBridgeRow(h_time, (int)tf, dir, 0)); // 0 = Indicator
            }
          if(ind.TypeIndicator() == IND_BANDS)
            {
@@ -273,23 +276,18 @@
                int line_total = bb.LineHistoryTotal(li);
                for(int h = 0; h < line_total; h++)
                  {
+                  datetime lh_time = bb.LineHistoryTime(li, h);
+                  if(lh_time <= since_time) continue;
                   ENUM_SIGNAL_DIR dir = bb.LineHistoryDir(li, h);
                   if(dir == SIGNAL_NONE) continue;
                   if(dir == SIGNAL_BUY  && !buy_on)  continue;
                   if(dir == SIGNAL_SELL && !sell_on) continue;
-                  rows.Add(new CSignalBridgeRow(bb.LineHistoryTime(li, h), (int)tf, dir, 0)); // 0 = Indicator
+                  rows.Add(new CSignalBridgeRow(lh_time, (int)tf, dir, 0)); // 0 = Indicator
                  }
               }
            }
         }
      }
-
-    // Phase 2b: Collect pattern signals (Anhnt, 2026-08-08) - same format as indicator signals
-    // Only closed bars: GetListAllPatterns() returns patterns from CBarSeriesDE.AddPatterns(),
-    // which only adds completed bars' patterns. Live bar 0 patterns excluded automatically.
-    // Phase 2c (Anhnt, 2026-08-26): now gated the same 2-layer way as Indicator signals -
-    // SymbolTF(sym,pat.Timeframe()) AND GetCandlePatternSetting(pat.TypePattern()), both must allow
-    // the signal's own direction.
     CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
     if(all_patterns != NULL)
      {
@@ -297,7 +295,7 @@
       for(int p = 0; p < pat_total; p++)
        {
         CBarPattern *pat = all_patterns.At(p);
-        if(pat == NULL || pat.Symbol() != sym) continue;
+        if(pat == NULL || pat.Symbol() != sym || pat.Time() <= since_time) continue;
 
         ENUM_PATTERN_DIRECTION pdir = pat.Direction();
         ENUM_SIGNAL_DIR pdir_signal = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
@@ -314,64 +312,78 @@
         rows.Add(new CSignalBridgeRow(pat.Time(), (int)pat.Timeframe(), pdir_signal, 1)); // 1 = Pattern
        }
      }
-
-    // --- Was a hand-rolled O(n^2) bubble sort over 4 parallel arrays - with thousands of
-    // --- accumulated historical rows (and ResetSignalBridge() forcing a FULL rebuild on every
-    // --- single Buy/Sell/Show toggle in the Symbol+TF/Indicator/Candle Pattern tabs), that was
-    // --- millions of comparisons run synchronously on the UI thread - the real cause of the
-    // --- EA freezing solid on any settings change. CArrayObj::Sort() uses CSignalBridgeRow's own
-    // --- Compare() (quicksort, O(n log n)) instead (Anhnt, 2026-08-29).
+    
     rows.Sort();
-
-    WriteSignalBridgeFile(rows);
-    m_signal_bridge_last_time = newest_seen;
-    // --- Rebuild is only slow enough to notice right after a Buy/Sell/Show toggle - this
-    // --- confirms in the Experts log exactly when the new bridge file is ready, so the user
-    // --- isn't left guessing whether SignalMarkers has caught up yet (Anhnt, 2026-08-29).
-    ::Print(__FUNCTION__, " > wrote ", rows.Total(), " signal row(s) to SignalBridge_", sym, ".dat");
-   }
-
-  //+------------------------------------------------------------------+
-  //| ResetSignalBridge                                                |
-  //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::ResetSignalBridge(void)
+    AppendSignalBridgeFile(rows, sym, do_full_rebuild);
+    m_bridge_wm_time[wm_idx] = newest_seen;
+    ::Print(__FUNCTION__, do_full_rebuild ? " > rebuilt " : " > appended ", rows.Total(),
+            " signal row(s) to SignalBridge_", sym, ".dat");
+   }  
+  bool CSignalBridgeWriter::OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+   {
+    if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED ||
+       id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED ||
+       id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ADDED ||
+       id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED ||
+       id == CHARTEVENT_CUSTOM + BARPATTERN_CONTROL_EVENT_BUYSELL_CHANGED)
+     {
+      BuildAndWriteSignalBridge(true);
+      return true;
+     }
+    return false;
+   }  
+  void CSignalBridgeWriter::AppendSignalBridgeFile(CArrayObj &rows, const string sym, const bool full_rebuild)
     {
-     m_signal_bridge_last_time = 0;
-     BuildAndWriteSignalBridge();
-    }
-  //+------------------------------------------------------------------+
-  //| WriteSignalBridgeFile                                            |
-  //+------------------------------------------------------------------+
-  void CSignalBridgeWriter::WriteSignalBridgeFile(CArrayObj &rows)
-    {
-      string base_name   = "SignalBridge_" + m_signal_bridge_symbol;
-      string final_name = (m_bridge_folder != "") ? (m_bridge_folder + "/" + base_name + ".dat") : (base_name + ".dat");
-      string tmp_name   = (m_bridge_folder != "") ? (m_bridge_folder + "/" + base_name + ".tmp") : (base_name + ".tmp");
-     int fh = ::FileOpen(tmp_name, FILE_BIN|FILE_WRITE);
-     if(fh == INVALID_HANDLE)
-        return;
+     string base_name  = "SignalBridge_" + sym;
+     string final_name = (g_ea_folder != "") ? (g_ea_folder + "/" + base_name + ".dat") : (base_name + ".dat");
 
-     // SIGNAL_BRIDGE_MAGIC v2 (Anhnt, 2026-08-08): added source field (0=indicator, 1=pattern)
-     // File format: magic(int) + update(long) + count(int) + count×{time(long), tf(int), dir(int), source(int)}
-     // - unchanged by the CArrayObj refactor (Anhnt, 2026-08-29), only the in-memory build path did.
-     #ifndef SIGNAL_BRIDGE_MAGIC
-      #define SIGNAL_BRIDGE_MAGIC 20260808
-     #endif
-     int count = rows.Total();
+     if(full_rebuild)
+      {
+       string tmp_name = (g_ea_folder != "") ? (g_ea_folder + "/" + base_name + ".tmp") : (base_name + ".tmp");
+       int fh = ::FileOpen(tmp_name, FILE_BIN|FILE_WRITE);
+       if(fh == INVALID_HANDLE) return;
+       int count = rows.Total();
+       ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
+       ::FileWriteLong(fh, (long)::TimeCurrent());
+       ::FileWriteInteger(fh, count, INT_VALUE);
+       for(int i = 0; i < count; i++)
+         {
+          CSignalBridgeRow *row = rows.At(i);
+          if(row == NULL) continue;
+          ::FileWriteLong(fh, (long)row.Time());
+          ::FileWriteInteger(fh, row.TF(),                          INT_VALUE);
+          ::FileWriteInteger(fh, (row.Dir() == SIGNAL_BUY) ? 1 : -1, INT_VALUE);
+          ::FileWriteInteger(fh, row.Source(),                      INT_VALUE);
+         }
+       ::FileClose(fh);
+       ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);
+       return;
+      }
+
+     int count_to_add = rows.Total();
+     if(count_to_add == 0) return;
+     int fh = ::FileOpen(final_name, FILE_BIN|FILE_READ|FILE_WRITE);
+     if(fh == INVALID_HANDLE) { AppendSignalBridgeFile(rows, sym, true); return; }
+     int magic = ::FileReadInteger(fh, INT_VALUE);
+     if(magic != SIGNAL_BRIDGE_MAGIC) { ::FileClose(fh); AppendSignalBridgeFile(rows, sym, true); return; }
+     ::FileReadLong(fh);                              // old update-time, unused
+     int old_count = ::FileReadInteger(fh, INT_VALUE);
+     ::FileSeek(fh, 0, SEEK_END);
+     for(int i = 0; i < count_to_add; i++)
+       {
+        CSignalBridgeRow *row = rows.At(i);
+        if(row == NULL) continue;
+        ::FileWriteLong(fh, (long)row.Time());
+        ::FileWriteInteger(fh, row.TF(),                          INT_VALUE);
+        ::FileWriteInteger(fh, (row.Dir() == SIGNAL_BUY) ? 1 : -1, INT_VALUE);
+        ::FileWriteInteger(fh, row.Source(),                      INT_VALUE);
+       }
+    //--- Patch the header in place - same 3 fields the full_rebuild branch writes, at offset 0.
+     ::FileSeek(fh, 0, SEEK_SET);
      ::FileWriteInteger(fh, SIGNAL_BRIDGE_MAGIC, INT_VALUE);
      ::FileWriteLong(fh, (long)::TimeCurrent());
-     ::FileWriteInteger(fh, count, INT_VALUE);
-     for(int i = 0; i < count; i++)
-       {
-         CSignalBridgeRow *row = rows.At(i);
-         if(row == NULL) continue;
-         ::FileWriteLong(fh, (long)row.Time());
-         ::FileWriteInteger(fh, row.TF(),                             INT_VALUE);
-         ::FileWriteInteger(fh, (row.Dir() == SIGNAL_BUY) ? 1 : -1,    INT_VALUE);
-         ::FileWriteInteger(fh, row.Source(),                         INT_VALUE);
-       }
+     ::FileWriteInteger(fh, old_count + count_to_add, INT_VALUE);
      ::FileClose(fh);
-     ::FileMove(tmp_name, 0, final_name, FILE_REWRITE);
     }
  #endif // CSIGNALBRIDGEWRITER_MQH_IMPLEMENTATION
 #endif // __SIGNALBRIDGEWRITER_MQH__

@@ -18,64 +18,40 @@
  //| tracking needed (ImplementaionClassForSetting.md muc 3).                            |
  //+------------------------------------------------------------------------------------+
  class CIndicatorSetting : public CBaseObj
-   {
-     private:
-       ENUM_INDICATOR  m_type_enum;           // real enum value - IDENTITY (SOLE source of truth -
-                                               // no stored text mirror; both display and JSON text
-                                               // are derived on demand from this + m_raw_params below)
-       MqlParam        m_raw_params[];        // real params - IDENTITY + input straight for Layer 1
-       bool            m_buy_signal;          // opt-in: count this indicator's Buy cross into the Signal Bridge
-       bool            m_sell_signal;         // opt-in: count this indicator's Sell cross into the Signal Bridge
-       bool            m_sound_alert;
-       bool            m_message_alert;
-       bool            m_show_on_chart;       // preference: default shown on a new chart - PureData, Layer 2 mirrors it
-
-       //--- shared enum-choice decode loop for DisplayLabel/JsonParamsText - same schema-based
-       //--- decode BuildIndicatorTextLabel/BuildIndicatorParamsText (TimeseriesDELib.mqh) used to
-       //--- do from outside; only the rounding precision differs between the two callers.
-       void            ParamTexts(const int decimals, string &out[]) const;
-
-     public:
+  {
+   private:
+    ENUM_INDICATOR  m_type_enum;           // real enum value - IDENTITY (SOLE source of truth -
+    MqlParam        m_raw_params[];        // real params - IDENTITY + input straight for Layer 1
+    bool            m_buy_signal;          // opt-in: count this indicator's Buy cross into the Signal Bridge
+    bool            m_sell_signal;         // opt-in: count this indicator's Sell cross into the Signal Bridge
+    bool            m_sound_alert;
+    bool            m_message_alert;
+    bool            m_show_on_chart;       // preference: default shown on a new chart - PureData, Layer 2 mirrors it    
+   public:
                          CIndicatorSetting(void);
                         ~CIndicatorSetting(void) {}
+    //--- identity (raw) - the ONLY thing used for matching, never text
+     ENUM_INDICATOR    TypeEnum(void)                          const { return m_type_enum; }
+     void              TypeEnum(const ENUM_INDICATOR type)           { m_type_enum = type;  }
+     void              GetRawParams(MqlParam &out[])            const;
+     void              SetRawParams(MqlParam &params[]);
 
-      //--- identity (raw) - the ONLY thing used for matching, never text
-       ENUM_INDICATOR    TypeEnum(void)                          const { return m_type_enum; }
-       void              TypeEnum(const ENUM_INDICATOR type)           { m_type_enum = type;  }
-       void              GetRawParams(MqlParam &out[])            const;
-       void              SetRawParams(MqlParam &params[]);
-       bool              MatchesIdentity(const ENUM_INDICATOR type, MqlParam &params[]) const;
+     void              ParamTexts(const int decimals, string &out[]) const;
+     string            DisplayLabel(void) const;
+     void              JSONParamsText(string &out[]) const;
+    //--- toggles - mirror table columns 2/3/5/6 directly
+     bool              BuySignal(void)      const { return m_buy_signal;    }
+     void              BuySignal(const bool v)    { m_buy_signal = v;       }
+     bool              SellSignal(void)     const { return m_sell_signal;   }
+     void              SellSignal(const bool v)   { m_sell_signal = v;      }
+     bool              SoundAlert(void)     const { return m_sound_alert;   }
+     void              SoundAlert(const bool v)   { m_sound_alert = v;      }
+     bool              MessageAlert(void)   const { return m_message_alert; }
+     void              MessageAlert(const bool v) { m_message_alert = v;    }    
+     bool              ShowOnChart(void)     const { return m_show_on_chart; }
+     void              ShowOnChart(const bool v)   { m_show_on_chart = v;    }
 
-       //--- display label (Table col 0 + Message Alert - SAME text both already use, GUIPannel_
-       //--- SoundAndMessageAlerts.mqh:118 and the old UpdateRow_IndicatorTemplateSetting both called
-       //--- BuildIndicatorTextLabel() fresh, never stored it - computed here, not cached, rounds
-       //--- doubles to 2 decimals (display-only - JSON save needs full precision, see
-       //--- JsonParamsText below). Self-contained (Anhnt, 2026-08-30) - no longer calls the
-       //--- Library's BuildIndicatorTextLabel(), builds straight off m_type_enum/m_raw_params via
-       //--- the private ParamTexts() helper shared with JsonParamsText (same decode, different
-       //--- rounding precision).
-       string            DisplayLabel(void) const;
-       //--- full-precision per-param text for JSON persistence (was BuildIndicatorParamsText());
-       //--- same enum-choice decode as DisplayLabel, just 8 decimals instead of 2 - see
-       //--- CIndicatorTemplateManager::BuildJsonSection.
-       void              JsonParamsText(string &out[]) const;
-
-       //--- toggles - mirror table columns 2/3/5/6 directly
-       bool              BuySignal(void)      const { return m_buy_signal;    }
-       void              BuySignal(const bool v)    { m_buy_signal = v;       }
-       bool              SellSignal(void)     const { return m_sell_signal;   }
-       void              SellSignal(const bool v)   { m_sell_signal = v;      }
-       bool              SoundAlert(void)     const { return m_sound_alert;   }
-       void              SoundAlert(const bool v)   { m_sound_alert = v;      }
-       bool              MessageAlert(void)   const { return m_message_alert; }
-       void              MessageAlert(const bool v) { m_message_alert = v;    }
-
-       //--- preference - default shown on chart; NOT the live "is it actually on THIS chart
-       //--- right now" state (that stays resolved live via chart scan to avoid staleness)
-       bool              ShowOnChart(void)     const { return m_show_on_chart; }
-       void              ShowOnChart(const bool v)   { m_show_on_chart = v;    }
-
-       virtual void      Print(const bool full_prop=false, const bool dash=false);
+     virtual void      Print(const bool full_prop=false, const bool dash=false);
    };
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
@@ -106,19 +82,6 @@
      ::ArrayResize(m_raw_params, total);
      for(int i = 0; i < total; i++)
         m_raw_params[i] = params[i];
-   }
- //+------------------------------------------------------------------+
- //| Identity match - same RAW style TemplateBuySellFor/                |
- //| IsIndicatorInTemplateSetting already use (type + IsEqualMqlParamArrays). Copies |
- //| m_raw_params out first - IsEqualMqlParamArrays takes non-const references, and  |
- //| every member is implicitly const inside a const method.                        |
- //+------------------------------------------------------------------+
- bool CIndicatorSetting::MatchesIdentity(const ENUM_INDICATOR type, MqlParam &params[]) const
-   {
-     if(m_type_enum != type) return false;
-     MqlParam raw[];
-     GetRawParams(raw);
-     return IsEqualMqlParamArrays(raw, params);
    }
  //+------------------------------------------------------------------+
  //| Shared per-param text decode - schema-typed params (Applied      |
@@ -177,11 +140,7 @@
       }
      return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
    }
- //+------------------------------------------------------------------+
- //| Full-precision per-param text for JSON persistence (was the free  |
- //| BuildIndicatorParamsText()) - see the declaration comment.        |
- //+------------------------------------------------------------------+
- void CIndicatorSetting::JsonParamsText(string &out[]) const
+ void CIndicatorSetting::JSONParamsText(string &out[]) const
    {
      ParamTexts(8, out);
    }
