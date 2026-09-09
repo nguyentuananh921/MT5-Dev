@@ -43,7 +43,7 @@
     //Borrow
       CSymbolsCollection        *m_symbol_collection;    // Symbol collection    
       void                      ProcessNewBarSignalEvents(void);    
-      CIndicatorDE             *GetIndicatorByIdentity(const string symbol, const ENUM_TIMEFRAMES tf,
+      CIndicatorDE              *GetIndicatorByIdentity(const string symbol, const ENUM_TIMEFRAMES tf,
                                   const ENUM_INDICATOR type, MqlParam &params[]);
     public:
      //CTimeSeriesEngine Lifecycle ->Implementation in TimeSeriesEngine_Lifecycle.mqh
@@ -60,7 +60,7 @@
       CIndicatorsCollection       *GetIndicatorsCollection()                          { return &this.m_IndicatorsCollection; }
       CMBookSeriesCollection      *GetBookSeries()                                    { return &this.m_MBookSeriesCollection; }
       CSignalsCollection          *GetSignalsCollection()                             { return &this.m_SignalsCollection; }
-      //CTickSeriesCollection       *GetTickSeries()                                    { return &this.m_tick_series; }
+      //CTickSeriesCollection       *GetTickSeries()                                  { return &this.m_tick_series; }
       CBarPatternsControl         *GetPatternsControl()                               { return &m_BarPatterns_Control; }
     // Layer 1: AddAllIndicatorsToNewSeries reads CIndicatorTemplateManager directly (Single
     // Source of Truth, Layer 1 keeps no copy of its own, just a borrowed

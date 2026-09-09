@@ -29,7 +29,7 @@
     // Col 3 (Indicator): dir icon = value slope (v0 vs v1); TextXOffset=22
     // Col 4 (Value): no icon, ALIGN_RIGHT, colored text only
     m_table_indicator_SymbolTFMonitor.TableSize(8, 20);
-    int widths[8]    = {90,  60,  22, INDICATOR_PARATEXT_WIDTH, 90, 40, 40, 55};
+    int widths[8]    = {M_SYMBOL_WIDTH,  M_TF_WIDTH,  22, INDICATOR_PARATEXT_WIDTH, INDICATOR_VALUE_WIDTH, 40, 40, 55};
     int img_x_off[8] = { 3,   3,  3,   3,  0, 10, 10, 10};
     int img_y_off[8] = { 3,   3,   3,   3,  0,  3,  3,  3};
     int txt_x_off[8] = {22,  22,   5,  22,  5,  5,  5,  5};
@@ -62,7 +62,7 @@
  //+------------------------------------------------------------------+
  //| Populate / refresh the Trade tab table (no-flicker per-cell)     |
  //+------------------------------------------------------------------+
- void CGUIPannel::SetValuesToTable_IndicatorSymbolTFMonitor(void)
+ void CGUIPannel::SynTable_IndicatorSymbolTFMonitor(void)
   {
    // Whole-row "this is the chart's current Symbol+TF" cache - drives Col 0/1's icon (both
    // together, not independently - a row only lights up when Symbol AND TF both match) and the
@@ -138,6 +138,7 @@
        m_table_indicator_SymbolTFMonitor.AddRow(1);
        m_table_indicator_SymbolTFMonitor.DeleteRow(0, true);
        ::ArrayResize(m_string_table_indicator_SymbolTFMonitor_cache_val,      0);
+       ::ArrayResize(m_double_table_indicator_SymbolTFMonitor_cache_val,   0);
        ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_sig_icon, 0);
        ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_dir_icon, 0);
        ::ArrayResize(s_cache_row_active, 0);
@@ -162,12 +163,14 @@
 
      m_table_indicator_SymbolTFMonitor.DeleteAllRows();
      ::ArrayResize(m_string_table_indicator_SymbolTFMonitor_cache_val,      count);
+     ::ArrayResize(m_double_table_indicator_SymbolTFMonitor_cache_val,   count);
      ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_sig_icon, count);
      ::ArrayResize(m_int_table_indicator_SymbolTFMonitor_cache_dir_icon, count);
      ::ArrayResize(s_cache_row_active, count);
      ::ArrayInitialize(m_int_table_indicator_SymbolTFMonitor_cache_sig_icon, -1);
      ::ArrayInitialize(m_int_table_indicator_SymbolTFMonitor_cache_dir_icon, -1);
      ::ArrayInitialize(s_cache_row_active, false);
+     ::ArrayInitialize(m_double_table_indicator_SymbolTFMonitor_cache_val, EMPTY_VALUE);
      for(int i = 0; i < count; i++) m_string_table_indicator_SymbolTFMonitor_cache_val[i] = "";
      // --- redraw=true on the LAST row only, same reasoning as RefreshIndicatorTable - see
      // --- README/BugNote 2026-07-14 black/smeared row-overflow bug.
@@ -268,16 +271,20 @@
             m_table_indicator_SymbolTFMonitor.BackColor(c, row, row_clr, true);
          any_changed = true;
         }
-      double v0 = ind.GetDataBuffer(0, 0); // current bar (realtime via CopyBuffer)
-      double v1 = ind.GetDataBuffer(0, 1); // previous bar (direction comparison)
-      // Value direction: index 0=up 1=down 2=flat
+      double v0      = ind.GetDataBuffer(0, 0); // current bar (realtime via CopyBuffer)
+      double prev_v0 = m_double_table_indicator_SymbolTFMonitor_cache_val[row]; // previous TICK's own value
+      // Value direction: index 0=up 1=down 2=flat - vs the PREVIOUS TICK's value now (Anhnt/Claude,
+      // 2026-09-08), not v1 "previous CLOSED bar". v1 only flips once per bar close, so it could read
+      // "up" the whole bar even while the live number was ticking DOWN within that bar (confirmed via
+      // debug log on the sibling m_table_indicator_PreTradeSymbolMonitor table, same formula).
        int dir_icon = 2;
-       if(v0 != EMPTY_VALUE && v1 != EMPTY_VALUE)
-          dir_icon = (v0 > v1) ? 0 : (v0 < v1) ? 1 : 2;
+       if(v0 != EMPTY_VALUE && prev_v0 != EMPTY_VALUE)
+          dir_icon = (v0 > prev_v0) ? 0 : (v0 < prev_v0) ? 1 : 2;
+       m_double_table_indicator_SymbolTFMonitor_cache_val[row] = v0; // seed for NEXT tick's comparison
        color txt_clr = (dir_icon == 0) ? C'0,160,0' :    // rising  → green text
                        (dir_icon == 1) ? C'200,0,0' :    // falling → red text
                                          clrGray;         // flat    → gray text
-      // Col 3 (Indicator): dir icon = value slope (v0 vs v1) - val_img, NOT the Signal system
+      // Col 3 (Indicator): dir icon = value slope (v0 vs previous tick) - val_img, NOT the Signal system
        bool dir_changed = (dir_icon != m_int_table_indicator_SymbolTFMonitor_cache_dir_icon[row]);
        if(dir_changed)
         {
@@ -286,7 +293,7 @@
          any_changed = true;
         }
       // Col 4 (Value): ALIGN_RIGHT, colored text only — redraw via TextColor(true)
-       string val_str     = (v0 == EMPTY_VALUE) ? "--" : ::DoubleToString(v0, 5);
+       string val_str     = (v0 == EMPTY_VALUE) ? "--" : ::DoubleToString(v0, 2);
        bool   val_changed = (val_str != m_string_table_indicator_SymbolTFMonitor_cache_val[row]);
        if(val_changed || dir_changed)  // recolor on direction change too, even if the text itself didn't
         {

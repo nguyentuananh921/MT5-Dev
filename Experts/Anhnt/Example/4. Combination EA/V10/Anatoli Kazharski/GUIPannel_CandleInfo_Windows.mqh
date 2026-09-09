@@ -90,7 +90,7 @@
      m_table_candle_information_atBar.SelectableRow(true);
      m_table_candle_information_atBar.LightsHover(true);
      m_table_candle_information_atBar.TableSize(3, 10);
-     int widths[3]    = {45, 55, 155};
+     int widths[3]    = {45, M_TF_WIDTH, 155};
      int img_x_off[3] = {0, 3, 3};
      int img_y_off[3] = {0, 3, 3};
      int txt_x_off[3] = {5, 22, 22};
@@ -578,7 +578,7 @@
             HideWindow_CandleInfo();
             m_candle_info_shown_bar = 0;
          }
-        else if(id == CHARTEVENT_MOUSE_MOVE && CalculateAtCandle() != 0 && !MouseOverAnyGUIWindow())
+        else if(!MouseOverAnyGUIWindow() && CalculateAtCandle() != 0)
          {
           // --- Popup isn't up right now (both branches above exhaustively handle
           // --- popup_shown==true). Shift and Alt are mutually exclusive (Anhnt, 2026-08-31, per
@@ -589,8 +589,13 @@
           // --- instead). CalculateAtCandle() is called again per key below (not reused from the
           // --- gate above) - a deliberate trade-off so the Shift/Alt work only ever runs at all
           // --- when the gate confirms we're over a real candle, not on every single mouse move.
-          // --- !MouseOverAnyGUIWindow() added (Anhnt, 2026-08-31): ChartXYToTimePrice() doesn't
-          // --- know our own panels are covering the chart there, so without this, hovering the
+          // --- !MouseOverAnyGUIWindow() checked FIRST (Anhnt, 2026-09-07 - was second, meaning
+          // --- CalculateAtCandle() ran on every single mouse move even while hovering a GUI
+          // --- panel, since && doesn't save work when the EXPENSIVE check comes first) - a cheap
+          // --- rect comparison, so short-circuiting CalculateAtCandle() (chart XY->time/price +
+          // --- bar lookup) whenever the mouse is over one of our own panels is strictly cheaper.
+          // --- Originally added (Anhnt, 2026-08-31) because ChartXYToTimePrice() doesn't know our
+          // --- own panels are covering the chart there, so without this, hovering the
           // --- Positions/Setting table while Alt is held rendered a phantom pattern-bitmap/tooltip
           // --- UNDER the panel (the "black smear" bug).
            if(m_keys.KeyShiftState())
@@ -608,78 +613,8 @@
             {
              HideWindow_CandleInfo();
              datetime bar_time = CalculateAtCandle();
-             string sym = ::Symbol();
-             ENUM_TIMEFRAMES tf = (ENUM_TIMEFRAMES)::Period();
-             int shift = ::iBarShift(sym, tf, bar_time, true);
-           // --- MY DEBUG: dump OHLC + the exact 3 ratios CBarPatternControlHammer::FindPattern()
-           // --- checks (body<=0.35, lower_shadow>=0.55, upper_shadow<=0.10, all as % of full
-           // --- High-Low range) - verifies whether a hovered candle SHOULD actually qualify
-           // --- as Hammer (Anhnt, 2026-08-29).
-            {
-              double o = ::iOpen(sym, tf, shift), h = ::iHigh(sym, tf, shift),
-                     l = ::iLow(sym, tf, shift),  cl = ::iClose(sym, tf, shift);
-              double full = h - l;
-              if(full > 0)
-              {
-                double body  = ::MathAbs(cl - o);
-                double lower = ::MathMin(o, cl) - l;
-                double upper = h - ::MathMax(o, cl);
-                ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: bar_time=", ::TimeToString(bar_time, TIME_DATE|TIME_MINUTES),
-                     " O=", o, " H=", h, " L=", l, " C=", cl,
-                     " body%=", ::DoubleToString(body/full*100, 1),
-                     " lower_shadow%=", ::DoubleToString(lower/full*100, 1),
-                     " upper_shadow%=", ::DoubleToString(upper/full*100, 1),
-                     " Hammer_needs(body<=35, lower>=55, upper<=10)");
-              }
-             }
-          // --- MY DEBUG: dump every REAL detected pattern instance at this exact bar (same
-          // --- source CheckCandlePatternAlerts()'s CloseBar path and the CSV log read) - lets
-          // --- us cross-check the ratio math above against what the real Alert pipeline
-          // --- actually sees (Anhnt, 2026-08-29). Each line is now tagged table_enabled=YES/NO
-          // --- (same PatternSignalBuy/Sell + Symbol-TF gate ShowPatternBitmapAtBar uses) and a
-          // --- final "=> Chart shows" line reproduces its exact best-of pick, so with only one
-          // --- row checked on the Setting table this collapses to a clean 1:1 against the Chart
-          // --- bitmap/tooltip - the point being to verify each pattern's name+math in isolation
-          // --- before ever turning several on at once for live use.
-           {
-            CArrayObj *all_pat_dbg = m_BarTimeSeriesCollection.GetListAllPatterns();
-            int found_dbg = 0;
-            CSymbolTFSetting *symtf_dbg = (m_SymbolTFManager != NULL) ? m_SymbolTFManager.FindByIdentity(sym, tf) : NULL;
-            bool symtf_buy_dbg  = (symtf_dbg != NULL) ? symtf_dbg.BuySignal()  : false;
-            bool symtf_sell_dbg = (symtf_dbg != NULL) ? symtf_dbg.SellSignal() : false;
-            CBarPattern *best_dbg = NULL;
-            int best_candles_dbg = 0;
-            if(all_pat_dbg != NULL)
-             {
-              int total_dbg = all_pat_dbg.Total();
-              for(int pi = 0; pi < total_dbg; pi++)
-               {
-                CBarPattern *p_dbg = all_pat_dbg.At(pi);
-                if(p_dbg == NULL || p_dbg.Symbol() != sym || p_dbg.Timeframe() != tf || p_dbg.Time() != bar_time) continue;
-                found_dbg++;
-                ENUM_PATTERN_DIRECTION pdir_dbg = p_dbg.Direction();
-                bool is_buy_dbg  = (pdir_dbg == PATTERN_DIRECTION_BULLISH);
-                bool is_sell_dbg = (pdir_dbg == PATTERN_DIRECTION_BEARISH);
-                bool enabled_dbg = (is_buy_dbg  && PatternSignalBuy(p_dbg.TypePattern())  && symtf_buy_dbg) ||
-                                   (is_sell_dbg && PatternSignalSell(p_dbg.TypePattern()) && symtf_sell_dbg);
-                ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE real pattern #", found_dbg, ": type=", EnumToString(p_dbg.TypePattern()),
-                        " name=", p_dbg.GetProperty(PATTERN_PROP_NAME),
-                        " direction=", EnumToString(pdir_dbg),
-                        " table_enabled=", (enabled_dbg ? "YES" : "no"));
-                if(enabled_dbg)
-                 {
-                  int n_dbg = (int)p_dbg.Candles();
-                  if(best_dbg == NULL || n_dbg > best_candles_dbg) { best_dbg = p_dbg; best_candles_dbg = n_dbg; }
-                 }
-               }
-             }
-            if(found_dbg == 0)
-              ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE: no real detected pattern at this closed bar (may be live bar-0, or genuinely no match)");
-            ::Print("MY DEBUG GUIPannel::OnEvent MOUSE_MOVE => Chart shows: ",
-                    (best_dbg != NULL) ? best_dbg.GetProperty(PATTERN_PROP_NAME) : "(none - no table-enabled pattern matches here)");
-           }
-           ShowPatternBitmapAtBar(bar_time);
-          }
+             ShowPatternBitmapAtBar(bar_time);
+            }
          }
       }
   }

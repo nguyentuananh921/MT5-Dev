@@ -215,13 +215,15 @@
    string markers        = JSONConfig_ExtractRawSection(existing, "Markers_Setting");
    string pattern_alerts = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
    string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
+   string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
    string own_section;
    BuildJsonSection(own_section);
    string json = "{\n \"Symbols_TFs_List\": " + own_section +
                  ",\n \"Indicator_Templates\": " + (indicator_templates == "" ? "[\n ]" : indicator_templates);
-   if(markers != "")        json += ",\n \"Markers_Setting\": " + markers;
-   if(pattern_alerts != "") json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
-   if(sound_settings != "") json += ",\n \"Sound_Settings\": " + sound_settings;
+   if(markers != "")          json += ",\n \"Markers_Setting\": " + markers;
+   if(pattern_alerts != "")   json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
+   if(sound_settings != "")   json += ",\n \"Sound_Settings\": " + sound_settings;
+   if(stoplost_setting != "") json += ",\n \"StopLost_Setting\": " + stoplost_setting;
    json += "\n}\n";
    int fh = ::FileOpen(full_path, FILE_WRITE | FILE_TXT | FILE_ANSI);
    if(fh == INVALID_HANDLE)
@@ -253,7 +255,6 @@
   {
    if(Exists(sym, tf))
     {
-     ::Print("MY DEBUG CSymbolTFManager::Add_SymbolTFSetting: rejected, already exists ", sym, " ", EnumToString(tf));
      return NULL;
     }
    CSymbolTFSetting *row = new CSymbolTFSetting();   // constructor already defaults buy/sell to true
@@ -264,8 +265,6 @@
      delete row;
      return NULL;
     }
-   ::Print("MY DEBUG CSymbolTFManager::Add_SymbolTFSetting: added ", sym, " ", EnumToString(tf),
-           " at index=", m_list.Total() - 1, " - firing SYMBOLTF_MANAGER_EVENT_ADDED");
    m_active_sym = sym;   // this row becomes the active pair too - keeps a later
    m_active_tf  = tf;    // NotifySettingChanged()'s "old" lookup accurate
    ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ADDED, (long)(m_list.Total() - 1), 0.0, "");
@@ -312,8 +311,6 @@
      // identity just calls FindByIdentity(sym, tf) itself once it has these 4 values.
      long packed_tf = ((long)tf << 32) | ((long)old_tf & 0xFFFFFFFF);
      string packed_sym = old_sym + "|" + sym;
-     ::Print("MY DEBUG CSymbolTFManager::NotifySettingChanged: old_sym=", old_sym, " old_tf=", EnumToString(old_tf),
-             " new_sym=", sym, " new_tf=", EnumToString(tf), " packed_sym=", packed_sym, " packed_tf=", packed_tf);
      ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, packed_tf, 0.0, packed_sym);
    }
  

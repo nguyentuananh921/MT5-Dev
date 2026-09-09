@@ -93,10 +93,23 @@
     SYMBOL_TRADE_MODE
     SYMBOL_FILLING_MODE
     SYMBOL_TRADE_FREEZE_LEVEL
-   Setting SL: Việc setting SL sẽ phải theo Symbol. Và Setting cái StopLost Distance so với giá theo đơn vị point.
-    Có 2 cách set SL được thực hiện bởi CButtonsGroup
-    Fixed/ATR (Distance-based): chọn Distance (point) trước → SL = giá_tham_chiếu ∓ Distance × Point.
+   Stop Lost và Trailling: 
+    - Cả 2 đều có thể set theo Fixed và Indicator, việc setting các giá trị theo cả 2 cách riêng biệt được lưu lại.
+    - Việc sử dụng cách nào sẽ được lựa chọn bằng Checkbox trên table chạy Live.
+   Stop Lost và Setting được Setup trong
+    m_window_setting_trading thông qua các table để display và form
+   Khi ấn Save thì
+    1. Update table.
+    2. Save xuống TradingSetupSetting để tay khác biêt đường mà đọc.
+    3. Save xuống JSONConfig
+
+   Trailling EA Mẫu
+    CSimpleTrailing (base)                     → GetStopLossValue() = tick.bid/ask ∓ offset*point
+     ├─ CTrailingByValue : CSimpleTrailing     → override: value_sl (do caller tự truyền vào) ∓ offset*point
+     └─ CTrailingByInd : CSimpleTrailing       → override: data (giá trị Indicator) ∓ offset*point
+      └─ CTrailingBySAR : CTrailingByInd    → chỉ khác ở chỗ lấy handle từ iSAR(), GetStopLossValue() thừa kế nguyên
    Trailling: MA/PSAR (Level-based, offset nhỏ): lấy indicator_value làm gốc → SL = indicator_value ∓ Offset × Point.
+   = Trailling luôn chạy trong Ontick áp dụng cho các Position đang open
     
 
 4. EA gồm có 

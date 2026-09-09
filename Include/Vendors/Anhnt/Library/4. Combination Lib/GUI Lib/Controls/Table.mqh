@@ -2867,11 +2867,11 @@
   void CTable::DrawHeaders(void)
    {
     // ---If out of focus, reset title color
-      if(!m_headers.MouseFocus() && m_column_resize_control==WRONG_VALUE)
-         {
-         m_headers.Erase(::ColorToARGB(m_headers_color,m_alpha));
-         return;
-         }
+     if(!m_headers.MouseFocus() && m_column_resize_control==WRONG_VALUE)
+      {
+       m_headers.Erase(::ColorToARGB(m_headers_color,m_alpha));
+       return;
+      }
     // --- To check focus on headings
       bool is_header_focus=false;
     // --- Mouse cursor coordinates
@@ -2958,9 +2958,9 @@
   void CTable::DrawHeadersText(void)
    {
     // --- To calculate coordinates and offsets
-      int x=0,y=m_header_y_size/2;
-      int column_offset =0;
-      uint text_align   =0;
+     int x=0,y=m_header_y_size/2;
+     int column_offset =0;
+     uint text_align   =0;
     // --- Text color
       uint clr=::ColorToARGB(m_headers_text_color);
     // --- Font properties
@@ -2975,31 +2975,30 @@
         uint img_h = m_columns[c].m_header_image.Height();        
         // Center image in header by X and Y
         int img_x = m_columns[c].m_x + (m_columns[c].m_width - (int)img_w) / 2;
-        int img_y = (m_header_y_size - (int)img_h) / 2;
-        
+        int img_y = (m_header_y_size - (int)img_h) / 2;        
         for(uint ly=0, i=0; ly<img_h; ly++)
+         {
+          for(uint lx=0; lx<img_w; lx++, i++)
            {
-            for(uint lx=0; lx<img_w; lx++, i++)
-             {
-                if(m_columns[c].m_header_image.Data(i) < 1) continue;
-                if(m_columns[c].m_header_image.Data(i) == 16777215) continue;  // Skip white transparent background
-                if((m_columns[c].m_header_image.Data(i) & 0xFF000000) == 0) continue;  // Skip if alpha = 0
+            if(m_columns[c].m_header_image.Data(i) < 1) continue;
+            if(m_columns[c].m_header_image.Data(i) == 16777215) continue;  // Skip white transparent background
+            if((m_columns[c].m_header_image.Data(i) & 0xFF000000) == 0) continue;  // Skip if alpha = 0
 
-                uint bg  = m_headers.PixelGet(img_x + (int)lx, img_y + (int)ly);
-                uint px  = m_columns[c].m_header_image.Data(i);
-                uint fg  = ::ColorToARGB(m_clr.BlendColors(bg, px));
-                m_headers.PixelSet(img_x + (int)lx, img_y + (int)ly, fg);
-             }
+            uint bg  = m_headers.PixelGet(img_x + (int)lx, img_y + (int)ly);
+            uint px  = m_columns[c].m_header_image.Data(i);
+            uint fg  = ::ColorToARGB(m_clr.BlendColors(bg, px));
+            m_headers.PixelSet(img_x + (int)lx, img_y + (int)ly, fg);
            }
+         }
        }
       // --- Draw text
       for(uint c=0; c<m_columns_total; c++)
        {
-         // --- Get the X-coordinate of the text
+        // --- Get the X-coordinate of the text
          x=TextX(c,true);
-         // --- Let's get the text alignment method
+        // --- Let's get the text alignment method
          text_align=TextAlign(c,TA_VCENTER);
-         // --- Draw column title
+        // --- Draw column title
          m_headers.TextOut(x,y,CorrectingText(c,0,true),clr,text_align);
         }
      }

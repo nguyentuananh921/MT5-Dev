@@ -151,6 +151,23 @@
        }
      return pos;
    }
+ //--- read a bare number (as raw text) starting at pos, return pos after the number - shared by
+ //--- IndicatorTemplateManager.mqh and TradingSetupSettingManager.mqh, both need it.
+ int JSONConfig_ReadRawNumber(const string &s, int pos, string &out)
+  {
+   int len = StringLen(s);
+   int start = pos;
+   while(pos < len)
+    {
+     ushort c = StringGetCharacter(s, pos);
+     if((c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E')
+        pos++;
+     else
+        break;
+    }
+   out = StringSubstr(s, start, pos - start);
+   return pos;
+  }
  //--- read a bare true/false literal starting at pos, return pos after it
  int IndicatorConfig_ReadBool(const string &s, int pos, bool &out)
   {

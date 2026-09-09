@@ -80,53 +80,27 @@
        CloseWindow_SettingTrading();
        return;
       }
-   //Handle m_buttonsGroup_SLMode - CButtonsGroup fires its own ON_CLICK_GROUP_BUTTON (not
-   //ON_CLICK_BUTTON) with dparam already carrying the newly-selected button index
-   //(ButtonsGroup.mqh CButtonsGroup::OnClickButton) - toggle which field set is visible.
-     if(id == CHARTEVENT_CUSTOM + ON_CLICK_GROUP_BUTTON && lparam == m_buttonsGroup_SLMode.Id())
-      {
-       ToggleStopLostModeState();
-       UpdateStopLostPreview();
-       ::ChartRedraw();   // same "Hide()/Show() doesn't blit on its own" issue as ShowStopLostForm()
-       return;
-      }
-   //Handle m_btn_save_StopLost_Setting - commit the form's fields into the per-Symbol cache
-   //for m_string_StopLost_setting_current_symbol, then reflect the result in the table's SL
-   //Value column for that row (Anhnt, 2026-09-01).
+   //Handle m_btn_save_StopLost_Setting - commits BOTH Fixed and Indicator config at once 
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_StopLost_Setting.Id())
       {
-       string symbol = m_string_StopLost_setting_current_symbol;
-       if(m_trading_setup_manager == NULL) return;
+       //--- No separate "current symbol" cache Property - read it straight back off the form's own
+       //--- Symbol label ("Symbol - XAUUSDm"), which ShowStopLostForm already keeps up to date.
+       string label_text = m_label_StopLostSetting_Symbol.LabelText();
+       int    sep         = StringFind(label_text, " - ");
+       string symbol      = (sep >= 0) ? StringSubstr(label_text, sep + 3) : "";
+       if(symbol == "" || m_trading_setup_manager == NULL) return;
        CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
        if(row_setting == NULL) row_setting = m_trading_setup_manager.Add_TradingSetupSetting(symbol);
        if(row_setting == NULL) return;
-       ENUM_STOPLOST_TRAILING_MODE mode = (ENUM_STOPLOST_TRAILING_MODE)m_buttonsGroup_SLMode.SelectedButtonIndex();
-       row_setting.StopLostActive(true);
-       row_setting.StopLostMode(mode);
-       if(mode == SL_MODE_FIXED)
+
+       row_setting.StopLostFixedMultiplier(StringToDouble(m_edit_StopLost_FixedPoint.GetValue()));
+
+       row_setting.StopLostIndMultiplier(StringToDouble(m_edit_ATR_Multiplexer.GetValue()));
+       ENUM_TIMEFRAMES tf;
+       int             period;
+       if(GetSelectedATRChoice(symbol, tf, period))
         {
-        //--- Fixed distance, measured from Mid (col1), must clear TWO stacked gaps (Anhnt,
-        //--- 2026-09-02): the position itself already fills at Bid/Ask, i.e. Spread()/2 away
-        //--- from Mid - then TradeStopLevel() is the broker's own minimum measured FROM that
-        //--- fill price, not from Mid. So the floor from Mid is the SUM of both, not whichever is
-        //--- larger: min = Spread()/2 + TradeStopLevel().
-         int typed_pts = (int)StringToInteger(m_edit_StopLost_FixedPoint.GetValue());
-         CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-         int min_pts = (sym != NULL) ? (sym.Spread() / 2 + sym.TradeStopLevel()) : 0;
-         row_setting.StopLostFixedPts(::MathMax(typed_pts, min_pts));
-        }
-       else
-          row_setting.StopLostIndMultiplier(StringToDouble(m_edit_ATR_Multiplexer.GetValue()));
-      //--- (tf, period) parsed straight off the combobox's own currently selected text ("ATR(14)
-      //--- M1") - local only (Anhnt, 2026-09-03), same as UpdateStopLostPreview() - guarded because
-      //--- Fixed-only Symbols (no ATR at all) leave the combobox with no items/no "(" to find.
-       string sel_text = m_combobox_ATR_choice.GetValue();
-       int    lp        = StringFind(sel_text, "(");
-       int    rp        = StringFind(sel_text, ")");
-       if(lp >= 0 && rp > lp)
-        {
-         int period = (int)StringToInteger(StringSubstr(sel_text, lp + 1, rp - lp - 1));
-         row_setting.StopLostIndTF(TimestampByDescription(StringSubstr(sel_text, rp + 2)));
+         row_setting.StopLostIndTF(tf);
          row_setting.StopLostIndType(IND_ATR);
          MqlParam sl_ind_p[1];
          sl_ind_p[0].type          = TYPE_INT;
@@ -134,16 +108,19 @@
          row_setting.SetStopLostIndParams(sl_ind_p);
         }
        m_trading_setup_manager.NotifySettingChanged(symbol);
+       //--- StopLost-by-Indicator only works live if its ATR template + the Symbol/TF pair it runs
+       //--- on already exist (that's exactly what the ATR combobox's own choices are scoped to -
+       //--- see SyncComboBox_ATRChoice) - but "exist in memory" isn't "persisted to disk" until
+       //--- their OWN Save buttons are clicked. Save them here too so StopLost_Setting never points
+       //--- at an Indicator_Templates/Symbols_TFs_List entry that didn't actually get written.
+       if(m_indicator_template_manager != NULL) m_indicator_template_manager.SaveIndicatorTemplateToJSON();
+       if(m_SymbolTFManager != NULL) m_SymbolTFManager.SaveSymbolTFSettingToJSON();
+       m_trading_setup_manager.SaveTradingSetupSettingToJSON();
        SyncTable_StopLostSetting(true);
+       HideStopLostForm();
        return;
       }
-   // Handle m_table_stoplostsetting Symbol cell click - switch THIS chart's own Symbol
-   // (keep the current TF), reusing the EXACT SAME event chain the SymbolTF TreeView navigation
-   // above already uses (Anhnt, 2026-08-31): NotifySettingChanged() fires
-   // SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, which the EA already listens for and reacts to via
-   // SetActiveChartSymbolTF() - CGUIPannel never touches the Chart directly, per the established
-   // split, so no new event/EA-side code needed here. ON_CLICK_LIST_ITEM (not ON_CLICK_BUTTON) is
-   // CTable's own event for a plain SelectableRow click - see Table.mqh::OnClickTable().
+   // Handle m_table_stoplostsetting Symbol cell click 
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_LIST_ITEM && lparam == m_table_stoplostsetting.Id())
       {
        string parts[];
@@ -155,9 +132,12 @@
          string clicked_sym = m_table_stoplostsetting.GetValue(0, row);
          if(m_SymbolTFManager != NULL && clicked_sym != "")
             m_SymbolTFManager.NotifySettingChanged(clicked_sym, (ENUM_TIMEFRAMES)::Period());
+         //--- Refresh the form to this Symbol too - not just when it's already visible from a
+         //--- previous gear-icon click. Without this, clicking a different row's Symbol left the
+         //--- form showing STALE data for whichever Symbol was last opened via the gear icon, so
+         //--- an immediate Save right after a Symbol click silently wrote to the wrong row.
+         if(clicked_sym != "") ShowStopLostForm(clicked_sym);
         }
-       // --- SL gear icon (Anhnt, 2026-09-01) - shows the SL Setting form scoped to this row's
-       // --- own Symbol, same identity source (col0 text) as the col==0 branch above.
        else if(col == 3)
         {
          string clicked_sym = m_table_stoplostsetting.GetValue(0, row);
@@ -165,11 +145,79 @@
         }
        return;
       }
-   //Handle tab switch on m_tabs_setting_trading - hide the SL Setting form when navigating
-   //away from the StopLost sub-tab.
+   // Handle m_table_trailingsetting Symbol/Trailling-icon cell click - refreshes
+   // m_table_indicators_trailingsetting below to this Symbol's tracked Indicators
+   // (GUIPannel_SettingWindows_TradingTrailing.mqh).
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_LIST_ITEM && lparam == m_table_trailingsetting.Id())
+      {
+       string parts[];
+       if(StringSplit(sparam, '_', parts) != 2) return;
+       int col = (int)StringToInteger(parts[0]);
+       int row = (int)StringToInteger(parts[1]);
+       if(col == 0 || col == 3)
+        {
+         //--- Both Symbol and Trailling-icon clicks do the same 2 things now: chart nav + refresh
+         //--- the Indicator-choice table below (Anhnt, 2026-09-07).
+         string clicked_sym = m_table_trailingsetting.GetValue(0, row);
+         if(clicked_sym == "") return;
+         if(m_SymbolTFManager != NULL)
+            m_SymbolTFManager.NotifySettingChanged(clicked_sym, (ENUM_TIMEFRAMES)::Period());
+         m_label_TrailingSetting_Symbol.LabelText("Symbol - " + clicked_sym);
+         m_label_TrailingSetting_Symbol.Draw();
+         m_label_TrailingSetting_Symbol.Update(true);
+         SyncTable_IndicatorsTrailingSetting(clicked_sym, true);
+         ShowTrailingForm(clicked_sym);
+        }
+       return;
+      }
+   //Handle m_table_indicators_trailingsetting checkbox click - implementation in
+   //GUIPannel_SettingWindows_TradingTrailing.mqh. Same dual ON_CLICK_BUTTON/ON_CLICK_CHECKBOX
+   //check every other checkbox-cell table in this codebase uses.
+     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+        && lparam == m_table_indicators_trailingsetting.Id())
+      {
+       string parts[];
+       if(StringSplit(sparam, '_', parts) != 2) return;
+       int col = (int)StringToInteger(parts[0]);
+       int row = (int)StringToInteger(parts[1]);
+       if(col == 3) OnCheckTable_IndicatorsTrailingSetting(row);
+       return;
+      }
+   //Handle m_btn_save_Trailing_Setting - commits Offset(Fixed+Indicator)/Start/Step for whichever
+   //Symbol m_table_indicators_trailingsetting is currently scoped to (read off the same label the
+   //other Trailing handlers use, no separate "current symbol" cache Property).
+     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_Trailing_Setting.Id())
+      {
+       string label_text = m_label_TrailingSetting_Symbol.LabelText();
+       int    sep         = StringFind(label_text, " - ");
+       string symbol      = (sep >= 0) ? StringSubstr(label_text, sep + 3) : "";
+       if(symbol == "" || m_trading_setup_manager == NULL) return;
+       CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+       if(row_setting == NULL) row_setting = m_trading_setup_manager.Add_TradingSetupSetting(symbol);
+       if(row_setting == NULL) return;
+       row_setting.TrailingOffsetPts((int)StringToInteger(m_edit_Trailing_Offset.GetValue()));
+       row_setting.TrailingStartPts((int)StringToInteger(m_edit_Trailing_Start.GetValue()));
+       row_setting.TrailingStepPts((int)StringToInteger(m_edit_Trailing_Step.GetValue()));
+       m_trading_setup_manager.NotifySettingChanged(symbol);
+       //--- Same "Indicator dependency" reasoning as the StopLost Save handler - the Indicator this
+       //--- Symbol trails by (picked via m_table_indicators_trailingsetting's checkbox) must have its
+       //--- own Template + Symbol/TF tracking actually persisted too, or a restart loses the live
+       //--- CIndicatorDE instance StopLost_Setting's Fixed/Ind lookups depend on.
+       if(m_indicator_template_manager != NULL) m_indicator_template_manager.SaveIndicatorTemplateToJSON();
+       if(m_SymbolTFManager != NULL) m_SymbolTFManager.SaveSymbolTFSettingToJSON();
+       m_trading_setup_manager.SaveTradingSetupSettingToJSON();
+       SyncTable_TrailingSetting(true);
+       HideTrailingForm();
+       return;
+      }
+   //Handle tab switch on m_tabs_setting_trading - hide the SL Setting form when navigating, and
+   //hide the Trailing Indicator-choice table + form too (Anhnt, 2026-09-08) - neither should be
+   //visible at all until the user clicks the Trailling icon on m_table_trailingsetting, same
+   //"nothing shows until asked for" convention as StopLost's own gear-icon-gated form.
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_setting_trading.Id())
       {
        HideStopLostForm();
+       HideTrailingForm();
        return;
       }
   }

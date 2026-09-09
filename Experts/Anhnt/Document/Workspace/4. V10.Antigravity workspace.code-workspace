@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../../../Indicators/Vendors/Anhnt/Custom Buildin"
+		},
+		{
+			"path": "../../Example/5. CodeBase"
 		}
 	],
 	"settings": {

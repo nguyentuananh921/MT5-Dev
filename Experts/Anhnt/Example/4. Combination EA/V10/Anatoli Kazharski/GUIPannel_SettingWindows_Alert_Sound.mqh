@@ -9,14 +9,19 @@
  // --- Split away from the Marker tab (Anhnt, 2026-08-26) - Buy/Sell alert sound file pickers
  // --- are an independent concern from marker shape/color, own tab.
  //+----------------------------------------------------------------------------+
- //| Seeds m_marker_buy_sound_file/m_marker_sell_sound_file from Config_Setting. |
- //| json's "Sound_Settings" section - always sets sane defaults FIRST so a     |
- //| missing/partial file still leaves the combo on a valid selection.          |
+ //| Seeds m_marker_buy_sound_file/m_marker_sell_sound_file + out_trailing_sound_file|
+ //| from Config_Setting.json's "Sound_Settings" section - always sets sane      |
+ //| defaults FIRST so a missing/partial file still leaves the combo on a       |
+ //| valid selection. Trailing sound has no own property (Anhnt/Claude,         |
+ //| 2026-09-08, "hạn chế khai báo properties") - m_combo_trailling_sound's own  |
+ //| current selection IS the source of truth once created, read back straight  |
+ //| off it at Save time; this out-param only seeds the INITIAL selected index. |
  //+----------------------------------------------------------------------------+
- void CGUIPannel::LoadSoundSettingsFromJSON(void)
+ void CGUIPannel::LoadSoundSettingsFromJSON(string &out_trailing_sound_file)
   {
     m_marker_buy_sound_file  = "SIGNAL_BUY_EN.wav";
     m_marker_sell_sound_file = "SIGNAL_SELL_EN.wav";
+    out_trailing_sound_file  = "alert.wav";
     string full_path = g_ea_folder + "/Config_Setting.json";
     string content = JSONConfig_ReadWholeFile(full_path);
     if(content == "") return;
@@ -25,6 +30,7 @@
     string sv;
     if(::JSONConfig_StringValue(sound_section, "buy_sound_file",  sv)) m_marker_buy_sound_file  = sv;
     if(::JSONConfig_StringValue(sound_section, "sell_sound_file", sv)) m_marker_sell_sound_file = sv;
+    if(::JSONConfig_StringValue(sound_section, "trailing_sound_file", sv)) out_trailing_sound_file = sv;
   }
  //Note: Must scan the default folder that can play the sound - ::TerminalInfoString(TERMINAL_PATH) + "\\Sounds\\"
  void CGUIPannel::ScanSoundFolder(string &files[])
@@ -58,7 +64,9 @@
     #define SETTING_SOUND_ROW_HEIGHT     26
     #define SETTING_SOUND_WIDTH          350 //Combobox Sound file
 
-    LoadSoundSettingsFromJSON(); // seed m_marker_*_sound_file from Config_Setting.json before building defaults
+    string trailing_sound_default;
+    LoadSoundSettingsFromJSON(trailing_sound_default); // seed m_marker_*_sound_file + trailing default from Config_Setting.json before building defaults
+    if(m_tradingEngine != NULL) m_tradingEngine.ApplyTrailingSoundToAllSymbols(trailing_sound_default); // wire it into CTradeObj right away too - don't wait for a Save click
 
    // Row 0: Sound folder static label (read-only, shows where to drop .wav files)
     if(!CreateTextLabel_OtherCaption(11, "Sound Folder", x + SETTING_SOUND_BASE_X_GAP, y, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
@@ -73,11 +81,12 @@
     string files[];
     ScanSoundFolder(files);
     int n_files = ArraySize(files);
-    int sel_buy_sound = 0, sel_sell_sound = 0;
+    int sel_buy_sound = 0, sel_sell_sound = 0, sel_trailing_sound = 0;
     for(int i = 0; i < n_files; i++)
      {
-      if(files[i] == m_marker_buy_sound_file)  sel_buy_sound  = i;
-      if(files[i] == m_marker_sell_sound_file) sel_sell_sound = i;
+      if(files[i] == m_marker_buy_sound_file)   sel_buy_sound      = i;
+      if(files[i] == m_marker_sell_sound_file)  sel_sell_sound     = i;
+      if(files[i] == trailing_sound_default)    sel_trailing_sound = i;
      }
 
    // Row 1: Buy Sound
@@ -90,6 +99,13 @@
                                 y + SETTING_SOUND_ROW_HEIGHT*2 + SETTING_SOUND_ROW_GAP*2, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
     if(!CreateCombobox_MarkerSelection(m_combo_sell_sound, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH,
                                 y + SETTING_SOUND_ROW_HEIGHT*2 + SETTING_SOUND_ROW_GAP*2, SETTING_SOUND_WIDTH, files, sel_sell_sound, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
+   // Row 3: Trailing Sound - plays on every real SL modify from ApplyStopLostAndTrailing (Anhnt/
+   // Claude, 2026-09-08), wired via CTradeObj::SetSoundModifySL/UseSoundModifySL in
+   // SaveSoundSettingsToJSON below, not a hand-rolled CMessage::PlaySound call.
+    if(!CreateTextLabel_OtherCaption(14, "Trailing Sound", x + SETTING_SOUND_BASE_X_GAP,
+                                y + SETTING_SOUND_ROW_HEIGHT*3 + SETTING_SOUND_ROW_GAP*3, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
+    if(!CreateCombobox_MarkerSelection(m_combo_trailling_sound, x + SETTING_SOUND_BASE_X_GAP + SETTING_SOUND_CAPTION_WIDTH,
+                                y + SETTING_SOUND_ROW_HEIGHT*3 + SETTING_SOUND_ROW_GAP*3, SETTING_SOUND_WIDTH, files, sel_trailing_sound, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
 
    //For Button Save sound settings
     m_btn_save_sound_settings.MainPointer(m_tabs_setting_markerAndSound);
@@ -98,7 +114,7 @@
     m_btn_save_sound_settings.XSize(80);
     m_btn_save_sound_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
     if(!m_btn_save_sound_settings.CreateButton("Save", x + SETTING_SOUND_BASE_X_GAP,
-                               y + SETTING_SOUND_ROW_HEIGHT*3 + SETTING_SOUND_ROW_GAP*3)) return false;
+                               y + SETTING_SOUND_ROW_HEIGHT*4 + SETTING_SOUND_ROW_GAP*4)) return false;
     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_btn_save_sound_settings);
 
     return true;
@@ -106,31 +122,44 @@
  //+----------------------------------------------------------------------------+
  //| Writes the "Sound_Settings" section of Config_Setting.json straight from   |
  //| m_marker_buy_sound_file/m_marker_sell_sound_file (already committed live   |
- //| by the combo's own ON_CLICK_COMBOBOX_ITEM handler) - preserves the 4       |
- //| sections owned elsewhere.                                                  |
+ //| by the combo's own ON_CLICK_COMBOBOX_ITEM handler) + m_combo_trailling_    |
+ //| sound's own current selection (no separate property for it - "hạn chế     |
+ //| khai báo properties", Anhnt/Claude 2026-09-08) - preserves the 4 sections  |
+ //| owned elsewhere. Also pushes the Trailing sound into every tracked         |
+ //| Symbol's own CTradeObj (Trading\TradeObj.mqh) via SetSoundModifySL/        |
+ //| UseSoundModifySL, so ApplyStopLostAndTrailing's real ModifyPosition calls  |
+ //| actually play it - reusing the Library's own sound machinery instead of a  |
+ //| separate hand-rolled CMessage::PlaySound path.                            |
  //+----------------------------------------------------------------------------+
  void CGUIPannel::SaveSoundSettingsToJSON(void)
   {
+   string trailing_sound = m_combo_trailling_sound.GetValue();
+
    string full_path = g_ea_folder + "/Config_Setting.json";
    string existing        = JSONConfig_ReadWholeFile(full_path);
    string symbols_tf      = JSONConfig_ExtractRawSection(existing, "Symbols_TFs_List");
    string templates       = JSONConfig_ExtractRawSection(existing, "Indicator_Templates");
    string markers         = JSONConfig_ExtractRawSection(existing, "Markers_Setting");
    string pattern_alerts  = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
+   string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
 
    string json = "{\n";
    if(symbols_tf     != "") json += " \"Symbols_TFs_List\": "     + symbols_tf     + ",\n";
    if(templates      != "") json += " \"Indicator_Templates\": "  + templates      + ",\n";
    if(markers        != "") json += " \"Markers_Setting\": "      + markers        + ",\n";
    if(pattern_alerts != "") json += " \"Pattern_Alerts_Setting\": " + pattern_alerts + ",\n";
+   if(stoplost_setting != "") json += " \"StopLost_Setting\": "   + stoplost_setting + ",\n";
 
-   string buy_sound_esc  = m_marker_buy_sound_file;
-   string sell_sound_esc = m_marker_sell_sound_file;
-   ::StringReplace(buy_sound_esc,  "\\", "\\\\");
-   ::StringReplace(sell_sound_esc, "\\", "\\\\");
+   string buy_sound_esc      = m_marker_buy_sound_file;
+   string sell_sound_esc     = m_marker_sell_sound_file;
+   string trailing_sound_esc = trailing_sound;
+   ::StringReplace(buy_sound_esc,      "\\", "\\\\");
+   ::StringReplace(sell_sound_esc,     "\\", "\\\\");
+   ::StringReplace(trailing_sound_esc, "\\", "\\\\");
    json += " \"Sound_Settings\": {\n" +
-       "  \"buy_sound_file\": \""  + buy_sound_esc  + "\",\n" +
-       "  \"sell_sound_file\": \"" + sell_sound_esc + "\"\n" +
+       "  \"buy_sound_file\": \""      + buy_sound_esc      + "\",\n" +
+       "  \"sell_sound_file\": \""     + sell_sound_esc     + "\",\n" +
+       "  \"trailing_sound_file\": \"" + trailing_sound_esc + "\"\n" +
        " }\n}";
 
    int fh = ::FileOpen(full_path, FILE_TXT | FILE_WRITE | FILE_ANSI);
@@ -142,5 +171,12 @@
    ::FileWriteString(fh, json);
    ::FileClose(fh);
    ::Print(__FUNCTION__, " > saved sound settings to ", full_path);
+
+   if(m_tradingEngine != NULL) m_tradingEngine.ApplyTrailingSoundToAllSymbols(trailing_sound);
   }
+ //+----------------------------------------------------------------------------+
+ //| ApplyTrailingSoundToAllSymbols moved to CTradingEngine (Anhnt/Claude,       |
+ //| 2026-09-09 - pure trading-domain logic, no GUI control touched). Calls      |
+ //| below go through m_tradingEngine.                                          |
+ //+----------------------------------------------------------------------------+
 #endif // CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH

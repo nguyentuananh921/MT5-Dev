@@ -95,7 +95,7 @@ bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
      }
     // Case 2: old series - patterns already in m_list_all_patterns, skip rescan
     return is_new_series;
-  }
+ }
  bool CTimeSeriesEngine::OnTickEvent(const string symbol, SDataCalculate &data_calc)
   {
     //this.m_BarTimeSeriesCollection.Refresh(data_calc);       // ALL symbols, ALL TFs

@@ -83,12 +83,14 @@
    string templates       = JSONConfig_ExtractRawSection(existing, "Indicator_Templates");
    string pattern_alerts  = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
    string sound_settings  = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
+   string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
 
    string json = "{\n";
    if(symbols_tf     != "") json += " \"Symbols_TFs_List\": "     + symbols_tf     + ",\n";
    if(templates      != "") json += " \"Indicator_Templates\": "  + templates      + ",\n";
    if(pattern_alerts != "") json += " \"Pattern_Alerts_Setting\": " + pattern_alerts + ",\n";
    if(sound_settings != "") json += " \"Sound_Settings\": "       + sound_settings + ",\n";
+   if(stoplost_setting != "") json += " \"StopLost_Setting\": "   + stoplost_setting + ",\n";
    // --- Human-readable labels (Anhnt, 2026-08-15), not raw Wingdings codes/color ints - e.g.
    // --- "83 Bomb" / "Dodger Blue" instead of "83" / "65280" - matches exactly what the combo
    // --- shows (ArrowLabelForCode/ColorLabelForValue look up the SAME GetMarker*Choices catalogs).

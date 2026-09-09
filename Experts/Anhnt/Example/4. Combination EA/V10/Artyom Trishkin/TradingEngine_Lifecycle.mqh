@@ -10,7 +10,13 @@
  CTradingEngine::CTradingEngine(void) : m_is_event(false),
                                         m_event_code(ENGINE_EVENT_NONE),
                                         m_is_first_start (true),
-                                        m_is_tester(::MQLInfoInteger(MQL_TESTER))
+                                        m_is_tester(::MQLInfoInteger(MQL_TESTER)),
+                                        m_trading_setup_manager(NULL),
+                                        m_indicators_collection(NULL),
+                                        m_symbol_tf_manager(NULL),
+                                        m_indicator_template_manager(NULL),
+                                        m_last_deal_time(0),
+                                        m_last_deal_ticket(0)
   {
 
   }
@@ -79,5 +85,8 @@
       m_is_event   = true;
       m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_ORDER);
      }
+    //--- StopLost/Trailing Apply engine - runs every tick, unconditional (Anhnt/Claude, 2026-09-09,
+    //--- moved from CGUIPannel::OnTickEvent).
+    this.ApplyStopLostAndTrailing();
   }
 #endif // CTRADINGENGINE_LIFECYCLE_MQH

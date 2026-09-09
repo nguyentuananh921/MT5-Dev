@@ -154,13 +154,6 @@
      //--- Set icon for the Settings item (IconXGap/IconYGap Library đã tự set =3/4 bên trong CreateItems())
        CMenuItem *settings_item = m_menu_bar.GetItemPointer(MENU_ITEM_SETTINGS);
        settings_item.IconFile(IMAGE_RESOURCE_BMP16_SETTING_PNG);
-       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: settings_item X=", settings_item.X(),
-               " Y=", settings_item.Y(), " XSize=", settings_item.XSize(), " YSize=", settings_item.YSize(),
-               " LabelText=", settings_item.LabelText(), " IsVisible=", settings_item.IsVisible());
-       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: BEFORE dropdown creation - m_window_main.Id()=", m_window_main.Id(),
-               " m_menu_bar.Id()=", m_menu_bar.Id(), " settings_item.Id()=", settings_item.Id(),
-               " settings_item.Index()=", settings_item.Index(), " m_contextmenu_settings.Id()=", m_contextmenu_settings.Id(),
-               " m_contextmenu_settings.Index()=", m_contextmenu_settings.Index());
     //--- Register m_menu_bar NOW (not at the end) - CElement::CheckMainPointer() stamps every new
     //--- element's Id() as "owning window's LastId()+1", and LastId() only changes on an
     //--- AddToElementsArray() call. With nothing in between, settings_item and the dropdown's own
@@ -178,19 +171,8 @@
        m_contextmenu_settings.AddItem("Trading",   IMAGE_RESOURCE_BMP16_TRADE_ON_PNG, IMAGE_RESOURCE_BMP16_TRADING_OFF_PNG, MI_SIMPLE);
        m_contextmenu_settings.AddItem("Alert",     IMAGE_RESOURCE_BMP16_ALERT_ON_PNG, IMAGE_RESOURCE_BMP16_ALERT_OFF_PNG, MI_SIMPLE);
        bool created_contextmenu_settings = m_contextmenu_settings.CreateContextMenu();
-       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: CreateContextMenu returned=", created_contextmenu_settings);
        if(!created_contextmenu_settings) return false;
-       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: dropdown X=", m_contextmenu_settings.X(),
-               " Y=", m_contextmenu_settings.Y(), " XSize=", m_contextmenu_settings.XSize(),
-               " YSize=", m_contextmenu_settings.YSize());
-       for(int dbg_i = 0; dbg_i < m_contextmenu_settings.ItemsTotal(); dbg_i++)
-        {
-         CMenuItem *dbg_item = m_contextmenu_settings.GetItemPointer(dbg_i);
-         ::Print("MY DEBUG CGUIPannel::CreateMenuBar: dropdown item[", dbg_i, "] LabelText=", dbg_item.LabelText(),
-                 " X=", dbg_item.X(), " Y=", dbg_item.Y(), " IsVisible=", dbg_item.IsVisible());
-        }
        m_contextmenu_settings.Hide();
-       ::Print("MY DEBUG CGUIPannel::CreateMenuBar: after Hide, IsVisible=", m_contextmenu_settings.IsVisible());
        m_menu_bar.AddContextMenuPointer(MENU_ITEM_SETTINGS, m_contextmenu_settings);
      CWndContainer::AddToElementsArray(WindowIdx(m_window_main), m_contextmenu_settings);
       return (true);
@@ -198,17 +180,7 @@
  // For Main Tabs m_tabs_main on the right of Main Window m_window_main  
   bool CGUIPannel::CreateTab_Main(const int x_gap, const int y_gap)
    {      
-    string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Monitor", "Positions", "History", "Settings","Bar Events"};
-    string texts[TAB_TAB_MAIN_TOTAL] = 
-    {
-      "[ Account Info Tab ]",
-      "[ Symbol Info Tab ]",
-      "[ Monitor Tab ]",
-      "[ Positions Tab ]",
-      "[ History Tab ]",
-      "[ Settings Tab ]",
-      "[ Bar Events Tab ]"
-    };
+    string tabs_names[TAB_TAB_MAIN_TOTAL] = {"Account infor", "Symbol Info", "Monitor", "Trading", "History"};    
     //--- Store the pointer to the main control
      m_tabs_main.MainPointer(m_window_main);
     //--- Properties
@@ -239,7 +211,41 @@
       else if((int)dparam == MENU_ITEM_SETTINGS_TRADING)
          OpenWindow_SettingTrading();
       else if((int)dparam == MENU_ITEM_SETTINGS_ALERT)
-         OpenWindow_SettingMarkerAndSound();      
+         OpenWindow_SettingMarkerAndSound();
+      return;
+     }
+   //Handle m_table_positions_StoplostAndTrailling checkbox toggles (SL Type/Run/Trailling/Run) -
+   //implementation in GUIPannel_NewFeatures.mqh. Checkbox cells in this library fire either
+   //ON_CLICK_BUTTON or ON_CLICK_CHECKBOX depending on cell setup - same dual-check
+   //m_table_CandlePatternsSetting's own handler uses (TimeSeries.mqh).
+    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+       && lparam == m_table_positions_StoplostAndTrailling.Id())
+     {
+      string parts[];
+      if(StringSplit(sparam, '_', parts) != 2) return;
+      int col = (int)StringToInteger(parts[0]);
+      int row = (int)StringToInteger(parts[1]);
+      if(col == COL_PST_SLTYPE || col == COL_PST_RUN_SL || col == COL_PST_TRAILTYPE || col == COL_PST_RUN_TRAIL)
+         OnCheckTable_PositionsStoplostAndTrailling(row, col);
+      return;
+     }
+   //Handle m_combobox_symbol_toTrade selection change - set chart + resync
+   //m_table_indicator_PreTradeSymbolMonitor to the newly picked Symbol (GUIPannel_MainWindows_TabPositions.mqh).
+    if(id == CHARTEVENT_CUSTOM + ON_CHANGE_GUI && lparam == m_combobox_symbol_toTrade.Id())
+     {
+      OnSymbolToTradeChanged();
+      return;
+     }
+   //Handle m_table_indicator_PreTradeSymbolMonitor checkbox click (col 4, "Trailing") - same dual
+   //ON_CLICK_BUTTON/ON_CLICK_CHECKBOX check every other checkbox-cell table in this codebase uses.
+    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
+       && lparam == m_table_indicator_PreTradeSymbolMonitor.Id())
+     {
+      string parts[];
+      if(StringSplit(sparam, '_', parts) != 2) return;
+      int col = (int)StringToInteger(parts[0]);
+      int row = (int)StringToInteger(parts[1]);
+      if(col == 4) OnCheckTable_PreTradeSymbolMonitor(row);
       return;
      }
   }

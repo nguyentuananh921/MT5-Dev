@@ -65,12 +65,14 @@
    string templates      = JSONConfig_ExtractRawSection(existing, "Indicator_Templates");
    string markers        = JSONConfig_ExtractRawSection(existing, "Markers_Setting");
    string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
+   string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
 
    string json = "{\n";
    if(symbols_tf     != "") json += " \"Symbols_TFs_List\": "  + symbols_tf     + ",\n";
    if(templates      != "") json += " \"Indicator_Templates\": " + templates    + ",\n";
    if(markers        != "") json += " \"Markers_Setting\": "   + markers        + ",\n";
    if(sound_settings != "") json += " \"Sound_Settings\": "    + sound_settings + ",\n";
+   if(stoplost_setting != "") json += " \"StopLost_Setting\": " + stoplost_setting + ",\n";
 
    CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
    int pattern_count = (controls != NULL) ? controls.Total() : 0;
@@ -147,11 +149,11 @@
     m_table_CandlePatternsSetting.SetHeaderText(0, "Pattern");
     m_table_CandlePatternsSetting.SetHeaderText(1, "No");
     // Buy signal
-     uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_BUY_PNG};
+     uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG};
      m_table_CandlePatternsSetting.SetHeaderText(2, "");
      m_table_CandlePatternsSetting.SetHeaderImage(2, resource_indices_buy);
     // Sell signal
-     uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SELL_PNG};
+     uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SIGNAL_SELL_PNG};
      m_table_CandlePatternsSetting.SetHeaderText(3, "");
      m_table_CandlePatternsSetting.SetHeaderImage(3, resource_indices_sell);
     // ▲ static direction legend (no header image)
@@ -238,11 +240,8 @@
  void CGUIPannel::OnCheckTableCandlePatternSetting(const int row, const int col)
   {
    int idx = FindPatternIndexByRow(row);
-   ::Print("MY DEBUG CGUIPannel::OnCheckTableCandlePatternSetting: row=", row, " col=", col, " idx=", idx,
-           " table_name_at_row=", m_table_CandlePatternsSetting.GetValue(0, row));
    if(idx < 0) return;
    CBarPatternControl *c = PatternControlAt(idx);
-   ::Print("MY DEBUG CGUIPannel::OnCheckTableCandlePatternSetting: c=", (c != NULL ? "OK type=" + EnumToString(c.TypePattern()) : "NULL"));
    if(c == NULL) return;
    if(col == 2)
      // --- No manual event fire anymore (Anhnt, 2026-08-30) - the setter itself dirty-checks and

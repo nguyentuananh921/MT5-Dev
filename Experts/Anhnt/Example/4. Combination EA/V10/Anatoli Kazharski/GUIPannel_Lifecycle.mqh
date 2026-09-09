@@ -38,7 +38,7 @@
         return (false);
        }
     //Create Main Tab 
-     if (!CreateTab_Main(M_TABS_MAIN_X, M_TABS_MAIN_Y))
+     if (!CreateTab_Main(M_CONTROL_BORDER_GAP, M_TABS_MAIN_Y))
       {
         Print(__FUNCTION__, " > Failed to create Tabs1!");
         return (false);
@@ -57,7 +57,7 @@
        }
      //For Indicator Setting TreeView on the left panel of setting window
       PopulateTreeView_IndicatorTemplateSetting();
-      if(!CreateTreeView_IndicatorTemplateSetting(TABS_CONFIG_X_GAP, PARAM_FORM_Y)) return false;
+      if(!CreateTreeView_IndicatorTemplateSetting(M_CONTROL_BORDER_GAP, PARAM_FORM_Y)) return false;
       //For Add Indicator form
        if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;          
        if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;       
@@ -66,7 +66,7 @@
        if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22        
        SyncTreeView_SymbolTFSetting();
       //Table m_table_SymbolTFSeting on the right of the Symbol TF sub-tab 
-       if(!CreateTable_SymbolTFSetting(M_TREEVIEW_SYMBOLTF_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
+       if(!CreateTable_SymbolTFSetting(M_SYMBOL_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
        PopulateTable_SymbolTFSetting();
        SyncTable_SymbolTFSetting();
      //For Candle Pattern Setting 
@@ -85,9 +85,16 @@
         Print(__FUNCTION__, " > Failed to create Setting Trading Tab!");
         return (false);
       }
-    //For Stop Lost Setting tab
-     if(!CreateTable_StopLostSetting(0, WINDOW_CAPTION_HEIGHT)) return false;
-     if(!CreateStopLostForm(0, m_table_stoplostsetting.Y2() - m_tabs_setting_trading.Y() + M_CONTROL_YDISTANCE)) return false;
+    //For Stop Lost Setting tab - fixed-width table (no AutoXResizeMode), so X gets the same
+    //M_CONTROL_BORDER_GAP margin every other fixed-width control in this codebase uses (Anhnt,
+    //2026-09-08) - was a bare 0, the one inconsistent case found auditing every Create*(0, ...) call.
+     if(!CreateTable_StopLostSetting(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT)) return false;
+     if(!CreateStopLostForm(M_CONTROL_BORDER_GAP, m_table_stoplostsetting.Y2() - m_tabs_setting_trading.Y() + M_CONTROL_YDISTANCE)) return false;
+    //For Trailing Setting tab (GUIPannel_SettingWindows_TradingTrailing.mqh) - m_table_indicators_trailingsetting
+    //sits below m_table_trailingsetting, same Y-offset convention CreateStopLostForm uses below its own table.
+     if(!CreateTable_TrailingSetting(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT)) return false;
+     if(!CreateTable_IndicatorsTrailingSetting(M_CONTROL_BORDER_GAP, m_table_trailingsetting.Y2() - m_tabs_setting_trading.Y() + M_CONTROL_YDISTANCE)) return false;
+     if(!CreateTrailingForm(m_table_indicators_trailingsetting.X2() + M_CONTROL_YDISTANCE, m_table_indicators_trailingsetting.Y() - m_tabs_setting_trading.Y())) return false;
    // For Setting Marker and Sound Window implementation in GUIPannel_SettingWindows_MarkerAndSound.mqh
     if (!CreateWindow_SettingMarkerAndSound("Setting Marker and Sound",30,30))
      {
@@ -114,15 +121,29 @@
    //---------------------
      //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
       if(!CreateTable_IndicatorSymbolTFMonitor(0, 0)) return false;       
-   //For New Order form
-     if(!CreateTradingForm(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP)) return false;
+   //For m_table_indicator_PreTradeSymbolMonitor (TAB_TAB_MAIN_TRADING) - left of the New Order
+   //form, scoped to m_combobox_symbol_toTrade's current selection (Anhnt/Claude, 2026-09-08).
+     if(!CreateTable_PreTradeSymbolMonitor(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP)) return false;
+   //For New Order form - starts right after m_table_indicator_PreTradeSymbolMonitor's own right edge
+   //(Anhnt/Claude, 2026-09-08 - read off X2() directly, not a hand-computed width formula that goes
+   //stale whenever the table's own columns change).
+     if(!CreateTradingForm(m_table_indicator_PreTradeSymbolMonitor.X2() + M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP)) return false;
+   //For m_table_positions_StoplostAndTrailling (TAB_TAB_MAIN_TRADING) - implementation in
+   //GUIPannel_NewFeatures.mqh - fixed-width table (no AutoXResizeMode), M_CONTROL_BORDER_GAP margin
+   //same as StopLost/Trailing above (Anhnt, 2026-09-08). Y starts right below the New Order form/
+   //Monitor table (both TRADING_FORM_HEIGHT tall) instead of the old fixed POSITIONS_TABLE_Y, which
+   //the form now overlaps since it grew to 9 rows (Trailing/Risk% controls added).
+     if(!CreateTable_PositionsStoplostAndTrailling(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP + TRADING_FORM_HEIGHT + M_CONTROL_BORDER_GAP))
+      {
+       Print(__FUNCTION__, " > Failed to create Positions StopLost/Trailing table!");
+       return (false);
+      }
      m_window_candle_infomation.Hide();
     //Finalize GUI Creation
      CWndEvents::CompletedGUI();
      HideAddIndicatorForm();
      HideStopLostForm();
      m_btn_save_indicator.Hide();
-     //if(!CreateTablePositions(0, POSITIONS_TABLE_Y)) return false;    
      CWndEvents::ShowTabElements(WindowIdx(m_window_main));
     //  m_trading_bubble.MousePointer(m_mouse);
     //  m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));
@@ -234,8 +255,13 @@
       m_table_indicator_need_sync = false;
       InitializeTable_IndicatorTemplateSetting();
      }   
-   // Update data for the Indicator and Symbol/TF Table on the Settings tab
-    SetValuesToTable_IndicatorSymbolTFMonitor();
+   // Update data for the Indicator and Symbol/TF Table on the Monitor tab - was running
+   // unconditionally every 16ms (this timer's own period) regardless of which window/tab was
+   // actually being viewed, unlike every other Sync call in this function - gated now to match
+   // (Anhnt, 2026-09-07). This is the heaviest table (every tracked Symbol x TF x Indicator), so
+   // this was very likely a real, ongoing source of the reported lag.
+    if(m_active_window_index == WindowIdx(m_window_main) && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_MONITOR)
+       SynTable_IndicatorSymbolTFMonitor();
    // Handling the elements
     CWndEvents::OnTimerEvent();   
   }  
@@ -248,24 +274,60 @@
    //For sound and message alerts - run every tick to catch all bar 0 changes.
     PlaySoundCloseBar();
     CheckIndicatorAlerts();
-    CheckCandlePatternAlerts();    
+    CheckCandlePatternAlerts();
+   //--- StopLost/Trailing Apply engine now runs inside CTradingEngine::OnTickEvent (Anhnt/Claude,
+   //--- 2026-09-09, moved out of the GUI layer) - no explicit call needed here.
    // Update data for the Symbol/SL/TP/Level Table on the Settings tab
     if(m_active_window_index == WindowIdx(m_window_setting_trading)
        && m_tabs_setting_trading.SelectedTab() == ENUM_TAB_SETTING_TRADING_STOPLOST
        && SyncTable_StopLostSetting())
       redraw_needed = true;
+   // Update data for the Symbol/Trailing Table on the Settings tab - same gating, Trailling tab
+    if(m_active_window_index == WindowIdx(m_window_setting_trading)
+       && m_tabs_setting_trading.SelectedTab() == ENUM_TAB_SETTING_TRADING_TRAILLING
+       && SyncTable_TrailingSetting())
+      redraw_needed = true;
+   // Update Col2 (Value) on m_table_indicators_trailingsetting - only once a Symbol has actually
+   // been scoped (Trailling-icon clicked at least once); read back off the label the same way the
+   // click handler and checkbox handler both do, no separate "current symbol" cache Property.
+    if(m_active_window_index == WindowIdx(m_window_setting_trading)
+       && m_tabs_setting_trading.SelectedTab() == ENUM_TAB_SETTING_TRADING_TRAILLING)
+     {
+      string trail_label = m_label_TrailingSetting_Symbol.LabelText();
+      int    trail_sep    = StringFind(trail_label, " - ");
+      string trail_symbol = (trail_sep >= 0) ? StringSubstr(trail_label, trail_sep + 3) : "";
+      if(trail_symbol != "" && trail_symbol != "-" && SyncTable_IndicatorsTrailingSetting(trail_symbol))
+         redraw_needed = true;
+     }
+   // Update data for m_table_positions_StoplostAndTrailling on the Positions tab
+    if(m_active_window_index == WindowIdx(m_window_main)
+       && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING
+       && SyncTable_PositionsStoplostAndTrailling())
+      redraw_needed = true;
+   // Update Col0(active-chart-TF)/Col2(Value) on m_table_indicator_PreTradeSymbolMonitor - scoped to
+   // m_combobox_symbol_toTrade's current selection (Anhnt/Claude, 2026-09-08), same "read back off
+   // the control that already displays it" convention as m_table_indicators_trailingsetting above.
+    if(m_active_window_index == WindowIdx(m_window_main)
+       && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING)
+     {
+      string toTrade_symbol = m_combobox_symbol_toTrade.GetValue();
+      if(toTrade_symbol != "" && SyncTable_PreTradeSymbolMonitor(toTrade_symbol))
+         redraw_needed = true;
+     }
    // Redraw the chart if any of the above updates required it
     if(redraw_needed)
            ::ChartRedraw(); 
       
   }
  //+------------------------------------------------------------------+
- //| Trade operation event - refresh positions table on a new deal    |
+ //| Trade operation event                                            |
  //+------------------------------------------------------------------+
  void CGUIPannel::OnTradeEvent(void)
   {
-      if(IsLastDealTicket())
-        InitializePositionsTable();
+      //--- m_table_positions_StoplostAndTrailling already refreshes itself every Tick via
+      //--- SyncTable_PositionsStoplostAndTrailling (this file's own OnTickEvent) - no explicit
+      //--- refresh call needed here.
+      if(m_tradingEngine != NULL) m_tradingEngine.IsLastDealTicket();   // consumes the HistorySelect watermark so the next real check works
   }
  //+------------------------------------------------------------------+
  //| OnEvent handler                                                  |
@@ -277,16 +339,7 @@
     OnEvent_Window_SettingTimeSeries(id, lparam, dparam, sparam);
     OnEvent_Window_SettingTrading(id, lparam, dparam, sparam);
     OnEvent_Window_SettingMarkerAndSound(id, lparam, dparam, sparam);
-   ulong __dbg_t_entry = (id == CHARTEVENT_MOUSE_MOVE) ? ::GetMicrosecondCount() : 0;
     OnEvent_Window_CandleInfor(id, lparam, dparam, sparam);
-  //--- MY DEBUG (temp, Anhnt 2026-09-03)
-   if(id == CHARTEVENT_MOUSE_MOVE)
-    {
-     ulong dt = ::GetMicrosecondCount() - __dbg_t_entry;
-     if(dt > 500)
-        CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-            "MY DEBUG PERF OnEvent_Window_CandleInfor took " + (string)dt + "us");
-    }
     if(id == CHARTEVENT_CHART_CHANGE && m_active_window_index != WindowIdx(m_window_main))
      {
       CWndEvents::Show(m_active_window_index);
@@ -302,67 +355,6 @@
          CloseWindow_SettingMarkerAndSound();
       return;
      }
-   //--- Debug: press D to dump every chart object that's NEW since the last press
-    if(id == CHARTEVENT_KEYDOWN && lparam == 68) // 'D'
-     {
-      int total = (int)::ObjectsTotal(0);
-      string current[];
-      ::ArrayResize(current, total);
-      for(int i = 0; i < total; i++)
-         current[i] = ::ObjectName(0, i);
-      int new_count = 0;
-      for(int i = 0; i < total; i++)
-       {
-        bool was_there = false;
-        for(int j = 0; j < ::ArraySize(m_debug_object_snapshot); j++)
-           if(m_debug_object_snapshot[j] == current[i]) { was_there = true; break; }
-        if(was_there) continue;
-        new_count++;
-        string name = current[i];
-        CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-            "MY DEBUG PRESS-D NEW OBJECT: name=" + name +
-            " x=" + (string)::ObjectGetInteger(0, name, OBJPROP_XDISTANCE) +
-            " y=" + (string)::ObjectGetInteger(0, name, OBJPROP_YDISTANCE) +
-            " xsize=" + (string)::ObjectGetInteger(0, name, OBJPROP_XSIZE) +
-            " ysize=" + (string)::ObjectGetInteger(0, name, OBJPROP_YSIZE) +
-            " corner=" + (string)::ObjectGetInteger(0, name, OBJPROP_CORNER) +
-            " timeframes=" + (string)::ObjectGetInteger(0, name, OBJPROP_TIMEFRAMES) +
-            " zorder=" + (string)::ObjectGetInteger(0, name, OBJPROP_ZORDER) +
-            " type=" + (string)::ObjectGetInteger(0, name, OBJPROP_TYPE) +
-            " hidden=" + (string)::ObjectGetInteger(0, name, OBJPROP_HIDDEN));
-       }
-      CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-          "MY DEBUG PRESS-D total_objects=" + (string)total + " new_since_last=" + (string)new_count);
-     //--- Also always dump the SPECIFIC "Settings" menu/dropdown objects by name (not gated by "new" -
-     //--- these exist from OnInit onward, so they'd never show up in the diff above) - this is the
-     //--- part that actually matters for the invisible-Settings-text / unclickable-sub-item bug.
-      string watch[5];
-      watch[0] = m_menu_bar.GetItemPointer(MENU_ITEM_SETTINGS).CanvasPointer().ChartObjectName();
-      watch[1] = m_contextmenu_settings.CanvasPointer().ChartObjectName();
-      watch[2] = m_contextmenu_settings.GetItemPointer(0).CanvasPointer().ChartObjectName();
-      watch[3] = m_contextmenu_settings.GetItemPointer(1).CanvasPointer().ChartObjectName();
-      watch[4] = m_contextmenu_settings.GetItemPointer(2).CanvasPointer().ChartObjectName();
-      for(int w = 0; w < 5; w++)
-       {
-        string name = watch[w];
-        bool exists = (::ObjectFind(0, name) >= 0);
-        CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-            "MY DEBUG PRESS-D WATCH: name=" + name + " exists=" + (string)exists +
-            " x=" + (string)::ObjectGetInteger(0, name, OBJPROP_XDISTANCE) +
-            " y=" + (string)::ObjectGetInteger(0, name, OBJPROP_YDISTANCE) +
-            " xsize=" + (string)::ObjectGetInteger(0, name, OBJPROP_XSIZE) +
-            " ysize=" + (string)::ObjectGetInteger(0, name, OBJPROP_YSIZE) +
-            " corner=" + (string)::ObjectGetInteger(0, name, OBJPROP_CORNER) +
-            " timeframes=" + (string)::ObjectGetInteger(0, name, OBJPROP_TIMEFRAMES) +
-            " zorder=" + (string)::ObjectGetInteger(0, name, OBJPROP_ZORDER) +
-            " hidden=" + (string)::ObjectGetInteger(0, name, OBJPROP_HIDDEN) +
-            " back=" + (string)::ObjectGetInteger(0, name, OBJPROP_BACK));
-       }
-      ::ArrayResize(m_debug_object_snapshot, total);
-      for(int i = 0; i < total; i++)
-         m_debug_object_snapshot[i] = current[i];
-      return;
-     }   
    //Handle m_combobox_direction/m_combobox_order_type (Anhnt, 2026-09-03) - CComboBox fires
    //ON_CHANGE_GUI (ComboBox.mqh::OnClickListItem(), lparam=the combobox's own Id()) whenever the
    //selection changes - refresh m_btn_send_toTrade's text/color from whichever one just changed.
@@ -398,28 +390,8 @@
          // Saved - clear the pending-change indicator (Anhnt, 2026-09-01).
          m_btn_save_indicator.Hide();
          return;
-        }
-
-    
-    //--- MY DEBUG (temp, Anhnt 2026-09-03) - time reached the bottom of the if-chain vs. the
-    //--- trading_bubble call itself, both only for MOUSE_MOVE (see __dbg_t_entry at the top).
-     ulong __dbg_t_before_bubble = (id == CHARTEVENT_MOUSE_MOVE) ? ::GetMicrosecondCount() : 0;
-     if(id == CHARTEVENT_MOUSE_MOVE)
-      {
-       ulong dt = __dbg_t_before_bubble - __dbg_t_entry;
-       if(dt > 500)
-          CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-              "MY DEBUG PERF if-chain (entry->before trading_bubble) took " + (string)dt + "us");
-      }
-      // m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);   // Trading Bubble disabled (Anhnt, 2026-09-04) - lazy-init on the first Position opened crashed with "invalid pointer access" in Element.mqh:614; multi-position-same-direction SL/TP/Trailing interaction was already an open, paused question before this
-     if(id == CHARTEVENT_MOUSE_MOVE)
-      {
-       ulong dt = ::GetMicrosecondCount() - __dbg_t_before_bubble;
-       if(dt > 500)
-          CMessage::ToFile(g_ea_folder, "CGUIPannel", "OnEvent",
-              "MY DEBUG PERF m_trading_bubble.OnChartEvent took " + (string)dt + "us");
-      }
-
+        }    
+    // m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);   // Trading Bubble disabled (Anhnt, 2026-09-04) - lazy-init on the first Position opened crashed with "invalid pointer access" in Element.mqh:614; multi-position-same-direction SL/TP/Trailing interaction was already an open, paused question before this
   }
  //+------------------------------------------------------------------+
  //| Update GUI                                                       |

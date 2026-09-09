@@ -114,26 +114,10 @@
    return true;
   }
  //+------------------------------------------------------------------+
- //| Indicator_Templates-specific tokenizer helpers - not shared with any other      |
- //| loader (SymbolTF/Marker/Sound/Pattern have no "params" array concept), so they  |
- //| live here rather than in the generic JSONConfig.mqh.                            |
+ //| Indicator_Templates-specific tokenizer helper - the raw-number     |
+ //| reader moved to JSONConfig_ReadRawNumber (JSONConfig.mqh) once     |
+ //| TradingSetupSettingManager.mqh needed the identical logic too.     |
  //+------------------------------------------------------------------+
- //--- read a bare number (as raw text) starting at pos, return pos after the number
- int IndicatorConfig_ReadRawNumber(const string &s, int pos, string &out)
-  {
-   int len = StringLen(s);
-   int start = pos;
-   while(pos < len)
-    {
-     ushort c = StringGetCharacter(s, pos);
-     if((c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.' || c == 'e' || c == 'E')
-        pos++;
-     else
-        break;
-    }
-   out = StringSubstr(s, start, pos - start);
-   return pos;
-  }
  //--- read a "params" array whose elements are EITHER a bare number OR a "quoted
  //--- string" (enum choice text) - both stored as raw text in out[], the caller
  //--- (ReadTemplateEntry) decides how to interpret each element via the schema.
@@ -151,7 +135,7 @@
       if(StringGetCharacter(s, pos) == '"')
         pos = JSONConfig_ReadString(s, pos, value);
       else
-        pos = IndicatorConfig_ReadRawNumber(s, pos, value);
+        pos = JSONConfig_ReadRawNumber(s, pos, value);
       int sz = ArraySize(out);
       ArrayResize(out, sz + 1);
       out[sz] = value;
@@ -321,7 +305,7 @@
       {
        if(p > 0) out_json += ", ";
        string raw = params_text[p];
-       // --- Re-quote unless every char is one IndicatorConfig_ReadRawNumber() would have
+       // --- Re-quote unless every char is one JSONConfig_ReadRawNumber() would have
        // --- consumed (digits/-/+/./e/E) - a bare number was never quoted in the original file.
        bool is_number = (StringLen(raw) > 0);
        for(int c = 0; c < StringLen(raw) && is_number; c++)
@@ -349,13 +333,15 @@
    string markers        = JSONConfig_ExtractRawSection(existing, "Markers_Setting");
    string pattern_alerts = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
    string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
+   string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
    string own_section;
    BuildJsonSection(own_section);
    string json = "{\n \"Symbols_TFs_List\": " + (symbols_tf == "" ? "[\n ]" : symbols_tf) +
                    ",\n \"Indicator_Templates\": " + own_section;
-   if(markers != "")        json += ",\n \"Markers_Setting\": " + markers;
-   if(pattern_alerts != "") json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
-     if(sound_settings != "") json += ",\n \"Sound_Settings\": " + sound_settings;
+   if(markers != "")          json += ",\n \"Markers_Setting\": " + markers;
+   if(pattern_alerts != "")   json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
+     if(sound_settings != "")   json += ",\n \"Sound_Settings\": " + sound_settings;
+     if(stoplost_setting != "") json += ",\n \"StopLost_Setting\": " + stoplost_setting;
      json += "\n}\n";
      int fh = ::FileOpen(full_path, FILE_WRITE | FILE_TXT | FILE_ANSI);
      if(fh == INVALID_HANDLE)
@@ -552,14 +538,6 @@
          }
       }
      m_suppress_event = false;
-     //Print Debug
-       ::Print("MY DEBUG CIndicatorTemplateManager::OnInitEvent: Total=", m_list.Total());
-       for(int dbg_i = 0; dbg_i < m_list.Total(); dbg_i++)
-        {
-         CIndicatorSetting *dbg_row = m_list.At(dbg_i);
-         if(dbg_row != NULL)
-            ::Print("MY DEBUG CIndicatorTemplateManager::OnInitEvent: [", dbg_i, "] ", dbg_row.DisplayLabel(), " ShowOnChart=", dbg_row.ShowOnChart());
-        }
      return ok;
   }
  //+------------------------------------------------------------------+
@@ -574,34 +552,22 @@
       int old_handle = (int)lparam;
       int win_num    = (int)dparam;
       int win_index  = (int)StringToInteger(sparam);
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: fired - old_handle=", old_handle, " win_num=", win_num, " win_index=", win_index);
 
       ENUM_INDICATOR old_type; MqlParam old_params[];
       if(::IndicatorParameters(old_handle, old_type, old_params) < 0)
        {
-        //Print Debug
-          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - IndicatorParameters(old_handle=", old_handle, ") failed, err=", ::GetLastError());
         return false;   //Get Old value
        }
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: old handle=", old_handle, " old_type=", EnumToString(old_type), " win_num=", win_num, " index=", win_index);
 
       CWndInd *new_ind = (chart_obj != NULL) ? chart_obj.GetIndicator(::ChartID(), win_num, win_index) : NULL;
       if(new_ind == NULL)
        {
-        //Print Debug
-          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - GetIndicator(win_num=", win_num, ", win_index=", win_index, ") returned NULL");
         return false;
        }
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: new name=", new_ind.Name(), " handle=", new_ind.Handle());
 
       ENUM_INDICATOR new_type; MqlParam new_params[];
       if(!new_ind.GetIdentity(new_type, new_params))
        {
-        //Print Debug
-          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - new_ind.GetIdentity() failed for name=", new_ind.Name());
         return false; //Get New value
        }
 
@@ -614,8 +580,6 @@
       // indicator we DO want tracked still passes through below.
       if(new_type == IND_CUSTOM && ::StringFind(new_ind.Name(), SIGNALMARKERS_NAME_TAG) >= 0)
        {
-        //Print Debug
-          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - handle=", old_handle, " is our own SignalMarkers, not a Template indicator");
         return false;
        }
 
@@ -626,8 +590,6 @@
       // --- gi thay the. Bail o day, giu nguyen old, khong dung gi ca.
       if(Exists(new_type, new_params))
        {
-        //Print Debug
-          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: bail - new params trung 1 identity khac da co trong Template - bo qua, giu nguyen old");
         return false;
        }
 
@@ -635,24 +597,18 @@
       // already reacts by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(),
       // no need to call them here too (and TYPE_ADDED/TYPE_DELETE correctly stay silent
       // when old_type == new_type, unlike the old unconditional Sync call).
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent CHANGE: -> Delete old_type=", EnumToString(old_type), " then Add new_type=", EnumToString(new_type));
       DeleteIndicatorFromIndicatorTemplateSetting(old_type, old_params); //Remove Old value
       AddIndicatorToIndicatorTemplateSetting(new_type, new_params); //Add New value
       return true;
      }
     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_DEL)
      {
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent DEL: win_num=", (int)dparam);
       // EA itself just called RemoveIndicatorFromChart (Show-toggle/row-delete reacting to
       // OUR OWN Data change) - this native DEL is the expected side effect, not a surprise.
       // Skip the defensive rescan below entirely; see g_suppress_del_rescan declaration.
       if(g_suppress_del_rescan)
        {
         g_suppress_del_rescan = false;
-        //Print Debug
-          ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent DEL: self-triggered, skipping rescan");
         return true;
        }
       // Native DEL event doesn't say WHICH indicator was removed - live-scan every row against
@@ -673,13 +629,9 @@
      }
     if(id != CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_ADD) return false;
     int handle = (int)lparam;
-    //Print Debug
-      ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent ADD: fired - handle=", handle);
     ENUM_INDICATOR type; MqlParam params[];
     if(::IndicatorParameters(handle, type, params) < 0)
      {
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent ADD: bail - IndicatorParameters(handle=", handle, ") failed, err=", ::GetLastError());
       return false;
      }
     // SignalMarkers.mq5 is EA's own Layer-3 marker-display program (attached by
@@ -690,8 +642,6 @@
     // through below (Anhnt, 2026-08-28).
     if(type == IND_CUSTOM && ArraySize(params) > 0 && ::StringFind(params[0].string_value, SIGNALMARKERS_NAME_TAG) >= 0)
      {
-      //Print Debug
-        ::Print("MY DEBUG CIndicatorTemplateManager::OnChartEvent ADD: bail - handle=", handle, " is our own SignalMarkers, not a Template indicator");
       return false;
      }
     CIndicatorSetting *entry = FindByIdentity(type, params);

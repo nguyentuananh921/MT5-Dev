@@ -28,7 +28,7 @@
     m_table_SymbolTFSeting.LightsHover(true);
     m_table_SymbolTFSeting.IsSortMode(true);
     m_table_SymbolTFSeting.TableSize(6, 10);
-    int widths[6]    = {150, 70, 40, 40, 40, 40};
+    int widths[6]    = {M_SYMBOL_WIDTH, M_TF_WIDTH, 40, 40, 40, 40};
     int img_x_off[6] = {3,   0,  10, 10, 10, 10};
     int img_y_off[6] = {3,   0,  3,  3,  3,  3};
     ENUM_ALIGN_MODE align[6] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
@@ -41,11 +41,11 @@
     m_table_SymbolTFSeting.SetHeaderText(0, "Symbol");
     m_table_SymbolTFSeting.SetHeaderText(1, "TF");
     //Column 2 for Buy
-     uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_BUY_PNG};
+     uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG};
      m_table_SymbolTFSeting.SetHeaderText(2, "");
      m_table_SymbolTFSeting.SetHeaderImage(2, resource_indices_buy);
     //Column 3 for sell
-     uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SELL_PNG};
+     uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SIGNAL_SELL_PNG};
      m_table_SymbolTFSeting.SetHeaderText(3, "");
      m_table_SymbolTFSeting.SetHeaderImage(3, resource_indices_sell);
     //Column 4 for sound alert - future SignalBridge wiring, see CSymbolTFSetting::SoundAlert()
@@ -74,9 +74,6 @@
      string sym_name = entry.Symbol();
      string tf_text  = entry.TFText();
      int existing_row = FindTableRowBySymbolTF(sym_name, tf_text);
-     Print("MY DEBUG CGUIPannel::PopulateTable_SymbolTFSetting: sym=", sym_name, " tf=", tf_text,
-           " existing_row=", existing_row, " RowsTotal=", m_table_SymbolTFSeting.RowsTotal(),
-           " ManagerTotal=", total);
      if(existing_row != -1) continue;   // already has a row
      int row = (int)m_table_SymbolTFSeting.RowsTotal();
      string first_col0 = m_table_SymbolTFSeting.GetValue(0, 0);
@@ -111,8 +108,8 @@
      if(row == -1) continue;
      // --- Col 0: Symbol label + icon - red Close (delete), EXCEPT the row matching the current
      // --- chart's own symbol/TF, which gets the "start" icon and is not deletable (this EA
-     // --- instance depends on that series existing - see IsCurrentChartSymbolTFRow).
-      bool is_current = IsCurrentChartSymbolTFRow(sym, tf_text);
+     // --- instance depends on that series existing).
+      bool is_current = (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
       m_table_SymbolTFSeting.CellType(0, row, CELL_BUTTON);
       if(is_current)
        m_table_SymbolTFSeting.SetImages(0, row, start_icon);
@@ -170,10 +167,6 @@
     }
    return -1;
   }
- bool CGUIPannel::IsCurrentChartSymbolTFRow(const string sym, const string tf_text)
-  {
-   return (sym == ::Symbol() && tf_text == TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
-  }
  void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col)
   {
    if(m_SymbolTFManager == NULL) return;
@@ -202,7 +195,7 @@
   {
     m_treeview_SymbolTF.MainPointer(m_tabs_setting_timeseries);
     m_treeview_SymbolTF.AutoXResizeMode(false);  // fixed width
-    m_treeview_SymbolTF.XSize(M_TREEVIEW_SYMBOLTF_WIDTH);
+    m_treeview_SymbolTF.XSize(M_SYMBOL_WIDTH);
     m_treeview_SymbolTF.AutoYResizeMode(true);
     m_treeview_SymbolTF.VisibleItemsTotal(15);
     m_treeview_SymbolTF.LightsHover(true);
@@ -296,23 +289,6 @@
          children[sz] = j;
         }
       int child_count = ArraySize(children);
-      if(tf_cnt != child_count)
-       {
-        string tf_dump = "", ch_dump = "";
-        for(int p = 0; p < tf_cnt; p++)
-         {
-          CSymbolTFSetting *pe = m_SymbolTFManager.At(tf_indexes[p]);
-          tf_dump += (pe != NULL ? pe.TFText() : "NULL") + " ";
-         }
-        for(int p = 0; p < child_count; p++)
-         {
-          CTreeItem *pt = m_treeview_SymbolTF.ItemPointer(children[p]);
-          ch_dump += (pt != NULL ? pt.LabelText() : "NULL") + "(li=" + IntegerToString(children[p]) + ") ";
-         }
-        Print("MY DEBUG CGUIPannel::PopulateTreeView_SymbolTFSetting: sym=", sym_name,
-              " sym_li=", sym_li, " tf_cnt=", tf_cnt, " tf_indexes=[", tf_dump,
-              "] child_count=", child_count, " children=[", ch_dump, "]");
-       }
       // Step 4: Match tf_indexes[k] against children[k]
       for(int k = 0; k < tf_cnt; k++)
        {
@@ -323,18 +299,12 @@
          {
           // Slot exists — update label if period changed
           CTreeItem *ti = m_treeview_SymbolTF.ItemPointer(children[k]);
-          Print("MY DEBUG CGUIPannel::PopulateTreeView_SymbolTFSetting: sym=", sym_name, " k=", k,
-                " matching existing child li=", children[k],
-                " current_label=", (ti != NULL ? ti.LabelText() : "NULL"), " target=", actual);
           if(ti != NULL && ti.LabelText() != actual)
             { ti.LabelText(actual); ti.Update(true); }
          }
         else
          {
           // New slot — add TF node
-          Print("MY DEBUG CGUIPannel::PopulateTreeView_SymbolTFSetting: sym=", sym_name, " k=", k,
-                " creating NEW child, li=", m_treeview_SymbolTF.ItemsTotal(),
-                " sym_li=", sym_li, " label=", actual, " item_index=", k);
            m_treeview_SymbolTF.AddTreeItem(m_treeview_SymbolTF.ItemsTotal(), sym_li,
                                             actual,
                                             IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,
@@ -385,10 +355,6 @@
        bool highlight = (parent_is_active && item.LabelText() == chart_tf);       
        bool still_exists = (m_SymbolTFManager != NULL && parent_item != NULL &&
                              m_SymbolTFManager.Exists(parent_item.LabelText(), TimestampByDescription(item.LabelText())));
-       Print("MY DEBUG CGUIPannel::SyncTreeView_SymbolTFSetting: i=", i, " parent_pos=", parent_pos,
-             " parent_label=", (parent_item != NULL ? parent_item.LabelText() : "NULL"),
-             " _Symbol=", _Symbol, " item_label=", item.LabelText(), " chart_tf=", chart_tf,
-             " parent_is_active=", parent_is_active, " highlight=", highlight, " still_exists=", still_exists);
        if(!still_exists)
           item.IconFile(IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG);   // orphaned - same icon as the Table's delete button
        else

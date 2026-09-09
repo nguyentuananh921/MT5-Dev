@@ -32,7 +32,9 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\ChartObjCollection.mqh>
  // For CMessage::PlaySound/Out - per-indicator Sound/Message alerts (2026-07-17)
   #include <Vendors\Anhnt\Library\4. Combination Lib\Notify\Message\Message.mqh>
-
+ // For CTradingSetupSetting
+ //Define Risk Percentage per Position
+    #define RISK_PERCENTAGE_PERPOSITION 5         // 5%
   enum ENUM_CHECKBOX_STATE
     {
       CHECKBOX_STATE_ON  = 0,
@@ -54,112 +56,108 @@
   // Main panel window m_window_main
     #define M_WINDOW_MAIN_WIDTH         550
     #define M_WINDOW_MAIN_HEIGHT        480
-    #define M_WINDOW_MIN_WIDTH     300
-    #define M_WINDOW_MIN_HEIGHT    200
-
+    #define M_WINDOW_MIN_WIDTH          300
+    #define M_WINDOW_MIN_HEIGHT         200
    // Setting panel window
-    #define M_WINDOW_SETTING_WIDTH         700
-    #define M_WINDOW_SETTING_HEIGHT        480
+    #define M_WINDOW_SETTING_WIDTH      700
+    #define M_WINDOW_SETTING_HEIGHT     480
    // Size for Candle Windows
-    #define CANDLE_INFO_WINDOW_W      300
-    #define CANDLE_INFO_WINDOW_H      220 
+    #define CANDLE_INFO_WINDOW_W        300
+    #define CANDLE_INFO_WINDOW_H        220 
    //Left pannel m_treeview_SymbolTF (fixed left strip, visible on all tabs)   
     #define M_CONTROL_BORDER_GAP        3  //Gap between border of two control
     #define M_CONTROL_YDISTANCE         22 //Gap Between 2 Control    
    // Control Height
     #define M_CONTROL_HEIGHT            22 //Height for MenuBar,Tab, Combobox,Label
-
-    #define M_TREEVIEW_SYMBOLTF_WIDTH   85
-   //Right Pannel m_tabs_main starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.
-    #define M_TABS_MAIN_X               M_CONTROL_BORDER_GAP
+   //Unified width
+    #define M_SYMBOL_WIDTH              85 //Unified width for every control/column that displays a Symbol+Icon
+    #define M_TF_WIDTH                  55 //Unified width for every control/column that displays a Timeframe+Icon
+    #define INDICATOR_PARATEXT_WIDTH    180 //Include LabelText + Icon
+    #define INDICATOR_VALUE_WIDTH       80  //Unified width for every column that displays an Indicator's live Value       
+   //Right Pannel m_tabs_main starts at (TABS_MAIN_X, TABS_MAIN_Y) inside m_Mainwindow.    
     #define M_TABS_MAIN_Y               WINDOW_CAPTION_HEIGHT+M_CONTROL_HEIGHT+M_CONTROL_HEIGHT
-    #define M_TABS_MAIN_WIDTH           (M_WINDOW_MAIN_WIDTH - M_TABS_MAIN_X - M_CONTROL_BORDER_GAP)
-   // For Tab X Gap
-    #define TABS_CONFIG_X_GAP   0
-   //Define Risk Percentage per Position
-    #define RISK_PERCENTAGE_PERPOSITION 5         // 5%
-    enum ENUM_MENU_ITEM
-     {        
+    #define M_TABS_MAIN_WIDTH           (M_WINDOW_MAIN_WIDTH - M_TABS_MAIN_X - M_CONTROL_BORDER_GAP)  
+   // For m_table_positions_StoplostAndTrailling (GUIPannel_NewFeatures.mqh) - column indices, defined
+   // here (included before every other module) so GUIPannel_MainWindows.mqh's OnEvent dispatch can
+   // reference them too, not just GUIPannel_NewFeatures.mqh itself (Anhnt/Claude, 2026-09-07).
+    #define COLUMNS_POS_SL_TRAIL_TOTAL 11
+    #define COL_PST_SYMBOL      0
+    #define COL_PST_DIR         1
+    #define COL_PST_VOLUME      2
+    #define COL_PST_NO          3
+    #define COL_PST_SLTYPE      4
+    #define COL_PST_SLPRICE     5
+    #define COL_PST_SLPROFIT    6
+    #define COL_PST_RUN_SL      7
+    #define COL_PST_TRAILTYPE   8
+    #define COL_PST_RUN_TRAIL   9
+    #define COL_PST_PROFIT      10   
+  enum ENUM_MENU_ITEM
+   {        
         MENU_ITEM_SETTINGS,
         MENU_ITEM_TOTAL,
-     };
-    enum ENUM_MENU_ITEM_SETTINGS
-     {
-      MENU_ITEM_SETTINGS_INDICATOR,
-      MENU_ITEM_SETTINGS_TRADING,
-      MENU_ITEM_SETTINGS_ALERT,
-      MENU_ITEM_SETTINGS_TOTAL,
-     };
-   // Status bar items
-    #define STATUS_LABELS_TOTAL 4
-    enum ENUM_STATUS_BAR_ITEM
-     {
+   };
+  enum ENUM_MENU_ITEM_SETTINGS
+   {
+    MENU_ITEM_SETTINGS_INDICATOR,
+    MENU_ITEM_SETTINGS_TRADING,
+    MENU_ITEM_SETTINGS_ALERT,
+    MENU_ITEM_SETTINGS_TOTAL,
+   };
+  // Status bar items
+   #define STATUS_LABELS_TOTAL 4
+   enum ENUM_STATUS_BAR_ITEM
+    {
       STATUS_BAR_HELP = 0,
       STATUS_BAR_DEPOSIT_LOAD,
       STATUS_BAR_PROFIT,
       STATUS_BAR_SERVER_TIME,
-     };     
-    enum ENUM_TAB_MAIN
-     {
-      TAB_TAB_MAIN_ACCOUNT_INFO = 0,
-      TAB_TAB_MAIN_SYMBOL_INFO,
-      TAB_TAB_MAIN_MONITOR,      
-      TAB_TAB_MAIN_POSITIONS,
-      TAB_TAB_MAIN_HISTORY,
-      TAB_TAB_MAIN_SETTINGS,
-      TAB_TAB_MAIN_EVENTS, //For Pattern Information      
-      TAB_TAB_MAIN_TOTAL,
-     };
-    enum ENUM_TAB_SETTING_TIMESERIES
-     {
-      TAB_TAB_SETTING_TIMESERIES_INDICATOR = 0,
-      TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,
-      TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN,
-      TAB_TAB_SETTING_TIMESERIES_TOTAL,
-     };  
-    enum ENUM_TAB_SETTING_TRADING
-     {
-      ENUM_TAB_SETTING_TRADING_STOPLOST = 0,
-      ENUM_TAB_SETTING_TRADING_TRAILLING,      
-      ENUM_TAB_SETTING_TRADING_TOTAL,
-     };   
-    enum ENUM_TAB_SETTING_MARKERANDSOUND
-     {
-        ENUM_TAB_SETTING_MARKERANDSOUND_MARKER = 0,
-        ENUM_TAB_SETTING_MARKERANDSOUND_SOUND,      
-        ENUM_TAB_SETTING_MARKERANDSOUND_TOTAL,
-     };  
-    //For marker
-     enum ENUM_MARKER_SHAPE_PREVIEW_ROW
-      {
-        SHAPE_PREVIEW_SINGLE_INDICATOR_BUY  = 0,
-        SHAPE_PREVIEW_SINGLE_INDICATOR_SELL = 1,
-        SHAPE_PREVIEW_MULTI_INDICATOR_BUY   = 2,   //Multi Indicator only
-        SHAPE_PREVIEW_MULTI_INDICATOR_SELL  = 3,
-        SHAPE_PREVIEW_PATTERN_BUY = 4,
-        SHAPE_PREVIEW_PATTERN_SELL= 5,
-        SHAPE_PREVIEW_COMBO_BUY   = 6,   //Combination Indicator and CandlePattern
-        SHAPE_PREVIEW_COMBO_SELL  = 7,
-      };
-   //Plan to remove 
-    enum ENUM_TAB_MAIN_SETTINGS_CONFIG
-     {
-        TAB_TAB_MAIN_SETTINGS_CONFIG_INDICATOR =0,
-        TAB_TAB_MAIN_SETTINGS_CONFIG_SYMBOL_TF,
-        TAB_TAB_MAIN_SETTINGS_CONFIG_CANDLE_PATTERN,
-        TAB_TAB_MAIN_SETTINGS_CONFIG_STOPLOST,    
-        TAB_TAB_MAIN_SETTINGS_CONFIG_MARKER,
-        TAB_TAB_MAIN_SETTINGS_CONFIG_SOUND,
-        TAB_TAB_MAIN_SETTINGS_CONFIG_TOTAL,
-      };
-    //---------      
-    enum ENUM_INDICATOR_SHOW_STATE
-      {
-        INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
-        INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
-      };
-    
-     
+    };     
+   enum ENUM_TAB_MAIN
+    {
+     TAB_TAB_MAIN_ACCOUNT_INFO = 0,
+     TAB_TAB_MAIN_SYMBOL_INFO,
+     TAB_TAB_MAIN_MONITOR,      
+     TAB_TAB_MAIN_TRADING,
+     TAB_TAB_MAIN_HISTORY,
+     TAB_TAB_MAIN_TOTAL,
+    };
+  enum ENUM_TAB_SETTING_TIMESERIES
+   {
+    TAB_TAB_SETTING_TIMESERIES_INDICATOR = 0,
+    TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,
+    TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN,
+    TAB_TAB_SETTING_TIMESERIES_TOTAL,
+   };  
+  enum ENUM_TAB_SETTING_TRADING
+   {
+    ENUM_TAB_SETTING_TRADING_STOPLOST = 0,
+    ENUM_TAB_SETTING_TRADING_TRAILLING,      
+    ENUM_TAB_SETTING_TRADING_TOTAL,
+   };   
+  enum ENUM_TAB_SETTING_MARKERANDSOUND
+   {  
+    ENUM_TAB_SETTING_MARKERANDSOUND_MARKER = 0,
+    ENUM_TAB_SETTING_MARKERANDSOUND_SOUND,      
+    ENUM_TAB_SETTING_MARKERANDSOUND_TOTAL,
+   };  
+  //For marker
+   enum ENUM_MARKER_SHAPE_PREVIEW_ROW
+   {
+     SHAPE_PREVIEW_SINGLE_INDICATOR_BUY  = 0,
+     SHAPE_PREVIEW_SINGLE_INDICATOR_SELL = 1,
+     SHAPE_PREVIEW_MULTI_INDICATOR_BUY   = 2,   //Multi Indicator only
+     SHAPE_PREVIEW_MULTI_INDICATOR_SELL  = 3,
+     SHAPE_PREVIEW_PATTERN_BUY = 4,
+     SHAPE_PREVIEW_PATTERN_SELL= 5,
+     SHAPE_PREVIEW_COMBO_BUY   = 6,   //Combination Indicator and CandlePattern
+     SHAPE_PREVIEW_COMBO_SELL  = 7,
+   };  
+   enum ENUM_INDICATOR_SHOW_STATE
+   {
+     INDICATOR_SHOW_ON_CHART = CHECKBOX_STATE_ON,
+     INDICATOR_HIDE_ON_CHART = CHECKBOX_STATE_OFF,
+   }; 
   // =====================================================================
   // --- Layer 2 (GUI) layout descriptor - decided BEFORE CreateAddIndicatorParaInfor/
   // --- ShowIndicatorParameterForm ever runs, separate from Layer 1's
@@ -176,54 +174,42 @@
                                         // regardless of each row's label text length.
       int               field_width;    // px width of the value control itself (edit/combo)
       ENUM_ELEMENT_TYPE element_type;   // E_TEXT_BOX or E_COMBO_BOX (GUIDefines.mqh)
-    };
-  
-   
+    }; 
   // --- Indicator tree (Settings tab, left column)
    #define INDICATOR_TREE_WIDTH      150
   // --- Param form (right of indicator tree in Settings tab)
    #define INDICATOR_PARAM_ROWS      4
-   #define INDICATOR_PARAM_LABEL_W   100
-  // --- FIELD_W must clear the longest label across ALL indicator types
-  // --- (e.g. "Slow EMA Period", "Applied Volume").
+   #define INDICATOR_PARAM_LABEL_W   100  
    #define INDICATOR_PARAM_FIELD_W   80
    #define INDICATOR_PARAM_COL_WIDTH (INDICATOR_PARAM_LABEL_W + INDICATOR_PARAM_FIELD_W + 12)
    #define PARAM_FORM_X              (INDICATOR_TREE_WIDTH + 10)
    #define PARAM_FORM_Y              5
-   #define PARAM_ROW_H               30   
-   
+   #define PARAM_ROW_H               30 
   // --- Indicator table: below Add button with 10px gap; width auto-fills m_tabs_main via AutoXResizeMode.
    #define INDICATOR_TABLE_X         PARAM_FORM_X
    #define INDICATOR_TABLE_Y         (PARAM_FORM_Y + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10 + M_CONTROL_HEIGHT + 10)
   // --- Symbol/TF setting table (Symbol TF sub-tab): note row on top, save button below it,
   // --- table below the button - same 10px gap convention as INDICATOR_TABLE_Y.
-   #define SYMBOLTF_NOTE_H           20
-   #define SYMBOLTF_BTN_Y            (SYMBOLTF_NOTE_H + 5)
-   #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + M_CONTROL_HEIGHT + 10)
-  // --- Positions tab (Anhnt 2026-09-01): m_table_stoplostsetting sits at (x=0, y=M_CONTROL_
-  // --- BORDER_GAP). Its own SL column shows the SL Setting form beside the table directly.
-  // --- POSITIONS_PLAN_TABLE_Y removed (Anhnt, 2026-09-03) - was a leftover gap sized for the
-  // --- old standalone Symbol combo/ButtonsGroup row, unused now that row is gone; redefine if a
-  // --- real need for it comes back.
-   #define POSITIONS_TABLE_Y            175 
-   
-   // --- Signal Markers bridge file header magic - MUST match SignalMarkers.mq5's own
-   // --- SIGNAL_BRIDGE_MAGIC exactly (Indicators\Vendors\Anhnt\Custom Buildin\SignalMarkers.mq5).
+   #define SYMBOLTF_BTN_Y            (M_CONTROL_HEIGHT + 5)
+   #define SYMBOLTF_TABLE_Y          (SYMBOLTF_BTN_Y + M_CONTROL_HEIGHT + 10)  
+   #define POSITIONS_TABLE_Y            175   
+  // Signal Markers bridge file header magic - MUST match Indicators\Vendors\Anhnt\Custom Buildin\SignalMarkers.mq5's own   
    #define SIGNAL_BRIDGE_MAGIC       20260808
-   // --- How far INSIDE the popup's near edge the cursor sits when it appears - NOT a gap.
-   // --- BugNote 2026-07-16: a GAP between cursor and popup meant the mouse had to cross that
-   // --- stretch of raw chart to reach it, and on a zoomed-out TF that stretch covers OTHER
-   // --- candles, each flipping bar_time (and re-triggering RepositionCandleInfoWindow) along
-   // --- the way - the popup kept jumping just out of reach. Placing the cursor already INSIDE
-   // --- the popup's rect the instant it appears means m_window_candle_infomation.MouseFocus() is true
-   // --- before the user moves at all - zero distance left to cross.
+  // How far INSIDE the popup's near edge the cursor sits when it appears - NOT a gap.
    #define CANDLE_INFO_CURSOR_INSET  15
   //For Indicator table field show in m_table_indicator and m_table_indicator_SymbolTFValue
-   #define INDICATOR_PARATEXT_WIDTH 180 //Include name + Icon
-  // --- Alt + hover pattern bitmap label (GUIPannel_CandleInfoWindow.mqh:ShowPatternBitmapAtBar).
-  // --- One fixed OBJ_TEXT object, repositioned/retexted per hover - native OBJPROP_TOOLTIP
-  // --- hover-delay proved unreliable while the mouse keeps moving with Alt held, so the name
-  // --- is drawn directly on chart instead.
+   
    #define PATTERN_HOVER_LABEL_NAME  "GUIPannel_PatternHoverLabel"
+  // --- TAB_TAB_MAIN_TRADING: m_table_indicator_PreTradeSymbolMonitor sits on the left, the New
+  // --- Order form (CreateTradingForm) starts right after it - X is read directly off the table's own
+  // --- X2() at the GUIPannel_Lifecycle.mqh call site now, not a hand-computed width formula (Anhnt/
+  // --- Claude, 2026-09-08 - the old PRETRADE_MONITOR_TABLE_WIDTH/TRADING_FORM_X formula went stale
+  // --- every time the table's own columns changed, leaving a growing gap).
+  // --- TRADING_FORM_ROWS_TOTAL rows (Symbol/Lot/Direction/OrderType/4 checkboxes+edit row/Send) -
+  // --- TRADING_FORM_HEIGHT is shared by the PreTradeSymbolMonitor table's own YSize (so both top-row
+  // --- elements end at the same Y) and by m_table_positions_StoplostAndTrailling's Y (starts right
+  // --- below, instead of the old fixed POSITIONS_TABLE_Y which the taller form now overlapped).
+   #define TRADING_FORM_ROWS_TOTAL   9
+   #define TRADING_FORM_HEIGHT       (TRADING_FORM_ROWS_TOTAL * M_CONTROL_YDISTANCE + M_CONTROL_HEIGHT)
 #endif // CGUIPANNELDEFINE_MQH
 

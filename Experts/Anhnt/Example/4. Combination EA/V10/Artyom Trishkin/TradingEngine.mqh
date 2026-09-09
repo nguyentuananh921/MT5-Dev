@@ -10,11 +10,18 @@
   //+------------------------------------------------------------------+
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\AccountsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SymbolsCollection.mqh>
-  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>  
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\InputData\TradingInpData.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\MarketCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\HistoryCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\TradeEventsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Services\DELib\TimeseriesDELib.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\TradingControl.mqh>
+  #include "..\Services\TradingSetupSetting.mqh"
+  #include "..\Services\TradingSetupSettingManager.mqh"
+  #include "..\Services\SymbolTFManager.mqh"
+  #include "..\Services\IndicatorTemplateManager.mqh"
+  extern string g_ea_folder;  // From EA - StopLost/Trailing Apply engine's own debug logs
   //+------------------------------------------------------------------+
   //| Event codes                                                      |
   //+------------------------------------------------------------------+
@@ -48,7 +55,16 @@
        //
         bool                     m_is_first_start;         // First launch flag
         bool                     m_is_event;
-        ENUM_ENGINE_EVENT        m_event_code;        
+        ENUM_ENGINE_EVENT        m_event_code;
+       //--- StopLost/Trailing Apply engine (moved from CGUIPannel, Anhnt/Claude, 2026-09-09 - pure
+       //--- trading-domain logic: computes ATR/Indicator-based SL targets and really modifies
+       //--- Positions, none of it touches a GUI control, so it doesn't belong in the GUI layer).
+        CTradingSetupSettingManager *m_trading_setup_manager;      // EA owns - borrowed
+        CIndicatorsCollection       *m_indicators_collection;      // CTimeSeriesEngine owns - borrowed
+        CSymbolTFManager            *m_symbol_tf_manager;          // EA owns - borrowed
+        CIndicatorTemplateManager   *m_indicator_template_manager; // EA owns - borrowed
+        datetime                     m_last_deal_time;             // IsLastDealTicket's own HistorySelect watermark
+        ulong                        m_last_deal_ticket;
       //Private Method
         bool                     IsFirstStart(void);              // Return the first launch flag
         bool                     IsTester(void) const { return this.m_is_tester; }
@@ -69,14 +85,19 @@
        //For Pointer
         CAccount            *GetCurrentAccount(void);
         CAccountsCollection *GetAccounts(void) { return &m_accounts_collection;}
-        CMarketCollection   *GetMarketCollection(void) { return &m_market_collection; }       
+        CMarketCollection   *GetMarketCollection(void) { return &m_market_collection; }
         CSymbolsCollection  *GetSymbolsCollection(void) { return &m_symbol_collection; }
         CTradingControl     *GetTradingControl(void) { return &m_trading_control; }
+       //--- Borrowed pointers for the StopLost/Trailing Apply engine below
+        void                 SetTradingSetupManager(CTradingSetupSettingManager *manager)   { m_trading_setup_manager = manager; }
+        void                 SetIndicatorsCollection(CIndicatorsCollection *ind)             { m_indicators_collection = ind;     }
+        void                 SetSymbolTFManager(CSymbolTFManager *manager)                   { m_symbol_tf_manager = manager;     }
+        void                 SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_indicator_template_manager = manager; }
        //--- Return the list of market (1) positions, (2) pending orders and (3) market orders
         CArrayObj           *GetListMarketPosition(void);
         CArrayObj           *GetListMarketPendings(void);
         CArrayObj           *GetListMarketOrders(void);
-       //For Profit Calculation 
+       //For Profit Calculation
         // Floating profit (current price)
          double             SumFloatingProfit(CArrayObj *list);
          double             CalcProfit(void);
@@ -85,7 +106,30 @@
          double             CalcProfit(const string symbol, ENUM_POSITION_TYPE dir);
         // Hypothetical profit (at target price)
          double             CalcProfitAt(const string symbol, double price);
-         double             CalcProfitAt(const string symbol, ENUM_POSITION_TYPE dir, double target_price);       
+         double             CalcProfitAt(const string symbol, ENUM_POSITION_TYPE dir, double target_price);
+       //--- StopLost/Trailing Apply engine (moved from CGUIPannel, Anhnt/Claude, 2026-09-09)
+         int    GetIndicatorStopLostDistancePoints(const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_INDICATOR ind_type, MqlParam &raw_params[], const double mult);
+         int    GetCurrentStopLostDistancePoints(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
+         double GetStopLostDistancePrice(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
+         double GetStopLostTargetPrice(const string symbol, const ENUM_POSITION_TYPE type);
+         int    BuildTrailingIndicatorChoiceList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[]);
+         bool   GetCurrentTrailingIndicatorValue(const string symbol, double &out_value);
+         double GetTrailingTargetPrice(const string symbol, const ENUM_POSITION_TYPE type);
+         int    BuildSLCandidates(const string symbol, const ENUM_POSITION_TYPE type, const bool sl_active, const bool trail_active, double &out_price[], bool &out_is_trail[]);
+         double GetPreviewSLTargetPrice(const string symbol, const ENUM_POSITION_TYPE type, bool &out_from_trail);
+         double GetPreviewSLMoneyValue(const string symbol, const ENUM_POSITION_TYPE type);
+         void   ApplyStopLostAndTrailing(void);
+         int    GetPositionsSymbolsAndDirections(string &symbols[], ENUM_POSITION_TYPE &dirs[]);
+         int    PositionsTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+         double PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+         double PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+         bool   IsLastDealTicket(void);
+         int    BuildATRChoiceList(const string symbol, ENUM_TIMEFRAMES &out_tf[], int &out_period[]);
+         void   ApplyTrailingSoundToAllSymbols(const string trailing_sound);
+         double GetStopLostMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
+         string FormatStopLostCacheValue(const string symbol);
+         int    GetCurrentTrailingDistancePoints(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
+         double GetTrailingMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
     };
 #endif // CTRADING_ENGINE_MQH_DECLARATION
 #ifndef CTRADING_ENGINE_MQH_IMPLEMENTATION

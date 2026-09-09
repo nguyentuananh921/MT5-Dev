@@ -12,7 +12,7 @@
   #include "Anatoli Kazharski\GUIPannel.mqh"
   CGUIPannel m_GUIPannel;
   #include "Artyom Trishkin\TradingEngine.mqh"
-  CTradingEngine m_tradingEngine;
+   CTradingEngine m_tradingEngine;
   #include "Artyom Trishkin\TimeSeriesEngine.mqh"
     CTimeSeriesEngine m_timeSeriesEngine;
   #include "Services\IndicatorTemplateManager.mqh"
@@ -46,8 +46,14 @@
         m_ChartObjCollection.CreateCollection();// For CChartObjCollection - MUST run before Manager's own OnInitEvent below (it scans this)
         m_IndicatorTemplateManager.OnInitEvent(&m_ChartObjCollection);//For Indicator Template Manager - loads JSON, then merges chart scan
         m_SymbolTFManager.OnInitEvent();//For Symbol+TF Manager
-        m_timeSeriesEngine.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());      
-        m_timeSeriesEngine.OnInitEvent(::Symbol(), (ENUM_TIMEFRAMES)::Period(), &m_SymbolTFManager, &m_IndicatorTemplateManager);      
+        m_TradingSetupManager.OnInitEvent();//For Trading Setup (StopLost/Trailing) Manager - loads "StopLost_Setting" from JSON
+        m_timeSeriesEngine.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());
+        m_timeSeriesEngine.OnInitEvent(::Symbol(), (ENUM_TIMEFRAMES)::Period(), &m_SymbolTFManager, &m_IndicatorTemplateManager);
+      //For CTradingEngine's own StopLost/Trailing Apply engine (moved from CGUIPannel, Anhnt/Claude, 2026-09-09)
+        m_tradingEngine.SetTradingSetupManager(&m_TradingSetupManager);
+        m_tradingEngine.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
+        m_tradingEngine.SetSymbolTFManager(&m_SymbolTFManager);
+        m_tradingEngine.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
         m_signal_bridge_writer.OnInitEvent(m_timeSeriesEngine.GetSignalsCollection(),
                                            m_timeSeriesEngine.GetIndicatorsCollection(),
                                            m_timeSeriesEngine.GetTimeSeriesCollection(),
@@ -61,10 +67,11 @@
         m_GUIPannel.SetTimeSeriesCollection(m_timeSeriesEngine.GetTimeSeriesCollection());
         m_GUIPannel.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
         m_GUIPannel.SetTimeSeriesEngine(&m_timeSeriesEngine);   // Tang 2 forwards "Add" clicks to Tang 1
-        m_GUIPannel.SetPatternsControl(m_timeSeriesEngine.GetPatternsControl());        
+        m_GUIPannel.SetPatternsControl(m_timeSeriesEngine.GetPatternsControl());
         //   //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         //   mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
-        m_GUIPannel.SetTradingControl(m_tradingEngine.GetTradingControl());        
+        m_GUIPannel.SetTradingControl(m_tradingEngine.GetTradingControl());
+        m_GUIPannel.SetTradingEngine(&m_tradingEngine);   // display-only now - real StopLost/Trailing Apply logic lives in CTradingEngine itself
         m_GUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE      
         m_signal_bridge_writer.BuildAndWriteSignalBridge();
         EnsureMarkerIndicatorAttached();
@@ -150,26 +157,20 @@
      if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED)
       {
        CIndicatorSetting *entry = m_IndicatorTemplateManager.At((int)lparam);
-       Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: lparam(index)=", lparam, " entry=", (entry == NULL ? "NULL" : entry.DisplayLabel()));
        if(entry == NULL) return;
        ENUM_INDICATOR type = entry.TypeEnum();
        MqlParam params[];
        entry.GetRawParams(params);
        bool shown = m_ChartObjCollection.IsIndicatorShownOnChart(::ChartID(), type, params);
-       Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: type=", EnumToString(type), " ShowOnChart()=", entry.ShowOnChart(), " live-shown=", shown);
        if(entry.ShowOnChart() && !shown)
         {
-         Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: -> ShowIndicatorOnChart");
          m_ChartObjCollection.ShowIndicatorOnChart(::ChartID(), type, params);
         }
        else if(!entry.ShowOnChart() && shown)
         {
-         Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: -> RemoveIndicatorFromChart");
          g_suppress_del_rescan = true;
          m_ChartObjCollection.RemoveIndicatorFromChart(::ChartID(), type, params);
         }
-       else
-         Print("MY DEBUG EA::OnChartEvent SHOW_CHANGED: -> no-op (already matches)");
        ChartRedraw();
        return;
       }    
@@ -193,12 +194,8 @@
       {
        string parts[];
        int split_total = StringSplit(sparam, '|', parts);
-       Print("MY DEBUG EA::OnChartEvent SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED: sparam=", sparam,
-             " lparam=", lparam, " split_total=", split_total);
        if(split_total != 2) return;
        ENUM_TIMEFRAMES new_tf = (ENUM_TIMEFRAMES)(int)(lparam >> 32);
-       Print("MY DEBUG EA::OnChartEvent SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED: new_sym=", parts[1],
-             " new_tf=", EnumToString(new_tf));
        SetActiveChartSymbolTF(parts[1], new_tf);
        return;
       }
@@ -238,7 +235,7 @@
    ::ResetLastError();
    if(!::ChartSetSymbolPeriod(chart.ID(), sym, tf))
     {
-     Print("MY DEBUG SetActiveChartSymbolTF: ChartSetSymbolPeriod failed, error=", ::GetLastError());
+     Print("SetActiveChartSymbolTF: ChartSetSymbolPeriod failed, error=", ::GetLastError());
      return;
     }
    chart.SetProperty(CHART_PROP_SYMBOL, sym);
