@@ -542,150 +542,150 @@
   void CTable::OnEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
    {
     // --- Handling the cursor movement event
-      if(id==CHARTEVENT_MOUSE_MOVE)
-        {
-         // --- If the scrollbar is in effect
-         if(m_scrollv.ScrollBarControl())
-           {
-            ShiftTable();
-            m_scrollv.Update(true);
-            return;
-           }
-         // --- If the scrollbar is in effect
-         if(m_scrollh.ScrollBarControl())
-           {
-            ShiftTable();
-            m_scrollh.Update(true);
-            return;
-           }
-         // --- Quit if scrollbar is activated
-         if(m_scrollh.State() || m_scrollv.State())
-            return;
-         // --- Checking focus on elements
-         m_headers.MouseFocus(m_mouse.X()>m_headers.X() && m_mouse.X()<m_headers.X2() && 
-                              m_mouse.Y()>m_headers.Y() && m_mouse.Y()<m_headers.Y2());
-         m_table.MouseFocus(m_mouse.X()>m_table.X() && m_mouse.X()<m_table.X2() && 
+     if(id==CHARTEVENT_MOUSE_MOVE)
+      {
+       // --- If the scrollbar is in effect
+        if(m_scrollv.ScrollBarControl())
+         {
+           ShiftTable();
+           m_scrollv.Update(true);
+           return;
+         }
+       // --- If the scrollbar is in effect
+        if(m_scrollh.ScrollBarControl())
+         {
+           ShiftTable();
+           m_scrollh.Update(true);
+           return;
+         }
+       // --- Quit if scrollbar is activated
+        if(m_scrollh.State() || m_scrollv.State())
+          return;
+       // --- Checking focus on elements
+        m_headers.MouseFocus(m_mouse.X()>m_headers.X() && m_mouse.X()<m_headers.X2() && 
+                             m_mouse.Y()>m_headers.Y() && m_mouse.Y()<m_headers.Y2());
+        m_table.MouseFocus(m_mouse.X()>m_table.X() && m_mouse.X()<m_table.X2() && 
                             m_mouse.Y()>m_table.Y() && m_mouse.Y()<m_table.Y2());
-         // --- Changing the color of objects
-         ChangeObjectsColor();
-         // --- Change the width of the captured column
-         ChangeColumnWidth();
-         return;
-        }
+       // --- Changing the color of objects
+        ChangeObjectsColor();
+       // --- Change the width of the captured column
+        ChangeColumnWidth();
+        return;
+      }
     // --- Handling mouse wheel event
-      if(id==CHARTEVENT_MOUSE_WHEEL)
-        {
-         // --- If the cursor is in the table
-         if(m_table.MouseFocus())
-           {
-            // --- Get the current position of the scroll bar
-            int pos=(m_scrollv.CurrentPos()-1<0)? 1 : m_scrollv.CurrentPos();
-            // --- If the mouse wheel has moved down
-            if(dparam<0)
-               VerticalScrolling(pos+1);
-            // --- If the mouse wheel has moved up
-            else if(dparam>0)
-               VerticalScrolling(pos-1);
-            // --- Refresh scrollbar
-            m_scrollv.Update(true);
+     if(id==CHARTEVENT_MOUSE_WHEEL)
+      {
+       // --- If the cursor is in the table
+        if(m_table.MouseFocus())
+         {
+          // --- Get the current position of the scroll bar
+           int pos=(m_scrollv.CurrentPos()-1<0)? 1 : m_scrollv.CurrentPos();
+          // --- If the mouse wheel has moved down
+           if(dparam<0)
+            VerticalScrolling(pos+1);
+          // --- If the mouse wheel has moved up
+          else if(dparam>0)
+            VerticalScrolling(pos-1);
+          // --- Refresh scrollbar
+          m_scrollv.Update(true);
            }
          return;
         }
     // --- Handling clicks on objects
-      if(id==CHARTEVENT_OBJECT_CLICK)
-        {
-         // --- Click on title
-         if(OnClickHeaders(sparam))
+     if(id==CHARTEVENT_OBJECT_CLICK)
+      {
+       // --- Click on title
+       if(OnClickHeaders(sparam))
             return;
-         // --- Click on the table
-         if(OnClickTable(sparam))
+       // --- Click on the table
+       if(OnClickTable(sparam))
             return;
-         //---
-         return;
-        }
+       //---
+       return;
+      }
     // --- Handling end of input event
-      if(id==CHARTEVENT_CUSTOM+ON_END_EDIT)
-        {
-         if(OnEndEditCell((int)lparam))
-            return;
-         //---
+     if(id==CHARTEVENT_CUSTOM+ON_END_EDIT)
+      {
+       if(OnEndEditCell((int)lparam))
+          return;
+       //---
          return;
         }
     // --- Handling the event of selecting an item in the list
-      if(id==CHARTEVENT_CUSTOM+ON_CLICK_COMBOBOX_ITEM)
-        {
-         if(OnClickComboboxItem((int)lparam))
-            return;
-         //---
-         return;
-        }
+     if(id==CHARTEVENT_CUSTOM+ON_CLICK_COMBOBOX_ITEM)
+      {
+       if(OnClickComboboxItem((int)lparam))
+          return;
+       //---
+       return;
+      }
     // --- Handling click events on scrollbar buttons
-      if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON)
-        {
-         // --- Quit if this is a click on the combo box button
-         if(m_combobox.CheckElementName(sparam))
-            return;
-         // --- Quit if the click is not on a scroll bar button
-         if(!m_scrollv.GetIncButtonPointer().CheckElementName(sparam))
-            return;
-         // --- If there was a click on the vertical scroll bar buttons
-         if(m_scrollv.OnClickScrollInc((uint)lparam,(uint)dparam) ||
-            m_scrollv.OnClickScrollDec((uint)lparam,(uint)dparam))
-           {
-            // --- Shifts data
-            ShiftTable();
-            m_scrollv.Update(true);
-            return;
-           }
-         // --- If there was a click on the horizontal scroll bar buttons of the list
-         if(m_scrollh.OnClickScrollInc((uint)lparam,(uint)dparam) ||
-            m_scrollh.OnClickScrollDec((uint)lparam,(uint)dparam))
-           {
-            // --- Shifts data
-            ShiftTable();
-            m_scrollh.Update(true);
-            return;
-           }
-        }
+     if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON)
+      {
+       // --- Quit if this is a click on the combo box button
+       if(m_combobox.CheckElementName(sparam))
+          return;
+       // --- Quit if the click is not on a scroll bar button
+       if(!m_scrollv.GetIncButtonPointer().CheckElementName(sparam))
+          return;
+       // --- If there was a click on the vertical scroll bar buttons
+       if(m_scrollv.OnClickScrollInc((uint)lparam,(uint)dparam) ||
+          m_scrollv.OnClickScrollDec((uint)lparam,(uint)dparam))
+         {
+          // --- Shifts data
+          ShiftTable();
+          m_scrollv.Update(true);
+          return;
+         }
+       // --- If there was a click on the horizontal scroll bar buttons of the list
+        if(m_scrollh.OnClickScrollInc((uint)lparam,(uint)dparam) ||
+          m_scrollh.OnClickScrollDec((uint)lparam,(uint)dparam))
+         {
+          // --- Shifts data
+          ShiftTable();
+          m_scrollh.Update(true);
+          return;
+         }
+      }
     // --- Changing the state of the left mouse button
-      if(id==CHARTEVENT_CUSTOM+ON_CHANGE_MOUSE_LEFT_BUTTON)
-        {
-         // --- Checking the input field in cells for hiding
-         CheckAndHideEdit();
-         // --- Checking the combo box in cells for hiding
-         CheckAndHideCombobox();
-         // --- Quit if headers are disabled
-         if(!m_show_headers)
-            return;
-         // --- If the left mouse button is released
-         if(m_column_resize_control!=WRONG_VALUE && !m_mouse.IsLeftBtn())
-           {
-            // --- Reset width mode
-            m_column_resize_control=WRONG_VALUE;
-            // --- Redraw the table
-            DrawTable();
-            Update();
-            // --- Hide pointer
-            m_column_resize.Hide();
-            // --- Send a message to determine available elements
-            ::EventChartCustom(m_chart_id,ON_SET_AVAILABLE,CElementBase::Id(),1,"");
-            // --- Send a message about the change in the graphical interface
-            ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0,"");
-           }
-         // --- Reset last focus header index
-         m_prev_header_index_focus=WRONG_VALUE;
-         // --- Changing the color of objects
-         ChangeObjectsColor();
+    if(id==CHARTEVENT_CUSTOM+ON_CHANGE_MOUSE_LEFT_BUTTON)
+     {
+      // --- Checking the input field in cells for hiding
+       CheckAndHideEdit();
+      // --- Checking the combo box in cells for hiding
+       CheckAndHideCombobox();
+      // --- Quit if headers are disabled
+       if(!m_show_headers)
          return;
+      // --- If the left mouse button is released
+       if(m_column_resize_control!=WRONG_VALUE && !m_mouse.IsLeftBtn())
+        {
+         // --- Reset width mode
+          m_column_resize_control=WRONG_VALUE;
+         // --- Redraw the table
+          DrawTable();
+          Update();
+         // --- Hide pointer
+          m_column_resize.Hide();
+         // --- Send a message to determine available elements
+          ::EventChartCustom(m_chart_id,ON_SET_AVAILABLE,CElementBase::Id(),1,"");
+         // --- Send a message about the change in the graphical interface
+          ::EventChartCustom(m_chart_id,ON_CHANGE_GUI,CElementBase::Id(),0,"");
         }
-    // --- Handling double-click of the left mouse button
-      if(id==CHARTEVENT_CUSTOM+ON_DOUBLE_CLICK)
+       // --- Reset last focus header index
+       m_prev_header_index_focus=WRONG_VALUE;
+       // --- Changing the color of objects
+       ChangeObjectsColor();
+       return;
+        }
+      // --- Handling double-click of the left mouse button
+       if(id==CHARTEVENT_CUSTOM+ON_DOUBLE_CLICK)
         {
          // --- Exit if the combo box is present and shown
-         if(m_combobox_state && m_combobox.IsVisible())
+          if(m_combobox_state && m_combobox.IsVisible())
             return;
          // --- Click on the table
-         if(OnDoubleClickTable(sparam))
+          if(OnDoubleClickTable(sparam))
             return;
          //---
          return;
@@ -757,20 +757,20 @@
   //+------------------------------------------------------------------+
   void CTable::InitializeProperties(const int x_gap,const int y_gap)
    {
-      m_x        =CElement::CalculateX(x_gap);
-      m_y        =CElement::CalculateY(y_gap);
-      m_x_size   =(m_x_size<1 || m_auto_xresize_mode)? (m_anchor_right_window_side)? m_main.X2()-m_x-m_auto_xresize_right_offset : m_main.X2()-m_x-m_auto_xresize_right_offset : m_x_size;
-      m_y_size   =(m_y_size<1 || m_auto_yresize_mode)? (m_anchor_bottom_window_side)? m_main.Y2()-m_y-m_auto_yresize_bottom_offset : m_main.Y2()-m_y-m_auto_yresize_bottom_offset : m_y_size;
+    m_x        =CElement::CalculateX(x_gap);
+    m_y        =CElement::CalculateY(y_gap);
+    m_x_size   =(m_x_size<1 || m_auto_xresize_mode)? (m_anchor_right_window_side)? m_main.X2()-m_x-m_auto_xresize_right_offset : m_main.X2()-m_x-m_auto_xresize_right_offset : m_x_size;
+    m_y_size   =(m_y_size<1 || m_auto_yresize_mode)? (m_anchor_bottom_window_side)? m_main.Y2()-m_y-m_auto_yresize_bottom_offset : m_main.Y2()-m_y-m_auto_yresize_bottom_offset : m_y_size;
     // ---Default properties
-      m_back_color          =(m_back_color!=clrNONE)? m_back_color : clrWhite;
-      m_label_color         =(m_label_color!=clrNONE)? m_label_color : clrBlack;
-      m_label_color_hover   =(m_label_color_hover!=clrNONE)? m_label_color_hover : clrBlack;
-      m_label_color_pressed =(m_label_color_pressed!=clrNONE)? m_label_color_pressed : clrWhite;
-      m_border_color        =(m_border_color!=clrNONE)? m_border_color : C'150,170,180';
-      m_icon_x_gap          =(m_icon_x_gap>0)? m_icon_x_gap : 3;
-      m_icon_y_gap          =(m_icon_y_gap>0)? m_icon_y_gap : 2;
-      m_label_x_gap         =(m_label_x_gap>0)? m_label_x_gap : 5;
-      m_label_y_gap         =(m_label_y_gap>0)? m_label_y_gap : 4;
+     m_back_color          =(m_back_color!=clrNONE)? m_back_color : clrWhite;
+     m_label_color         =(m_label_color!=clrNONE)? m_label_color : clrBlack;
+     m_label_color_hover   =(m_label_color_hover!=clrNONE)? m_label_color_hover : clrBlack;
+     m_label_color_pressed =(m_label_color_pressed!=clrNONE)? m_label_color_pressed : clrWhite;
+     m_border_color        =(m_border_color!=clrNONE)? m_border_color : C'150,170,180';
+     m_icon_x_gap          =(m_icon_x_gap>0)? m_icon_x_gap : 3;
+     m_icon_y_gap          =(m_icon_y_gap>0)? m_icon_y_gap : 2;
+     m_label_x_gap         =(m_label_x_gap>0)? m_label_x_gap : 5;
+     m_label_y_gap         =(m_label_y_gap>0)? m_label_y_gap : 4;
     // --- Indents from the extreme point
       CElementBase::XGap(x_gap);
       CElementBase::YGap(y_gap);
@@ -781,9 +781,9 @@
   bool CTable::CreateCanvas(void)
    {
     // --- Formation of object name
-      string name=CElementBase::ElementName("table");
+     string name=CElementBase::ElementName("table");
     // ---Create an object
-      if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
+     if(!CElement::CreateCanvas(name,m_x,m_y,m_x_size,m_y_size))
          return(false);
     //---
       return(true);
@@ -794,23 +794,23 @@
   bool CTable::CreateTable(void)
    {
     // --- Formation of object name
-      string name=CElementBase::ProgramName()+"_"+"table_grid"+"_"+(string)CElementBase::Id();
+     string name=CElementBase::ProgramName()+"_"+"table_grid"+"_"+(string)CElementBase::Id();
     // --- Coordinates
-      int x =m_x+1;
-      int y =m_y+((m_show_headers)? m_header_y_size : 1);
+     int x =m_x+1;
+     int y =m_y+((m_show_headers)? m_header_y_size : 1);
     // ---Create an object
-      ::ResetLastError();
-      if(!m_table.CreateBitmapLabel(m_chart_id,m_subwin,name,x,y,m_table_x_size,m_header_y_size,COLOR_FORMAT_ARGB_NORMALIZE))
-        {
-         ::Print(__FUNCTION__," > Failed to create a canvas for drawing the table: ",::GetLastError());
-         return(false);
-        }
+     ::ResetLastError();
+     if(!m_table.CreateBitmapLabel(m_chart_id,m_subwin,name,x,y,m_table_x_size,m_header_y_size,COLOR_FORMAT_ARGB_NORMALIZE))
+       {
+        ::Print(__FUNCTION__," > Failed to create a canvas for drawing the table: ",::GetLastError());
+        return(false);
+       }
     // --- Get a pointer to the base class
-      if(!m_table.Attach(m_chart_id,name,COLOR_FORMAT_ARGB_NORMALIZE))
-        {
-         ::Print(__FUNCTION__," > Failed to attach canvas for drawing to the chart: ",::GetLastError());
-         return(false);
-        }
+     if(!m_table.Attach(m_chart_id,name,COLOR_FORMAT_ARGB_NORMALIZE))
+       {
+        ::Print(__FUNCTION__," > Failed to attach canvas for drawing to the chart: ",::GetLastError());
+        return(false);
+       }
     // --- Properties
       ::ObjectSetInteger(m_chart_id,m_table.ChartObjectName(),OBJPROP_ZORDER,m_zorder+1);
       ::ObjectSetString(m_chart_id,m_table.ChartObjectName(),OBJPROP_TOOLTIP,"\n");
@@ -2041,7 +2041,9 @@
     // --- Set a new value to a table cell
       SetValue(c,r,m_combobox.GetValue(),0,true);
       Update();
-      return(true);
+    // Update to fix in V10
+     m_combobox.Hide();
+    return(true);
    }
   //+------------------------------------------------------------------+
   // | Checking the input field in cells for hiding |

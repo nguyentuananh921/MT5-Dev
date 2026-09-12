@@ -338,12 +338,16 @@
        m_table_candle_information_atBar.Update(true);
        return false;
       }
-    // --- Sort all collected rows ascending by time (stable-ish bubble sort - count is
-    // --- small, same style as the TF order[] sort above).
+    // --- Sort all collected rows ascending by time, TF as tie-break when times are equal
+    // --- (Anhnt, 2026-09-09 - "sort theo time nếu cùng time thì mới sort theo TF") - stable-ish
+    // --- bubble sort, count is small, same style as the TF order[] sort above.
      for(int a = 0; a < count - 1; a++)
       for(int b = a + 1; b < count; b++)
-       if(row_time[b] < row_time[a])
-        {
+       {
+        bool need_swap_time = (row_time[b] < row_time[a]) ||
+                               (row_time[b] == row_time[a] &&
+                                IndexEnumTimeframe(TimestampByDescription(row_tf[b])) < IndexEnumTimeframe(TimestampByDescription(row_tf[a])));
+        if(!need_swap_time) continue;
          //CIndicatorDE   *ti_ = row_ind[a];  row_ind[a]  = row_ind[b];  row_ind[b]  = ti_;
          string          lbl_ = row_label[a]; row_label[a] = row_label[b]; row_label[b] = lbl_;
          string          tf_ = row_tf[a];   row_tf[a]   = row_tf[b];   row_tf[b]   = tf_;

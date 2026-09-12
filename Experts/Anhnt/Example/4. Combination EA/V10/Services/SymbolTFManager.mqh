@@ -185,11 +185,48 @@
  //+------------------------------------------------------------------+
  void CSymbolTFManager::BuildJsonSection(string &out_json) const
   {
+   //--- Sort ascending by TF within each Symbol's own block before writing (Anhnt, 2026-09-09 -
+   //--- "khi Save xuống JSON thì sort giúp tớ") - m_table_SymbolTFSeting itself stays append-only
+   //--- (no live reorder, avoids a rebuild/flicker), but the persisted JSON should read TF-ordered.
+   //--- m_list itself is left untouched (this is a const method) - only the OUTPUT order is sorted,
+   //--- via an index array, same Symbol-group-then-TF-ascending rule as the Monitor tab table.
+    int total = m_list.Total();
+    int order[]; ::ArrayResize(order, total);
+    for(int i = 0; i < total; i++) order[i] = i;
+    string distinct_syms[]; int distinct_n = 0;
+    int sym_rank[]; ::ArrayResize(sym_rank, total);
+    for(int i = 0; i < total; i++)
+     {
+      CSymbolTFSetting *row = m_list.At(i);
+      string sym = (row != NULL) ? row.Symbol() : "";
+      int found = -1;
+      for(int d = 0; d < distinct_n; d++) if(distinct_syms[d] == sym) { found = d; break; }
+      if(found == -1)
+       {
+        ::ArrayResize(distinct_syms, distinct_n + 1);
+        distinct_syms[distinct_n] = sym;
+        found = distinct_n;
+        distinct_n++;
+       }
+      sym_rank[i] = found;
+     }
+    for(int a = 0; a < total - 1; a++)
+     for(int b = a + 1; b < total; b++)
+      {
+       CSymbolTFSetting *row_a = m_list.At(order[a]);
+       CSymbolTFSetting *row_b = m_list.At(order[b]);
+       ENUM_TIMEFRAMES tf_a = (row_a != NULL) ? row_a.TFEnum() : PERIOD_CURRENT;
+       ENUM_TIMEFRAMES tf_b = (row_b != NULL) ? row_b.TFEnum() : PERIOD_CURRENT;
+       bool need_swap = (sym_rank[order[b]] < sym_rank[order[a]]) ||
+                         (sym_rank[order[b]] == sym_rank[order[a]] && IndexEnumTimeframe(tf_b) < IndexEnumTimeframe(tf_a));
+       if(!need_swap) continue;
+       int tmp = order[a]; order[a] = order[b]; order[b] = tmp;
+      }
    out_json = "[\n";
    int saved = 0;
-   for(int i = 0; i < m_list.Total(); i++)
+   for(int oi = 0; oi < total; oi++)
     {
-     CSymbolTFSetting *row = m_list.At(i);
+     CSymbolTFSetting *row = m_list.At(order[oi]);
      if(row == NULL || row.Symbol() == "") continue;
      if(saved > 0) out_json += ",\n";
      saved++;
@@ -216,6 +253,7 @@
    string pattern_alerts = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
    string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
    string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
+   string trail_dri       = JSONConfig_ExtractRawSection(existing, "Trailing_DataRatesIndex");
    string own_section;
    BuildJsonSection(own_section);
    string json = "{\n \"Symbols_TFs_List\": " + own_section +
@@ -224,6 +262,7 @@
    if(pattern_alerts != "")   json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
    if(sound_settings != "")   json += ",\n \"Sound_Settings\": " + sound_settings;
    if(stoplost_setting != "") json += ",\n \"StopLost_Setting\": " + stoplost_setting;
+   if(trail_dri != "")        json += ",\n \"Trailing_DataRatesIndex\": " + trail_dri;
    json += "\n}\n";
    int fh = ::FileOpen(full_path, FILE_WRITE | FILE_TXT | FILE_ANSI);
    if(fh == INVALID_HANDLE)

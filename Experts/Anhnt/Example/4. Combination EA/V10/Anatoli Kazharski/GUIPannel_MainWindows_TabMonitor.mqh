@@ -126,6 +126,37 @@
         count++;
        }
      }
+   // --- Sort ascending by TF WITHIN each Symbol's own block, keeping each Symbol's block in its
+   // --- original relative order (Anhnt, 2026-09-09 - "sort TF từ nhỏ đến lớn" - a straight TF-only
+   // --- sort would interleave different Symbols together since this table spans several of them).
+    {
+     string distinct_syms[]; int distinct_n = 0;
+     int sym_rank[]; ::ArrayResize(sym_rank, count);
+     for(int i = 0; i < count; i++)
+      {
+       int found = -1;
+       for(int d = 0; d < distinct_n; d++) if(distinct_syms[d] == all_syms[i]) { found = d; break; }
+       if(found == -1)
+        {
+         ::ArrayResize(distinct_syms, distinct_n + 1);
+         distinct_syms[distinct_n] = all_syms[i];
+         found = distinct_n;
+         distinct_n++;
+        }
+       sym_rank[i] = found;
+      }
+     for(int a = 0; a < count - 1; a++)
+      for(int b = a + 1; b < count; b++)
+       {
+        bool need_swap = (sym_rank[b] < sym_rank[a]) ||
+                          (sym_rank[b] == sym_rank[a] && IndexEnumTimeframe(all_tfs[b]) < IndexEnumTimeframe(all_tfs[a]));
+        if(!need_swap) continue;
+        CIndicatorDE   *ind_tmp  = all_inds[a]; all_inds[a] = all_inds[b]; all_inds[b] = ind_tmp;
+        string          sym_tmp  = all_syms[a]; all_syms[a] = all_syms[b]; all_syms[b] = sym_tmp;
+        ENUM_TIMEFRAMES tf_tmp   = all_tfs[a];  all_tfs[a]  = all_tfs[b];  all_tfs[b]  = tf_tmp;
+        int             rank_tmp = sym_rank[a]; sym_rank[a] = sym_rank[b]; sym_rank[b] = rank_tmp;
+       }
+    }
    // --- All templates gone: purge the table down to ONE truly blank physical row.
    // --- DeleteAllRows only clears text - the surviving row would keep its icons
    // --- (SetImages rejects an empty array), so swap in a freshly CellInitialize'd

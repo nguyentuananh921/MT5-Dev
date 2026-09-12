@@ -91,7 +91,18 @@
     #define COL_PST_RUN_SL      7
     #define COL_PST_TRAILTYPE   8
     #define COL_PST_RUN_TRAIL   9
-    #define COL_PST_PROFIT      10   
+    #define COL_PST_PROFIT      10
+   // For m_table_position_pretrade_view (GUIPannel_MainWindows_TabTrading.mqh) (dry-run)
+    #define COLUMNS_PRETRADE_VIEW_TOTAL 8
+    #define COL_PTV_SYMBOL      0
+    #define COL_PTV_DIR         1
+    #define COL_PTV_LOT         2   // Anhnt, 2026-09-10 - embedded CELL_COMBOBOX, replaces m_combobox_lot_toTrade
+    #define COL_PTV_SLTYPE      3
+    #define COL_PTV_SLPRICE     4
+    #define COL_PTV_SLPROFIT    5   // reference loss @ LotsMin() - see COL_PTV_RISK for the real Lot
+    #define COL_PTV_TRAILTYPE   6
+    #define COL_PTV_RISK        7   // Anhnt, 2026-09-11 - real $ loss for the ACTUAL selected Lot
+    #define PRETRADE_VIEW_TABLE_HEIGHT 40 // header(20) + 1 data row(20), CTable's own default m_cell_y_size
   enum ENUM_MENU_ITEM
    {        
         MENU_ITEM_SETTINGS,

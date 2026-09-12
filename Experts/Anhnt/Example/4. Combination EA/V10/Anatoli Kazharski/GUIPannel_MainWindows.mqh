@@ -214,10 +214,8 @@
          OpenWindow_SettingMarkerAndSound();
       return;
      }
-   //Handle m_table_positions_StoplostAndTrailling checkbox toggles (SL Type/Run/Trailling/Run) -
-   //implementation in GUIPannel_NewFeatures.mqh. Checkbox cells in this library fire either
-   //ON_CLICK_BUTTON or ON_CLICK_CHECKBOX depending on cell setup - same dual-check
-   //m_table_CandlePatternsSetting's own handler uses (TimeSeries.mqh).
+   //--- Handle m_table_positions_StoplostAndTrailling SLTYPE/TRAILTYPE clicks (Anhnt, 2026-09-10) -
+   //--- both pure icon toggles now. RUN_SL/RUN_TRAIL stay read-only status-only CELL_BUTTON.
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
        && lparam == m_table_positions_StoplostAndTrailling.Id())
      {
@@ -225,28 +223,94 @@
       if(StringSplit(sparam, '_', parts) != 2) return;
       int col = (int)StringToInteger(parts[0]);
       int row = (int)StringToInteger(parts[1]);
-      if(col == COL_PST_SLTYPE || col == COL_PST_RUN_SL || col == COL_PST_TRAILTYPE || col == COL_PST_RUN_TRAIL)
-         OnCheckTable_PositionsStoplostAndTrailling(row, col);
+      if(col == COL_PST_SLTYPE) OnClickTogglePositionSLType(row);
+      else if(col == COL_PST_TRAILTYPE) OnClickTogglePositionTrailType(row);
       return;
      }
-   //Handle m_combobox_symbol_toTrade selection change - set chart + resync
-   //m_table_indicator_PreTradeSymbolMonitor to the newly picked Symbol (GUIPannel_MainWindows_TabPositions.mqh).
-    if(id == CHARTEVENT_CUSTOM + ON_CHANGE_GUI && lparam == m_combobox_symbol_toTrade.Id())
+   //Handle m_table_position_pretrade_view's shared combobox cell committing a new pick (Anhnt,
+   //2026-09-10) - COL_PTV_SYMBOL and COL_PTV_LOT are BOTH CELL_COMBOBOX now, sharing this one
+   //commit event (the embedded-CComboBox commit, distinct from a normal standalone combobox's
+   //ON_CHANGE_GUI). lparam equals the TABLE's own Id() (the Library's per-cell combobox widget
+   //shares the table's id, since it's constructed inside CTable::Create() before the table itself
+   //gets registered as a main element - see Table.mqh CreateCombobox/OnClickComboboxItem). sparam/
+   //dparam carry nothing useful, but CWndEvents::CheckElementsEvents() already ran the Table's own
+   //OnEvent (which commits the pick via SetValue) before this app-level hook fires, so
+   //OnSymbolToTradeChanged() reading the cell back is always fresh; its own guard tells a genuine
+   //Symbol pick apart from a Lot pick and no-ops on the latter.
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM && lparam == m_table_position_pretrade_view.Id())
      {
       OnSymbolToTradeChanged();
       return;
      }
-   //Handle m_table_indicator_PreTradeSymbolMonitor checkbox click (col 4, "Trailing") - same dual
+   //Handle CSymbolTFManager's own active-Symbol-change events (Anhnt, 2026-09-10 - "Nếu cậu dùng
+   //Event thì khỏi phải mất công cache thôi mà") - fires whenever the chart's active Symbol genuinely
+   //changes, from ANY source (this combobox, TreeView, or a native chart symbol switch), not just a
+   //pick here - re-syncs m_table_position_pretrade_view so its "active chart" icon (COL_PTV_SYMBOL)
+   //re-evaluates against the NOW-current ::Symbol() right when it's known to matter, no per-tick
+   //polling/cached s_active_old needed.
+    if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ADDED ||
+       id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED)
+     {
+      SyncTable_PositionPretradeView(true);
+      return;
+     }
+   //Handle account-state trade events (Anhnt, 2026-09-11 - "phải được Update mỗi khi send lệnh
+   //mới, Balance Update... có trong EventDefines.mqh rồi") - a new Position (margin used) or a
+   //Balance refill/withdrawal both change CalcMaxLotByRisk's own max_lot, so the Lot combobox's
+   //enabled/disabled state and choice list go stale otherwise until the next Symbol/Direction/Risk
+   //change forces a rebuild.
+    if(id == CHARTEVENT_CUSTOM + TRADE_EVENT_POSITION_OPENED ||
+       id == CHARTEVENT_CUSTOM + TRADE_EVENT_ACCOUNT_BALANCE_REFILL ||
+       id == CHARTEVENT_CUSTOM + TRADE_EVENT_ACCOUNT_BALANCE_WITHDRAWAL)
+     {
+      SyncTable_PositionPretradeView(true);
+      return;
+     }
+   //Handle m_table_position_pretrade_view Direction/SLType/TrailType icon clicks (Anhnt, 2026-09-10) -
+   //toggle Buy/Sell, StopLost Fixed/Indicator, Trailing Fixed/Indicator respectively. Same dual
    //ON_CLICK_BUTTON/ON_CLICK_CHECKBOX check every other checkbox-cell table in this codebase uses.
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-       && lparam == m_table_indicator_PreTradeSymbolMonitor.Id())
+       && lparam == m_table_position_pretrade_view.Id())
      {
       string parts[];
       if(StringSplit(sparam, '_', parts) != 2) return;
       int col = (int)StringToInteger(parts[0]);
-      int row = (int)StringToInteger(parts[1]);
-      if(col == 4) OnCheckTable_PreTradeSymbolMonitor(row);
+      if(col == COL_PTV_DIR) OnClickTogglePretradeDirection();
+      else if(col == COL_PTV_SLTYPE) OnClickTogglePretradeSLType();
+      else if(col == COL_PTV_TRAILTYPE) OnClickTogglePretradeTrailType();
       return;
      }
+   //Handle m_btn_send_toTrade click (Anhnt, 2026-09-10) - places the New Order form's trade.
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_send_toTrade.Id())
+     {
+      OnClickSendNewOrder();
+      return;
+     }
+   //Handle Run SL/Run Trailing checkbox click (New Order form) - standalone CCheckBox fires
+   //ON_CLICK_CHECKBOX with lparam=Id() (CheckBox.mqh:155), not ON_CLICK_BUTTON.
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX &&
+       (lparam == m_checkbox_use_StopLostSetting.Id() || lparam == m_checkbox_use_TrailingSetting.Id()))
+     {
+      OnClickRunSLOrTrailingCheckbox(lparam);
+      return;
+     }
+   //Handle m_btn_open_StopLostSetting/m_btn_open_TrailingSetting click - opens m_window_setting_trading
+   //on the matching tab.
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON &&
+       (lparam == m_btn_open_StopLostSetting.Id() || lparam == m_btn_open_TrailingSetting.Id()))
+     {
+      OnClickOpenTradingSettingTab(lparam == m_btn_open_StopLostSetting.Id() ? ENUM_TAB_SETTING_TRADING_STOPLOST : ENUM_TAB_SETTING_TRADING_TRAILLING);
+      return;
+     }
+   //Handle "Use RPT %" checkbox click (New Order form) - toggles m_edit_RiskPerNewTrade's
+   //visibility (Anhnt, 2026-09-10).
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_checkbox_use_RiskPerNewTrade.Id())
+     {
+      OnClickUseRiskPerNewTradeCheckbox();
+      return;
+     }
+   //--- m_table_indicator_PreTradeSymbolMonitor is read-only now (Anhnt, 2026-09-10) - StopLost/
+   //--- Trailing columns just mark which row is the current source, changed only via the gear-icon
+   //--- buttons' Setting popup - no click dispatch needed for this table anymore.
   }
 #endif // CGUIPANNEL_MAINWINDOWS_MQH

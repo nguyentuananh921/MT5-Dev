@@ -94,7 +94,10 @@
     SYMBOL_FILLING_MODE
     SYMBOL_TRADE_FREEZE_LEVEL
    Stop Lost và Trailling: 
-    - Cả 2 đều có thể set theo Fixed và Indicator, việc setting các giá trị theo cả 2 cách riêng biệt được lưu lại.
+    - Cả 2 đều có 2 mode và khi tính Distance
+     SL_MODE_FIXED = 0 -> Spread x Multiplexer
+     SL_MODE_INDICATOR -> Tính theo Indicator
+    thể set theo Fixed và Indicator, việc setting các giá trị theo cả 2 cách riêng biệt được lưu lại.
     - Việc sử dụng cách nào sẽ được lựa chọn bằng Checkbox trên table chạy Live.
    Stop Lost và Setting được Setup trong
     m_window_setting_trading thông qua các table để display và form
@@ -102,7 +105,7 @@
     1. Update table.
     2. Save xuống TradingSetupSetting để tay khác biêt đường mà đọc.
     3. Save xuống JSONConfig
-
+  
    Trailling EA Mẫu
     CSimpleTrailing (base)                     → GetStopLossValue() = tick.bid/ask ∓ offset*point
      ├─ CTrailingByValue : CSimpleTrailing     → override: value_sl (do caller tự truyền vào) ∓ offset*point

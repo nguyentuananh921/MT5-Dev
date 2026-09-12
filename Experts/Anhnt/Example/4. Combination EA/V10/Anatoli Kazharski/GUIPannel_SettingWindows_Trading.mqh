@@ -198,6 +198,8 @@
        row_setting.TrailingOffsetPts((int)StringToInteger(m_edit_Trailing_Offset.GetValue()));
        row_setting.TrailingStartPts((int)StringToInteger(m_edit_Trailing_Start.GetValue()));
        row_setting.TrailingStepPts((int)StringToInteger(m_edit_Trailing_Step.GetValue()));
+       //--- EA-wide, not per-Symbol - written straight onto the Manager, not this Symbol's row_setting
+       m_trading_setup_manager.TrailingDataRatesIndex((int)StringToInteger(m_edit_Trailing_DataRatesIndex.GetValue()));
        m_trading_setup_manager.NotifySettingChanged(symbol);
        //--- Same "Indicator dependency" reasoning as the StopLost Save handler - the Indicator this
        //--- Symbol trails by (picked via m_table_indicators_trailingsetting's checkbox) must have its

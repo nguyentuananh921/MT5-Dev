@@ -14,8 +14,8 @@
  #define ENUM_STOPLOST_TRAILING_MODE_DECLARATION
   enum ENUM_STOPLOST_TRAILING_MODE
    {
-    SL_MODE_FIXED = 0,
-    SL_MODE_INDICATOR,
+     SL_MODE_FIXED = 0,
+     SL_MODE_INDICATOR,
    };
   class CTradingSetupSetting : public CBaseObj
    {

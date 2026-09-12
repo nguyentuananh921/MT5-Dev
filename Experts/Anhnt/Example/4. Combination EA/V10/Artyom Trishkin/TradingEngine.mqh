@@ -15,6 +15,7 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\HistoryCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\TradeEventsCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\IndicatorsCollection.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\BarTimeSeriesCollection.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Services\DELib\TimeseriesDELib.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib\Trading\TradingControl.mqh>
   #include "..\Services\TradingSetupSetting.mqh"
@@ -42,29 +43,26 @@
     {
      private:
        //CollCollection        
-        CAccountsCollection      m_accounts_collection; // Account collection
-        CSymbolsCollection       m_symbol_collection;   //For sybols information at tab Trade        
-        CMarketCollection        m_market_collection;   // Collection of market orders and deals
-        CHistoryCollection       m_history_collection;  // Collection of historical orders and deals        
-        CTradeEventsCollection   m_trade_event_collection; // Collection of events
-        bool                     m_is_market_trade_event;  // Account trading event flag
-        bool                     m_is_history_trade_event; // Account history trading event flag
-        ENUM_TRADE_EVENT         m_last_trade_event;       // Last account trading event        
-        bool                     m_is_tester;              // Flag of working in the tester
-        CTradingControl          m_trading_control;        // Trading management object
+        CAccountsCollection           m_accounts_collection;        // Account collection
+        CSymbolsCollection            m_symbol_collection;          //For sybols information at tab Trade        
+        CMarketCollection             m_market_collection;          // Collection of market orders and deals
+        CHistoryCollection            m_history_collection;         // Collection of historical orders and deals        
+        CTradeEventsCollection        m_trade_event_collection;     // Collection of events     
+        bool                          m_is_market_trade_event;      // Account trading event flag
+        bool                          m_is_history_trade_event;     // Account history trading event flag
+        ENUM_TRADE_EVENT              m_last_trade_event;           // Last account trading event        
+        bool                          m_is_tester;                  // Flag of working in the tester
+        CTradingControl               m_trading_control;            // Trading management object
        //
-        bool                     m_is_first_start;         // First launch flag
-        bool                     m_is_event;
-        ENUM_ENGINE_EVENT        m_event_code;
-       //--- StopLost/Trailing Apply engine (moved from CGUIPannel, Anhnt/Claude, 2026-09-09 - pure
-       //--- trading-domain logic: computes ATR/Indicator-based SL targets and really modifies
-       //--- Positions, none of it touches a GUI control, so it doesn't belong in the GUI layer).
-        CTradingSetupSettingManager *m_trading_setup_manager;      // EA owns - borrowed
-        CIndicatorsCollection       *m_indicators_collection;      // CTimeSeriesEngine owns - borrowed
-        CSymbolTFManager            *m_symbol_tf_manager;          // EA owns - borrowed
-        CIndicatorTemplateManager   *m_indicator_template_manager; // EA owns - borrowed
-        datetime                     m_last_deal_time;             // IsLastDealTicket's own HistorySelect watermark
-        ulong                        m_last_deal_ticket;
+        bool                          m_is_first_start;             // First launch flag
+        bool                          m_is_event;
+        ENUM_ENGINE_EVENT             m_event_code;
+       // StopLost/Trailing Apply engine pure trading-domain logic
+        CBarTimeSeriesCollection     *m_BarTimeSeriesCollection;  //borrowed from CTimeSeriesEngine
+        CIndicatorsCollection       *m_indicators_collection;     //borrowed from CTimeSeriesEngine
+        CTradingSetupSettingManager *m_trading_setup_manager;     //borrowed from EA
+        CSymbolTFManager            *m_symbol_tf_manager;         //borrowed from EA
+        CIndicatorTemplateManager   *m_indicator_template_manager;//borrowed from EA
       //Private Method
         bool                     IsFirstStart(void);              // Return the first launch flag
         bool                     IsTester(void) const { return this.m_is_tester; }
@@ -75,11 +73,9 @@
        //CTradingEngine Lifecycle ->Implementation in CTradingEngine_Lifecycle.mqh 
         CTradingEngine(void);
        ~CTradingEngine(void);
-
         bool              OnInitEvent(void);
         void              OnTickEvent(void);
         void              OnDeinitEvent(void) {}
-
         bool              IsEvent(void)      const { return m_is_event;   }
         ENUM_ENGINE_EVENT GetEventCode(void) const { return m_event_code; }
        //For Pointer
@@ -93,50 +89,49 @@
         void                 SetIndicatorsCollection(CIndicatorsCollection *ind)             { m_indicators_collection = ind;     }
         void                 SetSymbolTFManager(CSymbolTFManager *manager)                   { m_symbol_tf_manager = manager;     }
         void                 SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_indicator_template_manager = manager; }
+        void                 SetBarTimeSeriesCollection(CBarTimeSeriesCollection *bars)      { m_BarTimeSeriesCollection = bars; }
        //--- Return the list of market (1) positions, (2) pending orders and (3) market orders
         CArrayObj           *GetListMarketPosition(void);
         CArrayObj           *GetListMarketPendings(void);
         CArrayObj           *GetListMarketOrders(void);
-       //For Profit Calculation
-        // Floating profit (current price)
+       //For Calculation        
          double             SumFloatingProfit(CArrayObj *list);
          double             CalcProfit(void);
          double             CalcProfit(const string symbol);
          double             CalcProfit(ENUM_POSITION_TYPE dir);
          double             CalcProfit(const string symbol, ENUM_POSITION_TYPE dir);
-        // Hypothetical profit (at target price)
+         int                GetPositionsSymbolsAndDirections(string &symbols[], ENUM_POSITION_TYPE &dirs[]);
+         int                PositionsTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+         double             PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
+         double             PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);        
          double             CalcProfitAt(const string symbol, double price);
          double             CalcProfitAt(const string symbol, ENUM_POSITION_TYPE dir, double target_price);
-       //--- StopLost/Trailing Apply engine (moved from CGUIPannel, Anhnt/Claude, 2026-09-09)
+       //--- StopLost/Trailing Apply engine
          int    GetIndicatorStopLostDistancePoints(const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_INDICATOR ind_type, MqlParam &raw_params[], const double mult);
          int    GetCurrentStopLostDistancePoints(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
          double GetStopLostDistancePrice(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
          double GetStopLostTargetPrice(const string symbol, const ENUM_POSITION_TYPE type);
          int    BuildTrailingIndicatorChoiceList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[]);
+         int    BuildSymbolIndicatorMonitorList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[]);
          bool   GetCurrentTrailingIndicatorValue(const string symbol, double &out_value);
          double GetTrailingTargetPrice(const string symbol, const ENUM_POSITION_TYPE type);
          int    BuildSLCandidates(const string symbol, const ENUM_POSITION_TYPE type, const bool sl_active, const bool trail_active, double &out_price[], bool &out_is_trail[]);
          double GetPreviewSLTargetPrice(const string symbol, const ENUM_POSITION_TYPE type, bool &out_from_trail);
-         double GetPreviewSLMoneyValue(const string symbol, const ENUM_POSITION_TYPE type);
-         void   ApplyStopLostAndTrailing(void);
-         int    GetPositionsSymbolsAndDirections(string &symbols[], ENUM_POSITION_TYPE &dirs[]);
-         int    PositionsTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
-         double PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
-         double PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE);
-         bool   IsLastDealTicket(void);
+         double GetPreviewSLMoneyValue(const string symbol, const ENUM_POSITION_TYPE type, const double lot = -1.0);
+         void   ApplyStopLostAndTrailing(const bool has_trade_event);
+         bool   SendNewOrder(const string symbol, const ENUM_POSITION_TYPE dir, const double lot, const int order_type_idx, const double price);
          int    BuildATRChoiceList(const string symbol, ENUM_TIMEFRAMES &out_tf[], int &out_period[]);
          void   ApplyTrailingSoundToAllSymbols(const string trailing_sound);
          double GetStopLostMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
-         string FormatStopLostCacheValue(const string symbol);
          int    GetCurrentTrailingDistancePoints(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
          double GetTrailingMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE);
+         double CalcMaxLotByRisk(const string symbol, const ENUM_POSITION_TYPE type, const double risk_percent);
     };
 #endif // CTRADING_ENGINE_MQH_DECLARATION
 #ifndef CTRADING_ENGINE_MQH_IMPLEMENTATION
 #define CTRADING_ENGINE_MQH_IMPLEMENTATION
 #include "TradingEngine_Lifecycle.mqh" 
 #include "TradingEngine_MultiModule.mqh" 
-
  //+------------------------------------------------------------------+
  //| Return the first launch flag, reset the flag                     |
  //+------------------------------------------------------------------+

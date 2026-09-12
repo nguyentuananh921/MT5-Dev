@@ -122,18 +122,26 @@
      //Create m_table_indicator_SymbolTFValue control at TAB_TAB_MAIN_TRADE m_tabs_main
       if(!CreateTable_IndicatorSymbolTFMonitor(0, 0)) return false;       
    //For m_table_indicator_PreTradeSymbolMonitor (TAB_TAB_MAIN_TRADING) - left of the New Order
-   //form, scoped to m_combobox_symbol_toTrade's current selection (Anhnt/Claude, 2026-09-08).
+   //form, scoped to GetNewOrderSymbol()'s current pick (Anhnt/Claude, 2026-09-08).
      if(!CreateTable_PreTradeSymbolMonitor(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP)) return false;
    //For New Order form - starts right after m_table_indicator_PreTradeSymbolMonitor's own right edge
    //(Anhnt/Claude, 2026-09-08 - read off X2() directly, not a hand-computed width formula that goes
    //stale whenever the table's own columns change).
      if(!CreateTradingForm(m_table_indicator_PreTradeSymbolMonitor.X2() + M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP)) return false;
+   //For m_table_position_pretrade_view (TAB_TAB_MAIN_TRADING) - "ướm" dry-run preview, right below
+   //the New Order form/Monitor table row (Anhnt/Claude, 2026-09-09). Gap = M_CONTROL_HEIGHT/2 (Anhnt,
+   //2026-09-10 - full M_CONTROL_HEIGHT looked like too much empty space).
+     if(!CreateTable_PositionPretradeView(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP + TRADING_FORM_HEIGHT + M_CONTROL_HEIGHT/2))
+      {
+       Print(__FUNCTION__, " > Failed to create Position Pretrade View table!");
+       return (false);
+      }
    //For m_table_positions_StoplostAndTrailling (TAB_TAB_MAIN_TRADING) - implementation in
-   //GUIPannel_NewFeatures.mqh - fixed-width table (no AutoXResizeMode), M_CONTROL_BORDER_GAP margin
-   //same as StopLost/Trailing above (Anhnt, 2026-09-08). Y starts right below the New Order form/
-   //Monitor table (both TRADING_FORM_HEIGHT tall) instead of the old fixed POSITIONS_TABLE_Y, which
-   //the form now overlaps since it grew to 9 rows (Trailing/Risk% controls added).
-     if(!CreateTable_PositionsStoplostAndTrailling(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP + TRADING_FORM_HEIGHT + M_CONTROL_BORDER_GAP))
+   //GUIPannel_MainWindows_TabTrading.mqh - fixed-width table (no AutoXResizeMode), M_CONTROL_BORDER_GAP
+   //margin same as StopLost/Trailing above (Anhnt, 2026-09-08). Y starts right below
+   //m_table_position_pretrade_view now (Anhnt/Claude, 2026-09-09), which itself sits right below the
+   //New Order form/Monitor table (both TRADING_FORM_HEIGHT tall) - same M_CONTROL_HEIGHT/2 gap rule.
+     if(!CreateTable_PositionsStoplostAndTrailling(M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP + TRADING_FORM_HEIGHT + M_CONTROL_HEIGHT/2 + PRETRADE_VIEW_TABLE_HEIGHT + M_CONTROL_HEIGHT/2))
       {
        Print(__FUNCTION__, " > Failed to create Positions StopLost/Trailing table!");
        return (false);
@@ -145,8 +153,13 @@
      HideStopLostForm();
      m_btn_save_indicator.Hide();
      CWndEvents::ShowTabElements(WindowIdx(m_window_main));
-    //  m_trading_bubble.MousePointer(m_mouse);
-    //  m_trading_bubble.SetChartObjCollection(GetPointer(m_chart_obj_collection));
+    //--- Default to the Trading tab (m_table_positions_StoplostAndTrailling lives here) instead of
+    //--- whatever CTabs itself defaults to, so it's visible right on EA attach without an extra
+    //--- click (Anhnt, 2026-09-09 - easier to point things out on it during StopLost/Trailing work).
+     m_tabs_main.SelectTab(TAB_TAB_MAIN_TRADING);
+     m_trading_bubble.MousePointer(m_mouse);
+     m_trading_bubble.SetWindow(GetPointer(m_window_main));
+     m_trading_bubble.OnInitEvent();
      return true;
   }
  //| Constructor/Destructor                                          | 
@@ -204,7 +217,7 @@
     ::ObjectDelete(m_chart_id, PATTERN_HOVER_LABEL_NAME);   // Alt+hover pattern label, harmless no-op if never created
     if(reason != REASON_CHARTCHANGE)
      {
-      // m_trading_bubble.OnDeinitEvent();   // Trading Bubble disabled (Anhnt, 2026-09-04) - see EA.mq5 SetTradingControl comment
+      m_trading_bubble.OnDeinitEvent();
       CWndEvents::Destroy();
          ::ChartRedraw(m_chart_id);
      }
@@ -262,9 +275,12 @@
    // this was very likely a real, ongoing source of the reported lag.
     if(m_active_window_index == WindowIdx(m_window_main) && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_MONITOR)
        SynTable_IndicatorSymbolTFMonitor();
+   // Trading Bubble: lazy-init retry, canvas resize check, hide-during-native-drag heuristic -
+   // needs a short unconditional poll, this 16ms timer is exactly what it was designed for.
+    m_trading_bubble.OnPoll();
    // Handling the elements
-    CWndEvents::OnTimerEvent();   
-  }  
+    CWndEvents::OnTimerEvent();
+  }
  void CGUIPannel::OnTickEvent(void)
   {      
    bool redraw_needed = false;
@@ -304,15 +320,31 @@
        && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING
        && SyncTable_PositionsStoplostAndTrailling())
       redraw_needed = true;
+   // Update data for m_table_position_pretrade_view ("ướm" preview) - same gating (Anhnt/Claude, 2026-09-09).
+    if(m_active_window_index == WindowIdx(m_window_main)
+       && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING
+       && SyncTable_PositionPretradeView())
+      redraw_needed = true;
    // Update Col0(active-chart-TF)/Col2(Value) on m_table_indicator_PreTradeSymbolMonitor - scoped to
-   // m_combobox_symbol_toTrade's current selection (Anhnt/Claude, 2026-09-08), same "read back off
+   // GetNewOrderSymbol()'s current pick (Anhnt/Claude, 2026-09-08), same "read back off
    // the control that already displays it" convention as m_table_indicators_trailingsetting above.
     if(m_active_window_index == WindowIdx(m_window_main)
        && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING)
      {
-      string toTrade_symbol = m_combobox_symbol_toTrade.GetValue();
+      string toTrade_symbol = GetNewOrderSymbol();
       if(toTrade_symbol != "" && SyncTable_PreTradeSymbolMonitor(toTrade_symbol))
          redraw_needed = true;
+      //--- Keep Run SL/Run Trailing truthed to CTradingSetupSetting every tick (Anhnt, 2026-09-10) -
+      //--- covers both the very first render (OnSymbolToTradeChanged only fires on an actual combobox
+      //--- change, never at GUI creation) and a change made elsewhere (e.g. Setting Trading window)
+      //--- while this tab stays open. CCheckBox::IsPressed() already no-ops when state is unchanged
+      //--- (CheckBox.mqh:135), so this is cheap to call unconditionally.
+      if(toTrade_symbol != "" && m_trading_setup_manager != NULL)
+       {
+        CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(toTrade_symbol);
+        m_checkbox_use_StopLostSetting.IsPressed((row_setting != NULL) && row_setting.StopLostActive());
+        m_checkbox_use_TrailingSetting.IsPressed((row_setting != NULL) && row_setting.TrailingActive());
+       }
      }
    // Redraw the chart if any of the above updates required it
     if(redraw_needed)
@@ -326,8 +358,11 @@
   {
       //--- m_table_positions_StoplostAndTrailling already refreshes itself every Tick via
       //--- SyncTable_PositionsStoplostAndTrailling (this file's own OnTickEvent) - no explicit
-      //--- refresh call needed here.
-      if(m_tradingEngine != NULL) m_tradingEngine.IsLastDealTicket();   // consumes the HistorySelect watermark so the next real check works
+      //--- refresh call needed here. Deliberately empty otherwise (Anhnt, 2026-09-10) - its only
+      //--- past use (IsLastDealTicket, feeding CTradingLevelBubble) was removed - the bubble now
+      //--- reacts to trade events directly via its own OnChartEvent (see OnEvent below), not this
+      //--- function. Any future "genuinely new deal" reaction should use ENUM_TRADE_EVENT/
+      //--- m_trade_event_collection (CTradingEngine::TradeEventsControl), not a bespoke watermark.
   }
  //+------------------------------------------------------------------+
  //| OnEvent handler                                                  |
@@ -355,11 +390,11 @@
          CloseWindow_SettingMarkerAndSound();
       return;
      }
-   //Handle m_combobox_direction/m_combobox_order_type (Anhnt, 2026-09-03) - CComboBox fires
-   //ON_CHANGE_GUI (ComboBox.mqh::OnClickListItem(), lparam=the combobox's own Id()) whenever the
-   //selection changes - refresh m_btn_send_toTrade's text/color from whichever one just changed.
-     if(id == CHARTEVENT_CUSTOM + ON_CHANGE_GUI
-        && (lparam == m_combobox_direction.Id() || lparam == m_combobox_order_type.Id()))
+   //Handle m_combobox_order_type (Anhnt, 2026-09-03) - CComboBox fires ON_CHANGE_GUI
+   //(ComboBox.mqh::OnClickListItem(), lparam=the combobox's own Id()) whenever the selection
+   //changes - refresh m_btn_send_toTrade's text/color. Direction is no longer a combobox
+   //(Anhnt, 2026-09-10) - see OnClickTogglePretradeDirection instead.
+     if(id == CHARTEVENT_CUSTOM + ON_CHANGE_GUI && lparam == m_combobox_order_type.Id())
       {
        UpdateSendButtonAppearance();
        return;
@@ -391,7 +426,7 @@
          m_btn_save_indicator.Hide();
          return;
         }    
-    // m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);   // Trading Bubble disabled (Anhnt, 2026-09-04) - lazy-init on the first Position opened crashed with "invalid pointer access" in Element.mqh:614; multi-position-same-direction SL/TP/Trailing interaction was already an open, paused question before this
+    m_trading_bubble.OnChartEvent(id, lparam, dparam, sparam);
   }
  //+------------------------------------------------------------------+
  //| Update GUI                                                       |

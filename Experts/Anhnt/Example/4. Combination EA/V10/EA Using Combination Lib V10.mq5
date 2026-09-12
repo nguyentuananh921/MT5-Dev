@@ -41,10 +41,36 @@
         ChartSetInteger(ChartID(), CHART_EVENT_MOUSE_WHEEL, true);
       //--- Initialize centralized folder path ONCE
         g_ea_folder = MQLInfoString(MQL_PROGRAM_NAME);
-        Print(__FUNCTION__, "Debug EA::OnInit Folder initialized: ", g_ea_folder);      
+        Print(__FUNCTION__, "Debug EA::OnInit Folder initialized: ", g_ea_folder);
+      //--- Fresh Trailing debug log every genuine EA Attach (Anhnt, 2026-09-10 - "PrintDebug ra file
+      //--- để kiểm tra... Đừng ghi đè file cũ tạo mới luôn khi EA Attach") - NOT on a REASON_CHARTCHANGE
+      //--- reinit, which fires on every native chart reload (e.g. SetActiveChartSymbolTF from Add TF)
+      //--- and would wipe the log mid-session far more often than an actual Attach.
+        if(_UninitReason != REASON_CHARTCHANGE)
+         {
+          string trailing_dbg_path = g_ea_folder + "/CTradingEngine_Debug_Trailing.log";
+          if(::FileIsExist(trailing_dbg_path)) ::FileDelete(trailing_dbg_path);
+         }
         m_tradingEngine.OnInitEvent(); //For trading
         m_ChartObjCollection.CreateCollection();// For CChartObjCollection - MUST run before Manager's own OnInitEvent below (it scans this)
         m_IndicatorTemplateManager.OnInitEvent(&m_ChartObjCollection);//For Indicator Template Manager - loads JSON, then merges chart scan
+        //--- Bootstrap ATR(14) into the Template if it's neither saved nor already on the chart
+        //--- (Anhnt, 2026-09-09) - StopLost's SL_MODE_INDICATOR path needs a live ATR(14) CIndicatorDE
+        //--- to read from; with zero ATR rows, the lookup finds nothing AND the GUI's own ATR-choice
+        //--- combobox has nothing to offer (BuildATRChoiceList only lists Template rows). Added
+        //--- ShowOnChart=false - it should compute in the background, not clutter the chart, unless
+        //--- the user separately drops it on the chart themselves.
+        {
+         MqlParam atr14_params[1];
+         atr14_params[0].type          = TYPE_INT;
+         atr14_params[0].integer_value = 14;
+         if(!m_IndicatorTemplateManager.Exists(IND_ATR, atr14_params))
+          {
+           m_IndicatorTemplateManager.AddIndicatorToIndicatorTemplateSetting(IND_ATR, atr14_params);
+           CIndicatorSetting *atr14_entry = m_IndicatorTemplateManager.FindByIdentity(IND_ATR, atr14_params);
+           if(atr14_entry != NULL) atr14_entry.ShowOnChart(false);
+          }
+        }
         m_SymbolTFManager.OnInitEvent();//For Symbol+TF Manager
         m_TradingSetupManager.OnInitEvent();//For Trading Setup (StopLost/Trailing) Manager - loads "StopLost_Setting" from JSON
         m_timeSeriesEngine.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());
@@ -54,6 +80,7 @@
         m_tradingEngine.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
         m_tradingEngine.SetSymbolTFManager(&m_SymbolTFManager);
         m_tradingEngine.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
+        m_tradingEngine.SetBarTimeSeriesCollection(m_timeSeriesEngine.GetTimeSeriesCollection());
         m_signal_bridge_writer.OnInitEvent(m_timeSeriesEngine.GetSignalsCollection(),
                                            m_timeSeriesEngine.GetIndicatorsCollection(),
                                            m_timeSeriesEngine.GetTimeSeriesCollection(),
@@ -69,8 +96,9 @@
         m_GUIPannel.SetTimeSeriesEngine(&m_timeSeriesEngine);   // Tang 2 forwards "Add" clicks to Tang 1
         m_GUIPannel.SetPatternsControl(m_timeSeriesEngine.GetPatternsControl());
         //   //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
-        //   mGUIPannel.SetMarketCollection(tradingEngine.GetMarketCollection());
+        m_GUIPannel.SetMarketCollection(m_tradingEngine.GetMarketCollection());
         m_GUIPannel.SetTradingControl(m_tradingEngine.GetTradingControl());
+        m_GUIPannel.SetChartObjCollection(&m_ChartObjCollection);
         m_GUIPannel.SetTradingEngine(&m_tradingEngine);   // display-only now - real StopLost/Trailing Apply logic lives in CTradingEngine itself
         m_GUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE      
         m_signal_bridge_writer.BuildAndWriteSignalBridge();
@@ -130,7 +158,7 @@
  void OnTrade(void)
   {
     m_tradingEngine.OnTickEvent();
-    m_GUIPannel.OnTradeEvent();   // lazy-init/redraw trigger for CTradingLevelBubble
+    m_GUIPannel.OnTradeEvent();
   }
  //+------------------------------------------------------------------+
  //| ChartEvent function                                              |

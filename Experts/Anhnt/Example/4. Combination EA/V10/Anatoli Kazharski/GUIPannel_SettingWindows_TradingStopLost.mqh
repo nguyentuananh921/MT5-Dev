@@ -526,12 +526,10 @@
    }
   //+------------------------------------------------------------------+
   //| GetIndicatorStopLostDistancePoints/GetCurrentStopLostDistancePoints/|
-  //| GetStopLostDistancePrice/FormatStopLostCacheValue/GetStopLostMoneyValue|
-  //| all moved to CTradingEngine (Anhnt/Claude, 2026-09-09 - pure       |
-  //| trading-domain logic, no GUI control touched). Calls below go      |
-  //| through m_tradingEngine. NOTE: FormatStopLostCacheValue had zero   |
-  //| real call sites before the move either - looks unused, left as-is |
-  //| since removal wasn't asked for.                                    |
+  //| GetStopLostDistancePrice/GetStopLostMoneyValue all moved to        |
+  //| CTradingEngine (Anhnt/Claude, 2026-09-09 - pure trading-domain     |
+  //| logic, no GUI control touched). Calls below go through             |
+  //| m_tradingEngine.                                                    |
   //+------------------------------------------------------------------+
 #endif // CGUIPANNEL_SETTINGWINDOWS_TRADINGSTOPLOST_MQH_IMPLEMENTATION
 

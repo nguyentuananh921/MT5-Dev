@@ -334,6 +334,7 @@
    string pattern_alerts = JSONConfig_ExtractRawSection(existing, "Pattern_Alerts_Setting");
    string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
    string stoplost_setting = JSONConfig_ExtractRawSection(existing, "StopLost_Setting");
+   string trail_dri       = JSONConfig_ExtractRawSection(existing, "Trailing_DataRatesIndex");
    string own_section;
    BuildJsonSection(own_section);
    string json = "{\n \"Symbols_TFs_List\": " + (symbols_tf == "" ? "[\n ]" : symbols_tf) +
@@ -342,6 +343,7 @@
    if(pattern_alerts != "")   json += ",\n \"Pattern_Alerts_Setting\": " + pattern_alerts;
      if(sound_settings != "")   json += ",\n \"Sound_Settings\": " + sound_settings;
      if(stoplost_setting != "") json += ",\n \"StopLost_Setting\": " + stoplost_setting;
+     if(trail_dri != "")        json += ",\n \"Trailing_DataRatesIndex\": " + trail_dri;
      json += "\n}\n";
      int fh = ::FileOpen(full_path, FILE_WRITE | FILE_TXT | FILE_ANSI);
      if(fh == INVALID_HANDLE)

@@ -26,7 +26,6 @@
 class CGBaseObj : public CObject
  {
   private:
-
   protected:
     CArrayObj         m_list_events;                      // Object event list
     ENUM_OBJECT       m_type_graph_obj;                   // Graphical object type

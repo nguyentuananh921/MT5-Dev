@@ -15,8 +15,7 @@
                                         m_indicators_collection(NULL),
                                         m_symbol_tf_manager(NULL),
                                         m_indicator_template_manager(NULL),
-                                        m_last_deal_time(0),
-                                        m_last_deal_ticket(0)
+                                        m_BarTimeSeriesCollection(NULL)
   {
 
   }
@@ -86,7 +85,9 @@
       m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_ORDER);
      }
     //--- StopLost/Trailing Apply engine - runs every tick, unconditional (Anhnt/Claude, 2026-09-09,
-    //--- moved from CGUIPannel::OnTickEvent).
-    this.ApplyStopLostAndTrailing();
+    //--- moved from CGUIPannel::OnTickEvent). has_trade_event (2026-09-10) gates ONLY the
+    //--- propagate-StopLost-to-sibling-Positions step inside it - Trailing/normal bootstrap still
+    //--- run every tick regardless.
+    this.ApplyStopLostAndTrailing(this.m_is_market_trade_event);
   }
 #endif // CTRADINGENGINE_LIFECYCLE_MQH

@@ -38,13 +38,21 @@
        CArrayObj   m_list;                 // list of CTradingSetupSetting*
        string      m_last_removed_symbol;
        bool        m_loaded_from_json;
+       //--- Global (not per-Symbol) Trailing-by-Value bar shift, mirrors Trishkin's reference
+       //--- InpDataRatesIndex (Anhnt, 2026-09-09 - "chúng ta cần tồn tại qua TF nhỏ 1M rồi mới nói
+       //--- chuyện đến TF lớn hơn" - TF is hardcoded M1 everywhere else, so this shift is likewise
+       //--- one single EA-wide value, not a per-Symbol row field like TrailingOffsetPts). Set-once,
+       //--- rarely touched - unlike m_edit_RiskPerNewTrade (changes every trade), this earns real
+       //--- JSON persistence so it survives EA restarts without re-typing.
+       int         m_trail_data_rates_index;
        int         ReadTradingSetupEntry(const string &s, int pos, CTradingSetupSetting *&out_row);
        int         ReadTradingSetupEntryArray(const string &s, int pos);
        int         ReadMqlParamArray(const string &s, int pos, MqlParam &out[]);
        void        BuildMqlParamArrayJson(MqlParam &params[], string &out_json) const;
 
      public:
-                     CTradingSetupSettingManager(void) : m_last_removed_symbol(""), m_loaded_from_json(false) {}
+                     CTradingSetupSettingManager(void) : m_last_removed_symbol(""), m_loaded_from_json(false),
+                                                          m_trail_data_rates_index(2) {}
                     ~CTradingSetupSettingManager(void) {}
 
       //--- Lifecycle - same convention as CSymbolTFManager::OnInitEvent/CIndicatorTemplateManager::OnInitEvent.
@@ -63,7 +71,11 @@
        void                    GetLastRemoved(string &out_symbol)     const;
        void                    NotifySettingChanged(const string symbol);
 
-      //--- JSON - reads/builds ONLY the "StopLost_Setting" section, does NOT FileOpen/write except
+      //--- Global Trailing-by-Value bar shift (EA-wide, not per-Symbol) - see member comment
+       int                     TrailingDataRatesIndex(void)         const { return m_trail_data_rates_index; }
+       void                    TrailingDataRatesIndex(const int shift)    { m_trail_data_rates_index = shift; }
+
+      //--- JSON - reads/builds ONLY the "StopLost_Setting" + "Trailing_DataRatesIndex" sections, does NOT FileOpen/write except
       //--- in SaveTradingSetupSettingToJSON (which also preserves every OTHER top-level section,
       //--- same "each Save builds only its own section, other Managers' full-rewrite Saves learn to
       //--- preserve it too" rule as CSymbolTFManager/CIndicatorTemplateManager).
@@ -341,6 +353,8 @@
      pos = JSONConfig_SkipSpace(clean, pos);
      if(key == "StopLost_Setting")
       pos = ReadTradingSetupEntryArray(clean, pos);
+     else if(key == "Trailing_DataRatesIndex")
+      { string num_text; pos = JSONConfig_ReadRawNumber(clean, pos, num_text); m_trail_data_rates_index = (int)StringToInteger(num_text); }
      else
       pos = JSONConfig_SkipValue(clean, pos);   // not this Manager's key
      pos = JSONConfig_SkipSpace(clean, pos);
@@ -435,7 +449,8 @@
    string sound_settings = JSONConfig_ExtractRawSection(existing, "Sound_Settings");
    string own_section;
    BuildJsonSection(own_section);
-   string json = "{\n \"StopLost_Setting\": " + own_section;
+   string json = "{\n \"StopLost_Setting\": " + own_section +
+                 ",\n \"Trailing_DataRatesIndex\": " + (string)m_trail_data_rates_index;
    if(symbols_tf != "")         json += ",\n \"Symbols_TFs_List\": " + symbols_tf;
    if(indicator_templates != "") json += ",\n \"Indicator_Templates\": " + indicator_templates;
    if(markers != "")            json += ",\n \"Markers_Setting\": " + markers;

@@ -37,8 +37,8 @@
         ENUM_SIGNAL_DIR                 m_lower_last_seen[];
         ENUM_PATTERN_DIRECTION          m_candle_pattern_last_seen[];       
         bool                            m_signal_log_watermarks_loaded; 
-     // For Trading Level Bubble implementation in GUIPannel_TradingLevelBubble.mqh  
-        CTradingLevelBubble             m_trading_bubble;                  
+     // Trading Level Bubble - wiring lives in GUIPannel_Lifecycle.mqh (Create/OnDeinit/OnTimer/OnEvent)
+        CTradingLevelBubble             m_trading_bubble;
      // For Layer 2 GUI Control Elements implementation in GUIPannel_MainWindows.mqh
         CWindow                         m_window_main;
         CStatusBar                      m_status_bar;
@@ -46,7 +46,7 @@
         CContextMenu                    m_contextmenu_settings;
       // Main Tabs
         CTabs                           m_tabs_main;               
-       // ==== TAB_TAB_MAIN_MONITOR (GUIPannel_MainWindows_TabMonitor.mqh) ====
+       // TAB_TAB_MAIN_MONITOR (GUIPannel_MainWindows_TabMonitor.mqh) ====
          CTable                          m_table_indicator_SymbolTFMonitor;         
         // per-row dirty-check cache for Trade tab table
          string                          m_string_table_indicator_SymbolTFMonitor_cache_val[];
@@ -56,21 +56,26 @@
          int                             m_int_table_indicator_SymbolTFMonitor_table_row_count;
        // ==== TAB_TAB_MAIN_TRADING 
         CTable                           m_table_positions_StoplostAndTrailling;
+        CTable                           m_table_position_pretrade_view;
         CTable                           m_table_indicator_PreTradeSymbolMonitor;         
-        //For Trading
-         CComboBox                       m_combobox_symbol_toTrade;
-         CComboBox                       m_combobox_lot_toTrade;
-         CComboBox                       m_combobox_direction;    //Buy or Sell
-         CComboBox                       m_combobox_order_type;
+        //For Trading         
+         CTextLabel                      m_textlabel_symbol_toTrade; //Display a symbol to trade base on combobox in COL_PTV_SYMBOL
+         bool                            m_new_order_is_buy;        //Direction (Buy/Sell) - replaced by clicking the Direction icon in
+         double                          m_new_order_lot_last;      //Last user-picked Lot (session-only) - restored into the Lot combobox on rebuild instead of always resetting to MinLot
+        //Default RISK_PERCENTAGE_PERPOSITION 5% change on Live
          CCheckBox                       m_checkbox_use_StopLostSetting;
+         CButton                         m_btn_open_StopLostSetting;   // opens m_window_setting_trading on the StopLost tab
          CCheckBox                       m_checkbox_use_TrailingSetting;
+         CButton                         m_btn_open_TrailingSetting;   // opens m_window_setting_trading on the Trailling tab
          CCheckBox                       m_checkbox_use_RiskPerNewTrade;
-         CTextLabel                      m_textLabel_use_RiskPerNewTrade;
-         CTextEdit                       m_edit_RiskPerNewTrade; //Default 5%
+         CTextEdit                       m_edit_RiskPerNewTrade;
+         CComboBox                       m_combobox_order_type;
+         CTextEdit                       m_edit_order_type_value; 
+        //Send Order
          CButton                         m_btn_send_toTrade;        
      // Setting Window for: Indicator and Symbol/TF, Candle Pattern
-      CWindow                          m_window_setting_timeseries;
-       CTabs                           m_tabs_setting_timeseries;                   // child of Window - deeper indent so folding the Window hides this + everything below
+      CWindow                            m_window_setting_timeseries;
+       CTabs                             m_tabs_setting_timeseries;                   
        // --- Indicator Setting tab (GUIPannel_SettingWindows_TS_Indicator.mqh) ---
         // TreeView on the left for Indicator Template
          CTreeView                       m_treeview_indicator;
@@ -113,9 +118,9 @@
          CTextLabel                     m_label_StopLost_GridCaption[5];   // static captions: 0=ColHeader Fixed, 1=ColHeader Ind, 2=RowLabel Selection, 3=RowLabel Multiplexer, 4=RowLabel Value
          CTextEdit                      m_edit_StopLost_FixedSelection;    // Fixed's Selection cell - editable, default "Spread"
          CTextEdit                      m_edit_StopLost_FixedPoint;        // Fixed's Multiplexer cell - multiplier on Spread
-         CComboBox                       m_combobox_ATR_choice;             // Indicator's Selection cell - template x tracked-TF choice
-         CTextEdit                       m_edit_ATR_Multiplexer;            // Indicator's Multiplexer cell - multiplier on ATR value
-         CTextLabel                      m_label_StopLost_ValuePreview[2];  // live-computed Value in Point: 0=Fixed, 1=Indicator
+         CComboBox                      m_combobox_ATR_choice;             // Indicator's Selection cell - template x tracked-TF choice
+         CTextEdit                      m_edit_ATR_Multiplexer;            // Indicator's Multiplexer cell - multiplier on ATR value
+         CTextLabel                     m_label_StopLost_ValuePreview[2];  // live-computed Value in Point: 0=Fixed, 1=Indicator
         //For Save Stop Lost Setting
          CButton                         m_btn_save_StopLost_Setting;       
        //m_table_indicators_trailingsetting declared above alongside m_table_stoplostsetting
@@ -124,12 +129,12 @@
         //each (Anhnt, 2026-09-08) - Fixed and Indicator use the SAME m_offset, mirroring
         //CSimpleTrailing in Trishkin's Trailings.mqh (one m_offset, not two per-mode fields). No
         //Selection or Multiplier row either (Indicator picked via the checkbox table).
-         CTextLabel                     m_label_Trailing_GridCaption[3];   // 0=RowLabel Offset, 1=RowLabel Start, 2=RowLabel Step
+         CTextLabel                     m_label_Trailing_GridCaption[4];   // 0=RowLabel Offset, 1=RowLabel Start, 2=RowLabel Step, 3=RowLabel DataRatesIndex
          CTextEdit                      m_edit_Trailing_Offset;            // shared - offset (points) from the current price / Indicator's line
          CTextEdit                      m_edit_Trailing_Start;             // shared - profit (points) required before trailing starts
          CTextEdit                      m_edit_Trailing_Step;              // shared - minimum improvement (points) before moving SL
+         CTextEdit                      m_edit_Trailing_DataRatesIndex;    // EA-wide (not per-Symbol) - M1 bar shift for Trailing-by-Value's base price
          CButton                        m_btn_save_Trailing_Setting;
-
      // Setting Window for Alert: Marker On Chart and Sound
       CWindow                          m_window_setting_markerAndSound;      
       CTabs                            m_tabs_setting_markerAndSound;
@@ -184,10 +189,7 @@
        int                               m_active_window_index_before_candle_info; // active window to restore on popup hide (Anhnt, 2026-08-29 - fixes Setting Window going dead after a CandleInfo hover)
        CBarPattern                       *m_pattern_bitmap_shown;             // pattern whose CGCnvPatternBitmap is visible via Alt+hover, NULL = none
        int                               m_pattern_bitmap_scale;              // CHART_SCALE the shown bitmap was built at - forces rebuild on zoom change
-       CTooltip                          m_tooltip_candle_info;               // Alt+hover pattern-name label, replaces the raw OBJ_TEXT ShowCandlePatternTooltipInfo used  
-     //UnOrginized Properties
-      
-      // ==========================================================================
+       CTooltip                          m_tooltip_candle_info;               // Alt+hover pattern-name label, replaces the raw OBJ_TEXT ShowCandlePatternTooltipInfo used 
      //Private Method
      // For GUI implemented in in GUIPannel_Lifecycle.mqh
        int                             WindowIdx(CWindow &wnd);
@@ -202,22 +204,36 @@
        bool                            CreateMenuBar(const int x_gap, const int y_gap);
       //For Main Tab
        bool                            CreateTab_Main(const int x_gap, const int y_gap);
-      // For Tab Monitor     
-       bool                            CreateTable_IndicatorSymbolTFMonitor(const int x, const int y);
-       void                            SynTable_IndicatorSymbolTFMonitor(void);
-      //For Tab Trading
-       // Table Position's Stoploss and Trailling
-        bool                            CreateTable_PositionsStoplostAndTrailling(const int x, const int y);
-        bool                            SyncTable_PositionsStoplostAndTrailling(bool force = false);
-        void                            OnCheckTable_PositionsStoplostAndTrailling(const int row, const int col);
-       // For Table Pre Trade Symbol Monitor
-        bool                            CreateTable_PreTradeSymbolMonitor(const int x, const int y);
-        bool                            SyncTable_PreTradeSymbolMonitor(const string symbol, bool force = false);
-        void                            OnCheckTable_PreTradeSymbolMonitor(const int row);
-        void                            OnSymbolToTradeChanged(void);
-       // Create Trading Form 
-        bool                            CreateTradingForm(const int x_gap, const int y_gap);
-        void                            UpdateSendButtonAppearance(void);
+       // For Tab Monitor     
+        bool                            CreateTable_IndicatorSymbolTFMonitor(const int x, const int y);
+        void                            SynTable_IndicatorSymbolTFMonitor(void);
+       //For Tab Trading
+        // Table Position's Stoploss and Trailling
+         bool                            CreateTable_PositionsStoplostAndTrailling(const int x, const int y);
+         bool                            SyncTable_PositionsStoplostAndTrailling(bool force = false);
+         bool                            CreateTable_PositionPretradeView(const int x, const int y);
+         bool                            SyncTable_PositionPretradeView(bool force = false);
+        // For Table Pre Trade Symbol Monitor
+         bool                            CreateTable_PreTradeSymbolMonitor(const int x, const int y);
+         bool                            SyncTable_PreTradeSymbolMonitor(const string symbol, bool force = false);
+         void                            OnSymbolToTradeChanged(void);
+         void                            OnClickRunSLOrTrailingCheckbox(const long checkbox_id);
+         void                            OnClickTogglePretradeDirection(void);
+         void                            OnClickTogglePretradeSLType(void);
+         void                            OnClickTogglePretradeTrailType(void);
+         void                            OnClickTogglePositionSLType(const int row);
+         void                            OnClickTogglePositionTrailType(const int row);
+         void                            OnClickSendNewOrder(void);
+         void                            OnClickUseRiskPerNewTradeCheckbox(void);
+         void                            OnClickOpenTradingSettingTab(const ENUM_TAB_SETTING_TRADING tab);
+        //--- Single source of truth for the New Order form's Symbol/Lot - COL_PTV_SYMBOL/COL_PTV_LOT
+        //--- of m_table_position_pretrade_view, both CELL_COMBOBOX now (Anhnt, 2026-09-10). Trivial
+        //--- one-line getters, inline per project convention.
+         string                          GetNewOrderSymbol(void) { return m_table_position_pretrade_view.GetValue(COL_PTV_SYMBOL, 0); }
+         double                          GetNewOrderLot(void)    { return ::StringToDouble(m_table_position_pretrade_view.GetValue(COL_PTV_LOT, 0)); }
+        // Create Trading Form
+         bool                            CreateTradingForm(const int x_gap, const int y_gap);
+         void                            UpdateSendButtonAppearance(void);
      // For Setting Windows m_window_setting_timeseries
        bool                            CreateWindow_SettingTimeSeries(const string caption_text,const int x_gap, const int y_gap);
        void                            OpenWindow_SettingTimeSeries(void);
@@ -309,8 +325,7 @@
        void                            OnEvent_Window_SettingTrading(const int id,const long &lparam, const double &dparam, const string &sparam);
       // For Tab m_tabs_setting_timeseries on Setting Windows m_window_setting_timeseries
        bool                            CreateTab_SettingTrading(const int x_gap, const int y_gap);
-      // For Stop Lost Setting implementation in GUIPannel_SettingWindows_TradingStopLost.mqh
-      //For Table 
+      // For Stop Lost Setting implementation in GUIPannel_SettingWindows_TradingStopLost.mqh       
        bool                            CreateTable_StopLostSetting(const int x, const int y);
        bool                            SyncTable_StopLostSetting(bool force = false);   
       //For Form             
@@ -321,7 +336,7 @@
        bool                            SyncComboBox_ATRChoice(const string symbol, const ENUM_TIMEFRAMES saved_tf, const int saved_period);
        bool                            GetSelectedATRChoice(const string symbol, ENUM_TIMEFRAMES &out_tf, int &out_period);
        void                            UpdateStopLostPreview(const string symbol);
-      // For Trailing Setting implementation in GUIPannel_SettingWindows_TradingTrailing.mqh
+     // For Trailing Setting implementation in GUIPannel_SettingWindows_TradingTrailing.mqh
        bool                            CreateTable_TrailingSetting(const int x, const int y);
        bool                            SyncTable_TrailingSetting(bool force = false);
        bool                            CreateTable_IndicatorsTrailingSetting(const int x, const int y);
@@ -361,19 +376,7 @@
                                          const string label, const string tf_text, const int digits,
                                          const bool buy_on, const bool sell_on, const bool symtf_buy, const bool symtf_sell);       
        
-     //New Method Unorganized
-         
-      //--- m_table_indicator_PreTradeSymbolMonitor (TAB_TAB_MAIN_TRADING) - same TF|Indicator|
-      //--- Value|Trailing shape as m_table_indicators_trailingsetting (Setting Trading window), just
-      //--- scoped to m_combobox_symbol_toTrade's current selection instead of a "Symbol - X" label
-      //--- (Anhnt/Claude, 2026-09-08).
-         
-         
-      //--- Refreshes m_btn_send_toTrade's text ("Buy"/"Sell Limit"/...) and color (green=Buy,
-      //--- red=Sell) from m_combobox_direction/m_combobox_order_type's CURRENT selection -
-      //--- called once at creation and on every ON_CHANGE_GUI from either combobox.
-
-      //--------------------------------------------------
+     //New Method Unorganized      
       
     public:
      // Lifecycle method implemented in GUIPannel_Lifecycle.mqh
@@ -383,7 +386,7 @@
        void                           OnDeinitEvent(const int reason);
        void                           OnTimerEvent(void);
        void                           OnTickEvent(void);
-       void                           OnTradeEvent(void);   // consumes IsLastDealTicket's HistorySelect watermark on a genuinely new deal
+       void                           OnTradeEvent(void);
        virtual void                   OnEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
       //For GUI 
        void                           UpdateGUI(const bool redraw = false);        
@@ -392,7 +395,7 @@
        void                            SyncTable_IndicatorTemplateSetting(void);
        void                            InitializeTable_IndicatorTemplateSetting(void);
        void                            AddRow_IndicatorTemplateSetting(void);       
-     // For Pointer SetPointer
+     // For Pointer
        void                           SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_indicator_template_manager = manager; }     
        void                           SetSymbolsCollection(CSymbolsCollection *symbols) { m_symbol_collection = symbols; }      
        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts;} 
@@ -402,6 +405,7 @@
        void                           SetTradingEngine(CTradingEngine *trading_engine) { m_tradingEngine = trading_engine; }
        void                           SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
        void                           SetTradingControl(CTradingControl *trading_control) { m_trading_control = trading_control; m_trading_bubble.SetTradingControl(trading_control); }
+       void                           SetChartObjCollection(CChartObjCollection *coll)    { m_trading_bubble.SetChartObjCollection(coll); }
        void                           SetSymbolTFManager(CSymbolTFManager *manager) { m_SymbolTFManager = manager; }
        void                           SetTradingSetupManager(CTradingSetupSettingManager *manager) { m_trading_setup_manager = manager; }
      // For Marker

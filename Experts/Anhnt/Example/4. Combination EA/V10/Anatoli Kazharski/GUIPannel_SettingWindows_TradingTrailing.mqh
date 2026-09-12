@@ -480,11 +480,12 @@
     int row0_y = y_gap;                          // Offset
     int row1_y = y_gap + M_CONTROL_YDISTANCE;    // Start
     int row2_y = y_gap + 2*M_CONTROL_YDISTANCE;  // Step
-    int row3_y = y_gap + 3*M_CONTROL_YDISTANCE;  // Save
+    int row3_y = y_gap + 3*M_CONTROL_YDISTANCE;  // DataRatesIndex (EA-wide, not per-Symbol)
+    int row4_y = y_gap + 4*M_CONTROL_YDISTANCE;  // Save
 
-    string caption_text[3] = {"Offset", "Start", "Step"};
-    int    caption_y[3]    = {row0_y, row1_y, row2_y};
-    for(int i = 0; i < 3; i++)
+    string caption_text[4] = {"Offset", "Start", "Step", "M1 Bar Shift"};
+    int    caption_y[4]    = {row0_y, row1_y, row2_y, row3_y};
+    for(int i = 0; i < 4; i++)
      {
       m_label_Trailing_GridCaption[i].MainPointer(m_tabs_setting_trading);
       m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING,m_label_Trailing_GridCaption[i]);
@@ -518,12 +519,24 @@
     if(!m_edit_Trailing_Step.CreateTextEdit("0", x_gap + 90, row2_y)) return false;
     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_trading),m_edit_Trailing_Step);
 
+    //--- EA-wide (not per-Symbol) - how many M1 bars back Trailing-by-Value reads its base
+    //--- Low/High from (Anhnt, 2026-09-09, mirrors Trishkin's InpDataRatesIndex). Same value
+    //--- regardless of which Symbol's Trailing form is open - populated/saved against
+    //--- m_trading_setup_manager directly, not the per-Symbol row_setting the 3 fields above use.
+     m_edit_Trailing_DataRatesIndex.MainPointer(m_tabs_setting_trading);
+     m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING,m_edit_Trailing_DataRatesIndex);
+     m_edit_Trailing_DataRatesIndex.XSize(70);
+     m_edit_Trailing_DataRatesIndex.YSize(M_CONTROL_HEIGHT);
+     m_edit_Trailing_DataRatesIndex.GetTextBoxPointer().XGap(1);
+     if(!m_edit_Trailing_DataRatesIndex.CreateTextEdit("2", x_gap + 90, row3_y)) return false;
+     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_trading),m_edit_Trailing_DataRatesIndex);
+
     m_btn_save_Trailing_Setting.MainPointer(m_tabs_setting_trading);
     m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING,m_btn_save_Trailing_Setting);
     m_btn_save_Trailing_Setting.XSize(80);
     m_btn_save_Trailing_Setting.YSize(M_CONTROL_HEIGHT);
     m_btn_save_Trailing_Setting.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
-    if(!m_btn_save_Trailing_Setting.CreateButton("Save", x_gap, row3_y)) return false;
+    if(!m_btn_save_Trailing_Setting.CreateButton("Save", x_gap, row4_y)) return false;
     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_trading),m_btn_save_Trailing_Setting);
    //--- Hidden by default (Anhnt, 2026-09-08) - the whole Indicator-choice table + this form only
    //--- appear once the user actually clicks the Trailling icon on m_table_trailingsetting for a
@@ -543,7 +556,7 @@
    m_label_TrailingSetting_Symbol.Show();
    m_label_TrailingSetting_Symbol.Moving();
    m_table_indicators_trailingsetting.Show();
-   for(int i = 0; i < 3; i++)
+   for(int i = 0; i < 4; i++)
     {
      m_label_Trailing_GridCaption[i].Show();
      m_label_Trailing_GridCaption[i].Moving();
@@ -554,6 +567,8 @@
    m_edit_Trailing_Start.Moving();
    m_edit_Trailing_Step.Show();
    m_edit_Trailing_Step.Moving();
+   m_edit_Trailing_DataRatesIndex.Show();
+   m_edit_Trailing_DataRatesIndex.Moving();
    m_btn_save_Trailing_Setting.Show();
    m_btn_save_Trailing_Setting.Moving();
 
@@ -561,6 +576,7 @@
    int offset_pts   = (row_setting != NULL) ? row_setting.TrailingOffsetPts()      : 0;
    int start_pts    = (row_setting != NULL) ? row_setting.TrailingStartPts()       : 0;
    int step_pts     = (row_setting != NULL) ? row_setting.TrailingStepPts()        : 0;
+   int data_rates_index = (m_trading_setup_manager != NULL) ? m_trading_setup_manager.TrailingDataRatesIndex() : 2;
    m_edit_Trailing_Offset.SetValue((string)offset_pts, false);
    m_edit_Trailing_Offset.GetTextBoxPointer().Update(true);
    m_edit_Trailing_Offset.Update(true);
@@ -573,6 +589,11 @@
    m_edit_Trailing_Step.GetTextBoxPointer().Update(true);
    m_edit_Trailing_Step.Update(true);
    m_edit_Trailing_Step.Draw();
+   //--- EA-wide value - same regardless of which Symbol this form is scoped to
+   m_edit_Trailing_DataRatesIndex.SetValue((string)data_rates_index, false);
+   m_edit_Trailing_DataRatesIndex.GetTextBoxPointer().Update(true);
+   m_edit_Trailing_DataRatesIndex.Update(true);
+   m_edit_Trailing_DataRatesIndex.Draw();
   }
  //+------------------------------------------------------------------+
  //| Hide the Indicator-choice table + Trailing form - called once     |
@@ -583,11 +604,12 @@
   {
    m_label_TrailingSetting_Symbol.Hide();
    m_table_indicators_trailingsetting.Hide();
-   for(int i = 0; i < 3; i++)
+   for(int i = 0; i < 4; i++)
       m_label_Trailing_GridCaption[i].Hide();
    m_edit_Trailing_Offset.Hide();
    m_edit_Trailing_Start.Hide();
    m_edit_Trailing_Step.Hide();
+   m_edit_Trailing_DataRatesIndex.Hide();
    m_btn_save_Trailing_Setting.Hide();
   }
 #endif // CGUIPANNEL_SETTINGWINDOWS_TRADINGTRAILING_MQH_IMPLEMENTATION
