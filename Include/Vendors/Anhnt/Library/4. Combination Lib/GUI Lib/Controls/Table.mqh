@@ -2180,9 +2180,8 @@
          }
     // --- Get relative coordinates under the mouse cursor
       int x=m_mouse.RelativeX(m_table);
-    // --- Get the right border of the picture
-      int image_x  =int(m_columns[column_index].m_x+m_columns[column_index].m_image_x_offset);
-      int image_x2 =int(image_x+m_columns[column_index].m_rows[row_index].m_images[0].Width());
+    // hit-zone widened to the WHOLE cell (m_x2), not just the icon's own pixel width
+      int image_x2 =m_columns[column_index].m_x2;
     // --- Exit if you clicked on something other than the picture
       if(x>image_x2)
          return(false);

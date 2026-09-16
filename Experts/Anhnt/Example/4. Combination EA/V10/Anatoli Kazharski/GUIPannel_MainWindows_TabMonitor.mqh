@@ -349,10 +349,10 @@
       // --- history entry's direction (m_hist_* - permanent, only written when a bar actually
       // --- closed with a real flip), which is exactly this "last known direction" state.
        int sig_icon = dir_icon;
-       if(m_timeSeriesEngine != NULL)
+       if(m_SignalsCollection != NULL)
         {
          // signal is BORROWED - CSignalsCollection owns it
-          CSignalBase *signal = m_timeSeriesEngine.GetSignalsCollection().GetOrCreateSignal(ind);
+          CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
           if(signal != NULL)
            {
             ENUM_SIGNAL_DIR dir = signal.GetCurrentSignal();

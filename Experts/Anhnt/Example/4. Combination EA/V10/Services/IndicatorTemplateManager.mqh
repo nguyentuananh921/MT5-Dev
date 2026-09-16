@@ -112,15 +112,7 @@
     }
    ::Print(__FUNCTION__, " > loaded ", m_list.Total(), " indicator template(s) from ", full_path);
    return true;
-  }
- //+------------------------------------------------------------------+
- //| Indicator_Templates-specific tokenizer helper - the raw-number     |
- //| reader moved to JSONConfig_ReadRawNumber (JSONConfig.mqh) once     |
- //| TradingSetupSettingManager.mqh needed the identical logic too.     |
- //+------------------------------------------------------------------+
- //--- read a "params" array whose elements are EITHER a bare number OR a "quoted
- //--- string" (enum choice text) - both stored as raw text in out[], the caller
- //--- (ReadTemplateEntry) decides how to interpret each element via the schema.
+  } 
  int IndicatorConfig_ReadParamsArray(const string &s, int pos, string &out[])
   {
    ArrayResize(out, 0);
@@ -144,14 +136,7 @@
    if(pos < StringLen(s) && StringGetCharacter(s, pos) == ']')
       pos++; // skip ']'
    return pos;
-  }
- //+------------------------------------------------------------------+
- //| Parse one { "type": "...", "buy": ..., "params": [...] } object,  |
- //| resolve .type_enum/.raw_params via catalog+schema, return a fresh |
- //| row (NULL if the type is unknown or the schema/param count        |
- //| mismatches - same rejection rules LoadIndicatorTemplateSettingFromJSON |
- //| used before this moved here).                                      |
- //+------------------------------------------------------------------+
+  } 
  int CIndicatorTemplateManager::ReadTemplateEntry(const string &s, int pos, CIndicatorSetting *&out_row)
   {
    out_row = NULL;
@@ -160,11 +145,7 @@
    pos++; // skip '{'
    pos = JSONConfig_SkipSpace(s, pos);
    string type_text = "";
-   string params_text[];
-   // --- "show" is never read from JSON - it's chart-live truth (re-synced by
-   // --- OnInitEvent()'s own chart scan + the CHART_OBJ_EVENT_*
-   // --- handlers in EA.mq5), not a persisted preference. Every row starts false here;
-   // --- the chart scan re-truths it to true right after Load for whatever's actually attached.
+   string params_text[];   
    bool   buy = false, sell = false, sound = false, message = false;
    while(pos < StringLen(s) && StringGetCharacter(s, pos) != '}')
     {
@@ -189,10 +170,7 @@
        pos = JSONConfig_SkipValue(s, pos);   // unrecognized key (e.g. a leftover "show"/old-style name from an older save) - skip its value, keep pos in sync
       pos = JSONConfig_SkipSpace(s, pos);
     }
-   if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}') pos++;
-
-   //--- Resolve .type_enum/.raw_params[] HERE (Layer 1 never touches JSON/text at all,
-   //--- same invariant LoadIndicatorTemplateSettingFromJSON already upheld)
+   if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}') pos++;   
    SIndicatorCatalogItem catalog[];
    GetIndicatorCatalog(catalog);
    ENUM_INDICATOR type_enum = IND_CUSTOM;
@@ -234,19 +212,14 @@
          raw_params[p].double_value = StringToDouble(raw);
       else
          raw_params[p].integer_value = StringToInteger(raw);
-    }
-   // type_text/params_text (as parsed from JSON) were only needed transiently, to resolve
-   // raw_params[] via the schema just above - no stored text field to fill anymore
-   // (CIndicatorSetting derives both display/JSON text on demand from type_enum/raw_params).
+    }   
    out_row = new CIndicatorSetting();
    out_row.TypeEnum(type_enum);
    out_row.SetRawParams(raw_params);
    out_row.BuySignal(buy);
    out_row.SellSignal(sell);
    out_row.SoundAlert(sound);
-   out_row.MessageAlert(message);
-   // Ctor defaults ShowOnChart to true - override to false here since a JSON-loaded row
-   // is never actually attached to the chart yet; the post-Load chart scan re-truths it.
+   out_row.MessageAlert(message);   
    out_row.ShowOnChart(false);
    return pos;
   }
@@ -268,13 +241,7 @@
     }
    if(pos < StringLen(s) && StringGetCharacter(s, pos) == ']') pos++;
    return pos;
-  }
- //+------------------------------------------------------------------+
- //| Build ONLY the "Indicator_Templates": [...] text - caller (EA/    |
- //| CGUIPannel) still owns FileOpen/write + preserving the OTHER      |
- //| sections, same "each Save builds only its own section" rule       |
- //| CGUIPannel::SaveGUIConfigToJSON already follows.                  |
- //+------------------------------------------------------------------+
+  } 
  void CIndicatorTemplateManager::BuildJsonSection(string &out_json) const
   {
    out_json = "[\n";
@@ -284,17 +251,14 @@
    for(int i = 0; i < m_list.Total(); i++)
     {
      CIndicatorSetting *row = m_list.At(i);
-     if(row == NULL || row.TypeEnum() == IND_CUSTOM) continue;
-     // Both texts derived on demand from raw identity - no stored text field on
-     // CIndicatorSetting anymore (2026-08-28), same catalog-name lookup AddIndicatorToIndicatorTemplateSetting
-     // used to do, same BuildIndicatorParamsText() DisplayLabel() already calls for the short form.
+     if(row == NULL || row.TypeEnum() == IND_CUSTOM) continue;     
      string type_key = "";
      for(int c = 0; c < ArraySize(catalog); c++)
       if(catalog[c].ind_type == row.TypeEnum()) { type_key = catalog[c].name; break; }
      if(type_key == "") continue;
      if(saved > 0) out_json += ",\n";
      saved++;
-     // "show" is chart-live truth, never persisted - see ReadTemplateEntry's comment.
+     // "show" is chart-live truth, never persisted.
      out_json += "  { \"m_indicator_type\": \"" + type_key + "\", \"m_buy_signal\": " + (row.BuySignal() ? "true" : "false") +
                  ", \"m_sell_signal\": " + (row.SellSignal() ? "true" : "false") +
                  ", \"m_sound_alert\": " + (row.SoundAlert() ? "true" : "false") +
@@ -318,13 +282,7 @@
      out_json += "] }";
     }
    out_json += "\n ]";
-  }
- //+------------------------------------------------------------------+
- //| Full save - owns FileOpen/write for Config_Setting.json. Reads the |
- //| file back first so "Symbols_TFs_List" (and any future section     |
- //| this Manager doesn't know about) survives untouched as raw text - |
- //| only "Indicator_Templates" gets overwritten with fresh data.       |
- //+------------------------------------------------------------------+
+  } 
  bool CIndicatorTemplateManager::SaveIndicatorTemplateToJSON(void)
   {
    string full_path = g_ea_folder + "/Config_Setting.json";
@@ -400,22 +358,11 @@
        if(row != NULL && row.TypeEnum() == type) return true;
       }
      return false;
-   }
- //+------------------------------------------------------------------+
- //| Append a new row - Data only, false if the identity already exists|
- //| Returns bool, not the row pointer - matches the RAW-identity-only |
- //| convention (type, params[]) every caller already uses; a caller   |
- //| that needs the new row reads it back via the ADDED event's        |
- //| lparam+At(index), or FindByIdentity(type, params) directly.       |
- //+------------------------------------------------------------------+
+   } 
  bool CIndicatorTemplateManager::AddIndicatorToIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
    {
      if(Exists(type, params)) return false;
-     bool is_new_type = !ExistsTypeInTemplate(type);   // check BEFORE insert - "first row of this type"
-
-     // Raw identity only - CIndicatorSetting has no stored text fields anymore (2026-08-28):
-     // DisplayLabel()/CIndicatorTemplateManager::BuildJsonSection derive both texts on demand
-     // from TypeEnum()/GetRawParams(), so nothing to build/store here at all.
+     bool is_new_type = !ExistsTypeInTemplate(type);   // check BEFORE insert - "first row of this type"     
      CIndicatorSetting *row = new CIndicatorSetting();   // constructor defaults buy/sell/sound/message = true
      row.TypeEnum(type);
      row.SetRawParams(params);
@@ -425,10 +372,7 @@
        return false;
       }
      if(!m_suppress_event)
-      {
-       // lparam = index of the row just inserted (m_list.Total()-1) - lets a
-       // receiver do At(index) to get the exact (type, raw_params) that was Added,
-       // no separate id/lookup mechanism needed.
+      {       
        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED, (long)(m_list.Total() - 1), 0.0, "");
        if(is_new_type)
           ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED, (long)type, 0.0, "");
@@ -485,20 +429,7 @@
      if(!m_suppress_event)
         ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED, (long)index, 0.0, "");
      return true;
-   }
-  //+------------------------------------------------------------------+
- //| Lifecycle - same convention as CTimeSeriesEngine::OnInitEvent/    |
- //| CGUIPannel::OnInitEvent. EA.mq5 calls this from its own OnInit(), |
- //| AFTER chart_obj's own CreateCollection() has already run. Loads   |
- //| JSON first (guarded - skips on a CHARTCHANGE reinit, see          |
- //| m_loaded_from_json declaration), THEN scans indicators actually   |
- //| on the chart and merges them in - ONLY considers indicators       |
- //| present in the Catalog (GetIndicatorCatalog); a line not in the   |
- //| Catalog (e.g. SignalMarkers - EA's own overlay, never part of the |
- //| Template) is skipped, never added to m_list. The scan runs on     |
- //| EVERY call (including reinit, unlike the JSON load) - re-truths   |
- //| Show against whatever's actually on THIS chart right now.         |
- //+------------------------------------------------------------------+
+   } 
  bool CIndicatorTemplateManager::OnInitEvent(CChartObjCollection *chart_obj)
   {
      bool ok = true;
@@ -511,9 +442,7 @@
 
      if(chart_obj == NULL) return ok;
      CChartObj *chart = chart_obj.GetChart(::ChartID());
-     if(chart == NULL) return ok;
-     // --- Bulk load - suppress AddIndicatorToIndicatorTemplateSetting()'s per-row event storm, nothing is
-     // --- listening this early in OnInit anyway (EA's own Set*() pointer wiring hasn't even run yet).
+     if(chart == NULL) return ok;     
      m_suppress_event = true;
      SIndicatorCatalogItem catalog[];
      GetIndicatorCatalog(catalog);
@@ -573,50 +502,26 @@
         return false; //Get New value
        }
 
-      // SignalMarkers.mq5 renames itself (IndicatorSetString(INDICATOR_SHORTNAME,...)) right
-      // after EnsureMarkerIndicatorAttached()'s ChartIndicatorAdd() - Layer 3 catches that as a
-      // CHANGE on the same handle (same bug class the ADD handler above already guards against,
-      // just one event later - see BugNote 2026-08-28, "SignalMarkers rename -> CHANGE -> IND_CUSTOM
-      // added to Template -> AddNewIndicatorToAllSeries(IND_CUSTOM) fails on every background
-      // symbol"). Identify by NAME, not a blanket type==IND_CUSTOM skip, so a real custom
-      // indicator we DO want tracked still passes through below.
+     // Don't add SignalMarkers.mq5 to Template      
       if(new_type == IND_CUSTOM && ::StringFind(new_ind.Name(), SIGNALMARKERS_NAME_TAG) >= 0)
        {
         return false;
-       }
-
-      // --- Check TRUOC khi Remove: neu new_type/new_params da trung 1 identity KHAC
-      // --- dang co san trong Template (vd user sua tham so indicator A trung het voi
-      // --- indicator B da co), thi khong the Add duoc nua (Manager tu chan trung) -
-      // --- neu cu Remove old truoc thi ket qua la MAT han A khoi Template ma khong co
-      // --- gi thay the. Bail o day, giu nguyen old, khong dung gi ca.
+       }      
       if(Exists(new_type, new_params))
        {
         return false;
-       }
-
-      // Both fire their own INDICATOR_TEMPLATE_MANAGER_EVENT_* below - GUIPannel_Lifecycle.mqh
-      // already reacts by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(),
-      // no need to call them here too (and TYPE_ADDED/TYPE_DELETE correctly stay silent
-      // when old_type == new_type, unlike the old unconditional Sync call).
+       }      
       DeleteIndicatorFromIndicatorTemplateSetting(old_type, old_params); //Remove Old value
       AddIndicatorToIndicatorTemplateSetting(new_type, new_params); //Add New value
       return true;
      }
     if(id == CHARTEVENT_CUSTOM + CHART_OBJ_EVENT_CHART_WND_IND_DEL)
-     {
-      // EA itself just called RemoveIndicatorFromChart (Show-toggle/row-delete reacting to
-      // OUR OWN Data change) - this native DEL is the expected side effect, not a surprise.
-      // Skip the defensive rescan below entirely; see g_suppress_del_rescan declaration.
+     {      
       if(g_suppress_del_rescan)
        {
         g_suppress_del_rescan = false;
         return true;
-       }
-      // Native DEL event doesn't say WHICH indicator was removed - live-scan every row against
-      // real chart state and push the truth into ourselves. CGUIPannel now listens to
-      // INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED itself to refresh its Table icon, no
-      // direct call needed here.
+       }      
       for(int row = 0; row < Total(); row++)
        {
         CIndicatorSetting *entry = At(row);
@@ -637,21 +542,14 @@
       return false;
      }
     // SignalMarkers.mq5 is EA's own Layer-3 marker-display program (attached by
-    // EnsureMarkerIndicatorAttached), NOT a Template indicator - its own ChartIndicatorAdd()
-    // triggers this very ADD event via CChartObjCollection::Refresh()'s diff detection, so it
-    // must be identified and excluded by NAME here, not by a blanket "type==IND_CUSTOM" skip -
-    // a future custom indicator we DO want tracked in the Template would still need to pass
-    // through below (Anhnt, 2026-08-28).
+    // EnsureMarkerIndicatorAttached), NOT a Template indicator - 
     if(type == IND_CUSTOM && ArraySize(params) > 0 && ::StringFind(params[0].string_value, SIGNALMARKERS_NAME_TAG) >= 0)
      {
       return false;
      }
     CIndicatorSetting *entry = FindByIdentity(type, params);
     if(entry != NULL)  //Add An Indicator exist in Indicator Template due to hide on Chart
-     {
-      // Go through this Manager's own setter (not a direct entry.ShowOnChart(true) mutation)
-      // so it fires INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED - CGUIPannel listens to
-      // that itself to refresh its Table icon, no need to call it here too.
+     {      
       if(!entry.ShowOnChart())
        {
         for(int row = 0; row < Total(); row++)
@@ -665,11 +563,7 @@
          }
        }
       return true;
-     }
-    // AddIndicatorToIndicatorTemplateSetting() below fires INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED
-    // (+TYPE_ADDED if this is the first row of its type) - GUIPannel_Lifecycle.mqh already
-    // reacts to those by calling InitializeTable_IndicatorTemplateSetting()/SyncTreeView_IndicatorTemplateSetting(),
-    // no need to call them here too.
+     }    
     AddIndicatorToIndicatorTemplateSetting(type, params);
     return true;
   }

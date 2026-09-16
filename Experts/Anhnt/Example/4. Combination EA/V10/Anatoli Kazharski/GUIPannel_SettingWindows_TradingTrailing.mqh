@@ -182,10 +182,10 @@
        m_table_trailingsetting.ChangeImage(3, row, 0);
 
        //--- Cols 4-7: Fixed (CTrailingByValue) and Indicator (CTrailingByInd) distances, via
-       //--- GetCurrentTrailingDistancePoints/GetTrailingMoneyValue (Anhnt/Claude, 2026-09-08 - same
+       //--- GetCurrent_TrailingDistance_Points/GetTrailingMoneyValue (Anhnt/Claude, 2026-09-08 - same
        //--- Point/$ shape as StopLost's own cols 4-7, but Trishkin's Trailing formulas, not StopLost's).
-       int    fixed_pts = m_tradingEngine.GetCurrentTrailingDistancePoints(sym_name, SL_MODE_FIXED);
-       int    ind_pts   = m_tradingEngine.GetCurrentTrailingDistancePoints(sym_name, SL_MODE_INDICATOR);
+       int    fixed_pts = m_tradingEngine.GetCurrent_TrailingDistance_Points(sym_name, SL_MODE_FIXED);
+       int    ind_pts   = m_tradingEngine.GetCurrent_TrailingDistance_Points(sym_name, SL_MODE_INDICATOR);
        double fixed_val = m_tradingEngine.GetTrailingMoneyValue(sym_name, SL_MODE_FIXED);
        double ind_val   = m_tradingEngine.GetTrailingMoneyValue(sym_name, SL_MODE_INDICATOR);
        fixed_pts_old[row] = fixed_pts;
@@ -242,8 +242,8 @@
         spread_half_old[row] = spread_half_pts;
         any_changed = true;
        }
-      int    fixed_pts = m_tradingEngine.GetCurrentTrailingDistancePoints(sym_name, SL_MODE_FIXED);
-      int    ind_pts   = m_tradingEngine.GetCurrentTrailingDistancePoints(sym_name, SL_MODE_INDICATOR);
+      int    fixed_pts = m_tradingEngine.GetCurrent_TrailingDistance_Points(sym_name, SL_MODE_FIXED);
+      int    ind_pts   = m_tradingEngine.GetCurrent_TrailingDistance_Points(sym_name, SL_MODE_INDICATOR);
       double fixed_val = m_tradingEngine.GetTrailingMoneyValue(sym_name, SL_MODE_FIXED);
       double ind_val   = m_tradingEngine.GetTrailingMoneyValue(sym_name, SL_MODE_INDICATOR);
       if(force || fixed_pts != fixed_pts_old[row])
@@ -287,15 +287,72 @@
    return any_changed;
   }
  //+------------------------------------------------------------------+
- //| BuildTrailingIndicatorChoiceList/GetCurrentTrailingIndicatorValue  |
- //| moved to CTradingEngine (Anhnt/Claude, 2026-09-09 - pure trading-  |
- //| domain logic). Calls below go through m_tradingEngine.             |
+ //| Candidate Trend/single-buffer indicators per tracked TF for this   |
+ //| Symbol - pure data, no GUI control touched. GetCurrent_Trailing    |
+ //| Indicator_AnchorPrice (CTradingEngine, real per-tick trailing      |
+ //| lookup) no longer needs this - it looks up its ONE saved identity  |
+ //| directly instead of scanning a whole choice list (Anhnt/Claude,    |
+ //| 2026-09-15). So the only remaining consumers are the 2 GUI call    |
+ //| sites below, which is why this lives on CGUIPannel now, using its  |
+ //| own borrowed pointers, not CTradingEngine (see                     |
+ //| [[project_v10_stoplost_trailing_engine_split]] for where it lived  |
+ //| before).                                                            |
  //+------------------------------------------------------------------+
- //+------------------------------------------------------------------+
- //| GetCurrentTrailingDistancePoints/GetTrailingMoneyValue moved to    |
- //| CTradingEngine (Anhnt/Claude, 2026-09-09 - pure math, no GUI       |
- //| control touched). Calls below go through m_tradingEngine.          |
- //+------------------------------------------------------------------+
+ int CGUIPannel::BuildTrailingIndicatorChoiceList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[])
+  {
+   int count = 0;
+   ::ArrayResize(out_inds, 0);
+   ::ArrayResize(out_tfs,  0);
+   if(m_IndicatorsCollection == NULL || m_SymbolTFManager == NULL || m_indicator_template_manager == NULL) return 0;
+   int symtf_total = m_SymbolTFManager.Total();
+   int tmpl_total  = m_indicator_template_manager.Total();
+   for(int si = 0; si < symtf_total; si++)
+    {
+     CSymbolTFSetting *symtf = m_SymbolTFManager.At(si);
+     if(symtf == NULL || symtf.Symbol() != symbol) continue;
+     ENUM_TIMEFRAMES tf = symtf.TFEnum();
+     CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(symbol);
+     ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+     int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+     if(ind_total == 0) continue;
+     for(int ti = 0; ti < tmpl_total; ti++)
+      {
+       CIndicatorSetting *entry = m_indicator_template_manager.At(ti);
+       if(entry == NULL) continue;
+       ENUM_INDICATOR ind_type = entry.TypeEnum();
+       if(GetIndicatorGroupForType(ind_type) != INDICATOR_GROUP_TREND) continue;
+       if(GetIndicatorBuffersTotal(ind_type) != 1) continue;
+       if(ind_type == IND_STDDEV) continue;
+       MqlParam raw_params[];
+       entry.GetRawParams(raw_params);
+       if(::ArraySize(raw_params) == 0) continue;
+       CIndicatorDE *ind = NULL;
+       for(int ii = 0; ii < ind_total; ii++)
+        {
+         CIndicatorDE *cand = ind_list.At(ii);
+         if(cand == NULL || cand.TypeIndicator() != entry.TypeEnum()) continue;
+         MqlParam cand_params[];
+         cand.GetMqlParams(cand_params);
+         if(IsEqualMqlParamArrays(cand_params, raw_params)) { ind = cand; break; }
+        }
+       if(ind == NULL) continue; // template not instantiated on this Symbol+TF yet
+       ::ArrayResize(out_inds, count + 1);
+       ::ArrayResize(out_tfs,  count + 1);
+       out_inds[count] = ind;
+       out_tfs[count]  = tf;
+       count++;
+      }
+    }
+   //--- Sort ascending by TF (M1 first) - insertion order otherwise follows m_SymbolTFManager's own.
+   for(int a = 0; a < count - 1; a++)
+    for(int b = a + 1; b < count; b++)
+     if(IndexEnumTimeframe(out_tfs[b]) < IndexEnumTimeframe(out_tfs[a]))
+      {
+       CIndicatorDE   *ind_tmp = out_inds[a]; out_inds[a] = out_inds[b]; out_inds[b] = ind_tmp;
+       ENUM_TIMEFRAMES tf_tmp  = out_tfs[a];  out_tfs[a]  = out_tfs[b];  out_tfs[b]  = tf_tmp;
+      }
+   return count;
+  } 
  //+------------------------------------------------------------------+
  //| Full rebuild when the scoped Symbol changes (icon click) or count  |
  //| changes, otherwise a per-tick dirty-check that only touches Col2's |
@@ -316,7 +373,7 @@
 
    CIndicatorDE   *inds[];
    ENUM_TIMEFRAMES tfs[];
-   int count = (m_tradingEngine != NULL) ? m_tradingEngine.BuildTrailingIndicatorChoiceList(symbol, inds, tfs) : 0;
+   int count = BuildTrailingIndicatorChoiceList(symbol, inds, tfs);
 
    if(force || count != s_row_count)
     {
@@ -444,7 +501,7 @@
 
    CIndicatorDE   *inds[];
    ENUM_TIMEFRAMES tfs[];
-   int count = (m_tradingEngine != NULL) ? m_tradingEngine.BuildTrailingIndicatorChoiceList(symbol, inds, tfs) : 0;
+   int count = BuildTrailingIndicatorChoiceList(symbol, inds, tfs);
    for(int i = 0; i < count; i++)
     {
      MqlParam ind_params[];

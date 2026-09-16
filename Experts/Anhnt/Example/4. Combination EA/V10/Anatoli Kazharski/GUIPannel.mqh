@@ -20,9 +20,11 @@
      //--- Press-D debug dump snapshot see OnEvent's CHARTEVENT_KEYDOWN/'D' handler; general utility, not tied to any one tab.
      // Private Pointer variables
         CSymbolsCollection               *m_symbol_collection;                // CTradingEngine owns
+        CMarketCollection                *m_market_collection;                // CTradingEngine owns
+        CAccountsCollection              *m_accounts_collection;              // CTradingEngine owns - direct borrow (Anhnt/Claude, 2026-09-15), same pattern as m_market_collection/m_symbol_collection; GetCurrentAccount() itself lives on CAccountsCollection now, not CTradingEngine
         CBarTimeSeriesCollection         *m_BarTimeSeriesCollection;          // CBarTimeSeriesCollection owns        
         CIndicatorsCollection            *m_IndicatorsCollection;             // CTimeSeriesEngine owns
-        CTimeSeriesEngine                *m_timeSeriesEngine;                 // EA owns  
+        CSignalsCollection               *m_SignalsCollection;               // CTimeSeriesEngine owns
         CTradingEngine                   *m_tradingEngine;                    // EA owns - now wired via EA.mq5's OnInit (Anhnt/Claude, 2026-09-09); also hosts the StopLost/Trailing Apply engine (moved from CGUIPannel) - display code below calls through this pointer.
         CTradingControl                  *m_trading_control;                  // CTradingEngine owns - actually wired, via SetTradingControl() below (was forward-only to m_trading_bubble before)
      // For Single Source of Truth
@@ -39,6 +41,7 @@
         bool                            m_signal_log_watermarks_loaded; 
      // Trading Level Bubble - wiring lives in GUIPannel_Lifecycle.mqh (Create/OnDeinit/OnTimer/OnEvent)
         CTradingLevelBubble             m_trading_bubble;
+        CChartObjCollection             *m_chart_obj_collection;             // EA owns - for TF-cell click -> SetActiveChartSymbolTF
      // For Layer 2 GUI Control Elements implementation in GUIPannel_MainWindows.mqh
         CWindow                         m_window_main;
         CStatusBar                      m_status_bar;
@@ -157,10 +160,7 @@
         int                             m_marker_pattern_sell_code;
         int                             m_marker_combo_buy_code;
         int                             m_marker_combo_sell_code;
-       // Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi Buy/Sell), 
-       // index 0-2 of the color arrays = Buy/Sell/Non-Related. Preview labels render the ACTUAL Wingdings glyph (Font("Wingdings") 
-       // + the raw char code) so the user sees the real shape, not just a number; color previews reuse CColorButton's
-       // own swatch rendering, just never wired to a click handler (display-only).
+       // Other tab captions/previews - index 0-3 = shape rows (Single Buy/Sell, Multi Buy/Sell),        
         CTextLabel                      m_label_other_caption[16];
         CTextLabel                      m_preview_shape[16];
         CColorButton                    m_colorbutton [3];
@@ -183,39 +183,41 @@
         CComboBox                       m_combo_trailling_sound;
         CButton                         m_btn_save_sound_settings;
      // Setting Window for Candle Infor to display signal on chart     
-       CWindow                           m_window_candle_infomation;
-       CTable                            m_table_candle_information_atBar;
-       datetime                          m_candle_info_shown_bar;             // 0 = window currently hidden
-       int                               m_active_window_index_before_candle_info; // active window to restore on popup hide (Anhnt, 2026-08-29 - fixes Setting Window going dead after a CandleInfo hover)
-       CBarPattern                       *m_pattern_bitmap_shown;             // pattern whose CGCnvPatternBitmap is visible via Alt+hover, NULL = none
-       int                               m_pattern_bitmap_scale;              // CHART_SCALE the shown bitmap was built at - forces rebuild on zoom change
-       CTooltip                          m_tooltip_candle_info;               // Alt+hover pattern-name label, replaces the raw OBJ_TEXT ShowCandlePatternTooltipInfo used 
+       CWindow                          m_window_candle_infomation;
+       CTable                           m_table_candle_information_atBar;
+       datetime                         m_candle_info_shown_bar;             // 0 = window currently hidden
+       int                              m_active_window_index_before_candle_info; // active window to restore on popup hide (Anhnt, 2026-08-29 - fixes Setting Window going dead after a CandleInfo hover)
+       CBarPattern                     *m_pattern_bitmap_shown;             // pattern whose CGCnvPatternBitmap is visible via Alt+hover, NULL = none
+       int                              m_pattern_bitmap_scale;              // CHART_SCALE the shown bitmap was built at - forces rebuild on zoom change
+       CTooltip                         m_tooltip_candle_info;               // Alt+hover pattern-name label, replaces the raw OBJ_TEXT ShowCandlePatternTooltipInfo used 
      //Private Method
      // For GUI implemented in in GUIPannel_Lifecycle.mqh
-       int                             WindowIdx(CWindow &wnd);
-       bool                            CreateGUIPannel();
+       int                              WindowIdx(CWindow &wnd);
+       bool                             CreateGUIPannel();
      // For Main Window m_window_main Implementation in GUIPannel_MainWindow.mqh
-       bool                            CreateWindow_Main(const string caption_text,const int x_gap, const int y_gap);
-       void                            OnEvent_Window_Main(const int id,const long &lparam, const double &dparam, const string &sparam);
+       bool                             CreateWindow_Main(const string caption_text,const int x_gap, const int y_gap);
+       void                             OnEvent_Window_Main(const int id,const long &lparam, const double &dparam, const string &sparam);
       //For status Bar on the bottom of Main Window 
-       bool                            CreateStatusBar(const int x_gap, const int y_gap);
-       bool                            UpdateStatusBar(void); 
+       bool                             CreateStatusBar(const int x_gap, const int y_gap);
+       bool                             UpdateStatusBar(void); 
       //For MenuBar on top of Main Window
-       bool                            CreateMenuBar(const int x_gap, const int y_gap);
+       bool                             CreateMenuBar(const int x_gap, const int y_gap);
       //For Main Tab
-       bool                            CreateTab_Main(const int x_gap, const int y_gap);
+       bool                             CreateTab_Main(const int x_gap, const int y_gap);
        // For Tab Monitor     
         bool                            CreateTable_IndicatorSymbolTFMonitor(const int x, const int y);
         void                            SynTable_IndicatorSymbolTFMonitor(void);
        //For Tab Trading
         // Table Position's Stoploss and Trailling
-         bool                            CreateTable_PositionsStoplostAndTrailling(const int x, const int y);
-         bool                            SyncTable_PositionsStoplostAndTrailling(bool force = false);
-         bool                            CreateTable_PositionPretradeView(const int x, const int y);
-         bool                            SyncTable_PositionPretradeView(bool force = false);
+         bool                           CreateTable_PositionsStoplostAndTrailling(const int x, const int y);
+         bool                           SyncTable_PositionsStoplostAndTrailling(bool force = false);
+         bool                           CreateTable_PositionPretradeView(const int x, const int y);
+         bool                           SyncTable_PositionPretradeView(bool force = false);
         // For Table Pre Trade Symbol Monitor
          bool                            CreateTable_PreTradeSymbolMonitor(const int x, const int y);
-         bool                            SyncTable_PreTradeSymbolMonitor(const string symbol, bool force = false);
+         bool                            SyncTable_PreTradeSymbolMonitor(const string symbol, bool force = false);         
+         int                             BuildSymbolIndicatorMonitorList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[]);
+         void                            OnClickNavigateToTF(const int row);
          void                            OnSymbolToTradeChanged(void);
          void                            OnClickRunSLOrTrailingCheckbox(const long checkbox_id);
          void                            OnClickTogglePretradeDirection(void);
@@ -226,9 +228,7 @@
          void                            OnClickSendNewOrder(void);
          void                            OnClickUseRiskPerNewTradeCheckbox(void);
          void                            OnClickOpenTradingSettingTab(const ENUM_TAB_SETTING_TRADING tab);
-        //--- Single source of truth for the New Order form's Symbol/Lot - COL_PTV_SYMBOL/COL_PTV_LOT
-        //--- of m_table_position_pretrade_view, both CELL_COMBOBOX now (Anhnt, 2026-09-10). Trivial
-        //--- one-line getters, inline per project convention.
+        //--- Single source of truth for the New Order form's 
          string                          GetNewOrderSymbol(void) { return m_table_position_pretrade_view.GetValue(COL_PTV_SYMBOL, 0); }
          double                          GetNewOrderLot(void)    { return ::StringToDouble(m_table_position_pretrade_view.GetValue(COL_PTV_LOT, 0)); }
         // Create Trading Form
@@ -297,12 +297,13 @@
         void                            LoadMarkerSettingsFromJSON(void);
         void                            SaveMarkerSettingsToJSON(void);
         void                            LoadSoundSettingsFromJSON(string &out_trailing_sound_file);
-        void                            SaveSoundSettingsToJSON(void);
+        void                            SaveSoundSettingsToJSON(void); 
        // For Tab m_tabs_setting_markerAndSound on Setting Windows m_window_setting_markerAndSound
         bool                            CreateTab_SettingMarkerAndSound(const int x_gap, const int y_gap);
         bool                            CreateTab_SettingConfig_Marker(const int x, const int y);
         bool                            CreateTab_SettingConfig_Sound(const int x, const int y);
         void                            ScanSoundFolder(string &files[]);
+        void                            ApplyTrailingSoundToAllSymbols(const string trailing_sound);
        // Handle Event on Windows
         void                            OnEvent_Window_SettingMarkerAndSound(const int id,const long &lparam, const double &dparam, const string &sparam);
        // For Marker shape/color settings
@@ -335,7 +336,8 @@
       //For ATR Combobox
        bool                            SyncComboBox_ATRChoice(const string symbol, const ENUM_TIMEFRAMES saved_tf, const int saved_period);
        bool                            GetSelectedATRChoice(const string symbol, ENUM_TIMEFRAMES &out_tf, int &out_period);
-       void                            UpdateStopLostPreview(const string symbol);
+       void                            UpdateStopLostPreview(const string symbol);      
+       int                             BuildATRChoiceList(const string symbol, ENUM_TIMEFRAMES &out_tf[], int &out_period[]);
      // For Trailing Setting implementation in GUIPannel_SettingWindows_TradingTrailing.mqh
        bool                            CreateTable_TrailingSetting(const int x, const int y);
        bool                            SyncTable_TrailingSetting(bool force = false);
@@ -344,7 +346,8 @@
        void                            OnCheckTable_IndicatorsTrailingSetting(const int row);
        bool                            CreateTrailingForm(const int x_gap, const int y_gap);
        void                            ShowTrailingForm(const string symbol);
-       void                            HideTrailingForm(void);
+       void                            HideTrailingForm(void);      
+       int                             BuildTrailingIndicatorChoiceList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[]);
      // For Candle info popup Implementation in GUIPannel_CandleInfo_Windows.mqh
        bool                            MouseOverAnyGUIWindow(const int px = INT_MIN, const int py = INT_MIN);       
        datetime                        CalculateAtCandle(void);
@@ -401,11 +404,12 @@
        void                           SetTimeSeriesCollection(CBarTimeSeriesCollection *ts) { m_BarTimeSeriesCollection = ts;} 
        void                           SetPatternsControl(CBarPatternsControl* ctrl) { m_BarPatterns_Control = ctrl; } 
        void                           SetIndicatorsCollection(CIndicatorsCollection *ind) { m_IndicatorsCollection = ind;}
-       void                           SetTimeSeriesEngine(CTimeSeriesEngine *engine) { m_timeSeriesEngine = engine;}
+       void                           SetSignalsCollection(CSignalsCollection *signals) { m_SignalsCollection = signals;}
        void                           SetTradingEngine(CTradingEngine *trading_engine) { m_tradingEngine = trading_engine; }
-       void                           SetMarketCollection(CMarketCollection *market)      { m_trading_bubble.SetMarketCollection(market); }
+       void                           SetMarketCollection(CMarketCollection *market)      { m_market_collection = market; m_trading_bubble.SetMarketCollection(market); }
+       void                           SetAccountsCollection(CAccountsCollection *acc)     { m_accounts_collection = acc; }
        void                           SetTradingControl(CTradingControl *trading_control) { m_trading_control = trading_control; m_trading_bubble.SetTradingControl(trading_control); }
-       void                           SetChartObjCollection(CChartObjCollection *coll)    { m_trading_bubble.SetChartObjCollection(coll); }
+       void                           SetChartObjCollection(CChartObjCollection *coll)    { m_chart_obj_collection = coll; m_trading_bubble.SetChartObjCollection(coll); }
        void                           SetSymbolTFManager(CSymbolTFManager *manager) { m_SymbolTFManager = manager; }
        void                           SetTradingSetupManager(CTradingSetupSettingManager *manager) { m_trading_setup_manager = manager; }
      // For Marker

@@ -20,27 +20,27 @@
   class CTradingSetupSetting : public CBaseObj
    {
      private:
-       string           m_symbol;                 // IDENTITY
-       //--- StopLost
-       bool             m_sl_active;
+      string                           m_symbol;                 // IDENTITY
+      //--- StopLost
+       bool                            m_sl_active;
        ENUM_STOPLOST_TRAILING_MODE     m_sl_mode;
-       double           m_sl_fixed_mult;           // Fixed: multiplier on Spread (mirrors m_sl_ind_multiplier)
-       ENUM_TIMEFRAMES  m_sl_ind_tf;               // ByInd: TF of the driving Indicator
-       ENUM_INDICATOR   m_sl_ind_type;             // ByInd: Indicator type (e.g. IND_ATR)
-       MqlParam         m_sl_ind_params[];         // ByInd: raw params (period, etc.)
-       double           m_sl_ind_multiplier;       // ByInd: multiplier on the Indicator's value
+       double                          m_sl_fixed_mult;           // Fixed: multiplier on Spread (mirrors m_sl_ind_multiplier)
+       ENUM_TIMEFRAMES                 m_sl_ind_tf;               // ByInd: TF of the driving Indicator
+       ENUM_INDICATOR                  m_sl_ind_type;             // ByInd: Indicator type (e.g. IND_ATR)
+       MqlParam                        m_sl_ind_params[];         // ByInd: raw params (period, etc.)
+       double                          m_sl_ind_multiplier;       // ByInd: multiplier on the Indicator's value
 
-       //--- Trailing
-       bool             m_trail_active;
+      //--- Trailing
+       bool                            m_trail_active;
        ENUM_STOPLOST_TRAILING_MODE     m_trail_mode;
-       int              m_trail_offset_pts;        // shared by Fixed and ByInd - CSimpleTrailing in
-                                                    // Trishkin's Trailings.mqh has one m_offset used
-                                                     // by both GetStopLossValue() overrides, not two
-       ENUM_TIMEFRAMES  m_trail_ind_tf;            // ByInd: TF of the driving Indicator
-       ENUM_INDICATOR   m_trail_ind_type;          // ByInd: Indicator type (e.g. IND_MA, IND_SAR)
-       MqlParam         m_trail_ind_params[];      // ByInd: raw params
-       int              m_trail_start_pts;         // profit (points) required before trailing starts
-       int              m_trail_step_pts;          // minimum improvement (points) before moving SL
+       int                             m_trail_offset_pts;        // shared by Fixed and ByInd - CSimpleTrailing in
+                                                   // Trishkin's Trailings.mqh has one m_offset used
+                                                   // by both GetStopLossValue() overrides, not two
+       ENUM_TIMEFRAMES                 m_trail_ind_tf;            // ByInd: TF of the driving Indicator
+       ENUM_INDICATOR                  m_trail_ind_type;          // ByInd: Indicator type (e.g. IND_MA, IND_SAR)
+       MqlParam                        m_trail_ind_params[];      // ByInd: raw params
+       int                             m_trail_start_pts;         // profit (points) required before trailing starts
+       int                             m_trail_step_pts;          // minimum improvement (points) before moving SL
 
      public:
                          CTradingSetupSetting(void);

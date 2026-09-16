@@ -126,10 +126,10 @@
        m_table_stoplostsetting.SetImages(3, row, sl_gear_img);
        m_table_stoplostsetting.ChangeImage(3, row, 0);
 
-       int    fixed_pts = m_tradingEngine.GetCurrentStopLostDistancePoints(sym_name, SL_MODE_FIXED);
-       int    ind_pts   = m_tradingEngine.GetCurrentStopLostDistancePoints(sym_name, SL_MODE_INDICATOR);
-       double fixed_val = m_tradingEngine.GetStopLostMoneyValue(sym_name, SL_MODE_FIXED);
-       double ind_val    = m_tradingEngine.GetStopLostMoneyValue(sym_name, SL_MODE_INDICATOR);
+       int    fixed_pts = m_tradingEngine.GetCurrent_StopLostDistance_Point(sym_name, SL_MODE_FIXED);
+       int    ind_pts   = m_tradingEngine.GetCurrent_StopLostDistance_Point(sym_name, SL_MODE_INDICATOR);
+       double fixed_val = m_tradingEngine.GetCurrent_StopLostDistance_MoneyForMinLot(sym_name, SL_MODE_FIXED);
+       double ind_val    = m_tradingEngine.GetCurrent_StopLostDistance_MoneyForMinLot(sym_name, SL_MODE_INDICATOR);
        fixed_pts_old[row] = fixed_pts;
        ind_pts_old[row]   = ind_pts;
        fixed_val_old[row] = fixed_val;
@@ -193,10 +193,10 @@
         }
 
       // --- Col4-7: Fixed and Indicator distances, both always recomputed regardless of active mode.
-       int    fixed_pts = m_tradingEngine.GetCurrentStopLostDistancePoints(sym_name, SL_MODE_FIXED);
-       int    ind_pts   = m_tradingEngine.GetCurrentStopLostDistancePoints(sym_name, SL_MODE_INDICATOR);
-       double fixed_val = m_tradingEngine.GetStopLostMoneyValue(sym_name, SL_MODE_FIXED);
-       double ind_val   = m_tradingEngine.GetStopLostMoneyValue(sym_name, SL_MODE_INDICATOR);
+       int    fixed_pts = m_tradingEngine.GetCurrent_StopLostDistance_Point(sym_name, SL_MODE_FIXED);
+       int    ind_pts   = m_tradingEngine.GetCurrent_StopLostDistance_Point(sym_name, SL_MODE_INDICATOR);
+       double fixed_val = m_tradingEngine.GetCurrent_StopLostDistance_MoneyForMinLot(sym_name, SL_MODE_FIXED);
+       double ind_val   = m_tradingEngine.GetCurrent_StopLostDistance_MoneyForMinLot(sym_name, SL_MODE_INDICATOR);
        if(force || fixed_pts != fixed_pts_old[row])
         {
          int dir = (fixed_pts_old[row] < 0 || fixed_pts < 0) ? 2 : (fixed_pts > fixed_pts_old[row]) ? 0 : (fixed_pts < fixed_pts_old[row]) ? 1 : 2;
@@ -419,15 +419,54 @@
     m_btn_save_StopLost_Setting.Hide();
   } 
  //+------------------------------------------------------------------+
- //| BuildATRChoiceList moved to CTradingEngine (Anhnt/Claude,          |
- //| 2026-09-09 - pure data, no GUI control touched). Calls below go    |
- //| through m_tradingEngine.                                           |
+ //| Candidate ATR(period) per tracked TF for this Symbol - pure data, |
+ //| no GUI control touched. Only ever consumed here (GUI), so it     |
+ //| lives directly on CGUIPannel using its own borrowed pointers,    |
+ //| not CTradingEngine (Anhnt/Claude, 2026-09-15 - moved back out of  |
+ //| CTradingEngine, see [[project_v10_stoplost_trailing_engine_split]]|
+ //| for where it lived before).                                       |
  //+------------------------------------------------------------------+
+ int CGUIPannel::BuildATRChoiceList(const string symbol, ENUM_TIMEFRAMES &out_tf[], int &out_period[])
+  {
+   int n = 0;
+   ::ArrayResize(out_tf,     0);
+   ::ArrayResize(out_period, 0);
+   if(m_indicator_template_manager == NULL || m_SymbolTFManager == NULL) return 0;
+   int templates_total = m_indicator_template_manager.Total();
+   for(int t = 0; t < templates_total; t++)
+    {
+     CIndicatorSetting *tpl = m_indicator_template_manager.At(t);
+     if(tpl == NULL || tpl.TypeEnum() != IND_ATR) continue;
+     MqlParam raw[];
+     tpl.GetRawParams(raw);
+     int period = (int)raw[0].integer_value;
+     int tf_total = m_SymbolTFManager.Total();
+     for(int s = 0; s < tf_total; s++)
+      {
+       CSymbolTFSetting *row = m_SymbolTFManager.At(s);
+       if(row == NULL || row.Symbol() != symbol) continue;
+       ::ArrayResize(out_tf,     n + 1);
+       ::ArrayResize(out_period, n + 1);
+       out_tf[n]     = row.TFEnum();
+       out_period[n] = period;
+       n++;
+      }
+    }
+   //--- Sort ascending by TF (M1 first) - same reasoning as BuildTrailingIndicatorChoiceList.
+   for(int a = 0; a < n - 1; a++)
+    for(int b = a + 1; b < n; b++)
+     if(IndexEnumTimeframe(out_tf[b]) < IndexEnumTimeframe(out_tf[a]))
+      {
+       ENUM_TIMEFRAMES tf_tmp = out_tf[a]; out_tf[a] = out_tf[b]; out_tf[b] = tf_tmp;
+       int period_tmp = out_period[a]; out_period[a] = out_period[b]; out_period[b] = period_tmp;
+      }
+   return n;
+  }
  bool CGUIPannel::SyncComboBox_ATRChoice(const string symbol, const ENUM_TIMEFRAMES saved_tf, const int saved_period)
    {
     ENUM_TIMEFRAMES local_tf[];
     int             local_period[];
-    int n = (m_tradingEngine != NULL) ? m_tradingEngine.BuildATRChoiceList(symbol, local_tf, local_period) : 0;
+    int n = BuildATRChoiceList(symbol, local_tf, local_period);
     m_combobox_ATR_choice.ItemsTotal(n);
     int list_h = 18 * ::MathMax(n, 1) + 4;
     if(list_h > 300) list_h = 300;
@@ -486,7 +525,7 @@
   {
    ENUM_TIMEFRAMES local_tf[];
    int             local_period[];
-   int n   = (m_tradingEngine != NULL) ? m_tradingEngine.BuildATRChoiceList(symbol, local_tf, local_period) : 0;
+   int n   = BuildATRChoiceList(symbol, local_tf, local_period);
    int idx = m_combobox_ATR_choice.GetListViewPointer().SelectedItemIndex();
    if(idx < 0 || idx >= n) return false;
    out_tf     = local_tf[idx];
@@ -514,7 +553,7 @@
       MqlParam raw_params[1];
       raw_params[0].type          = TYPE_INT;
       raw_params[0].integer_value = period;
-      int pts = m_tradingEngine.GetIndicatorStopLostDistancePoints(symbol, tf, IND_ATR, raw_params, mult);
+      int pts = m_tradingEngine.GetIndicator_StopLostDistance_Points(symbol, tf, IND_ATR, raw_params, mult);
       if(pts >= 0) ind_text = (string)pts;
      }
     m_label_StopLost_ValuePreview[0].LabelText(fixed_text);
@@ -525,8 +564,8 @@
     m_label_StopLost_ValuePreview[1].Update(true);
    }
   //+------------------------------------------------------------------+
-  //| GetIndicatorStopLostDistancePoints/GetCurrentStopLostDistancePoints/|
-  //| GetStopLostDistancePrice/GetStopLostMoneyValue all moved to        |
+  //| GetIndicator_StopLostDistance_Points/GetCurrent_StopLostDistance_Point/|
+  //| GetCurrent_StopLostDistance_MoneyForMinLot all moved to             |
   //| CTradingEngine (Anhnt/Claude, 2026-09-09 - pure trading-domain     |
   //| logic, no GUI control touched). Calls below go through             |
   //| m_tradingEngine.                                                    |

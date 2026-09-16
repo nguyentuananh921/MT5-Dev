@@ -155,7 +155,7 @@
   }  
  bool CGUIPannel::RefreshWindow_CandleInfo(const datetime bar_time)
   {
-   if(m_IndicatorsCollection == NULL || m_timeSeriesEngine == NULL || m_BarTimeSeriesCollection == NULL ||
+   if(m_IndicatorsCollection == NULL || m_SignalsCollection == NULL || m_BarTimeSeriesCollection == NULL ||
       m_indicator_template_manager == NULL || m_SymbolTFManager == NULL)
       return false;
    datetime next_bar_time = bar_time + ::PeriodSeconds();
@@ -217,7 +217,7 @@
           bool ind_buy  = (ind_entry != NULL) ? ind_entry.BuySignal()  : false;
           bool ind_sell = (ind_entry != NULL) ? ind_entry.SellSignal() : false;
          // signal is BORROWED - CSignalsCollection owns it
-          CSignalBase *signal = m_timeSeriesEngine.GetSignalsCollection().GetOrCreateSignal(ind);
+          CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
           if(signal == NULL) continue;
          // --- history is oldest->newest; walk backward and stop once we're before the span -
          // --- collect EVERY flip inside the span (usually 0 or 1, but never assume 1).

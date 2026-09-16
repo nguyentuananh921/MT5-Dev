@@ -136,6 +136,10 @@
        Print(__FUNCTION__, " > Failed to create Position Pretrade View table!");
        return (false);
       }
+   //--- CreateTradingForm() above hardcodes m_checkbox_use_StopLostSetting/m_checkbox_use_TrailingSetting
+   //--- to checked at construction time - sync them to the actually-loaded StopLost setting now that
+   //--- the New Order form's Symbol cell (read by GetNewOrderSymbol()) has its default value.
+     OnSymbolToTradeChanged();
    //For m_table_positions_StoplostAndTrailling (TAB_TAB_MAIN_TRADING) - implementation in
    //GUIPannel_MainWindows_TabTrading.mqh - fixed-width table (no AutoXResizeMode), M_CONTROL_BORDER_GAP
    //margin same as StopLost/Trailing above (Anhnt, 2026-09-08). Y starts right below
@@ -320,9 +324,14 @@
        && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING
        && SyncTable_PositionsStoplostAndTrailling())
       redraw_needed = true;
-   // Update data for m_table_position_pretrade_view ("ướm" preview) - same gating (Anhnt/Claude, 2026-09-09).
+   // Update data for m_table_position_pretrade_view ("ướm" preview) - same gating (Anhnt/Claude, 2026-09-09),
+   // plus !IsMinimized() (Anhnt/Claude, 2026-09-16) - this Sync's own m_edit_RiskPerNewTrade.Show()/Hide()
+   // re-asserts every tick regardless of the window's own minimize state (see its "Reassert visibility
+   // every tick" comment), so with m_window_main minimized it kept forcing the edit box back visible,
+   // floating on the chart outside the collapsed panel instead of staying hidden with everything else.
     if(m_active_window_index == WindowIdx(m_window_main)
        && m_tabs_main.SelectedTab() == TAB_TAB_MAIN_TRADING
+       && !m_window_main.IsMinimized()
        && SyncTable_PositionPretradeView())
       redraw_needed = true;
    // Update Col0(active-chart-TF)/Col2(Value) on m_table_indicator_PreTradeSymbolMonitor - scoped to

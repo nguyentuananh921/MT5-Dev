@@ -4,12 +4,30 @@
 #ifndef CTIMESERIESENGINE_LIFECYCLE_MQH
 #define CTIMESERIESENGINE_LIFECYCLE_MQH
 #include "TimeSeriesEngine.mqh"
-#include "..\Services\SymbolTFManager.mqh"   // CSymbolTFManager/CSymbolTFSetting - bulk-sync loop reads it LIVE
- //Life cycle management
+#include "..\Services\SymbolTFManager.mqh"   // CSymbolTFManager/CSymbolTFSetting - bulk-sync loop reads it LIVE 
  bool CTimeSeriesEngine::OnInitEvent(const string symbol, const ENUM_TIMEFRAMES period,
                                       CSymbolTFManager *manager, CIndicatorTemplateManager *templateManager)
  {
   if(m_symbol_collection == NULL) return false;
+
+  // Bootstrap ATR(14) into the Template if it's neither saved nor already on the chart
+  // (Anhnt, 2026-09-09) - StopLost's SL_MODE_INDICATOR path needs a live ATR(14) CIndicatorDE
+  // to read from; with zero ATR rows, the lookup finds nothing AND the GUI's own ATR-choice
+  // combobox has nothing to offer (BuildATRChoiceList only lists Template rows). ShowOnChart=false
+  // - it should compute in the background, not clutter the chart, unless the user separately
+  // drops it on the chart themselves.
+  if(templateManager != NULL)
+   {
+    MqlParam atr14_params[1];
+    atr14_params[0].type          = TYPE_INT;
+    atr14_params[0].integer_value = 14;
+    if(!templateManager.Exists(IND_ATR, atr14_params))
+     {
+      templateManager.AddIndicatorToIndicatorTemplateSetting(IND_ATR, atr14_params);
+      CIndicatorSetting *atr14_entry = templateManager.FindByIdentity(IND_ATR, atr14_params);
+      if(atr14_entry != NULL) atr14_entry.ShowOnChart(false);
+     }
+   }
 
   // DOM setup - chay MOI lan goi (symbol cua chart co the doi qua tung reinit), tu guard
   // theo tung symbol qua m_dom_attempted[] - khong nam trong co init_complete ben duoi.

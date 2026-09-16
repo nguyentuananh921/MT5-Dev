@@ -5,17 +5,7 @@
 #ifndef CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH
 #define CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH
 #include "GUIPannel.mqh"
- //Tab Sound ENUM_TAB_SETTING_MARKERANDSOUND_SOUND of Tab m_tabs_setting_markerAndSound
- // --- Split away from the Marker tab (Anhnt, 2026-08-26) - Buy/Sell alert sound file pickers
- // --- are an independent concern from marker shape/color, own tab.
- //+----------------------------------------------------------------------------+
- //| Seeds m_marker_buy_sound_file/m_marker_sell_sound_file + out_trailing_sound_file|
- //| from Config_Setting.json's "Sound_Settings" section - always sets sane      |
- //| defaults FIRST so a missing/partial file still leaves the combo on a       |
- //| valid selection. Trailing sound has no own property (Anhnt/Claude,         |
- //| 2026-09-08, "hạn chế khai báo properties") - m_combo_trailling_sound's own  |
- //| current selection IS the source of truth once created, read back straight  |
- //| off it at Save time; this out-param only seeds the INITIAL selected index. |
+ //Tab Sound ENUM_TAB_SETTING_MARKERANDSOUND_SOUND of Tab m_tabs_setting_markerAndSound 
  //+----------------------------------------------------------------------------+
  void CGUIPannel::LoadSoundSettingsFromJSON(string &out_trailing_sound_file)
   {
@@ -66,7 +56,7 @@
 
     string trailing_sound_default;
     LoadSoundSettingsFromJSON(trailing_sound_default); // seed m_marker_*_sound_file + trailing default from Config_Setting.json before building defaults
-    if(m_tradingEngine != NULL) m_tradingEngine.ApplyTrailingSoundToAllSymbols(trailing_sound_default); // wire it into CTradeObj right away too - don't wait for a Save click
+    ApplyTrailingSoundToAllSymbols(trailing_sound_default); // wire it into CTradeObj right away too - don't wait for a Save click
 
    // Row 0: Sound folder static label (read-only, shows where to drop .wav files)
     if(!CreateTextLabel_OtherCaption(11, "Sound Folder", x + SETTING_SOUND_BASE_X_GAP, y, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
@@ -118,19 +108,7 @@
     CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_markerAndSound), m_btn_save_sound_settings);
 
     return true;
-  }
- //+----------------------------------------------------------------------------+
- //| Writes the "Sound_Settings" section of Config_Setting.json straight from   |
- //| m_marker_buy_sound_file/m_marker_sell_sound_file (already committed live   |
- //| by the combo's own ON_CLICK_COMBOBOX_ITEM handler) + m_combo_trailling_    |
- //| sound's own current selection (no separate property for it - "hạn chế     |
- //| khai báo properties", Anhnt/Claude 2026-09-08) - preserves the 4 sections  |
- //| owned elsewhere. Also pushes the Trailing sound into every tracked         |
- //| Symbol's own CTradeObj (Trading\TradeObj.mqh) via SetSoundModifySL/        |
- //| UseSoundModifySL, so ApplyStopLostAndTrailing's real ModifyPosition calls  |
- //| actually play it - reusing the Library's own sound machinery instead of a  |
- //| separate hand-rolled CMessage::PlaySound path.                            |
- //+----------------------------------------------------------------------------+
+  } 
  void CGUIPannel::SaveSoundSettingsToJSON(void)
   {
    string trailing_sound = m_combo_trailling_sound.GetValue();
@@ -172,11 +150,24 @@
    ::FileClose(fh);
    ::Print(__FUNCTION__, " > saved sound settings to ", full_path);
 
-   if(m_tradingEngine != NULL) m_tradingEngine.ApplyTrailingSoundToAllSymbols(trailing_sound);
+   ApplyTrailingSoundToAllSymbols(trailing_sound);
+  }  
+ void CGUIPannel::ApplyTrailingSoundToAllSymbols(const string trailing_sound)
+  {
+   if(trailing_sound == "" || m_trading_control == NULL) return;   
+   m_trading_control.SetUseSounds(true);
+   m_trading_control.SetSound(MODE_SET_SOUND_MODIFY_SL, ORDER_TYPE_BUY,  trailing_sound);
+   m_trading_control.SetSound(MODE_SET_SOUND_MODIFY_SL, ORDER_TYPE_SELL, trailing_sound);   
+   CArrayObj *col_list = (m_symbol_collection != NULL) ? m_symbol_collection.GetList() : NULL;
+   int count = (col_list != NULL) ? col_list.Total() : 0;
+   for(int i = 0; i < count; i++)
+    {
+     CSymbol *sym = col_list.At(i);
+     if(sym == NULL) continue;
+     CTradeObj *trade_obj = sym.GetTradeObj();
+     if(trade_obj == NULL) continue;
+     trade_obj.UseSoundModifySL(ORDER_TYPE_BUY,  true);
+     trade_obj.UseSoundModifySL(ORDER_TYPE_SELL, true);
+    }
   }
- //+----------------------------------------------------------------------------+
- //| ApplyTrailingSoundToAllSymbols moved to CTradingEngine (Anhnt/Claude,       |
- //| 2026-09-09 - pure trading-domain logic, no GUI control touched). Calls      |
- //| below go through m_tradingEngine.                                          |
- //+----------------------------------------------------------------------------+
 #endif // CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH

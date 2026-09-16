@@ -5,90 +5,91 @@
 #include "TradingEngine.mqh"
 #ifndef CTRADINGENGINE_MULTIMODULE_MQH
 #define CTRADINGENGINE_MULTIMODULE_MQH
-//For profit calculation
- double CTradingEngine::SumFloatingProfit(CArrayObj *list)
-  {
-   if(list == NULL) return 0;
-   double total = 0;
-   for(int i = 0; i < list.Total(); i++)
-    {
-     CMarketPosition *pos = (CMarketPosition*)list.At(i);
-     if(pos != NULL) total += pos.Profit();
-  }
-   return total;
-  }
  //+------------------------------------------------------------------+
- double CTradingEngine::CalcProfit(void)
-  {
-   CArrayObj *list = m_market_collection.GetList();
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-   return SumFloatingProfit(list);
-  }
+ //| Check trading events                                             |
  //+------------------------------------------------------------------+
- double CTradingEngine::CalcProfit(const string symbol)
+ void CTradingEngine::TradeEventsControl(void) 
   {
-   CArrayObj *list = m_market_collection.GetList();
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, symbol, EQUAL);
-   return SumFloatingProfit(list);
+   //--- Initialize trading events' flags
+    this.m_is_market_trade_event = false;
+    this.m_is_history_trade_event = false;
+    this.m_trade_event_collection .SetEventFlag(false);
+    //--- Update the lists
+     this.m_market_collection.Refresh();
+     this.m_history_collection.Refresh();
+    //--- First launch actions
+    if (this.IsFirstStart())
+       return;
+    //--- Check the changes in the market status and account history
+    this.m_is_market_trade_event = this.m_market_collection.IsTradeEvent();
+    this.m_is_history_trade_event = this.m_history_collection.IsTradeEvent();
+
+    //If there is any event, send the lists, the flags and the number of new orders and deals to the event collection, and update it
+    int change_total = 0;
+    CArrayObj *list_changes = this.m_market_collection.GetListChanges();
+    if (list_changes != NULL)
+      change_total = list_changes.Total();
+    if (this.m_is_history_trade_event || this.m_is_market_trade_event ||
+         change_total > 0) 
+     {
+      this.m_trade_event_collection.Refresh(
+      this.m_history_collection.GetList(), this.m_market_collection.GetList(), list_changes,
+      this.m_market_collection.GetListControl(), this.m_is_history_trade_event,
+      this.m_is_market_trade_event, this.m_history_collection.NewOrders(),
+      this.m_market_collection.NewPendingOrders(), this.m_market_collection.NewPositions(),
+      this.m_history_collection.NewDeals(), this.m_market_collection.ChangedVolumeValue());
+     }
   }
- //+------------------------------------------------------------------+
- double CTradingEngine::CalcProfit(ENUM_POSITION_TYPE dir)
-  {
-   CArrayObj *list = m_market_collection.GetList();
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-   return SumFloatingProfit(list);
-  }
- //+------------------------------------------------------------------+
- double CTradingEngine::CalcProfit(const string symbol, ENUM_POSITION_TYPE dir)
-  {
-   CArrayObj *list = m_market_collection.GetList();
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, symbol, EQUAL);
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-   return SumFloatingProfit(list);
-  }
- //+------------------------------------------------------------------+
- double CTradingEngine::CalcProfitAt(const string symbol, ENUM_POSITION_TYPE dir,
-                                        double target_price)
-  {
-   CArrayObj *list = m_market_collection.GetList();
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, symbol, EQUAL);
-   list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-   if(list == NULL) return 0;
-   double total = 0;
-   for(int i = 0; i < list.Total(); i++)
-    {
-     CMarketPosition *pos = (CMarketPosition*)list.At(i);
-     if(pos == NULL) continue;
-     double p = 0;
-     if(OrderCalcProfit((ENUM_ORDER_TYPE)dir, symbol,
-                            pos.Volume(), pos.PriceOpen(), target_price, p))
-      total += p;
-    }
-   return total;
-  }
- //+------------------------------------------------------------------+
- double CTradingEngine::CalcProfitAt(const string symbol, double price)
-  {
-   return CalcProfitAt(symbol, POSITION_TYPE_BUY,  price)
-     + CalcProfitAt(symbol, POSITION_TYPE_SELL, price);
-  }
-//+------------------------------------------------------------------+
-//| StopLost/Trailing Apply engine (moved from CGUIPannel_NewFeatures.mqh /
-//| GUIPannel_SettingWindows_TradingStopLost.mqh / GUIPannel_SettingWindows_
-//| TradingTrailing.mqh / GUIPannel_MainWindows_TabTrading.mqh, Anhnt/Claude,
-//| 2026-09-09 - pure trading-domain logic, doesn't belong in the GUI layer.
-//| CGUIPannel now only calls through m_tradingEngine to display the numbers.
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//| Shared core: ATR-style Indicator distance lookup, in points.      |
-//| Used both by GetCurrentStopLostDistancePoints (saved config) and  |
-//| CGUIPannel::UpdateStopLostPreview (live unsaved form fields).     |
-//+------------------------------------------------------------------+
-int CTradingEngine::GetIndicatorStopLostDistancePoints(const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_INDICATOR ind_type, MqlParam &raw_params[], const double mult)
+//+--------------------------------------------------------------------+
+//| StopLost distance (points) of the Symbol's currently-configured    |
+//| StopLost mode (Fixed = Spread*Multiplier, Indicator = ATR-style).  |
+//+--------------------------------------------------------------------+
+int CTradingEngine::GetCurrent_StopLostDistance_Point(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
+ {
+  if(m_trading_setup_manager == NULL) return -1;
+  CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+  if(row_setting == NULL) return -1;
+  ENUM_STOPLOST_TRAILING_MODE mode = (mode_override == WRONG_VALUE) ? row_setting.StopLostMode() : mode_override;
+  if(mode == SL_MODE_FIXED)
+   {
+    CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
+    int spread_pts = (sym != NULL) ? sym.Spread() : (int)::SymbolInfoInteger(symbol, SYMBOL_SPREAD);
+    return (int)::MathRound(spread_pts * row_setting.StopLostFixedMultiplier());
+   }
+  MqlParam raw_params[];
+  row_setting.GetStopLostIndParams(raw_params);
+  return GetIndicator_StopLostDistance_Points(symbol, row_setting.StopLostIndTF(), row_setting.StopLostIndType(), raw_params, row_setting.StopLostIndMultiplier());
+ } 
+double CTradingEngine::GetCurrent_StopLostDistance_MoneyForMinLot(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
+ {
+  int distance_pts = GetCurrent_StopLostDistance_Point(symbol, mode_override);
+  if(distance_pts < 0) return EMPTY_VALUE;
+  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
+  if(sym == NULL) return EMPTY_VALUE;
+  return distance_pts * sym.TradeTickValue() * sym.LotsMin();
+ }
+double CTradingEngine::CalcMaxLotByRisk(const string symbol, const ENUM_POSITION_TYPE type, const double risk_percent)
+ {
+  if(risk_percent <= 0.0) return 0.0;
+  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
+  if(sym == NULL) return 0.0;
+  int distance_pts = GetCurrent_StopLostDistance_Point(symbol);
+  if(distance_pts <= 0) return 0.0;
+  double tick_value = sym.TradeTickValue();
+  if(tick_value <= 0.0) return 0.0;
+  double money_per_lot = distance_pts * tick_value;
+  if(money_per_lot <= 0.0) return 0.0;
+  CAccount *acc = m_accounts_collection.GetCurrentAccount();
+  double balance = (acc != NULL) ? acc.Balance() : ::AccountInfoDouble(ACCOUNT_BALANCE);
+  double raw_max_lot = (balance * risk_percent / 100.0) / money_per_lot;
+  double step = sym.LotsStep();
+  double lots_max = sym.LotsMax();
+  if(step <= 0.0) return 0.0;
+  double stepped = ::MathFloor(raw_max_lot / step) * step;
+  if(stepped > lots_max) stepped = ::MathFloor(lots_max / step) * step;
+  return (stepped > 0.0) ? stepped : 0.0;
+ }
+int CTradingEngine::GetIndicator_StopLostDistance_Points(const string symbol, const ENUM_TIMEFRAMES tf, const ENUM_INDICATOR ind_type, MqlParam &raw_params[], const double mult)
  {
   if(m_indicators_collection == NULL) return -1;
   CArrayObj *ind_list = m_indicators_collection.GetListIndBySymbol(symbol);
@@ -110,211 +111,84 @@ int CTradingEngine::GetIndicatorStopLostDistancePoints(const string symbol, cons
    }
   return -1; // instance not synced yet
  }
-//+------------------------------------------------------------------+
-//| StopLost distance (points) of the Symbol's currently-configured   |
-//| StopLost mode (Fixed = Spread*Multiplier, Indicator = ATR-style). |
-//+------------------------------------------------------------------+
-int CTradingEngine::GetCurrentStopLostDistancePoints(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
+int CTradingEngine::GetCurrent_TrailingDistance_Points(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
  {
   if(m_trading_setup_manager == NULL) return -1;
   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
   if(row_setting == NULL) return -1;
-  ENUM_STOPLOST_TRAILING_MODE mode = (mode_override == WRONG_VALUE) ? row_setting.StopLostMode() : mode_override;
-  if(mode == SL_MODE_FIXED)
-   {
-    CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-    int spread_pts = (sym != NULL) ? sym.Spread() : (int)::SymbolInfoInteger(symbol, SYMBOL_SPREAD);
-    return (int)::MathRound(spread_pts * row_setting.StopLostFixedMultiplier());
-   }
-  MqlParam raw_params[];
-  row_setting.GetStopLostIndParams(raw_params);
-  return GetIndicatorStopLostDistancePoints(symbol, row_setting.StopLostIndTF(), row_setting.StopLostIndType(), raw_params, row_setting.StopLostIndMultiplier());
- }
-//+------------------------------------------------------------------+
-//| StopLost distance (price units) of the Symbol's currently-        |
-//| configured StopLost mode.                                        |
-//+------------------------------------------------------------------+
-double CTradingEngine::GetStopLostDistancePrice(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
- {
-  int distance_pts = GetCurrentStopLostDistancePoints(symbol, mode_override);
-  if(distance_pts < 0) return EMPTY_VALUE;
+  ENUM_STOPLOST_TRAILING_MODE mode = (mode_override == WRONG_VALUE) ? row_setting.TrailingMode() : mode_override;
+  int offset_pts = row_setting.TrailingOffsetPts();
+  if(mode == SL_MODE_FIXED) return offset_pts;
+  double ind_value;
+  if(!GetCurrent_TrailingIndicator_AnchorPrice(symbol, ind_value)) return -1;
   CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
+  double bid   = (sym != NULL) ? sym.Bid()   : ::SymbolInfoDouble(symbol, SYMBOL_BID);
+  double ask   = (sym != NULL) ? sym.Ask()   : ::SymbolInfoDouble(symbol, SYMBOL_ASK);
   double point = (sym != NULL) ? sym.Point() : ::SymbolInfoDouble(symbol, SYMBOL_POINT);
-  if(point <= 0) return EMPTY_VALUE;
-  return distance_pts * point;
- }
-//+------------------------------------------------------------------+
-//| Target SL price for one (Symbol,Direction) - Mid -/+ the          |
-//| currently-configured Distance (Fixed or ATR, whichever            |
-//| CTradingSetupSetting.StopLostMode() says is active). Returns      |
-//| EMPTY_VALUE if the distance/Symbol isn't available.                |
-//+------------------------------------------------------------------+
-double CTradingEngine::GetStopLostTargetPrice(const string symbol, const ENUM_POSITION_TYPE type)
- {
-  double distance_price = GetStopLostDistancePrice(symbol);   // already respects StopLostMode() internally
-  if(distance_price == EMPTY_VALUE) return EMPTY_VALUE;
-  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-  double bid = (sym != NULL) ? sym.Bid() : ::SymbolInfoDouble(symbol, SYMBOL_BID);
-  double ask = (sym != NULL) ? sym.Ask() : ::SymbolInfoDouble(symbol, SYMBOL_ASK);
+  if(point <= 0) return -1;
   double mid = (bid + ask) / 2.0;
-  return (type == POSITION_TYPE_BUY) ? (mid - distance_price) : (mid + distance_price);
- }
-//+------------------------------------------------------------------+
-//| Shared core: every live CIndicatorDE instance tracked for the      |
-//| given Symbol (across every tracked TF). Restricted to              |
-//| INDICATOR_GROUP_TREND, exactly 1 buffer, minus StdDev - only       |
-//| single-price-level indicators are valid Trailing-by-Indicator      |
-//| candidates (CTrailingByInd reads ONE value, no Upper/Lower          |
-//| selection exists in Trishkin's reference).                         |
-//+------------------------------------------------------------------+
-int CTradingEngine::BuildTrailingIndicatorChoiceList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[])
- {
-  int count = 0;
-  ::ArrayResize(out_inds, 0);
-  ::ArrayResize(out_tfs,  0);
-  if(m_indicators_collection == NULL || m_symbol_tf_manager == NULL || m_indicator_template_manager == NULL) return 0;
-  int symtf_total = m_symbol_tf_manager.Total();
-  int tmpl_total  = m_indicator_template_manager.Total();
-  for(int si = 0; si < symtf_total; si++)
-   {
-    CSymbolTFSetting *symtf = m_symbol_tf_manager.At(si);
-    if(symtf == NULL || symtf.Symbol() != symbol) continue;
-    ENUM_TIMEFRAMES tf = symtf.TFEnum();
-    CArrayObj *ind_list = m_indicators_collection.GetListIndBySymbol(symbol);
-    ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-    int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
-    if(ind_total == 0) continue;
-    for(int ti = 0; ti < tmpl_total; ti++)
-     {
-      CIndicatorSetting *entry = m_indicator_template_manager.At(ti);
-      if(entry == NULL) continue;
-      ENUM_INDICATOR ind_type = entry.TypeEnum();
-      if(GetIndicatorGroupForType(ind_type) != INDICATOR_GROUP_TREND) continue;
-      if(GetIndicatorBuffersTotal(ind_type) != 1) continue;
-      if(ind_type == IND_STDDEV) continue;
-      MqlParam raw_params[];
-      entry.GetRawParams(raw_params);
-      if(::ArraySize(raw_params) == 0) continue;
-      CIndicatorDE *ind = NULL;
-      for(int ii = 0; ii < ind_total; ii++)
-       {
-        CIndicatorDE *cand = ind_list.At(ii);
-        if(cand == NULL || cand.TypeIndicator() != entry.TypeEnum()) continue;
-        MqlParam cand_params[];
-        cand.GetMqlParams(cand_params);
-        if(IsEqualMqlParamArrays(cand_params, raw_params)) { ind = cand; break; }
-       }
-      if(ind == NULL) continue; // template not instantiated on this Symbol+TF yet
-      ::ArrayResize(out_inds, count + 1);
-      ::ArrayResize(out_tfs,  count + 1);
-      out_inds[count] = ind;
-      out_tfs[count]  = tf;
-      count++;
-     }
-   }
-  //--- Sort ascending by TF (M1 first) - m_symbol_tf_manager's own insertion order is otherwise
-  //--- whatever order Symbol+TF rows were Added/loaded in, not TF order (Anhnt, 2026-09-09).
-  for(int a = 0; a < count - 1; a++)
-   for(int b = a + 1; b < count; b++)
-    if(IndexEnumTimeframe(out_tfs[b]) < IndexEnumTimeframe(out_tfs[a]))
-     {
-      CIndicatorDE   *ind_tmp = out_inds[a]; out_inds[a] = out_inds[b]; out_inds[b] = ind_tmp;
-      ENUM_TIMEFRAMES tf_tmp  = out_tfs[a];  out_tfs[a]  = out_tfs[b];  out_tfs[b]  = tf_tmp;
-     }
-  return count;
- }
-//+------------------------------------------------------------------+
-//| Every live CIndicatorDE instance tracked for the given Symbol      |
-//| (across every tracked TF) - NO Trend/1-buffer/StdDev filter, this  |
-//| is for general monitoring display (m_table_indicator_             |
-//| PreTradeSymbolMonitor), not Trailing-by-Indicator eligibility.     |
-//| Same core loop as BuildTrailingIndicatorChoiceList minus that      |
-//| filter (Anhnt/Claude, 2026-09-09 - "ATR đúng là nó không trailling |
-//| được nhưng nó vẫn cần hiện ra trong table để tiện theo dõi" - the  |
-//| two functions serve different purposes and shouldn't share one     |
-//| filtered implementation).                                          |
-//+------------------------------------------------------------------+
-int CTradingEngine::BuildSymbolIndicatorMonitorList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[])
- {
-  int count = 0;
-  ::ArrayResize(out_inds, 0);
-  ::ArrayResize(out_tfs,  0);
-  if(m_indicators_collection == NULL || m_symbol_tf_manager == NULL || m_indicator_template_manager == NULL) return 0;
-  int symtf_total = m_symbol_tf_manager.Total();
-  int tmpl_total  = m_indicator_template_manager.Total();
-  for(int si = 0; si < symtf_total; si++)
-   {
-    CSymbolTFSetting *symtf = m_symbol_tf_manager.At(si);
-    if(symtf == NULL || symtf.Symbol() != symbol) continue;
-    ENUM_TIMEFRAMES tf = symtf.TFEnum();
-    CArrayObj *ind_list = m_indicators_collection.GetListIndBySymbol(symbol);
-    ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
-    int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
-    if(ind_total == 0) continue;
-    for(int ti = 0; ti < tmpl_total; ti++)
-     {
-      CIndicatorSetting *entry = m_indicator_template_manager.At(ti);
-      if(entry == NULL) continue;
-      MqlParam raw_params[];
-      entry.GetRawParams(raw_params);
-      if(::ArraySize(raw_params) == 0) continue;
-      CIndicatorDE *ind = NULL;
-      for(int ii = 0; ii < ind_total; ii++)
-       {
-        CIndicatorDE *cand = ind_list.At(ii);
-        if(cand == NULL || cand.TypeIndicator() != entry.TypeEnum()) continue;
-        MqlParam cand_params[];
-        cand.GetMqlParams(cand_params);
-        if(IsEqualMqlParamArrays(cand_params, raw_params)) { ind = cand; break; }
-       }
-      if(ind == NULL) continue; // template not instantiated on this Symbol+TF yet
-      ::ArrayResize(out_inds, count + 1);
-      ::ArrayResize(out_tfs,  count + 1);
-      out_inds[count] = ind;
-      out_tfs[count]  = tf;
-      count++;
-     }
-   }
-  //--- Sort ascending by TF (M1 first) - same reasoning as BuildTrailingIndicatorChoiceList above.
-  for(int a = 0; a < count - 1; a++)
-   for(int b = a + 1; b < count; b++)
-    if(IndexEnumTimeframe(out_tfs[b]) < IndexEnumTimeframe(out_tfs[a]))
-     {
-      CIndicatorDE   *ind_tmp = out_inds[a]; out_inds[a] = out_inds[b]; out_inds[b] = ind_tmp;
-      ENUM_TIMEFRAMES tf_tmp  = out_tfs[a];  out_tfs[a]  = out_tfs[b];  out_tfs[b]  = tf_tmp;
-     }
-  return count;
+  return (int)::MathRound(::MathAbs(mid - ind_value) / point) + offset_pts;
  }
 //+------------------------------------------------------------------+
 //| Live buffer value of the Symbol's currently-selected Trailing-by-  |
 //| Indicator choice (TrailingIndTF/Type/Params on CTradingSetupSetting)|
-//| - same identity match BuildTrailingIndicatorChoiceList's own       |
-//| candidates use. Returns false if nothing chosen yet or the          |
-//| instance isn't synced.                                             |
+//| - direct identity lookup on m_indicators_collection, same pattern   |
+//| as GetIndicator_StopLostDistance_Points above (Anhnt/Claude,        |
+//| 2026-09-15 - no longer builds the whole GUI choice list just to     |
+//| filter down to the one already-saved identity; that choice-list     |
+//| builder now lives on CGUIPannel, GUI-only consumer, see             |
+//| [[project_v10_stoplost_trailing_engine_split]]). Reads shift=0      |
+//| (Live), same convention as GetIndicator_StopLostDistance_Points -   |
+//| no longer shares CTradingSetupSettingManager::TrailingDataRatesIndex|
+//| with Fixed mode's own M1-bar shift, which is a separate concept in  |
+//| Trishkin's own reference (CTrailingByValue takes no shift at all;   |
+//| CTrailingByInd's own m_data_index defaults to 1, not shared) - Anhnt|
+//| decided not to add a 3rd field just for this, plain Live is enough.|
 //+------------------------------------------------------------------+
-bool CTradingEngine::GetCurrentTrailingIndicatorValue(const string symbol, double &out_value)
+bool CTradingEngine::GetCurrent_TrailingIndicator_AnchorPrice(const string symbol, double &out_value)
  {
   out_value = EMPTY_VALUE;
-  if(m_trading_setup_manager == NULL) return false;
+  if(m_trading_setup_manager == NULL || m_indicators_collection == NULL) return false;
   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
   if(row_setting == NULL || row_setting.TrailingIndType() == WRONG_VALUE) return false;
   MqlParam saved_params[];
   row_setting.GetTrailingIndParams(saved_params);
-  CIndicatorDE   *inds[];
-  ENUM_TIMEFRAMES tfs[];
-  int count = BuildTrailingIndicatorChoiceList(symbol, inds, tfs);
-  for(int i = 0; i < count; i++)
+  CArrayObj *ind_list = m_indicators_collection.GetListIndBySymbol(symbol);
+  ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, row_setting.TrailingIndTF(), EQUAL);
+  int total = (ind_list != NULL) ? ind_list.Total() : 0;
+  for(int i = 0; i < total; i++)
    {
-    if(tfs[i] != row_setting.TrailingIndTF() || inds[i].TypeIndicator() != row_setting.TrailingIndType()) continue;
-    MqlParam ind_params[];
-    inds[i].GetMqlParams(ind_params);
-    if(!IsEqualMqlParamArrays(ind_params, saved_params)) continue;
-    double v0 = inds[i].GetDataBuffer(0, 0);
+    CIndicatorDE *cand = ind_list.At(i);
+    if(cand == NULL || cand.TypeIndicator() != row_setting.TrailingIndType()) continue;
+    MqlParam cand_params[];
+    cand.GetMqlParams(cand_params);
+    if(!IsEqualMqlParamArrays(cand_params, saved_params)) continue;
+    double v0 = cand.GetDataBuffer(0, 0);
     if(v0 == EMPTY_VALUE) return false;
     out_value = v0;
     return true;
    }
   return false;
+ }
+double CTradingEngine::GetTrailingMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
+ {
+  int distance_pts = GetCurrent_TrailingDistance_Points(symbol, mode_override);
+  if(distance_pts < 0) return EMPTY_VALUE;
+  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
+  if(sym == NULL) return EMPTY_VALUE;
+  return distance_pts * sym.TradeTickValue() * sym.LotsMin();
+ }
+double CTradingEngine::Get_StopLost_TargetPrice(const string symbol, const ENUM_POSITION_TYPE type)
+ {
+  int distance_pts = GetCurrent_StopLostDistance_Point(symbol);   // already respects StopLostMode() internally
+  if(distance_pts < 0) return EMPTY_VALUE;
+  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
+  double point = (sym != NULL) ? sym.Point() : ::SymbolInfoDouble(symbol, SYMBOL_POINT);
+  if(point <= 0) return EMPTY_VALUE;
+  double distance_price = distance_pts * point;
+  double bid = (sym != NULL) ? sym.Bid() : ::SymbolInfoDouble(symbol, SYMBOL_BID);
+  double ask = (sym != NULL) ? sym.Ask() : ::SymbolInfoDouble(symbol, SYMBOL_ASK);
+  return (type == POSITION_TYPE_BUY) ? (bid - distance_price) : (ask + distance_price);
  }
 //+------------------------------------------------------------------+
 //| Target Trailing price for one (Symbol,Direction) - Trishkin's own  |
@@ -323,7 +197,7 @@ bool CTradingEngine::GetCurrentTrailingIndicatorValue(const string symbol, doubl
 //|  Indicator: IndicatorValue ∓ Offset*Point                          |
 //| Returns EMPTY_VALUE if the Symbol/Indicator data isn't available.  |
 //+------------------------------------------------------------------+
-double CTradingEngine::GetTrailingTargetPrice(const string symbol, const ENUM_POSITION_TYPE type)
+double CTradingEngine::Get_Trailing_TargetPrice(const string symbol, const ENUM_POSITION_TYPE type)
  {
   if(m_trading_setup_manager == NULL) return EMPTY_VALUE;
   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
@@ -334,19 +208,7 @@ double CTradingEngine::GetTrailingTargetPrice(const string symbol, const ENUM_PO
   int offset_pts = row_setting.TrailingOffsetPts();
   double base_price;
   if(row_setting.TrailingMode() == SL_MODE_FIXED)
-   {
-    //--- CTrailingByValue anchors on a CLOSED M1 bar's Low(long)/High(short) at shift
-    //--- TrailingDataRatesIndex - matches Trishkin's own OnTick() feed exactly:
-    //--- CopyRates(symbol, PERIOD_M1, InpDataRatesIndex, 1, rates); Run(rates[0].low, rates[0].high)
-    //--- (Anhnt, 2026-09-09 - "chúng ta cần tồn tại qua TF nhỏ 1M rồi mới nói chuyện TF lớn hơn" -
-    //--- replaces the live-tick Bid/Ask base price that was causing the StopLost(ATR)/Trailing(Fixed)
-    //--- "snap" danger, since a live-tick base tracks price too tightly vs. a stable closed bar).
-    //--- Deliberately does NOT go through m_symbol_tf_manager.Add_SymbolTFSetting() - that fires
-    //--- SYMBOLTF_MANAGER_EVENT_ADDED, which EA.mq5's own handler reacts to by force-switching the
-    //--- VISIBLE chart to whatever was just added (SetActiveChartSymbolTF -> ::ChartSetSymbolPeriod,
-    //--- the same native reload behind the Nháy/z-order BugNote) - M1 here is a silent backend need,
-    //--- not something that should ever jump the user's chart. CBarTimeSeriesCollection::CreateSeries
-    //--- is fully independent of CSymbolTFManager's tracked list, so this is safe standalone.
+   {    
     if(m_BarTimeSeriesCollection == NULL) return EMPTY_VALUE;
     if(!m_BarTimeSeriesCollection.IsAvailable(symbol, PERIOD_M1))
        m_BarTimeSeriesCollection.CreateSeries(symbol, PERIOD_M1);
@@ -358,28 +220,18 @@ double CTradingEngine::GetTrailingTargetPrice(const string symbol, const ENUM_PO
   else
    {
     double ind_value;
-    if(!GetCurrentTrailingIndicatorValue(symbol, ind_value)) return EMPTY_VALUE;
+    if(!GetCurrent_TrailingIndicator_AnchorPrice(symbol, ind_value)) return EMPTY_VALUE;
     base_price = ind_value;
    }
   return (type == POSITION_TYPE_BUY) ? (base_price - offset_pts*point) : (base_price + offset_pts*point);
  }
-//+------------------------------------------------------------------+
-//| Best-first ordered StopLost/Trailing candidate list for one        |
-//| (Symbol,Direction) - shared by ApplyStopLostAndTrailing (which      |
-//| layers its own per-POSITION never-worse/Step/min-distance gate      |
-//| loop on top, with fallback to the next candidate) and the SL       |
-//| Price/SL Profit preview columns. Deliberately does NOT validate     |
-//| broker min-distance/side-of-market here - callers do that           |
-//| themselves. Returns the candidate count (0-2); out_price[]/         |
-//| out_is_trail[] sized to match.                                      |
-//+------------------------------------------------------------------+
 int CTradingEngine::BuildSLCandidates(const string symbol, const ENUM_POSITION_TYPE type, const bool sl_active, 
   const bool trail_active, double &out_price[], bool &out_is_trail[])
  {
   ::ArrayResize(out_price, 0);
   ::ArrayResize(out_is_trail, 0);
-  double sl_candidate    = sl_active    ? GetStopLostTargetPrice(symbol, type) : EMPTY_VALUE;
-  double trail_candidate = trail_active ? GetTrailingTargetPrice(symbol, type) : EMPTY_VALUE;
+  double sl_candidate    = sl_active    ? Get_StopLost_TargetPrice(symbol, type) : EMPTY_VALUE;
+  double trail_candidate = trail_active ? Get_Trailing_TargetPrice(symbol, type) : EMPTY_VALUE;
   int n = 0;
   if(sl_candidate != EMPTY_VALUE)
    {
@@ -405,6 +257,17 @@ int CTradingEngine::BuildSLCandidates(const string symbol, const ENUM_POSITION_T
   return n;
  }
 //+------------------------------------------------------------------+
+//| True if a candidate SL/TP price is far enough from the live market |
+//| (Bid for a BUY exit, Ask for a SELL exit) per MinStopDistancePrice()|
+//| above.                                                              |
+//+------------------------------------------------------------------+
+bool CTradingEngine::IsStopDistanceValid(CSymbol *sym, const ENUM_POSITION_TYPE type, const double price)
+ {
+  if(sym == NULL) return false;
+  double min_dist = this.MinStopDistancePrice(sym);
+  return (type == POSITION_TYPE_BUY) ? (sym.Bid() - price >= min_dist) : (price - sym.Ask() >= min_dist);
+ }
+//+------------------------------------------------------------------+
 //| Preview target SL price for one (Symbol,Direction) - the best-of   |
 //| StopLost/Trailing candidate, validated on the correct side of the  |
 //| market (broker min-distance), matching what ApplyStopLostAndTrailing|
@@ -416,24 +279,9 @@ int CTradingEngine::BuildSLCandidates(const string symbol, const ENUM_POSITION_T
 //+------------------------------------------------------------------+
 double CTradingEngine::GetPreviewSLTargetPrice(const string symbol, const ENUM_POSITION_TYPE type, bool &out_from_trail)
  {
-  out_from_trail = false;
-  //--- If a real Position already exists for this Symbol+Direction, show its ACTUAL current SL
-  //--- (the real value sitting on the broker), not a freshly recomputed target (Anhnt, 2026-09-10 -
-  //--- "cần display cái giá của StopLost hiện tại chứ không phải target... Cái giá của Target hiển
-  //--- thị ở trên rồi" - m_table_position_pretrade_view above already covers the "what would a NEW
-  //--- trade's SL be" preview; this table is about Positions that already exist). Falls through to
-  //--- the computed-target path below only when no real Position is open yet for this Symbol+Direction.
-   int total = ::PositionsTotal();
-   for(int i = 0; i < total; i++)
-    {
-     ulong ticket = ::PositionGetTicket(i);
-     if(ticket == 0 || !::PositionSelectByTicket(ticket)) continue;
-     if(::PositionGetString(POSITION_SYMBOL) != symbol) continue;
-     if((ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE) != type) continue;
-     double current_sl = ::PositionGetDouble(POSITION_SL);
-     if(current_sl > 0.0) return current_sl;
-     break;   // Position exists but has no SL yet (bootstrap not applied this tick) - fall through
-    }
+  out_from_trail = false;  
+  double current_sl = m_market_collection.GetSL(symbol, type);
+  if(current_sl > 0.0) return current_sl;
   if(m_trading_setup_manager == NULL) return EMPTY_VALUE;
   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
   if(row_setting == NULL) return EMPTY_VALUE;
@@ -442,24 +290,14 @@ double CTradingEngine::GetPreviewSLTargetPrice(const string symbol, const ENUM_P
   if(!sl_active && !trail_active) return EMPTY_VALUE;
   CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
   if(sym == NULL) return EMPTY_VALUE;
-  double point = sym.Point();
-  if(point <= 0) return EMPTY_VALUE;
+  if(sym.Point() <= 0) return EMPTY_VALUE;
 
   double cand_price[]; bool cand_is_trail[];
-  int cand_n = BuildSLCandidates(symbol, type, sl_active, trail_active, cand_price, cand_is_trail);
-  //--- Min-distance floor: fall back to Spread*2 when the broker doesn't set a real
-  //--- SYMBOL_TRADE_STOPS_LEVEL (Anhnt, 2026-09-10 - matches Trishkin's own CSimpleTrailing::
-  //--- StopLevel() default m_spread_mlt=2, and the Library's own Trading.mqh already uses this
-  //--- exact fallback elsewhere) - TradeStopLevel()==0 alone means NO real floor, which let
-  //--- Trailing set SL essentially at the market and get stopped out within a second (confirmed
-  //--- via broker log: tickets #2521748838/#2521749298 closed by StopLost 1s after the modify).
-  double bid = sym.Bid(), ask = sym.Ask();
-  double min_dist = (sym.TradeStopLevel() == 0 ? sym.Spread()*2 : sym.TradeStopLevel()) * point;
+  int cand_n = BuildSLCandidates(symbol, type, sl_active, trail_active, cand_price, cand_is_trail);  
   for(int c = 0; c < cand_n; c++)
    {
     double cprice = cand_price[c];
-    bool valid_dist = (type == POSITION_TYPE_BUY) ? (bid - cprice >= min_dist) : (cprice - ask >= min_dist);
-    if(!valid_dist) continue;
+    if(!this.IsStopDistanceValid(sym, type, cprice)) continue;
     out_from_trail = cand_is_trail[c];
     return cprice;
    }
@@ -486,17 +324,15 @@ double CTradingEngine::GetPreviewSLMoneyValue(const string symbol, const ENUM_PO
   if(sym == NULL) return EMPTY_VALUE;
   double point = sym.Point();
   if(point <= 0) return EMPTY_VALUE;
-  double cur_price = EMPTY_VALUE;
-  int total = ::PositionsTotal();
-  for(int i = 0; i < total; i++)
-   {
-    ulong ticket = ::PositionGetTicket(i);
-    if(ticket == 0 || !::PositionSelectByTicket(ticket)) continue;
-    if(::PositionGetString(POSITION_SYMBOL) != symbol) continue;
-    if((ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE) != type) continue;
-    cur_price = ::PositionGetDouble(POSITION_PRICE_OPEN);
-    break;
-   }
+  //--- First matching Position's own open price, read-only - reuses GetPositionList() instead of a
+  //--- second hand-rolled ::PositionsTotal() loop (Anhnt/Claude, 2026-09-13).
+   double cur_price = EMPTY_VALUE;
+   CArrayObj *pos_list = this.m_market_collection.GetPositionList(symbol, type);
+   if(pos_list != NULL && pos_list.Total() > 0)
+    {
+     CMarketPosition *pos = (CMarketPosition*)pos_list.At(0);
+     if(pos != NULL) cur_price = pos.PriceOpen();
+    }
   if(cur_price == EMPTY_VALUE) cur_price = (type == POSITION_TYPE_BUY) ? sym.Bid() : sym.Ask();
   double dist_pts = ::MathAbs(cur_price - target) / point;
   double use_lot = (lot > 0.0) ? lot : sym.LotsMin();
@@ -548,36 +384,6 @@ bool CTradingEngine::SendNewOrder(const string symbol, const ENUM_POSITION_TYPE 
                    " lot=", lot, " price=", price, " error=", ::GetLastError());
   return ok;
  }
-//+------------------------------------------------------------------+
-//| Apply engine - runs every tick (CTradingEngine::OnTickEvent,       |
-//| unconditional). Per open position: builds StopLost/Trailing         |
-//| candidates from whichever is Active, picks the more favorable one   |
-//| (best-of), gates on "never worse than current SL" (+Trailing's own  |
-//| Step when Trailing's candidate wins - Start gates whether Trailing  |
-//| proposes a candidate at all), then a broker min-distance check,     |
-//| then really modifies the position via CSymbol's own CTradeObj       |
-//| (Trading\TradeObj.mqh). A Position with no SL yet always bootstraps |
-//| from StopLost, never Trailing (Anhnt, 2026-09-09 - "việc đầu tiên   |
-//| phải modify SL của Position chưa có gì thành StopLost theo ATR,     |
-//| sau đó mới Trailing" - Trailing's job is to IMPROVE an existing     |
-//| stop, not plant the first one). On the tick a genuinely NEW Position |
-//| bootstraps its SL (has_trade_event==true), the SAME freshly-computed |
-//| target also propagates to every OTHER open Position sharing this    |
-//| Symbol+Direction if it improves their own SL (Anhnt, 2026-09-10) -   |
-//| GetStopLostTargetPrice() depends only on Symbol+Direction, never a   |
-//| specific ticket, so it's equally valid for all of them right now.   |
-//| Deliberately NOT CTradingControl::ModifyPosition - that higher-     |
-//| level call resolves the ticket through CTrading::GetSymbolObjByPosition,|
-//| which looks the position up in the Library's OWN internal m_market  |
-//| collection (Trading.mqh ~1750), not a live PositionSelectByTicket() |
-//| - a position opened OUTSIDE this EA (e.g. Mobile app) isn't          |
-//| guaranteed to be in that internal collection, so it silently         |
-//| no-op'd for exactly that case. CTradeObj::ModifyPosition(ticket,...)|
-//| reads the position live via the ticket directly, so it works        |
-//| regardless of where the position was opened. Sound is played        |
-//| manually here via PlaySoundSuccess (public API - PlaySoundModifySL  |
-//| itself is private).                                                  |
-//+------------------------------------------------------------------+
 void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
  {
   if(m_trading_setup_manager == NULL) return;
@@ -591,38 +397,15 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
 
     CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
     if(row_setting == NULL) continue;
-    bool sl_active    = row_setting.StopLostActive();
-    //--- Kill switch removed (Anhnt, 2026-09-10) - Trailing's base price is now a CLOSED M1 bar's
-    //--- Low/High (GetTrailingTargetPrice), not live Bid/Ask, so it can only move once per M1 bar
-    //--- close instead of every tick - the ratchet-to-noise risk the kill switch guarded against no
-    //--- longer applies the same way. TrailingStepPts is still whatever the user configured (0 =
-    //--- no minimum improvement floor between bars).
+    bool sl_active    = row_setting.StopLostActive();    
     bool trail_active = row_setting.TrailingActive();
     if(!sl_active && !trail_active) continue;
-
     CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
     if(sym == NULL) continue;
     double point = sym.Point();
-    if(point <= 0) continue;
-
-    //--- Bootstrap rule - StopLost ONLY ever plants the very first SL, on the tick a Position has
-    //--- none yet. It does NOT keep re-competing on every later tick (Anhnt, 2026-09-09 - "Cái
-    //--- StopLost chỉ áp dụng 1 lần đầu tiên, còn những lần sau nếu có Trailing thì mới tính toán
-    //--- lại cái STOPLOST đó và mới modify" - StopLost sets the baseline once; Trailing, if Active,
-    //--- is the ONLY thing allowed to move the SL on every tick after that). This is what actually
-    //--- closes the ratchet-to-noise gap: StopLost's own ATR/Mid formula re-applying every tick with
-    //--- zero minimum improvement was the real cause of ticket #2516609303's premature stop-out -
-    //--- that incident's whole modify chain was sourced from StopLost, Trailing never won a single
-    //--- compare in it. Without this exclusion, "StopLost On + Trailing Off" alone does NOT stop the
-    //--- same ratchet from happening again via StopLost by itself.
+    if(point <= 0) continue;    
      double current_sl  = ::PositionGetDouble(POSITION_SL);
-     bool   is_bootstrap = (current_sl == 0.0);
-
-    //--- Start gate (Trishkin's CheckCriterion) - Trailing only proposes a candidate once profit
-    //--- exceeds TrailingStartPts; 0 = no threshold (always propose). Position-specific (needs
-    //--- THIS ticket's own open price), so resolved here before calling the shared candidate
-    //--- builder below - not inside it, which is also used by the Symbol+Direction-level preview
-    //--- that has no single position to anchor on.
+     bool   is_bootstrap = (current_sl == 0.0);    
      bool effective_trail_active = trail_active;
      if(trail_active)
       {
@@ -634,51 +417,26 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
          double profit_pts = (type == POSITION_TYPE_BUY) ? (cur_price - open_price)/point : (open_price - cur_price)/point;
          effective_trail_active = (profit_pts > start_pts);
         }
-      }
-     //--- Bootstrap tick is StopLost-only - Trailing never competes on the same tick that plants
-     //--- the first SL, even if it would otherwise be valid.
+      }     
       if(is_bootstrap)
-         effective_trail_active = false;
-
-    //--- Build both candidates (StopLost/Trailing) when Active, best-first order - shared with the
-    //--- SL Price/SL Profit preview columns. Built EVERY tick regardless of bootstrap status
-    //--- (Anhnt, 2026-09-09 - "Build là việc của Build, nhưng apply hay không lại là khác" - keeps
-    //--- sl_candidate visible below/in the debug log even post-bootstrap); the bootstrap-only
-    //--- restriction on StopLost is enforced separately, in the APPLY gate loop below.
+         effective_trail_active = false;    
      double cand_price[]; bool cand_is_trail[];
      int cand_n = BuildSLCandidates(symbol, type, sl_active, effective_trail_active, cand_price, cand_is_trail);
      double sl_candidate    = (cand_n > 0 && !cand_is_trail[0]) ? cand_price[0] : ((cand_n > 1 && !cand_is_trail[1]) ? cand_price[1] : EMPTY_VALUE);
      double trail_candidate = (cand_n > 0 &&  cand_is_trail[0]) ? cand_price[0] : ((cand_n > 1 &&  cand_is_trail[1]) ? cand_price[1] : EMPTY_VALUE);
-
-    //--- Never-worse-than-current gate, +Trailing's own Step (minimum improvement) when the
-    //--- candidate under test is Trailing's - WITH FALLBACK to the next candidate if the more
-    //--- favorable one fails validation (e.g. a wrong-side Trailing candidate - PSAR still on the
-    //--- Buy side while this position is a Sell, per Trishkin's own documented flip edge case).
-    //--- Broker min-distance check reuses CSymbol's own Bid/Ask/TradeStopLevel/Point, same
-    //--- convention as ShowStopLostForm's own "Min Stop Lot" calc. Falls back to Spread*2 when
-    //--- TradeStopLevel()==0 (Anhnt, 2026-09-10 - matches Trishkin's own CSimpleTrailing::
-    //--- StopLevel() and the Library's own Trading.mqh convention elsewhere) - TradeStopLevel()==0
-    //--- alone means NO real floor, confirmed via broker log to have let Trailing set SL essentially
-    //--- at the market (tickets #2521748838/#2521749298 closed by StopLost 1s after the modify).
-     double bid = sym.Bid(), ask = sym.Ask();
-     double min_dist = (sym.TradeStopLevel() == 0 ? sym.Spread()*2 : sym.TradeStopLevel()) * point;
+     double bid = sym.Bid(), ask = sym.Ask();   // kept for the debug log lines below, not for the distance check itself
      double best = EMPTY_VALUE, norm_best = EMPTY_VALUE;
      bool   best_from_trail = false, improves = false, valid_dist = false, did_modify = false;
      for(int c = 0; c < cand_n; c++)
       {
        double cprice = cand_price[c];
-       bool   ctrail = cand_is_trail[c];
-       //--- APPLY gate: a StopLost-sourced candidate may only actually be applied on the bootstrap
-       //--- tick (Anhnt, 2026-09-09 - "StopLost chỉ áp dụng 1 lần đầu tiên, còn những lần sau nếu có
-       //--- Trailing thì mới tính toán lại và modify"). It's still BUILT every tick above (for
-       //--- sl_candidate's own debug/preview visibility) - this is purely an apply-time restriction,
-       //--- not a build-time one. Once a baseline SL exists, only Trailing may move it further.
-        if(!ctrail && !is_bootstrap) continue;
+       bool   ctrail = cand_is_trail[c];       
+       if(!ctrail && !is_bootstrap) continue;
        double c_improve_dist = (type == POSITION_TYPE_BUY) ? (cprice - current_sl) : (current_sl - cprice);
        double c_min_improve  = ctrail ? row_setting.TrailingStepPts()*point : 0.0;
        bool   c_improves = (current_sl == 0.0) || (c_improve_dist > c_min_improve);
        if(!c_improves) continue;
-       bool c_valid_dist = (type == POSITION_TYPE_BUY) ? (bid - cprice >= min_dist) : (cprice - ask >= min_dist);
+       bool c_valid_dist = this.IsStopDistanceValid(sym, type, cprice);
        if(!c_valid_dist) continue;
        double c_norm = ::NormalizeDouble(cprice, sym.Digits());
        if(c_norm == current_sl) continue; // rounding collapsed to no real change
@@ -686,14 +444,7 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
        CTradeObj *trade_obj = sym.GetTradeObj();
        if(trade_obj != NULL)
         {
-         did_modify = trade_obj.ModifyPosition(ticket, c_norm);
-         //Print Debug - every real SL modify ATTEMPT (StopLost or Trailing), including whether it
-         //actually SUCCEEDED with the broker (Anhnt, 2026-09-10 - "PrintDebug ra file để kiểm tra...
-         //Đừng ghi đè file cũ tạo mới luôn khi EA Attach" - file deleted once in EA.mq5's OnInit so
-         //each Attach starts fresh, then appends normally). Written AFTER ModifyPosition (not
-         //before) specifically so did_modify/last_err are known - a log line here is NOT proof the
-         //broker actually applied it. For Trailing, also reverse-derives the M1 base price from
-         //c_norm+offset so the Low/High read from the closed bar can be cross-checked by hand.
+         did_modify = trade_obj.ModifyPosition(ticket, c_norm);         
           {
            string dbg_fname = "CTradingEngine_Debug_Trailing.log";
            string dbg_path  = (g_ea_folder != "") ? (g_ea_folder + "/" + dbg_fname) : dbg_fname;
@@ -705,9 +456,17 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
              if(ctrail)
               {
                int    offset_pts = row_setting.TrailingOffsetPts();
-               double base_price = (type == POSITION_TYPE_BUY) ? (c_norm + offset_pts*point) : (c_norm - offset_pts*point);
-               extra = " M1_base=" + ::DoubleToString(base_price, sym.Digits()) + " offset_pts=" + (string)offset_pts +
-                       " step_pts=" + (string)row_setting.TrailingStepPts() + " shift=" + (string)m_trading_setup_manager.TrailingDataRatesIndex();
+               //--- TrailingMode() printed directly (Anhnt/Claude, 2026-09-15) - the old "M1_base"
+               //--- field re-derived base_price as c_norm∓offset_pts*point, which just reconstructs
+               //--- target_price and says nothing about which mode (Fixed/Indicator) actually built
+               //--- it, especially misleading when offset_pts=0 (base_price == target_price always).
+               bool   is_fixed  = (row_setting.TrailingMode() == SL_MODE_FIXED);
+               string mode_str  = is_fixed ? "Fixed" : "Indicator";
+               //--- shift only means something for Fixed (M1 bar shift) - Indicator mode always
+               //--- reads Live (shift=0), no shared field between the 2 modes (Anhnt, 2026-09-15).
+               extra = " TrailingMode=" + mode_str + " offset_pts=" + (string)offset_pts +
+                       " step_pts=" + (string)row_setting.TrailingStepPts() +
+                       (is_fixed ? (" shift=" + (string)m_trading_setup_manager.TrailingDataRatesIndex()) : "");
               }
              ::FileWrite(dbg_fh, "MY DEBUG    CTradingEngine::ApplyStopLostAndTrailing ticket=", ticket, " sym=", symbol,
                          " type=", EnumToString(type), " source=", (ctrail ? "Trailing" : "StopLost"),
@@ -715,29 +474,22 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
                          " Bid=", bid, " Ask=", ask, " did_modify=", did_modify, " last_err=", ::GetLastError(), extra);
              ::FileClose(dbg_fh);
             }
-          }
-         //--- ModifyPosition only SENDS the request - it never plays a sound itself. PlaySoundModifySL
-         //--- itself is PRIVATE - PlaySoundSuccess(ACTION_TYPE_MODIFY,...) is the public entry point
-         //--- that dispatches to it (same convention CTrading's own ModifyPosition uses, Trading.mqh
-         //--- :2889); reads SetSoundModifySL/UseSoundModifySL's own per-ORDER_TYPE settings + the
-         //--- global SetUseSound flag (ApplyTrailingSoundToAllSymbols, GUIPannel_SettingWindows_
-         //--- Alert_Sound.mqh - sets both).
+          }         
          if(did_modify && trade_obj.IsUseSound())
           {
            ENUM_ORDER_TYPE order_action = (type == POSITION_TYPE_BUY) ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
-           trade_obj.PlaySoundSuccess(ACTION_TYPE_MODIFY, (int)order_action, true, false, false);
+           //--- NOT trade_obj.PlaySoundSuccess() - it routes through CMessage::PlaySound() (Library,
+           //--- Message.mqh), which unconditionally prepends "\Files\" to any non-built-in filename.
+           //--- TERMINAL_PATH\Files\ doesn't exist (confirmed 2026-09-15), so that call always fails
+           //--- even though the file is already correctly placed in TERMINAL_PATH\Sounds\ - a bare
+           //--- filename passed straight to native ::PlaySound() resolves against Sounds\ correctly,
+           //--- so call it directly here instead, bypassing the Library wrapper's broken prefix.
+           if(trade_obj.UseSoundModifySL((int)order_action))
+            {
+             string trailing_sound_file = trade_obj.GetSoundModifySL(order_action);
+             if(trailing_sound_file != "") ::PlaySound(trailing_sound_file);
+            }
           }
-         //--- Propagate this SAME freshly-computed StopLost target to every OTHER open Position on
-         //--- this Symbol+Direction, if it's more favorable than their own current SL (Anhnt,
-         //--- 2026-09-10 - "khi có Event mà thấy Position đó không có StopLost... ngoài việc áp SL
-         //--- cho nó thì loop all Position áp luôn StopLost mới cho những Position cùng chiều cùng
-         //--- Symbol"). GetStopLostTargetPrice() depends only on Symbol+Direction (current Mid +/-
-         //--- ATR distance), never on a specific ticket's own open price - so c_norm computed for
-         //--- THIS bootstrap ticket is equally the freshest valid StopLost target for every sibling
-         //--- right now too. Gated on has_trade_event (a genuinely NEW Position just triggered this,
-         //--- not a routine tick) and is_bootstrap/!ctrail (only ever a StopLost-sourced target, same
-         //--- restriction Trailing itself is under) - self-limiting to the one tick a new Position
-         //--- actually opens, same anti-ratchet reasoning as the bootstrap-once rule above.
           if(did_modify && has_trade_event && is_bootstrap && !ctrail)
            {
             int sib_total = ::PositionsTotal();
@@ -751,15 +503,10 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
               double sib_improve = (type == POSITION_TYPE_BUY) ? (c_norm - sib_current_sl) : (sib_current_sl - c_norm);
               bool   sib_improves = (sib_current_sl == 0.0) || (sib_improve > 0);
               if(!sib_improves) continue;
-              bool sib_valid_dist = (type == POSITION_TYPE_BUY) ? (bid - c_norm >= min_dist) : (c_norm - ask >= min_dist);
+              bool sib_valid_dist = this.IsStopDistanceValid(sym, type, c_norm);
               if(!sib_valid_dist) continue;
               if(c_norm == sib_current_sl) continue; // rounding collapsed to no real change
-              bool sib_did_modify = trade_obj.ModifyPosition(sib_ticket, c_norm);
-              //Print Debug - same file/format as the main log above, tagged "StopLost-Sibling" so a
-              //ticket's own current_SL_before doesn't appear to jump unexplainably between entries
-              //(Anhnt, 2026-09-10 - "đừng nhầm với việc tớ mở Position mới" - this is exactly that:
-              //a sibling getting pulled along by a DIFFERENT ticket's fresh bootstrap, not this
-              //ticket's own Trailing).
+              bool sib_did_modify = trade_obj.ModifyPosition(sib_ticket, c_norm);              
                {
                 string sib_dbg_fname = "CTradingEngine_Debug_Trailing.log";
                 string sib_dbg_path  = (g_ea_folder != "") ? (g_ea_folder + "/" + sib_dbg_fname) : sib_dbg_fname;
@@ -782,292 +529,10 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
    }
  }
 //+------------------------------------------------------------------+
-//| Distinct (Symbol,Direction) pairs currently holding at least one  |
-//| open Position - row identity source for m_table_positions_        |
-//| StoplostAndTrailling. Order is whatever PositionsTotal() iteration |
-//| order happens to be; the table itself has IsSortMode(false) so     |
-//| this order is what displays.                                       |
+//| Position count/volume/profit and distinct (Symbol,Direction) pairs |
+//| moved to CMarketCollection (Anhnt/Claude, 2026-09-13) - see         |
+//| GetPositionList()/SumVolume()/SumFloatingProfit()/                  |
+//| GetDistinctSymbolsAndDirections() there; callers now go through     |
+//| m_market_collection directly instead of this pass-through layer.   |
 //+------------------------------------------------------------------+
-int CTradingEngine::GetPositionsSymbolsAndDirections(string &symbols[], ENUM_POSITION_TYPE &dirs[])
- {
-  ::ArrayResize(symbols, 0);
-  ::ArrayResize(dirs, 0);
-  int total = ::PositionsTotal();
-  for(int i = 0; i < total; i++)
-   {
-    string sym = ::PositionGetSymbol(i);
-    if(sym == "") continue;
-    ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE);
-    bool already = false;
-    for(int j = 0; j < ::ArraySize(symbols); j++)
-      if(symbols[j] == sym && dirs[j] == type) { already = true; break; }
-    if(already) continue;
-    int n = ::ArraySize(symbols);
-    ::ArrayResize(symbols, n + 1);
-    ::ArrayResize(dirs, n + 1);
-    symbols[n] = sym;
-    dirs[n]    = type;
-   }
-  return ::ArraySize(symbols);
- }
-//+------------------------------------------------------------------+
-//| Number of position trades with a specified symbol                |
-//+------------------------------------------------------------------+
-int CTradingEngine::PositionsTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
- {
-  //--- Position counter
-   int pos_counter = 0;
-  //--- Check if there is a position with specified properties
-   int positions_total = ::PositionsTotal();
-   for(int i = positions_total - 1; i >= 0; i--)
-    {
-     //--- If failed to select a position, go to the next one
-      if(symbol != ::PositionGetSymbol(i))
-         continue;
-     //--- If the type should be selected
-      if(type != WRONG_VALUE)
-       {
-        if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
-           continue;
-       }
-     //--- Increase the counter
-      pos_counter++;
-    }
-   //--- Return the number of positions
-   return(pos_counter);
- }
-//+------------------------------------------------------------------+
-//| Total volume of positions with the specified properties          |
-//+------------------------------------------------------------------+
-double CTradingEngine::PositionsVolumeTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
- {
-  //--- Volume counter
-   double volume_counter = 0;
-  //--- Check if there is a position with specified properties
-   int positions_total = ::PositionsTotal();
-   for(int i = positions_total - 1; i >= 0; i--)
-    {
-     //--- If failed to select a position, go to the next one
-      if(symbol != ::PositionGetSymbol(i))
-         continue;
-     //--- If the type should be selected
-      if(type != WRONG_VALUE)
-       {
-        //--- If the type does not match, go to the next position
-         if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
-            continue;
-       }
-     //--- Sum up the volume
-     volume_counter += ::PositionGetDouble(POSITION_VOLUME);
-    }
-   //--- Return the volume
-   return(volume_counter);
- }
-//+------------------------------------------------------------------+
-//| Total floating profit of positions with the specified properties |
-//+------------------------------------------------------------------+
-double CTradingEngine::PositionsFloatingProfitTotal(const string symbol, const ENUM_POSITION_TYPE type = WRONG_VALUE)
- {
-  //--- Current profit counter
-   double profit_counter = 0.0;
-  //--- Check if there is a position with specified properties
-   int positions_total = ::PositionsTotal();
-   for(int i = positions_total - 1; i >= 0; i--)
-    {
-     //--- If failed to select a position, go to the next one
-      if(symbol != "" && symbol != ::PositionGetSymbol(i))
-         continue;
-     //--- If the type should be selected
-      if(type != WRONG_VALUE)
-       {
-       //--- If the type does not match, go to the next position
-        if(type != (ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE))
-           continue;
-       }
-     //--- Sum up the current profit + accumulated swap
-     profit_counter += ::PositionGetDouble(POSITION_PROFIT) + ::PositionGetDouble(POSITION_SWAP);
-    }
-   //--- Return the result
-     return(profit_counter);
- }
-//+------------------------------------------------------------------+
-//| Every (TF, ATR period) combination currently tracked for the      |
-//| given Symbol - one entry per (Symbol,TF) row in m_symbol_tf_manager|
-//| whose configured Indicator Template includes an ATR instance.     |
-//| Moved from CGUIPannel (Anhnt/Claude, 2026-09-09 - pure data, no    |
-//| GUI control touched); SyncComboBox_ATRChoice/GetSelectedATRChoice  |
-//| (GUIPannel_SettingWindows_TradingStopLost.mqh) call through        |
-//| m_tradingEngine now.                                               |
-//+------------------------------------------------------------------+
-int CTradingEngine::BuildATRChoiceList(const string symbol, ENUM_TIMEFRAMES &out_tf[], int &out_period[])
- {
-  int n = 0;
-  ::ArrayResize(out_tf,     0);
-  ::ArrayResize(out_period, 0);
-  if(m_indicator_template_manager == NULL || m_symbol_tf_manager == NULL) return 0;
-  int templates_total = m_indicator_template_manager.Total();
-  for(int t = 0; t < templates_total; t++)
-   {
-    CIndicatorSetting *tpl = m_indicator_template_manager.At(t);
-    if(tpl == NULL || tpl.TypeEnum() != IND_ATR) continue;
-    MqlParam raw[];
-    tpl.GetRawParams(raw);
-    int period = (int)raw[0].integer_value;
-    int tf_total = m_symbol_tf_manager.Total();
-    for(int s = 0; s < tf_total; s++)
-     {
-      CSymbolTFSetting *row = m_symbol_tf_manager.At(s);
-      if(row == NULL || row.Symbol() != symbol) continue;
-      ::ArrayResize(out_tf,     n + 1);
-      ::ArrayResize(out_period, n + 1);
-      out_tf[n]     = row.TFEnum();
-      out_period[n] = period;
-      n++;
-     }
-   }
-  //--- Sort ascending by TF (M1 first) - same reasoning as BuildTrailingIndicatorChoiceList.
-  for(int a = 0; a < n - 1; a++)
-   for(int b = a + 1; b < n; b++)
-    if(IndexEnumTimeframe(out_tf[b]) < IndexEnumTimeframe(out_tf[a]))
-     {
-      ENUM_TIMEFRAMES tf_tmp = out_tf[a]; out_tf[a] = out_tf[b]; out_tf[b] = tf_tmp;
-      int period_tmp = out_period[a]; out_period[a] = out_period[b]; out_period[b] = period_tmp;
-     }
-  return n;
- }
-//+------------------------------------------------------------------+
-//| Pushes the Trailing sound into every tracked Symbol's own CTradeObj|
-//| (Trading\TradeObj.mqh) via SetSoundModifySL/UseSoundModifySL, so   |
-//| real ModifyPosition calls (ApplyStopLostAndTrailing above) actually|
-//| play it. Moved from CGUIPannel (Anhnt/Claude, 2026-09-09 - pure    |
-//| trading-domain logic, no GUI control touched); called from BOTH    |
-//| GUIPannel_SettingWindows_Alert_Sound.mqh's SaveSoundSettingsToJSON |
-//| (after a Save click) AND CreateTab_SettingConfig_Sound (right      |
-//| after loading the saved default) through m_tradingEngine now.      |
-//+------------------------------------------------------------------+
-void CTradingEngine::ApplyTrailingSoundToAllSymbols(const string trailing_sound)
- {
-  if(trailing_sound == "") return;
-  CArrayObj *col_list = m_symbol_collection.GetList();
-  int count = (col_list != NULL) ? col_list.Total() : 0;
-  for(int i = 0; i < count; i++)
-   {
-    CSymbol *sym = col_list.At(i);
-    if(sym == NULL) continue;
-    CTradeObj *trade_obj = sym.GetTradeObj();
-    if(trade_obj == NULL) continue;
-    //--- PlaySoundSuccess (called from ApplyStopLostAndTrailing above) bails out immediately unless
-    //--- this GLOBAL flag is set too - the per-action UseSoundModifySL flags alone aren't enough
-    //--- (Anhnt/Claude, 2026-09-08 - confirmed by reading TradeObj.mqh/BaseObj.mqh).
-     trade_obj.SetUseSound(true);
-    trade_obj.SetSoundModifySL(ORDER_TYPE_BUY,  trailing_sound);
-    trade_obj.SetSoundModifySL(ORDER_TYPE_SELL, trailing_sound);
-    trade_obj.UseSoundModifySL(ORDER_TYPE_BUY,  true);
-    trade_obj.UseSoundModifySL(ORDER_TYPE_SELL, true);
-   }
- }
-//+------------------------------------------------------------------+
-//| Money value of GetCurrentStopLostDistancePoints() - same LotsMin- |
-//| based preview convention as GetTrailingMoneyValue. Moved from      |
-//| CGUIPannel (Anhnt/Claude, 2026-09-09 - pure math, no GUI control    |
-//| touched).                                                           |
-//+------------------------------------------------------------------+
-double CTradingEngine::GetStopLostMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
- {
-  int distance_pts = GetCurrentStopLostDistancePoints(symbol, mode_override);
-  if(distance_pts < 0) return EMPTY_VALUE;
-  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-  if(sym == NULL) return EMPTY_VALUE;
-  return distance_pts * sym.TradeTickValue() * sym.LotsMin();
- }
-//+------------------------------------------------------------------+
-//| Distance (points) from current Mid to the Trailing target price - |
-//| mirrors GetCurrentStopLostDistancePoints's own signature, but uses |
-//| Trishkin's Trailing formulas instead of StopLost's Fixed-multiplier|
-//| /ATR ones:                                                          |
-//|  Fixed (CTrailingByValue::GetStopLossValue = CurrentPrice ∓ Offset)|
-//|   -> distance IS the Offset itself.                                |
-//|  Indicator (CTrailingByInd::GetStopLossValue = IndValue ∓ Offset)  |
-//|   -> distance = |Mid - IndValue|/Point() + Offset. Moved from       |
-//|   CGUIPannel (Anhnt/Claude, 2026-09-09 - pure math, no GUI control  |
-//|   touched).                                                         |
-//+------------------------------------------------------------------+
-int CTradingEngine::GetCurrentTrailingDistancePoints(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
- {
-  if(m_trading_setup_manager == NULL) return -1;
-  CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
-  if(row_setting == NULL) return -1;
-  ENUM_STOPLOST_TRAILING_MODE mode = (mode_override == WRONG_VALUE) ? row_setting.TrailingMode() : mode_override;
-  int offset_pts = row_setting.TrailingOffsetPts();
-  if(mode == SL_MODE_FIXED) return offset_pts;
-  double ind_value;
-  if(!GetCurrentTrailingIndicatorValue(symbol, ind_value)) return -1;
-  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-  double bid   = (sym != NULL) ? sym.Bid()   : ::SymbolInfoDouble(symbol, SYMBOL_BID);
-  double ask   = (sym != NULL) ? sym.Ask()   : ::SymbolInfoDouble(symbol, SYMBOL_ASK);
-  double point = (sym != NULL) ? sym.Point() : ::SymbolInfoDouble(symbol, SYMBOL_POINT);
-  if(point <= 0) return -1;
-  double mid = (bid + ask) / 2.0;
-  return (int)::MathRound(::MathAbs(mid - ind_value) / point) + offset_pts;
- }
-//+------------------------------------------------------------------+
-//| Money value of GetCurrentTrailingDistancePoints() - same LotsMin- |
-//| based preview convention as GetStopLostMoneyValue. Moved from      |
-//| CGUIPannel (Anhnt/Claude, 2026-09-09 - pure math, no GUI control    |
-//| touched).                                                           |
-//+------------------------------------------------------------------+
-double CTradingEngine::GetTrailingMoneyValue(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override = WRONG_VALUE)
- {
-  int distance_pts = GetCurrentTrailingDistancePoints(symbol, mode_override);
-  if(distance_pts < 0) return EMPTY_VALUE;
-  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-  if(sym == NULL) return EMPTY_VALUE;
-  return distance_pts * sym.TradeTickValue() * sym.LotsMin();
- }
-//+------------------------------------------------------------------+
-//| Max Lot such that a StopLost hit would lose at most risk_percent% |
-//| of current Balance (Anhnt, 2026-09-10 - "chúng ta biết Stoplost    |
-//| rồi, và với Balance là ngần này thì chấp nhận mất Risk% thì tối đa  |
-//| lot là bao nhiêu"). Uses the SAME StopLost distance the real       |
-//| bootstrap uses (GetStopLostDistancePrice - Fixed=Spread*Mult,      |
-//| Indicator=ATR*Mult), NOT the Trailing-aware preview - Trailing may |
-//| not even be Active pre-trade. Result is rounded DOWN to the        |
-//| Symbol's real LotsStep and clamped to LotsMax - caller (GUI) is    |
-//| the one that decides what to do if this comes back below LotsMin   |
-//| (disable the Lot picker - "nếu không đủ tiền thì disable").        |
-//+------------------------------------------------------------------+
-double CTradingEngine::CalcMaxLotByRisk(const string symbol, const ENUM_POSITION_TYPE type, const double risk_percent)
- {
-  if(risk_percent <= 0.0) return 0.0;
-  CSymbol *sym = m_symbol_collection.GetSymbolObjByName(symbol);
-  if(sym == NULL) return 0.0;
-  double distance_price = GetStopLostDistancePrice(symbol);
-  if(distance_price == EMPTY_VALUE || distance_price <= 0.0)
-   {
-    //--- TEMP (Anhnt/Claude, 2026-09-10) - diagnosing why Lot shows "N/A" for some Symbols
-    //--- despite StopLostActive being true; remove once root cause confirmed+fixed.
-    CTradingSetupSetting *dbg_row = (m_trading_setup_manager != NULL) ? m_trading_setup_manager.FindByIdentity(symbol) : NULL;
-    ::Print("MY DEBUG CTradingEngine::CalcMaxLotByRisk: no distance for ", symbol,
-            " row=", (dbg_row != NULL ? "found" : "NULL"),
-            " mode=", (dbg_row != NULL ? EnumToString(dbg_row.StopLostMode()) : "-"),
-            " ind_tf=", (dbg_row != NULL ? EnumToString(dbg_row.StopLostIndTF()) : "-"),
-            " ind_type=", (dbg_row != NULL ? EnumToString(dbg_row.StopLostIndType()) : "-"));
-    return 0.0;
-   }
-  double point = sym.Point();
-  if(point <= 0.0) return 0.0;
-  double tick_value = sym.TradeTickValue();
-  if(tick_value <= 0.0) return 0.0;
-  double money_per_lot = (distance_price / point) * tick_value;
-  if(money_per_lot <= 0.0) return 0.0;
-  CAccount *acc = GetCurrentAccount();
-  double balance = (acc != NULL) ? acc.Balance() : ::AccountInfoDouble(ACCOUNT_BALANCE);
-  double raw_max_lot = (balance * risk_percent / 100.0) / money_per_lot;
-  double step = sym.LotsStep();
-  double lots_max = sym.LotsMax();
-  if(step <= 0.0) return 0.0;
-  double stepped = ::MathFloor(raw_max_lot / step) * step;
-  if(stepped > lots_max) stepped = ::MathFloor(lots_max / step) * step;
-  return (stepped > 0.0) ? stepped : 0.0;
- }
 #endif // CTRADINGENGINE_MULTIMODULE_MQH

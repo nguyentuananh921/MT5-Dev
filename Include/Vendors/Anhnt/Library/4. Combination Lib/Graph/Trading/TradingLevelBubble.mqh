@@ -10,7 +10,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "..\..\Collections\MarketCollection.mqh"   // CMarketCollection + CMarketPosition + CTradingSelect
+ #include "..\..\Collections\MarketCollection.mqh"   // CMarketCollection + CMarketPosition
  #include "..\..\Trading\TradingControl.mqh"         // CTradingControl
  #include "..\..\Services\MouseCombine.mqh"
  #include "..\GBase\GBaseObj.mqh"                    // CGBaseObj - shared Layer-3 graphic-object identity (name/chart_id/species)
@@ -56,69 +56,61 @@
  class CTradingLevelBubble : public CGBaseObj
   {
    private:
-    CCanvas            m_canvas;
-    CMarketCollection *m_market;                // Collection of market orders and deals Trading Engine Own
-    CTradingControl   *m_trading_control;       // Trading management object CTradingEngine own it
-    CChartObjCollection *m_chart_obj_collection; // BORROWED - CGUIPannel owns it
-    CWindow           *m_window;                 // BORROWED - CGUIPannel owns it, see SetWindow()
-    bool               m_created;                // canvas exists - set by OnInitEvent()
-    bool               m_orig_chart_shift;       // CHART_SHIFT value before we forced it on, restored on deinit
-    bool               m_need_resize;
-    bool               m_need_redraw;            // set true bởi CHARTEVENT_CHART_CHANGE (zoom/scroll)
-    double             m_last_sl_buy;
-    double             m_last_tp_buy;
-    double             m_last_sl_sell;
-    double             m_last_tp_sell;
-    int                m_drag_offset_y;
-    CMouseCombine     *m_mouse;
+    CCanvas              m_canvas;                     // Object drawing
+    CMarketCollection    *m_market_collection;         // Collection of market orders and deals Trading Engine Own
+    CTradingControl      *m_trading_control;           // Trading management object CTradingEngine own it
+    CChartObjCollection  *m_chart_obj_collection;      // BORROWED - EA owns it
+    CWindow              *m_window_main;                    // BORROWED - CGUIPannel owns it, see SetWindow()
+    bool                 m_created;                    // canvas exists - set by OnInitEvent()
+    bool                 m_orig_chart_shift;           // CHART_SHIFT value before we forced it on, restored on deinit
+    bool                 m_need_resize;                // set true bởi CHARTEVENT_CHART_CHANGE (zoom/scroll)
+    bool                 m_need_redraw;                // set true bởi CHARTEVENT_CHART_CHANGE (zoom/scroll)
+    double               m_last_sl_buy;
+    double               m_last_tp_buy;
+    double               m_last_sl_sell;
+    double               m_last_tp_sell;
+    int                  m_drag_offset_y;
+    CMouseCombine        *m_mouse;
     // Drag state
-     bool              m_is_dragging;
-     ENUM_BUBBLE_TYPE  m_drag_type;
-     int               m_drag_y;        // current drag Y in pixels
-     int               m_drag_bx;       // X frozen at drag-start - see DrawBubble() note
+     bool                 m_is_dragging;
+     ENUM_BUBBLE_TYPE     m_drag_type;
+     int                  m_drag_y;             // current drag Y in pixels
+     int                  m_drag_bx;            // X frozen at drag-start - see DrawBubble() note
     //Add properties here
-     int               m_drag_anchor_y;       // Y anchor at drag-start (pixel)
-     double            m_drag_price_anchor;   // price at anchor (capture at drag-start)
-     double            m_price_per_pixel;     // price change per vertical pixel at drag-start
+     int                  m_drag_anchor_y;      // Y anchor at drag-start (pixel)
+     double               m_drag_price_anchor;  // price at anchor (capture at drag-start)
+     double               m_price_per_pixel;    // price change per vertical pixel at drag-start
     //Mouse State
-     bool              m_prev_left_btn;     // previous MOUSE_MOVE's button state - see OnChartEvent note
-     bool              m_prev_over;         // previous MOUSE_MOVE's dragbox-hover state     
-     bool              m_scroll_locked_by_me;
+     bool                 m_prev_left_btn;      // previous MOUSE_MOVE's button state - see OnChartEvent note
+     bool                 m_prev_over;          // previous MOUSE_MOVE's dragbox-hover state     
+     bool                 m_scroll_locked_by_me;
     // Interaction boxes (one slot per ENUM_BUBBLE_TYPE)
-     SBubbleBox        m_hitbox[BUBBLE_TOTAL];   // X close button
-     SBubbleBox        m_dragbox[BUBBLE_TOTAL];  // draggable body
-    //Calculation profit
-     double CalcProfitAt(ENUM_BUBBLE_TYPE type, double target_price);
+     SBubbleBox           m_hitbox[BUBBLE_TOTAL];     // X close button
+     SBubbleBox           m_dragbox[BUBBLE_TOTAL];    // draggable body
     // Internal helpers
-     bool              HasBuys(void);
-     bool              HasSells(void);
-     double            GetSL(ENUM_POSITION_TYPE dir);
-     double            GetTP(ENUM_POSITION_TYPE dir);
-     void              DrawBubble(ENUM_BUBBLE_TYPE type, int y_pixel);
-     void              CloseAll(ENUM_POSITION_TYPE dir);
-     void              ModifyAll(ENUM_BUBBLE_TYPE type, double new_price);
-     string            BubbleLabel(ENUM_BUBBLE_TYPE type, double price);
-     int               PriceToY(double price);
-     int               AnchorBX(void);
-    void               ResolveOverlap(int &ya, int &yb, bool a_dragged, bool b_dragged);
+     void                 DrawBubble(ENUM_BUBBLE_TYPE type, int y_pixel);
+     string               BubbleLabel(ENUM_BUBBLE_TYPE type, double price);
+     int                  PriceToY(double price);
+     int                  AnchorBX(void);
+     void                 ResolveOverlap(int &ya, int &yb, bool a_dragged, bool b_dragged);
 
    public:
-     CTradingLevelBubble(void);
-     ~CTradingLevelBubble(void);
-    bool      OnInitEvent(void);
-    void      OnDeinitEvent(void);
-    //void OnTickEvent(void);
-    void      OnPoll(void);
-    void      OnChartEvent(const int id, const long &lparam,
-                      const double &dparam, const string &sparam);
-    bool      IsDragging(void) const { return m_is_dragging; }
-    void      Draw(void);
+                         CTradingLevelBubble(void);
+                         ~CTradingLevelBubble(void);
+    bool                 OnInitEvent(void);
+    void                 OnDeinitEvent(void);
+    //void                 OnTickEvent(void);
+    void                 OnPoll(void);
+    void                 OnChartEvent(const int id, const long &lparam,
+                                     const double &dparam, const string &sparam);
+    bool                 IsDragging(void) const { return m_is_dragging; }
+    void                 Draw(void);
     //For pointer
-     void MousePointer(CMouseCombine &object)                 { m_mouse = GetPointer(object);        }
-     void SetMarketCollection(CMarketCollection *market)      { m_market = market;                   }
-     void SetTradingControl(CTradingControl *trading_control) { m_trading_control = trading_control; }
+     void                 MousePointer(CMouseCombine &object)                 { m_mouse = GetPointer(object);        }
+     void                 SetMarketCollection(CMarketCollection *market)      { m_market_collection = market;                   }
+     void                 SetTradingControl(CTradingControl *trading_control) { m_trading_control = trading_control; }
      void SetChartObjCollection(CChartObjCollection *coll)    { m_chart_obj_collection = coll;        }
-     void SetWindow(CWindow *window)                          { m_window = window;                    }
+     void SetWindow(CWindow *window)                          { m_window_main = window;                    }
 };
 #endif // CTRADING_LEVEL_BUBBLE_DECLARATION
 #ifndef CTRADING_LEVEL_BUBBLE_IMPLEMENTATION
@@ -133,10 +125,10 @@
       m_drag_y(0), m_drag_bx(0),
       //Adding new Properties in constructor
        m_drag_anchor_y(0), m_drag_price_anchor(0.0), m_price_per_pixel(0.0),
-      m_prev_left_btn(false), m_prev_over(false), m_scroll_locked_by_me(false), m_market(NULL),
+      m_prev_left_btn(false), m_prev_over(false), m_scroll_locked_by_me(false), m_market_collection(NULL),
       m_trading_control(NULL),
       m_chart_obj_collection(NULL),
-      m_window(NULL),
+      m_window_main(NULL),
       m_drag_offset_y(0),
       m_mouse(NULL),
       m_last_sl_buy(0), m_last_tp_buy(0),
@@ -157,6 +149,9 @@
  //+------------------------------------------------------------------+
  bool CTradingLevelBubble::OnInitEvent(void)
   {
+    // m_market_collection/m_trading_control are set once (before this runs) - every event-driven
+    // path below trusts them from here on, no per-call NULL check needed.
+    if(m_market_collection == NULL || m_trading_control == NULL) return false;
     ChartSetInteger(0, CHART_EVENT_MOUSE_MOVE, true);
     ChartSetInteger(0, CHART_SHOW_TRADE_LEVELS, false); // hide MT5 default lines - this class owns dragging now    
     m_orig_chart_shift = (bool)ChartGetInteger(0, CHART_SHIFT);
@@ -201,7 +196,9 @@
         m_scroll_locked_by_me = false;
         int dy = m_drag_y - m_drag_anchor_y;
         double new_price = m_drag_price_anchor + dy * m_price_per_pixel;
-        ModifyAll(m_drag_type, new_price);
+        ENUM_POSITION_TYPE modify_dir = (m_drag_type <= BUBBLE_TP_BUY) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
+        bool modify_sl = (m_drag_type == BUBBLE_SL_BUY || m_drag_type == BUBBLE_SL_SELL);
+        m_trading_control.ModifyPositions(_Symbol, modify_dir, modify_sl, new_price);
         m_is_dragging = false;
         Draw();
         return;
@@ -295,7 +292,7 @@
            // flip CHART_MOUSE_SCROLL back on (it only sees "mouse is over the chart, not the
            // panel") - going through its own m_custom_event_chart_state flag instead of a raw
            // ChartSetInteger makes it agree with us for this event.
-           if(m_window != NULL) m_window.CustomEventChartState(true);
+           if(m_window_main != NULL) m_window_main.CustomEventChartState(true);
            ChartSetInteger(0, CHART_AUTOSCROLL,   false);
            m_scroll_locked_by_me = true;
           }
@@ -311,7 +308,7 @@
             bool is_buy = (btype == BUBBLE_SL_BUY || btype == BUBBLE_TP_BUY);
             bool is_sl  = (btype == BUBBLE_SL_BUY || btype == BUBBLE_SL_SELL);
             ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-            double price  = is_sl ? GetSL(dir) : GetTP(dir);
+            double price  = is_sl ? m_market_collection.GetSL(_Symbol, dir) : m_market_collection.GetTP(_Symbol, dir);
             int    anchor = PriceToY(price);
             m_is_dragging   = true;
             m_drag_type     = btype;
@@ -334,13 +331,13 @@
                 {
                     // fallback: use current SL/TP and tick step
                     ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-                    m_drag_price_anchor = is_sl ? GetSL(dir) : GetTP(dir);
+                    m_drag_price_anchor = is_sl ? m_market_collection.GetSL(_Symbol, dir) : m_market_collection.GetTP(_Symbol, dir);
                     m_price_per_pixel   = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
                 }
 
               }
             m_drag_offset_y = my - anchor;
-            if(m_window != NULL) m_window.CustomEventChartState(true);
+            if(m_window_main != NULL) m_window_main.CustomEventChartState(true);
             ChartSetInteger(0, CHART_AUTOSCROLL, false);
          }
         if(m_is_dragging)
@@ -363,7 +360,7 @@
         {
             ENUM_POSITION_TYPE dir = (i <= BUBBLE_TP_BUY)
                                     ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-            CloseAll(dir);
+            m_trading_control.ClosePositions(_Symbol, dir);
             Draw();
             return;
         }
@@ -372,12 +369,12 @@
  //+------------------------------------------------------------------+
  void CTradingLevelBubble::Draw(void)
   {
-    if(!m_created) return; // canvas not created yet - EnsureCreated() owns that decision
+    if(!m_created) return; // canvas not created yet
     ulong t0 = ::GetMicrosecondCount();
-    double sl_buy  = GetSL(POSITION_TYPE_BUY);
-    double tp_buy  = GetTP(POSITION_TYPE_BUY);
-    double sl_sell = GetSL(POSITION_TYPE_SELL);
-    double tp_sell = GetTP(POSITION_TYPE_SELL);
+    double sl_buy  = m_market_collection.GetSL(_Symbol, POSITION_TYPE_BUY);
+    double tp_buy  = m_market_collection.GetTP(_Symbol, POSITION_TYPE_BUY);
+    double sl_sell = m_market_collection.GetSL(_Symbol, POSITION_TYPE_SELL);
+    double tp_sell = m_market_collection.GetTP(_Symbol, POSITION_TYPE_SELL);
 
     ulong fetch_us = ::GetMicrosecondCount() - t0;
 
@@ -509,13 +506,15 @@
       else
       {
           ENUM_POSITION_TYPE dir = is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-          display_price = is_sl ? GetSL(dir) : GetTP(dir);
+          display_price = is_sl ? m_market_collection.GetSL(_Symbol, dir) : m_market_collection.GetTP(_Symbol, dir);
       }
       string lbl = BubbleLabel(type, display_price);
       m_canvas.TextOut(body_x1 + 8, by - 12, lbl, label_clr, TA_LEFT | TA_VCENTER);
 
       // P&L label (bottom): color by sign
-      double pnl     = CalcProfitAt(type, display_price);
+      double pnl     = (display_price > 0)
+                        ? m_market_collection.SumFloatingProfit(_Symbol, is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL, display_price)
+                        : 0;
       string pnl_str = (pnl >= 0 ? "+" : "") + DoubleToString(pnl, 2) + " $";
       uint   pnl_clr = ColorToARGB(pnl >= 0 ? BUBBLE_CLR_PROFIT_POS : BUBBLE_CLR_PROFIT_NEG);
       m_canvas.TextOut(body_x1 + 8, by + 12, pnl_str, pnl_clr, TA_LEFT | TA_VCENTER);
@@ -565,114 +564,6 @@
         if(ya >= yb) { ya = mid + half; yb = mid - half; }
         else         { ya = mid - half; yb = mid + half; }
      }
-  }
- //+------------------------------------------------------------------+
- bool CTradingLevelBubble::HasBuys(void)
-  {
-    if(m_market == NULL) return false;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)POSITION_TYPE_BUY, EQUAL);
-    return (list != NULL && list.Total() > 0);
-  }
- bool CTradingLevelBubble::HasSells(void)
-  {
-    if(m_market == NULL) return false;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)POSITION_TYPE_SELL, EQUAL);
-    return (list != NULL && list.Total() > 0);
-  }
- double CTradingLevelBubble::GetSL(ENUM_POSITION_TYPE dir)
-  {
-    if(m_market == NULL) return 0;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return 0;
-    for(int i = 0; i < list.Total(); i++)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double sl = pos.StopLoss();
-        if(sl > 0) return sl;
-     }
-    return 0;
-  }
- double CTradingLevelBubble::GetTP(ENUM_POSITION_TYPE dir)
-  {
-    if(m_market == NULL) return 0;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return 0;
-    for(int i = 0; i < list.Total(); i++)
-    {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double tp = pos.TakeProfit();
-        if(tp > 0) return tp;
-    }
-    return 0;
-  }
- void CTradingLevelBubble::CloseAll(ENUM_POSITION_TYPE dir)
-  {
-    if(m_market == NULL || m_trading_control == NULL) return;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return;
-    for(int i = list.Total() - 1; i >= 0; i--)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        m_trading_control.ClosePosition((ulong)pos.Ticket());
-     }
-  }
-
- void CTradingLevelBubble::ModifyAll(ENUM_BUBBLE_TYPE type, double new_price)
-  {
-    if(m_market == NULL || m_trading_control == NULL) return;
-    ENUM_POSITION_TYPE dir = (type <= BUBBLE_TP_BUY) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-    bool modify_sl = (type == BUBBLE_SL_BUY || type == BUBBLE_SL_SELL);
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return;
-    for(int i = list.Total() - 1; i >= 0; i--)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double sl = modify_sl ? new_price : pos.StopLoss();
-        double tp = modify_sl ? pos.TakeProfit() : new_price;
-        m_trading_control.ModifyPosition((ulong)pos.Ticket(), sl, tp);
-     }
-  }
- double CTradingLevelBubble::CalcProfitAt(ENUM_BUBBLE_TYPE type, double target_price)
-  {
-    if(m_market == NULL || target_price <= 0) return 0;
-    ENUM_POSITION_TYPE dir = (type <= BUBBLE_TP_BUY) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-    CArrayObj *list = m_market.GetList();
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_STATUS, ORDER_STATUS_MARKET_POSITION, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_SYMBOL, _Symbol, EQUAL);
-    list = CTradingSelect::ByOrderProperty(list, ORDER_PROP_TYPE, (long)dir, EQUAL);
-    if(list == NULL) return 0;
-    double total = 0;
-    for(int i = 0; i < list.Total(); i++)
-     {
-        CMarketPosition *pos = (CMarketPosition*)list.At(i);
-        if(pos == NULL) continue;
-        double p = 0;
-        if(OrderCalcProfit((ENUM_ORDER_TYPE)dir, _Symbol, pos.Volume(), pos.PriceOpen(), target_price, p))
-            total += p;
-     }
-    return total;
   }
  string CTradingLevelBubble::BubbleLabel(ENUM_BUBBLE_TYPE type, double price)
   {

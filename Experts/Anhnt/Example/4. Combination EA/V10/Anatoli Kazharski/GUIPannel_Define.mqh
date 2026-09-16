@@ -20,9 +20,9 @@
    #include "..\Services\TradingSetupSetting.mqh"   // ENUM_STOPLOST_TRAILING_MODE + CTradingSetupSetting (Anhnt, 2026-09-04)
    #include "..\Services\TradingSetupSettingManager.mqh"
 
-  // For indicator catalog/schema + CTimeSeriesEngine itself - JSON loading and
-  // indicator creation live there now, GUIPannel only reads + renders (EA-local, not the Library)
-   #include "..\Artyom Trishkin\TimeSeriesEngine.mqh"
+  // GUIPannel only holds CSignalsCollection (a property CTimeSeriesEngine owns), never the
+  // engine itself - no other CTimeSeriesEngine method is called from the GUI layer.
+   #include <Vendors\Anhnt\Library\4. Combination Lib\Collections\SignalsCollection.mqh>
    #include "..\Artyom Trishkin\TradingEngine.mqh"
  // For GUI controls Layer 2
   #include <Vendors\Anhnt\Library\4. Combination Lib\GUI Lib\WndEvents.mqh>

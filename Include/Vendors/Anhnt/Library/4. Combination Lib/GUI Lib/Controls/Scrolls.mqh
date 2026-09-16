@@ -901,6 +901,8 @@ class CScrollH;
       m_canvas.FillRectangle(x1,y1,x2-1,y2-1,m_back_color);
     // --- Update coordinates
       m_thumb_y=y;
+    //Add Here to Fix in V10
+      y1=y;
       y2=y+m_thumb_length;
     // --- Draw new slider position
       m_canvas.FillRectangle(x1,y1,x2-1,y2-1,m_thumb_color_pressed);

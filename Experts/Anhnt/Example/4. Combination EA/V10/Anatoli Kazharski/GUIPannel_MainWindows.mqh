@@ -89,10 +89,13 @@
     static double s_deposit_val = 0;
     static double s_profit_val = 0;
 
-    CAccount *acc = (m_tradingEngine != NULL) ? m_tradingEngine.GetCurrentAccount() : NULL;
+    CAccount *acc = (m_accounts_collection != NULL) ? m_accounts_collection.GetCurrentAccount() : NULL;
     double deposit_val = (acc != NULL) ? acc.Margin() : ::AccountInfoDouble(ACCOUNT_MARGIN);
     double deposit_pct = (acc != NULL && acc.Balance() != 0.0) ? (acc.Margin() / acc.Balance() * 100) : 0.0;
-    double profit_val = (m_tradingEngine != NULL) ? m_tradingEngine.CalcProfit() : ::AccountInfoDouble(ACCOUNT_PROFIT);
+    //--- GetPositionList() with no args = every Symbol/every Direction (Anhnt/Claude, 2026-09-13).
+     double profit_val = (m_market_collection != NULL)
+       ? m_market_collection.SumFloatingProfit(m_market_collection.GetPositionList())
+       : ::AccountInfoDouble(ACCOUNT_PROFIT);
     string new_deposit = "Deposit load: " + ::DoubleToString(deposit_val, 2) + "/" +
                           ::DoubleToString(deposit_pct, 2) + "%";
     string new_time = ::TimeToString(::TimeTradeServer(), TIME_DATE | TIME_SECONDS);
@@ -309,8 +312,18 @@
       OnClickUseRiskPerNewTradeCheckbox();
       return;
      }
-   //--- m_table_indicator_PreTradeSymbolMonitor is read-only now (Anhnt, 2026-09-10) - StopLost/
-   //--- Trailing columns just mark which row is the current source, changed only via the gear-icon
-   //--- buttons' Setting popup - no click dispatch needed for this table anymore.
+   //--- m_table_indicator_PreTradeSymbolMonitor's StopLost/Trailing columns are still read-only
+   //--- (Anhnt, 2026-09-10) - just markers, changed only via the gear-icon buttons' Setting popup.
+   //--- Col0 (TF) is NOT read-only though (Anhnt/Claude, 2026-09-15) - click switches the active
+   //--- chart to that row's own (Symbol,TF).
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_table_indicator_PreTradeSymbolMonitor.Id())
+     {
+      string parts[];
+      if(StringSplit(sparam, '_', parts) != 2) return;
+      int col = (int)StringToInteger(parts[0]);
+      int row = (int)StringToInteger(parts[1]);
+      if(col == 0) OnClickNavigateToTF(row);
+      return;
+     }
   }
 #endif // CGUIPANNEL_MAINWINDOWS_MQH

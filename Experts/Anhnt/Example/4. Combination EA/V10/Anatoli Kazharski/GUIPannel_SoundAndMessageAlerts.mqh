@@ -22,7 +22,7 @@
   } 
  void CGUIPannel::CheckIndicatorAlerts(void)
   {
-   if(m_timeSeriesEngine == NULL || m_BarTimeSeriesCollection == NULL ||
+   if(m_SignalsCollection == NULL || m_BarTimeSeriesCollection == NULL ||
       m_indicator_template_manager == NULL || m_SymbolTFManager == NULL) return;
    int rows = m_indicator_template_manager.Total();
    if(rows == 0) return;   
@@ -83,7 +83,7 @@
           }
          if(ind == NULL) continue; // not created on this TF yet (background sync still catching up)
 
-        CSignalBase *signal = m_timeSeriesEngine.GetSignalsCollection().GetOrCreateSignal(ind);
+        CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
         // --- NULL here just means this indicator type has no CSignalXxx wired yet in
         // --- GetOrCreateSignal (e.g. ATR) - known, permanent.
         if(signal == NULL) continue;

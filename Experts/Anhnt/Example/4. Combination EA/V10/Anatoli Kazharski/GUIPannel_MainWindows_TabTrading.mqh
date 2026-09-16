@@ -41,10 +41,15 @@
    m_table_position_pretrade_view.ShowHeaders(true);
    m_table_position_pretrade_view.SelectableRow(false);
    m_table_position_pretrade_view.IsSortMode(false);
-   //--- Auto-fits EVERY column's width to its header+content text on each Update() (Anhnt, 2026-09-10 -
-   //--- "cậu bật... rồi mình lựa") - may drift COL_PTV_SYMBOL/COL_PTV_LOT away from M_SYMBOL_WIDTH
-   //--- (the constant every other New Order form control is aligned to); trying it to see the real result.
-   m_table_position_pretrade_view.AutoCorrectColumnsWidthMode(true);
+   //--- AutoCorrectColumnsWidthMode turned back OFF (Anhnt/Claude, 2026-09-15) - it re-measures
+   //--- every column's width on EVERY Update() call, even Update(false); SL Price/SL Profit/Risk$
+   //--- change on nearly every tick (live Indicator values), so this table's Update(false) was
+   //--- firing constantly, repositioning the Lot cell (CELL_COMBOBOX) mid-interaction and making
+   //--- its dropdown hard to click/double-click. ColumnResizeMode(true) instead - lets the user
+   //--- drag column borders by hand when they actually want to resize, without re-running on
+   //--- every live-value tick. Also short-circuits AutoCorrectWidthColumns() on its own
+   //--- (Table.mqh:1841 checks `|| m_column_resize_mode`), so this alone would have been enough.
+   m_table_position_pretrade_view.ColumnResizeMode(true);
    //--- Symbol picked via an embedded combobox cell (Anhnt, 2026-09-10 - "cái combobox ấy chuyển
    //--- vào cột đầu tiên của Table") instead of the old standalone m_combobox_symbol_toTrade.
    //--- CellType(...,CELL_COMBOBOX) MUST be set BEFORE CreateTable() - the Library's shared
@@ -240,6 +245,12 @@
          int nearest_idx = (int)::MathRound((m_new_order_lot_last - min_lot) / step_lot);
          if(nearest_idx >= 0 && nearest_idx < count) default_idx = nearest_idx;
         }
+       //--- Explicit safety clamp (Anhnt/Claude, 2026-09-15) - CTable::AddValueList() silently
+       //--- clamps an out-of-range selected_item UP to the LAST item (MaxLot), not down to the
+       //--- first, if this ever went out of bounds (Table.mqh:1706). default_idx should already be
+       //--- in range from the guard above, but never rely on that alone for something this
+       //--- dangerous - clamp here explicitly too, and clamp DOWN toward MinLot on failure, never up.
+       if(default_idx < 0 || default_idx >= count) default_idx = 0;
        m_table_position_pretrade_view.CellType(COL_PTV_LOT, 0, CELL_COMBOBOX);
        m_table_position_pretrade_view.AddValueList(COL_PTV_LOT, 0, lot_list, default_idx);
       }
@@ -336,9 +347,15 @@
    m_table_positions_StoplostAndTrailling.SelectableRow(true);
    m_table_positions_StoplostAndTrailling.LightsHover(true);
    m_table_positions_StoplostAndTrailling.IsSortMode(false);
-   //--- Same auto-fit-to-content as m_table_position_pretrade_view (Anhnt, 2026-09-10 - "cái table
-   //--- ở dưới cũng không hề AutoRize cái column ấy").
-   m_table_positions_StoplostAndTrailling.AutoCorrectColumnsWidthMode(true);
+   //--- AutoCorrectColumnsWidthMode turned back OFF, same reasoning + fix as m_table_position_
+   //--- pretrade_view (Anhnt/Claude, 2026-09-15) - this table has 5 narrow packed icon columns
+   //--- (DIR/SLTYPE/RUN_SL/TRAILTYPE/RUN_TRAIL, 20px each) and SL Price/SL Profit/Profit change on
+   //--- nearly every tick, so Update(false) was re-running AutoCorrectWidthColumns() constantly,
+   //--- shifting those narrow columns' boundaries mid-click - a click aimed at SLTYPE (StopLost
+   //--- mode) could land on the just-shifted TRAILTYPE (Trailing mode) instead, or vice versa.
+   //--- ColumnResizeMode(true) instead - lets the user drag column borders by hand, and also
+   //--- short-circuits AutoCorrectWidthColumns() on its own (Table.mqh:1841).
+   m_table_positions_StoplostAndTrailling.ColumnResizeMode(true);
    if(!m_table_positions_StoplostAndTrailling.CreateTable(x, y)) return false;
    m_table_positions_StoplostAndTrailling.SetHeaderText(COL_PST_SYMBOL,    "Symbol");
     {
@@ -386,7 +403,7 @@
  bool CGUIPannel::SyncTable_PositionsStoplostAndTrailling(bool force = false)
   {
    string symbols[]; ENUM_POSITION_TYPE dirs[];
-   int count = m_tradingEngine.GetPositionsSymbolsAndDirections(symbols, dirs);
+   int count = (m_market_collection != NULL) ? m_market_collection.GetDistinctSymbolsAndDirections(symbols, dirs) : 0;
    static string s_prev_keys[];
    static bool   s_active_old[];
    static double s_sl_price_old[];
@@ -457,8 +474,9 @@
        //--- Buy/Sell icon alone already conveys Direction.
        m_table_positions_StoplostAndTrailling.SetImages(COL_PST_DIR, row, dir_img);
        m_table_positions_StoplostAndTrailling.ChangeImage(COL_PST_DIR, row, (type == POSITION_TYPE_BUY) ? 0 : 1);
-       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_VOLUME, row, ::DoubleToString(m_tradingEngine.PositionsVolumeTotal(sym, type), 2));
-       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_NO, row, (string)m_tradingEngine.PositionsTotal(sym, type));
+       CArrayObj *pos_list_row = (m_market_collection != NULL) ? m_market_collection.GetPositionList(sym, type) : NULL;
+       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_VOLUME, row, ::DoubleToString((m_market_collection != NULL) ? m_market_collection.SumVolume(pos_list_row) : 0.0, 2));
+       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_NO, row, (string)((pos_list_row != NULL) ? pos_list_row.Total() : 0));
 
        CTradingSetupSetting *row_setting = (m_trading_setup_manager != NULL) ? m_trading_setup_manager.FindByIdentity(sym) : NULL;
        if(row_setting == NULL && m_trading_setup_manager != NULL)
@@ -500,19 +518,24 @@
       //--- giá đó nếu bị StopLost thì sẽ mất bao tiền").
        bool sl_price_from_trail;
        double sl_price   = m_tradingEngine.GetPreviewSLTargetPrice(sym, type, sl_price_from_trail);
-       double real_volume = m_tradingEngine.PositionsVolumeTotal(sym, type);
-       double sl_profit  = m_tradingEngine.GetPreviewSLMoneyValue(sym, type, real_volume);
-       double profit     = m_tradingEngine.PositionsFloatingProfitTotal(sym, type);
+      //--- Both SL Profit and Profit are now the SAME signed money-if-closed-at-sl_price value via
+      //--- CMarketCollection::SumFloatingProfit(symbol,dir,price) overload (Anhnt/Claude, 2026-09-15 -
+      //--- "Cái số ở đây phải khớp với nhau" - SL Profit used to call GetPreviewSLMoneyValue(), which
+      //--- only reads Position #0's PriceOpen() while multiplying by the GROUP's total Volume, giving
+      //--- a different/wrong number than Profit's own correct per-Position calc on the exact same row;
+      //--- unified with the CArrayObj-list overload under one name, 2026-09-15).
+       double sl_profit  = (sl_price != EMPTY_VALUE && m_market_collection != NULL) ? m_market_collection.SumFloatingProfit(sym, type, sl_price) : EMPTY_VALUE;
+       double profit     = sl_profit;
        s_sl_price_old[row]  = sl_price;
        s_sl_profit_old[row] = sl_profit;
        s_profit_old[row]    = profit;
       //--- "N/A" (not "-") when unavailable (Anhnt, 2026-09-10) - usually Mode=Indicator with no
       //--- Indicator actually configured yet for this Symbol.
        m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPRICE, row, (sl_price == EMPTY_VALUE) ? "N/A" : ::DoubleToString(sl_price, digits));
-      //--- SL Profit = the money LOST if the previewed SL is hit, so shown negative -
-      //--- GetPreviewSLMoneyValue() itself returns a plain magnitude, so the "-" is only added here.
-       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPROFIT, row, (sl_profit == EMPTY_VALUE) ? "N/A" : "-$" + ::DoubleToString(sl_profit, 2));
-       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_PROFIT, row, ::DoubleToString(profit, 2));
+      //--- Signed - can be positive when Trailing already locked in profit, not
+      //--- always a loss (Anhnt/Claude, 2026-09-15 - no more hardcoded "-$" prefix).
+       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPROFIT, row, (sl_profit == EMPTY_VALUE) ? "N/A" : ::DoubleToString(sl_profit, 2));
+       m_table_positions_StoplostAndTrailling.SetValue(COL_PST_PROFIT, row, (profit == EMPTY_VALUE) ? "N/A" : ::DoubleToString(profit, 2));
       }
      m_table_positions_StoplostAndTrailling.Update(true);
      return true;
@@ -536,13 +559,14 @@
          any_changed = true;
         }
       //--- Volume/No - cheap enough to just re-check every tick like Mid does elsewhere
-       string v_vol = ::DoubleToString(m_tradingEngine.PositionsVolumeTotal(sym, type), 2);
+       CArrayObj *pos_list_dirty = (m_market_collection != NULL) ? m_market_collection.GetPositionList(sym, type) : NULL;
+       string v_vol = ::DoubleToString((m_market_collection != NULL) ? m_market_collection.SumVolume(pos_list_dirty) : 0.0, 2);
        if(force || v_vol != m_table_positions_StoplostAndTrailling.GetValue(COL_PST_VOLUME, row))
         {
          m_table_positions_StoplostAndTrailling.SetValue(COL_PST_VOLUME, row, v_vol, 0, true);
          any_changed = true;
         }
-       string v_no = (string)m_tradingEngine.PositionsTotal(sym, type);
+       string v_no = (string)((pos_list_dirty != NULL) ? pos_list_dirty.Total() : 0);
        if(force || v_no != m_table_positions_StoplostAndTrailling.GetValue(COL_PST_NO, row))
         {
          m_table_positions_StoplostAndTrailling.SetValue(COL_PST_NO, row, v_no, 0, true);
@@ -595,22 +619,21 @@
          m_table_positions_StoplostAndTrailling.TextColor(COL_PST_SLPRICE, row, clr, true);
          any_changed = true;
         }
+      //--- SL Profit and Profit are the SAME signed value now (Anhnt/Claude, 2026-09-15 - "Cái số ở
+      //--- đây phải khớp với nhau") - compute once, reuse for both columns' own dirty-checks below.
        double prev_sl_profit = s_sl_profit_old[row];
-       double sl_profit = m_tradingEngine.GetPreviewSLMoneyValue(sym, type, m_tradingEngine.PositionsVolumeTotal(sym, type));
+       double sl_profit = (sl_price != EMPTY_VALUE && m_market_collection != NULL) ? m_market_collection.SumFloatingProfit(sym, type, sl_price) : EMPTY_VALUE;
        if(force || sl_profit != prev_sl_profit)
         {
-      //--- Polarity flipped vs SL Price's own dir check above: sl_profit is a magnitude, but shown
-      //--- negative (money LOST if SL hit) - a growing magnitude means a WORSE (bigger) loss, so
-      //--- that's red, not green.
-         int dir = (prev_sl_profit == EMPTY_VALUE || sl_profit == EMPTY_VALUE) ? 2 : (sl_profit > prev_sl_profit) ? 1 : (sl_profit < prev_sl_profit) ? 0 : 2;
+         int dir = (prev_sl_profit == EMPTY_VALUE || sl_profit == EMPTY_VALUE) ? 2 : (sl_profit > prev_sl_profit) ? 0 : (sl_profit < prev_sl_profit) ? 1 : 2;
          color clr = (dir == 0) ? C'0,160,0' : (dir == 1) ? C'200,0,0' : clrGray;
          s_sl_profit_old[row] = sl_profit;
-         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPROFIT, row, (sl_profit == EMPTY_VALUE) ? "N/A" : "-$" + ::DoubleToString(sl_profit, 2), 0, true);
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPROFIT, row, (sl_profit == EMPTY_VALUE) ? "N/A" : ::DoubleToString(sl_profit, 2), 0, true);
          m_table_positions_StoplostAndTrailling.TextColor(COL_PST_SLPROFIT, row, clr, true);
          any_changed = true;
         }
        double prev_profit = s_profit_old[row];
-       double profit = m_tradingEngine.PositionsFloatingProfitTotal(sym, type);
+       double profit = sl_profit;
        if(force || profit != prev_profit)
         {
          //--- No "first tick" sentinel needed here (unlike Mid's -1 init) - the full-rebuild branch
@@ -618,7 +641,7 @@
          int dir = (profit > prev_profit) ? 0 : (profit < prev_profit) ? 1 : 2;
          color clr = (dir == 0) ? C'0,160,0' : (dir == 1) ? C'200,0,0' : clrGray;
          s_profit_old[row] = profit;
-         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_PROFIT, row, ::DoubleToString(profit, 2), 0, true);
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_PROFIT, row, (profit == EMPTY_VALUE) ? "N/A" : ::DoubleToString(profit, 2), 0, true);
          m_table_positions_StoplostAndTrailling.TextColor(COL_PST_PROFIT, row, clr, true);
          any_changed = true;
         }
@@ -875,6 +898,95 @@
    return true;
   }
  //+------------------------------------------------------------------+
+ //| Every live CIndicatorDE instance tracked for the given Symbol      |
+ //| (across every tracked TF) - NO Trend/1-buffer/StdDev filter, this  |
+ //| is for general monitoring display (m_table_indicator_             |
+ //| PreTradeSymbolMonitor), not Trailing-by-Indicator eligibility.     |
+ //| Pure data, no GUI control touched - only ever consumed here (GUI), |
+ //| so it lives directly on CGUIPannel using its own borrowed pointers,|
+ //| not CTradingEngine (Anhnt/Claude, 2026-09-15 - moved back out of   |
+ //| CTradingEngine, see [[project_v10_stoplost_trailing_engine_split]] |
+ //| for where it lived before).                                       |
+ //+------------------------------------------------------------------+
+ int CGUIPannel::BuildSymbolIndicatorMonitorList(const string symbol, CIndicatorDE* &out_inds[], ENUM_TIMEFRAMES &out_tfs[])
+  {
+   int count = 0;
+   ::ArrayResize(out_inds, 0);
+   ::ArrayResize(out_tfs,  0);
+   if(m_IndicatorsCollection == NULL || m_SymbolTFManager == NULL || m_indicator_template_manager == NULL) return 0;
+   int symtf_total = m_SymbolTFManager.Total();
+   int tmpl_total  = m_indicator_template_manager.Total();
+   for(int si = 0; si < symtf_total; si++)
+    {
+     CSymbolTFSetting *symtf = m_SymbolTFManager.At(si);
+     if(symtf == NULL || symtf.Symbol() != symbol) continue;
+     ENUM_TIMEFRAMES tf = symtf.TFEnum();
+     CArrayObj *ind_list = m_IndicatorsCollection.GetListIndBySymbol(symbol);
+     ind_list = CTimeseriesSelect::ByIndicatorProperty(ind_list, INDICATOR_PROP_TIMEFRAME, tf, EQUAL);
+     int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+     if(ind_total == 0) continue;
+     for(int ti = 0; ti < tmpl_total; ti++)
+      {
+       CIndicatorSetting *entry = m_indicator_template_manager.At(ti);
+       if(entry == NULL) continue;
+       MqlParam raw_params[];
+       entry.GetRawParams(raw_params);
+       if(::ArraySize(raw_params) == 0) continue;
+       CIndicatorDE *ind = NULL;
+       for(int ii = 0; ii < ind_total; ii++)
+        {
+         CIndicatorDE *cand = ind_list.At(ii);
+         if(cand == NULL || cand.TypeIndicator() != entry.TypeEnum()) continue;
+         MqlParam cand_params[];
+         cand.GetMqlParams(cand_params);
+         if(IsEqualMqlParamArrays(cand_params, raw_params)) { ind = cand; break; }
+        }
+       if(ind == NULL) continue; // template not instantiated on this Symbol+TF yet
+       ::ArrayResize(out_inds, count + 1);
+       ::ArrayResize(out_tfs,  count + 1);
+       out_inds[count] = ind;
+       out_tfs[count]  = tf;
+       count++;
+      }
+    }
+   //--- Sort ascending by TF (M1 first) - same reasoning as BuildTrailingIndicatorChoiceList.
+   for(int a = 0; a < count - 1; a++)
+    for(int b = a + 1; b < count; b++)
+     if(IndexEnumTimeframe(out_tfs[b]) < IndexEnumTimeframe(out_tfs[a]))
+      {
+       CIndicatorDE   *ind_tmp = out_inds[a]; out_inds[a] = out_inds[b]; out_inds[b] = ind_tmp;
+       ENUM_TIMEFRAMES tf_tmp  = out_tfs[a];  out_tfs[a]  = out_tfs[b];  out_tfs[b]  = tf_tmp;
+      }
+   return count;
+  }
+ //+------------------------------------------------------------------+
+ //| TF cell click (m_table_indicator_PreTradeSymbolMonitor, col 0) -   |
+ //| switches the active chart to this row's own (Symbol,TF) via        |
+ //| CChartObjCollection::SetActiveChartSymbolTF() (Anhnt/Claude,        |
+ //| 2026-09-15). Re-derives the row's real ENUM_TIMEFRAMES from the     |
+ //| cell's own displayed text (IsSortMode(true) on this table means     |
+ //| row index alone isn't a stable identity after a header-click sort - |
+ //| same reasoning as OnCheckTable_IndicatorsTrailingSetting's own      |
+ //| composite-key re-derivation elsewhere in this codebase) instead of  |
+ //| trusting a stale per-row array.                                     |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::OnClickNavigateToTF(const int row)
+  {
+   if(m_chart_obj_collection == NULL) return;
+   string symbol = GetNewOrderSymbol();
+   if(symbol == "") return;
+   string tf_text = m_table_indicator_PreTradeSymbolMonitor.GetValue(0, row);
+   CIndicatorDE   *inds[];
+   ENUM_TIMEFRAMES tfs[];
+   int count = BuildSymbolIndicatorMonitorList(symbol, inds, tfs);
+   for(int i = 0; i < count; i++)
+    {
+     if(TimeframeDescription(tfs[i]) != tf_text) continue;
+     m_chart_obj_collection.SetActiveChartSymbolTF(::ChartID(), symbol, tfs[i]);
+     return;
+    }
+  }
+ //+------------------------------------------------------------------+
  //| Full rebuild when the scoped Symbol changes or count changes, otherwise a per-tick dirty-check    |
  //| that touches Col0 (active-chart-TF icon), Col1 (Signal system, sticky last-known direction - same |
  //| GetOrCreateSignal()/HistoryDir() fallback as SynTable_IndicatorSymbolTFMonitor's own Col2), Col2   |
@@ -896,7 +1008,7 @@
    //--- General monitor list (ALL indicators tracked for this Symbol), not the Trailing-eligible-only
    //--- subset - ATR etc. still needs to show here even though it can't be picked as a Trailing target
    //--- (Anhnt/Claude, 2026-09-09).
-   int count = m_tradingEngine.BuildSymbolIndicatorMonitorList(symbol, inds, tfs);
+   int count = BuildSymbolIndicatorMonitorList(symbol, inds, tfs);
 
    if(force || count != s_row_count)
     {
@@ -949,6 +1061,9 @@
        //--- m_table_SymbolTFSeting's is_current, checks both).
        bool tf_active = (symbol == ::Symbol() && tfs[row] == (ENUM_TIMEFRAMES)::Period());
        s_tf_active_old[row] = tf_active;
+       //--- Clickable now (Anhnt/Claude, 2026-09-15) - click switches the active chart to this row's
+       //--- own (Symbol,TF), via CChartObjCollection::SetActiveChartSymbolTF().
+       m_table_indicator_PreTradeSymbolMonitor.CellType(0, row, CELL_BUTTON);
        m_table_indicator_PreTradeSymbolMonitor.SetImages(0, row, tf_img);
        m_table_indicator_PreTradeSymbolMonitor.ChangeImage(0, row, tf_active ? 0 : 1);
        m_table_indicator_PreTradeSymbolMonitor.SetValue(0, row, TimeframeDescription(tfs[row]));
@@ -965,9 +1080,9 @@
       //--- SynTable_IndicatorSymbolTFMonitor's own Col2 - a live flip wins, else the last COMMITTED
       //--- history entry, else fall back to the raw value-slope dir computed above.
        int sig = dir;
-       if(m_timeSeriesEngine != NULL)
+       if(m_SignalsCollection != NULL)
         {
-         CSignalBase *signal = m_timeSeriesEngine.GetSignalsCollection().GetOrCreateSignal(ind);
+         CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
          if(signal != NULL)
           {
            ENUM_SIGNAL_DIR sdir = signal.GetCurrentSignal();
@@ -1105,9 +1220,9 @@
         any_changed = true;
        }
       int sig = dir;
-      if(m_timeSeriesEngine != NULL)
+      if(m_SignalsCollection != NULL)
        {
-        CSignalBase *signal = m_timeSeriesEngine.GetSignalsCollection().GetOrCreateSignal(inds[i]);
+        CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(inds[i]);
         if(signal != NULL)
          {
           ENUM_SIGNAL_DIR sdir = signal.GetCurrentSignal();
@@ -1140,9 +1255,6 @@
    s_last_symbol = symbol;
    if(!symbol_changed)
     {
-     //--- A Lot pick fired the same commit event, not a Symbol change - remember it (Anhnt,
-     //--- 2026-09-11 - "Lưu lại giá trị lần cuối") so the Lot list rebuild above restores it
-     //--- instead of resetting to MinLot on the next Symbol/Direction/Risk change.
       double picked_lot = GetNewOrderLot();
       if(picked_lot > 0.0) m_new_order_lot_last = picked_lot;
       return;

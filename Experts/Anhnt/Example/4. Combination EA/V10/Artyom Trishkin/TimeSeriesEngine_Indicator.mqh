@@ -1,8 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                   TimeSeriesEngine_Indicator.mqh |
 //+------------------------------------------------------------------+
-//Function related to Indicator in Layer 1
-
 #ifndef CTIMESERIESENGINE_INDICATOR_MQH
 #define CTIMESERIESENGINE_INDICATOR_MQH
 #include "TimeSeriesEngine.mqh"
@@ -50,9 +48,7 @@
      MqlParam inst_params[];
      indicator.GetMqlParams(inst_params);
      if(!IsEqualMqlParamArrays(inst_params, params)) continue;
-     // --- Release the Signal FIRST: CSignalsCollection borrows this indicator's
-     // --- pointer (m_indicator_list[] + the signal's own m_indicator), so deleting
-     // --- the indicator before its signal would leave both dangling.
+     // Release the Signal FIRST: CSignalsCollection borrows this indicator's
      m_SignalsCollection.DeleteSignal(indicator);
      list.Delete(i);   // CArrayObj FreeMode -> ~CIndicatorDE -> IndicatorRelease(handle)
     }

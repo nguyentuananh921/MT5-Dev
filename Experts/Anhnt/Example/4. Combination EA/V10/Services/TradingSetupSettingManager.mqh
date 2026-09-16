@@ -38,13 +38,9 @@
        CArrayObj   m_list;                 // list of CTradingSetupSetting*
        string      m_last_removed_symbol;
        bool        m_loaded_from_json;
-       //--- Global (not per-Symbol) Trailing-by-Value bar shift, mirrors Trishkin's reference
-       //--- InpDataRatesIndex (Anhnt, 2026-09-09 - "chúng ta cần tồn tại qua TF nhỏ 1M rồi mới nói
-       //--- chuyện đến TF lớn hơn" - TF is hardcoded M1 everywhere else, so this shift is likewise
-       //--- one single EA-wide value, not a per-Symbol row field like TrailingOffsetPts). Set-once,
-       //--- rarely touched - unlike m_edit_RiskPerNewTrade (changes every trade), this earns real
-       //--- JSON persistence so it survives EA restarts without re-typing.
+      //--- Global Trailing-by-Value bar shift
        int         m_trail_data_rates_index;
+      //Working with JSON
        int         ReadTradingSetupEntry(const string &s, int pos, CTradingSetupSetting *&out_row);
        int         ReadTradingSetupEntryArray(const string &s, int pos);
        int         ReadMqlParamArray(const string &s, int pos, MqlParam &out[]);
@@ -54,7 +50,6 @@
                      CTradingSetupSettingManager(void) : m_last_removed_symbol(""), m_loaded_from_json(false),
                                                           m_trail_data_rates_index(2) {}
                     ~CTradingSetupSettingManager(void) {}
-
       //--- Lifecycle - same convention as CSymbolTFManager::OnInitEvent/CIndicatorTemplateManager::OnInitEvent.
        bool                    OnInitEvent(void);
 

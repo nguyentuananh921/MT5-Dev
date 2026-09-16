@@ -54,23 +54,6 @@
         m_tradingEngine.OnInitEvent(); //For trading
         m_ChartObjCollection.CreateCollection();// For CChartObjCollection - MUST run before Manager's own OnInitEvent below (it scans this)
         m_IndicatorTemplateManager.OnInitEvent(&m_ChartObjCollection);//For Indicator Template Manager - loads JSON, then merges chart scan
-        //--- Bootstrap ATR(14) into the Template if it's neither saved nor already on the chart
-        //--- (Anhnt, 2026-09-09) - StopLost's SL_MODE_INDICATOR path needs a live ATR(14) CIndicatorDE
-        //--- to read from; with zero ATR rows, the lookup finds nothing AND the GUI's own ATR-choice
-        //--- combobox has nothing to offer (BuildATRChoiceList only lists Template rows). Added
-        //--- ShowOnChart=false - it should compute in the background, not clutter the chart, unless
-        //--- the user separately drops it on the chart themselves.
-        {
-         MqlParam atr14_params[1];
-         atr14_params[0].type          = TYPE_INT;
-         atr14_params[0].integer_value = 14;
-         if(!m_IndicatorTemplateManager.Exists(IND_ATR, atr14_params))
-          {
-           m_IndicatorTemplateManager.AddIndicatorToIndicatorTemplateSetting(IND_ATR, atr14_params);
-           CIndicatorSetting *atr14_entry = m_IndicatorTemplateManager.FindByIdentity(IND_ATR, atr14_params);
-           if(atr14_entry != NULL) atr14_entry.ShowOnChart(false);
-          }
-        }
         m_SymbolTFManager.OnInitEvent();//For Symbol+TF Manager
         m_TradingSetupManager.OnInitEvent();//For Trading Setup (StopLost/Trailing) Manager - loads "StopLost_Setting" from JSON
         m_timeSeriesEngine.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());
@@ -78,22 +61,20 @@
       //For CTradingEngine's own StopLost/Trailing Apply engine (moved from CGUIPannel, Anhnt/Claude, 2026-09-09)
         m_tradingEngine.SetTradingSetupManager(&m_TradingSetupManager);
         m_tradingEngine.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
-        m_tradingEngine.SetSymbolTFManager(&m_SymbolTFManager);
-        m_tradingEngine.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
         m_tradingEngine.SetBarTimeSeriesCollection(m_timeSeriesEngine.GetTimeSeriesCollection());
         m_signal_bridge_writer.OnInitEvent(m_timeSeriesEngine.GetSignalsCollection(),
                                            m_timeSeriesEngine.GetIndicatorsCollection(),
                                            m_timeSeriesEngine.GetTimeSeriesCollection(),
                                            &m_IndicatorTemplateManager, &m_SymbolTFManager,
                                            m_timeSeriesEngine.GetPatternsControl());
-      //For GUI. Set pointers before GUI init - SetTimeSeriesEngine MUST run before
+      //For GUI. Set pointers before GUI init
         m_GUIPannel.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
         m_GUIPannel.SetSymbolTFManager(&m_SymbolTFManager);
         m_GUIPannel.SetTradingSetupManager(&m_TradingSetupManager);
         m_GUIPannel.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());
         m_GUIPannel.SetTimeSeriesCollection(m_timeSeriesEngine.GetTimeSeriesCollection());
         m_GUIPannel.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
-        m_GUIPannel.SetTimeSeriesEngine(&m_timeSeriesEngine);   // Tang 2 forwards "Add" clicks to Tang 1
+        m_GUIPannel.SetSignalsCollection(m_timeSeriesEngine.GetSignalsCollection());
         m_GUIPannel.SetPatternsControl(m_timeSeriesEngine.GetPatternsControl());
         //   //mGUIPannel.SetTickSeriesCollection(timeSeriesEngine.GetTickSeries());
         m_GUIPannel.SetMarketCollection(m_tradingEngine.GetMarketCollection());
@@ -102,7 +83,7 @@
         m_GUIPannel.SetTradingEngine(&m_tradingEngine);   // display-only now - real StopLost/Trailing Apply logic lives in CTradingEngine itself
         m_GUIPannel.OnInitEvent(_UninitReason);  // GUIPannel tự xử lý CHARTCHANGE      
         m_signal_bridge_writer.BuildAndWriteSignalBridge();
-        EnsureMarkerIndicatorAttached();
+        AttachMarkerIndicatorToChart();
       EventSetMillisecondTimer(16);
       g_ea_init_done = true;   // every module wired - safe for Managers/Layer 3 to fire events now
       return (INIT_SUCCEEDED);
@@ -114,7 +95,7 @@
   {
     m_GUIPannel.OnDeinitEvent(reason);
     if(reason != REASON_CHARTCHANGE)
-       RemoveMarkerIndicator();
+       ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
   }
  //+------------------------------------------------------------------+
  //| Expert tick function                                             |
@@ -228,9 +209,9 @@
        return;
       }
      if(id == CHARTEVENT_CUSTOM + GUIPANNEL_EVENT_MARKER_SETTING_CHANGED)
-      {       
-       RemoveMarkerIndicator();
-       EnsureMarkerIndicatorAttached();
+      {
+       ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
+       AttachMarkerIndicatorToChart();
        return;
       }
   }
@@ -255,23 +236,18 @@
    CChartObj *chart = m_ChartObjCollection.GetChart(::ChartID());
    if(chart == NULL) return;
    if(chart.Timeframe() == tf && chart.Symbol() == sym) return;
-   // Single native call - chart.SetTimeframe()+chart.SetSymbol() each issue their own
-   // ChartSetSymbolPeriod(), so calling both back-to-back fires it TWICE on the same chart;
-   // a symbol/period switch is a full chart reinit, and the terminal rejects the second call
-   // with 4102 "Chart does not respond" while the first one is still in flight - reproduced by
-   // clicking a Symbol-level TreeView node with no TF child yet (Anhnt, 2026-08-26).
-   ::ResetLastError();
-   if(!::ChartSetSymbolPeriod(chart.ID(), sym, tf))
-    {
-     Print("SetActiveChartSymbolTF: ChartSetSymbolPeriod failed, error=", ::GetLastError());
-     return;
-    }
-   chart.SetProperty(CHART_PROP_SYMBOL, sym);
-   chart.SetProperty(CHART_PROP_TIMEFRAME, tf);
-  }
- //For Signal Marker  
-  void EnsureMarkerIndicatorAttached(void)
-   {
+   // Single native call - chart.SetTimeframe()+chart.SetSymbol().
+    ::ResetLastError();
+    if(!::ChartSetSymbolPeriod(chart.ID(), sym, tf))
+     {
+      Print("SetActiveChartSymbolTF: ChartSetSymbolPeriod failed, error=", ::GetLastError());
+      return;
+     }
+    chart.SetProperty(CHART_PROP_SYMBOL, sym);
+    chart.SetProperty(CHART_PROP_TIMEFRAME, tf);
+  }   
+ void AttachMarkerIndicatorToChart(void)
+  {
     CChartWnd *wnd = m_ChartObjCollection.GetChartWindow(::ChartID(), 0);
     if(wnd != NULL)
      {
@@ -301,11 +277,7 @@
      }
     if(!::ChartIndicatorAdd(::ChartID(), 0, h))
       ::Print(__FUNCTION__, " > ChartIndicatorAdd(SignalMarkers) failed, error ", ::GetLastError());
-   }  
-  void RemoveMarkerIndicator(void)
-   {
-    ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
-   }  
- 
+  }
+
    
 

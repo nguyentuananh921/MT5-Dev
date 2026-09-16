@@ -7,14 +7,10 @@
  //+------------------------------------------------------------------+
  //| Constructor/Destructor                                           |
  //+------------------------------------------------------------------+
- CTradingEngine::CTradingEngine(void) : m_is_event(false),
-                                        m_event_code(ENGINE_EVENT_NONE),
-                                        m_is_first_start (true),
+ CTradingEngine::CTradingEngine(void) : m_is_first_start (true),
                                         m_is_tester(::MQLInfoInteger(MQL_TESTER)),
                                         m_trading_setup_manager(NULL),
                                         m_indicators_collection(NULL),
-                                        m_symbol_tf_manager(NULL),
-                                        m_indicator_template_manager(NULL),
                                         m_BarTimeSeriesCollection(NULL)
   {
 
@@ -23,14 +19,11 @@
   {
 
   }
- //CTradingEngine Life cycle management
  //+------------------------------------------------------------------+
- //| Initialize collections and setup control thresholds             |
+ //| Initialize collections and setup control thresholds              |
  //+------------------------------------------------------------------+
  bool CTradingEngine::OnInitEvent(void)
-  {
-    //For m_accounts
-    //Using in Account info at tab Trade, initialize account collection and set control thresholds to 0 to detect any change in account info, these values will be updated in GUI when there is an event
+  {    
     m_accounts_collection.RefreshAndEventsControl();
     int index = m_accounts_collection.IndexCurrentAccount();
                 if(index == WRONG_VALUE) return false;    
@@ -43,14 +36,12 @@
         acc.SetControlProfitDec(0);
         acc.SetControlEquityInc(0);
         acc.SetControlEquityDec(0);
-    //For trading
-    //For Symbols Information at tab Trade, initialize symbols collection      
-    // Symbols — init with current chart symbol
-    m_market_collection.Refresh();
-    m_history_collection.Refresh();
-    if(!m_symbol_collection.CreateSymbolsList(true)) // true = MarketWatch
+    //For trading    
+     m_market_collection.Refresh();
+     m_history_collection.Refresh();
+     if(!m_symbol_collection.CreateSymbolsList(true)) // true = MarketWatch
         return false;        
-    m_trading_control.OnInit(GetCurrentAccount(), &m_symbol_collection, &m_market_collection, &m_history_collection, &m_trade_event_collection);
+     m_trading_control.OnInit(m_accounts_collection.GetCurrentAccount(), &m_symbol_collection, &m_market_collection, &m_history_collection, &m_trade_event_collection);
     return true;  
       
   }
@@ -58,36 +49,25 @@
  //| Refresh all collections and detect changes                       |
  //+------------------------------------------------------------------+
  void CTradingEngine::OnTickEvent(void)
-  {      
-   //For Account info at tab Trade, only update dynamic info when there is an event in account, no need to update every tick
-    m_is_event   = false;
-    m_event_code = ENGINE_EVENT_NONE;
+  {
+   //For Account info update dynamic info when there is an event in account, no need to update every tick
     m_accounts_collection.RefreshAndEventsControl();
-    if(m_accounts_collection.IsEvent())
-     {
-      m_is_event   = true;
-      m_event_code = ENGINE_EVENT_ACCOUNT;
-     }
-    //For Symbols Information at tab Trade, only update symbols collection when there is an event in symbols, no need to update every tick
+   //For Symbols Information update symbols collection when there is an event in symbols, no need to update every tick
     m_symbol_collection.RefreshAndEventsControl();
-    if(m_symbol_collection.IsEvent())
-     {
-      m_is_event   = true;
-      m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_SYMBOL);
-     }
-    if(m_symbol_collection.ModeSymbolsList() == SYMBOLS_MODE_MARKET_WATCH)
-     this.MarketWatchEventsControl();
-    //For Order and deal
+   //--- Skipped in the Tester (Anhnt/Claude, 2026-09-14) - this hash-sums the live Market Watch
+   //--- window to detect the USER manually adding/removing a symbol while the EA runs; that
+   //--- interaction can't happen during a backtest, so it would just re-scan every symbol every
+   //--- tick for a result that never changes - pure wasted CPU across potentially millions of
+   //--- simulated ticks. Inlined here (was CTradingEngine::MarketWatchEventsControl()) - the
+   //--- wrapper added no value beyond this one guard + one forwarded call.
+    if(!m_is_tester && m_symbol_collection.ModeSymbolsList() == SYMBOLS_MODE_MARKET_WATCH)
+     m_symbol_collection.MarketWatchEventsControl();
+   //For Order and deal
     this.TradeEventsControl();
-    if(this.m_is_market_trade_event || this.m_is_history_trade_event)
-     {
-      m_is_event   = true;
-      m_event_code = (ENUM_ENGINE_EVENT)(m_event_code | ENGINE_EVENT_ORDER);
-     }
-    //--- StopLost/Trailing Apply engine - runs every tick, unconditional (Anhnt/Claude, 2026-09-09,
-    //--- moved from CGUIPannel::OnTickEvent). has_trade_event (2026-09-10) gates ONLY the
-    //--- propagate-StopLost-to-sibling-Positions step inside it - Trailing/normal bootstrap still
-    //--- run every tick regardless.
+   //StopLost/Trailing Apply engine - runs every tick, unconditional (Anhnt/Claude, 2026-09-09,
+   //moved from CGUIPannel::OnTickEvent). has_trade_event (2026-09-10) gates ONLY the
+   //propagate-StopLost-to-sibling-Positions step inside it - Trailing/normal bootstrap still
+   //run every tick regardless.
     this.ApplyStopLostAndTrailing(this.m_is_market_trade_event);
   }
 #endif // CTRADINGENGINE_LIFECYCLE_MQH
