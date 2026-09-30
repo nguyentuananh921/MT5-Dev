@@ -14,17 +14,17 @@
 //+------------------------------------------------------------------+
 class CTrailingATR
   {
-protected:
-   int               m_handle;
-   string            m_symbol;
-   long               m_magic;
+   protected:
+    int               m_handle;
+    string            m_symbol;
+    long               m_magic;
 
-public:
+   public:
                      CTrailingATR(int handle, string symbol, long magic = -1);
                     ~CTrailingATR(void);
 
-   static void       TrailStops(int handle, string symbol, double stop_atr_multiplier = 0.5, double step_atr_multiplier = 0.2, long magic = -1);
-   void              TrailStops(double stop_atr_multiplier = 0.5, double step_atr_multiplier = 0.2);
+    static void       TrailStops(int handle, string symbol, double stop_atr_multiplier = 0.5, double step_atr_multiplier = 0.2, long magic = -1);
+    void              TrailStops(double stop_atr_multiplier = 0.5, double step_atr_multiplier = 0.2);
   };
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -33,9 +33,9 @@ CTrailingATR::CTrailingATR(int handle, string symbol, long magic = -1):
  m_handle(handle),
  m_symbol(symbol),
  m_magic(magic)
- {
+  {
  
- }
+  }
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -71,39 +71,28 @@ void CTrailingATR::TrailStops(int handle,
   {
    CPositionInfo pos;
    CTrade trade;
-
-//---
-
-   double atr_buff[];
-   if(!CopyBuffer(handle, 0, 0, 1, atr_buff))
+   //---
+    double atr_buff[];
+    if(!CopyBuffer(handle, 0, 0, 1, atr_buff))
       return;
-
-   double atr_value = atr_buff[0];
-
-//---
-
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+    double atr_value = atr_buff[0];
+   //---
+    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(!pos.SelectByIndex(i))
          continue;
-
       if(pos.Symbol() != symbol)
          continue;
-
       long pos_magic = pos.Magic();
       if(magic != -1)
          if(pos_magic != magic)
             continue;
-
       double sl = pos.StopLoss(), tp = pos.TakeProfit(), open_price = pos.PriceOpen();
       double sl_gap = fabs(open_price - sl);
-
       //---
-
-      ulong ticket = pos.Ticket();
-      ENUM_POSITION_TYPE type = pos.PositionType();
-
-      switch(type)
+       ulong ticket = pos.Ticket();
+       ENUM_POSITION_TYPE type = pos.PositionType();
+       switch(type)
         {
          case  POSITION_TYPE_BUY:
            {
@@ -111,12 +100,9 @@ void CTrailingATR::TrailStops(int handle,
             double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
             if(bid - open_price < atr_value * stop_atr_multiplier)
                continue;
-
             double new_sl = bid - atr_value * step_atr_multiplier;
-
             if(sl != 0 && new_sl <= sl)
                continue;
-
             if(!isPositionModificationSameLevels(ticket, new_sl, tp))
                continue;
 
@@ -129,22 +115,16 @@ void CTrailingATR::TrailStops(int handle,
          case  POSITION_TYPE_SELL:
            {
             double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
-
             //--- Ensure the positoin has moved enough
-            if(open_price - ask < atr_value * stop_atr_multiplier)
+             if(open_price - ask < atr_value * stop_atr_multiplier)
                continue;
-
             double new_sl = ask + atr_value * step_atr_multiplier;
-
             if(sl != 0 && new_sl >= sl)
                continue;
-
             if(!isPositionModificationSameLevels(ticket, new_sl, tp))
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_SELL, new_sl, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, new_sl, tp);
            }
          break;

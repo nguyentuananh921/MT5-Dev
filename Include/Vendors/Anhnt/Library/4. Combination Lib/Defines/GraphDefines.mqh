@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                               GraphDefines.mqh   |
 //|  Extracted from Artyom Trishkin's DoEasy Defines.mqh             |
+//|Link                      https://www.mql5.com/en/articles/10237  |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #ifndef __GRAPH_DEFINES_MQH__

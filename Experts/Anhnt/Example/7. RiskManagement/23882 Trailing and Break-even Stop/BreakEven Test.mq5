@@ -32,16 +32,11 @@ input uint TAKEPROFIT = 500;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
-  {
-//---
-
+  { 
    m_symbol.Name(sym);
    m_trade.SetExpertMagicNumber(MAGIC_NUMBER);
    m_trade.SetTypeFillingBySymbol(sym);
    m_trade.SetDeviationInPoints(100);
-
-
-//---
    /*
       ma_handle = iMA(sym, PERIOD_CURRENT, 20, 0, MODE_SMA, PRICE_CLOSE);
       if(ma_handle == INVALID_HANDLE)
@@ -84,8 +79,6 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
-//---
-
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
@@ -95,21 +88,14 @@ void OnTick()
 
    if(!m_symbol.RefreshRates())
       return;
-
-//---
-
-   double lots = m_symbol.LotsMin();
-   double ask = m_symbol.Ask(), bid = m_symbol.Bid();
-   double pts = m_symbol.Point();
-
-//---
-
+   //---
+    double lots = m_symbol.LotsMin();
+    double ask = m_symbol.Ask(), bid = m_symbol.Bid();
+    double pts = m_symbol.Point();
    //if(!PositionExistsByType(POSITION_TYPE_BUY))
-   //   m_trade.Buy(lots, sym, ask, ask - STOPLOSS * pts, ask + TAKEPROFIT * pts);
-      
+   //   m_trade.Buy(lots, sym, ask, ask - STOPLOSS * pts, ask + TAKEPROFIT * pts);      
    if(!PositionExistsByType(POSITION_TYPE_BUY))
-      m_trade.Buy(lots, sym, ask, ask - STOPLOSS * pts);
-   
+      m_trade.Buy(lots, sym, ask, ask - STOPLOSS * pts);   
    //CBreakEvenFixedPoints::BreakEven(ACTIVATION_POINTS, OFFSET, sym, MAGIC_NUMBER);
    CBreakEvenMoney::BreakEven(10, 5, sym, MAGIC_NUMBER);
   }

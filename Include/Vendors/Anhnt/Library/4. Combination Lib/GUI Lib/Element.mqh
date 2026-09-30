@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                      Element.mqh |
 //|                        Copyright 2016, MetaQuotes Software Corp. |
-//| Link note https://www.mql5.com/en/articles/2943                  |
+//|Link                       https://www.mql5.com/en/articles/2943  |
+//|Link                       https://www.mql5.com/en/articles/3365  |
 //|Lib Link https://www.mql5.com/en/code/19703                       |
 //+------------------------------------------------------------------+
 #ifndef __ELEMENT_MQH__

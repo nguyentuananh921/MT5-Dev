@@ -146,8 +146,8 @@ void CSignalBollinger::CommitLineClosedBar(int line_idx)
 
    double v = LineComputeAt(m_line_buffer[line_idx], 1);
    ENUM_SIGNAL_DIR dir  = DirOf(v);
-   ENUM_SIGNAL_DIR last = (total > 0) ? DirOf(m_lines[line_idx].hist_val[total - 1]) : SIGNAL_NONE;
-   if(dir == SIGNAL_NONE || dir == last) return; // no flip - nothing worth recording
+   ENUM_SIGNAL_DIR prev = DirOf(LineComputeAt(m_line_buffer[line_idx], 2)); // previous bar - same rule as CSignalBase
+   if(dir == SIGNAL_NONE || dir == prev) return; // no flip - nothing worth recording
 
    ::ArrayResize(m_lines[line_idx].hist_time, total + 1);
    ::ArrayResize(m_lines[line_idx].hist_val,  total + 1);
@@ -167,8 +167,8 @@ void CSignalBollinger::SyncLineHistory(int line_idx, int total_bars)
       double v   = LineComputeAt(m_line_buffer[line_idx], shift);
       ENUM_SIGNAL_DIR dir  = DirOf(v);
       int total = ::ArraySize(m_lines[line_idx].hist_time);
-      ENUM_SIGNAL_DIR last = (total > 0) ? DirOf(m_lines[line_idx].hist_val[total - 1]) : SIGNAL_NONE;
-      if(dir == SIGNAL_NONE || dir == last) continue; // no flip at this bar
+      ENUM_SIGNAL_DIR prev = DirOf(LineComputeAt(m_line_buffer[line_idx], shift + 1));
+      if(dir == SIGNAL_NONE || dir == prev) continue; // no flip at this bar
 
       datetime t[1];
       if(::CopyTime(m_indicator.Symbol(), m_indicator.Timeframe(), shift, 1, t) != 1) continue;

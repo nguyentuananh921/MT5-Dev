@@ -1,0 +1,48 @@
+//+------------------------------------------------------------------+
+//|                                            PatternThreeStars.mqh |
+//|                           Copyright 2023, MetaQuotes Ltd.        |
+//|                                   https://www.mql5.com           |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property strict    // Necessary for mql4
+// Pure data only - GUI code removed.
+// Base class changed: CPattern -> CBarPattern
+#ifndef __PATTERNTHREESTARS_MQH__
+#define __PATTERNTHREESTARS_MQH__
+ //+------------------------------------------------------------------+
+ //| Include files                                                    |
+ //+------------------------------------------------------------------+
+ #include "..\BarPattern.mqh"
+
+ #ifndef CPATTERNTHREESTARS_MQH_DECLARATION
+ #define CPATTERNTHREESTARS_MQH_DECLARATION
+  //+------------------------------------------------------------------+
+  //| Three Stars pattern class (3 consecutive doji — reversal signal) |
+  //+------------------------------------------------------------------+
+  class CPatternThreeStars : public CBarPattern
+    {
+      public:
+        //--- Constructor
+                            CPatternThreeStars(const uint id, const string symbol, const ENUM_TIMEFRAMES timeframe,
+                                               MqlRates &rates, const ENUM_PATTERN_DIRECTION direct);
+    };
+  #endif // CPATTERNTHREESTARS_MQH_DECLARATION
+  #ifndef CPATTERNTHREESTARS_MQH_IMPLEMENTATION
+  #define CPATTERNTHREESTARS_MQH_IMPLEMENTATION
+   //+------------------------------------------------------------------+
+   //| Constructor                                                      |
+   //+------------------------------------------------------------------+
+   CPatternThreeStars::CPatternThreeStars(const uint id, const string symbol,
+                                          const ENUM_TIMEFRAMES timeframe,
+                                          MqlRates &rates,
+                                          const ENUM_PATTERN_DIRECTION direct) :
+    CBarPattern(PATTERN_STATUS_PA, PATTERN_TYPE_THREE_STARS, id, direct, symbol, timeframe, rates)
+    {
+      this.SetProperty(PATTERN_PROP_NAME,    "Three Stars");
+      this.SetProperty(PATTERN_PROP_CANDLES, 3);
+      this.m_bars_formation = (int)this.GetProperty(PATTERN_PROP_CANDLES);
+    }
+  #endif // CPATTERNTHREESTARS_MQH_IMPLEMENTATION
+#endif // __PATTERNTHREESTARS_MQH__

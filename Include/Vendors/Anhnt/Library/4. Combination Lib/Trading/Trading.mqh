@@ -1,13 +1,15 @@
-#ifndef __TRADING_MQH__
-#define __TRADING_MQH__
 //+------------------------------------------------------------------+
 //|                                                      Trading.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
+//|Link                      https://www.mql5.com/en/articles/11228  |
+//|Lib                       https://www.mql5.com/en/articles/14710  |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
+#ifndef __TRADING_MQH__
+#define __TRADING_MQH__
 //+------------------------------------------------------------------+
 //| Include files                                                    |
 //+------------------------------------------------------------------+

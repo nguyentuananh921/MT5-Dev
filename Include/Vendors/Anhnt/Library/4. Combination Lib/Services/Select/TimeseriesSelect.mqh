@@ -8,7 +8,7 @@
 #define __TIMESERIES_SELECT_MQH__
    #include "CommonSelect.mqh"
    #include "..\..\Timeseries\Bars\Bar.mqh"
-   #include "..\..\Timeseries\Bars\BarSeriesPatterns\BarPattern.mqh"
+   #include "..\..\Timeseries\Bars\BarPatternsSeries\BarPattern.mqh"
    #include "..\..\Timeseries\Indicators\DataInd.mqh"
    #include "..\..\Timeseries\Indicators\IndicatorDE.mqh"
 #ifndef CTIMESERIES_SELECT_MQH_DECLARATION

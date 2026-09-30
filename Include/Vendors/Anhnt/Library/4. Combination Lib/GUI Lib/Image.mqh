@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                        Image.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
+//|Link                       https://www.mql5.com/en/articles/3365  |
 //| Library link https://www.mql5.com/en/code/19703                  |
 //+------------------------------------------------------------------+
 #ifndef __IMAGE_MQH__

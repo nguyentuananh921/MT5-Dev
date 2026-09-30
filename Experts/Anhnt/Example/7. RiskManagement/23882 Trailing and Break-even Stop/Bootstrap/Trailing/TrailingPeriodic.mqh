@@ -64,71 +64,52 @@ void CTrailingPeriodic::TrailStops(ulong interval_seconds, double trail_step, st
   {
    CPositionInfo pos;
    CTrade trade;
-
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
-
-//---
-
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   //---
+    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(!pos.SelectByIndex(i))
          continue;
-
       if(pos.Symbol() != symbol)
          continue;
-
       long pos_magic = pos.Magic();
       if(magic != -1)
          if(pos_magic != magic)
             continue;
-
       double sl = pos.StopLoss(), tp = pos.TakeProfit(), open_price = pos.PriceOpen();
       double sl_gap = fabs(open_price - sl);
-
       //---
-
-      ulong ticket = pos.Ticket();
-      ENUM_POSITION_TYPE type = pos.PositionType();
-      ulong open_time = (ulong)pos.Time();
-      ulong update_time = pos.TimeUpdate();
-
+       ulong ticket = pos.Ticket();
+       ENUM_POSITION_TYPE type = pos.PositionType();
+       ulong open_time = (ulong)pos.Time();
+       ulong update_time = pos.TimeUpdate();
       //--- modify after a specified number of seconds has passed
-      ulong time_diff = (long)TimeCurrent() - update_time;
-      
-      if(time_diff < interval_seconds)
+       ulong time_diff = (long)TimeCurrent() - update_time;      
+       if(time_diff < interval_seconds)
          continue;
-
-      switch(type)
+       switch(type)
         {
          case  POSITION_TYPE_BUY:
            {
             double new_sl = sl + trail_step * point; //increase the stoploss by a given number of points
-
             if(sl != 0 && new_sl <= sl)
                continue;
-
             if(!isPositionModificationSameLevels(ticket, new_sl, tp))
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_BUY, new_sl, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, new_sl, tp);
            }
          break;
          case  POSITION_TYPE_SELL:
            {
             double new_sl = sl - trail_step * point; //reduce the stoploss by a given number of points
-
             if(sl != 0 && new_sl >= sl)
                continue;
-
             if(!isPositionModificationSameLevels(ticket, new_sl, tp))
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_SELL, new_sl, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, new_sl, tp);
            }
          break;

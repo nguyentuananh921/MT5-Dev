@@ -13,6 +13,7 @@
   //+------------------------------------------------------------------+
   //#include "..\..\Defines\Defines.mqh"
   #include "..\..\Defines\TimeseriesDefines.mqh"
+  #include "..\..\Defines\SwingDefines.mqh"
   #include "..\..\Defines\TradingDefines.mqh"
   #include "..\..\Notify\Message\Message.mqh"
   #include "..\InputData\CommonInpData.mqh"
@@ -441,6 +442,33 @@ string PatternTypeDescription(const ENUM_PATTERN_TYPE type)
       }
   }
 //+------------------------------------------------------------------+
+//| Return swing type description - plain literal, not routed through |
+//| CMessage (only 2 fixed labels, not worth a localization entry).   |
+//+------------------------------------------------------------------+
+string SwingTypeDescription(const ENUM_SWING_TYPE type)
+  {
+    switch(type)
+      {
+        case SWING_TYPE_HIGH : return "Swing High";
+        case SWING_TYPE_LOW  : return "Swing Low";
+        default               : return "None";
+      }
+  }
+//+------------------------------------------------------------------+
+//| Return swing structure (HH/LH/HL/LL) description                 |
+//+------------------------------------------------------------------+
+string SwingStructureDescription(const ENUM_SWING_STRUCTURE structure)
+  {
+    switch(structure)
+      {
+        case SWING_STRUCTURE_HH : return "HH";
+        case SWING_STRUCTURE_LH : return "LH";
+        case SWING_STRUCTURE_HL : return "HL";
+        case SWING_STRUCTURE_LL : return "LL";
+        default                  : return "-";
+      }
+  }
+//+------------------------------------------------------------------+
 //| Return the number and list of patterns in the ulong variable     |
 //+------------------------------------------------------------------+
 int ListPatternsInVar(const ulong var, ulong &array[])
@@ -506,6 +534,23 @@ string ChartModeDescription(ENUM_CHART_MODE mode)
       mode==CHART_BARS     ? CMessage::Text(MSG_CHART_OBJ_CHART_BARS)      :
       mode==CHART_CANDLES  ? CMessage::Text(MSG_CHART_OBJ_CHART_CANDLES)   :
       CMessage::Text(MSG_CHART_OBJ_CHART_LINE)
+     );
+  }
+//+------------------------------------------------------------------+
+//| Return description of the line style                             |
+//| Using in                                                         |
+//| GStdGraphObj.mqh + Buffer.mqh                                    |
+//+------------------------------------------------------------------+
+string LineStyleDescription(const ENUM_LINE_STYLE style)
+  {
+   return
+     (
+      style==STYLE_SOLID      ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_SOLID)      :
+      style==STYLE_DASH       ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASH)       :
+      style==STYLE_DOT        ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DOT)        :
+      style==STYLE_DASHDOT    ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOT)    :
+      style==STYLE_DASHDOTDOT ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOTDOT) :
+      "Unknown"
      );
   }
 #endif // __COMMON_DELIB_MQH__

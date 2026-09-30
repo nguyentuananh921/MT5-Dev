@@ -1,0 +1,48 @@
+//+------------------------------------------------------------------+
+//|                                          PatternEveningStar.mqh  |
+//|                           Copyright 2023, MetaQuotes Ltd.        |
+//|                                   https://www.mql5.com           |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property strict    // Necessary for mql4
+// Pure data only - GUI code removed.
+// Base class changed: CPattern -> CBarPattern
+#ifndef __PATTERNEVENINGSTAR_MQH__
+#define __PATTERNEVENINGSTAR_MQH__
+ //+------------------------------------------------------------------+
+ //| Include files                                                    |
+ //+------------------------------------------------------------------+
+ #include "..\BarPattern.mqh"
+
+ #ifndef CPATTERNEVENINGSTAR_MQH_DECLARATION
+ #define CPATTERNEVENINGSTAR_MQH_DECLARATION
+  //+------------------------------------------------------------------+
+  //| Evening Star pattern class (3-candle bearish reversal)           |
+  //+------------------------------------------------------------------+
+  class CPatternEveningStar : public CBarPattern
+    {
+      public:
+        //--- Constructor
+                            CPatternEveningStar(const uint id, const string symbol, const ENUM_TIMEFRAMES timeframe,
+                                                MqlRates &rates, const ENUM_PATTERN_DIRECTION direct);
+    };
+  #endif // CPATTERNEVENINGSTAR_MQH_DECLARATION
+  #ifndef CPATTERNEVENINGSTAR_MQH_IMPLEMENTATION
+  #define CPATTERNEVENINGSTAR_MQH_IMPLEMENTATION
+   //+------------------------------------------------------------------+
+   //| Constructor                                                      |
+   //+------------------------------------------------------------------+
+   CPatternEveningStar::CPatternEveningStar(const uint id, const string symbol,
+                                            const ENUM_TIMEFRAMES timeframe,
+                                            MqlRates &rates,
+                                            const ENUM_PATTERN_DIRECTION direct) :
+    CBarPattern(PATTERN_STATUS_PA, PATTERN_TYPE_EVENING_STAR, id, direct, symbol, timeframe, rates)
+    {
+      this.SetProperty(PATTERN_PROP_NAME,    "Evening Star");
+      this.SetProperty(PATTERN_PROP_CANDLES, 3);
+      this.m_bars_formation = (int)this.GetProperty(PATTERN_PROP_CANDLES);
+    }
+  #endif // CPATTERNEVENINGSTAR_MQH_IMPLEMENTATION
+#endif // __PATTERNEVENINGSTAR_MQH__

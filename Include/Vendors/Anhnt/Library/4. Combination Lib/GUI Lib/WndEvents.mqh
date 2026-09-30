@@ -22,7 +22,9 @@
        int               m_active_window_index; // --- Active window index
        int               m_subwindow_handle;    // --- Expert subwindow handle
        string            m_subwindow_shortname; // --- Expert subwindow name
-       int               m_subwindows_total;    // --- Number of subwindows on the chart after installing the Expert Advisor subwindow      
+       int               m_subwindows_total;    // --- Number of subwindows on the chart after installing the Expert Advisor subwindow
+      //Add properties to fix Trading bubble 
+       bool              m_external_chart_lock; // --- An outside owner (e.g. a canvas element mid-drag) wants the chart tools held off
     private:
       // ---Event settings
        int               m_id;
@@ -95,7 +97,10 @@
       // ---Graph event handlers
         void              ChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);      
       // --- Returns the index of the activated window
-      int               GetActiveWindowIndex(void) {return(m_active_window_index); }         
+      int               GetActiveWindowIndex(void) {return(m_active_window_index); }
+      // --- External chart-state lock: folded into SetChartState() on every mouse move, so a
+      // --- non-GUI element never has to reach into CWindow::CustomEventChartState itself
+      void              SetExternalChartLock(const bool lock) { m_external_chart_lock = lock; }
       void              InitializeCore(void);                 // Kernel initialization        
       void              CompletedGUI(void);                   // Completing GUI creation        
       void              Moving(void);                         // Updating the position of elements    
@@ -112,7 +117,8 @@
     m_program_name(PROGRAM_NAME),
     m_subwindow_handle(INVALID_HANDLE),
     m_subwindow_shortname(""),
-    m_subwindows_total(1) 
+    m_subwindows_total(1),
+    m_external_chart_lock(false)
     {
       // --- Quit if this is not real time
         if(::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
@@ -1801,8 +1807,9 @@
   void CWndEvents::SetChartState(void) 
    {
       int awi = m_active_window_index;
-     // --- To determine the event when control should be disabled
-      bool condition = false;
+     // --- To determine the event when control should be disabled - seeded with the external
+     // --- lock so it survives the per-move recompute below instead of being overwritten
+      bool condition = m_external_chart_lock;
      // --- Let's check the windows
       int windows_total = CWndContainer::WindowsTotal();
       for(int i = 0; i < windows_total; i++) 

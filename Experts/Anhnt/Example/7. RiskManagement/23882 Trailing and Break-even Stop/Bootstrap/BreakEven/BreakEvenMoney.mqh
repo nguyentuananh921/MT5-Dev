@@ -14,16 +14,16 @@
 //+------------------------------------------------------------------+
 class CBreakEvenMoney
   {
-protected:
-   string            m_symbol;
-   long              m_magic;
+   protected:
+    string            m_symbol;
+    long              m_magic;
 
-public:
+   public:
                      CBreakEvenMoney(string symbol, long magic = -1);
                     ~CBreakEvenMoney(void);
 
-   static void       BreakEven(double activation_money, double offset_money, string symbol, long magic = -1);
-   void              BreakEven(double activation_money, double offset_money);
+    static void       BreakEven(double activation_money, double offset_money, string symbol, long magic = -1);
+    void              BreakEven(double activation_money, double offset_money);
   };
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -66,33 +66,26 @@ void CBreakEvenMoney::BreakEven(double activation_money,
      {
       if(!pos.SelectByIndex(i))
          continue;
-
       if(pos.Symbol() != symbol)
          continue;
-
       if(magic != -1 && pos.Magic() != magic)
          continue;
-
       double profit = pos.Profit();
-
       // Wait until the desired profit is reached
       if(profit < activation_money)
          continue;
-
       double volume     = pos.Volume();
       double tick_size  = SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_SIZE);
       double tick_value = SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_VALUE);
-
       if(tick_size <= 0 || tick_value <= 0)
          continue;
-
       // Convert money into a price distance
-      double distance = offset_money * tick_size / (tick_value * volume);
+       double distance = offset_money * tick_size / (tick_value * volume);
 
-      double tp = pos.TakeProfit(), sl = pos.StopLoss(), open_price = pos.PriceOpen();
-      ulong ticket = pos.Ticket();
+       double tp = pos.TakeProfit(), sl = pos.StopLoss(), open_price = pos.PriceOpen();
+       ulong ticket = pos.Ticket();
 
-      switch(pos.PositionType())
+       switch(pos.PositionType())
         {
          case POSITION_TYPE_BUY:
            {

@@ -2,6 +2,18 @@
 //|                                                     GBaseObj.mqh |
 //|                                  Copyright 2021, MetaQuotes Ltd. |
 //|                             https://mql5.com/en/users/artmedia70 |
+//|Link                        https://www.mql5.com/en/articles/9493 |
+//|Link                        https://www.mql5.com/en/articles/9553 |
+//|Link                        https://www.mql5.com/en/articles/9902 |
+//|Link                      https://www.mql5.com/en/articles/10237  |
+//|Link                      https://www.mql5.com/en/articles/10331  |
+//|Link                      https://www.mql5.com/en/articles/10663  |
+//|Link                      https://www.mql5.com/en/articles/11121  |
+//|Link                      https://www.mql5.com/en/articles/11194  |
+//|Link                      https://www.mql5.com/en/articles/11260  |
+//|Link                      https://www.mql5.com/en/articles/11228  |
+//|Link TabcontrolUpdate     https://www.mql5.com/en/articles/11316  |
+//|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2021, MetaQuotes Ltd."
 #property link      "https://mql5.com/en/users/artmedia70"
@@ -42,14 +54,15 @@ class CGBaseObj : public CObject
     int               m_type;                             // Object type
     int               m_timeframes_visible;               // Visibility of an object on timeframes (a set of flags)
     int               m_digits;                           // Number of decimal places in a quote
+   //|Link                      https://www.mql5.com/en/articles/11194  |
     int               m_group;                            // Graphical object group
+    
     bool              m_visible;                          // Object visibility
     bool              m_back;                             // "Background object" flag
     bool              m_selected;                         // "Object selection" flag
     bool              m_selectable;                       // "Object availability" flag
     bool              m_hidden;                           // "Disable displaying the name of a graphical object in the terminal object list" flag
-    datetime          m_create_time;                      // Object creation time
-    
+    datetime          m_create_time;                      // Object creation time    
    //--- Create (1) the object structure and (2) the object from the structure
     virtual bool      ObjectToStruct(void)                      { return true; }
     virtual void      StructToObject(void)                      {;}
@@ -80,7 +93,9 @@ class CGBaseObj : public CObject
     void              SetTypeGraphObject(const ENUM_OBJECT obj) { this.m_type_graph_obj=obj;           }
     void              SetTypeElement(const ENUM_GRAPH_ELEMENT_TYPE type) { this.m_type_element=type;   }
     void              SetSpecies(const ENUM_GRAPH_OBJ_SPECIES species){ this.m_species=species;        }
+   //|Link                      https://www.mql5.com/en/articles/11194  |
     virtual void      SetGroup(const int value)                 { this.m_group=value;                  }
+    
     void              SetName(const string name)                { this.m_name=name;                    }
     void              SetDigits(const int value)                { this.m_digits=value;                 }
     void              SetChartID(const long chart_id)           { this.m_chart_id=(chart_id==NULL || chart_id==0 ? ::ChartID() : chart_id); }

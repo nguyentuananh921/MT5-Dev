@@ -1,0 +1,150 @@
+//+------------------------------------------------------------------+
+//|                                              IndicatorSetting.mqh |
+//|                                     Copyright 2026, Anhnt        |
+//| Replaces struct SJsonIndicatorEntry (formerly in JSONConfig.mqh, since removed) with a |
+//| class - see Implementaion Plan\ImplementaionClassForSetting.md for the full discussion.|
+//| 1 instance = 1 indicator (config row) - held in CIndicatorTemplateManager's list.       |
+//+------------------------------------------------------------------+
+#ifndef __INDICATORSETTING_MQH__
+#define __INDICATORSETTING_MQH__
+ #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Bases\BaseObj.mqh>
+ #include <Vendors\Anhnt\Library\4. Combination Lib V2\Services\DELib\TimeseriesDELib.mqh>
+
+ #ifndef CINDICATORSETTING_MQH_DECLARATION
+ #define CINDICATORSETTING_MQH_DECLARATION
+ //+------------------------------------------------------------------------------------+
+ //| CIndicatorSetting - 1 indicator's config row, CBaseObj (not CBaseObjExt)           |
+ //| static config row, no INC/DEC/LEVEL threshold tracking needed                      |
+ //+------------------------------------------------------------------------------------+
+ class CIndicatorSetting : public CBaseObj
+  {
+   private:
+    ENUM_INDICATOR  m_type_enum;           // real enum value - IDENTITY (SOLE source of truth -
+    MqlParam        m_raw_params[];        // real params - IDENTITY + input straight for Layer 1
+    bool            m_buy_signal;          // opt-in: count this indicator's Buy cross into the Signal Bridge
+    bool            m_sell_signal;         // opt-in: count this indicator's Sell cross into the Signal Bridge
+    bool            m_sound_alert;
+    bool            m_message_alert;
+    bool            m_show_on_chart;       // preference: default shown on a new chart - PureData, Layer 2 mirrors it    
+   public:
+                         CIndicatorSetting(void);
+                        ~CIndicatorSetting(void) {}
+    //--- identity (raw) - the ONLY thing used for matching, never text
+     ENUM_INDICATOR    TypeEnum(void)                          const { return m_type_enum; }
+     void              TypeEnum(const ENUM_INDICATOR type)           { m_type_enum = type;  }
+     void              GetRawParams(MqlParam &out[])            const;
+     void              SetRawParams(MqlParam &params[]);
+
+     void              ParamTexts(const int decimals, string &out[]) const;
+     string            DisplayLabel(void) const;
+     void              JSONParamsText(string &out[]) const;
+    //--- toggles - mirror table columns 2/3/5/6 directly
+     bool              BuySignal(void)      const { return m_buy_signal;    }
+     void              BuySignal(const bool v)    { m_buy_signal = v;       }
+     bool              SellSignal(void)     const { return m_sell_signal;   }
+     void              SellSignal(const bool v)   { m_sell_signal = v;      }
+     bool              SoundAlert(void)     const { return m_sound_alert;   }
+     void              SoundAlert(const bool v)   { m_sound_alert = v;      }
+     bool              MessageAlert(void)   const { return m_message_alert; }
+     void              MessageAlert(const bool v) { m_message_alert = v;    }    
+     bool              ShowOnChart(void)     const { return m_show_on_chart; }
+     void              ShowOnChart(const bool v)   { m_show_on_chart = v;    }
+
+     virtual void      Print(const bool full_prop=false, const bool dash=false);
+   };
+ //+------------------------------------------------------------------+
+ //| Constructor                                                      |
+ //+------------------------------------------------------------------+
+ CIndicatorSetting::CIndicatorSetting(void) : m_type_enum(IND_CUSTOM),
+                                               m_buy_signal(true), m_sell_signal(true),
+                                               m_sound_alert(true), m_message_alert(true),
+                                               m_show_on_chart(true)
+   {
+     this.m_type = OBJECT_DE_TYPE_INDICATOR_SETTING;
+   }
+ //+------------------------------------------------------------------+
+ //| Copy out the raw params (identity + Layer 1 input)                |
+ //+------------------------------------------------------------------+
+ void CIndicatorSetting::GetRawParams(MqlParam &out[]) const
+   {
+     int total = ::ArraySize(m_raw_params);
+     ::ArrayResize(out, total);
+     for(int i = 0; i < total; i++)
+        out[i] = m_raw_params[i];
+   }
+ //+------------------------------------------------------------------+
+ //| Replace the raw params                                            |
+ //+------------------------------------------------------------------+
+ void CIndicatorSetting::SetRawParams(MqlParam &params[])
+   {
+     int total = ::ArraySize(params);
+     ::ArrayResize(m_raw_params, total);
+     for(int i = 0; i < total; i++)
+        m_raw_params[i] = params[i];
+   }
+ //+------------------------------------------------------------------+
+ //| Shared per-param text decode - schema-typed params (Applied      |
+ //| Price/MA Method/Applied Volume/Stoch Price) resolve to their      |
+ //| description text; everything else is just DoubleToString/         |
+ //| IntegerToString at the caller's requested precision. Same         |
+ //| decode BuildIndicatorTextLabel/BuildIndicatorParamsText used to    |
+ //| do from outside (TimeseriesDELib.mqh) - ported in directly since   |
+ //| m_type_enum/m_raw_params are already right here (Anhnt, 2026-08-30). |
+ //+------------------------------------------------------------------+
+ void CIndicatorSetting::ParamTexts(const int decimals, string &out[]) const
+   {
+     SIndicatorParam schema[];
+     GetIndicatorParamSchema(m_type_enum, schema);
+     int total = ArraySize(m_raw_params);
+     ArrayResize(out, total);
+     for(int p = 0; p < total; p++)
+      {
+       string choices = (p < ArraySize(schema)) ? schema[p].choices : "";
+       if(choices == PRICE_CHOICES)
+         out[p] = AppliedPriceDescription((ENUM_APPLIED_PRICE)m_raw_params[p].integer_value);
+       else if(choices == CALCULATION_METHOD_CHOICES)
+         out[p] = AveragingMethodDescription((ENUM_MA_METHOD)m_raw_params[p].integer_value);
+       else if(choices == VOLUME_CHOICES)
+         out[p] = AppliedVolumeDescription((ENUM_APPLIED_VOLUME)m_raw_params[p].integer_value);
+       else if(choices == STOCH_PRICE_CHOICES)
+         out[p] = StochPriceDescription((ENUM_STO_PRICE)m_raw_params[p].integer_value);
+       else if(m_raw_params[p].type == TYPE_DOUBLE)
+         out[p] = ::DoubleToString(m_raw_params[p].double_value, decimals);
+       else
+         out[p] = ::IntegerToString((int)m_raw_params[p].integer_value);
+      }
+   }
+ //+------------------------------------------------------------------+
+ //| Human-readable label (2-decimal rounded) - Table col 0 + Message  |
+ //| Alert share this exact computation, see the declaration comment.  |
+ //+------------------------------------------------------------------+
+ string CIndicatorSetting::DisplayLabel(void) const
+   {
+     // --- Catalog name = what JSON persists as "m_indicator_type"; enum text only as fallback.
+     string short_name = GetIndicatorNameForType(m_type_enum);
+     if(short_name == "") short_name = IndicatorTypeDescription(m_type_enum);
+     string vals[];
+     ParamTexts(2, vals);
+     string pvalues = "";
+     for(int i = 0; i < ArraySize(vals); i++)
+      {
+       if(i > 0) pvalues += ", ";
+       pvalues += vals[i];
+      }
+     return short_name + (pvalues != "" ? "  (" + pvalues + ")" : "");
+   }
+ void CIndicatorSetting::JSONParamsText(string &out[]) const
+   {
+     ParamTexts(8, out);
+   }
+ //+------------------------------------------------------------------+
+ //| Debug dump                                                        |
+ //+------------------------------------------------------------------+
+ void CIndicatorSetting::Print(const bool full_prop=false, const bool dash=false)
+   {
+     ::Print((dash ? " - " : ""), "CIndicatorSetting::Print label=", DisplayLabel(),
+             " buy=", m_buy_signal, " sell=", m_sell_signal, " sound=", m_sound_alert,
+             " message=", m_message_alert, " show=", m_show_on_chart);
+   }
+ #endif // CINDICATORSETTING_MQH_DECLARATION
+#endif // __INDICATORSETTING_MQH__

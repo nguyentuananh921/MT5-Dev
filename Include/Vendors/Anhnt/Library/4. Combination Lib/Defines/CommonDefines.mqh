@@ -109,6 +109,7 @@
   #define COLLECTION_CHART_WND_ID        (0x7788)                   // Chart window list ID
   #define COLLECTION_GRAPH_OBJ_ID        (0x7789)                   // Graphical object collection list ID
   #define COLLECTION_SIGNALS_ID          (0x778A)                   // Indicator signals collection list ID
+  #define COLLECTION_SERIES_SWINGS_ID    (0x778B)                   // Timeseries swing list ID
   #define COLLECTION_ID_LIST_END         (COLLECTION_SIGNALS_ID)    // End of collection ID list
  //--- Pending request type IDs
   #define PENDING_REQUEST_ID_TYPE_ERR    (1)                        // Type of a pending request created based on the server return code
@@ -425,6 +426,8 @@
     OBJECT_DE_TYPE_SERIES_PATTERN,                                 // "Pattern" object type
     OBJECT_DE_TYPE_SERIES_PATTERN_CONTROL,                         // "Pattern management" object type
     OBJECT_DE_TYPE_SERIES_PATTERNS_CONTROLLERS,                    // "Patterns management" object type
+    OBJECT_DE_TYPE_SERIES_SWING,                                   // "Swing point" object type
+    OBJECT_DE_TYPE_SERIES_SWING_CONTROL,                           // "Swing management" object type
     OBJECT_DE_TYPE_SYMBOL,                                         // "Symbol" object type
     OBJECT_DE_TYPE_SYMBOL_BONDS,                                   // "Bond symbol" object type
     OBJECT_DE_TYPE_SYMBOL_CFD,                                     // "CFD (contract for difference) symbol" object type
@@ -463,6 +466,7 @@
     OBJECT_DE_TYPE_SIGNAL_BOLLINGER,                               // "Bollinger bands signal" object type
     OBJECT_DE_TYPE_SIGNAL_ENVELOPES,                               // "Envelopes signal" object type
     OBJECT_DE_TYPE_SIGNAL_TWOLINECROSS,                            // "Two-line cross signal" object type
+    OBJECT_DE_TYPE_SIGNAL_FRACTALS,                                // "Fractals reversal signal" object type
     OBJECT_DE_TYPE_TRADING_LEVEL_BUBBLE,                           // "Trading level bubble (SL/TP drag overlay)" object type
     OBJECT_DE_TYPE_INDICATOR_SETTING,                              // "Indicator template config row (CIndicatorSetting)" object type
     OBJECT_DE_TYPE_SYMBOLTF_SETTING,                               // "Symbol+TF config row (CSymbolTFSetting)" object type

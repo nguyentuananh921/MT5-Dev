@@ -61,50 +61,36 @@ void CTrailingMA::TrailStops(int handle, string symbol, long magic = -1)
   {
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
    CPositionInfo pos;
-
    CTrade trade;
-
-//---
-
-   double ma[];
-   if(!CopyBuffer(handle, 0, 0, 1, ma))
+   //---
+    double ma[];
+    if(!CopyBuffer(handle, 0, 0, 1, ma))
       return;
-
-   double ma_value = ma[0];
-
-//---
-
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+    double ma_value = ma[0];
+   //---
+    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(!pos.SelectByIndex(i))
          continue;
-
       if(pos.Symbol() != symbol)
          continue;
-
       double sl = pos.StopLoss(),
              open_price = pos.PriceOpen();
-
       ulong ticket = pos.Ticket();
       ENUM_POSITION_TYPE type = pos.PositionType();
       double tp = pos.TakeProfit();
-
       //---
-
-      switch(type)
+       switch(type)
         {
          case  POSITION_TYPE_BUY:
            {
             if(!isPositionModificationSameLevels(ticket, ma_value, tp))
                continue;
-
             //--- Modify only when the moving average is above the current sl
             if(sl != 0 && ma_value <= sl)
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_BUY, ma_value, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, ma_value, tp);
            }
          break;
@@ -112,14 +98,11 @@ void CTrailingMA::TrailStops(int handle, string symbol, long magic = -1)
            {
             if(!isPositionModificationSameLevels(ticket, ma_value, tp))
                continue;
-
             //--- Modify only when the moving average is below the current sl
             if(sl != 0 && ma_value >= sl)
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_SELL, ma_value, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, ma_value, tp);
            }
          break;
@@ -127,8 +110,7 @@ void CTrailingMA::TrailStops(int handle, string symbol, long magic = -1)
             break;
         }
      }
-  }
-  
+  }  
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+

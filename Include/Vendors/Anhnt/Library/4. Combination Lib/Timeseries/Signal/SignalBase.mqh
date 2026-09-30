@@ -137,8 +137,12 @@ void CSignalBase::CommitClosedBar(void)
 
    double v          = ComputeAt(1);
    ENUM_SIGNAL_DIR dir  = DirOf(v);
-   ENUM_SIGNAL_DIR last = (total > 0) ? DirOf(m_hist_val[total - 1]) : SIGNAL_NONE;
-   if(dir == SIGNAL_NONE || dir == last) return; // no flip - nothing arrow-worthy happened
+   // Flip = differs from the PREVIOUS BAR, not from the last recorded entry (Anhnt, 2026-09-19):
+   // identical for continuous-state signals (MA/cross), but threshold signals (RSI/CCI/WPR/...)
+   // pass through NONE between zone visits, so comparing against the last entry swallowed every
+   // re-entry into the same zone - RSI never showed up.
+   ENUM_SIGNAL_DIR prev = DirOf(ComputeAt(2));
+   if(dir == SIGNAL_NONE || dir == prev) return; // no flip - nothing arrow-worthy happened
 
    double lo[1] = {0}, hi[1] = {0};
    ::CopyLow(m_indicator.Symbol(), m_indicator.Timeframe(), 1, 1, lo);
@@ -165,8 +169,8 @@ void CSignalBase::SyncHistory(int total_bars)
       double v   = ComputeAt(shift);
       ENUM_SIGNAL_DIR dir  = DirOf(v);
       int total = ::ArraySize(m_hist_time);
-      ENUM_SIGNAL_DIR last = (total > 0) ? DirOf(m_hist_val[total - 1]) : SIGNAL_NONE;
-      if(dir == SIGNAL_NONE || dir == last) continue; // no flip at this bar
+      ENUM_SIGNAL_DIR prev = DirOf(ComputeAt(shift + 1)); // previous bar, same rule as CommitClosedBar
+      if(dir == SIGNAL_NONE || dir == prev) continue; // no flip at this bar
 
       datetime t[1];
       if(::CopyTime(m_indicator.Symbol(), m_indicator.Timeframe(), shift, 1, t) != 1) continue;

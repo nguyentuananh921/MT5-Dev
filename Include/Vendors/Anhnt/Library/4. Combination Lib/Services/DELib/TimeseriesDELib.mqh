@@ -106,6 +106,15 @@
      if(catalog[c].ind_type == type) return catalog[c].group;
    return INDICATOR_GROUP_OSCILLATOR;
   }
+ //--- Catalog display name (the JSON "m_indicator_type" key / table label), "" if not in the catalog
+ string GetIndicatorNameForType(const ENUM_INDICATOR type)
+  {
+   SIndicatorCatalogItem catalog[];
+   GetIndicatorCatalog(catalog);
+   for(int c = 0; c < ArraySize(catalog); c++)
+     if(catalog[c].ind_type == type) return catalog[c].name;
+   return "";
+  }
  //+----------------------------------------------------------------------------+
  //|How many data buffers this indicator type allocates - required by           |
  //|CIndicatorsCollection::AddIndicatorToList() to actually register the created|
@@ -348,21 +357,6 @@
      }
    #undef I
    #undef E
-  }
- //+------------------------------------------------------------------+
- //| Return description of the line style                             |
- //+------------------------------------------------------------------+
- string LineStyleDescription(const ENUM_LINE_STYLE style)
-  {
-    return
-      (
-        style==STYLE_SOLID      ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_SOLID)      :
-        style==STYLE_DASH       ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASH)       :
-        style==STYLE_DOT        ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DOT)        :
-        style==STYLE_DASHDOT    ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOT)    :
-        style==STYLE_DASHDOTDOT ? CMessage::Text(MSG_LIB_TEXT_BUFFER_TEXT_STYLE_DASHDOTDOT) :
-        "Unknown"
-      );
   }
  //+------------------------------------------------------------------+
  //| Compare two MqlParam structures                                  |

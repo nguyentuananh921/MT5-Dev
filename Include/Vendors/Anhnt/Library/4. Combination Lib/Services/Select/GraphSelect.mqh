@@ -12,7 +12,7 @@
 #ifndef CGRAPHSELECT_MQH
 #define CGRAPHSELECT_MQH
  #include "CommonSelect.mqh"
- #include "..\..\Graph\GCnvElement.mqh"
+ #include "..\..\Graph\GBase\GCnvElement.mqh"
  #include "..\..\Graph\Standard\GStdGraphObj.mqh"
 #ifndef CGRAPHSELECT_MQH_DECLARATION
 #define CGRAPHSELECT_MQH_DECLARATION

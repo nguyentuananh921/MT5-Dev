@@ -2,6 +2,7 @@
 //|                                               PivotPointXY.mqh   |
 //|                                  Copyright 2021, MetaQuotes Ltd. |
 //|  Extracted from Artyom Trishkin's DoEasy GStdGraphObj.mqh        |
+//|Link                      https://www.mql5.com/en/articles/10331  |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2021, MetaQuotes Ltd."

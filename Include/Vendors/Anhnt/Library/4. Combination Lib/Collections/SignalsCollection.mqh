@@ -28,6 +28,9 @@
 #include "..\Timeseries\Signal\SignalOscillator.mqh"
 #include "..\Timeseries\Signal\SignalCrossover.mqh"
 #include "..\Timeseries\Signal\SignalBands.mqh"
+#include "..\Timeseries\Signal\SignalZeroCross.mqh"
+#include "..\Timeseries\Signal\SignalADX.mqh"
+#include "..\Timeseries\Signal\SignalFractals.mqh"
 
 #ifndef CSIGNALSCOLLECTION_MQH_DECLARATION
 #define CSIGNALSCOLLECTION_MQH_DECLARATION
@@ -99,6 +102,43 @@
        case IND_RSI:   signal = new CSignalOscillator(70.0, 30.0); break; // OB/OS thresholds
        case IND_MACD:  signal = new CSignalTwoLineCross(0, 1);     break; // main(0) crosses signal(1)
        case IND_BANDS: signal = new CSignalBollinger();            break; // close leaves upper/lower band
+       // --- Wired 2026-09-17 (Anhnt: "Signal nào có sẵn mà chưa wire thì wire luôn") - classes
+       // already existed with their own "Applies to" doc comments, just never referenced here.
+       case IND_ADX:        signal = new CSignalADX();               break; // DI+/DI- cross
+       case IND_ADXW:       signal = new CSignalADX();               break; // ADX-family: DI+/DI- cross
+       case IND_STOCHASTIC: signal = new CSignalTwoLineCross(0, 1, 80.0, 20.0); break; // main/signal cross + OB/OS gate
+       case IND_RVI:        signal = new CSignalTwoLineCross(0, 1);  break; // main/signal cross, no gate
+       case IND_ALLIGATOR:  signal = new CSignalTwoLineCross(0, 2);  break; // Jaw(0) crosses Lips(2)
+       case IND_AO:         signal = new CSignalZeroCross();         break; // zero-line cross
+       case IND_AC:         signal = new CSignalZeroCross();         break; // zero-line cross
+       case IND_FORCE:      signal = new CSignalZeroCross();         break; // zero-line cross
+       case IND_MOMENTUM:   signal = new CSignalZeroCross(100.0);    break; // level-100 cross, not zero
+       case IND_OSMA:       signal = new CSignalZeroCross();         break; // zero-line cross
+       case IND_TRIX:       signal = new CSignalZeroCross();         break; // zero-line cross
+       case IND_CHAIKIN:    signal = new CSignalZeroCross();         break; // zero-line cross
+       case IND_OBV:        signal = new CSignalZeroCross();         break; // zero-line cross       
+       case IND_ICHIMOKU:  signal = new CSignalTwoLineCross(0, 1);   break; // Tenkan(0) crosses Kijun(1)
+       case IND_ENVELOPES: signal = new CSignalEnvelopes();          break; // close vs upper/lower band
+       case IND_FRAMA:     signal = new CSignalMA();                 break; // MA-family: slope of buffer 0
+       case IND_DEMA:      signal = new CSignalMA();                 break; // MA-family: slope of buffer 0
+       case IND_TEMA:      signal = new CSignalMA();                 break; // MA-family: slope of buffer 0
+       case IND_VIDYA:     signal = new CSignalMA();                 break; // MA-family: slope of buffer 0
+       case IND_CCI:       signal = new CSignalOscillator(100.0, -100.0); break; // OB/OS thresholds
+       case IND_DEMARKER:  signal = new CSignalOscillator(0.7, 0.3); break; // OB/OS thresholds
+       case IND_WPR:       signal = new CSignalOscillator(-20.0, -80.0); break; // OB/OS thresholds (inverted scale)
+       case IND_MFI:       signal = new CSignalOscillator(80.0, 20.0); break; // OB/OS thresholds
+       case IND_BEARS:     signal = new CSignalZeroCross();          break; // zero-line cross
+       case IND_BULLS:     signal = new CSignalZeroCross();          break; // zero-line cross
+       // --- Approximate first-draft proxies - these 3 don't have a natural Buy/Sell convention;
+       // slope/zero-cross is a loose stand-in, refine later if it doesn't feel right in practice.
+       case IND_STDDEV:    signal = new CSignalMA();                 break; // proxy: rising/falling volatility
+       // IND_ATR NOT wired (Anhnt, 2026-09-19) - pure volatility, no direction; a slope "Buy/Sell" was
+       // meaningless noise in the log/bridge, and ATR(14) is auto-bootstrapped on every series for StopLost.
+       case IND_AD:        signal = new CSignalMA();                 break; // proxy: slope of cumulative line
+       case IND_BWMFI:     signal = new CSignalMA();                 break; // proxy: slope of buffer 0
+       case IND_GATOR:     signal = new CSignalZeroCross();          break; // proxy: upper histogram only
+       case IND_FRACTALS:  signal = new CSignalFractals();           break; // Up=SELL, Down=BUY (reversal read)
+       // IND_VOLUMES intentionally NOT wired - raw volume has no Buy/Sell polarity at all.
        default: return NULL; // not wired yet - table falls back to its own placeholder
       }
     if(signal == NULL) return NULL;

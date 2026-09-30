@@ -59,17 +59,20 @@ def image_to_argb_array(file_path):
     h_abs     = abs(h)
 
     if bit_count == 32:
-        pixels_raw  = data[offset:]
-        argb_values = []
+        pixels_raw = data[offset:]
+        pixels     = []
         for i in range(0, w * h_abs * 4, 4):
-            b = pixels_raw[i];     g = pixels_raw[i + 1]
-            r = pixels_raw[i + 2]; a = pixels_raw[i + 3]
-            val = 0x00FFFFFF if a == 0 else (0xFF << 24) | (r << 16) | (g << 8) | b
-            argb_values.append(val)
+            pixels.append((pixels_raw[i + 2], pixels_raw[i + 1], pixels_raw[i], pixels_raw[i + 3]))
         if h > 0:
-            rows = [argb_values[row * w:(row + 1) * w] for row in range(h_abs)]
+            rows = [pixels[row * w:(row + 1) * w] for row in range(h_abs)]
             rows.reverse()
-            argb_values = [v for row in rows for v in row]
+            pixels = [p for row in rows for p in row]
+        # No real alpha (all 0, XRGB, e.g. Kazharski checkbox icons): every pixel is opaque
+        if all(a == 0 for (_, _, _, a) in pixels):
+            argb_values = [(0xFF << 24) | (r << 16) | (g << 8) | b for (r, g, b, _) in pixels]
+        else:
+            argb_values = [0x00FFFFFF if a == 0 else (0xFF << 24) | (r << 16) | (g << 8) | b
+                           for (r, g, b, a) in pixels]
         return w, h_abs, argb_values
     else:
         from PIL import Image
@@ -146,28 +149,35 @@ def generate():
         f.write("//+--- Part 1: Image index constants ---------------------------------+\n")
         for i, e in enumerate(entries):
             f.write(f" #define {e['enum_name']} (uint){i}\n")
+        f.write(f" #define IMAGE_RESOURCE_TOTAL (uint){len(entries)}\n")
         f.write("\n")
 
-        # ── Part 2 + Part 3 inside InitImageData ──────────────────────────────
-        # Pixel arrays declared as locals inside the function → freed after call
-        f.write("//+--- Part 2 & 3: Pixel data + initializer function -----------------+\n")
-        f.write(f"void InitImageData(SImage &images[])\n")
+        # ── Part 2 + Part 3: one switch case per image ─────────────────────────
+        # Only the requested case runs, so only that image's pixels are built
+        f.write("//+--- Part 2 & 3: Pixel data + loader of a single image ------------+\n")
+        f.write("bool LoadImageData(const uint index, SImage &image)\n")
         f.write("  {\n")
-        f.write(f"    ArrayResize(images, {len(entries)});\n\n")
+        f.write("    switch(index)\n")
+        f.write("      {\n")
 
         for i, e in enumerate(entries):
-            f.write(f"    // [{i}] {e['var_name']}\n")
-            f.write(f"    uint {e['var_name']}[] = {{\n")
+            f.write(f"       case {i}: // {e['var_name']}\n")
+            f.write("         {\n")
+            f.write(f"          uint {e['var_name']}[] = {{\n")
             argb = e['argb']
             for j in range(0, len(argb), 20):
-                line = "    " + ",".join(str(v) for v in argb[j:j + 20])
+                line = "          " + ",".join(str(v) for v in argb[j:j + 20])
                 f.write(line + (",\n" if j + 20 < len(argb) else "\n"))
-            f.write("    };\n")
-            f.write(f"    images[{i}].name   = \"{e['var_name']}\";\n")
-            f.write(f"    images[{i}].width  = {e['w']};\n")
-            f.write(f"    images[{i}].height = {e['h']};\n")
-            f.write(f"    ArrayCopy(images[{i}].data, {e['var_name']});\n\n")
+            f.write("          };\n")
+            f.write(f"          image.name   = \"{e['var_name']}\";\n")
+            f.write(f"          image.width  = {e['w']};\n")
+            f.write(f"          image.height = {e['h']};\n")
+            f.write(f"          ArrayCopy(image.data, {e['var_name']});\n")
+            f.write("          return true;\n")
+            f.write("         }\n")
 
+        f.write("      }\n")
+        f.write("    return false;\n")
         f.write("  }\n\n")
         f.write("#endif // __IMAGEDATADEFINE_MQH__\n")
 

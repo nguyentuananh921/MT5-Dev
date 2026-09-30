@@ -13,7 +13,6 @@
   //+------------------------------------------------------------------+
   #include "..\..\Defines\GraphDefines.mqh"
   #include "CommonDELib.mqh"
-  #include "TimeseriesDELib.mqh"
 //+------------------------------------------------------------------+
 //| Return the description of the chart corner for pixel coordinates  |
 //+------------------------------------------------------------------+

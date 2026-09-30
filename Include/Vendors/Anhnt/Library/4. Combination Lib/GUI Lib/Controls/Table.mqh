@@ -1,7 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                        Table.mqh |
 //|                        Copyright 2015, MetaQuotes Software Corp. |
-//|                                              http://www.mql5.com |
+//|Link                       https://www.mql5.com/en/articles/2943  |
+//|Library base on Link       https://www.mql5.com/en/code/19703     |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 //| Class for creating a drawn table |

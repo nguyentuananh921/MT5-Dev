@@ -1,0 +1,276 @@
+//+------------------------------------------------------------------+
+//|                        GUIPannel_SettingWindows_TS_Indicator.mqh |
+//| The library for the setting indicator                            |
+//+------------------------------------------------------------------+
+#ifndef CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION
+#define CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION
+ #include "GUIPannel.mqh" 
+ //For Tab Group on the left Setting Windows m_tabs_setting_timeseries
+ // For TreeView Indicator m_treeview_indicator on the left m_window_setting 
+  bool CGUIPannel::CreateTreeView_IndicatorTemplateSetting(const int x_gap, const int y_gap)
+   {
+    m_treeview_indicator.MainPointer(m_tabs_setting_timeseries);
+    m_treeview_indicator.AutoXResizeMode(false);
+    m_treeview_indicator.XSize(150);
+    m_treeview_indicator.AutoYResizeMode(true);
+    m_treeview_indicator.VisibleItemsTotal(15);
+    m_treeview_indicator.LightsHover(true);
+    //Create treeview
+    if(!m_treeview_indicator.CreateTreeView(x_gap, y_gap)) return false;
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_treeview_indicator);
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_treeview_indicator);       
+    return true;
+   }
+  void CGUIPannel::PopulateTreeView_IndicatorTemplateSetting(void)
+   {    
+    //Seting Root Node for m_treeview_indicator base on ENUM_INDICATOR_GROUP in TimeseriesDefines.mqh
+    ENUM_INDICATOR_GROUP group_values[4] = {INDICATOR_GROUP_TREND, 
+      INDICATOR_GROUP_OSCILLATOR, 
+      INDICATOR_GROUP_VOLUMES, 
+      INDICATOR_GROUP_ARROWS}; 
+    SIndicatorCatalogItem catalog[];
+    GetIndicatorCatalog(catalog);    
+    for(int g = 0; g < 4; g++)
+     {
+      int root_li = m_treeview_indicator.ItemsTotal();
+      //m_group_tree_pos[g] = root_li;
+      m_treeview_indicator.AddTreeItem(root_li,
+                                    -1,                          // prev_node_list_index = -1 (root)
+                                    GetIndicatorGroupName(group_values[g]),//Node Name IndicatorGroupName in TimeseriesDELib.mqh
+                                    IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,     //Inactive Icon
+                                    g, 0,                        // item_index, node_level = 0
+                                    0, 0, 0,
+                                    true, true);                 // item_state, is_folder
+      int k = 0;
+      for(int i = 0; i < ArraySize(catalog); i++)
+       {
+        if(catalog[i].group != group_values[g]) continue;
+        int child_li = m_treeview_indicator.ItemsTotal();
+        m_treeview_indicator.AddTreeItem(child_li, root_li, catalog[i].name,
+                                        IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP,
+                                        k, 1, g, 0, 0, true, true);        
+        int sz = ArraySize(m_type_node_li);
+        ArrayResize(m_type_node_li, sz + 1);
+        ArrayResize(m_type_node_value, sz + 1);
+        m_type_node_li[sz]    = child_li;
+        m_type_node_value[sz] = catalog[i].ind_type;
+        k++;
+       }
+     }
+   }
+  // For Syn and Highlight active Indicator in Template
+  void CGUIPannel::SyncTreeView_IndicatorTemplateSetting(void)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    // Reset every Group node to inactive FIRST - the loop below only ever SETS a group's icon
+    // to active (blue) when it has an active type, never un-sets it.
+    for(int i = 0; i < ArraySize(m_type_node_li); i++)
+     {
+      int group_li = m_treeview_indicator.ItemPrevNode(m_type_node_li[i]);
+      CTreeItem *group_item = m_treeview_indicator.ItemPointer(group_li);
+      if(group_item != NULL)
+        group_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
+     }
+    for(int i = 0; i < ArraySize(m_type_node_li); i++)
+     {
+      ENUM_INDICATOR type = m_type_node_value[i];
+      bool active = false;
+      for(int r = 0; r < m_indicator_template_manager.Total(); r++)
+        {
+         CIndicatorSetting *row = m_indicator_template_manager.At(r);
+         if(row != NULL && row.TypeEnum() == type) { active = true; break; }
+        }
+      CTreeItem *type_item = m_treeview_indicator.ItemPointer(m_type_node_li[i]);
+      if(type_item != NULL)
+        type_item.IconFile(active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
+      if(active)
+       {
+        int group_li = m_treeview_indicator.ItemPrevNode(m_type_node_li[i]);
+        CTreeItem *group_item = m_treeview_indicator.ItemPointer(group_li);
+        if(group_item != NULL)
+          group_item.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);
+       }
+     }
+    m_treeview_indicator.Update(true);
+   }
+ //For Table Indicator at Bottom 
+  //+----------------------------------------------------------------------------+
+  //| Creates m_table_indicator_template (7 columns: Indicator+delete icon,      |
+  //| Group, Buy, Sell, Show-on-chart, Sound, Message).                          |
+  //+----------------------------------------------------------------------------+
+  bool CGUIPannel::CreateTable_IndicatorTemplateSetting(const int x, const int y)
+   {
+    m_table_indicator_template.MainPointer(m_tabs_setting_timeseries);
+    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_table_indicator_template);
+    //Resize Properties
+     m_table_indicator_template.AutoXResizeMode(true);
+     m_table_indicator_template.AutoXResizeRightOffset(3);
+     m_table_indicator_template.AutoYResizeMode(true);
+     m_table_indicator_template.AutoYResizeBottomOffset(3);
+    //Table Properties
+     m_table_indicator_template.ShowHeaders(true);
+     m_table_indicator_template.SelectableRow(true);
+     m_table_indicator_template.LightsHover(true);
+     // --- m_indicator_template_manager already sorts m_list itself (type then raw_params) - no
+     // --- need for this table to ALSO independently sort, and doing so would desync row position
+     // --- from m_list's data index (Anhnt/Claude, 2026-09-17).
+     m_table_indicator_template.IsSortMode(false);
+    // --- 7 columns: col 0 merges the old icon-only "show on T3" column with the label/delete icon.
+     m_table_indicator_template.TableSize(7, 20);
+     int widths[7]    = {INDICATOR_PARATEXT_WIDTH, 70, 40, 40, 40, 40, 40};
+     int img_x_off[7] = {3,   0,  10, 10, 10, 10, 10};
+     int img_y_off[7] = {3,   0,  3,  3,  3,  3,  3};
+     ENUM_ALIGN_MODE align[7] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+     m_table_indicator_template.ColumnsWidth(widths);
+     m_table_indicator_template.ImageXOffset(img_x_off);
+     m_table_indicator_template.ImageYOffset(img_y_off);
+     m_table_indicator_template.TextAlign(align);
+     m_table_indicator_template.HeaderYSize(24);
+     if(!m_table_indicator_template.CreateTable(x, y)) return false;
+    //Set Header text
+     m_table_indicator_template.SetHeaderText(0, "Indicator");
+     m_table_indicator_template.SetHeaderText(1, "Group");
+    // Checkbox to include this indicator's signal in the Signal Bridge (feeds SignalMarkers.mq5's    
+    //Column 2
+     uint resource_indices_buy[] = {IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG};
+     m_table_indicator_template.SetHeaderImage(2, resource_indices_buy);
+     m_table_indicator_template.SetHeaderText(2, "");
+    //Column 3
+     uint resource_indices_sell[] = {IMAGE_RESOURCE_BMP16_SIGNAL_SELL_PNG};
+     m_table_indicator_template.SetHeaderImage(3, resource_indices_sell);
+     m_table_indicator_template.SetHeaderText(3, "");
+    //Column 4 Setting for Visiable on Chart
+     uint resource_indices_visiable[] = {IMAGE_RESOURCE_BMP16_VISIBLE_PNG};
+     m_table_indicator_template.SetHeaderImage(4, resource_indices_visiable);
+     m_table_indicator_template.SetHeaderText(4, "");   //On to show on Chart    
+    //Column 5 Setting for sound alert
+     uint resource_indices_sound[] = {IMAGE_RESOURCE_BMP16_BELL_PNG};
+     m_table_indicator_template.SetHeaderImage(5, resource_indices_sound);
+     m_table_indicator_template.SetHeaderText(5, "");  //On to show sound alert
+    //Column 6 Setting for message alert
+     uint resource_indices_message[] = {IMAGE_RESOURCE_BMP16_MESSAGE_PNG};
+     m_table_indicator_template.SetHeaderImage(6, resource_indices_message);
+     m_table_indicator_template.SetHeaderText(6, "");  //On to show message alert
+    CWndContainer::AddToElementsArray(WindowIdx(m_window_setting_timeseries), m_table_indicator_template);
+    return true;
+   }   
+  void CGUIPannel::InitializeTable_IndicatorTemplateSetting(void)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    int count        = m_indicator_template_manager.Total();
+    int current_rows = (int)m_table_indicator_template.RowsTotal();
+    if(count == 0)
+     {      
+      m_table_indicator_template.DeleteAllRows();
+      m_table_indicator_template.AddRow(0);
+      m_table_indicator_template.DeleteRow(1);
+      m_table_indicator_template.Update(true);
+      return;
+     }
+    if(count != current_rows)
+     {
+      m_table_indicator_template.DeleteAllRows();
+      for(int i = 0; i < count - 1; i++)   // DeleteAllRows leaves one physical row behind
+         m_table_indicator_template.AddRow(i, i == count - 2);
+     }
+    for(int row = 0; row < count; row++)
+      UpdateRow_IndicatorTemplateSetting(row);
+    m_table_indicator_template.Update(true);
+   }  
+  void CGUIPannel::UpdateRow_IndicatorTemplateSetting(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+    if(entry == NULL) return;
+    uint delete_icon[]   = {IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
+    uint chk[]           = {IMAGE_RESOURCE_BMP16_CHECKBOX_ON_G_PNG, IMAGE_RESOURCE_BMP16_CHECKBOX_OFF_G_PNG};
+    //Col 0: delete icon + label
+     m_table_indicator_template.CellType(0, row, CELL_BUTTON);
+     m_table_indicator_template.SetImages(0, row, delete_icon);
+     m_table_indicator_template.ChangeImage(0, row, 0);
+     m_table_indicator_template.SetValue(0, row, "        " + entry.DisplayLabel());   
+     ENUM_INDICATOR_GROUP group = GetIndicatorGroupForType(entry.TypeEnum());
+     m_table_indicator_template.SetValue(1, row, "  " + GetIndicatorGroupName(group));
+    //Col 2-6: checkboxes
+     m_table_indicator_template.CellType(2, row, CELL_CHECKBOX);
+     m_table_indicator_template.SetImages(2, row, chk);
+     m_table_indicator_template.ChangeImage(2, row, entry.BuySignal() ? 0 : 1);
+     m_table_indicator_template.CellType(3, row, CELL_CHECKBOX);
+     m_table_indicator_template.SetImages(3, row, chk);
+     m_table_indicator_template.ChangeImage(3, row, entry.SellSignal() ? 0 : 1);
+     m_table_indicator_template.CellType(4, row, CELL_CHECKBOX);
+     m_table_indicator_template.SetImages(4, row, chk);
+     m_table_indicator_template.ChangeImage(4, row, entry.ShowOnChart() ? 0 : 1);
+     m_table_indicator_template.CellType(5, row, CELL_CHECKBOX);
+     m_table_indicator_template.SetImages(5, row, chk);
+     m_table_indicator_template.ChangeImage(5, row, entry.SoundAlert() ? 0 : 1);
+     m_table_indicator_template.CellType(6, row, CELL_CHECKBOX);
+     m_table_indicator_template.SetImages(6, row, chk);
+     m_table_indicator_template.ChangeImage(6, row, entry.MessageAlert() ? 0 : 1);
+   }
+  void CGUIPannel::OnClickToggleShowIndicatorOnChart(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;    
+    int new_state = (int)m_table_indicator_template.SelectedImageIndex(4, row);   
+    m_indicator_template_manager.UpdateRow_IndicatorTemplateSetting_ShowColumn(row, new_state != INDICATOR_HIDE_ON_CHART);
+   }
+  void CGUIPannel::SyncTable_IndicatorTemplateSetting(void)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    int tmpl_total = m_indicator_template_manager.Total();
+    bool any_changed = false;
+    for(int row = 0; row < tmpl_total; row++)
+     {
+      CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+      if(entry == NULL) continue;
+      bool shown = entry.ShowOnChart();
+      bool painted_shown = ((int)m_table_indicator_template.SelectedImageIndex(4, row) != INDICATOR_HIDE_ON_CHART);
+      if(painted_shown == shown) continue;   // dirty-check against what's already painted
+      m_table_indicator_template.ChangeImage(4, row, shown ? INDICATOR_SHOW_ON_CHART : INDICATOR_HIDE_ON_CHART);
+      m_table_indicator_template.BackColor(4, row, clrWhite, true);
+      any_changed = true;
+     }
+    if(any_changed)
+      m_table_indicator_template.Update(false);
+   }
+  void CGUIPannel::OnClickRemoveIndicator(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;    
+    CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+    if(entry == NULL) return;
+    ENUM_INDICATOR type = entry.TypeEnum();
+    MqlParam params[]; entry.GetRawParams(params);
+    m_indicator_template_manager.DeleteIndicatorFromIndicatorTemplateSetting(type, params);
+   }
+  void CGUIPannel::OnClickToggleBuySignal(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+    if(entry == NULL) return;
+    entry.BuySignal((int)m_table_indicator_template.SelectedImageIndex(2, row) == 0);    
+    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED, (long)row, 0.0, "");
+   }
+  void CGUIPannel::OnClickToggleSellSignal(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+    if(entry == NULL) return;
+    entry.SellSignal((int)m_table_indicator_template.SelectedImageIndex(3, row) == 0);
+    // Fire directly (no Manager method needed) - same reasoning as OnClickToggleBuySignal above.
+    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED, (long)row, 0.0, "");
+   }
+  void CGUIPannel::OnClickToggleSoundAlert(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+    if(entry == NULL) return;
+    entry.SoundAlert((int)m_table_indicator_template.SelectedImageIndex(5, row) == 0);
+   }
+  void CGUIPannel::OnClickToggleMessageAlert(const int row)
+   {
+    if(m_indicator_template_manager == NULL) return;
+    CIndicatorSetting *entry = m_indicator_template_manager.At(row);
+    if(entry == NULL) return;
+    entry.MessageAlert((int)m_table_indicator_template.SelectedImageIndex(6, row) == 0);
+   }
+#endif // CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION

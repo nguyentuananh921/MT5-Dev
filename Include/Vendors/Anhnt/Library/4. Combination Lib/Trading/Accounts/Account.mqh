@@ -1,15 +1,17 @@
 //+------------------------------------------------------------------+
 //|                                                      Account.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
-//|Topic link: https://www.mql5.com/en/articles/7258                 |
+//|Topic link:               https://www.mql5.com/en/articles/7258   |
+//|Link                      https://www.mql5.com/en/articles/9850   |
+//|Link                      https://www.mql5.com/en/articles/10663  |
+//|Link                      https://www.mql5.com/en/articles/11194  |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
-#ifndef __ACCOUNT_MQH__
-#define __ACCOUNT_MQH__
-
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
+#ifndef __ACCOUNT_MQH__
+#define __ACCOUNT_MQH__
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+

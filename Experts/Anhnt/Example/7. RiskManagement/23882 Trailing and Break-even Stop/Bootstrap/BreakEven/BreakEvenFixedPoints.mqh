@@ -14,11 +14,10 @@
 //+------------------------------------------------------------------+
 class CBreakEvenFixedPoints
   {
-protected:
-   string            m_symbol;
-   long              m_magic;
-
-public:
+   protected:
+    string            m_symbol;
+    long              m_magic;
+   public:
                      CBreakEvenFixedPoints(const string symbol, const long magic = -1);
                     ~CBreakEvenFixedPoints(void);
 
@@ -58,12 +57,9 @@ void CBreakEvenFixedPoints::BreakEven(double activation_points, double offset_po
   {
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
    CPositionInfo pos;
-
    CTrade trade;
-
-//---
-
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   //---
+    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(!pos.SelectByIndex(i))
          continue;

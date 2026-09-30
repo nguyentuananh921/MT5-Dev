@@ -64,29 +64,21 @@ void CTrailingFixedPoints::TrailStops(string symbol, double trail_points, double
   {
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
    CPositionInfo pos;
-
    CTrade trade;
-
-//---
-
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   //---
+    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(!pos.SelectByIndex(i))
          continue;
-
       if(pos.Symbol() != symbol)
          continue;
-
       long pos_magic = pos.Magic();
       if(magic != -1)
          if(pos_magic != magic)
             continue;
-
       double sl = pos.StopLoss(), tp = pos.TakeProfit(), open_price = pos.PriceOpen();
-
       ulong ticket = pos.Ticket();
       ENUM_POSITION_TYPE type = pos.PositionType();
-
       switch(type)
         {
          case  POSITION_TYPE_BUY:
@@ -95,42 +87,31 @@ void CTrailingFixedPoints::TrailStops(string symbol, double trail_points, double
             double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
             if(bid - open_price <= trail_points * point)
                continue;
-
             double new_sl = bid - step_points * point;
-
             //--- Never move the stop loss backwards
             if(sl != 0.0 && new_sl < sl)
                continue;
-
             if(!isPositionModificationSameLevels(ticket, new_sl, tp))
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_BUY, new_sl, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, new_sl, tp);
            }
          break;
          case  POSITION_TYPE_SELL:
            {
             double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
-
             //--- Ensure the positoin has moved enough
             if(open_price - ask <= trail_points * point)
                continue;
-
             double new_sl = ask + step_points * point;
-
             //--- Never move the stop loss backwards
             if(sl != 0.0 && new_sl > sl)
                continue;
-
             if(!isPositionModificationSameLevels(ticket, new_sl, tp))
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_SELL, new_sl, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, new_sl, tp);
            }
          break;

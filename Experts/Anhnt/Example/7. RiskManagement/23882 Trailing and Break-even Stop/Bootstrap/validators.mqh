@@ -18,27 +18,24 @@ double NormalizeLotSize(const double volume, string symbol = "")
    if(symbol == NULL || symbol == "")
       symbol = Symbol();
 
-//--- Get the minimum, maximum, and step size for the symbol
+   //--- Get the minimum, maximum, and step size for the symbol
+    double min_volume = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
+    double max_volume = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
+    double step_volume = SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
 
-   double min_volume = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
-   double max_volume = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
-   double step_volume = SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
-
-//--- Check if the volume is less than the minimum
-   if(volume < min_volume)
+   //--- Check if the volume is less than the minimum
+    if(volume < min_volume)
       return min_volume;
 
-//--- Check if the volume is greater than the maximum
-
-   if(volume > max_volume)
+   //--- Check if the volume is greater than the maximum
+    if(volume > max_volume)
       return max_volume;
 
-//--- Check if the volume is a multiple of the step size
+   //--- Check if the volume is a multiple of the step size
+    int ratio = (int) MathRound(volume / step_volume);
+    double adjusted_volume = ratio * step_volume;
 
-   int ratio = (int) MathRound(volume / step_volume);
-   double adjusted_volume = ratio * step_volume;
-
-   if(MathAbs(adjusted_volume - volume) > 0.0000001)
+    if(MathAbs(adjusted_volume - volume) > 0.0000001)
       return adjusted_volume;
 
    return adjusted_volume;
@@ -52,29 +49,29 @@ bool isValidLotsize(double volume, string symbol = NULL, bool verbose = false)
    if(symbol == NULL || symbol == "")
       symbol = Symbol();
 
-//--- minimal allowed volume for trade operations
-   double min_volume = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MIN);
-   if(volume < min_volume)
+   //--- minimal allowed volume for trade operations
+    double min_volume = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MIN);
+    if(volume < min_volume)
      {
       if(verbose)
          printf("Volume is less than the minimal allowed SYMBOL_VOLUME_MIN=%.2f", min_volume);
       return(false);
      }
 
-//--- maximal allowed volume of trade operations
-   double max_volume = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MAX);
-   if(volume > max_volume)
+   //--- maximal allowed volume of trade operations
+    double max_volume = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MAX);
+    if(volume > max_volume)
      {
       if(verbose)
          printf("Volume is greater than the maximal allowed SYMBOL_VOLUME_MAX=%.2f", max_volume);
       return(false);
      }
 
-//--- get minimal step of volume changing
-   double volume_step = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_STEP);
+   //--- get minimal step of volume changing
+    double volume_step = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_STEP);
 
-   int ratio = (int)MathRound(volume / volume_step);
-   if(MathAbs(ratio * volume_step - volume) > 0.0000001)
+    int ratio = (int)MathRound(volume / volume_step);
+    if(MathAbs(ratio * volume_step - volume) > 0.0000001)
      {
       if(verbose)
          printf("Volume is not a multiple of the minimal step SYMBOL_VOLUME_STEP=%.2f, the closest correct volume is %.2f", volume_step, ratio * volume_step);
@@ -112,8 +109,7 @@ bool isValidStoploss_Takeprofit(ENUM_ORDER_TYPE type, double SL, double TP, stri
    if(symbol == NULL || symbol == "")
       symbol = Symbol();
 
-//--- get the SYMBOL_TRADE_STOPS_LEVEL level
-
+   //--- get the SYMBOL_TRADE_STOPS_LEVEL level
    int stops_level = (int)SymbolInfoInteger(symbol, SYMBOL_TRADE_STOPS_LEVEL);
    if(stops_level != 0)
      {
@@ -121,17 +117,14 @@ bool isValidStoploss_Takeprofit(ENUM_ORDER_TYPE type, double SL, double TP, stri
          PrintFormat("SYMBOL_TRADE_STOPS_LEVEL=%d: StopLoss and TakeProfit must" +
                      " not be nearer than %d points from the closing price", stops_level, stops_level);
      }
-
-//---
-
-   MqlTick ticks;
-   if(!SymbolInfoTick(symbol, ticks))
+   //---
+    MqlTick ticks;
+    if(!SymbolInfoTick(symbol, ticks))
      {
       printf("Failed to obtain ticks from %s. Error = %d", symbol, GetLastError());
       return false;
      }
-
-   double ask = ticks.ask, bid = ticks.bid;
+    double ask = ticks.ask, bid = ticks.bid;
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
 
 //---

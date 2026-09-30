@@ -14,17 +14,16 @@
 //+------------------------------------------------------------------+
 class CTrailingSAR
   {
-protected:
-   int               m_handle;
-   string            m_symbol;
-   long            m_magic;
-
-public:
+   protected:
+    int               m_handle;
+    string            m_symbol;
+    long              m_magic;
+   public:
                      CTrailingSAR(int handle, string symbol, long magic = -1);
                     ~CTrailingSAR(void);
 
-   void              TrailStops();
-   static void       TrailStops(int handle, string symbol, long magic = -1);
+    void              TrailStops();
+    static void       TrailStops(int handle, string symbol, long magic = -1);
   };
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -61,48 +60,34 @@ void CTrailingSAR::TrailStops(int handle, string symbol, long magic = -1)
   {
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
    CPositionInfo pos;
-
    CTrade trade;
-
-//---
-
-   double sar_buff[];
-   if(!CopyBuffer(handle, 0, 0, 1, sar_buff))
+   //---
+    double sar_buff[];
+    if(!CopyBuffer(handle, 0, 0, 1, sar_buff))
       return;
-
-   double sar_value = sar_buff[0];
-
-//---
-
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
+    double sar_value = sar_buff[0];
+   //---
+    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(!pos.SelectByIndex(i))
          continue;
-
       if(pos.Symbol() != symbol)
          continue;
-
       double sl = pos.StopLoss(), tp = pos.TakeProfit(), open_price = pos.PriceOpen();
-
       ulong ticket = pos.Ticket();
       ENUM_POSITION_TYPE type = pos.PositionType();
-
       //---
-
-      switch(type)
+       switch(type)
         {
          case  POSITION_TYPE_BUY:
            {
             if(!isPositionModificationSameLevels(ticket, sar_value, tp))
                continue;
-
             //--- Modify only when the SAR is above the current sl
             if(sl != 0 && sar_value <= sl)
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_BUY, sar_value, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, sar_value, tp);
            }
          break;
@@ -110,14 +95,11 @@ void CTrailingSAR::TrailStops(int handle, string symbol, long magic = -1)
            {
             if(!isPositionModificationSameLevels(ticket, sar_value, tp))
                continue;
-
             //--- Modify only when the SAR is below the current sl
             if(sl != 0 && sar_value >= sl)
                continue;
-
             if(!isValidStoploss_Takeprofit(ORDER_TYPE_SELL, sar_value, tp, symbol))
                continue;
-
             trade.PositionModify(ticket, sar_value, tp);
            }
          break;

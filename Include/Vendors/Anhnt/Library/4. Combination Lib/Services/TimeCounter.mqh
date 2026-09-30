@@ -1,5 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                                  TimeCounter.mqh |
+//|Link                       https://www.mql5.com/en/articles/2943  |
 //|        Combines CTimeCounter (GUI Lib, Kazharski) +              |
 //|                  CTimerCounter (Services, Trishkin)              |
 //|  - Plain step/pause throttle gate (Kazharski)                    |
