@@ -123,6 +123,9 @@
     //--- Return the flag of using the specified pattern
       bool                    IsUsedPattern(const ENUM_PATTERN_TYPE pattern,MqlParam &param[],const string symbol,const ENUM_TIMEFRAMES timeframe);
     //--- Draw marks of the specified pattern on the chart
+    //--- Widest pattern that opens on the bar, opted in by 'flags' and by the caller's Symbol/TF Buy/Sell switches
+      CBarPattern            *GetPatternAtBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar_time,
+                                              CBarPatternsControl *flags,const bool allow_buy,const bool allow_sell);
     //--- Redraw the bitmap objects of the specified pattern on the chart
     //--- Set chart parameters for pattern management objects on the specified symbol and timeframe
 
@@ -510,7 +513,7 @@
   //+------------------------------------------------------------------+
   bool CBarTimeSeriesCollection::IsNewBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime time=0)
    {
-    // IsAvailable tự check NULL và tự check cờ IsAvailable của series luôn
+    // IsAvailable checks for NULL and the series' own IsAvailable flag
      if(!this.IsAvailable(symbol, timeframe))
        return false;
     CBarSeriesDE *series = this.GetSeries(symbol, timeframe);
@@ -1022,6 +1025,55 @@
    {
       CBarTimeSeriesDE *timeseries=this.GetTimeseries(symbol);
       return(timeseries!=NULL ? timeseries.IsUsedPattern(pattern,param,timeframe) : false);
+   }
+  //+------------------------------------------------------------------+
+  //| Widest pattern that opens on the bar, bullish/bearish only,      |
+  //| opted in per type by 'flags' and per Symbol/TF by the caller     |
+  //+------------------------------------------------------------------+
+  CBarPattern *CBarTimeSeriesCollection::GetPatternAtBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar_time,
+                                                         CBarPatternsControl *flags,const bool allow_buy,const bool allow_sell)
+   {
+      CArrayObj *controls=(flags!=NULL ? flags.GetListControls() : NULL);
+      if(controls==NULL)
+         return NULL;
+      datetime next_bar_time=bar_time+(datetime)::PeriodSeconds(timeframe);
+      CBarPattern *best=NULL;
+      int best_candles=0;
+      for(int i=0; i<this.m_list_all_patterns.Total(); i++)
+        {
+         CBarPattern *p=this.m_list_all_patterns.At(i);
+         if(p==NULL || p.Symbol()!=symbol || p.Timeframe()!=timeframe)
+            continue;
+         datetime pt=p.Time();
+         if(pt<bar_time || pt>=next_bar_time)
+            continue;
+         ENUM_PATTERN_DIRECTION dir=p.Direction();
+         bool is_buy =(dir==PATTERN_DIRECTION_BULLISH);
+         bool is_sell=(dir==PATTERN_DIRECTION_BEARISH);
+         if(!is_buy && !is_sell)
+            continue;
+         if((is_buy && !allow_buy) || (is_sell && !allow_sell))
+            continue;
+         bool opted_in=false;
+         for(int k=0; k<controls.Total(); k++)
+           {
+            CBarPatternControl *c=controls.At(k);
+            if(c!=NULL && c.TypePattern()==p.TypePattern())
+              {
+               opted_in=(is_buy ? c.BuySignal() : c.SellSignal());
+               break;
+              }
+           }
+         if(!opted_in)
+            continue;
+         int n=(int)p.Candles();
+         if(best==NULL || n>best_candles)
+           {
+            best=p;
+            best_candles=n;
+           }
+        }
+      return best;
    }
    //+------------------------------------------------------------------+
  #endif // CCBARTIMESERIESCOLLECTION_MQH_IMPLEMENTATION

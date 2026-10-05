@@ -57,7 +57,7 @@
        CTradingSetupSetting   *FindByIdentity(const string symbol)   const;
        bool                    Exists(const string symbol)           const { return FindByIdentity(symbol) != NULL; }
 
-      //--- Add based on Symbol identity - no Delete: never wired to any UI, removed as dead code (Anhnt/Claude, 2026-09-22)
+      //--- Add based on Symbol identity - no Delete: never wired to any UI, removed as dead code
        CTradingSetupSetting   *Add_TradingSetupSetting(const string symbol);   // NULL if identity already exists
        void                    NotifySettingChanged(const string symbol);
 

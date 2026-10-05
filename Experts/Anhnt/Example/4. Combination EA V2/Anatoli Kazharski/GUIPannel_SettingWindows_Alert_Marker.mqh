@@ -5,16 +5,11 @@
 #ifndef CGUIPANNEL_SETTINGWINDOWS_ALERT_MARKER_MQH
 #define CGUIPANNEL_SETTINGWINDOWS_ALERT_MARKER_MQH
 #include "GUIPannel.mqh"
- #define SETTING_MARKER_BASE_X_GAP     10
  #define SETTING_MARKER_CAPTION_WIDTH  130   // combo caption, "Non-Related Color" is the longest
  #define SETTING_MARKER_COMBOBOX_WIDTH 150
  #define SETTING_MARKER_PREVIEW_WIDTH  32
- #define SETTING_MARKER_GAP            5
- #define SETTING_MARKER_COL_GAP        10
  #define SETTING_MARKER_ROW_STEP       30
- #define SETTING_MARKER_PAD            8
  #define SETTING_MARKER_LIST_ROWS      8    // visible rows of a dropdown list
- #define SETTING_MARKER_IN_ROW0_Y      18   // below the frame caption cut into the top border
  #define SETTING_MARKER_COLOR_COMBO_WIDTH   100
  #define SETTING_MARKER_COLOR_PREVIEW_WIDTH 40
  //--- Defaults first, so a missing or partial "Markers_Setting" still leaves a working state
@@ -101,11 +96,11 @@
    GetMarkerArrowCodeChoices(codes, shape_labels);
    color mcolors[]; string color_labels[];
    GetMarkerColorChoices(mcolors, color_labels);
-   const int frame_w   = SETTING_MARKER_PAD + SETTING_MARKER_CAPTION_WIDTH + SETTING_MARKER_COMBOBOX_WIDTH + SETTING_MARKER_GAP + SETTING_MARKER_PREVIEW_WIDTH + SETTING_MARKER_PAD;
-   const int frame_h   = SETTING_MARKER_IN_ROW0_Y + 4 * SETTING_MARKER_ROW_STEP + M_CONTROL_HEIGHT + SETTING_MARKER_PAD;
-   const int frame1_x  = x + SETTING_MARKER_BASE_X_GAP;
-   const int frame2_x  = frame1_x + frame_w + SETTING_MARKER_COL_GAP;
-   const int preview_x = SETTING_MARKER_PAD + SETTING_MARKER_CAPTION_WIDTH + SETTING_MARKER_COMBOBOX_WIDTH + SETTING_MARKER_GAP;
+   const int frame_w   = M_CONTROL_BORDER_GAP + SETTING_MARKER_CAPTION_WIDTH + SETTING_MARKER_COMBOBOX_WIDTH + M_CONTROL_BORDER_GAP + SETTING_MARKER_PREVIEW_WIDTH + M_CONTROL_BORDER_GAP;
+   const int frame_h   = M_CONTROL_HEIGHT + 4 * SETTING_MARKER_ROW_STEP + M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP;
+   const int frame1_x  = x + M_CONTROL_BORDER_GAP;
+   const int frame2_x  = frame1_x + frame_w + M_CONTROL_BORDER_GAP;
+   const int preview_x = M_CONTROL_BORDER_GAP + SETTING_MARKER_CAPTION_WIDTH + SETTING_MARKER_COMBOBOX_WIDTH + M_CONTROL_BORDER_GAP;
    m_frame_buy_marker.SetText("Buy Marker");
    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_frame_buy_marker);
    if(!m_frame_buy_marker.CreateFrame(m_chart_id, m_subwin, "FrameBuyMarker", frame1_x, y, frame_w, frame_h)) return false;
@@ -137,17 +132,17 @@
      for(int k = 0; k < ::ArraySize(codes); k++)
         if(codes[k] == cur_codes[i]) sel = k;
      CFrame *frame = (i % 2 == 0) ? GetPointer(m_frame_buy_marker) : GetPointer(m_frame_sell_marker);
-     int row_y = SETTING_MARKER_IN_ROW0_Y + (i / 2) * SETTING_MARKER_ROW_STEP;
+     int row_y = M_CONTROL_HEIGHT + (i / 2) * SETTING_MARKER_ROW_STEP;
      combos[i].SetText(captions[i]);
      frame.AddChild(combos[i]);
-     if(!CreateCombobox_MarkerSelection(combos[i], SETTING_MARKER_PAD, row_y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel)) return false;
+     if(!CreateCombobox_MarkerSelection(combos[i], M_CONTROL_BORDER_GAP, row_y, SETTING_MARKER_COMBOBOX_WIDTH, shape_labels, sel)) return false;
      frame.AddChild(GetPointer(m_preview_shape[preview_rows[i]]));
      if(!CreateTextLabel_ShapePreview(preview_rows[i], preview_x, row_y, cur_codes[i])) return false;
     }
    //--- "Color for Marker" frame across both columns: Buy | Sell, then Non-Related, aligned with the frames above
-   const int color_frame_y = y + frame_h + SETTING_MARKER_PAD;
+   const int color_frame_y = y + frame_h + M_CONTROL_BORDER_GAP;
    const int color_frame_w = frame2_x + frame_w - frame1_x;
-   const int color_frame_h = SETTING_MARKER_IN_ROW0_Y + SETTING_MARKER_ROW_STEP + M_CONTROL_HEIGHT + SETTING_MARKER_PAD;
+   const int color_frame_h = M_CONTROL_HEIGHT + SETTING_MARKER_ROW_STEP + M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP;
    m_frame_color.SetText("Color for Marker");
    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_frame_color);
    if(!m_frame_color.CreateFrame(m_chart_id, m_subwin, "FrameMarkerColor", frame1_x, color_frame_y, color_frame_w, color_frame_h)) return false;
@@ -157,8 +152,8 @@
    color_combos[2] = GetPointer(m_combo_color_nonrelated);
    string color_captions[3] = {"Buy Color", "Sell Color", "Non-Related Color"};
    color  cur_colors[3]     = {m_marker_buy_color, m_marker_sell_color, m_marker_nonrelated_color};
-   int    color_x[3]        = {SETTING_MARKER_PAD, frame2_x - frame1_x + SETTING_MARKER_PAD, SETTING_MARKER_PAD};
-   int    color_y[3]        = {SETTING_MARKER_IN_ROW0_Y, SETTING_MARKER_IN_ROW0_Y, SETTING_MARKER_IN_ROW0_Y + SETTING_MARKER_ROW_STEP};
+   int    color_x[3]        = {M_CONTROL_BORDER_GAP, frame2_x - frame1_x + M_CONTROL_BORDER_GAP, M_CONTROL_BORDER_GAP};
+   int    color_y[3]        = {M_CONTROL_HEIGHT, M_CONTROL_HEIGHT, M_CONTROL_HEIGHT + SETTING_MARKER_ROW_STEP};
    for(int i = 0; i < 3; i++)
     {
      int sel = 0;
@@ -168,13 +163,13 @@
      m_frame_color.AddChild(GetPointer(m_colorbutton[i]));
      color_combos[i].SetText(color_captions[i]);
      if(!CreateCombobox_MarkerSelection(color_combos[i], color_x[i], color_y[i], SETTING_MARKER_COLOR_COMBO_WIDTH, color_labels, sel)) return false;
-     int swatch_x = color_x[i] + SETTING_MARKER_CAPTION_WIDTH + SETTING_MARKER_COLOR_COMBO_WIDTH + SETTING_MARKER_GAP;
+     int swatch_x = color_x[i] + SETTING_MARKER_CAPTION_WIDTH + SETTING_MARKER_COLOR_COMBO_WIDTH + M_CONTROL_BORDER_GAP;
      if(!CreateColorButton_Preview(i, swatch_x, color_y[i], cur_colors[i])) return false;
     }
    m_btn_save_marker_settings.SetText("Save");
    m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_btn_save_marker_settings);
-   if(!m_btn_save_marker_settings.Create(m_chart_id, m_subwin, "BtnSaveMarker", frame1_x, color_frame_y + color_frame_h + SETTING_MARKER_PAD, 80, M_CONTROL_HEIGHT)) return false;
+   if(!m_btn_save_marker_settings.Create(m_chart_id, m_subwin, "BtnSaveMarker", frame1_x, color_frame_y + color_frame_h + M_CONTROL_BORDER_GAP, 80, M_CONTROL_HEIGHT)) return false;
    return true;
   }
  //--- Every combo of the Alert window: caption (combo's own SetText, if any) + list of labels
@@ -198,7 +193,6 @@
  bool CGUIPannel::CreateTextLabel_ShapePreview(const int row, const int x, const int y, const int arrow_code)
   {
    m_preview_shape[row].Font("Wingdings");
-   m_preview_shape[row].FontSize(14);
    m_preview_shape[row].LabelXGap(0);
    m_preview_shape[row].SetText(::ShortToString((ushort)(0xF000 + arrow_code)));   // Wingdings glyphs live at U+F020..U+F0FF
    if(m_preview_shape[row].Parent() == NULL) m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER, m_preview_shape[row]);

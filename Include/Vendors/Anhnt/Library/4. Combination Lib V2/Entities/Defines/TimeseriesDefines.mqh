@@ -470,4 +470,13 @@ enum ENUM_SORT_TICK_MODE
    SORT_BY_TICK_SYMBOL = FIRST_TICK_STR_PROP,               // Sort by tick symbol
   };
 //+------------------------------------------------------------------+
+//| Signal direction                                                 |
+//+------------------------------------------------------------------+
+enum ENUM_SIGNAL_DIR
+  {
+   SIGNAL_NONE =  0,                                        // No signal
+   SIGNAL_BUY  =  1,                                        // Buy
+   SIGNAL_SELL = -1                                         // Sell
+  };
+//+------------------------------------------------------------------+
 #endif // __TIMESERIES_DEFINES_MQH__

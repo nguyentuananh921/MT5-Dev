@@ -31,7 +31,7 @@
       if(handle == INVALID_HANDLE) continue;
       created_any = true;
       // 'indicator' may be dangling here (AddIndicatorToList deletes it on a duplicate) -
-      // never touch it again; re-acquire the canonical instance by IDENTITY (Anhnt, 2026-08-28).
+      // never touch it again; re-acquire the canonical instance by IDENTITY.
       CIndicatorDE *canonical = GetIndicatorByIdentity(s.Symbol(), s.Timeframe(), type, params);
       if(canonical != NULL)
       m_SignalsCollection.GetOrCreateSignal(canonical);
@@ -121,18 +121,5 @@
       if(IsEqualMqlParamArrays(ind_params, params)) return ind;
      }
    return NULL;
-  }
- void CTimeSeriesEngine::ProcessNewBarSignalEvents(void)
-  {
-   CArrayObj *events = m_BarTimeSeriesCollection.GetListEvents();
-   if(events == NULL) return;
-   int total = events.Total();
-   for(int i = 0; i < total; i++)
-    {
-     CEventBaseObj *ev = events.At(i);
-     if(ev == NULL) continue;
-     if(ev.ID() != SERIES_EVENTS_NEW_BAR) continue;
-     m_SignalsCollection.FreezeClosedBar(ev.SParam(), (ENUM_TIMEFRAMES)(int)ev.DParam());
-    }
   }
 #endif // CTIMESERIESENGINE_INDICATOR_MQH

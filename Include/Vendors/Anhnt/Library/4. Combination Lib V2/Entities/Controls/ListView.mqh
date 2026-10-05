@@ -60,6 +60,7 @@ class CListView : public CGElement
     void              SetValue(const uint item_index,const string value,const bool redraw=false);
     string            GetValue(const uint item_index);
     bool              GetState(const uint item_index);
+    void              SetState(const uint item_index,const bool state,const bool redraw=false);
     void              SelectItem(const uint item_index,const bool redraw=false);
     void              ListSize(const int items_total);
     void              Rebuilding(const int items_total,const bool redraw=false);
@@ -250,7 +251,7 @@ void CListView::OnRelease(const int x,const int y)
 //+------------------------------------------------------------------+
 void CListView::MouseActiveAreaWhellHandler(const int id,const long &lparam,const double &dparam,const string &sparam)
  {
-  if(s_mouse.X()-this.m_x>=this.ContentWidth())
+  if(s_mouse.IsCtrl() || s_mouse.X()-this.m_x>=this.ContentWidth())
      return;
   this.Scrolling(this.m_visible_list_from_index+(s_mouse.DeltaWheel()>0 ? -1 : 1));
  }
@@ -280,6 +281,17 @@ string CListView::GetValue(const uint item_index)
 bool CListView::GetState(const uint item_index)
  {
   return(item_index<(uint)this.ItemsTotal() ? this.m_items[item_index].m_state : false);
+ }
+//+------------------------------------------------------------------+
+//| Check state of an item in checkbox mode                          |
+//+------------------------------------------------------------------+
+void CListView::SetState(const uint item_index,const bool state,const bool redraw=false)
+ {
+  if(item_index>=(uint)this.ItemsTotal())
+     return;
+  this.m_items[item_index].m_state=state;
+  if(redraw)
+     this.Draw(true);
  }
 //+------------------------------------------------------------------+
 //| Selects an item and scrolls it into view                         |

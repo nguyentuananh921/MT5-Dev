@@ -5,17 +5,16 @@
 #ifndef CGUIPANNEL_SETTINGWINDOWS_TRADINGSTOPLOST_MQH_IMPLEMENTATION
 #define CGUIPANNEL_SETTINGWINDOWS_TRADINGSTOPLOST_MQH_IMPLEMENTATION
  #include "GUIPannel.mqh"
- #define COLUMNS_STOPLOST_TOTAL 8
  //--- col: Symbol | Price | [Spread/2] | [gear] | [Fixed]Point | [Indicator]Point | [Fixed]Value | [Indicator]Value
  bool CGUIPannel::CreateTable_StopLostSetting(const int x, const int y)
   {
-   int width[COLUMNS_STOPLOST_TOTAL]             = {M_SYMBOL_WIDTH, M_PRICE_WIDTH, 35, M_ICON16_WIDTH, 60, 60, 70, 70};
-   ENUM_ALIGN_MODE align[COLUMNS_STOPLOST_TOTAL] = {ALIGN_LEFT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_LEFT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_RIGHT};
-   int text_x_offset[COLUMNS_STOPLOST_TOTAL]     = {5, 2, 2, 5, 2, 2, 2, 2};   // right-aligned numbers: small edge gap, more room for the text
-   int image_x_offset[COLUMNS_STOPLOST_TOTAL]    = {3, 3, (35 - 16) / 2, 2, (60 - 16) / 2, (60 - 16) / 2, (70 - 16) / 2, (70 - 16) / 2};   // header icons centered
-   int table_w = 2 + 16;   // border + vertical scrollbar
-   for(int c = 0; c < COLUMNS_STOPLOST_TOTAL; c++)
-      table_w += width[c];
+   int columns_width_total = 0;
+   for(int col = 0; col < COLUMNS_STOPLOST_TOTAL; col++)
+    {
+      columns_width_total += STOPLOST_WIDTH[col];
+      m_table_stoplostsetting.View().GetHeaderViewPointer().TextAlign(col, STOPLOST_HEADER_ALIGN[col]);
+    }
+   int table_w = columns_width_total + 2 + 16; // border + vertical scrollbar
    table_w = ::MathMax(table_w, SL_TOTAL_WIDTH);   // right edge in line with the Fixed frame below
    m_table_stoplostsetting.TableSize(COLUMNS_STOPLOST_TOTAL, 0);
    m_table_stoplostsetting.View().ShowHeaders(true);
@@ -25,10 +24,9 @@
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_STOPLOST, m_table_stoplostsetting);
    if(!m_table_stoplostsetting.CreateTable(m_chart_id, m_subwin, "TableStopLostSetting", x, y, table_w, SETTING_TRADING_TABLE_HEIGHT)) return false;
    CTableHeaderView *header = m_table_stoplostsetting.View().GetHeaderViewPointer();
-   header.ColumnsWidth(width);
-   header.TextAlign(align);
-   header.TextXOffset(text_x_offset);
-   header.ImageXOffset(image_x_offset);
+   header.ColumnsWidth(STOPLOST_WIDTH);
+   header.TextXOffset(STOPLOST_TEXT_X_OFFSET);
+   header.ImageXOffset(STOPLOST_IMAGE_X_OFFSET);
    uint spread_img[] = {IMAGE_RESOURCE_BMP16_SPREADRED_PNG};
    uint gear_img[]   = {IMAGE_RESOURCE_BMP16_STOPLOSTRED_PNG};
    uint fixed_img[]  = {IMAGE_RESOURCE_BMP16_STOP_LOST_FIXED_PNG};
@@ -68,6 +66,7 @@
      for(int row = 0; row < count; row++)
       {
        CSymbol *sym = col_list.At(row);
+       m_table_stoplostsetting.View().RowView(row).TextAlign(STOPLOST_CONTENT_ALIGN);
        m_table_stoplostsetting.CellView(0, row).SetImages(sym_img);
        m_table_stoplostsetting.SetValue(0, row, (sym != NULL) ? sym.Name() : "");
        m_table_stoplostsetting.CellView(3, row).SetImages(gear_img);
@@ -119,10 +118,10 @@
  //--- Symbol row, then 2 framed columns side by side: Indicator (ATR) | Fixed (Spread); captions are the controls' own
  bool CGUIPannel::CreateStopLostForm(const int x_gap, const int y_gap)
   {
-   const int pad       = SL_FORM_PAD;
+   const int pad       = M_CONTROL_BORDER_GAP;
    const int caption_w = SL_FORM_CAPTION_WIDTH;
    const int field_w   = SL_FORM_FIELD_WIDTH;
-   const int in_row0_y = 18;                                  // below the frame caption cut into the top border
+   const int in_row0_y = M_CONTROL_HEIGHT;                                  // below the frame caption cut into the top border
    const int in_row1_y = in_row0_y + M_CONTROL_YDISTANCE;
    const int in_row2_y = in_row0_y + 2*M_CONTROL_YDISTANCE;
    const int frame_w   = SL_FORM_FRAME_WIDTH;
@@ -133,7 +132,7 @@
    if(!m_label_StopLostSetting_Symbol.Create(m_chart_id, m_subwin, "LabelSLSymbol", x_gap, y_gap, frame_w, M_CONTROL_HEIGHT)) return false;
    m_label_StopLost_MinPts.SetText("Min Stop Lot - 0");
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_STOPLOST, m_label_StopLost_MinPts);
-   if(!m_label_StopLost_MinPts.Create(m_chart_id, m_subwin, "LabelSLMinPts", x_gap + frame_w + SL_FORM_GAP, y_gap, frame_w, M_CONTROL_HEIGHT)) return false;
+   if(!m_label_StopLost_MinPts.Create(m_chart_id, m_subwin, "LabelSLMinPts", x_gap + frame_w + M_CONTROL_BORDER_GAP, y_gap, frame_w, M_CONTROL_HEIGHT)) return false;
    //--- Indicator mode: ATR choice (template x tracked TF), multiplier on ATR, live distance
    m_frame_stoplost_setting_indicatormode.SetText("Indicator");
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_STOPLOST, m_frame_stoplost_setting_indicatormode);
@@ -153,7 +152,7 @@
    //--- Fixed mode: Spread x multiplier (Trishkin's spread*m_spread_mlt), live distance
    m_frame_stoplost_setting_fixedmode.SetText("Fixed");
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_STOPLOST, m_frame_stoplost_setting_fixedmode);
-   if(!m_frame_stoplost_setting_fixedmode.CreateFrame(m_chart_id, m_subwin, "FrameSLFixed", x_gap + frame_w + SL_FORM_GAP, frame_y, frame_w, frame_h)) return false;
+   if(!m_frame_stoplost_setting_fixedmode.CreateFrame(m_chart_id, m_subwin, "FrameSLFixed", x_gap + frame_w + M_CONTROL_BORDER_GAP, frame_y, frame_w, frame_h)) return false;
    m_edit_StopLost_FixedSelection.SetText("Selection");
    m_frame_stoplost_setting_fixedmode.AddChild(&m_edit_StopLost_FixedSelection);
    if(!m_edit_StopLost_FixedSelection.CreateTextEdit(m_chart_id, m_subwin, "EditSLFixedSelection", pad, in_row0_y, caption_w + field_w, M_CONTROL_HEIGHT, field_w)) return false;

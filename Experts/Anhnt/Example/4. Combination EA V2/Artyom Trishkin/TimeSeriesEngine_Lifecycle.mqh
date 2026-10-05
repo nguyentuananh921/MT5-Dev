@@ -121,7 +121,6 @@ bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
     //this.m_tick_series.Refresh(symbol);
      m_IndicatorsCollection.SeriesRefreshBySymbol(symbol);
      m_SignalsCollection.RefreshCurrentBar(symbol); // current chart symbol only - stays live every tick, not just every timer tick
-     ProcessNewBarSignalEvents(); // freeze bar 1 for any (symbol,TF) whose bar just closed this tick
      return this.m_BarTimeSeriesCollection.IsEvent();           // true if any TF has a new bar
   }
  bool CTimeSeriesEngine::OnTimerEvent(void)
@@ -132,7 +131,6 @@ bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
 
     ulong t0 = ::GetMicrosecondCount();
     this.m_BarTimeSeriesCollection.RefreshAllExceptCurrent(this.m_last_data_calc);
-    ProcessNewBarSignalEvents(); // freeze bar 1 for any (symbol,TF), other than the chart's own, whose bar just closed
 
     ulong t1 = ::GetMicrosecondCount();
     m_IndicatorsCollection.SeriesRefreshAllExceptSymbol(::Symbol());

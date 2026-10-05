@@ -1,14 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                               SwingDefines.mqh   |
-//| Swing High/Low point definitions - own enum space, NOT reusing   |
-//| ENUM_PATTERN_TYPE (Anhnt/Claude, 2026-09-18): that enum is a     |
-//| bit-flag set nearly at capacity (highest used bit is 0x20000000,|
-//| bit 29) - a signed 32-bit int enum's bit 31 (0x80000000) would   |
-//| overflow into the sign bit and corrupt every OR'd-in value once  |
-//| promoted to the `long` BAR_PROP_PATTERNS_TYPE storage (sign      |
-//| extension sets all the high bits). Only bit 30 is actually safe, |
-//| which isn't enough room for both Swing High and Swing Low - so   |
-//| Swing gets its own small enum instead of squeezing into Pattern's.|
+//| Swing High/Low definitions - own enum space: ENUM_PATTERN_TYPE is|
+//| a bit-flag set with no free bit left for two more flags in the   |
+//| `long` BAR_PROP_PATTERNS_TYPE storage.                           |
 //+------------------------------------------------------------------+
 #ifndef __SWING_DEFINES_MQH__
 #define __SWING_DEFINES_MQH__
@@ -25,8 +19,7 @@ enum ENUM_SWING_TYPE
  };
 //+------------------------------------------------------------------+
 //| Which price a Swing is measured from - wick (High/Low, classic)  |
-//| or candle body (Open/Close, ignores wicks) - Option (Anhnt,      |
-//| 2026-09-18, "cho luôn mấy cái đấy thành Option luôn").            |
+//| or candle body (Open/Close, ignores wicks)                       |
 //+------------------------------------------------------------------+
 enum ENUM_SWING_PRICE_BASIS
  {

@@ -8,7 +8,7 @@
 #include "GUIPannel.mqh"
  bool CGUIPannel::CreateWindow_SettingMarkerAndSound(const string caption_text,const int x_gap, const int y_gap)
   {
-   m_window_setting_markerAndSound.FontSize(9);
+   m_window_setting_markerAndSound.FontSize(DEF_FONT_SIZE);
    m_window_setting_markerAndSound.IsMovable(true);
    m_window_setting_markerAndSound.ResizeMode(true);
    m_window_setting_markerAndSound.CloseButtonIsUsed(true);
@@ -24,11 +24,6 @@
   {
    m_window_setting_markerAndSound.OpenWindow();
    ::ChartRedraw(m_chart_id);
-  }
- void CGUIPannel::CloseWindow_SettingMarkerAndSound(void)
-  {
-   if(m_window_setting_markerAndSound.IsVisible())
-      m_window_setting_markerAndSound.CloseWindow();
   }
  bool CGUIPannel::CreateTab_SettingMarkerAndSound(const int x_gap, const int y_gap)
   {
@@ -49,11 +44,16 @@
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX &&
        (lparam == m_checkbox_buy_sound.ObjectID() || lparam == m_checkbox_sell_sound.ObjectID() || lparam == m_checkbox_trailing_sound.ObjectID()))
      {
-      m_buy_sound_enabled      = m_checkbox_buy_sound.State();
-      m_sell_sound_enabled     = m_checkbox_sell_sound.State();
-      m_trailing_sound_enabled = m_checkbox_trailing_sound.State();
-      if(lparam == m_checkbox_trailing_sound.ObjectID())
-         ApplyTrailingSoundToAllSymbols(m_combo_trailling_sound.GetValue(), m_trailing_sound_enabled);
+      bool on = (dparam != 0);   // the new state sent with the event
+      if(lparam == m_checkbox_buy_sound.ObjectID())
+         m_buy_sound_enabled = on;
+      else if(lparam == m_checkbox_sell_sound.ObjectID())
+         m_sell_sound_enabled = on;
+      else
+        {
+         m_trailing_sound_enabled = on;
+         ApplyTrailingSoundToAllSymbols(m_combo_trailling_sound.GetValue(), on);
+        }
       return;
      }
    //--- Combo pick: previews update right away, before Save (dparam = selected index)
@@ -79,8 +79,8 @@
       if(lparam == m_combo_color_buy.ObjectID())                   { if(color_ok) UpdateColorPreview(0, mcolors[sel]); return; }
       if(lparam == m_combo_color_sell.ObjectID())                  { if(color_ok) UpdateColorPreview(1, mcolors[sel]); return; }
       if(lparam == m_combo_color_nonrelated.ObjectID())            { if(color_ok) UpdateColorPreview(2, mcolors[sel]); return; }
-      if(lparam == m_combo_buy_sound.ObjectID())  { m_marker_buy_sound_file  = m_combo_buy_sound.GetValue();  return; }
-      if(lparam == m_combo_sell_sound.ObjectID()) { m_marker_sell_sound_file = m_combo_sell_sound.GetValue(); return; }
+      if(lparam == m_combo_buy_sound.ObjectID())  { m_marker_buy_sound_file  = sparam;  return; }
+      if(lparam == m_combo_sell_sound.ObjectID()) { m_marker_sell_sound_file = sparam; return; }
       return;
      }
    //--- Save marker style: commit every combo's current pick, then the full config write

@@ -1,9 +1,9 @@
- - Hồ sơ bug chi tiết + luật xương máu: BugNote.md.
+ - Hồ sơ bug (ảnh): thư mục Bug note.
  1. Working Rule:
  [] Trao đổi bằng tiếng Việt, Comment trong code bằng tiếng Anh. 
  [] Print Debug: Để tiện cho việc xóa Print Debug đi thì
    - Print debug ra file lấy tên file là tên class kèm Debug_<which>   
-   - ::Print("MY DEBUG    CGUIPannel::LineRepresentsIndicator .....=", ....);
+   - ::Print("MY DEBUG    CClassName::MethodName .....=", ....);
    - Print Debug cần được căn lề để khi fold cho tiện theo format 
     //Print Debug
       ->Căn lề từ đây.
@@ -53,7 +53,7 @@
 2. Version Update
  [v] Từ bản V8 thì Layer 2 được tách biệt việc implemenation ra các module khác nhau theo nguyên tắc chức năng của các GUI Control theo Tab
  [v] Từ bản V9 thì CGUIPannel trực tiếp làm việc với JSONConfig.
- [] V10 đang Update Struct thành Class và rất nhiều phần khác trong EA, CGUIPanel đang được tạm remove để rà soát trong lúc chỉ tập trung việc Synindicator giữa các Layer. 
+ [v] Từ V2: Library là "4. Combination Lib V2", EA là "4. Combination EA V2"; CGUIPannel đang chạy lại (không còn tạm remove) và dùng control của Lib V2\Entities\Controls.
 3. Feature
  [x] Candle Pattern ->Chỉ tính hình dạng nến chưa tính đến Trend
    -PATTERN_TYPE_THREE_STARS
@@ -67,14 +67,14 @@
  [v] CTable Indicator-Template-Table
     m_table_indicator_template; danh sách các Indicator có trong template nó có thể nhiều hơn ở Layer 3 vì đơn giản có checkbox để điều khiển việc show/hide
       - Việc Toggle các check box sẽ mirror từ layer 2 -> Layer 3.  
- [v] CTable     m_table_indicator_SymbolTFValue;
+ [v] CTable     m_table_indicator_PreTradeSymbolMonitor; (m_table_indicator_SymbolTFValue không còn trong GUIPannel.mqh)
  [] SynIndicator-Template giữa các layer
   - Layer 1: Hoàn toàn không tự thay đổi gì.
     CTimeSeriesEngine hold CBarTimeSeriesCollection và sẽ phải tạo các CBarTimeSeriesDE tương ứng với Symbol + TF
     CTimeSeriesEngine hold CIndicatorsCollection m_IndicatorsCollection và m_IndicatorsCollection sẽ phải đồng bộ với Indicator template để với mỗi 
   - Layer 2: CGUIPannel.
-     AddIndicatorOnForm.
-     DelteIndicatorFromTable
+     AddIndicatorToIndicatorTemplateSetting.
+     DeleteIndicatorFromIndicatorTemplateSetting
   - Layer3: CChartObjCollection
    - Scan Indicator on Chart on Init
    - Add Indicator ->User Manual Add Indicator
@@ -125,7 +125,7 @@
           └─ m_list_series: nhiều CBarSeriesDE, mỗi Timeframe 1 cái
               └─ m_list_series: nhiều CBar, mỗi Bar 1 Row (28 cột)
                   └─ BAR_PROP_PATTERNS_TYPE: cache bitmask, FK thật nằm bên Table Patterns (PATTERN_PROP_TIME)
-  [] V11 không dùng file nữa, SignalBridgeWriter tự bắn Event 
+  [] SignalBridgeWriter: mỗi bar mới bắn Event, mỗi row đi thẳng trong Event (không file). File SignalBridge_<SYMBOL>.dat vẫn được ghi khi rebuild đầy đủ.
 4. EA gồm có 
  [] Layer 1:PureData Sử dụng Library của Artyom Trishkin
    - Library link Lib https://www.mql5.com/en/articles/14710
@@ -138,11 +138,15 @@
   - IndicatorTemplateManager.mqh
   - SymbolTFSetting.mqh
   - SymbolTFManager.mqh
+  - TradingSetupSetting.mqh, TradingSetupSettingManager.mqh
+  - SwingSettingJSON.mqh
+  - SignalBridgeWriter.mqh, SignalBridgeRow.mqh
+  - SignalLogger.mqh
    [] CIndicatorSetting: dùng để Seting cho mỗi indicator có trong CIndicatorTemplateManager
    [] CIndicatorTemplateManager: dùng để Setting cho một template. Khái niệm template có trên Chart, có trên Table, Indicator TreeView của CGUIPannel, và List các Indicator có trong một symbol + tf
    [] CIndicatorTemplateManager sẽ bắn Event để các component khác tự bắt Event và xử lý.   
-  [] Layer 2: CGUIPannel dùng Libarary của Anatoli Kazharski
-    - Library Link https://www.mql5.com/en/code/19703
+  [] Layer 2: CGUIPannel dùng control trong Lib V2\Entities\Controls (port từ Library của Anatoli Kazharski)
+    - Library gốc https://www.mql5.com/en/code/19703
     - Chỉ hold pointer các collection,không own gì thuộc PureData.    
   [] Layer 3: Display On Chart bằng việc dùng ChartObjCollection.mqh, control by EA
     [v] Indicator sẽ display bằng Buildin MT5 dc control bởi EA.
@@ -158,33 +162,29 @@
       + Setting Marker->
       + Setting Sound ->
   [] Combination GUI
-   - Anatoli Kazharski GUI Library.
+   - Lib V2\Entities\Controls (port từ Anatoli Kazharski GUI Library).
    - Artyom Trishkin 2. DoEasy. Service functions Lib 
    - Artyom Trishkin MVC
   [] Swing: Cần computeatBar nếu có 2 Swing cùng chiều thì cũng chỉ mark 1 thôi, còn đâu thì khi Shift + Hold Over hiển thị cho đủ.
-    - Swing hình như nhầm rất nhiều Swing có mầu đỏ gần nhau trên M15     
+    [] Swing dày trên chart (nhiều HH/LH/HL/LL gần nhau) quay lại mỗi khi đổi TF; sau khi restart MT5 + build thì thưa. Chưa rõ nguyên nhân (nghi nhãn OBJ_TEXT của TF cũ không bị xóa), cần Print debug. Bridge chứa swing của mọi TF, SignalMarkers chỉ vẽ swing của TF chart.
   
    [] Công việc dang dở cần check
     - TF column (cột đầu tiên) trong m_table_indicator_PreTradeSymbolMonitor không sync khi thay đổi tf trên Chart.
     - Khi giao dịch nhiều Symbol thì Tradingbubble cần hiển thị Profit cho Symbol đó.
-    - CBarPatternsControl:CBaseObjExt mà CBaseObjExt có Track 
-      // [index][0]=INC  [1]=DEC  [2]=LEVEL  [3]=Value  [4]=Change
-        // [5]=FlagINC  [6]=FlagDEC  [7]=FlagMORE  [8]=FlagLESS  [9]=FlagEQUAL
-        long                   m_long_prop_event[][CONTROLS_TOTAL];
-        double                 m_double_prop_event[][CONTROLS_TOTAL];
-        long                   m_long_prop_event_prev[][CONTROLS_TOTAL];
-        double                 m_double_prop_event_prev[][CONTROLS_TOTAL];
+    - CBarPatternsControl:CBaseObjExt mà CBaseObjExt có Track      
     - Signal 
-      + CMQLSignal ko sử dụng cần check lại 
-      + CSignalBase sao không dùng CArray
-        datetime         m_hist_time[];
-        double           m_hist_val[];
-        double           m_hist_low[];
-        double           m_hist_high[];
-    [] Có 3 thứ phải sync với nhau: 
+      [v] CMQLSignal (MQLSignal.mqh, không dùng) đã xóa; còn các define SIGNAL_MQL5_* trong ChartDefines/EventDefines/MessageData
+      [v] CSignalBase lưu lịch sử bằng CArrayLong m_hist_time + CArrayInt m_hist_dir (chỉ lưu khi đổi hướng); đã bỏ low/high
+      + CSignalOscillator có thêm lịch sử cắt ngưỡng (CrossTotal/CrossTime/CrossKind), chưa có nơi nào dùng
+      [v] CSignalBollinger (SignalBands.mqh) lưu lịch sử line Upper/Lower bằng CArrayLong + CArrayInt (m_line_time[2], m_line_dir[2]); signal chính (cắt MidBand) nằm ở lịch sử của CSignalBase
+      [v] ENUM_SIGNAL_DIR nằm trong Entities\Defines\TimeseriesDefines.mqh
+      [v] CSignalBase::RefreshCurrent bắn SIGNAL_EVENT_LIVE_FLIP khi bar 0 đổi sang BUY/SELL so với tick trước (lần đầu m_first_start thì không bắn); lparam=handle indicator, dparam=hướng, sparam=""/"Upper"/"Lower"
+      [v] CGUIPannel::OnSignalLiveFlip nghe SIGNAL_EVENT_LIVE_FLIP để báo live (Sound/Message/CSV), đã bỏ m_live_signal_last_seen[]/m_upper_last_seen[]/m_lower_last_seen[]; phần nến đóng vẫn dùng watermark của CSignalLogger
+    [v] Có 3 thứ phải sync với nhau: 
        + CButtonsGroup: m_btngroup_tf_switch
        + TF trên Chart.
        + Cột TF trên: m_table_indicator_PreTradeSymbolMonitor
+       + CHARTEVENT_CHART_CHANGE vs REASON_CHARTCHANGE 
 
       -Nguồn gốc thay đổi khiến 3 yếu tố trên không đồng bộ
        + Khi User đổi TF trên Chart.

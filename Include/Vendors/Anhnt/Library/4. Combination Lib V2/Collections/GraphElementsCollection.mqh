@@ -11,45 +11,40 @@
  #include <Arrays\ArrayObj.mqh>
  #include "..\Entities\Bases\BaseObj.mqh"
  #include "..\Entities\GBases\GElement.mqh"
- #include "..\Entities\Graph\TradingLevelBubble.mqh"
  #ifndef CGRAPHELEMENTSCOLLECTION_MQH_DECLARATION
  #define CGRAPHELEMENTSCOLLECTION_MQH_DECLARATION
   //+------------------------------------------------------------------+
-  //| Root of every canvas element on every chart, owns the ZOrder     |
+  //| Root of every chart object and canvas element, owns the ZOrder.  |
+  //| Its children (AddChild) are owned and told nothing about their   |
+  //| kind: events, timer and "covered by a window" go through the     |
+  //| CGBaseObj hooks                                                  |
   //+------------------------------------------------------------------+
-  class CGraphElementsCollection : public CBaseObj
+  class CGraphElementsCollection : public CGBaseObj
     {
      private:
-       CArrayObj         m_list_all_canv_elm_obj;   // owned canvas elements
-       CArrayObj         m_list_registered_elm;     // registered, not owned
-       CArrayObj         m_list_bubble_ctrl;        // owned CTradingLevelBubbles, one per chart
+       CArrayObj         m_list_registered_elm;     // registered windows, not owned
        long              m_watch_chart_id[];        // charts that hold elements
        int               m_objects_total_prev[];    // ObjectsTotal per watched chart at the last check
        bool              m_prev_left;               // left button state at the previous mouse event
 
        void              WatchChart(const long chart_id);
        void              CheckChartObjectsTotal(void);
-       bool              IsPresentCanvElm(CGElement *element);
+       bool              IsPresentElm(CGElement *element);
        bool              IsRegisteredElm(CGElement *element);
        bool              IsBackground(CGElement *element);
        int               CollectElements(CGElement *&elements[]);
        void              RemoveInvalidRegistered(void);
      public:
-       CGraphElementsCollection *GetObject(void)                  { return &this;                          }
-       CArrayObj        *GetListCanvElm(void)                     { return &this.m_list_all_canv_elm_obj;  }
-       CArrayObj        *GetListRegisteredElm(void)               { return &this.m_list_registered_elm;    }
-       bool              AddCanvElmToCollection(CGElement *element);
+       //--- A CGElement child also gets the top ZOrder
+       virtual bool      AddChild(CGBaseObj *child);
        bool              RegisterElement(CGElement *element);
-       bool              DeleteCanvElm(CGElement *element);
-       CGElement        *GetCanvElement(const long chart_id,const string name);
        long              GetZOrderMax(void);
        bool              SetZOrderMAX(CGElement *obj);
        void              BringToTopAllCanvElm(void);
-       bool              IsCoveredByHigherElement(const int x,const int y,CGElement *element);
-       CTradingLevelBubbles *CreateTradingLevelBubbles(const long chart_id,CMarketCollection *market,CTradingControl *trading_control);
+       bool              IsCoveredAt(const long chart_id,const int x,const int y);
        //Life cycle
-        void              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-        void              OnTimer(void);
+        virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+        virtual void      OnTimerEvent(void);
                           CGraphElementsCollection(void);
                          ~CGraphElementsCollection(void);
     };
@@ -61,18 +56,14 @@
   //+------------------------------------------------------------------+
   CGraphElementsCollection::CGraphElementsCollection(void) : m_prev_left(false)
     {
-     this.m_list_all_canv_elm_obj.FreeMode(true);
      this.m_list_registered_elm.FreeMode(false);
-     this.m_list_bubble_ctrl.FreeMode(true);
     }
   //+------------------------------------------------------------------+
-  //| Destructor                                                       |
+  //| Destructor: the children are freed by CGBaseObj                  |
   //+------------------------------------------------------------------+
   CGraphElementsCollection::~CGraphElementsCollection(void)
     {
-     this.m_list_bubble_ctrl.Clear();
      this.m_list_registered_elm.Clear();
-     this.m_list_all_canv_elm_obj.Clear();
     }
   //+------------------------------------------------------------------+
   //| Start tracking ObjectsTotal of a chart                           |
@@ -106,13 +97,13 @@
         this.BringToTopAllCanvElm();
     }
   //+------------------------------------------------------------------+
-  //| True if the element is in either list                            |
+  //| True if the element is a child or registered                     |
   //+------------------------------------------------------------------+
-  bool CGraphElementsCollection::IsPresentCanvElm(CGElement *element)
+  bool CGraphElementsCollection::IsPresentElm(CGElement *element)
     {
      CObject *obj=element;
-     for(int i=0;i<this.m_list_all_canv_elm_obj.Total();i++)
-        if(this.m_list_all_canv_elm_obj.At(i)==obj)
+     for(int i=0;i<this.ChildrenTotal();i++)
+        if(this.Child(i)==obj)
            return true;
      for(int i=0;i<this.m_list_registered_elm.Total();i++)
         if(this.m_list_registered_elm.At(i)==obj)
@@ -136,16 +127,17 @@
            this.m_list_registered_elm.Detach(i);
     }
   //+------------------------------------------------------------------+
-  //| Both lists in one array, sorted by ZOrder ascending              |
+  //| Child elements and registered elements in one array, sorted by   |
+  //| ZOrder ascending                                                 |
   //+------------------------------------------------------------------+
   int CGraphElementsCollection::CollectElements(CGElement *&elements[])
     {
      this.RemoveInvalidRegistered();
      int total=0;
-     ::ArrayResize(elements,this.m_list_all_canv_elm_obj.Total()+this.m_list_registered_elm.Total());
-     for(int i=0;i<this.m_list_all_canv_elm_obj.Total();i++)
+     ::ArrayResize(elements,this.ChildrenTotal()+this.m_list_registered_elm.Total());
+     for(int i=0;i<this.ChildrenTotal();i++)
        {
-        CGElement *elm=dynamic_cast<CGElement *>(this.m_list_all_canv_elm_obj.At(i));
+        CGElement *elm=dynamic_cast<CGElement *>(this.Child(i));
         if(elm!=NULL)
            elements[total++]=elm;
        }
@@ -170,19 +162,18 @@
      return total;
     }
   //+------------------------------------------------------------------+
-  //| Take ownership of a created element, stacked on top              |
+  //| Take ownership of a child; a canvas element is stacked on top    |
   //+------------------------------------------------------------------+
-  bool CGraphElementsCollection::AddCanvElmToCollection(CGElement *element)
+  bool CGraphElementsCollection::AddChild(CGBaseObj *child)
     {
-     if(::CheckPointer(element)==POINTER_INVALID)
+     if(::CheckPointer(child)==POINTER_INVALID)
         return false;
-     if(this.IsPresentCanvElm(element))
-        return true;
-     if(!this.IsBackground(element))
+     CGElement *element=dynamic_cast<CGElement *>(child);
+     if(element!=NULL && !this.IsPresentElm(element) && !this.IsBackground(element))
         element.SetZorder(this.GetZOrderMax()+1,false);
-     if(!this.m_list_all_canv_elm_obj.Add(element))
+     if(!CGBaseObj::AddChild(child))
         return false;
-     this.WatchChart(element.ChartID());
+     this.WatchChart(child.ChartID()==0 ? ::ChartID() : child.ChartID());
      return true;
     }
   //+------------------------------------------------------------------+
@@ -192,7 +183,7 @@
     {
      if(::CheckPointer(element)==POINTER_INVALID)
         return false;
-     if(this.IsPresentCanvElm(element))
+     if(this.IsPresentElm(element))
         return true;
      if(!this.IsBackground(element))
         element.SetZorder(this.GetZOrderMax()+1,false);
@@ -200,32 +191,6 @@
         return false;
      this.WatchChart(element.ChartID());
      return true;
-    }
-  //+------------------------------------------------------------------+
-  //| Owned: delete, registered: detach only                           |
-  //+------------------------------------------------------------------+
-  bool CGraphElementsCollection::DeleteCanvElm(CGElement *element)
-    {
-     CObject *obj=element;
-     for(int i=0;i<this.m_list_all_canv_elm_obj.Total();i++)
-        if(this.m_list_all_canv_elm_obj.At(i)==obj)
-           return this.m_list_all_canv_elm_obj.Delete(i);
-     for(int i=0;i<this.m_list_registered_elm.Total();i++)
-        if(this.m_list_registered_elm.At(i)==obj)
-           return (this.m_list_registered_elm.Detach(i)!=NULL);
-     return false;
-    }
-  //+------------------------------------------------------------------+
-  //| Element by chart ID and full object name                         |
-  //+------------------------------------------------------------------+
-  CGElement *CGraphElementsCollection::GetCanvElement(const long chart_id,const string name)
-    {
-     CGElement *elements[];
-     int total=this.CollectElements(elements);
-     for(int i=0;i<total;i++)
-        if(elements[i].ChartID()==chart_id && elements[i].Name()==name)
-           return elements[i];
-     return NULL;
     }
   //+------------------------------------------------------------------+
   //| Maximum ZOrder of all elements                                   |
@@ -274,35 +239,28 @@
         ::ChartRedraw(this.m_watch_chart_id[i]);
     }
   //+------------------------------------------------------------------+
-  //| Owned elements get the event; a press raises the topmost element |
-  //| under the cursor                                                 |
+  //| Children get the event and, on a mouse move, whether a window    |
+  //| covers the cursor; a press raises the topmost element under it   |
   //+------------------------------------------------------------------+
   void CGraphElementsCollection::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
     {
      long chart_id=::ChartID();
-     for(int i=0;i<this.m_list_all_canv_elm_obj.Total();i++)
+     bool covered=(id==CHARTEVENT_MOUSE_MOVE && this.IsCoveredAt(chart_id,(int)lparam,(int)dparam));
+     for(int i=0;i<this.ChildrenTotal();i++)
        {
-        CGElement *elm=dynamic_cast<CGElement *>(this.m_list_all_canv_elm_obj.At(i));
-        if(elm==NULL || elm.ChartID()!=chart_id)
+        CGBaseObj *child=this.Child(i);
+        if(child==NULL || child.ChartID()!=chart_id)
            continue;
-        //--- A bubble under a panel window must not take the mouse
-        CTradingLevelBubble *bubble=dynamic_cast<CTradingLevelBubble *>(elm);
-        if(bubble!=NULL && id==CHARTEVENT_MOUSE_MOVE)
-           bubble.SetCovered(this.IsCoveredByHigherElement((int)lparam,(int)dparam,bubble));
-        elm.OnChartEvent(id,lparam,dparam,sparam);
+        if(id==CHARTEVENT_MOUSE_MOVE)
+           child.SetCovered(covered);
+        child.OnChartEvent(id,lparam,dparam,sparam);
        }
-     bool restack=false;
-     for(int i=0;i<this.m_list_bubble_ctrl.Total();i++)
+     //--- A child was just shown on top of the windows: put the windows back above it
+     if(id==CHARTEVENT_CUSTOM+ON_BRING_TO_TOP)
        {
-        CTradingLevelBubbles *ctrl=this.m_list_bubble_ctrl.At(i);
-        if(ctrl==NULL || ctrl.ChartID()!=chart_id)
-           continue;
-        ctrl.OnChartEvent(id,lparam,dparam,sparam);
-        if(ctrl.TakeRestackRequest())
-           restack=true;
+        this.BringToTopAllCanvElm();
+        return;
        }
-     if(restack)
-        this.BringToTopAllCanvElm();   // a bubble just shown sits on top - put the windows back above it
      //--- A window just opened: it goes on top of the ZOrder too, not only visually
      if(id==CHARTEVENT_CUSTOM+ON_OPEN_DIALOG_BOX)
        {
@@ -342,46 +300,30 @@
        }
     }
   //+------------------------------------------------------------------+
-  //| Owned elements get the timer; watched charts are checked         |
+  //| Children get the timer; watched charts are checked               |
   //+------------------------------------------------------------------+
-  void CGraphElementsCollection::OnTimer(void)
+  void CGraphElementsCollection::OnTimerEvent(void)
     {
-     for(int i=0;i<this.m_list_all_canv_elm_obj.Total();i++)
+     for(int i=0;i<this.ChildrenTotal();i++)
        {
-        CGElement *elm=dynamic_cast<CGElement *>(this.m_list_all_canv_elm_obj.At(i));
-        if(elm!=NULL)
-           elm.OnTimerEvent();
+        CGBaseObj *child=this.Child(i);
+        if(child!=NULL)
+           child.OnTimerEvent();
        }
-     bool restack=false;
-     for(int i=0;i<this.m_list_bubble_ctrl.Total();i++)
-       {
-        CTradingLevelBubbles *ctrl=this.m_list_bubble_ctrl.At(i);
-        if(ctrl==NULL)
-           continue;
-        ctrl.OnTimer();
-        if(ctrl.TakeRestackRequest())
-           restack=true;
-       }
-     if(restack)
-        this.BringToTopAllCanvElm();
      this.CheckChartObjectsTotal();
     }
   //+------------------------------------------------------------------+
-  //| True if a visible, non-background element with a higher ZOrder   |
-  //| on the same chart contains x,y                                   |
+  //| True if any visible, non-background element of the chart         |
+  //| contains x,y (for objects that are not elements themselves)      |
   //+------------------------------------------------------------------+
-  bool CGraphElementsCollection::IsCoveredByHigherElement(const int x,const int y,CGElement *element)
+  bool CGraphElementsCollection::IsCoveredAt(const long chart_id,const int x,const int y)
     {
-     if(element==NULL)
-        return false;
      CGElement *elements[];
      int total=this.CollectElements(elements);
      for(int i=0;i<total;i++)
        {
         CGElement *elm=elements[i];
-        if(elm==element || elm.ChartID()!=element.ChartID() || !elm.IsVisible() || this.IsBackground(elm))
-           continue;
-        if(elm.Zorder()>element.Zorder() && elm.CursorInsideElement(x,y))
+        if(elm.ChartID()==chart_id && elm.IsVisible() && !this.IsBackground(elm) && elm.CursorInsideElement(x,y))
            return true;
        }
      return false;
@@ -396,38 +338,6 @@
         if(this.m_list_registered_elm.At(i)==obj)
            return true;
      return false;
-    }
-  //+------------------------------------------------------------------+
-  //| SL/TP bubbles of a chart: controller + 4 elements, all owned     |
-  //+------------------------------------------------------------------+
-  CTradingLevelBubbles *CGraphElementsCollection::CreateTradingLevelBubbles(const long chart_id,CMarketCollection *market,CTradingControl *trading_control)
-    {
-     for(int i=0;i<this.m_list_bubble_ctrl.Total();i++)
-       {
-        CTradingLevelBubbles *existing=this.m_list_bubble_ctrl.At(i);
-        if(existing!=NULL && existing.ChartID()==chart_id)
-           return existing;
-       }
-     CTradingLevelBubbles *ctrl=new CTradingLevelBubbles();
-     if(ctrl==NULL)
-        return NULL;
-     bool ok=ctrl.Create(chart_id,market,trading_control);
-     for(int i=0;i<BUBBLE_TOTAL;i++)
-       {
-        CTradingLevelBubble *bubble=ctrl.Bubble(i);
-        if(bubble==NULL)
-           continue;
-        if(!this.AddCanvElmToCollection(bubble))
-           delete bubble;
-       }
-     if(!ok || !this.m_list_bubble_ctrl.Add(ctrl))
-       {
-        ::Print(__FUNCTION__," > failed for chart ",chart_id);
-        delete ctrl;
-        return NULL;
-       }
-     ctrl.Refresh();
-     return ctrl;
     }
  #endif // CGRAPHELEMENTSCOLLECTION_MQH_IMPLEMENTATION
 #endif // __GRAPHELEMENTSCOLLECTION_MQH__

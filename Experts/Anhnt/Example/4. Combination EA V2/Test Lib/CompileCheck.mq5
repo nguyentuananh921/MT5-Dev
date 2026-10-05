@@ -31,7 +31,7 @@
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Collections\ChartObjCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\GBases\GElement.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Controls\Button.mqh>
-#include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Properties\Image.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Graph\Properties\Image.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Services\Keys.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Controls\Scrolls\ScrollV.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Controls\Scrolls\ScrollH.mqh>

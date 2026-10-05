@@ -9,7 +9,7 @@
 #define CTREEITEM_MQH
  #include <Canvas\Canvas.mqh>
  #include "..\GBases\GBaseObj.mqh"
- #include "..\Properties\Image.mqh"
+ #include "..\Graph\Properties\Image.mqh"
  #include "..\..\Services\Colors.mqh"
 #ifndef CTREEITEM_MQH_DECLARATION
 #define CTREEITEM_MQH_DECLARATION

@@ -63,6 +63,8 @@ input color InpSellColor           = clrRed;   // Color when related to this cha
 input color InpNonRelatedColor     = clrGray;  // Color when NOT related to this chart's own TF
 input string InpBridgeFolderPath = "";  // Bridge file folder path (empty = root MQL5/Files)
 
+#include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Defines\CommonDefines.mqh>   // DEF_FONT, DEF_FONT_SIZE
+
 // Must match SignalBridgeWriter.mqh (separately compiled, no shared enum)
 #define SIGNAL_BRIDGE_MAGIC                20260919
 #define SIGNAL_BRIDGE_WRITER_EVENT_UPDATED 50000   // file rewritten - reread
@@ -93,9 +95,23 @@ datetime g_pending_from       = 0;    // time span of rows added by event since 
 datetime g_pending_to         = 0;
 
 string   g_bridge_file = "";
+//--- The newest instance of this chart owns the global below; a replaced one keeps being called after a timeframe
+//--- change (it still reports its old Period()) and must not draw, read the bridge or delete labels
+ulong g_instance_id = 0;
+string ActiveInstanceKey(void)
+  {
+   return("SignalMarkers.active." + (string)::ChartID());
+  }
+bool IsStaleInstance(void)
+  {
+   string key = ActiveInstanceKey();
+   return(::GlobalVariableCheck(key) && (ulong)::GlobalVariableGet(key) != g_instance_id);
+  }
 //+------------------------------------------------------------------+
 int OnInit(void)
   {
+   g_instance_id = ::GetTickCount64() * 1000 + (::GetMicrosecondCount() % 1000);
+   ::GlobalVariableSet(ActiveInstanceKey(), (double)g_instance_id);
    SetIndexBuffer(0,  BufSingleBuyValue,    INDICATOR_DATA);
    SetIndexBuffer(1,  BufSingleBuyColorIdx, INDICATOR_COLOR_INDEX);
    SetIndexBuffer(2,  BufSingleSellValue,   INDICATOR_DATA);
@@ -149,6 +165,8 @@ int OnInit(void)
 void OnDeinit(const int reason)
   {
    ::EventKillTimer();
+   if(IsStaleInstance())
+      return;
    ::ObjectsDeleteAll(0, SWING_LABEL_PREFIX, 0, OBJ_TEXT);
   }
 //+------------------------------------------------------------------+
@@ -156,6 +174,8 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
   {
+   if(IsStaleInstance())
+      return;
    if(id == CHARTEVENT_CUSTOM + SIGNAL_BRIDGE_WRITER_EVENT_UPDATED && sparam == ::Symbol())
      {
       ReadBridgeFile();
@@ -179,6 +199,8 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
 //+------------------------------------------------------------------+
 void OnTimer(void)
   {
+   if(IsStaleInstance())
+      return;
    int fh = ::FileOpen(g_bridge_file, FILE_BIN|FILE_READ|FILE_SHARE_READ|FILE_SHARE_WRITE);
    if(fh == INVALID_HANDLE)
       return;
@@ -324,8 +346,8 @@ void DrawSwingLabel(const datetime bar_time, const double price, const bool is_h
       ::ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
       ::ObjectSetInteger(0, name, OBJPROP_HIDDEN,     true);
       ::ObjectSetInteger(0, name, OBJPROP_BACK,       true);
-      ::ObjectSetString (0, name, OBJPROP_FONT,       "Arial");
-      ::ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   8);
+      ::ObjectSetString (0, name, OBJPROP_FONT,       DEF_FONT);
+      ::ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   DEF_FONT_SIZE);
       ::ObjectSetString (0, name, OBJPROP_TOOLTIP,    "\n");
      }
    ::ObjectSetInteger(0, name, OBJPROP_TIME,   bar_time);
@@ -335,7 +357,9 @@ void DrawSwingLabel(const datetime bar_time, const double price, const bool is_h
    ::ObjectSetString (0, name, OBJPROP_TEXT,   text);
   }
 //+------------------------------------------------------------------+
-//| Bar i from rows [r_from, r_to): shape from all, color from own TF|
+//| Bar i from rows [r_from, r_to): Buy/Sell side and color from own |
+//| TF signals (gray + all-TF side when it has none); Single/Multi/  |
+//| Pattern/Combo shape from all TFs; swings from own TF only        |
 //+------------------------------------------------------------------+
 void ComputeBar(const int i, const int r_from, const int r_to, const datetime &time[], const double &high[], const double &low[])
   {
@@ -352,18 +376,18 @@ void ComputeBar(const int i, const int r_from, const int r_to, const datetime &t
    BufSwingHighValue[i]   = EMPTY_VALUE; BufSwingHighColorIdx[i]   = 0;
 
    int ind_buy = 0, ind_sell = 0, pat_buy = 0, pat_sell = 0, own_buy = 0, own_sell = 0;
-   //--- Swings never feed the signal shape/color
-   int swing_low = 0, swing_high = 0, own_swing_low = 0, own_swing_high = 0;
+   //--- Swings: own TF only, own plots, never feed the signal shape/color
+   int swing_low = 0, swing_high = 0;
    int swing_low_struct = 0, swing_high_struct = 0;
    for(int r = r_from; r < r_to; r++)
      {
       if(g_rows_source[r] == 2)
         {
-         bool own = (g_rows_tf[r] == own_tf);
+         if(g_rows_tf[r] != own_tf) continue;
          if(g_rows_dir[r] > 0)
-           { swing_low++;  if(own) own_swing_low++;  if(own || swing_low_struct  == 0) swing_low_struct  = g_rows_extra[r]; }
+           { swing_low++;  swing_low_struct  = g_rows_extra[r]; }
          else
-           { swing_high++; if(own) own_swing_high++; if(own || swing_high_struct == 0) swing_high_struct = g_rows_extra[r]; }
+           { swing_high++; swing_high_struct = g_rows_extra[r]; }
          continue;
         }
       if(g_rows_source[r] == 0)
@@ -382,20 +406,20 @@ void ComputeBar(const int i, const int r_from, const int r_to, const datetime &t
          else                  own_sell++;
         }
      }
-   //--- Swing marker 2x further out than a signal marker, colored only when this TF confirmed it
+   //--- Swing marker 2x further out than a signal marker
    if(swing_low + swing_high > 0)
      {
       double swing_gap = (high[i] - low[i]) * 1.0;
       double label_gap = swing_gap * 0.8;
       if(swing_low > 0)
         {
-         BufSwingLowValue[i] = low[i] - swing_gap; BufSwingLowColorIdx[i] = (own_swing_low > 0) ? 1 : 0;
-         DrawSwingLabel(time[i], BufSwingLowValue[i] - label_gap, false, swing_low_struct, (own_swing_low > 0) ? InpBuyColor : InpNonRelatedColor);
+         BufSwingLowValue[i] = low[i] - swing_gap; BufSwingLowColorIdx[i] = 1;
+         DrawSwingLabel(time[i], BufSwingLowValue[i] - label_gap, false, swing_low_struct, InpBuyColor);
         }
       if(swing_high > 0)
         {
-         BufSwingHighValue[i] = high[i] + swing_gap; BufSwingHighColorIdx[i] = (own_swing_high > 0) ? 2 : 0;
-         DrawSwingLabel(time[i], BufSwingHighValue[i] + label_gap, true, swing_high_struct, (own_swing_high > 0) ? InpSellColor : InpNonRelatedColor);
+         BufSwingHighValue[i] = high[i] + swing_gap; BufSwingHighColorIdx[i] = 2;
+         DrawSwingLabel(time[i], BufSwingHighValue[i] + label_gap, true, swing_high_struct, InpSellColor);
         }
      }
    int total_ind = ind_buy + ind_sell;
@@ -404,8 +428,11 @@ void ComputeBar(const int i, const int r_from, const int r_to, const datetime &t
       return;
    int    color_idx  = (own_buy + own_sell > 0) ? ((own_buy >= own_sell) ? 1 : 2) : 0; // 0=Non-Related, 1=Buy, 2=Sell
    double gap        = (high[i] - low[i]) * 0.5;
-   bool   ind_is_buy = (ind_buy >= ind_sell);
-   bool   pat_is_buy = (pat_buy >= pat_sell);
+   //--- Side (position and Buy/Sell shape) follows this TF's own signals; only a bar with none of its own falls back to all TFs
+   bool   has_own    = (own_buy + own_sell > 0);
+   bool   own_is_buy = (own_buy >= own_sell);
+   bool   ind_is_buy = has_own ? own_is_buy : (ind_buy >= ind_sell);
+   bool   pat_is_buy = has_own ? own_is_buy : (pat_buy >= pat_sell);
    double value_buy  = low[i] - gap;
    double value_sell = high[i] + gap;
    if(total_ind > 0 && total_pat == 0)
@@ -428,7 +455,7 @@ void ComputeBar(const int i, const int r_from, const int r_to, const datetime &t
      }
    else
      { // Combo
-      bool combo_is_buy = (ind_buy + pat_buy >= ind_sell + pat_sell);
+      bool combo_is_buy = has_own ? own_is_buy : (ind_buy + pat_buy >= ind_sell + pat_sell);
       if(combo_is_buy) { BufComboBuyValue[i]  = value_buy;  BufComboBuyColorIdx[i]  = color_idx; }
       else             { BufComboSellValue[i] = value_sell; BufComboSellColorIdx[i] = color_idx; }
      }
@@ -447,6 +474,8 @@ int OnCalculate(const int rates_total,
   {
    if(rates_total <= 0)
       return(0);
+   if(IsStaleInstance())
+      return(rates_total);
    int period = ::PeriodSeconds();
    if(g_dirty)
      {

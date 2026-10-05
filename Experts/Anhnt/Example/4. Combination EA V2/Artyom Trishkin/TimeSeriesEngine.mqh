@@ -38,7 +38,6 @@
        bool                      m_time_series_engine_init_complete;
     //Borrow
       CSymbolsCollection        *m_symbol_collection;    // Symbol collection    
-      void                      ProcessNewBarSignalEvents(void);    
       CIndicatorDE              *GetIndicatorByIdentity(const string symbol, const ENUM_TIMEFRAMES tf,
                                   const ENUM_INDICATOR type, MqlParam &params[]);
     public:

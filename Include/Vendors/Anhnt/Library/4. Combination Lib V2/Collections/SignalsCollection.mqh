@@ -1,18 +1,10 @@
 //+------------------------------------------------------------------+
 //|                                           SignalsCollection.mqh  |
-//| Owns exactly one CSignalBase-derived object per CIndicatorDE     |
-//| that supports a signal (1-1). Reuses the existing CSignalXXX     |
-//| classes from Timeseries/Signal as-is - this file only manages    |
-//| their lifecycle/lookup, it does not duplicate calculation logic. |
-//|                                                                  |
-//| Pointer ownership:                                                |
-//|  - m_list (CSignalBase*)      : OWNED here - created in           |
-//|    GetOrCreateSignal, freed by CListObj (FreeMode) in            |
-//|    DeleteSignal / collection destruction.                         |
-//|  - CSignalBase::m_indicator   : BORROWED - CIndicatorsCollection  |
-//|    owns the CIndicatorDE objects. Whoever deletes an indicator    |
-//|    there MUST call DeleteSignal() here FIRST, or the signal's     |
-//|    m_indicator turns dangling.                                    |
+//| One CSignalBase-derived object per CIndicatorDE that supports a |
+//| signal; this file only manages lifecycle and lookup.             |
+//| m_list owns the signals; CSignalBase::m_indicator is borrowed:   |
+//| call DeleteSignal() BEFORE deleting the indicator from           |
+//| CIndicatorsCollection, or m_indicator dangles.                   |
 //+------------------------------------------------------------------+
 #ifndef CSIGNALSCOLLECTION_MQH
 #define CSIGNALSCOLLECTION_MQH
@@ -37,27 +29,17 @@
       int           FindIndex(CIndicatorDE *indicator);
     public:
                     CSignalsCollection(void);
-     // Return the signal collection list "as is" (list Type() == COLLECTION_SIGNALS_ID)
+     // The list as is (Type() == COLLECTION_SIGNALS_ID)
       CArrayObj    *GetList(void)             { return &this.m_list;         }
       int           DataTotal(void)     const { return this.m_list.Total();  }
-     // Returns the existing signal for this indicator, or creates+registers one if the
-     // indicator's type is supported. Returns NULL for types with no signal defined yet.
+     // Existing signal of this indicator, or a new registered one; NULL for types without a signal
       CSignalBase  *GetOrCreateSignal(CIndicatorDE *indicator);
-     // Deletes the signal bound to this indicator (if any) and unregisters it.
-     // MUST be called BEFORE the indicator itself is deleted from CIndicatorsCollection.
+     // Deletes the signal of this indicator - call BEFORE deleting the indicator
       void          DeleteSignal(CIndicatorDE *indicator);
-     // Recompute bar 0 (the still-forming current bar) for every tracked signal - call this
-     // on every timer tick so the "current" direction never repaints a stale value.
+     // Per signal: commit the just-closed bar on a new bar, then recompute bar 0 (a flip sends SIGNAL_EVENT_LIVE_FLIP)
       void          RefreshCurrentBar(void);
-     // Same, but only for signals whose indicator belongs to 'symbol' - call this on every
-     // OnTick (mirrors CIndicatorsCollection::SeriesRefreshBySymbol's per-tick scoping) so the
-     // chart's own symbol feels truly live between timer ticks, without recomputing every
-     // other tracked symbol's signal on every single tick.
+     // Same, only for the signals of 'symbol' (every OnTick)
       void          RefreshCurrentBar(const string symbol);
-     // Freeze bar 1 (the bar that JUST closed) to its one final value for every signal whose
-     // indicator matches (symbol, timeframe). Call this once per (symbol,timeframe) new-bar
-     // event - never call every tick, since bar 1 is a settled historical fact, not a live one.
-      void          FreezeClosedBar(const string symbol, const ENUM_TIMEFRAMES tf);
   };
 #endif // CSIGNALSCOLLECTION_MQH_DECLARATION
 
@@ -65,8 +47,7 @@
 #define CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
   CSignalsCollection::CSignalsCollection(void)
    {
-    // DoEasy collection convention: tag both the collection object and its list with the
-    // collection ID so consumers can verify what they received (CommonDefines "Collection list IDs")
+    // Tag the collection and its list with COLLECTION_SIGNALS_ID (DoEasy convention)
     this.m_type = COLLECTION_SIGNALS_ID;
     this.m_list.Clear();
     this.m_list.Sort();
@@ -91,15 +72,13 @@
     CSignalBase *signal = NULL;
     switch(indicator.TypeIndicator())
       {
-       // First-draft rules (user-approved defaults, refine per type later - README 5f):
+       // Default rule per indicator type:
        case IND_SAR:   signal = new CSignalSAR();                  break; // price side flips vs SAR dots
        case IND_MA:    signal = new CSignalMA();                   break; // slope of buffer 0
        case IND_AMA:   signal = new CSignalMA();                   break; // MA-family: slope of buffer 0
        case IND_RSI:   signal = new CSignalOscillator(70.0, 30.0); break; // OB/OS thresholds
        case IND_MACD:  signal = new CSignalTwoLineCross(0, 1);     break; // main(0) crosses signal(1)
-       case IND_BANDS: signal = new CSignalBollinger();            break; // close leaves upper/lower band
-       // --- Wired 2026-09-17 (Anhnt: "Signal nào có sẵn mà chưa wire thì wire luôn") - classes
-       // already existed with their own "Applies to" doc comments, just never referenced here.
+       case IND_BANDS: signal = new CSignalBollinger();            break; // close vs MidBand; Upper/Lower crosses keep own histories
        case IND_ADX:        signal = new CSignalADX();               break; // DI+/DI- cross
        case IND_ADXW:       signal = new CSignalADX();               break; // ADX-family: DI+/DI- cross
        case IND_STOCHASTIC: signal = new CSignalTwoLineCross(0, 1, 80.0, 20.0); break; // main/signal cross + OB/OS gate
@@ -128,8 +107,7 @@
        // --- Approximate first-draft proxies - these 3 don't have a natural Buy/Sell convention;
        // slope/zero-cross is a loose stand-in, refine later if it doesn't feel right in practice.
        case IND_STDDEV:    signal = new CSignalMA();                 break; // proxy: rising/falling volatility
-       // IND_ATR NOT wired (Anhnt, 2026-09-19) - pure volatility, no direction; a slope "Buy/Sell" was
-       // meaningless noise in the log/bridge, and ATR(14) is auto-bootstrapped on every series for StopLost.
+       // IND_ATR not wired: pure volatility has no direction (ATR(14) is auto-created on every series for StopLost)
        case IND_AD:        signal = new CSignalMA();                 break; // proxy: slope of cumulative line
        case IND_BWMFI:     signal = new CSignalMA();                 break; // proxy: slope of buffer 0
        case IND_GATOR:     signal = new CSignalZeroCross();          break; // proxy: upper histogram only
@@ -139,8 +117,7 @@
       }
     if(signal == NULL) return NULL;
     signal.SetIndicator(indicator);
-    // Backfill flip history so chart arrows have something to show right away, not just from
-    // the moment this Signal was created. Capped at 500 bars - a one-time cost per indicator.
+    // Backfill the flip history, capped at 500 bars (one-time cost per indicator)
     int bars_avail = (int)::Bars(indicator.Symbol(), indicator.Timeframe());
     signal.SyncHistory(bars_avail > 500 ? 500 : bars_avail);
     signal.SyncHistoryExtra(bars_avail > 500 ? 500 : bars_avail);
@@ -164,7 +141,9 @@
     for(int i = 0; i < total; i++)
       {
        CSignalBase *signal = m_list.At(i);
-       if(signal != NULL) { signal.RefreshCurrent(); signal.RefreshCurrentExtra(); }
+       if(signal == NULL) continue;
+       signal.CommitIfNewBar();
+       signal.RefreshCurrent();
       }
    }
   void CSignalsCollection::RefreshCurrentBar(const string symbol)
@@ -175,20 +154,9 @@
        CSignalBase *signal = m_list.At(i);
        if(signal == NULL) continue;
        CIndicatorDE *indicator = signal.GetIndicator();  // BORROWED
-       if(indicator != NULL && indicator.Symbol() == symbol)
-         { signal.RefreshCurrent(); signal.RefreshCurrentExtra(); }
-      }
-   }
-  void CSignalsCollection::FreezeClosedBar(const string symbol, const ENUM_TIMEFRAMES tf)
-   {
-    int total = m_list.Total();
-    for(int i = 0; i < total; i++)
-      {
-       CSignalBase *signal = m_list.At(i);
-       if(signal == NULL) continue;
-       CIndicatorDE *indicator = signal.GetIndicator();  // BORROWED
-       if(indicator != NULL && indicator.Symbol() == symbol && indicator.Timeframe() == tf)
-         { signal.CommitClosedBar(); signal.CommitClosedBarExtra(); }
+       if(indicator == NULL || indicator.Symbol() != symbol) continue;
+       signal.CommitIfNewBar();
+       signal.RefreshCurrent();
       }
    }
 #endif // CSIGNALSCOLLECTION_MQH_IMPLEMENTATION

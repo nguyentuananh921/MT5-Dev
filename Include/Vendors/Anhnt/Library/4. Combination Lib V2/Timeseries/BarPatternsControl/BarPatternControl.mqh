@@ -13,10 +13,10 @@
 #ifndef __BARPATTERNCONTROL_MQH__
 #define __BARPATTERNCONTROL_MQH__
 #include "..\..\Entities\Defines\EventDefines.mqh"
-//--- First link off WF_CONTROL_EVENTS_NEXT_CODE; the Manager chains continue from BARPATTERN_CONTROL_EVENTS_NEXT_CODE
+//--- First link off SIGNAL_EVENTS_NEXT_CODE; the Manager chains continue from BARPATTERN_CONTROL_EVENTS_NEXT_CODE
 enum ENUM_BARPATTERN_CONTROL_EVENT
  {
-  BARPATTERN_CONTROL_EVENT_NO_EVENT = WF_CONTROL_EVENTS_NEXT_CODE,
+  BARPATTERN_CONTROL_EVENT_NO_EVENT = SIGNAL_EVENTS_NEXT_CODE,
   BARPATTERN_CONTROL_EVENT_BUYSELL_CHANGED, // this control's Buy or Sell signal setting was toggled
  };
 #define BARPATTERN_CONTROL_EVENTS_NEXT_CODE (BARPATTERN_CONTROL_EVENT_BUYSELL_CHANGED+1)  // The code of the next event after the last BarPatternControl event code

@@ -8,14 +8,15 @@
  #include "GUIPannel.mqh"
  bool CGUIPannel::CreateWindow_SettingTrading(const string caption_text,const int x_gap, const int y_gap)
   {
-   m_window_setting_trading.FontSize(9);
+   m_window_setting_trading.FontSize(DEF_FONT_SIZE);
    m_window_setting_trading.IsMovable(true);
    m_window_setting_trading.ResizeMode(true);
    m_window_setting_trading.CloseButtonIsUsed(true);
    m_window_setting_trading.MinimumXSize(M_WINDOW_MIN_WIDTH);
    m_window_setting_trading.MinimumYSize(M_WINDOW_MIN_HEIGHT);
    m_window_setting_trading.WindowType(W_DIALOG);
-   if(!m_window_setting_trading.CreateWindow(m_chart_id, m_subwin, caption_text, x_gap, y_gap, M_WINDOW_SETTING_WIDTH, M_WINDOW_SETTING_HEIGHT))
+   if(!m_window_setting_trading.CreateWindow(m_chart_id, m_subwin, caption_text, x_gap, y_gap,
+                                           M_WINDOW_TRADING_SETTING_WIDTH, M_WINDOW_TRADING_SETTING_HEIGHT))
       return false;
    m_window_setting_trading.IconFile(IMAGE_RESOURCE_BMP16_TRADE_ON_PNG);
    return true;
@@ -29,11 +30,6 @@
    SyncTable_StopLostSetting(true);
    SyncTable_TrailingSetting(true);
    ::ChartRedraw(m_chart_id);
-  }
- void CGUIPannel::CloseWindow_SettingTrading(void)
-  {
-   if(m_window_setting_trading.IsVisible())
-      m_window_setting_trading.CloseWindow();
   }
  bool CGUIPannel::CreateTab_SettingTrading(const int x_gap, const int y_gap)
   {
@@ -93,7 +89,7 @@
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_LIST_ITEM && lparam == m_table_stoplostsetting.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
+      if(!m_table_stoplostsetting.CellIndexes(sparam, col, row)) return;
       if(col != 0 && col != 3) return;
       string clicked_sym = m_table_stoplostsetting.Cell(0, row).ValueS();
       if(clicked_sym == "") return;
@@ -106,7 +102,7 @@
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_LIST_ITEM && lparam == m_table_trailingsetting.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
+      if(!m_table_trailingsetting.CellIndexes(sparam, col, row)) return;
       if(col != 0 && col != 3) return;
       string clicked_sym = m_table_trailingsetting.Cell(0, row).ValueS();
       if(clicked_sym == "") return;
@@ -123,7 +119,7 @@
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_indicators_trailingsetting.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
+      if(!m_table_indicators_trailingsetting.CellIndexes(sparam, col, row)) return;
       if(col == 3) OnCheckTable_IndicatorsTrailingSetting(row);
       return;
      }

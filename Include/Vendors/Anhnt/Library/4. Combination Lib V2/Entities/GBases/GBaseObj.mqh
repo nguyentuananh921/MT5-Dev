@@ -89,8 +89,13 @@ class CGBaseObj : public CBaseObj
     CGBaseObj        *Parent(void)                        const { return this.m_parent;                }
     int               ChildrenTotal(void)                 const { return this.m_list_children.Total(); }
     CGBaseObj        *Child(const int index);
-    bool              AddChild(CGBaseObj *child);
+    virtual bool      AddChild(CGBaseObj *child);
     bool              DeleteChild(CGBaseObj *child);
+
+   //--- Life cycle hooks, empty here: CGElement and CGStdBaseObj override them, a collection calls them through CGBaseObj
+    virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam) { }
+    virtual void      OnTimerEvent(void)                                                                     { }
+    virtual void      SetCovered(const bool covered)                                                         { }   // a window covers the cursor, set by the collection
 
    //--- Return the prefix name
     string            NamePrefix(void)                    const { return this.m_name_prefix;           }

@@ -4,7 +4,6 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_SETTINGWINDOWS_TS_CANDLE_PATTERN_MQH
 #define CGUIPANNEL_SETTINGWINDOWS_TS_CANDLE_PATTERN_MQH
- #define SETTING_BTN_SAVE_CANDLE_PATTERN_X_GAP 10
  #define SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP 20
  #define COLUMNS_CANDLE_PATTERN_TOTAL          8
  #include "GUIPannel.mqh"
@@ -81,7 +80,7 @@
    m_btn_save_pattern_config.SetText("Save");
    m_btn_save_pattern_config.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN, m_btn_save_pattern_config);
-   if(!m_btn_save_pattern_config.Create(m_chart_id, m_subwin, "BtnSavePattern", x + SETTING_BTN_SAVE_CANDLE_PATTERN_X_GAP,
+   if(!m_btn_save_pattern_config.Create(m_chart_id, m_subwin, "BtnSavePattern", x + M_CONTROL_BORDER_GAP,
                                         y + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP, 80, M_CONTROL_HEIGHT)) return false;
    int table_y = y + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP + M_CONTROL_HEIGHT + SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP;
    m_table_CandlePatternsSetting.TableSize(COLUMNS_CANDLE_PATTERN_TOTAL, 0);
@@ -163,12 +162,11 @@
     }
    return -1;
   }
- //--- CTable already flipped the checkbox cell, its value is the new state
- void CGUIPannel::OnCheckTableCandlePatternSetting(const int row, const int col)
+ //--- 'on' is the new checkbox state sent with the event (dparam)
+ void CGUIPannel::OnCheckTableCandlePatternSetting(const int row, const int col, const bool on)
   {
    CBarPatternControl *c = PatternControlAt(FindPatternIndexByRow(row));
    if(c == NULL) return;
-   bool on = (m_table_CandlePatternsSetting.Cell(col, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
    if(col == 2)      c.BuySignal(on);
    else if(col == 3) c.SellSignal(on);
    else if(col == 5) c.SoundAlert(on);

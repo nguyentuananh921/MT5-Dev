@@ -240,7 +240,7 @@
   #define DEF_CONTROL_PROCESS_DURATION                  (1000)               // Process duration
  //Fonts
   #define DEF_FONT                                      ("Calibri")          // Default font
-  #define DEF_FONT_SIZE                                 (8)                  // Default font size
+  #define DEF_FONT_SIZE                                 (10)                  // Default font size
   #define DEF_CHECK_SIZE                                (12)                 // Checkbox default size
   #define DEF_ARROW_BUTTON_SIZE                         (15)                 // Default arrow button size
   #define OUTER_AREA_SIZE                               (16)                 // Size of one side of the outer area around the form workspace

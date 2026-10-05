@@ -416,22 +416,16 @@ class CBarSeriesDE : public CBaseObj
     //--- Set the flag of sorting the list of bars by time
       this.m_list_series.Sort(SORT_BY_BAR_TIME);
     //--- If a new bar is present on a symbol and period
-    //--- New bar = THIS series' own bar 0 moved on (iTime), not the chart's data_calculate.rates.time:
-    //--- that one is the chart TF's bar time, so with the chart on M5 an M1 series only got a new
-    //--- object every 5 minutes and the other 4 bars were overwritten into the same object (list
-    //--- gaps). Every bar between the newest held one and bar 0 is backfilled, so index-adjacent
-    //--- consumers (Swing's N-bar window) always see a contiguous list (Anhnt/Claude, 2026-09-19).
+    //--- New bar = THIS series' own bar 0 moved on (iTime), not the chart TF's bar time; every bar
+    //--- between the newest held one and bar 0 is backfilled so the list has no gaps
     datetime own_bar0=::iTime(this.m_symbol,this.m_timeframe,0);
     if(own_bar0>0 && this.IsNewBarManual(own_bar0))
       {
        int      period_sec=::PeriodSeconds(this.m_timeframe);
        int      last_idx=CTimeseriesSelect::FindBarMax(this.GetList(),BAR_PROP_TIME);
        CBar    *last_bar=this.m_list_series.At(last_idx);
-       // Just-closed bar's CBar was last touched via CopyRates(...,0,1,...) while it was
-       // still forming - that snapshot can miss price movement in the final moments before
-       // it actually closed. One more refresh here, from CopyRates(...,1,1,...) (now the
-       // closed bar's own, final, authoritative data), before Pattern/Swing ever read it
-       // (confirmed via debug: real High/Low mismatches seen, Anhnt/Claude, 2026-09-22).
+       // Re-read the just-closed bar via CopyRates(...,1,1,...): its last snapshot came from the
+       // forming bar and can miss the final price moves
        if(last_bar!=NULL)
          {
           MqlRates fresh_check[1];

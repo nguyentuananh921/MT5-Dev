@@ -89,7 +89,7 @@
  //| IntegerToString at the caller's requested precision. Same         |
  //| decode BuildIndicatorTextLabel/BuildIndicatorParamsText used to    |
  //| do from outside (TimeseriesDELib.mqh) - ported in directly since   |
- //| m_type_enum/m_raw_params are already right here (Anhnt, 2026-08-30). |
+ //| m_type_enum/m_raw_params are already right here.                   |
  //+------------------------------------------------------------------+
  void CIndicatorSetting::ParamTexts(const int decimals, string &out[]) const
    {

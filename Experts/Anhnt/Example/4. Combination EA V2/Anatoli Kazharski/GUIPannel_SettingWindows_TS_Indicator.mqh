@@ -11,7 +11,7 @@
    m_treeview_indicator.LightsHover(true);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_treeview_indicator);
    return m_treeview_indicator.CreateTreeView(m_chart_id, m_subwin, "TreeIndicatorTemplate", x_gap, y_gap,
-                                              INDICATOR_TREE_WIDTH, m_tabs_setting_timeseries.Height() - y_gap - 3);
+                                              M_TREEVIEW_WIDTH, m_tabs_setting_timeseries.Height() - y_gap - 3);
   }
  //--- Groups (ENUM_INDICATOR_GROUP) as roots, catalog types as leaves
  void CGUIPannel::PopulateTreeView_IndicatorTemplateSetting(void)
@@ -149,11 +149,11 @@
     }
    m_table_indicator_template.Update(true);
   }
- //--- Checkbox handlers: CTable already flipped the cell, its value is the new state
- void CGUIPannel::OnClickToggleShowIndicatorOnChart(const int row)
+ //--- Checkbox handlers: 'on' is the new state sent with the event (dparam)
+ void CGUIPannel::OnClickToggleShowIndicatorOnChart(const int row, const bool on)
   {
    if(m_indicator_template_manager == NULL) return;
-   m_indicator_template_manager.UpdateRow_IndicatorTemplateSetting_ShowColumn(row, m_table_indicator_template.Cell(4, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
+   m_indicator_template_manager.UpdateRow_IndicatorTemplateSetting_ShowColumn(row, on);
   }
  void CGUIPannel::OnClickRemoveIndicator(const int row)
   {
@@ -164,32 +164,32 @@
    entry.GetRawParams(params);
    m_indicator_template_manager.DeleteIndicatorFromIndicatorTemplateSetting(entry.TypeEnum(), params);
   }
- void CGUIPannel::OnClickToggleBuySignal(const int row)
+ void CGUIPannel::OnClickToggleBuySignal(const int row, const bool on)
   {
    CIndicatorSetting *entry = (m_indicator_template_manager != NULL) ? m_indicator_template_manager.At(row) : NULL;
    if(entry == NULL) return;
-   entry.BuySignal(m_table_indicator_template.Cell(2, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
+   entry.BuySignal(on);
    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED, (long)row, 0.0, "");
   }
- void CGUIPannel::OnClickToggleSellSignal(const int row)
+ void CGUIPannel::OnClickToggleSellSignal(const int row, const bool on)
   {
    CIndicatorSetting *entry = (m_indicator_template_manager != NULL) ? m_indicator_template_manager.At(row) : NULL;
    if(entry == NULL) return;
-   entry.SellSignal(m_table_indicator_template.Cell(3, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
+   entry.SellSignal(on);
    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED, (long)row, 0.0, "");
   }
- void CGUIPannel::OnClickToggleSoundAlert(const int row)
+ void CGUIPannel::OnClickToggleSoundAlert(const int row, const bool on)
   {
    CIndicatorSetting *entry = (m_indicator_template_manager != NULL) ? m_indicator_template_manager.At(row) : NULL;
    if(entry == NULL) return;
-   entry.SoundAlert(m_table_indicator_template.Cell(5, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
+   entry.SoundAlert(on);
    ShowIndicatorSavePending();
   }
- void CGUIPannel::OnClickToggleMessageAlert(const int row)
+ void CGUIPannel::OnClickToggleMessageAlert(const int row, const bool on)
   {
    CIndicatorSetting *entry = (m_indicator_template_manager != NULL) ? m_indicator_template_manager.At(row) : NULL;
    if(entry == NULL) return;
-   entry.MessageAlert(m_table_indicator_template.Cell(6, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
+   entry.MessageAlert(on);
    ShowIndicatorSavePending();
   }
 #endif // CGUIPANNEL_SETTINGWINDOWS_TS_INDICATOR_MQH_IMPLEMENTATION

@@ -2,6 +2,7 @@
 //|                      External and Internal Structure Mapping.mq5 |
 //|                                             Abioye Israel Pelumi |
 //|                                              https://Algoyin.com |
+//| https://www.mql5.com/en/articles/22968
 //+------------------------------------------------------------------+
 #property copyright "Abioye Israel Pelumi"
 #property link      "https://Algoyin.com"

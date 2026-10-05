@@ -5,18 +5,16 @@
 #ifndef CGUIPANNEL_SETTINGWINDOWS_TRADINGTRAILING_MQH_IMPLEMENTATION
 #define CGUIPANNEL_SETTINGWINDOWS_TRADINGTRAILING_MQH_IMPLEMENTATION
  #include "GUIPannel.mqh"
- #define COLUMNS_TRAIL_TOTAL     8
- #define COLUMNS_IND_TRAIL_TOTAL 4
  //--- Same layout as the StopLost table, only col 3's icon differs
  bool CGUIPannel::CreateTable_TrailingSetting(const int x, const int y)
   {
-   int width[COLUMNS_TRAIL_TOTAL]             = {M_SYMBOL_WIDTH, M_PRICE_WIDTH, 35, M_ICON16_WIDTH, 60, 60, 70, 70};
-   ENUM_ALIGN_MODE align[COLUMNS_TRAIL_TOTAL] = {ALIGN_LEFT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_LEFT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_RIGHT, ALIGN_RIGHT};
-   int text_x_offset[COLUMNS_TRAIL_TOTAL]     = {5, 2, 2, 5, 2, 2, 2, 2};   // right-aligned numbers: small edge gap, more room for the text
-   int image_x_offset[COLUMNS_TRAIL_TOTAL]    = {3, 3, (35 - 16) / 2, 2, (60 - 16) / 2, (60 - 16) / 2, (70 - 16) / 2, (70 - 16) / 2};   // header icons centered
-   int table_w = 2 + 16;   // border + vertical scrollbar
-   for(int c = 0; c < COLUMNS_TRAIL_TOTAL; c++)
-      table_w += width[c];
+   int columns_width_total = 0;
+   for(int col = 0; col < COLUMNS_TRAIL_TOTAL; col++)
+    {
+      columns_width_total += TRAIL_WIDTH[col];
+      m_table_trailingsetting.View().GetHeaderViewPointer().TextAlign(col, TRAIL_HEADER_ALIGN[col]);
+    }
+   int table_w = columns_width_total + 2 + 16; // border + vertical scrollbar
    table_w = ::MathMax(table_w, TRAIL_TOTAL_WIDTH);   // right edge in line with the Fixed Mode frame below
    m_table_trailingsetting.TableSize(COLUMNS_TRAIL_TOTAL, 0);
    m_table_trailingsetting.View().ShowHeaders(true);
@@ -26,10 +24,9 @@
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING, m_table_trailingsetting);
    if(!m_table_trailingsetting.CreateTable(m_chart_id, m_subwin, "TableTrailingSetting", x, y, table_w, SETTING_TRADING_TABLE_HEIGHT)) return false;
    CTableHeaderView *header = m_table_trailingsetting.View().GetHeaderViewPointer();
-   header.ColumnsWidth(width);
-   header.TextAlign(align);
-   header.TextXOffset(text_x_offset);
-   header.ImageXOffset(image_x_offset);
+   header.ColumnsWidth(TRAIL_WIDTH);
+   header.TextXOffset(TRAIL_TEXT_X_OFFSET);
+   header.ImageXOffset(TRAIL_IMAGE_X_OFFSET);
    uint spread_img[]    = {IMAGE_RESOURCE_BMP16_SPREADRED_PNG};
    uint trailling_img[] = {IMAGE_RESOURCE_BMP16_TRAILLING_PNG};
    uint fixed_img[]     = {IMAGE_RESOURCE_BMP16_STOP_LOST_FIXED_PNG};
@@ -52,10 +49,6 @@
    m_label_TrailingSetting_Symbol.SetText("Symbol - -");
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING, m_label_TrailingSetting_Symbol);
    if(!m_label_TrailingSetting_Symbol.Create(m_chart_id, m_subwin, "LabelTrailSymbol", x, y, 160, M_CONTROL_HEIGHT)) return false;
-   int width[COLUMNS_IND_TRAIL_TOTAL]             = {M_TF_WIDTH, M_INDICATOR_PARATEXT_WIDTH - 17, M_PRICE_WIDTH, M_ICON16_WIDTH};
-   ENUM_ALIGN_MODE align[COLUMNS_IND_TRAIL_TOTAL] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_RIGHT, ALIGN_LEFT};
-   int text_x_offset[COLUMNS_IND_TRAIL_TOTAL]     = {5, 5, 5, 5};
-   int image_x_offset[COLUMNS_IND_TRAIL_TOTAL]    = {3, 0, 0, 2};
    int table_w = TRAIL_IND_TABLE_WIDTH;   // border + scrollbar + columns
    m_table_indicators_trailingsetting.TableSize(COLUMNS_IND_TRAIL_TOTAL, 0);
    m_table_indicators_trailingsetting.View().ShowHeaders(true);
@@ -67,10 +60,10 @@
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING, m_table_indicators_trailingsetting);
    if(!m_table_indicators_trailingsetting.CreateTable(m_chart_id, m_subwin, "TableIndTrailing", x, y + M_CONTROL_YDISTANCE, table_w)) return false;
    CTableHeaderView *header = m_table_indicators_trailingsetting.View().GetHeaderViewPointer();
-   header.ColumnsWidth(width);
-   header.TextAlign(align);
-   header.TextXOffset(text_x_offset);
-   header.ImageXOffset(image_x_offset);
+   header.ColumnsWidth(IND_TRAIL_WIDTH);
+   header.TextAlign(IND_TRAIL_HEADER_ALIGN);
+   header.TextXOffset(IND_TRAIL_TEXT_X_OFFSET);
+   header.ImageXOffset(IND_TRAIL_IMAGE_X_OFFSET);
    uint trailling_img[] = {IMAGE_RESOURCE_BMP16_TRAILLING_PNG};
    m_table_indicators_trailingsetting.SetHeaderText(0, "TF");
    m_table_indicators_trailingsetting.SetHeaderText(1, "Indicator");
@@ -103,6 +96,7 @@
      for(int row = 0; row < count; row++)
       {
        CSymbol *sym = col_list.At(row);
+       m_table_trailingsetting.View().RowView(row).TextAlign(TRAIL_CONTENT_ALIGN);
        m_table_trailingsetting.CellView(0, row).SetImages(sym_img);
        m_table_trailingsetting.SetValue(0, row, (sym != NULL) ? sym.Name() : "");
        m_table_trailingsetting.CellView(3, row).SetImages(trailling_img);
@@ -223,6 +217,7 @@
       {
        CIndicatorDE *ind = inds[row];
        s_inds_old[row] = ind;
+       m_table_indicators_trailingsetting.View().RowView(row).TextAlign(IND_TRAIL_CONTENT_ALIGN);
        m_table_indicators_trailingsetting.CellView(0, row).SetImages(tf_img);
        m_table_indicators_trailingsetting.SetValue(0, row, TimeframeDescription(tfs[row]));
        MqlParam ind_params[];
@@ -293,8 +288,8 @@
  bool CGUIPannel::CreateTrailingForm(const int x_gap, const int y_gap)
   {
    const int field_w   = TRAIL_FORM_CAPTION_WIDTH + TRAIL_FORM_EDIT_WIDTH;   // caption + edit box
-   const int in_row0_y = 18;                                                // below the frame caption cut into the top border
-   const int frame_h   = in_row0_y + 3 * M_CONTROL_YDISTANCE + M_CONTROL_HEIGHT + TRAIL_FORM_PAD;
+   const int in_row0_y = M_CONTROL_HEIGHT;                                                // below the frame caption cut into the top border
+   const int frame_h   = in_row0_y + 3 * M_CONTROL_YDISTANCE + M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP;
    m_frame_trailling_setting_fixedmode.SetText("Fixed Mode");
    m_tabs_setting_trading.AddToElementsArray(ENUM_TAB_SETTING_TRADING_TRAILLING, m_frame_trailling_setting_fixedmode);
    if(!m_frame_trailling_setting_fixedmode.CreateFrame(m_chart_id, m_subwin, "FrameTrailFixed", x_gap, y_gap, TRAIL_FORM_FRAME_WIDTH, frame_h)) return false;
@@ -309,7 +304,7 @@
     {
      edits[i].SetText(captions[i]);
      m_frame_trailling_setting_fixedmode.AddChild(edits[i]);
-     if(!edits[i].CreateTextEdit(m_chart_id, m_subwin, names[i], TRAIL_FORM_PAD, in_row0_y + i * M_CONTROL_YDISTANCE, field_w, M_CONTROL_HEIGHT, TRAIL_FORM_EDIT_WIDTH)) return false;
+     if(!edits[i].CreateTextEdit(m_chart_id, m_subwin, names[i], M_CONTROL_BORDER_GAP, in_row0_y + i * M_CONTROL_YDISTANCE, field_w, M_CONTROL_HEIGHT, TRAIL_FORM_EDIT_WIDTH)) return false;
     }
    //--- Save commits both Indicator mode (table pick) and Fixed mode: outside the frame
    m_btn_save_Trailing_Setting.SetText("Save");

@@ -5,7 +5,6 @@
 //+------------------------------------------------------------------+
 #ifndef __GUIPANNEL_SETTINGWINDOWS_TS_SWING_MQH__
 #define __GUIPANNEL_SETTINGWINDOWS_TS_SWING_MQH__
- #define SETTING_BTN_SAVE_SWING_X_GAP 10
  #define SETTING_BTN_SAVE_SWING_Y_GAP 20
  #define COLUMNS_SWING_TOTAL          4
  #include "GUIPannel.mqh"
@@ -15,9 +14,9 @@ bool CGUIPannel::CreateTable_SwingSetting(const int x, const int y)
   m_btn_save_swing_config.SetText("Save");
   m_btn_save_swing_config.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SWING, m_btn_save_swing_config);
-  if(!m_btn_save_swing_config.Create(m_chart_id, m_subwin, "BtnSaveSwing", x + SETTING_BTN_SAVE_SWING_X_GAP,
+  if(!m_btn_save_swing_config.Create(m_chart_id, m_subwin, "BtnSaveSwing", x + M_CONTROL_BORDER_GAP,
                                      y + SETTING_BTN_SAVE_SWING_Y_GAP, 80, M_CONTROL_HEIGHT)) return false;
-  if(!CreateSwingParamControls(x + SETTING_BTN_SAVE_SWING_X_GAP + 80 + 20, y + SETTING_BTN_SAVE_SWING_Y_GAP)) return false;
+  if(!CreateSwingParamControls(x + M_CONTROL_BORDER_GAP + 80 + 20, y + SETTING_BTN_SAVE_SWING_Y_GAP)) return false;
   int table_y = y + SETTING_BTN_SAVE_SWING_Y_GAP + M_CONTROL_HEIGHT + SETTING_BTN_SAVE_SWING_Y_GAP;
   m_table_SwingSetting.TableSize(COLUMNS_SWING_TOTAL, 0);
   m_table_SwingSetting.View().ShowHeaders(true);
@@ -68,12 +67,11 @@ void CGUIPannel::InitializeTable_SwingSetting(void)
    }
   m_table_SwingSetting.View().Rebuild(true);
  }
-//--- CTable already flipped the checkbox cell; Show changes the markers, so the bridge is told
-void CGUIPannel::OnCheckTableSwingSetting(const int row, const int col)
+//--- 'on' is the new checkbox state sent with the event (dparam); Show changes the markers, so the bridge is told
+void CGUIPannel::OnCheckTableSwingSetting(const int row, const int col, const bool on)
  {
   if(m_SwingSetting == NULL || row < 0 || row > 1) return;
   ENUM_SWING_TYPE type = (row == 0) ? SWING_TYPE_HIGH : SWING_TYPE_LOW;
-  bool on = (m_table_SwingSetting.Cell(col, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
   if(col == 1)
    {
     if(m_SwingSetting.SignalShow(type, on))
@@ -97,7 +95,7 @@ bool CGUIPannel::CreateSwingParamControls(const int x, const int y)
   m_edit_swing_strength.SetValue((string)strength);
   m_checkbox_swing_wick.SetText("Use Wick");
   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SWING, m_checkbox_swing_wick);
-  if(!m_checkbox_swing_wick.Create(m_chart_id, m_subwin, "CheckSwingWick", x + 120 + 15, y, M_SYMBOL_WIDTH, M_CONTROL_HEIGHT)) return false;
+  if(!m_checkbox_swing_wick.Create(m_chart_id, m_subwin, "CheckSwingWick", x + 120 + 15, y, M_SYMBOL_WITHICON_WIDTH, M_CONTROL_HEIGHT)) return false;
   m_checkbox_swing_wick.SetState(use_wick);
   return true;
  }

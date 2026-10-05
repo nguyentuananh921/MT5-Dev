@@ -11,7 +11,7 @@
  bool CGUIPannel::CreateWindow_Main(const string caption_text,const int x_gap, const int y_gap)
   {
     //--- Properties
-      m_window_main.FontSize(9);
+      m_window_main.FontSize(DEF_FONT_SIZE);
       m_window_main.IsMovable(true);
       m_window_main.ResizeMode(true);
       m_window_main.CloseButtonIsUsed(true);
@@ -70,7 +70,7 @@
     CAccount *acc = (m_accounts_collection != NULL) ? m_accounts_collection.GetCurrentAccount() : NULL;
     double deposit_val = (acc != NULL) ? acc.Margin() : ::AccountInfoDouble(ACCOUNT_MARGIN);
     double deposit_pct = (acc != NULL && acc.Balance() != 0.0) ? (acc.Margin() / acc.Balance() * 100) : 0.0;
-    //--- GetPositionList() with no args = every Symbol/every Direction (Anhnt/Claude, 2026-09-13).
+    //--- GetPositionList() with no args = every Symbol/every Direction.
      double profit_val = (m_market_collection != NULL)
        ? m_market_collection.SumFloatingProfit(m_market_collection.GetPositionList())
        : ::AccountInfoDouble(ACCOUNT_PROFIT);
@@ -198,10 +198,8 @@
    //--- Monitor: only the colored SL / Trailling cell opens Setting Trading on its tab, gray cells do nothing
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_LIST_ITEM && lparam == m_table_indicator_PreTradeSymbolMonitor.ObjectID())
      {
-      string parts[];
-      if(StringSplit(sparam, '_', parts) != 2) return;
-      int col = (int)StringToInteger(parts[0]);
-      int row = (int)StringToInteger(parts[1]);
+      int col, row;
+      if(!m_table_indicator_PreTradeSymbolMonitor.CellIndexes(sparam, col, row)) return;
       if((col == 4 || col == 5) && m_table_indicator_PreTradeSymbolMonitor.CellView(col, row).SelectedImage() == 0)
          OnClickOpenTradingSettingTab(col == 4 ? ENUM_TAB_SETTING_TRADING_STOPLOST : ENUM_TAB_SETTING_TRADING_TRAILLING);
       return;
@@ -210,10 +208,8 @@
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
        && lparam == m_table_positions_StoplostAndTrailling.ObjectID())
      {
-      string parts[];
-      if(StringSplit(sparam, '_', parts) != 2) return;
-      int col = (int)StringToInteger(parts[0]);
-      int row = (int)StringToInteger(parts[1]);
+      int col, row;
+      if(!m_table_positions_StoplostAndTrailling.CellIndexes(sparam, col, row)) return;
       if(col == COL_PST_SLTYPE) OnClickTogglePositionSLType(row);
       else if(col == COL_PST_TRAILTYPE) OnClickTogglePositionTrailType(row);
       return;
@@ -227,7 +223,7 @@
    // Handle the TF switch row (All / M1 / M5 ...)
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_GROUP_BUTTON && lparam == m_btngroup_tf_switch.ObjectID())
      {
-      OnClickTFSwitchButton();
+      OnClick_CButtonsGroup_TFSwitchButton();
       return;
      }
    // Handle CSymbolTFManager's own active-Symbol-change events
@@ -240,7 +236,8 @@
       if(SyncComboBox_NewOrderSymbol())
          OnSymbolToTradeChanged(false);
       SyncTable_PositionPretradeView(true);
-      SyncTFSwitchButtons();
+      Sync_CButtonsGroup_TFSwitchButtons();
+      OnClick_CButtonsGroup_TFSwitchButton();
       return;
      }
    // Handle account-state trade events: the Lot combobox's max lot goes stale otherwise
@@ -255,9 +252,8 @@
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
        && lparam == m_table_position_pretrade_view.ObjectID())
      {
-      string parts[];
-      if(StringSplit(sparam, '_', parts) != 2) return;
-      int col = (int)StringToInteger(parts[0]);
+      int col, row;
+      if(!m_table_position_pretrade_view.CellIndexes(sparam, col, row)) return;
       if(col == COL_PTV_DIR) OnClickTogglePretradeDirection();
       else if(col == COL_PTV_SLTYPE) OnClickTogglePretradeSLType();
       else if(col == COL_PTV_TRAILTYPE) OnClickTogglePretradeTrailType();
@@ -268,44 +264,12 @@
      {
       OnClickSendNewOrder();
       return;
-     }
-   //--- Replaced by m_contextmenu_trading (on/off) and the Monitor's colored cells (open the settings)
-   // if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX &&
-   //    (lparam == m_checkbox_use_StopLostSetting.ObjectID() || lparam == m_checkbox_use_TrailingSetting.ObjectID()))
-   //  {
-   //   OnClickRunSLOrTrailingCheckbox(lparam);
-   //   return;
-   //  }
-   // if((id == CHARTEVENT_CUSTOM + TRADING_SETUP_MANAGER_EVENT_CHANGED ||
-   //     id == CHARTEVENT_CUSTOM + TRADING_SETUP_MANAGER_EVENT_ADDED) &&
-   //    sparam == GetNewOrderSymbol())
-   //  {
-   //   CTradingSetupSetting *row_setting = (m_trading_setup_manager != NULL) ? m_trading_setup_manager.FindByIdentity(sparam) : NULL;
-   //   m_checkbox_use_StopLostSetting.SetState((row_setting != NULL) && row_setting.StopLostActive());
-   //   m_checkbox_use_TrailingSetting.SetState((row_setting != NULL) && row_setting.TrailingActive());
-   //   return;
-   //  }
-   // if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON &&
-   //    (lparam == m_btn_open_StopLostSetting.ObjectID() || lparam == m_btn_open_TrailingSetting.ObjectID()))
-   //  {
-   //   OnClickOpenTradingSettingTab(lparam == m_btn_open_StopLostSetting.ObjectID() ? ENUM_TAB_SETTING_TRADING_STOPLOST : ENUM_TAB_SETTING_TRADING_TRAILLING);
-   //   return;
-   //  }
+     }   
    // Handle "Use RPT %" checkbox click (New Order form)
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_checkbox_use_RiskPerNewTrade.ObjectID())
      {
       OnClickUseRiskPerNewTradeCheckbox();
       return;
-     }
-   // Col0 (TF) of m_table_indicator_PreTradeSymbolMonitor switches the active chart
-   // if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_table_indicator_PreTradeSymbolMonitor.ObjectID())
-   //  {
-   //   string parts[];
-   //   if(StringSplit(sparam, '_', parts) != 2) return;
-   //   int col = (int)StringToInteger(parts[0]);
-   //   int row = (int)StringToInteger(parts[1]);
-   //   if(col == 0) OnClickNavigateToTF(row);
-   //   return;
-   //  }
+     }   
   }
 #endif // CGUIPANNEL_MAINWINDOWS_MQH

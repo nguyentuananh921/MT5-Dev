@@ -17,11 +17,14 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib V2\Collections\ChartObjCollection.mqh>
    CChartObjCollection  m_ChartObjCollection;
   #include "Anatoli Kazharski\GUIPannel.mqh"
+  #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Graph\Composite\TradingLevelBubble.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Graph\Composite\PatternInfoBox.mqh>
 
    CGUIPannel m_GUIPannel;
    CGraphElementsCollection m_GraphElementsCollection;
    bool g_ea_init_done = false;
    bool g_suppress_del_rescan = false;
+   bool g_orig_chart_shift = true;   // chart shift before the bubbles took over
  int OnInit(void)
    {
       g_ea_init_done = false;
@@ -59,8 +62,28 @@
         m_GUIPannel.SetGraphElementsCollection(&m_GraphElementsCollection);
         m_GUIPannel.SetTradingEngine(&m_tradingEngine);
         //--- Before the panel registers its windows: the bubbles stack below them
-        m_GraphElementsCollection.CreateTradingLevelBubbles(::ChartID(), m_tradingEngine.GetMarketCollection(), m_tradingEngine.GetTradingControl());
-        m_GUIPannel.OnInitEvent(_UninitReason);
+        //--- The bubbles replace the native SL/TP lines; the right shift leaves room for them
+        ::ChartSetInteger(::ChartID(), CHART_SHOW_TRADE_LEVELS, false);
+        g_orig_chart_shift = (bool)::ChartGetInteger(::ChartID(), CHART_SHIFT);
+        ::ChartSetInteger(::ChartID(), CHART_SHIFT, true);
+        for(int b = 0; b < BUBBLE_TOTAL; b++)
+         {
+          CTradingLevelBubble *bubble = new CTradingLevelBubble();
+          if(bubble != NULL && bubble.Create(::ChartID(), 0, (ENUM_BUBBLE_TYPE)b) && m_GraphElementsCollection.AddChild(bubble))
+            {
+             bubble.SetSources(m_tradingEngine.GetMarketCollection());
+             bubble.Refresh();
+            }
+          else
+             delete bubble;
+         }
+        m_GUIPannel.OnInit(_UninitReason);
+        //--- After the windows are registered: the box and its name stack above them
+        CPatternInfoBox *patternBox=new CPatternInfoBox();
+        if(patternBox!=NULL && patternBox.Create(::ChartID(), 0, "PatternHoverBox") && m_GraphElementsCollection.AddChild(patternBox))
+           patternBox.SetSources(m_timeSeriesEngine.GetTimeSeriesCollection(), m_timeSeriesEngine.GetPatternsControl(), &m_SymbolTFManager);
+        else
+           delete patternBox;
         //--- Per-symbol watermark: full build only for a symbol never built, else no-op/increment; no chart series yet = wait for SYMTF_ADDED
         if(m_timeSeriesEngine.GetTimeSeriesCollection().IsAvailable(::Symbol(), (ENUM_TIMEFRAMES)::Period()))
            m_signalBridgeWriter.BuildAndWriteSignalBridge();
@@ -72,7 +95,11 @@
 
  void OnDeinit(const int reason)
   {
-    m_GUIPannel.OnDeinitEvent(reason);
+    m_GUIPannel.OnDeinit(reason);
+    //--- Give the chart back its native SL/TP lines
+    ::ChartSetInteger(::ChartID(), CHART_SHOW_TRADE_LEVELS, true);
+    ::ChartSetInteger(::ChartID(), CHART_SHIFT, g_orig_chart_shift);
+    ::ChartSetInteger(::ChartID(), CHART_AUTOSCROLL, true);
     if(reason != REASON_CHARTCHANGE)
        ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
   }
@@ -90,23 +117,22 @@
     bool any_new_bar = m_timeSeriesEngine.OnTickEvent(Symbol(), data_calc);
     if(any_new_bar)
        m_signalBridgeWriter.BuildAndWriteSignalBridge();
-    m_GUIPannel.OnTickEvent();
+    m_GUIPannel.OnTick(any_new_bar);
   }
 
  void OnTimer(void)
   {
     if(!g_ea_init_done) return;
     m_ChartObjCollection.Refresh();
-    m_timeSeriesEngine.OnTimerEvent();
-    //m_signalBridgeWriter.BuildAndWriteSignalBridge();
+    m_timeSeriesEngine.OnTimerEvent();    
     m_GUIPannel.OnTimerEvent();
-    m_GraphElementsCollection.OnTimer();
+    m_GraphElementsCollection.OnTimerEvent();
   }
 
  void OnTrade(void)
   {
-    m_tradingEngine.OnTickEvent();
-    m_GUIPannel.OnTradeEvent();
+    m_tradingEngine.OnTradeEvent();
+    m_GUIPannel.OnTrade();
   }
 
  void OnChartEvent(const int id, const long &lparam, const double &dparam,
@@ -117,7 +143,8 @@
     m_IndicatorTemplateManager.OnChartEvent(id, lparam, dparam, sparam, &m_ChartObjCollection);
     m_signalBridgeWriter.OnChartEvent(id, lparam, dparam, sparam);
     m_GraphElementsCollection.OnChartEvent(id, lparam, dparam, sparam);   // before the panel: chart-anchored elements move first
-    m_GUIPannel.OnEvent(id, lparam, dparam, sparam);
+    m_tradingEngine.OnChartEvent(id, lparam, dparam, sparam);
+    m_GUIPannel.OnChartEvent(id, lparam, dparam, sparam);
     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
      {
       ENUM_INDICATOR type = (ENUM_INDICATOR)lparam;

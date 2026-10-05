@@ -8,7 +8,7 @@
  #include "GUIPannel.mqh"
  bool CGUIPannel::CreateWindow_SettingTimeSeries(const string caption_text,const int x_gap, const int y_gap)
   {
-   m_window_setting_timeseries.FontSize(9);
+   m_window_setting_timeseries.FontSize(DEF_FONT_SIZE);
    m_window_setting_timeseries.IsMovable(true);
    m_window_setting_timeseries.ResizeMode(true);
    m_window_setting_timeseries.CloseButtonIsUsed(true);
@@ -21,21 +21,12 @@
    m_window_setting_timeseries.IconFile(IMAGE_RESOURCE_BMP16_INDICATOR_ON_PNG);
    return true;
   }
- void CGUIPannel::OpenWindow_SettingTimeSeries(void)
+  void CGUIPannel::OpenWindow_SettingTimeSeries(void)
   {
-   m_window_setting_timeseries.OpenWindow();
-   //--- OpenWindow() shows the whole subtree: re-hide what must stay hidden
-   HideAddIndicatorForm();
+   m_window_setting_timeseries.OpenWindow();   
+   m_frame_indicator_parameter.Hide();
    m_btn_save_indicator.Hide();
-   //m_treeview_symboltf_need_sync  = true;
-   //m_treeview_indicator_need_sync = true;
-   //m_table_indicator_need_sync    = true;
    ::ChartRedraw(m_chart_id);
-  }
- void CGUIPannel::CloseWindow_SettingTimeSeries(void)
-  {
-   if(m_window_setting_timeseries.IsVisible())
-      m_window_setting_timeseries.CloseWindow();
   }
  bool CGUIPannel::CreateTab_SettingTimeSeries(const int x_gap, const int y_gap)
   {
@@ -50,58 +41,16 @@
    m_window_setting_timeseries.AddChild(&m_tabs_setting_timeseries);
    return m_tabs_setting_timeseries.CreateTabs(m_chart_id, m_subwin, "TabsSettingTS", x_gap, y_gap);
   }
- //--- Deferred work (row deletes, resyncs) runs here, never inside the click that asked for it
- void CGUIPannel::OnTimer_SettingTimeSeries(void)
-  {
-   if(m_pending_remove_row >= 0)
-    {
-     int remove_row = m_pending_remove_row;
-     m_pending_remove_row = -1;
-     OnClickRemoveIndicator(remove_row);
-    }
-   if(m_pending_remove_sym_symboltf != "")
-    {
-     string remove_sym = m_pending_remove_sym_symboltf;
-     string remove_tf  = m_pending_remove_tf_symboltf;
-     m_pending_remove_sym_symboltf = "";
-     m_pending_remove_tf_symboltf  = "";
-     if(m_SymbolTFManager != NULL)
-        m_SymbolTFManager.Delete_SymbolTFSetting(remove_sym, TimestampByDescription(remove_tf));
-    }
-   if(!m_window_setting_timeseries.IsVisible())
-      return;
-   //int tab = m_tabs_setting_timeseries.SelectedTab();
-   //if(m_treeview_symboltf_need_sync && tab == TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF)
-   // {
-   //  m_treeview_symboltf_need_sync = false;
-   //  PopulateTable_SymbolTFSetting();
-   //  PopulateTreeView_SymbolTFSetting();
-   //  SyncTreeView_SymbolTFSetting();
-   // }
-   //if(m_treeview_indicator_need_sync && tab == TAB_TAB_SETTING_TIMESERIES_INDICATOR)
-   // {
-   //  m_treeview_indicator_need_sync = false;
-   //  SyncTreeView_IndicatorTemplateSetting();
-   // }
-   //if(m_table_indicator_need_sync && tab == TAB_TAB_SETTING_TIMESERIES_INDICATOR)
-   // {
-   //  m_table_indicator_need_sync = false;
-   //  InitializeTable_IndicatorTemplateSetting();
-   // }
-   m_window_setting_timeseries.OnTimerEvent();
-  }
  void CGUIPannel::OnEvent_Window_SettingTimeSeries(const int id,const long &lparam, const double &dparam, const string &sparam)
   {
    //--- Tab switch / window expand: Show() cascaded to the hidden form slots again
     if((id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_setting_timeseries.ObjectID()) ||
        (id == CHARTEVENT_CUSTOM + ON_WINDOW_EXPAND && lparam == m_window_setting_timeseries.ObjectID()))
      {
-      HideAddIndicatorForm();
+      m_frame_indicator_parameter.Hide();
       if(m_current_param_type != IND_CUSTOM && m_tabs_setting_timeseries.SelectedTab() == TAB_TAB_SETTING_TIMESERIES_INDICATOR)
-         ShowAddIndicatorForm(m_current_param_type);
+         ShowCFrame_IndicatorParameter(m_current_param_type);
       if(!m_indicator_save_pending) m_btn_save_indicator.Hide();
-      //m_treeview_symboltf_need_sync = true;
-      //m_table_indicator_need_sync   = true;
       ::ChartRedraw(m_chart_id);
       return;
      }
@@ -119,7 +68,7 @@
       for(int i = 0; i < ::ArraySize(m_type_node_id); i++)
         {
          if(m_type_node_id[i] != item_id) continue;
-         ShowAddIndicatorForm(m_type_node_value[i]);
+         ShowCFrame_IndicatorParameter(m_type_node_value[i]);
          ::ChartRedraw(m_chart_id);
          break;
         }
@@ -169,36 +118,47 @@
       ShowIndicatorSavePending();
       return;
      }
-   //--- m_table_indicator_template: col 0 = delete, 2..6 = checkboxes
-    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-       && lparam == m_table_indicator_template.ObjectID())
+   //--- m_table_indicator_template: col 0 = delete button
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_table_indicator_template.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
-      if(col == 0)      m_pending_remove_row = row;
-      else if(col == 2) OnClickToggleBuySignal(row);
-      else if(col == 3) OnClickToggleSellSignal(row);
-      else if(col == 4) OnClickToggleShowIndicatorOnChart(row);
-      else if(col == 5) OnClickToggleSoundAlert(row);
-      else if(col == 6) OnClickToggleMessageAlert(row);
+      if(!m_table_indicator_template.CellIndexes(sparam, col, row)) return;
+      if(col == 0) OnClickRemoveIndicator(row);
       return;
      }
-   //--- m_table_SymbolTFSeting: col 0 = delete (not the chart's own pair), 2..5 = checkboxes
-    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-       && lparam == m_table_SymbolTFSeting.ObjectID())
+   //--- m_table_indicator_template: cols 2..6 = checkboxes, dparam = the new state
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_indicator_template.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
-      if(row < 0 || row >= (int)m_table_SymbolTFSeting.Model().RowsTotal()) return;
+      if(!m_table_indicator_template.CellIndexes(sparam, col, row)) return;
+      bool on = (dparam != 0);
+      if(col == 2)      OnClickToggleBuySignal(row, on);
+      else if(col == 3) OnClickToggleSellSignal(row, on);
+      else if(col == 4) OnClickToggleShowIndicatorOnChart(row, on);
+      else if(col == 5) OnClickToggleSoundAlert(row, on);
+      else if(col == 6) OnClickToggleMessageAlert(row, on);
+      return;
+     }
+   //--- m_table_SymbolTFSeting: col 0 = delete button (not the chart's own pair)
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_table_SymbolTFSeting.ObjectID())
+     {
+      int col, row;
+      if(!m_table_SymbolTFSeting.CellIndexes(sparam, col, row)) return;
+      if(col != 0 || row < 0 || row >= (int)m_table_SymbolTFSeting.Model().RowsTotal()) return;
       string sym = m_table_SymbolTFSeting.Cell(0, row).ValueS();
       string tf  = m_table_SymbolTFSeting.Cell(1, row).ValueS();
-      if(col == 0 && !(sym == ::Symbol() && tf == TimeframeDescription((ENUM_TIMEFRAMES)::Period())))
-       {
-        m_pending_remove_sym_symboltf = sym;
-        m_pending_remove_tf_symboltf  = tf;
-       }
-      else if(col >= 2 && col <= 5)
-         OnCheckTableSymbolTFSetting(sym, tf, row, col);
+      if(sym == ::Symbol() && tf == TimeframeDescription((ENUM_TIMEFRAMES)::Period())) return;
+      if(m_SymbolTFManager != NULL)
+         m_SymbolTFManager.Delete_SymbolTFSetting(sym, TimestampByDescription(tf));
+      return;
+     }
+   //--- m_table_SymbolTFSeting: cols 2..5 = checkboxes, dparam = the new state
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_SymbolTFSeting.ObjectID())
+     {
+      int col, row;
+      if(!m_table_SymbolTFSeting.CellIndexes(sparam, col, row)) return;
+      if(col < 2 || col > 5 || row < 0 || row >= (int)m_table_SymbolTFSeting.Model().RowsTotal()) return;
+      OnCheckTableSymbolTFSetting(m_table_SymbolTFSeting.Cell(0, row).ValueS(), m_table_SymbolTFSeting.Cell(1, row).ValueS(), col, dparam != 0);
       return;
      }
    //--- CSymbolsCollection: a symbol was added to / removed from Market Watch
@@ -251,22 +211,20 @@
       OnClickTreeView_SymbolTFSetting((long)dparam);
       return;
      }
-    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-       && lparam == m_table_CandlePatternsSetting.ObjectID())
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_CandlePatternsSetting.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
+      if(!m_table_CandlePatternsSetting.CellIndexes(sparam, col, row)) return;
       if(col == 2 || col == 3 || col == 5 || col == 6)
-         OnCheckTableCandlePatternSetting(row, col);
+         OnCheckTableCandlePatternSetting(row, col, dparam != 0);
       return;
      }
-    if((id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON || id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX)
-       && lparam == m_table_SwingSetting.ObjectID())
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_SwingSetting.ObjectID())
      {
       int col, row;
-      if(!TableCellFromId(sparam, col, row)) return;
+      if(!m_table_SwingSetting.CellIndexes(sparam, col, row)) return;
       if(col >= 1 && col <= 3)
-         OnCheckTableSwingSetting(row, col);
+         OnCheckTableSwingSetting(row, col, dparam != 0);
       return;
      }
    //--- Swing Strength spin-edit (Enter or +/-) and Wick checkbox apply live
@@ -281,15 +239,6 @@
       OnChangeSwingParams();
       return;
      }
-  }
- //--- "col_row" cell id sent by CTable
- bool CGUIPannel::TableCellFromId(const string cell_id, int &col, int &row)
-  {
-   string parts[];
-   if(::StringSplit(cell_id, '_', parts) != 2) return false;
-   col = (int)::StringToInteger(parts[0]);
-   row = (int)::StringToInteger(parts[1]);
-   return true;
   }
  void CGUIPannel::ShowIndicatorSavePending(void)
   {

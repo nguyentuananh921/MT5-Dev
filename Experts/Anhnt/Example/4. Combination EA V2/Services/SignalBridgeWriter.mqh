@@ -36,17 +36,8 @@
       CBarPatternsControl         *m_patterns_control;
       CSwingSetting               *m_swing_setting;
 
-     // Per-Symbol watermark was 2 scalars (m_signal_bridge_symbol/m_signal_bridge_last_time),
-     // so switching the active chart between 2+ already-tracked Symbols made EVERY switch look
-     // "fresh" for whichever Symbol wasn't the last one written, forcing a full unconditional
-     // rewrite even though nothing about that Symbol's own signal history had changed. Parallel
-     // arrays let each Symbol keep its own watermark.
-     // One shared watermark across Indicator+Pattern+Swing (pre-2026-09-22) let a newer
-     // Indicator/Pattern row push the combined watermark past a Swing's ConfirmedTime() before
-     // that Swing had ever actually been pushed - ConfirmedTime() is pivot time + N bars, so it's
-     // structurally older than same-tick Signal/Pattern times. The incremental filter then saw
-     // the Swing as already-covered and silently dropped it forever. Split into 3 independent
-     // per-type watermarks so one type's progress can never mask another's (Anhnt/Claude, 2026-09-22).
+     // Watermarks are per Symbol (parallel arrays) and per type (Indicator, Pattern, Swing): a shared
+     // one let a newer Indicator/Pattern row hide a Swing, whose ConfirmedTime() (pivot + N bars) is older
       string                     m_bridge_wm_symbol[];
       datetime                   m_bridge_wm_time_indicator[];
       datetime                   m_bridge_wm_time_pattern[];
@@ -142,7 +133,6 @@
   //| GetCandlePatternSetting - identity-only lookup against the LIVE   |
   //| m_patterns_control (same registry CGUIPannel borrows), same        |
   //| pattern as GetIndicatorTemplateSetting/GetSymbolTFSetting above    |
-  //| (Anhnt, 2026-08-29).                                                |
   //+------------------------------------------------------------------+
   bool CSignalBridgeWriter::GetCandlePatternSetting(const ENUM_PATTERN_TYPE type, bool &buy, bool &sell)
    {
@@ -211,7 +201,7 @@
           if(ind.TypeIndicator() == IND_BANDS)
            {
             CSignalBollinger *bb = (CSignalBollinger*)signal;
-            for(int li = 0; li < 3; li++)
+            for(int li = 0; li < 2; li++)
               {
                int lt = bb.LineHistoryTotal(li);
                if(lt == 0) continue;
@@ -307,9 +297,8 @@
          if(ind.TypeIndicator() == IND_BANDS)
            {
             CSignalBollinger *bb = (CSignalBollinger*)signal;
-            for(int li = 0; li < 3; li++)
+            for(int li = 0; li < 2; li++)
               {
-               if(li == BBAND_LINE_MID) continue;
                int line_total = bb.LineHistoryTotal(li);
                for(int h = 0; h < line_total; h++)
                  {

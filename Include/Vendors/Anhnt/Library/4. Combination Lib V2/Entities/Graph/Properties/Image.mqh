@@ -6,8 +6,8 @@
 #ifndef __IMAGE_MQH__
 #define __IMAGE_MQH__
  #include <Canvas\Canvas.mqh>
- #include "..\Defines\ImageDataDefine.mqh"
- #include "..\..\Services\Colors.mqh"
+ #include "..\..\Defines\ImageDataDefine.mqh"
+ #include "..\..\..\Services\Colors.mqh"
 //+------------------------------------------------------------------+
 //| One picture: pixel data read from ImageDataDefine or a resource  |
 //+------------------------------------------------------------------+

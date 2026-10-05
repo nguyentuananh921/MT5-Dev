@@ -15,7 +15,6 @@
   {
    private:
       double           m_min_adx;   // minimum ADX to generate signal (0 = no gate)
-
    public:
       CSignalADX(double min_adx = 0.0);
       virtual         ~CSignalADX(void);

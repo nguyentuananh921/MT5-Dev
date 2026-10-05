@@ -262,4 +262,12 @@
   };
 #define WF_CONTROL_EVENTS_NEXT_CODE (WF_CONTROL_EVENT_CLICK_SCROLL_DOWN+1)  // The code of the next event after the last graphical element event code
 
+//--- Signal events: first link off WF_CONTROL_EVENTS_NEXT_CODE; BarPatternControl and the Manager chains continue from SIGNAL_EVENTS_NEXT_CODE
+enum ENUM_SIGNAL_EVENT
+ {
+  SIGNAL_EVENT_NO_EVENT = WF_CONTROL_EVENTS_NEXT_CODE,
+  SIGNAL_EVENT_LIVE_FLIP,    // bar 0 flipped to BUY/SELL: lparam=indicator handle, dparam=direction, sparam="" primary / "Upper" / "Lower"
+ };
+#define SIGNAL_EVENTS_NEXT_CODE (SIGNAL_EVENT_LIVE_FLIP+1)  // The code of the next event after the last signal event code
+
 #endif // __EVENT_DEFINES_MQH__

@@ -316,7 +316,7 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
         double d = (type == POSITION_TYPE_BUY) ? (trail_price - current_sl) : (current_sl - trail_price);
         double min_improve = row_setting.TrailingStepPts()*point;
         double n = ::NormalizeDouble(trail_price, sym.Digits());
-        //--- Same point/2 tolerance as the StopLost candidate above, same reason (Anhnt/Claude, 2026-09-17).
+        //--- Same point/2 tolerance as the StopLost candidate above, same reason.
         if(((current_sl == 0.0) || (d > min_improve)) && ::MathAbs(n - current_sl) >= point/2 && this.IsStopDistanceValid(sym, type, trail_price))
          {
           trail_improve = d;
@@ -378,7 +378,7 @@ void CTradingEngine::ApplyStopLostAndTrailing(const bool has_trade_event)
               if(!sib_improves) continue;
               bool sib_valid_dist = this.IsStopDistanceValid(sym, type, c_norm);
               if(!sib_valid_dist) continue;
-              if(::MathAbs(c_norm - sib_current_sl) < point/2) continue; // rounding collapsed to no real change - same point/2 tolerance as the main candidate checks above (Anhnt/Claude, 2026-09-17)
+              if(::MathAbs(c_norm - sib_current_sl) < point/2) continue; // rounding collapsed to no real change - same point/2 tolerance as the main candidate checks above
               trade_obj.ModifyPosition(sib_ticket, c_norm);
              }
            }

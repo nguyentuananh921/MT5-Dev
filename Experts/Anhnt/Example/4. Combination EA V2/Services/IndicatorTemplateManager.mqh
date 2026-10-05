@@ -39,7 +39,6 @@
   {
    private:
     CArrayObj          m_list;               //List of CIndicatorSetting* in Template
-    bool               m_suppress_event;     // true while OnInitEvent()'s chart-scan bulk-loads - avoids an event storm
     ENUM_INDICATOR     m_last_removed_type;
     MqlParam           m_last_removed_params[];
     bool               m_loaded_from_json;
@@ -51,7 +50,7 @@
     int                FindInsertIndex(const ENUM_INDICATOR type, MqlParam &params[]) const;
 
    public:
-                       CIndicatorTemplateManager(void) : m_suppress_event(false), m_last_removed_type(IND_CUSTOM), m_loaded_from_json(false) {}
+                       CIndicatorTemplateManager(void) : m_last_removed_type(IND_CUSTOM), m_loaded_from_json(false) {}
                        ~CIndicatorTemplateManager(void) {}     
      bool              OnInitEvent(CChartObjCollection *chart_obj);      
      bool              OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam,
@@ -64,7 +63,7 @@
      bool                Exists(const ENUM_INDICATOR type, MqlParam &params[])        const { return FindByIdentity(type, params) != NULL; }
 
     //--Add,Remove in Template base on indicator identity
-     bool                AddIndicatorToIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);   // false if identity already exists - RAW identity only, callers never need the row pointer (ADDED event's lparam+At(index) covers that)
+     bool                AddIndicatorToIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[], const bool silent=false);   // false if identity already exists - RAW identity only, callers never need the row pointer (ADDED event's lparam+At(index) covers that)
      bool                DeleteIndicatorFromIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[]);
      bool                UpdateRow_IndicatorTemplateSetting_ShowColumn(const int index, const bool show);
      void                GetLastRemoved(ENUM_INDICATOR &type, MqlParam &out_params[]) const;
@@ -234,7 +233,7 @@
       {
        // Insert sorted here too (not just AddIndicatorToIndicatorTemplateSetting) - self-heals
        // m_list's type/params-sorted invariant even if Config_Setting.json was ever hand-edited
-       // out of order (Anhnt/Claude, 2026-09-17).
+       // out of order.
        MqlParam row_params[];
        row.GetRawParams(row_params);
        int insert_at = FindInsertIndex(row.TypeEnum(), row_params);
@@ -391,7 +390,7 @@
      }
     return m_list.Total();
   }
- bool CIndicatorTemplateManager::AddIndicatorToIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[])
+ bool CIndicatorTemplateManager::AddIndicatorToIndicatorTemplateSetting(const ENUM_INDICATOR type, MqlParam &params[], const bool silent=false)
    {
      if(Exists(type, params)) return false;
      bool is_new_type = !ExistsTypeInTemplate(type);   // check BEFORE insert - "first row of this type"
@@ -405,8 +404,8 @@
        delete row;
        return false;
       }
-     if(!m_suppress_event)
-      {       
+     if(!silent)
+      {
        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED, (long)type, 0.0, "");
        if(is_new_type)
           ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_ADDED, (long)type, 0.0, "");
@@ -432,12 +431,9 @@
         m_last_removed_params[p] = params[p];
      if(!m_list.Delete(IndexOfIdentity(type, params))) return false;   // FreeMode default true - deletes the CIndicatorSetting too
 
-     if(!m_suppress_event)
-      {
-       ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE, (long)type, 0.0, "");
-       if(!ExistsTypeInTemplate(type))   // check AFTER delete - "last row of this type just left"
-          ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE, (long)type, 0.0, "");
-      }
+     ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE, (long)type, 0.0, "");
+     if(!ExistsTypeInTemplate(type))   // check AFTER delete - "last row of this type just left"
+        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_TYPE_DELETE, (long)type, 0.0, "");
      return true;
    }
  //+------------------------------------------------------------------+
@@ -460,8 +456,7 @@
      CIndicatorSetting *row = m_list.At(index);
      if(row == NULL) return false;
      row.ShowOnChart(show);
-     if(!m_suppress_event)
-        ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED, (long)index, 0.0, "");
+     ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED, (long)index, 0.0, "");
      return true;
    } 
  bool CIndicatorTemplateManager::OnInitEvent(CChartObjCollection *chart_obj)
@@ -480,9 +475,7 @@
        atr14_params[0].integer_value = 14;
        if(!Exists(IND_ATR, atr14_params))
         {
-         m_suppress_event = true;
-         AddIndicatorToIndicatorTemplateSetting(IND_ATR, atr14_params);
-         m_suppress_event = false;
+         AddIndicatorToIndicatorTemplateSetting(IND_ATR, atr14_params, true);
          CIndicatorSetting *atr14_entry = FindByIdentity(IND_ATR, atr14_params);
          if(atr14_entry != NULL) atr14_entry.ShowOnChart(false);
         }
@@ -491,7 +484,6 @@
      if(chart_obj == NULL) return ok;
      CChartObj *chart = chart_obj.GetChart(::ChartID());
      if(chart == NULL) return ok;     
-     m_suppress_event = true;
      for(int win = 0; win < chart.WindowsTotal(); win++)
       {
        CChartWnd *wnd = chart.GetWindowByNum(win);
@@ -508,15 +500,14 @@
           if(existing != NULL)
              existing.ShowOnChart(true);   // already tracked - re-truth Show to match reality on chart
           else
-             AddIndicatorToIndicatorTemplateSetting(type, params);   // new row - ctor already defaults ShowOnChart=true
+             AddIndicatorToIndicatorTemplateSetting(type, params, true);   // new row - ctor already defaults ShowOnChart=true
          }
       }
-     m_suppress_event = false;
      return ok;
   }
  //+------------------------------------------------------------------+
  //| Handle events from the Chart Window indicator objects (manual     |
- //| changes) - moved from EA::OnChartEvent (Anhnt, 2026-08-30).       |
+ //| changes).                                                         |
  //+------------------------------------------------------------------+
  bool CIndicatorTemplateManager::OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam,
                                               CChartObjCollection *chart_obj)

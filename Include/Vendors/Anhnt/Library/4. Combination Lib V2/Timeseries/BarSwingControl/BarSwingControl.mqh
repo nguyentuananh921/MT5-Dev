@@ -27,17 +27,14 @@ class CBarSwingControl : public CBaseObj
       ENUM_TIMEFRAMES         m_timeframe;                                             // Swing timeseries chart period
       ulong                   m_symbol_code;                                           // Symbol name as a number, same formula CBarPattern uses
       CSwingSetting          *m_setting;                                               // Shared Strength/PriceBasis - owned outside
-      datetime                m_last_processed_time;                                   // Newest candidate bar's Time() already run through ProcessCandidate() - tracks
-                                                                                        // progress across calls so UpdateSwingList() never re-derives a fixed-size
-                                                                                        // window (a real tick gap can let "hi" jump by more bars than that window
-                                                                                        // covered, silently skipping candidates in between - Anhnt/Claude, 2026-09-22)
-      CArrayObj              *m_list_series;                                           // Pointer to the Bars table (CBarSeriesDE::m_list_series) - index 0 = newest
+      datetime                m_last_processed_time;                                   // Time of the newest candidate bar already run through ProcessCandidate()
+      CArrayObj              *m_list_series;                                           // Pointer to the Bars table (CBarSeriesDE::m_list_series) - index 0 = oldest
       CArrayObj              *m_list_all_swings;                                       // Pointer to the (possibly shared, multi-symbol) Swings table
       CBarSwing               m_swing_instance;                                        // Scratch instance for Search()-by-code, mirrors CBarPatternsControl::m_pattern_instance
    //--- Price used for the High/Low comparison at a given m_list_series index, per m_price_basis
       double                  SwingHighPrice(const int idx) const;
       double                  SwingLowPrice(const int idx) const;
-   //--- Local-extremum test at idx against m_strength bars each side (idx-j = newer, idx+j = older)
+   //--- Local-extremum test at idx against m_strength bars each side (idx-j = older, idx+j = newer)
       bool                    IsSwingHighAt(const int idx) const;
       bool                    IsSwingLowAt(const int idx) const;
    //--- Unique code (Primary Key) - time+type+period+symbol, mirrors CBarPattern's own code formula
@@ -151,13 +148,9 @@ ulong CBarSwingControl::GetSwingCode(const ENUM_SWING_TYPE type, const datetime 
    return (ulong)pivot_time + (ulong)type + (ulong)this.m_timeframe + this.m_symbol_code;
  }
 //+------------------------------------------------------------------+
-//| HH/LH/HL/LL vs the last CONFIRMED Swing of the SAME type, SAME   |
-//| Symbol+Timeframe - scans m_list_all_swings backward (newest      |
-//| first) since it is sorted by time; this Control's own new Swing  |
-//| has not been inserted yet when this runs, so the first match     |
-//| found IS the correct "previous" reference (Anhnt/Claude,          |
-//| 2026-09-18 - "so với Swing gần nhất trước đó" - N=1 by definition,|
-//| not a multi-swing search).                                        |
+//| HH/LH/HL/LL vs the previous Swing of the SAME type, Symbol and   |
+//| Timeframe - scans m_list_all_swings newest first (sorted by time);|
+//| the new Swing is not inserted yet, so the first match is the one.|
 //+------------------------------------------------------------------+
 ENUM_SWING_STRUCTURE CBarSwingControl::ClassifyStructure(const ENUM_SWING_TYPE type, const double price) const
  {
@@ -270,22 +263,11 @@ int CBarSwingControl::InitSwingList(void)
    return this.m_list_all_swings.Total();
  }
 //+------------------------------------------------------------------+
-//| Incremental scan: every candidate newer than the last one this   |
-//| Control actually processed - call this on every new-bar event    |
-//| once InitSwingList() has already run once.                        |
-//| n_bars is now only the FALLBACK window for the one-time case     |
-//| where m_last_processed_time is still unset (fresh instance that   |
-//| never ran InitSwingList - shouldn't normally happen, but keeps    |
-//| this method safe to call standalone).                             |
-//| Tracks progress by bar TIME, not index - m_list_series trims its  |
-//| oldest entries once past capacity (CBarSeriesDE::Refresh(),       |
-//| Delete(0)), which would silently invalidate a remembered index.   |
-//| A fixed n_bars-sized window here previously assumed "hi" only     |
-//| ever advances by 1 bar between calls; a real tick gap (thin       |
-//| liquidity, or the moments right after attach/reinit) can let it   |
-//| jump by more, permanently skipping the candidates in between      |
-//| (Anhnt/Claude, 2026-09-22 - traced several "missing Swing on      |
-//| chart" reports back to exactly this).                             |
+//| Incremental scan: every candidate newer than the last processed |
+//| one - call on every new-bar event after InitSwingList().         |
+//| n_bars is only the fallback window when nothing was processed.   |
+//| Progress is tracked by bar TIME, not index: m_list_series trims  |
+//| its oldest entries past capacity, which would invalidate an index.|
 //+------------------------------------------------------------------+
 int CBarSwingControl::UpdateSwingList(const int n_bars=4)
  {

@@ -425,7 +425,7 @@ void CScroll::OnChartEvent(const int id,const long &lparam,const double &dparam,
 //+------------------------------------------------------------------+
 void CScroll::MouseActiveAreaWhellHandler(const int id,const long &lparam,const double &dparam,const string &sparam)
  {
-  if(!this.IsScroll())
+  if(s_mouse.IsCtrl() || !this.IsScroll())
      return;
   this.MovingThumb(this.m_current_pos+(s_mouse.DeltaWheel()>0 ? -1 : 1));
  }

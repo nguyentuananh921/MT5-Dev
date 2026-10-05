@@ -25,6 +25,7 @@ class CTableView : public CGElement
     CTableModel      *m_model;
     CTableHeaderView  m_header_view;
     CTableRowView    *m_rows[];
+    CTableRowView    *m_hidden_rows[];
     CScrollV          m_scrollv;
     CScrollH          m_scrollh;
     CTextBox          m_edit;
@@ -36,7 +37,6 @@ class CTableView : public CGElement
     bool              m_lights_hover;
     bool              m_selectable_row;
     bool              m_is_sort_mode;
-    bool              m_column_resize_mode;
     color             m_grid_color;
     color             m_headers_color;
     color             m_headers_color_hover;
@@ -57,6 +57,8 @@ class CTableView : public CGElement
     int               m_column_resize_x_fixed;
     int               m_column_resize_prev_width;
     int               m_shift_x_step;
+    string            m_filter_hidden[];
+    int               m_filter_column;
 
     int               RowsTop(void)                        const { return(this.m_show_headers ? 1+this.m_header_y_size : 1); }
     int               RowsBottom(void)                     const { return(this.m_y_size-1-(this.m_scrollh.IsVisible() ? 16 : 0)); }
@@ -69,6 +71,11 @@ class CTableView : public CGElement
     void              DrawHeaderStrip(void);
     void              OpenEdit(const int column,const int row);
     void              OpenComboList(const int column,const int row);
+    void              OpenFilterList(const int column);
+    void              CommitFilter(void);
+    void              FiltersReset(void);
+    bool              RowPasses(CTableRow *row);
+    int               ModelRowIndex(const int row);
     void              CheckEditEnd(void);
     void              CloseOverlays(void);
     void              UpdateResizePointer(void);
@@ -82,7 +89,9 @@ class CTableView : public CGElement
   public:
     bool              CreateTableView(const long chart_id,const int subwin,const string name,const int x,const int y,const int w,const int h);
     void              Bind(CTableModel *model)                   { this.m_model=model; this.m_header_view.Bind(model.Header()); }
-    void              Rebuild(const bool redraw=false);
+    void              Rebuild(const bool redraw=false,const bool keep_filter=false);
+    void              ClearFilters(const bool redraw=false);
+    CTableRowView    *RowViewByModel(const int model_row);
     CTableHeaderView *GetHeaderViewPointer(void)                 { return(::GetPointer(this.m_header_view)); }
     CScrollV         *GetScrollVPointer(void)                    { return(::GetPointer(this.m_scrollv));     }
     CScrollH         *GetScrollHPointer(void)                    { return(::GetPointer(this.m_scrollh));     }
@@ -96,7 +105,8 @@ class CTableView : public CGElement
     void              LightsHover(const bool flag)               { this.m_lights_hover=flag;      }
     void              SelectableRow(const bool flag)             { this.m_selectable_row=flag;    }
     void              IsSortMode(const bool flag)                { this.m_is_sort_mode=flag;      }
-    void              ColumnResizeMode(const bool flag)          { this.m_column_resize_mode=flag; }
+    void              IsFilterMode(const int column,const bool flag) { this.m_header_view.FilterMode(column,flag); }
+    void              ColumnResizeMode(const bool flag,const int column=-1) { this.m_header_view.ColumnResizeMode(column,flag); }
     void              MinColumnWidth(const int width)            { this.m_min_column_width=(width>3 ? width : 3); }
     void              GridColor(const color clr)                 { this.m_grid_color=clr;         }
     void              HeadersColor(const color clr)              { this.m_headers_color=clr;      }
@@ -131,7 +141,6 @@ CTableView::CTableView(void) : m_model(NULL),
                                m_lights_hover(false),
                                m_selectable_row(false),
                                m_is_sort_mode(false),
-                               m_column_resize_mode(false),
                                m_grid_color(clrLightGray),
                                m_headers_color(C'255,244,213'),
                                m_headers_color_hover(C'229,241,251'),
@@ -151,7 +160,8 @@ CTableView::CTableView(void) : m_model(NULL),
                                m_column_resize_control(WRONG_VALUE),
                                m_column_resize_x_fixed(0),
                                m_column_resize_prev_width(0),
-                               m_shift_x_step(10)
+                               m_shift_x_step(10),
+                               m_filter_column(WRONG_VALUE)
  {
  }
 //+------------------------------------------------------------------+
@@ -200,21 +210,30 @@ bool CTableView::CreateTableView(const long chart_id,const int subwin,const stri
  }
 //+------------------------------------------------------------------+
 //| Row views follow the model rows by identity, so their cell       |
-//| settings and the selection survive sorting and deleting          |
+//| settings and the selection survive sorting and deleting.         |
+//| New data shows every row; keep_filter keeps the column filters   |
 //+------------------------------------------------------------------+
-void CTableView::Rebuild(const bool redraw=false)
+void CTableView::Rebuild(const bool redraw=false,const bool keep_filter=false)
  {
   if(this.m_model==NULL)
      return;
   this.CloseOverlays();
   this.m_header_view.ColumnsInit((int)this.m_model.ColumnsTotal());
-  int size =::ArraySize(this.m_rows);
+  if(keep_filter)
+     ::ArrayResize(this.m_filter_hidden,this.m_header_view.ColumnsTotal());
+  else
+     this.FiltersReset();
   int total=(int)this.m_model.RowsTotal();
+  int size =::ArraySize(this.m_rows);
+  int hidden=::ArraySize(this.m_hidden_rows);
   CTableRow *selected=(this.m_selected_item>=0 && this.m_selected_item<size ? this.m_rows[this.m_selected_item].Row() : NULL);
   CTableRowView *old[];
-  ::ArrayResize(old,size);
+  ::ArrayResize(old,size+hidden);
   for(int i=0; i<size; i++)
      old[i]=this.m_rows[i];
+  for(int i=0; i<hidden; i++)
+     old[size+i]=this.m_hidden_rows[i];
+  size+=hidden;
   CTableRowView *rows[];
   ::ArrayResize(rows,total);
   for(int i=0; i<total; i++)
@@ -253,18 +272,91 @@ void CTableView::Rebuild(const bool redraw=false)
      this.DeleteChild(old[j]);
      delete old[j];
     }
-  ::ArrayResize(this.m_rows,total,100);
+  ::ArrayResize(this.m_rows,0);
+  ::ArrayResize(this.m_hidden_rows,0);
   this.m_selected_item=WRONG_VALUE;
   for(int i=0; i<total; i++)
     {
-     this.m_rows[i]=rows[i];
-     this.m_rows[i].Bind(this.m_model.Row(i));
-     if(selected!=NULL && this.m_model.Row(i)==selected)
-        this.m_selected_item=i;
+     CTableRow *model_row=this.m_model.Row(i);
+     rows[i].Bind(model_row);
+     if(!this.RowPasses(model_row))
+       {
+        int h=::ArraySize(this.m_hidden_rows);
+        ::ArrayResize(this.m_hidden_rows,h+1,100);
+        this.m_hidden_rows[h]=rows[i];
+        continue;
+       }
+     int v=::ArraySize(this.m_rows);
+     ::ArrayResize(this.m_rows,v+1,100);
+     this.m_rows[v]=rows[i];
+     if(selected!=NULL && model_row==selected)
+        this.m_selected_item=v;
     }
   this.m_item_index_focus=WRONG_VALUE;
   if(this.m_canvas.ChartObjectName()!="")
      this.RecalculateAndResizeTable(redraw);
+ }
+//+------------------------------------------------------------------+
+//| Every column shows every value again                             |
+//+------------------------------------------------------------------+
+void CTableView::FiltersReset(void)
+ {
+  int total=this.m_header_view.ColumnsTotal();
+  ::ArrayResize(this.m_filter_hidden,total);
+  for(int i=0; i<total; i++)
+    {
+     this.m_filter_hidden[i]="";
+     this.m_header_view.FilterActive(i,false);
+    }
+ }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void CTableView::ClearFilters(const bool redraw=false)
+ {
+  this.FiltersReset();
+  this.Rebuild(redraw,true);
+ }
+//+------------------------------------------------------------------+
+//| A column hides a row when its value is in the hidden list;       |
+//| the list is "\x01value\x01value\x01", empty = no filter          |
+//+------------------------------------------------------------------+
+bool CTableView::RowPasses(CTableRow *row)
+ {
+  string sep=::ShortToString(1);
+  for(int c=0; c<::ArraySize(this.m_filter_hidden); c++)
+    {
+     if(this.m_filter_hidden[c]=="")
+        continue;
+     CTableCell *cell=row.Cell(c);
+     if(cell!=NULL && ::StringFind(this.m_filter_hidden[c],sep+cell.Value()+sep)>=0)
+        return(false);
+    }
+  return(true);
+ }
+//+------------------------------------------------------------------+
+//| Displayed row -> model row (what the events carry)               |
+//+------------------------------------------------------------------+
+int CTableView::ModelRowIndex(const int row)
+ {
+  if(row<0 || row>=::ArraySize(this.m_rows) || this.m_rows[row].Row()==NULL)
+     return(WRONG_VALUE);
+  return(this.m_rows[row].Row().Index());
+ }
+//+------------------------------------------------------------------+
+//| Row view of a model row, filtered-out rows included              |
+//+------------------------------------------------------------------+
+CTableRowView *CTableView::RowViewByModel(const int model_row)
+ {
+  if(this.ModelRowIndex(model_row)==model_row)
+     return(this.m_rows[model_row]);
+  for(int i=0; i<::ArraySize(this.m_rows); i++)
+     if(this.m_rows[i].Row()!=NULL && this.m_rows[i].Row().Index()==model_row)
+        return(this.m_rows[i]);
+  for(int i=0; i<::ArraySize(this.m_hidden_rows); i++)
+     if(this.m_hidden_rows[i].Row()!=NULL && this.m_hidden_rows[i].Row().Index()==model_row)
+        return(this.m_hidden_rows[i]);
+  return(NULL);
  }
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -373,7 +465,7 @@ void CTableView::DrawHeaderStrip(void)
   if(!this.m_show_headers)
      return;
   this.m_canvas.FontSet(this.m_font,-this.m_font_size*10);
-  this.m_header_view.DrawHeader(this.m_canvas,1,this.m_header_y_size,this.m_x_size-2,this.m_headers_color,this.m_headers_color_hover,this.m_headers_text_color,this.m_grid_color);
+  this.m_header_view.DrawHeader(this.m_canvas,1,this.m_header_y_size,this.m_x_size-2,this.m_headers_color,this.m_headers_color_hover,this.m_headers_text_color,this.m_grid_color,this.m_selected_row_color);
  }
 //+------------------------------------------------------------------+
 //| Header strip + every visible row                                 |
@@ -501,6 +593,7 @@ void CTableView::OpenComboList(const int column,const int row)
   if(view==NULL || view.ValueListTotal()<1 || r<0 || r>=this.VisibleRowsTotal())
      return;
   int total=view.ValueListTotal();
+  this.m_listview.CheckBoxMode(false);
   this.m_listview.Rebuilding(total,false);
   for(int i=0; i<total; i++)
      this.m_listview.SetValue(i,view.ValueListItem(i));
@@ -516,6 +609,83 @@ void CTableView::OpenComboList(const int column,const int row)
   ::EventChartCustom(this.m_chart_id,ON_SET_AVAILABLE,this.ObjectID(),0,"");
  }
 //+------------------------------------------------------------------+
+//| Excel-like list under the header: "(All)" + the distinct values  |
+//| of the column in its own sort order, checked = shown             |
+//+------------------------------------------------------------------+
+void CTableView::OpenFilterList(const int column)
+ {
+  if(column<0 || column>=::ArraySize(this.m_filter_hidden))
+     return;
+  CTableRow *sample[];
+  string     value[];
+  int        total=0;
+  for(uint r=0; r<this.m_model.RowsTotal(); r++)
+    {
+     CTableRow  *row =this.m_model.Row(r);
+     CTableCell *cell=(row!=NULL ? row.Cell(column) : NULL);
+     if(cell==NULL)
+        continue;
+     string text=cell.Value();
+     bool   found=false;
+     for(int i=0; i<total && !found; i++)
+        found=(value[i]==text);
+     if(found)
+        continue;
+     ::ArrayResize(sample,total+1,100);
+     ::ArrayResize(value,total+1,100);
+     int pos=total++;
+     while(pos>0 && sample[pos-1].Compare(row,column)>0)
+       {
+        sample[pos]=sample[pos-1];
+        value[pos] =value[pos-1];
+        pos--;
+       }
+     sample[pos]=row;
+     value[pos] =text;
+    }
+  string sep=::ShortToString(1);
+  bool   all=true;
+  this.m_listview.CheckBoxMode(true);
+  this.m_listview.Rebuilding(total+1,false);
+  for(int i=0; i<total; i++)
+    {
+     bool shown=(::StringFind(this.m_filter_hidden[column],sep+value[i]+sep)<0);
+     this.m_listview.SetValue(i+1,value[i]);
+     this.m_listview.SetState(i+1,shown);
+     all=(all && shown);
+    }
+  this.m_listview.SetValue(0,"(All)");
+  this.m_listview.SetState(0,all);
+  this.m_listview.Move(this.m_x+::MathMax(this.m_header_view.ColumnX(column),1),this.m_y+this.RowsTop());
+  this.m_listview.Show();
+  this.m_listview.Draw(true);
+  this.m_filter_column=column;
+  ::EventChartCustom(this.m_chart_id,ON_SET_AVAILABLE,this.ObjectID(),0,"");
+ }
+//+------------------------------------------------------------------+
+//| List closed by an outside click: unchecked values become hidden  |
+//+------------------------------------------------------------------+
+void CTableView::CommitFilter(void)
+ {
+  int column=this.m_filter_column;
+  if(column==WRONG_VALUE || column>=::ArraySize(this.m_filter_hidden) || !this.m_listview.IsVisible())
+     return;
+  string sep=::ShortToString(1);
+  string hidden="";
+  for(int i=1; i<this.m_listview.ItemsTotal(); i++)
+    {
+     if(this.m_listview.GetState(i))
+        continue;
+     if(hidden=="")
+        hidden=sep;
+     hidden+=this.m_listview.GetValue(i)+sep;
+    }
+  this.m_filter_hidden[column]=hidden;
+  this.m_header_view.FilterActive(column,hidden!="");
+  this.m_visible_table_from_index=0;
+  this.Rebuild(true,true);
+ }
+//+------------------------------------------------------------------+
 //| Edit box left edit mode (Enter, Esc, outside press): shout once  |
 //| with the text kept for the controller                            |
 //+------------------------------------------------------------------+
@@ -529,7 +699,8 @@ void CTableView::CheckEditEnd(void)
   this.m_edit.Hide();
   this.m_last_edit_column_index=WRONG_VALUE;
   this.m_last_edit_row_index   =WRONG_VALUE;
-  this.SendEvent(ON_END_EDIT,row,(string)column+"_"+(string)row);
+  int model_row=this.ModelRowIndex(row);
+  this.SendEvent(ON_END_EDIT,model_row,(string)column+"_"+(string)model_row);
   ::ChartRedraw(this.m_chart_id);
  }
 //+------------------------------------------------------------------+
@@ -546,6 +717,7 @@ void CTableView::CloseOverlays(void)
      this.m_edit.Hide();
   this.m_last_edit_column_index=WRONG_VALUE;
   this.m_last_edit_row_index   =WRONG_VALUE;
+  this.m_filter_column         =WRONG_VALUE;
  }
 //+------------------------------------------------------------------+
 //| Resize pointer on a header column border or while dragging       |
@@ -555,7 +727,7 @@ void CTableView::UpdateResizePointer(void)
   int  mx=s_mouse.X();
   int  my=s_mouse.Y();
   bool show=(this.m_column_resize_control!=WRONG_VALUE ||
-             (this.m_column_resize_mode && this.m_mouse_focus && !s_mouse.IsLeftBtn() && this.InHeader(my) &&
+             (this.m_mouse_focus && !s_mouse.IsLeftBtn() && this.InHeader(my) &&
               this.m_header_view.ColumnBorderAt(mx-this.m_x,3)!=WRONG_VALUE));
   if(!show)
     {
@@ -598,7 +770,7 @@ void CTableView::OnBlur(void)
 void CTableView::OnPress(const int x,const int y)
  {
   CGElement::OnPress(x,y);
-  if(!this.m_column_resize_mode || this.m_listview.IsVisible() || !this.InHeader(y))
+  if(this.m_listview.IsVisible() || !this.InHeader(y))
      return;
   int column=this.m_header_view.ColumnBorderAt(x-this.m_x,3);
   if(column==WRONG_VALUE)
@@ -637,13 +809,22 @@ void CTableView::OnRelease(const int x,const int y)
   if(this.m_listview.IsVisible())
     {
      if(!this.m_listview.MouseFocus())
+       {
+        this.CommitFilter();
         this.CloseOverlays();
+       }
      return;
     }
   if(!this.m_mouse_focus || (this.m_edit.IsVisible() && this.m_edit.MouseFocus()))
      return;
   if(this.InHeader(y))
     {
+     int filter=this.m_header_view.FilterButtonAt(x-this.m_x);
+     if(filter!=WRONG_VALUE)
+       {
+        this.OpenFilterList(filter);
+        return;
+       }
      int caption=this.m_header_view.ColumnAt(x-this.m_x);
      if(this.m_is_sort_mode && caption!=WRONG_VALUE)
         this.SendEvent(ON_SORT_DATA,caption,"");
@@ -653,17 +834,18 @@ void CTableView::OnRelease(const int x,const int y)
   int column=(row!=WRONG_VALUE ? this.m_header_view.ColumnAt(x-this.m_x) : WRONG_VALUE);
   if(column==WRONG_VALUE)
      return;
-  string cell_id=(string)column+"_"+(string)row;
+  int model_row=this.ModelRowIndex(row);
+  string cell_id=(string)column+"_"+(string)model_row;
   CTableCellView *view=this.CellView(column,row);
   ENUM_TYPE_CELL type=(view!=NULL ? view.CellType() : CELL_SIMPLE);
   if(type==CELL_CHECKBOX)
-     this.SendEvent(ON_CLICK_CHECKBOX,row,cell_id);
+     this.SendEvent(ON_CLICK_CHECKBOX,model_row,cell_id);
   else if(type==CELL_BUTTON)
-     this.SendEvent(ON_CLICK_BUTTON,row,cell_id);
+     this.SendEvent(ON_CLICK_BUTTON,model_row,cell_id);
   if(this.m_selectable_row)
     {
      this.SelectRow(row,true);
-     this.SendEvent(ON_CLICK_LIST_ITEM,row,cell_id);
+     this.SendEvent(ON_CLICK_LIST_ITEM,model_row,cell_id);
     }
   if(type==CELL_COMBOBOX)
      this.OpenComboList(column,row);
@@ -675,7 +857,7 @@ void CTableView::OnRelease(const int x,const int y)
 //+------------------------------------------------------------------+
 void CTableView::MouseActiveAreaWhellHandler(const int id,const long &lparam,const double &dparam,const string &sparam)
  {
-  if(this.m_listview.IsVisible() || s_mouse.X()-this.m_x>this.ContentRight())
+  if(s_mouse.IsCtrl() || this.m_listview.IsVisible() || s_mouse.X()-this.m_x>this.ContentRight())
      return;
   this.Scrolling(this.m_visible_table_from_index+(s_mouse.DeltaWheel()>0 ? -1 : 1));
  }
@@ -730,10 +912,26 @@ void CTableView::OnChartEvent(const int id,const long &lparam,const double &dpar
        }
      return;
     }
+  if(id==CHARTEVENT_CUSTOM+ON_CLICK_LIST_ITEM && lparam==this.m_listview.ObjectID() && this.m_filter_column!=WRONG_VALUE)
+    {
+     int  item=(int)dparam;
+     bool all =this.m_listview.GetState(0);
+     for(int i=1; i<this.m_listview.ItemsTotal(); i++)
+       {
+        if(item==0)
+           this.m_listview.SetState(i,all);
+        else if(!this.m_listview.GetState(i))
+           all=false;
+       }
+     if(item!=0)
+        this.m_listview.SetState(0,all);
+     this.m_listview.Draw(true);
+     return;
+    }
   if(id==CHARTEVENT_CUSTOM+ON_CLICK_LIST_ITEM && lparam==this.m_listview.ObjectID())
     {
      int column=this.m_last_edit_column_index;
-     int row   =this.m_last_edit_row_index;
+     int row   =this.ModelRowIndex(this.m_last_edit_row_index);
      this.CloseOverlays();
      if(column!=WRONG_VALUE)
         this.SendEvent(ON_CLICK_COMBOBOX_ITEM,dparam,(string)column+"_"+(string)row);
@@ -749,6 +947,7 @@ void CTableView::OnChartEvent(const int id,const long &lparam,const double &dpar
      return;
   if(this.m_listview.IsVisible() && s_mouse.IsLeftBtn() && !prev_left && !this.m_listview.MouseFocus() && !this.m_mouse_focus)
     {
+     this.CommitFilter();
      this.CloseOverlays();
      ::ChartRedraw(this.m_chart_id);
     }

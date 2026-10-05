@@ -16,7 +16,7 @@
 #ifndef __COLORELEMENT_MQH__
 #define __COLORELEMENT_MQH__
 #include "Color.mqh"
-#include "..\Defines\GraphDefines.mqh"
+#include "..\..\Defines\GraphDefines.mqh"
 //+------------------------------------------------------------------+
 //| Graphics element color class                                     |
 //+------------------------------------------------------------------+

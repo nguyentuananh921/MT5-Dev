@@ -54,6 +54,11 @@
   #define ON_WINDOW_DRAG_END          (41)
   #define ON_END_CREATE_GUI           (42)
   #define ON_SCROLL_CHANGE            (43)
+  #define ON_BUBBLE_PRESS             (44)
+  #define ON_BUBBLE_RELEASE           (46)
+  #define ON_BUBBLE_CLOSE             (47)
+  #define ON_BRING_TO_TOP             (48)   // a child was shown on top of the windows
+  #define ON_BUBBLE_RESTORE           (49)   // a bubble drop was not applied: bubbles show the real levels again
 // ──────────────────────────────────────────────────────────────────
 // WINDOW / CONTROL SIZES
 // ──────────────────────────────────────────────────────────────────

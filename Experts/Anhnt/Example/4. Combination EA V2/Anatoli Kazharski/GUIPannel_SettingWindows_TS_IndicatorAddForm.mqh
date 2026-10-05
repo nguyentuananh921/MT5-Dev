@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //|                 GUIPannel_SettingWindows_TS_IndicatorAddForm.mqh |
-//| Add Indicator form: per-type param slots + Add/Save buttons      |
+//| Indicator Parameter frame: per-type param slots + Add/Save buttons|
 //+------------------------------------------------------------------+
 #ifndef GUIPANNEL_SETTINGWINDOWS_ADDINDICATORFORM_MQH
 #define GUIPANNEL_SETTINGWINDOWS_ADDINDICATORFORM_MQH
@@ -196,45 +196,50 @@
     return total;
   }
  //--- Each slot owns a CTextEdit and a CComboBox at the same spot; the caption is the control's own label
- bool CGUIPannel::CreateAddIndicatorForm(const int x_gap, const int y_gap)
+ bool CGUIPannel::CreateCFrame_IndicatorParameter(const int x_gap, const int y_gap)
   {
    const int slot_w = INDICATOR_PARAM_LABEL_W + INDICATOR_PARAM_FIELD_W;
+   m_frame_indicator_parameter.SetText("Indicator Parameter");
+   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_frame_indicator_parameter);
+   if(!m_frame_indicator_parameter.CreateFrame(m_chart_id, m_subwin, "FrameIndicatorParam", x_gap, y_gap,
+                                           INDICATOR_FRAME_W, INDICATOR_FRAME_H)) return false;
    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
     {
-     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_param_edits[i]);
-     if(!m_param_edits[i].CreateTextEdit(m_chart_id, m_subwin, "ParamEdit" + (string)i, x_gap, y_gap,
+     m_frame_indicator_parameter.AddChild(&m_param_edits[i]);
+     if(!m_param_edits[i].CreateTextEdit(m_chart_id, m_subwin, "ParamEdit" + (string)i, M_CONTROL_BORDER_GAP, M_CONTROL_HEIGHT,
                                          slot_w, M_CONTROL_HEIGHT, INDICATOR_PARAM_FIELD_W)) return false;
      m_param_combo[i].ItemsTotal(7);   // room for the largest choice list (PRICE_CHOICES)
-     m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_param_combo[i]);
-     if(!m_param_combo[i].CreateComboBox(m_chart_id, m_subwin, "ParamCombo" + (string)i, x_gap, y_gap,
+     m_frame_indicator_parameter.AddChild(&m_param_combo[i]);
+     if(!m_param_combo[i].CreateComboBox(m_chart_id, m_subwin, "ParamCombo" + (string)i, M_CONTROL_BORDER_GAP, M_CONTROL_HEIGHT,
                                          slot_w, M_CONTROL_HEIGHT, INDICATOR_PARAM_FIELD_W, 140)) return false;
     }
-   const int btn_y = y_gap + INDICATOR_PARAM_ROWS * PARAM_ROW_H + 10;
+   const int btn_y = M_CONTROL_HEIGHT + INDICATOR_PARAM_ROWS * PARAM_ROW_H;
    m_btn_add_indicator.SetText("Add");
    m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);
-   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_btn_add_indicator);
-   if(!m_btn_add_indicator.Create(m_chart_id, m_subwin, "BtnAddIndicator", x_gap, btn_y, 80, M_CONTROL_HEIGHT)) return false;
+   m_frame_indicator_parameter.AddChild(&m_btn_add_indicator);
+   if(!m_btn_add_indicator.Create(m_chart_id, m_subwin, "BtnAddIndicator", M_CONTROL_BORDER_GAP, btn_y, 80, M_CONTROL_HEIGHT)) return false;
    m_btn_save_indicator.SetText("Save");
    m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_btn_save_indicator);
-   if(!m_btn_save_indicator.Create(m_chart_id, m_subwin, "BtnSaveIndicator", x_gap + 85, btn_y, 80, M_CONTROL_HEIGHT)) return false;
+   if(!m_btn_save_indicator.Create(m_chart_id, m_subwin, "BtnSaveIndicator", x_gap, y_gap + INDICATOR_FRAME_H + M_CONTROL_BORDER_GAP, 80, M_CONTROL_HEIGHT)) return false;
    return true;
   }
  //--- Indicator tree leaf clicked: lay the slots out for this type
- void CGUIPannel::ShowAddIndicatorForm(const ENUM_INDICATOR type)
+ void CGUIPannel::ShowCFrame_IndicatorParameter(const ENUM_INDICATOR type)
   {
    m_current_param_type = type;
    SIndicatorParam schema[];
    int total = GetIndicatorParamSchema(type, schema);
    SIndicatorLayout layout[];
    GetIndicatorGuiLayout(type, layout);
+   m_frame_indicator_parameter.Show();   // cascades to every slot and the Add button: unused slots are hidden again below
    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
     {
      m_param_edits[i].Hide();
      m_param_combo[i].Hide();
      if(i >= total) continue;
-     int x = m_tabs_setting_timeseries.X() + PARAM_FORM_X + layout[i].col * INDICATOR_PARAM_COL_WIDTH;
-     int y = m_tabs_setting_timeseries.Y() + PARAM_FORM_Y + layout[i].row * PARAM_ROW_H;
+     int x = m_frame_indicator_parameter.X() + M_CONTROL_BORDER_GAP + layout[i].col * INDICATOR_PARAM_COL_WIDTH;
+     int y = m_frame_indicator_parameter.Y() + M_CONTROL_HEIGHT + layout[i].row * PARAM_ROW_H;
      if(layout[i].element_type == E_COMBO_BOX)
       {
        string parts[];
@@ -259,19 +264,8 @@
        m_param_edits[i].Draw(false);
       }
     }
-   m_btn_add_indicator.Show();
   }
- //--- Re-applied after every Show() cascade (tab switch, window open/expand)
- void CGUIPannel::HideAddIndicatorForm(void)
-  {
-   for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-    {
-     m_param_edits[i].Hide();
-     m_param_combo[i].Hide();
-    }
-   m_btn_add_indicator.Hide();
-  }
- //--- Form values -> MqlParam[] -> CIndicatorTemplateManager (data only, EA attaches on ADDED)
+ //--- Slot values -> MqlParam[] -> CIndicatorTemplateManager (data only, EA attaches on ADDED)
  void CGUIPannel::OnClickAddIndicatorBtnOnForm(void)
   {
    SIndicatorParam schema[];

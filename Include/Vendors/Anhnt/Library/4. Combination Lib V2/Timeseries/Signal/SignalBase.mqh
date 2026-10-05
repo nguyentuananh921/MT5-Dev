@@ -1,48 +1,30 @@
 //+------------------------------------------------------------------+
 //|                                                   SignalBase.mqh |
-//|  Base class for indicator signal wrappers (Option B pattern).   |
-//|  A genuine time series, mirroring CBarSeriesDE's grow-only model:|
-//|  m_current_val is the live, still-forming bar - safe to refresh  |
-//|  every tick, never stored. m_hist_* arrays are permanent history,|
-//|  oldest->newest, one entry per bar where the direction actually  |
-//|  FLIPPED (sparse - most bars have no signal, only a flip does).  |
+//|  Base of the indicator signal wrappers.                          |
+//|  Live bar (shift 0): refreshed every tick, never stored.         |
+//|  History: one (time, direction) entry per direction flip,        |
+//|  oldest->newest.                                                 |
 //+------------------------------------------------------------------+
 #ifndef __SIGNAL_BASE_MQH__
 #define __SIGNAL_BASE_MQH__
+#include <Arrays\ArrayLong.mqh>
+#include <Arrays\ArrayInt.mqh>
+#include "../../Entities/Defines/TimeseriesDefines.mqh"
 #include "../Indicators/IndicatorDE.mqh"
 //--- signal direction values
 #define SIGNAL_BUF_BUY   1.0
 #define SIGNAL_BUF_SELL (-1.0)
 
-//--- signal direction enum
-#ifndef ENUM_SIGNAL_DIR_DEFINED
-#define ENUM_SIGNAL_DIR_DEFINED
- enum ENUM_SIGNAL_DIR
-  {
-   SIGNAL_NONE =  0,
-   SIGNAL_BUY  =  1,
-   SIGNAL_SELL = -1
-  };
-#endif
-
 //+------------------------------------------------------------------+
-// CBaseObj-derived like every other PureData object (CIndicatorDE, CBar, CSymbol...):
-// lives inside CListObj collections, and each concrete subclass sets this.m_type to its
-// own OBJECT_DE_TYPE_SIGNAL_* id in its constructor (CommonDefines object type list).
-// CSignalsCollection stores and OWNS the instances in its CListObj m_list.
+// Owned by CSignalsCollection; each subclass sets m_type (OBJECT_DE_TYPE_SIGNAL_*).
 class CSignalBase : public CBaseObj
   {
    protected:
-     // BORROWED - CIndicatorsCollection owns the CIndicatorDE. CSignalsCollection guarantees
-     // this signal is deleted (DeleteSignal) BEFORE the indicator itself is, so m_indicator
-     // is never dangling inside a live signal.
-     CIndicatorDE    *m_indicator;
-     double           m_current_val;   // live value for the still-forming bar (shift 0)
-    //--- permanent history, oldest->newest - one entry per bar whose direction FLIPPED
-     datetime         m_hist_time[];
-     double           m_hist_val[];
-     double           m_hist_low[];
-     double           m_hist_high[];
+     CIndicatorDE    *m_indicator;     // borrowed - the signal is deleted before its indicator
+     double           m_current_val;   // live value of the forming bar (shift 0)
+     CArrayLong       m_hist_time;     // datetime of each flip
+     CArrayInt        m_hist_dir;      // ENUM_SIGNAL_DIR of each flip (never SIGNAL_NONE)
+     datetime         m_bar_time;      // open time of the forming bar seen by CommitIfNewBar
    public:
                           CSignalBase(void);
          virtual          ~CSignalBase(void);
@@ -50,56 +32,48 @@ class CSignalBase : public CBaseObj
     //--- setup
      void             SetIndicator(CIndicatorDE *indicator);
 
-    //--- pure signal math for one bar shift - subclasses implement, no storage side effects
+    //--- signal value at one bar shift, no side effects - subclasses implement
      virtual double   ComputeAt(int bar) const = 0;
 
-    //--- realtime: recompute the still-forming bar (shift 0) - safe every tick, never touches history
+    //--- recompute the forming bar - safe every tick, never touches history; sends SIGNAL_EVENT_LIVE_FLIP when it flips to BUY/SELL
      void             RefreshCurrent(void);
-    //--- permanent: append the bar that just closed (shift 1, read at the moment its new-bar
-    //--- event fires) to history, but ONLY if its direction differs from the last recorded one.
-    //--- Call exactly once per closed bar - never call every tick.
+    //--- append the just-closed bar (shift 1) if its direction flipped - once per closed bar
      void             CommitClosedBar(void);
-    //--- catch up: backfill flip history for bars 1..total_bars-1 that closed before this signal
-    //--- object existed - mirrors CBarSeriesDE::SyncData's "grow to what's required" pattern.
-    //--- Call once, right after SetIndicator, while history is still empty.
+    //--- CommitClosedBar + CommitClosedBarExtra when the forming bar changed since the last call; cheap per tick
+     void             CommitIfNewBar(void);
+    //--- backfill flips of bars 1..total_bars-1 - once, right after SetIndicator
      void             SyncHistory(int total_bars);
-    
+
+    //--- per-subclass hooks; RefreshCurrentExtra runs inside RefreshCurrent
      virtual void     RefreshCurrentExtra(void) { }
      virtual void     CommitClosedBarExtra(void) { }
      virtual void     SyncHistoryExtra(int total_bars) { }
 
     //--- read results
      ENUM_SIGNAL_DIR  GetCurrentSignal(void) const;
-     int              HistoryTotal(void)        const { return ::ArraySize(m_hist_time); }
+     int              HistoryTotal(void)        const { return m_hist_time.Total(); }
      datetime         HistoryTime(int index)    const;
      ENUM_SIGNAL_DIR  HistoryDir(int index)     const;
-     double           HistoryLow(int index)     const;
-     double           HistoryHigh(int index)    const;
      CIndicatorDE    *GetIndicator(void) const;
 
    protected:
     //--- helpers
      double                  Buf(int buffer_num, int bar) const;
+     void                    SendLiveFlip(const ENUM_SIGNAL_DIR dir, const string line);
      static ENUM_SIGNAL_DIR  DirOf(double v);
   };
 
 //+------------------------------------------------------------------+
-//| Constructor                                                      |
-//+------------------------------------------------------------------+
 CSignalBase::CSignalBase(void)
-   : m_indicator(NULL), m_current_val(EMPTY_VALUE)
+   : m_indicator(NULL), m_current_val(EMPTY_VALUE), m_bar_time(0)
   {
   }
 
-//+------------------------------------------------------------------+
-//| Destructor                                                       |
 //+------------------------------------------------------------------+
 CSignalBase::~CSignalBase(void)
   {
   }
 
-//+------------------------------------------------------------------+
-//| Bind indicator pointer                                           |
 //+------------------------------------------------------------------+
 void CSignalBase::SetIndicator(CIndicatorDE *indicator)
   {
@@ -107,15 +81,33 @@ void CSignalBase::SetIndicator(CIndicatorDE *indicator)
   }
 
 //+------------------------------------------------------------------+
-//| Recompute the live, still-forming bar - never stored in history |
-//+------------------------------------------------------------------+
 void CSignalBase::RefreshCurrent(void)
   {
+   ENUM_SIGNAL_DIR before = DirOf(m_current_val);
    m_current_val = ComputeAt(0);
+   ENUM_SIGNAL_DIR now = DirOf(m_current_val);
+   RefreshCurrentExtra();
+   if(m_first_start)
+     {
+      m_first_start = false;
+      return;
+     }
+   if(now != SIGNAL_NONE && now != before)
+      SendLiveFlip(now, "");
   }
 
 //+------------------------------------------------------------------+
-//| Append the just-closed bar (shift 1) to history if it flipped   |
+//| sparam = line name ("" = the primary signal)                     |
+//+------------------------------------------------------------------+
+void CSignalBase::SendLiveFlip(const ENUM_SIGNAL_DIR dir, const string line)
+  {
+   if(m_indicator == NULL) return;
+   ::EventChartCustom(::ChartID(), (ushort)SIGNAL_EVENT_LIVE_FLIP, (long)m_indicator.Handle(), (double)dir, line);
+  }
+
+//+------------------------------------------------------------------+
+//| Flip = direction differs from the previous bar (threshold        |
+//| signals pass through NONE between zone visits).                  |
 //+------------------------------------------------------------------+
 void CSignalBase::CommitClosedBar(void)
   {
@@ -123,97 +115,78 @@ void CSignalBase::CommitClosedBar(void)
    datetime t[1];
    if(::CopyTime(m_indicator.Symbol(), m_indicator.Timeframe(), 1, 1, t) != 1) return;
 
-   int total = ::ArraySize(m_hist_time);
-   if(total > 0 && m_hist_time[total - 1] >= t[0]) return; // already committed
+   int total = m_hist_time.Total();
+   if(total > 0 && m_hist_time.At(total - 1) >= t[0]) return; // already committed
 
-   double v          = ComputeAt(1);
-   ENUM_SIGNAL_DIR dir  = DirOf(v);
-   // Flip = differs from the PREVIOUS BAR, not from the last recorded entry (Anhnt, 2026-09-19):
-   // identical for continuous-state signals (MA/cross), but threshold signals (RSI/CCI/WPR/...)
-   // pass through NONE between zone visits, so comparing against the last entry swallowed every
-   // re-entry into the same zone - RSI never showed up.
+   ENUM_SIGNAL_DIR dir  = DirOf(ComputeAt(1));
    ENUM_SIGNAL_DIR prev = DirOf(ComputeAt(2));
-   if(dir == SIGNAL_NONE || dir == prev) return; // no flip - nothing arrow-worthy happened
+   if(dir == SIGNAL_NONE || dir == prev) return;
 
-   double lo[1] = {0}, hi[1] = {0};
-   ::CopyLow(m_indicator.Symbol(), m_indicator.Timeframe(), 1, 1, lo);
-   ::CopyHigh(m_indicator.Symbol(), m_indicator.Timeframe(), 1, 1, hi);
-
-   ::ArrayResize(m_hist_time, total + 1);
-   ::ArrayResize(m_hist_val,  total + 1);
-   ::ArrayResize(m_hist_low,  total + 1);
-   ::ArrayResize(m_hist_high, total + 1);
-   m_hist_time[total] = t[0];
-   m_hist_val[total]  = v;
-   m_hist_low[total]  = lo[0];
-   m_hist_high[total] = hi[0];
+   m_hist_time.Add((long)t[0]);
+   m_hist_dir.Add((int)dir);
   }
+
 //+------------------------------------------------------------------+
-//| Backfill flip history for bars 1..total_bars-1 - call once,     |
-//| right after SetIndicator, while history is still empty.         |
+//| The first call only records the forming bar (SyncHistory already |
+//| covered the closed ones).                                        |
+//+------------------------------------------------------------------+
+void CSignalBase::CommitIfNewBar(void)
+  {
+   if(m_indicator == NULL) return;
+   datetime t = ::iTime(m_indicator.Symbol(), m_indicator.Timeframe(), 0);
+   if(t == 0 || t == m_bar_time) return;
+   bool first = (m_bar_time == 0);
+   m_bar_time = t;
+   if(first) return;
+   CommitClosedBar();
+   CommitClosedBarExtra();
+  }
+
+//+------------------------------------------------------------------+
+//| Same flip rule as CommitClosedBar; prev carries over from the    |
+//| older bar so ComputeAt runs once per bar.                        |
 //+------------------------------------------------------------------+
 void CSignalBase::SyncHistory(int total_bars)
   {
    if(m_indicator == NULL || total_bars <= 1) return;
+   ENUM_SIGNAL_DIR prev = DirOf(ComputeAt(total_bars));
    for(int shift = total_bars - 1; shift >= 1; shift--)
      {
-      double v   = ComputeAt(shift);
-      ENUM_SIGNAL_DIR dir  = DirOf(v);
-      int total = ::ArraySize(m_hist_time);
-      ENUM_SIGNAL_DIR prev = DirOf(ComputeAt(shift + 1)); // previous bar, same rule as CommitClosedBar
-      if(dir == SIGNAL_NONE || dir == prev) continue; // no flip at this bar
+      ENUM_SIGNAL_DIR dir    = DirOf(ComputeAt(shift));
+      ENUM_SIGNAL_DIR before = prev;
+      prev = dir;
+      if(dir == SIGNAL_NONE || dir == before) continue;
 
       datetime t[1];
       if(::CopyTime(m_indicator.Symbol(), m_indicator.Timeframe(), shift, 1, t) != 1) continue;
-      double lo[1] = {0}, hi[1] = {0};
-      ::CopyLow(m_indicator.Symbol(), m_indicator.Timeframe(), shift, 1, lo);
-      ::CopyHigh(m_indicator.Symbol(), m_indicator.Timeframe(), shift, 1, hi);
 
-      ::ArrayResize(m_hist_time, total + 1);
-      ::ArrayResize(m_hist_val,  total + 1);
-      ::ArrayResize(m_hist_low,  total + 1);
-      ::ArrayResize(m_hist_high, total + 1);
-      m_hist_time[total] = t[0];
-      m_hist_val[total]  = v;
-      m_hist_low[total]  = lo[0];
-      m_hist_high[total] = hi[0];
+      m_hist_time.Add((long)t[0]);
+      m_hist_dir.Add((int)dir);
      }
   }
 
-//+------------------------------------------------------------------+
-//| Current (still-forming) bar's direction                         |
 //+------------------------------------------------------------------+
 ENUM_SIGNAL_DIR CSignalBase::GetCurrentSignal(void) const
   {
    return DirOf(m_current_val);
   }
-
+ENUM_SIGNAL_DIR CSignalBase::DirOf(double v)
+ {
+   if(v == EMPTY_VALUE) return SIGNAL_NONE;
+   return (v > 0.0 ? SIGNAL_BUY : SIGNAL_SELL);
+ }
 //+------------------------------------------------------------------+
 datetime CSignalBase::HistoryTime(int index) const
   {
-   if(index < 0 || index >= ::ArraySize(m_hist_time)) return 0;
-   return m_hist_time[index];
+   if(index < 0 || index >= m_hist_time.Total()) return 0;
+   return (datetime)m_hist_time.At(index);
   }
 
 //+------------------------------------------------------------------+
 ENUM_SIGNAL_DIR CSignalBase::HistoryDir(int index) const
   {
-   if(index < 0 || index >= ::ArraySize(m_hist_val)) return SIGNAL_NONE;
-   return DirOf(m_hist_val[index]);
-  }
-
-//+------------------------------------------------------------------+
-double CSignalBase::HistoryLow(int index) const
-  {
-   if(index < 0 || index >= ::ArraySize(m_hist_low)) return 0;
-   return m_hist_low[index];
-  }
-
-//+------------------------------------------------------------------+
-double CSignalBase::HistoryHigh(int index) const
-  {
-   if(index < 0 || index >= ::ArraySize(m_hist_high)) return 0;
-   return m_hist_high[index];
+   if(index < 0 || index >= m_hist_dir.Total()) return SIGNAL_NONE;
+   return (ENUM_SIGNAL_DIR)m_hist_dir.At(index);
   }
 
 //+------------------------------------------------------------------+
@@ -223,7 +196,7 @@ CIndicatorDE *CSignalBase::GetIndicator(void) const
   }
 
 //+------------------------------------------------------------------+
-//| Read indicator buffer value; returns EMPTY_VALUE on failure     |
+//| Indicator buffer value; EMPTY_VALUE on failure                   |
 //+------------------------------------------------------------------+
 double CSignalBase::Buf(int buffer_num, int bar) const
   {
@@ -232,12 +205,5 @@ double CSignalBase::Buf(int buffer_num, int bar) const
   }
 
 //+------------------------------------------------------------------+
-//| Convert a raw computed value to ENUM_SIGNAL_DIR                 |
-//+------------------------------------------------------------------+
-ENUM_SIGNAL_DIR CSignalBase::DirOf(double v)
-  {
-   if(v == EMPTY_VALUE) return SIGNAL_NONE;
-   return (v > 0.0 ? SIGNAL_BUY : SIGNAL_SELL);
-  }
 
 #endif // __SIGNAL_BASE_MQH__

@@ -23,7 +23,6 @@ class CTable : public CGElement
     int               m_auto_xresize_right_offset;
     int               m_auto_yresize_bottom_offset;
 
-    bool              CellIndexes(const string cell_id,int &column,int &row);
     void              SetCellFromText(CTableCell *cell,const string text);
   protected:
     virtual void      InitColors(void);
@@ -31,6 +30,7 @@ class CTable : public CGElement
     bool              CreateTable(const long chart_id,const int subwin,const string name,const int x,const int y,const int w=0,const int h=0);
     CTableModel      *Model(void)                                { return(::GetPointer(this.m_model)); }
     CTableView       *View(void)                                 { return(::GetPointer(this.m_view));  }
+    bool              CellIndexes(const string cell_id,int &column,int &row);
     void              TableSize(const int columns_total,const int rows_total);
     CTableRow        *AddRow(const int row_index=WRONG_VALUE,const bool redraw=false);
     void              DeleteRow(const int row_index,const bool redraw=false);
@@ -39,7 +39,7 @@ class CTable : public CGElement
     void              SetHeaderImage(const uint column_index,const uint &resource_index[]) { this.m_view.GetHeaderViewPointer().SetHeaderImage(column_index,resource_index); }
     template<typename T> void SetValue(const uint column_index,const uint row_index,const T value) { this.m_model.CellSetValue(row_index,column_index,value); }
     CTableCell       *Cell(const uint column_index,const uint row_index)         { return(this.m_model.Cell(row_index,column_index)); }
-    CTableCellView   *CellView(const uint column_index,const uint row_index)     { return(this.m_view.CellView((int)column_index,(int)row_index)); }
+    CTableCellView   *CellView(const uint column_index,const uint row_index)     { CTableRowView *row=this.m_view.RowViewByModel((int)row_index); return(row!=NULL ? row.CellView((int)column_index) : NULL); }
     void              SortData(const uint column_index,const ENUM_CSORT_MODE direction);
     void              AutoXResizeMode(const bool mode)           { this.m_auto_xresize_mode=mode;           }
     void              AutoYResizeMode(const bool mode)           { this.m_auto_yresize_mode=mode;           }
@@ -136,7 +136,7 @@ void CTable::SortData(const uint column_index,const ENUM_CSORT_MODE direction)
  {
   this.m_model.SortByColumn(column_index,direction==SORT_DESCEND);
   this.m_view.GetHeaderViewPointer().SortState((int)column_index,direction);
-  this.m_view.Rebuild(true);
+  this.m_view.Rebuild(true,true);
  }
 //+------------------------------------------------------------------+
 //| "column_row" -> indexes                                          |

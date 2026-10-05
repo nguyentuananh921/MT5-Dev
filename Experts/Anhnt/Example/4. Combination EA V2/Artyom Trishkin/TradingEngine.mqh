@@ -22,6 +22,7 @@
   #include "..\Services\TradingSetupSettingManager.mqh"
   #include "..\Services\SymbolTFManager.mqh"
   #include "..\Services\IndicatorTemplateManager.mqh"
+  #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Graph\Composite\TradingLevelBubble.mqh>   // ENUM_BUBBLE_TYPE of the bubble events
 #ifndef CTRADING_ENGINE_MQH_DECLARATION
 #define CTRADING_ENGINE_MQH_DECLARATION
   //+------------------------------------------------------------------+
@@ -59,6 +60,8 @@
        ~CTradingEngine(void);
         bool                         OnInitEvent(void);
         void                         OnTickEvent(void);
+        void                         OnTradeEvent(void);
+        void                         OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
         void                         OnDeinitEvent(void) {}
        //For Pointer
         CAccountsCollection          *GetAccountsCollection(void) { return &m_accounts_collection;}

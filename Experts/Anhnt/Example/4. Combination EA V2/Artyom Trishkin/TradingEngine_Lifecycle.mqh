@@ -60,4 +60,31 @@
     this.TradeEventsControl();   
     this.ApplyStopLostAndTrailing(this.m_is_market_trade_event);
   }
+ //+------------------------------------------------------------------+
+ //| OnTrade: only the order/deal part of OnTickEvent                 |
+ //+------------------------------------------------------------------+
+ void CTradingEngine::OnTradeEvent(void)
+  {
+    this.TradeEventsControl();
+    this.ApplyStopLostAndTrailing(this.m_is_market_trade_event);
+  }
+ //+------------------------------------------------------------------+
+ //| A level bubble was dropped (lparam type, dparam price) or closed |
+ //+------------------------------------------------------------------+
+ void CTradingEngine::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+  {
+    if(id!=CHARTEVENT_CUSTOM+ON_BUBBLE_RELEASE && id!=CHARTEVENT_CUSTOM+ON_BUBBLE_CLOSE)
+      return;
+    if(lparam<0 || lparam>=BUBBLE_TOTAL)
+      return;
+    ENUM_BUBBLE_TYPE type=(ENUM_BUBBLE_TYPE)lparam;
+    ENUM_POSITION_TYPE dir=(type<=BUBBLE_TP_BUY ? POSITION_TYPE_BUY : POSITION_TYPE_SELL);
+    if(id==CHARTEVENT_CUSTOM+ON_BUBBLE_RELEASE)
+     {
+      if(!this.m_trading_control.ModifyPositions(::Symbol(),dir,(type==BUBBLE_SL_BUY || type==BUBBLE_SL_SELL),dparam))
+         ::EventChartCustom(::ChartID(),ON_BUBBLE_RESTORE,0,0,"");
+     }
+    else
+      this.m_trading_control.ClosePositions(::Symbol(),dir);
+  }
 #endif // CTRADINGENGINE_LIFECYCLE_MQH

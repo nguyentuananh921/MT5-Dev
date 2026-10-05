@@ -46,7 +46,7 @@
                        list_series, list_patterns, param)
     {
       int param_size = ArraySize(this.PatternParams);
-      this.m_min_body_size                       = 0;   // unused for PPR since 2026-08-15 - see m_ratio_candle_sizes above
+      this.m_min_body_size                       = 0;   // unused for PPR - see m_ratio_candle_sizes above
       this.m_ratio_body_to_candle_size           = 0;
       this.m_ratio_larger_shadow_to_candle_size  = 0;
       this.m_ratio_smaller_shadow_to_candle_size = 0;

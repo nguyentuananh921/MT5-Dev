@@ -33,8 +33,8 @@
      long                        m_long_prop[PATTERN_PROP_INTEGER_TOTAL];              // Integer properties
      double                      m_double_prop[PATTERN_PROP_DOUBLE_TOTAL];             // Real properties
      string                      m_string_prop[PATTERN_PROP_STRING_TOTAL];             // String properties   
-      int                         IndexProp(ENUM_PATTERN_PROP_DOUBLE property) const   { return(int)property-PATTERN_PROP_INTEGER_TOTAL; }
-      int                         IndexProp(ENUM_PATTERN_PROP_STRING property) const   { return(int)property-PATTERN_PROP_INTEGER_TOTAL-PATTERN_PROP_DOUBLE_TOTAL; }
+      int                        IndexProp(ENUM_PATTERN_PROP_DOUBLE property) const   { return(int)property-PATTERN_PROP_INTEGER_TOTAL; }
+      int                        IndexProp(ENUM_PATTERN_PROP_STRING property) const   { return(int)property-PATTERN_PROP_INTEGER_TOTAL-PATTERN_PROP_DOUBLE_TOTAL; }
     protected:
      ulong                       m_symbol_code;                                        // Symbol as a number (sum of name symbol codes)
      int                         m_bars_formation;                                     // Number of bars in the formation (nested pattern)

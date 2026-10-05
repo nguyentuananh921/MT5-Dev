@@ -7,10 +7,10 @@
 #define CGELEMENT_MQH
  #include <Canvas\Canvas.mqh>
  #include "GBaseObj.mqh"
- #include "..\Properties\ColorElement.mqh"
+ #include "..\Graph\Properties\ColorElement.mqh"
  #include "..\..\Services\Colors.mqh"
  #include "..\..\Services\Mouse.mqh"
- #include "..\Properties\Image.mqh"
+ #include "..\Graph\Properties\Image.mqh"
  #include "..\Defines\GUIDefines.mqh"
 #ifndef CGELEMENT_MQH_DECLARATION
 #define CGELEMENT_MQH_DECLARATION
@@ -58,6 +58,7 @@
     bool              m_is_available;
     bool              m_prev_left;
     bool              m_chart_tools_locked;
+    bool              m_lock_chart_tools;    // false: focus/press never lock the chart (display-only elements)
     static CMouse     s_mouse;
     ENUM_MOUSE_EVENT  m_mouse_event_last;
     int               m_press_area;
@@ -97,6 +98,7 @@
     virtual void      MouseResizeAreaPressedHandler(const int id,const long &lparam,const double &dparam,const string &sparam)        {}
     virtual void      MouseResizeAreaWhellHandler(const int id,const long &lparam,const double &dparam,const string &sparam)          {}
     void              SetChartTools(const bool enable);
+    void              LockChartTools(const bool flag)       { this.m_lock_chart_tools=flag;    }
     void              DrawFrame(void);
     bool              SendEvent(const ushort event_id,const double dparam,const string sparam);
     bool              CheckOutOfRange(const uint group_index,const uint image_index);
@@ -215,9 +217,9 @@
  //+------------------------------------------------------------------+
  //|                                                                  |
  //+------------------------------------------------------------------+
- CGElement::CGElement(void) : m_x(0),m_y(0),m_x_size(0),m_y_size(0),m_x_gap(0),m_y_gap(0),m_state(false),m_color_state(COLOR_STATE_DEFAULT),m_font("Calibri"),m_font_size(10),
+ CGElement::CGElement(void) : m_x(0),m_y(0),m_x_size(0),m_y_size(0),m_x_gap(0),m_y_gap(0),m_state(false),m_color_state(COLOR_STATE_DEFAULT),m_font(DEF_FONT),m_font_size(DEF_FONT_SIZE),
                              m_mouse_focus(false),m_focused(false),m_is_pressed(false),m_is_locked(false),m_is_available(true),m_prev_left(false),
-                             m_chart_tools_locked(false),m_mouse_event_last(MOUSE_EVENT_NO_EVENT),m_press_area(0),
+                             m_chart_tools_locked(false),m_lock_chart_tools(true),m_mouse_event_last(MOUSE_EVENT_NO_EVENT),m_press_area(0),
                              m_act_shift_left(0),m_act_shift_top(0),m_act_shift_right(0),m_act_shift_bottom(0),
                              m_control_area_x(0),m_control_area_y(0),m_control_area_width(0),m_control_area_height(0),
                              m_border_resize_area_left(0),m_border_resize_area_right(0),m_border_resize_area_top(0),m_border_resize_area_bottom(0)
@@ -957,14 +959,16 @@
           {
            this.m_is_pressed=true;
            this.m_press_area=area;
-           this.SetChartTools(false);
+           if(this.m_lock_chart_tools)
+              this.SetChartTools(false);
            this.OnPress(x,y);
           }
        }
      else if(focus && !this.m_focused)
        {
         this.m_focused=true;
-        this.SetChartTools(false);
+        if(this.m_lock_chart_tools)
+           this.SetChartTools(false);
         this.OnFocus();
        }
      else if(!focus && this.m_focused)

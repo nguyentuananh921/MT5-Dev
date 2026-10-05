@@ -23,7 +23,7 @@
    m_table_SymbolTFSeting.AutoYResizeBottomOffset(3);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF, m_table_SymbolTFSeting);
    if(!m_table_SymbolTFSeting.CreateTable(m_chart_id, m_subwin, "TableSymbolTF", x, y + SYMBOLTF_TABLE_Y)) return false;
-   int widths[COLUMNS_SYMBOLTF_TOTAL]            = {M_SYMBOL_WIDTH, M_TF_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH};
+   int widths[COLUMNS_SYMBOLTF_TOTAL]            = {M_SYMBOL_WITHICON_WIDTH, M_TF_WITHICON_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH};
    int image_x[COLUMNS_SYMBOLTF_TOTAL]           = {3, 3, 2, 2, 2, 2};
    ENUM_ALIGN_MODE align[COLUMNS_SYMBOLTF_TOTAL] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
    CTableHeaderView *header = m_table_SymbolTFSeting.View().GetHeaderViewPointer();
@@ -96,25 +96,20 @@
  //--- GUI only: the Manager already removed the row before SYMBOLTF_MANAGER_EVENT_DELETE fired
  void CGUIPannel::DeleteRow_SymbolTFSetting(const string sym, const string tf_text)
   {
-   int row = FindTableRowBySymbolTF(sym, tf_text);
-   if(row == -1) return;
-   m_table_SymbolTFSeting.DeleteRow(row, true);
-  }
- int CGUIPannel::FindTableRowBySymbolTF(const string &sym, const string &tf_text)
-  {
    int rows = (int)m_table_SymbolTFSeting.Model().RowsTotal();
    for(int row = 0; row < rows; row++)
       if(m_table_SymbolTFSeting.Cell(0, row).ValueS() == sym && m_table_SymbolTFSeting.Cell(1, row).ValueS() == tf_text)
-         return row;
-   return -1;
+        {
+         m_table_SymbolTFSeting.DeleteRow(row, true);
+         return;
+        }
   }
- //--- CTable already flipped the checkbox cell, its value is the new state
- void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int row, const int col)
+ //--- 'on' is the new checkbox state sent with the event (dparam)
+ void CGUIPannel::OnCheckTableSymbolTFSetting(const string sym, const string tf_text, const int col, const bool on)
   {
    if(m_SymbolTFManager == NULL) return;
    CSymbolTFSetting *entry = m_SymbolTFManager.FindByIdentity(sym, TimestampByDescription(tf_text));
    if(entry == NULL) return;
-   bool on = (m_table_SymbolTFSeting.Cell(col, row).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED);
    if(col == 2)
     {
      entry.BuySignal(on);
@@ -135,7 +130,7 @@
    m_treeview_SymbolTF.LightsHover(true);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF, m_treeview_SymbolTF);
    return m_treeview_SymbolTF.CreateTreeView(m_chart_id, m_subwin, "TreeSymbolTF", x_gap, y_gap,
-                                             M_SYMBOL_WIDTH, m_tabs_setting_timeseries.Height() - y_gap - 3);
+                                             M_TREEVIEW_WIDTH, m_tabs_setting_timeseries.Height() - y_gap - 3);
   }
  //--- Roots = Market Watch symbols + symbols CSymbolTFManager tracks (sorted), each tracked TF as a leaf
  void CGUIPannel::PopulateTreeView_SymbolTFSetting(void)

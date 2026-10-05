@@ -3,12 +3,9 @@
 //|                                     Copyright 2026, Anhnt        |
 //| 1 instance = 1 already-gated signal row (time, TF, direction,    |
 //| source) waiting to be written to SignalBridge_<SYMBOL>.dat.      |
-//| Held LIVE in a CArrayObj inside CSignalBridgeWriter::            |
-//| BuildAndWriteSignalBridge() - replaces the old 4 parallel raw    |
-//| arrays (row_time[]/row_tf[]/row_dir[]/row_source[]) that needed  |
-//| a hand-rolled O(n^2) bubble sort to keep in time order. Compare()|
-//| lets CArrayObj::Sort() do it in O(n log n) instead (Anhnt,       |
-//| 2026-08-29).                                                     |
+//| Held in a CArrayObj inside CSignalBridgeWriter::                 |
+//| BuildAndWriteSignalBridge(); Compare() lets CArrayObj::Sort()    |
+//| order the rows by time.                                          |
 //+------------------------------------------------------------------+
 #ifndef __SIGNALBRIDGEROW_MQH__
 #define __SIGNALBRIDGEROW_MQH__

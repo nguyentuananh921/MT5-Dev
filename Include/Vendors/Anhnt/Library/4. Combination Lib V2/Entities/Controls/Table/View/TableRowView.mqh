@@ -17,6 +17,7 @@ class CTableRowView : public CGBaseObj
  {
   private:
     CTableRow        *m_row;
+    ENUM_ALIGN_MODE   m_text_align[];      //Align for content in cell.
   public:
     bool              Bind(CTableRow *row);
     CTableRow        *Row(void)                            const { return(this.m_row); }
@@ -24,6 +25,10 @@ class CTableRowView : public CGBaseObj
     int               CellsTotal(void)                     const { return(this.ChildrenTotal()); }
     bool              IsChanged(void);
     void              ResetChanged(void);
+    //Add here to set align header and content text separate
+     void              TextAlign(const ENUM_ALIGN_MODE &array[]);
+     void              TextAlign(const uint column_index,const ENUM_ALIGN_MODE align);
+     ENUM_ALIGN_MODE   ColumnTextAlign(const int column) const;
     void              DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
                                  const color back,const color text,const color grid,const bool selected);
     void              DrawRow(CCanvas &canvas,CTableHeaderView &header,const int y,const int h,const int right,
@@ -85,6 +90,24 @@ void CTableRowView::ResetChanged(void)
         view.Cell().SetEventFlag(false);
     }
  }
+void CTableRowView::TextAlign(const ENUM_ALIGN_MODE &array[])
+ {
+   int total=::MathMin(::ArraySize(array),this.CellsTotal());
+   ::ArrayResize(this.m_text_align,total);
+   for(int i=0; i<total; i++)
+      this.m_text_align[i]=array[i];
+ }
+void CTableRowView::TextAlign(const uint column_index,const ENUM_ALIGN_MODE align)
+ {
+   if(column_index<(uint)this.CellsTotal())
+      this.m_text_align[column_index]=align;
+ }
+ENUM_ALIGN_MODE CTableRowView::ColumnTextAlign(const int column) const
+ {
+   if(column>=0 && column<::ArraySize(this.m_text_align))
+      return(this.m_text_align[column]);
+   return(ALIGN_LEFT);
+ }
 //+------------------------------------------------------------------+
 //| One cell, clipped at right, skipped when scrolled out at left    |
 //+------------------------------------------------------------------+
@@ -98,7 +121,18 @@ void CTableRowView::DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const in
   if(x>right || x+header.ColumnWidth(column)<=1)
      return;
   int w=::MathMin(header.ColumnWidth(column),right-x+2);
-  view.DrawCell(canvas,x,y,w,h,back,text,header.ColumnTextAlign(column),header.ColumnTextXOffset(column),header.ColumnImageXOffset(column),selected);
+  //view.DrawCell(canvas,x,y,w,h,back,text,header.ColumnTextAlign(column),header.ColumnTextXOffset(column),header.ColumnImageXOffset(column),selected);
+  view.DrawCell(canvas,
+              x,
+              y,
+              w,
+              h,
+              back,
+              text,
+              this.ColumnTextAlign(column),
+              header.ColumnTextXOffset(column),
+              header.ColumnImageXOffset(column),
+              selected);
  }
 //+------------------------------------------------------------------+
 //| Every cell, then the row's grid                                  |

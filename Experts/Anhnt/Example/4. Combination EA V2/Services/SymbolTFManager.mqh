@@ -35,7 +35,7 @@
                                            // method needed, same style as GUIPANNEL_EVENT_
                                            // PATTERN_BUYSELL_CHANGED), no payload - EA's own
                                            // reaction (CSignalBridgeWriter::ResetSignalBridge)
-                                           // does a full re-read, not a per-row lookup (Anhnt, 2026-08-28)
+                                           // does a full re-read, not a per-row lookup
   };
 #ifndef CSYMBOLTFMANAGER_MQH_DECLARATION
 #define CSYMBOLTFMANAGER_MQH_DECLARATION
@@ -57,8 +57,7 @@
                      CSymbolTFManager(void) : m_last_removed_symbol(""), m_last_removed_tf(PERIOD_CURRENT),
                                                m_active_sym(""), m_active_tf(PERIOD_CURRENT),
                                                m_loaded_from_json(false) {}
-                    ~CSymbolTFManager(void) {}
-
+                    ~CSymbolTFManager(void) {}       
       //--- Lifecycle - same convention as CIndicatorTemplateManager::OnInitEvent.
        bool                OnInitEvent(void);
 
@@ -149,7 +148,6 @@
       {
        // Insert sorted here too (not just Add_SymbolTFSetting) - self-heals m_list's Symbol-grouped/
        // TF-ascending invariant even if Config_Setting.json was ever hand-edited out of order
-       // (Anhnt/Claude, 2026-09-17).
        int insert_at = FindInsertIndex(row.Symbol(), row.TFEnum());
        bool inserted = (insert_at >= m_list.Total()) ? m_list.Add(row) : m_list.Insert(row, insert_at);
        if(!inserted) delete row;
@@ -202,7 +200,6 @@
   {
    //--- m_list is already Symbol-grouped/TF-ascending (Add_SymbolTFSetting inserts at its sorted
    //--- position directly, via FindInsertIndex) - just walk it in order, no local re-sort needed
-   //--- (Anhnt/Claude, 2026-09-17).
     int total = m_list.Total();
    out_json = "[\n";
    int saved = 0;
@@ -238,7 +235,6 @@
  //| first appeared) then TF-ascending within each group - same rule
  //| every consumer (JSON save, Monitor table, ...) used to re-sort for
  //| itself. Sorting m_list ONCE here means none of them need to anymore
- //| (Anhnt/Claude, 2026-09-17 - "tay nào dùng cũng có sort sẵn rồi").
  //+------------------------------------------------------------------+
  int CSymbolTFManager::FindInsertIndex(const string sym, const ENUM_TIMEFRAMES tf) const
   {
@@ -287,7 +283,7 @@
    // --- Identity (symbol via sparam, TF via lparam), NOT insert_at - EventChartCustom is queued/
    // async, and a sorted Insert() (unlike a plain Add()) can shift this row's position before the
    // event is dequeued if another row gets added in between; an index captured now can go stale by
-   // the time a listener reads it. Passing identity directly is immune to that (Anhnt/Claude, 2026-09-17).
+   // the time a listener reads it. Passing identity directly is immune to that.
    ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ADDED, (long)tf, 0.0, sym);
    return row;
   }
@@ -338,8 +334,7 @@
      long packed_tf = ((long)tf << 32) | ((long)old_tf & 0xFFFFFFFF);
      string packed_sym = old_sym + "|" + sym;
      ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, packed_tf, 0.0, packed_sym);
-   }
- 
+   } 
  //+------------------------------------------------------------------+
  //| Lifecycle - same convention as CIndicatorTemplateManager::        |
  //| OnInitEvent. EA.mq5 calls this from its own OnInit().             |

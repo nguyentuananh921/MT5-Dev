@@ -240,6 +240,8 @@ void CTableCellView::DrawCell(CCanvas &canvas,const int x,const int y,const int 
      anchor=TA_RIGHT;
      max_width=tx-text_left;
     }
+  if(max_width<1)
+     return;
   color text_color=(this.m_text_color!=clrNONE && !selected ? this.m_text_color : text);
   if(this.m_direction_colors && !selected)
      text_color=(this.m_cell.Datatype()==TYPE_STRING ? this.m_color_same :

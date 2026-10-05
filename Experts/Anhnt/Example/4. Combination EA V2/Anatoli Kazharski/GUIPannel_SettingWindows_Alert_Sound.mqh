@@ -5,7 +5,6 @@
 #ifndef CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH
 #define CGUIPANNEL_SETTINGWINDOWS_ALERT_SOUND_MQH
 #include "GUIPannel.mqh"
- #define SETTING_SOUND_BASE_X_GAP    10
  #define SETTING_SOUND_CAPTION_WIDTH 125   // checkbox caption "Trailing Sound"
  #define SETTING_SOUND_COMBO_WIDTH   350
  #define SETTING_SOUND_ROW_STEP      30
@@ -53,7 +52,7 @@
  //--- Row 0: folder; rows 1-3: [x] caption checkbox + file combo; row 4: Save
  bool CGUIPannel::CreateTab_SettingConfig_Sound(const int x, const int y)
   {
-   const int base_x  = x + SETTING_SOUND_BASE_X_GAP;
+   const int base_x  = x + M_CONTROL_BORDER_GAP;
    const int combo_x = base_x + SETTING_SOUND_CAPTION_WIDTH;
    string trailing_sound_default;
    LoadSoundSettingsFromJSON(trailing_sound_default);

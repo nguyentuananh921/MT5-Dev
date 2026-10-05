@@ -5,17 +5,6 @@
 #ifndef CGUIPANNEL_LIFECYCLE_MQH
 #define CGUIPANNEL_LIFECYCLE_MQH
 #include "GUIPannel.mqh"
-//Private Method
- //Get window index
- //int CGUIPannel::WindowIdx(CWindow &wnd)
- // {
- //  for(int i = 0; i < WindowsTotal(); i++)
- //   {
- //    if(m_windows[i] == GetPointer(wnd))
- //     return i;
- //   }
- //    return 0;
- // }
  //For GUIPannel
  bool CGUIPannel::CreateGUIPannel(void)
   {
@@ -30,8 +19,7 @@
      {
        Print(__FUNCTION__, " > Failed to create Main Window!");
        return (false);
-     }
-     //m_window_main.Hide();
+     }     
     //Create Status Bar at the bottom of m_window_main
      if (!CreateStatusBar(1, M_WINDOW_MAIN_HEIGHT - 23))
       {
@@ -66,52 +54,19 @@
      if(!CreateTreeView_IndicatorTemplateSetting(M_CONTROL_BORDER_GAP, PARAM_FORM_Y)) return false;
      PopulateTreeView_IndicatorTemplateSetting();
      SyncTreeView_IndicatorTemplateSetting();
-     if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;
+     if(!CreateCFrame_IndicatorParameter(PARAM_FORM_X, PARAM_FORM_Y)) return false;
      if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
      InitializeTable_IndicatorTemplateSetting();
      if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP, PARAM_FORM_Y)) return false;
      PopulateTreeView_SymbolTFSetting();
      SyncTreeView_SymbolTFSetting();
-     if(!CreateTable_SymbolTFSetting(M_SYMBOL_WIDTH + 10, 0)) return false;
+     if(!CreateTable_SymbolTFSetting(PARAM_FORM_X, 0)) return false;
      PopulateTable_SymbolTFSetting();
      LoadCandlePatternSetting_FromJSON();
      if(!CreateTable_CandlePatternSetting(0, 0)) return false;
      InitializeTable_CandlePatternSetting();
      if(!CreateTable_SwingSetting(0, 0)) return false;
-     InitializeTable_SwingSetting();
-     //m_window_setting_timeseries.Hide();
-   //  if (!CreateWindow_SettingTimeSeries("Setting Time Serries",30,30))
-   //   {
-   //     Print(__FUNCTION__, " > Failed to create Setting Windows!");
-   //     return (false);
-   //   }
-   //  //Create Tab
-   //   if(!CreateTab_SettingTimeSeries(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT + M_CONTROL_YDISTANCE))
-   //    {
-   //     Print(__FUNCTION__, " > Failed to create Setting Time Serries Tab!");
-   //     return (false);
-   //    }
-   //  //For Indicator Setting TreeView on the left panel of setting window
-   //   PopulateTreeView_IndicatorTemplateSetting();
-   //   if(!CreateTreeView_IndicatorTemplateSetting(M_CONTROL_BORDER_GAP, PARAM_FORM_Y)) return false;
-   //   //For Add Indicator form
-   //    if(!CreateAddIndicatorForm(PARAM_FORM_X, PARAM_FORM_Y)) return false;
-   //    if(!CreateTable_IndicatorTemplateSetting(INDICATOR_TABLE_X, INDICATOR_TABLE_Y)) return false;
-   //  //For Symbol TF setting on Tab Config
-   //    PopulateTreeView_SymbolTFSetting();
-   //    if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+2)) return false;  //WINDOW_CAPTION_HEIGHT = 22
-   //    SyncTreeView_SymbolTFSetting();
-   //   //Table m_table_SymbolTFSeting on the right of the Symbol TF sub-tab
-   //    if(!CreateTable_SymbolTFSetting(M_SYMBOL_WIDTH + 10, WINDOW_CAPTION_HEIGHT)) return false;
-   //    PopulateTable_SymbolTFSetting();
-   //    SyncTable_SymbolTFSetting();
-   //  //For Candle Pattern Setting
-   //    LoadCandlePatternSetting_FromJSON();
-   //    if(!CreateTable_CandlePatternSetting(0, 0)) return false;
-   //    InitializeTable_CandlePatternSetting();
-   //  //For Swing Setting - m_SwingSetting already loaded from JSON by CTimeSeriesEngine::OnInitEvent
-   //    if(!CreateTable_SwingSetting(0, 0)) return false;
-   //    InitializeTable_SwingSetting();
+     InitializeTable_SwingSetting();     
    // Create Setting Trading window implementation in GUIPannel_SettingWindows_Trading.mqh
      if (!CreateWindow_SettingTrading("Setting Trading",30,30))
       {
@@ -128,7 +83,7 @@
      if(!CreateStopLostForm(M_CONTROL_BORDER_GAP, SETTING_TRADING_TABLE_HEIGHT + M_CONTROL_BORDER_GAP)) return false;
      if(!CreateTable_TrailingSetting(M_CONTROL_BORDER_GAP, 0)) return false;
      if(!CreateTable_IndicatorsTrailingSetting(M_CONTROL_BORDER_GAP, SETTING_TRADING_TABLE_HEIGHT + M_CONTROL_BORDER_GAP)) return false;
-     if(!CreateTrailingForm(M_CONTROL_BORDER_GAP + m_table_indicators_trailingsetting.Width() + TRAIL_FORM_GAP,
+     if(!CreateTrailingForm(M_CONTROL_BORDER_GAP + m_table_indicators_trailingsetting.Width() + M_CONTROL_BORDER_GAP,
                             SETTING_TRADING_TABLE_HEIGHT + M_CONTROL_BORDER_GAP + M_CONTROL_YDISTANCE)) return false;
    // Create Setting Alert window (Marker / Sound) implementation in GUIPannel_SettingWindows_Alert.mqh
      if (!CreateWindow_SettingMarkerAndSound("Setting Marker and Sound",30,30))
@@ -148,64 +103,24 @@
       {
        Print(__FUNCTION__, " > Failed to create candle info popup!");
        return (false);
-      }
-   //// Create Setting Trading window implementation in GUIPannel_SettingWindows_Trading.mqh
-   // if (!CreateWindow_SettingTrading("Setting Trading",30,30))
-   //  {
-   //    Print(__FUNCTION__, " > Failed to create Setting Trading Windows!");
-   //    return (false);
-   //  }
-   // //Create Tab
-   //  if(!CreateTab_SettingTrading(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT + M_CONTROL_YDISTANCE))
-   //   {
-   //     Print(__FUNCTION__, " > Failed to create Setting Trading Tab!");
-   //     return (false);
-   //   }
-   //  if(!CreateTable_StopLostSetting(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT)) return false;
-   //  if(!CreateStopLostForm(M_CONTROL_BORDER_GAP, m_table_stoplostsetting.Y2() - m_tabs_setting_trading.Y() + M_CONTROL_YDISTANCE)) return false;
-   //  if(!CreateTable_TrailingSetting(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT)) return false;
-   //  if(!CreateTable_IndicatorsTrailingSetting(M_CONTROL_BORDER_GAP, m_table_trailingsetting.Y2() - m_tabs_setting_trading.Y() + M_CONTROL_YDISTANCE)) return false;
-   //  if(!CreateTrailingForm(m_table_indicators_trailingsetting.X2() + M_CONTROL_YDISTANCE, m_table_indicators_trailingsetting.Y() - m_tabs_setting_trading.Y())) return false;
-   //// For Setting Marker and Sound Window implementation in GUIPannel_SettingWindows_MarkerAndSound.mqh
-   // if (!CreateWindow_SettingMarkerAndSound("Setting Marker and Sound",30,30))
-   //  {
-   //    Print(__FUNCTION__, " > Failed to create Setting Marker and Sound Windows!");
-   //    return (false);
-   //  }
-   // //Create Tab
-   //  if(!CreateTab_SettingMarkerAndSound(M_CONTROL_BORDER_GAP, WINDOW_CAPTION_HEIGHT + M_CONTROL_YDISTANCE))
-   //   {
-   //     Print(__FUNCTION__, " > Failed to create Setting Marker and Sound Tab!");
-   //     return (false);
-   //   }
-   // //For Marker Setting
-   //  LoadMarkerSettingsFromJSON();
-   //  if(!CreateTab_SettingConfig_Marker(0, WINDOW_CAPTION_HEIGHT)) return false;
-   // // For Sound Setting
-   //  if(!CreateTab_SettingConfig_Sound(0, WINDOW_CAPTION_HEIGHT)) return false;
-   //---------------------
+      }   
      int trading_top = M_CONTROL_BORDER_GAP + 3;
+     int trading_body_top = trading_top + M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP;   // below the TF switch row
      if(!CreateTFSwitchButtons(M_CONTROL_BORDER_GAP, trading_top)) return false;
-     if(!CreateTable_PreTradeSymbolMonitor(M_CONTROL_BORDER_GAP, trading_top + TF_SWITCH_ROW_HEIGHT)) return false;
-     if(!CreateTradingForm(M_CONTROL_BORDER_GAP + m_table_indicator_PreTradeSymbolMonitor.Width() + M_CONTROL_BORDER_GAP, trading_top + TF_SWITCH_ROW_HEIGHT)) return false;
-     if(!CreateTable_PositionPretradeView(M_CONTROL_BORDER_GAP, trading_top + TF_SWITCH_ROW_HEIGHT + TRADING_FORM_HEIGHT + M_CONTROL_HEIGHT))
+     if(!CreateTable_PreTradeSymbolMonitor(M_CONTROL_BORDER_GAP, trading_body_top)) return false;
+     if(!CreateTradingForm(M_CONTROL_BORDER_GAP + m_table_indicator_PreTradeSymbolMonitor.Width() + M_CONTROL_BORDER_GAP, trading_body_top)) return false;
+     if(!CreateTable_PositionPretradeView(M_CONTROL_BORDER_GAP, trading_body_top + TRADING_FORM_HEIGHT + M_CONTROL_HEIGHT))
       {
        Print(__FUNCTION__, " > Failed to create Position Pretrade View table!");
        return (false);
       }
      OnSymbolToTradeChanged();
-     SyncTFSwitchButtons();
-     if(!CreateTable_PositionsStoplostAndTrailling(M_CONTROL_BORDER_GAP, trading_top + TF_SWITCH_ROW_HEIGHT + TRADING_FORM_HEIGHT + M_CONTROL_HEIGHT + PRETRADE_VIEW_TABLE_HEIGHT + M_CONTROL_HEIGHT))
+     Sync_CButtonsGroup_TFSwitchButtons();
+     if(!CreateTable_PositionsStoplostAndTrailling(M_CONTROL_BORDER_GAP, trading_body_top + TRADING_FORM_HEIGHT + M_CONTROL_HEIGHT + PRETRADE_VIEW_TABLE_HEIGHT + M_CONTROL_HEIGHT))
       {
        Print(__FUNCTION__, " > Failed to create Positions StopLost/Trailing table!");
        return (false);
-      }
-    //Finalize GUI Creation
-    // CWndEvents::CompletedGUI();
-    // HideAddIndicatorForm();
-    // HideStopLostForm();
-    // m_btn_save_indicator.Hide();
-    // CWndEvents::ShowTabElements(WindowIdx(m_window_main));
+      }    
     //--- Default to the Trading tab
      m_tabs_main.SelectTab(TAB_TAB_MAIN_TRADING);
     //--- One Show for the whole panel; CTabs::Show keeps only the selected tab, then re-hide the per-mode ones
@@ -221,16 +136,10 @@
                                 m_tradingEngine(NULL),m_trading_control(NULL),m_indicator_template_manager(NULL),
                                 m_SymbolTFManager(NULL),m_BarPatterns_Control(NULL),m_SwingSetting(NULL),
                                 m_trading_setup_manager(NULL),m_chart_obj_collection(NULL),m_graph_elements(NULL),
-                                m_candle_info_shown_bar(0),m_pattern_bitmap(NULL),m_tooltip_candle_info(NULL),m_chart_id(::ChartID()),m_subwin(0)
+                                m_candle_info_shown_bar(0),m_chart_id(::ChartID()),m_subwin(0)
   {
    //--- Setting parameters for the time counters
     m_gui_timecounter.SetParameters(16, 500);
-    m_pending_remove_row     = -1;
-    m_pending_remove_sym_symboltf = "";
-    m_pending_remove_tf_symboltf  = "";
-    //m_treeview_symboltf_need_sync = false;
-    //m_treeview_indicator_need_sync = false;
-    //m_table_indicator_need_sync = false;
     m_indicator_save_pending = false;
     m_current_param_type = IND_CUSTOM;
     m_gui_created     = false;
@@ -245,7 +154,7 @@
  //+------------------------------------------------------------------+
  //| Init                                                             |
  //+------------------------------------------------------------------+
- bool CGUIPannel::OnInitEvent(const int uninit_reason)
+ bool CGUIPannel::OnInit(const int uninit_reason)
   {
    if(!m_gui_created)
     {
@@ -264,23 +173,11 @@
       //--- The New Order combobox mirrors the chart Symbol (tree click / combobox both move the chart)
       m_table_position_pretrade_view.SetValue(COL_PTV_SYMBOL, 0, ::Symbol());
       OnSymbolToTradeChanged(false);
-      SyncTFSwitchButtons();          // chart Symbol may have changed
+      OnClick_CButtonsGroup_TFSwitchButton();          // chart Symbol may have changed
       SyncTreeView_SymbolTFSetting(); // chart pair moved: the start-icon row and the active Symbol node follow it
       SyncTable_SymbolTFSetting();
       UpdateGUI(false);
-    }
-   //--- Re-register every init: CreateCollection() rebuilds the chart objects
-   // if(m_chart_obj_collection != NULL)
-   //  {
-   //    CChartObj *chart = m_chart_obj_collection.GetChart(m_chart_id);
-   //    if(chart != NULL)
-   //     {
-   //      chart.AddTopElement(GetPointer(m_window_main));
-   //      chart.AddTopElement(GetPointer(m_window_setting_timeseries));
-   //      chart.AddTopElement(GetPointer(m_window_setting_trading));
-   //      chart.AddTopElement(GetPointer(m_window_setting_markerAndSound));
-   //     }
-   //  }
+    }   
    //--- Registration order = stacking order: main at the bottom of the panel, dialogs above it
    if(m_graph_elements != NULL)
     {
@@ -290,24 +187,17 @@
       m_graph_elements.RegisterElement(GetPointer(m_window_setting_markerAndSound));
       m_graph_elements.RegisterElement(GetPointer(m_window_candle_infomation));
     }
-   //--- Box/tooltip after the windows: the tooltip stacks above them
-   if(!CreatePatternHoverElements())
-      Print(__FUNCTION__, " > Failed to create the pattern hover box/tooltip");
    return true;
   };
  //+------------------------------------------------------------------+
  //| Deinit                                                           |
  //+------------------------------------------------------------------+
- void CGUIPannel::OnDeinitEvent(const int reason)
+ void CGUIPannel::OnDeinit(const int reason)
   {
-    //--- Symbol/TF change too: the box and the popup belong to the old bars
-    HidePatternBitmapAtBar();
-    HideWindow_CandleInfo();
+    //--- Symbol/TF change too: the popup belongs to the old bars
+     HideWindow_CandleInfo();
     if(reason != REASON_CHARTCHANGE)
-     {
-     // CWndEvents::Destroy();
-      ::ChartRedraw(m_chart_id);
-     }
+     ::ChartRedraw(m_chart_id);    
   }
  //+------------------------------------------------------------------+
  //| Timer                                                            |
@@ -316,47 +206,10 @@
   {
    //--- Exit if this is the tester
     if (::MQLInfoInteger(MQL_TESTER) || ::MQLInfoInteger(MQL_FRAME_MODE))
-      return;
-   //--- Deferred delete and sync
-   // if(m_pending_remove_row >= 0)
-   //  {
-   //    int remove_row = m_pending_remove_row;
-   //    m_pending_remove_row = -1;
-   //    if(m_indicator_template_manager != NULL && remove_row < (int)m_table_indicator_template.RowsTotal())
-   //      OnClickRemoveIndicator(remove_row);
-   //  }
-   // if(m_pending_remove_sym_symboltf != "")
-   //  {
-   //   string remove_sym = m_pending_remove_sym_symboltf;
-   //   string remove_tf  = m_pending_remove_tf_symboltf;
-   //   m_pending_remove_sym_symboltf = "";
-   //   m_pending_remove_tf_symboltf  = "";
-   //   if(m_SymbolTFManager != NULL)
-   //      m_SymbolTFManager.Delete_SymbolTFSetting(remove_sym, TimestampByDescription(remove_tf));
-   //  }
-   // if(m_treeview_symboltf_need_sync && m_active_window_index == WindowIdx(m_window_setting_timeseries) &&
-   //   m_tabs_setting_timeseries.SelectedTab() == TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF)
-   //  {
-   //   m_treeview_symboltf_need_sync = false;
-   //   PopulateTable_SymbolTFSetting();
-   //   PopulateTreeView_SymbolTFSetting();
-   //   SyncTreeView_SymbolTFSetting();
-   //   SyncTable_SymbolTFSetting();
-   //  }
-   // if(m_treeview_indicator_need_sync && m_active_window_index == WindowIdx(m_window_setting_timeseries) &&
-   //   m_tabs_setting_timeseries.SelectedTab() == TAB_TAB_SETTING_TIMESERIES_INDICATOR)
-   //  {
-   //   m_treeview_indicator_need_sync = false;
-   //   SyncTreeView_IndicatorTemplateSetting();
-   //  }
-   // if(m_table_indicator_need_sync && m_active_window_index == WindowIdx(m_window_setting_timeseries) &&
-   //   m_tabs_setting_timeseries.SelectedTab() == TAB_TAB_SETTING_TIMESERIES_INDICATOR)
-   //  {
-   //   m_table_indicator_need_sync = false;
-   //   InitializeTable_IndicatorTemplateSetting();
-   //  }
+      return;   
    // Handling the elements
-    OnTimer_SettingTimeSeries();
+    if(m_window_setting_timeseries.IsVisible())
+       m_window_setting_timeseries.OnTimerEvent();
     if(m_window_setting_trading.IsVisible())
        m_window_setting_trading.OnTimerEvent();
     if(m_window_setting_markerAndSound.IsVisible())
@@ -365,36 +218,18 @@
        m_window_candle_infomation.OnTimerEvent();
     m_window_main.OnTimerEvent();
   }
- void CGUIPannel::OnTickEvent(void)
+ void CGUIPannel::OnTick(const bool new_bar)
   {
    bool redraw_needed = false;
    // --- Status Bar (Deposit Load/Profit/Server Time)
     if(UpdateStatusBar())
       redraw_needed = true;
-   //For sound and message alerts - run every tick to catch all bar 0 changes.
    // PlaySoundCloseBar();
-    CheckIndicatorAlerts();
-    CheckCandlePatternAlerts();
-    CheckSwingAlerts();
-   //// Update data for the Symbol/SL/TP/Level Table on the Settings tab
-   // if(m_active_window_index == WindowIdx(m_window_setting_trading)
-   //    && m_tabs_setting_trading.SelectedTab() == ENUM_TAB_SETTING_TRADING_STOPLOST
-   //    && SyncTable_StopLostSetting())
-   //   redraw_needed = true;
-   //// Update data for the Symbol/Trailing Table on the Settings tab - same gating, Trailling tab
-   // if(m_active_window_index == WindowIdx(m_window_setting_trading)
-   //    && m_tabs_setting_trading.SelectedTab() == ENUM_TAB_SETTING_TRADING_TRAILLING
-   //    && SyncTable_TrailingSetting())
-   //   redraw_needed = true;
-   // if(m_active_window_index == WindowIdx(m_window_setting_trading)
-   //    && m_tabs_setting_trading.SelectedTab() == ENUM_TAB_SETTING_TRADING_TRAILLING)
-   //  {
-   //   string trail_label = m_label_TrailingSetting_Symbol.LabelText();
-   //   int    trail_sep    = StringFind(trail_label, " - ");
-   //   string trail_symbol = (trail_sep >= 0) ? StringSubstr(trail_label, trail_sep + 3) : "";
-   //   if(trail_symbol != "" && trail_symbol != "-" && SyncTable_IndicatorsTrailingSetting(trail_symbol))
-   //      redraw_needed = true;
-   //  }
+    if(new_bar)
+       CheckIndicatorAlerts();   // closed-bar flips only; live flips arrive as SIGNAL_EVENT_LIVE_FLIP
+    CheckCandlePatternAlerts(new_bar);   // closed-bar part on a new bar only, live bar 0 every tick
+    if(new_bar)
+       CheckSwingAlerts();
    // Setting Trading window: live tables of the tab being shown
     if(m_window_setting_trading.IsVisible())
      {
@@ -442,14 +277,14 @@
  //+------------------------------------------------------------------+
  //| Trade operation event                                            |
  //+------------------------------------------------------------------+
- void CGUIPannel::OnTradeEvent(void)
+ void CGUIPannel::OnTrade(void)
   {
   }
  //+------------------------------------------------------------------+
  //| OnEvent handler: windows handle their controls first, then the   |
  //| panel reacts to what they shouted                                |
  //+------------------------------------------------------------------+
- void CGUIPannel::OnEvent(const int id, const long &lparam,
+ void CGUIPannel::OnChartEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
   {
     if(id == CHARTEVENT_KEYDOWN && lparam == 'O')
@@ -467,6 +302,11 @@
                   " zorder=", ::ObjectGetInteger(m_chart_id, name, OBJPROP_ZORDER));
         }
        ::Print("MY DEBUG CGUIPannel::OnEvent: trade objects found=", trade_objects);
+     }
+    if(id == CHARTEVENT_CUSTOM + SIGNAL_EVENT_LIVE_FLIP)
+     {
+      OnSignalLiveFlip(lparam, (ENUM_SIGNAL_DIR)(int)dparam, sparam);
+      return;
      }
     m_window_main.OnChartEvent(id, lparam, dparam, sparam);
     m_window_setting_timeseries.OnChartEvent(id, lparam, dparam, sparam);
@@ -494,29 +334,19 @@
    // ESC always force-hides whichever Setting window is currently active
     if(id == CHARTEVENT_KEYDOWN && lparam == 27 && m_window_setting_timeseries.IsVisible())
      {
-      CloseWindow_SettingTimeSeries();
+      m_window_setting_timeseries.CloseWindow();
       return;
      }
     if(id == CHARTEVENT_KEYDOWN && lparam == 27 && m_window_setting_trading.IsVisible())
      {
-      CloseWindow_SettingTrading();
+      m_window_setting_trading.CloseWindow();
       return;
      }
     if(id == CHARTEVENT_KEYDOWN && lparam == 27 && m_window_setting_markerAndSound.IsVisible())
      {
-      CloseWindow_SettingMarkerAndSound();
+      m_window_setting_markerAndSound.CloseWindow();
       return;
-     }
-   // if(id == CHARTEVENT_KEYDOWN && lparam == 27) // VK_ESCAPE
-   //  {
-   //   if(m_active_window_index == WindowIdx(m_window_setting_timeseries))
-   //      CloseWindow_SettingTimeSeries();
-   //   else if(m_active_window_index == WindowIdx(m_window_setting_trading))
-   //      CloseWindow_SettingTrading();
-   //   else if(m_active_window_index == WindowIdx(m_window_setting_markerAndSound))
-   //      CloseWindow_SettingMarkerAndSound();
-   //   return;
-   //  }
+     }   
      if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM && lparam == m_combobox_order_type.ObjectID())
       {
        UpdateSendButtonAppearance();
@@ -525,35 +355,17 @@
    // A tab (re)show shows every element of the tab: hide again the ones that must stay hidden
       if(id == CHARTEVENT_CUSTOM + ON_CLICK_TAB && lparam == m_tabs_main.ObjectID())
       {
-        HidePatternBitmapAtBar();
         HideWindow_CandleInfo();
         UpdateSendButtonAppearance();
         if(m_checkbox_use_RiskPerNewTrade.State()) m_edit_RiskPerNewTrade.Show(); else m_edit_RiskPerNewTrade.Hide();
         ::ChartRedraw(m_chart_id);
         return;
-      }
-   //   if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON &&
-   //      (lparam == m_btn_save_pattern_config.Id() || lparam == m_btn_save_swing_config.Id() || lparam == m_btn_save_SymbolTF.Id()))
-   //    {
-   //     SaveAllSettingsToJSON();
-   //     return;
-   //    }
-   //    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_indicator.Id())
-   //     {
-   //      SaveAllSettingsToJSON();
-   //      m_btn_save_indicator.Hide();
-   //      return;
-   //     }
+      }   
   } 
  void CGUIPannel::SaveAllSettingsToJSON(void)
   {
    if(m_SymbolTFManager == NULL) return;
-   string full_path = m_SymbolTFManager.GetFolderName() + "/Config_Setting.json";
-   //string old_content = JSONConfig_ReadWholeFile(full_path);
-   //string markers = JSONConfig_ExtractRawSection(old_content, "Markers_Setting");
-   //string sound   = JSONConfig_ExtractRawSection(old_content, "Sound_Settings");
-   //if(markers == "") markers = "{\n }";
-   //if(sound == "")   sound   = "{\n }";
+   string full_path = m_SymbolTFManager.GetFolderName() + "/Config_Setting.json";   
    string markers, sound;
    BuildJsonSection_Markers(markers);
    BuildJsonSection_Sound(sound);
@@ -592,9 +404,7 @@
  //| Update GUI                                                       |
  //+------------------------------------------------------------------+
  void CGUIPannel::UpdateGUI(const bool redraw)
-  {
-   // m_treeview_indicator_need_sync = true;
-   // m_table_indicator_need_sync = true;
+  {   
    if(redraw) ::ChartRedraw(m_chart_id);
   }
 #endif // CGUIPANNEL_LIFECYCLE_MQH

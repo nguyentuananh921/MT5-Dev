@@ -14,7 +14,7 @@
    ::PlaySound(file);
   }
  //+------------------------------------------------------------------+
- //| Indicator alerts: closed-bar catch-up (watermark) + live bar 0   |
+ //| Indicator alerts: closed-bar catch-up (watermark)                |
  //+------------------------------------------------------------------+
  void CGUIPannel::CheckIndicatorAlerts(void)
   {
@@ -27,14 +27,6 @@
    CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
    int series_total = (series_list != NULL) ? series_list.Total() : 0;
    if(series_total == 0) return;
-   int total_slots = series_total * rows;
-   bool seeding = (::ArraySize(m_live_signal_last_seen) != total_slots);   // TF/row grid changed shape: seed, don't fire
-   if(seeding)
-    {
-     ::ArrayResize(m_live_signal_last_seen, total_slots);
-     ::ArrayResize(m_upper_last_seen, total_slots);
-     ::ArrayResize(m_lower_last_seen, total_slots);
-    }
    CArrayObj *ind_list = m_IndicatorsCollection.GetList();   // filtered inline below - no Select per tick
    int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
    int digits = (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS);
@@ -70,17 +62,16 @@
        if(ind == NULL) continue;
        CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
        if(signal == NULL) continue;   // no CSignalXxx wired for this type yet
-       int index = ti * rows + row;
        string label = entry.DisplayLabel();
        string type_key = ::EnumToString(entry.TypeEnum());
        string wm_params_key = label + "|" + tf_text;   // TF-qualified: each TF keeps its own watermark
-       //--- BBands Upper/Lower line crosses; Mid is the primary signal handled below
+       //--- BBands Upper/Lower closed-bar crosses; Mid is the primary signal handled below
        if(message_on && ind.TypeIndicator() == IND_BANDS)
         {
          CSignalBollinger *bb = (CSignalBollinger*)signal;
-         ProcessBandLine(index, bb, BBAND_LINE_UPPER, "Upper", m_upper_last_seen, seeding, type_key, wm_params_key,
+         ProcessBandLine(bb, BBAND_LINE_UPPER, "Upper", type_key, wm_params_key,
                          label, tf_text, digits, entry.BuySignal(), entry.SellSignal(), symtf_buy, symtf_sell);
-         ProcessBandLine(index, bb, BBAND_LINE_LOWER, "Lower", m_lower_last_seen, seeding, type_key, wm_params_key,
+         ProcessBandLine(bb, BBAND_LINE_LOWER, "Lower", type_key, wm_params_key,
                          label, tf_text, digits, entry.BuySignal(), entry.SellSignal(), symtf_buy, symtf_sell);
         }
        //--- Closed bars: every committed flip newer than the watermark
@@ -126,41 +117,13 @@
          if(newest_committed > wm)
             m_signal_logger.SetSignalLogWatermark(type_key, wm_params_key, newest_committed);
         }
-       //--- Live bar 0: Sound + Message + CSV on every real direction change
-       ENUM_SIGNAL_DIR live_dir = signal.GetCurrentSignal();
-       if(seeding)
-        {
-         //--- Baseline = last closed-bar direction, so a flip made while detached still fires next tick
-         int hist_total = signal.HistoryTotal();
-         m_live_signal_last_seen[index] = (hist_total > 0) ? signal.HistoryDir(hist_total - 1) : live_dir;
-         continue;
-        }
-       if(live_dir == m_live_signal_last_seen[index]) continue;
-       m_live_signal_last_seen[index] = live_dir;
-       if(live_dir == SIGNAL_NONE) continue;
-       bool is_buy = (live_dir == SIGNAL_BUY);
-       if(is_buy  && !(entry.BuySignal()  && symtf_buy))  continue;
-       if(!is_buy && !(entry.SellSignal() && symtf_sell)) continue;
-       if(sound_on)
-          PlaySoundForDirection(is_buy);
-       if(message_on)
-        {
-         string dir_text   = is_buy ? "Buy" : "Sell";
-         string cross_text = (ind.TypeIndicator() == IND_BANDS) ? (is_buy ? "Cross Up MidBand" : "Cross Down MidBand") : "";
-         if(signal.Type() == OBJECT_DE_TYPE_SIGNAL_OSCILLATOR)
-            cross_text = "Value " + ::DoubleToString(ind.GetDataBuffer(0, 0), 2);
-         string time_text  = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
-         string price_text = ::DoubleToString(::iClose(sym, tf, 0), digits);   // bar 0 not closed: current price
-         CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
-         m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
-        }
       }
     }
   }
  //+------------------------------------------------------------------+
- //| Candle Pattern alerts: closed-bar watermark + live bar 0          |
+ //| Candle Pattern alerts: closed-bar watermark (new bar) + live bar 0 |
  //+------------------------------------------------------------------+
- void CGUIPannel::CheckCandlePatternAlerts(void)
+ void CGUIPannel::CheckCandlePatternAlerts(const bool new_bar)
   {
    if(m_BarPatterns_Control == NULL || m_BarTimeSeriesCollection == NULL || m_SymbolTFManager == NULL) return;
    CArrayObj *pattern_controls = m_BarPatterns_Control.GetListControls();
@@ -185,7 +148,7 @@
     }   
    //--- Closed bars
    CArrayObj *all_patterns_cb = m_BarTimeSeriesCollection.GetListAllPatterns();
-   if(all_patterns_cb != NULL)
+   if(new_bar && all_patterns_cb != NULL)
     {
      int all_patterns_total_cb = all_patterns_cb.Total();
      for(int ti = 0; ti < series_total; ti++)
@@ -389,8 +352,7 @@
  //| One BBands line (Upper/Lower): closed-bar watermark + live flip,  |
  //| Message + CSV only (no Sound)                                     |
  //+------------------------------------------------------------------+
- void CGUIPannel::ProcessBandLine(const int row, CSignalBollinger *bb, const int line_idx, const string line_name,
-                                  ENUM_SIGNAL_DIR &last_seen[], const bool seeding, const string type_key, const string params_key,
+ void CGUIPannel::ProcessBandLine(CSignalBollinger *bb, const int line_idx, const string line_name, const string type_key, const string params_key,
                                   const string label, const string tf_text, const int digits,
                                   const bool buy_on, const bool sell_on, const bool symtf_buy, const bool symtf_sell)
   {
@@ -434,24 +396,59 @@
      if(newest_committed > wm)
         m_signal_logger.SetSignalLogWatermark(type_key, line_params_key, newest_committed);
     }
-   ENUM_SIGNAL_DIR live_dir = bb.LineCurrentSignal(line_idx);
-   if(seeding)
-    {
-     int line_hist_total = bb.LineHistoryTotal(line_idx);
-     last_seen[row] = (line_hist_total > 0) ? bb.LineHistoryDir(line_idx, line_hist_total - 1) : live_dir;
-     return;
-    }
-   if(live_dir == last_seen[row]) return;
-   last_seen[row] = live_dir;
-   if(live_dir == SIGNAL_NONE) return;
-   bool is_buy_line = (live_dir == SIGNAL_BUY);
-   if(is_buy_line  && !(buy_on  && symtf_buy))  return;
-   if(!is_buy_line && !(sell_on && symtf_sell)) return;
-   string dir_text   = is_buy_line ? "Buy" : "Sell";
-   string cross_text = is_buy_line ? ("Cross Up " + line_name + "Band") : ("Cross Down " + line_name + "Band");
-   string time_text  = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
-   string price_text = ::DoubleToString(::iClose(ind.Symbol(), ind.Timeframe(), 0), digits);
-   CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + ";" + cross_text);
-   m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
   }
+//+------------------------------------------------------------------+
+//| SIGNAL_EVENT_LIVE_FLIP: bar 0 of an indicator flipped to BUY/SELL |
+//| line = "" for the primary signal, "Upper"/"Lower" for Bollinger   |
+//+------------------------------------------------------------------+
+void CGUIPannel::OnSignalLiveFlip(const long handle, const ENUM_SIGNAL_DIR dir, const string line)
+ {
+  if(dir == SIGNAL_NONE || m_SignalsCollection == NULL || m_IndicatorsCollection == NULL ||
+     m_indicator_template_manager == NULL || m_SymbolTFManager == NULL) return;
+  CArrayObj *ind_list = m_IndicatorsCollection.GetList();
+  int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
+  CIndicatorDE *ind = NULL;
+  for(int i = 0; i < ind_total; i++)
+   {
+    CIndicatorDE *cand = ind_list.At(i);
+    if(cand != NULL && cand.Handle() == (int)handle) { ind = cand; break; }
+   }
+  string sym = ::Symbol();
+  if(ind == NULL || ind.Symbol() != sym) return;
+  MqlParam params[];
+  ind.GetMqlParams(params);
+  CIndicatorSetting *entry = m_indicator_template_manager.FindByIdentity(ind.TypeIndicator(), params);
+  if(entry == NULL) return;
+  bool sound_on   = entry.SoundAlert();
+  bool message_on = entry.MessageAlert();
+  if(!sound_on && !message_on) return;
+  ENUM_TIMEFRAMES tf = ind.Timeframe();
+  CSymbolTFSetting *symtf_entry = m_SymbolTFManager.FindByIdentity(sym, tf);
+  bool symtf_buy  = (symtf_entry != NULL) ? symtf_entry.BuySignal()  : false;
+  bool symtf_sell = (symtf_entry != NULL) ? symtf_entry.SellSignal() : false;
+  bool is_buy = (dir == SIGNAL_BUY);
+  if(is_buy  && !(entry.BuySignal()  && symtf_buy))  return;
+  if(!is_buy && !(entry.SellSignal() && symtf_sell)) return;
+  string cross_text = "";
+  if(line == "")
+   {
+    if(sound_on)
+       PlaySoundForDirection(is_buy);
+    if(ind.TypeIndicator() == IND_BANDS)
+       cross_text = is_buy ? "Cross Up MidBand" : "Cross Down MidBand";
+    CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
+    if(signal != NULL && signal.Type() == OBJECT_DE_TYPE_SIGNAL_OSCILLATOR)
+       cross_text = "Value " + ::DoubleToString(ind.GetDataBuffer(0, 0), 2);
+   }
+  else
+     cross_text = is_buy ? ("Cross Up " + line + "Band") : ("Cross Down " + line + "Band");
+  if(!message_on) return;
+  string label      = entry.DisplayLabel();
+  string tf_text    = TimeframeDescription(tf);
+  string dir_text   = is_buy ? "Buy" : "Sell";
+  string time_text  = ::TimeToString(::TimeCurrent(), TIME_DATE|TIME_MINUTES);
+  string price_text = ::DoubleToString(::iClose(sym, tf, 0), (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS));   // bar 0 not closed: current price
+  CMessage::Out(time_text + ";Live;" + tf_text + ";" + label + ";" + dir_text + (cross_text != "" ? ";" + cross_text : ""));
+  m_signal_logger.WriteSignalLogRow(time_text, "Indicator", tf_text, "Live", dir_text, label, price_text, cross_text);
+ }
 #endif // CGUIPANNEL_SOUNDANDMESSAGEALERTS_MQH
