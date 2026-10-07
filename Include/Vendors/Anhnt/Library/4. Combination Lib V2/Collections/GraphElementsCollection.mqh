@@ -43,6 +43,7 @@
        void              BringToTopAllCanvElm(void);
        bool              IsCoveredAt(const long chart_id,const int x,const int y);
        //Life cycle
+        void              OnInit(void);
         virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
         virtual void      OnTimerEvent(void);
                           CGraphElementsCollection(void);
@@ -237,6 +238,16 @@
            elements[i].BringToTop();
      for(int i=0;i<::ArraySize(this.m_watch_chart_id);i++)
         ::ChartRedraw(this.m_watch_chart_id[i]);
+    }
+  //+------------------------------------------------------------------+
+  //| End of the EA OnInit: the children were created without caring   |
+  //| about the stacking, put the windows above them once and leave    |
+  //| the first start                                                  |
+  //+------------------------------------------------------------------+
+  void CGraphElementsCollection::OnInit(void)
+    {
+     this.BringToTopAllCanvElm();
+     this.m_first_start=false;
     }
   //+------------------------------------------------------------------+
   //| Children get the event and, on a mouse move, whether a window    |

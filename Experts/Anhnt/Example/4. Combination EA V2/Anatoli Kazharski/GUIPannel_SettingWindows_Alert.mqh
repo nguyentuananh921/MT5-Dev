@@ -56,26 +56,19 @@
         }
       return;
      }
-   //--- Combo pick: previews update right away, before Save (dparam = selected index)
+   //--- Smart Money check box: Show of every Smart Money element on or off (the table keeps the fine control)
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_checkbox_show_smartMoney_markers.ObjectID())
+     {
+      ApplyShowToAllSmartMoney(dparam != 0);
+      return;
+     }
+   //--- Combo pick: the swatches update right away, before Save (dparam = selected index)
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_COMBOBOX_ITEM)
      {
       int sel = (int)dparam;
-      int codes[]; string shape_labels[];
-      GetMarkerArrowCodeChoices(codes, shape_labels);
-      bool shape_ok = (sel >= 0 && sel < ::ArraySize(codes));
       color mcolors[]; string color_labels[];
-      GetMarkerColorChoices(mcolors, color_labels);
+      if(m_marker_setting != NULL) m_marker_setting.GetColorChoices(mcolors, color_labels);
       bool color_ok = (sel >= 0 && sel < ::ArraySize(mcolors));
-      if(lparam == m_combo_shape_single_indicator_buy.ObjectID())  { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_BUY,  codes[sel]); return; }
-      if(lparam == m_combo_shape_single_indicator_sell.ObjectID()) { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_SINGLE_INDICATOR_SELL, codes[sel]); return; }
-      if(lparam == m_combo_shape_multi_indicator_buy.ObjectID())   { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_BUY,   codes[sel]); return; }
-      if(lparam == m_combo_shape_multi_indicator_sell.ObjectID())  { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_MULTI_INDICATOR_SELL,  codes[sel]); return; }
-      if(lparam == m_combo_shape_pattern_buy.ObjectID())           { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_BUY,           codes[sel]); return; }
-      if(lparam == m_combo_shape_pattern_sell.ObjectID())          { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_PATTERN_SELL,          codes[sel]); return; }
-      if(lparam == m_combo_shape_combo_buy.ObjectID())             { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_COMBO_BUY,             codes[sel]); return; }
-      if(lparam == m_combo_shape_combo_sell.ObjectID())            { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_COMBO_SELL,            codes[sel]); return; }
-      if(lparam == m_combo_shape_swing_high.ObjectID())            { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_SWING_HIGH,            codes[sel]); return; }
-      if(lparam == m_combo_shape_swing_low.ObjectID())             { if(shape_ok) UpdateShapePreview(SHAPE_PREVIEW_SWING_LOW,             codes[sel]); return; }
       if(lparam == m_combo_color_buy.ObjectID())                   { if(color_ok) UpdateColorPreview(0, mcolors[sel]); return; }
       if(lparam == m_combo_color_sell.ObjectID())                  { if(color_ok) UpdateColorPreview(1, mcolors[sel]); return; }
       if(lparam == m_combo_color_nonrelated.ObjectID())            { if(color_ok) UpdateColorPreview(2, mcolors[sel]); return; }
@@ -86,39 +79,21 @@
    //--- Save marker style: commit every combo's current pick, then the full config write
     if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_marker_settings.ObjectID())
      {
-      int codes[]; string shape_labels[];
-      GetMarkerArrowCodeChoices(codes, shape_labels);
-      int n_shapes = ::ArraySize(codes);
+      if(m_marker_setting == NULL) return;
       color mcolors[]; string color_labels[];
-      GetMarkerColorChoices(mcolors, color_labels);
+      m_marker_setting.GetColorChoices(mcolors, color_labels);
       int n_colors = ::ArraySize(mcolors);
+      color buy_clr = m_marker_setting.BuyColor(), sell_clr = m_marker_setting.SellColor(), nonrelated_clr = m_marker_setting.NonRelatedColor();
       int sel;
-      sel = m_combo_shape_single_indicator_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_buy_code  = codes[sel];
-      sel = m_combo_shape_single_indicator_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_single_indicator_sell_code = codes[sel];
-      sel = m_combo_shape_multi_indicator_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_buy_code   = codes[sel];
-      sel = m_combo_shape_multi_indicator_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_multi_indicator_sell_code  = codes[sel];
-      sel = m_combo_shape_pattern_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_pattern_buy_code  = codes[sel];
-      sel = m_combo_shape_pattern_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_pattern_sell_code = codes[sel];
-      sel = m_combo_shape_combo_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_combo_buy_code  = codes[sel];
-      sel = m_combo_shape_combo_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_combo_sell_code = codes[sel];
-      sel = m_combo_shape_swing_high.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_swing_high_code = codes[sel];
-      sel = m_combo_shape_swing_low.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_shapes) m_marker_swing_low_code = codes[sel];
       sel = m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_colors) m_marker_buy_color = mcolors[sel];
+      if(sel >= 0 && sel < n_colors) buy_clr = mcolors[sel];
       sel = m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_colors) m_marker_sell_color = mcolors[sel];
+      if(sel >= 0 && sel < n_colors) sell_clr = mcolors[sel];
       sel = m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
-      if(sel >= 0 && sel < n_colors) m_marker_nonrelated_color = mcolors[sel];
+      if(sel >= 0 && sel < n_colors) nonrelated_clr = mcolors[sel];
+      m_marker_setting.SetColors(buy_clr, sell_clr, nonrelated_clr);
+      m_marker_setting.SetShowMarkers(m_checkbox_show_indicator_markers.State(), m_checkbox_show_candle_markers.State(),
+                                      m_checkbox_show_smartMoney_markers.State());
       SaveAllSettingsToJSON();
       ::EventChartCustom(::ChartID(), (ushort)GUIPANNEL_EVENT_MARKER_SETTING_CHANGED, 0, 0.0, "");
       return;

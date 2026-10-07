@@ -9,9 +9,11 @@
                                       CSymbolTFManager *manager, CIndicatorTemplateManager *templateManager)
  {
   if(m_symbol_collection == NULL) return false;
+  m_SymbolTFManager = manager;
+  m_IndicatorTemplateManager = templateManager;
   if(!m_time_series_engine_init_complete)
    {
-    SwingSetting_LoadFromJSON(this.m_SwingSetting, manager != NULL ? manager.GetFolderName() : ::MQLInfoString(MQL_PROGRAM_NAME));   // before any series exists
+    SmartMoneySetting_LoadFromJSON(this.m_SwingSetting, manager != NULL ? manager.GetFolderName() : ::MQLInfoString(MQL_PROGRAM_NAME));   // before any series exists
     this.m_BarTimeSeriesCollection.CreateCollection(m_symbol_collection.GetList());
     this.m_BarPatterns_Control.RegisterAllKnownPatterns();
     if(manager != NULL)
@@ -116,24 +118,40 @@ bool CTimeSeriesEngine::OnChartEvent(const int id, const long& lparam,
  bool CTimeSeriesEngine::OnTickEvent(const string symbol, SDataCalculate &data_calc)
   {
     //this.m_BarTimeSeriesCollection.Refresh(data_calc);       // ALL symbols, ALL TFs
+    //Print Debug
+        PERF_BEGIN
      this.m_last_data_calc = data_calc;
      this.m_BarTimeSeriesCollection.Refresh(symbol, data_calc); // Refresh only current chart symbol; CopyRates reads from local cache when synchronized
+    //Print Debug
+        PERF_LAP("Engine.Tick.barsRefresh")
     //this.m_tick_series.Refresh(symbol);
      m_IndicatorsCollection.SeriesRefreshBySymbol(symbol);
+    //Print Debug
+        PERF_LAP("Engine.Tick.indicatorsRefresh")
      m_SignalsCollection.RefreshCurrentBar(symbol); // current chart symbol only - stays live every tick, not just every timer tick
+    //Print Debug
+        PERF_LAP("Engine.Tick.signalsRefresh")
      return this.m_BarTimeSeriesCollection.IsEvent();           // true if any TF has a new bar
   }
  bool CTimeSeriesEngine::OnTimerEvent(void)
   {
+    //Print Debug
+        PERF_BEGIN
     m_SignalsCollection.RefreshCurrentBar(); // recompute bar 0 for every tracked signal - "current direction" must never be stale
+    //Print Debug
+        PERF_LAP("Engine.Timer.signalsRefreshAll")
 
     if(!this.m_bg_counter.CheckTimeCounter()) return false;
 
     ulong t0 = ::GetMicrosecondCount();
     this.m_BarTimeSeriesCollection.RefreshAllExceptCurrent(this.m_last_data_calc);
+    //Print Debug
+        PERF_LAP("Engine.Timer.barsAllExceptCurrent")
 
     ulong t1 = ::GetMicrosecondCount();
     m_IndicatorsCollection.SeriesRefreshAllExceptSymbol(::Symbol());
+    //Print Debug
+        PERF_LAP("Engine.Timer.indicatorsAllExceptSymbol")
     //this.m_tick_series.RefreshExpectCurrent();
 
     ulong t2 = ::GetMicrosecondCount();

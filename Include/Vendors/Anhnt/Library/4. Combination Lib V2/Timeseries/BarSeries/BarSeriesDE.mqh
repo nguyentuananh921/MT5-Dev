@@ -21,7 +21,8 @@
  #include "NewBarObj.mqh"
  #include "..\..\Entities\Bar.mqh"
   #include "..\BarPatternsControl\BarPatternsControl.mqh"
-  #include "..\BarSwingControl\BarSwingControl.mqh"
+  #include "..\SmartMoneyControl\BarSwingControl.mqh"
+  #include "..\SmartMoneyControl\MarketStructureControl.mqh"
   #include "..\..\Services\Pause.mqh"
 class CBarSeriesDE : public CBaseObj
  {
@@ -41,11 +42,13 @@ class CBarSeriesDE : public CBaseObj
     
     CBarPatternsControl *m_patterns_control;                             // Pointer to pattern control object
     CBarSwingControl *m_swing_control;                                   // Pointer to swing control object
+    CMarketStructureControl *m_market_structure_control;                 // Pointer to market structure (BOS/CHoCH) control object
    //--- Set the very first date by a period symbol at the moment and the new time of opening the last bar by a period symbol
     void              SetServerDate(void);
   protected:
     CArrayObj        *m_list_all_patterns;                               // Pointer to the list of all patterns of all timeseries of all symbols
     CArrayObj        *m_list_all_swings;                                 // Pointer to the list of all swings of all timeseries of all symbols
+    CArrayObj        *m_list_all_market_structures;                      // Pointer to the list of all market structure events of all timeseries of all symbols
   public:
    //--- Return (1) itself, (2) timeseries list, (3) timeseries "New bar" object and (4) pattern management object
     CBarSeriesDE        *GetObject(void)                                    { return &this;                  }
@@ -53,6 +56,7 @@ class CBarSeriesDE : public CBaseObj
     CNewBarObj          *GetNewBarObj(void)                                 { return &this.m_new_bar_obj;    }
     CBarPatternsControl *GetPatternsCtrlObj(void)                           { return this.m_patterns_control;}
     CBarSwingControl    *GetSwingCtrlObj(void)                            { return this.m_swing_control;   }
+    CMarketStructureControl *GetMarketStructureCtrlObj(void)              { return this.m_market_structure_control; }
 
    //--- Return the list of bars by selected (1) double, (2) integer and (3) string property fitting a compared condition
     CArrayObj        *GetList(ENUM_BAR_PROP_DOUBLE property,double value,ENUM_COMPARER_TYPE mode=EQUAL){ return CTimeseriesSelect::ByBarProperty(this.GetList(),property,value,mode); }
@@ -130,7 +134,7 @@ class CBarSeriesDE : public CBaseObj
     virtual int       Compare(const CObject *node,const int mode=0);
    //--- Constructors
                       CBarSeriesDE(CArrayObj *list);
-                      CBarSeriesDE(CArrayObj *list,CArrayObj *list_swings,const string symbol,const ENUM_TIMEFRAMES timeframe,const uint required=0);
+                      CBarSeriesDE(CArrayObj *list,CArrayObj *list_swings,CArrayObj *list_market_structures,const string symbol,const ENUM_TIMEFRAMES timeframe,const uint required=0);
                       ~CBarSeriesDE(void);
    //+------------------------------------------------------------------+
    //| Working with patterns                                            |
@@ -156,12 +160,15 @@ class CBarSeriesDE : public CBaseObj
     this.m_list_all_patterns=list;
     this.m_patterns_control=new CBarPatternsControl(this.m_symbol,this.m_timeframe,this.GetList(),this.m_list_all_patterns);
     this.m_list_all_swings=NULL;
+    this.m_list_all_market_structures=NULL;
     this.m_swing_control=new CBarSwingControl(this.m_symbol,this.m_timeframe,this.GetList(),this.m_list_all_swings);
+    this.m_market_structure_control=new CMarketStructureControl(this.m_symbol,this.m_timeframe,this.GetList(),this.m_list_all_swings,this.m_list_all_market_structures);
+    this.m_swing_control.SetStructureControl(this.m_market_structure_control);
     }
   //+------------------------------------------------------------------+
   //| Constructor 2 (specified symbol and period timeseries)           |
   //+------------------------------------------------------------------+
-  CBarSeriesDE::CBarSeriesDE(CArrayObj *list,CArrayObj *list_swings,const string symbol,const ENUM_TIMEFRAMES timeframe,const uint required=0) : m_bars(0), m_amount(0),m_required(0),m_sync(false)
+  CBarSeriesDE::CBarSeriesDE(CArrayObj *list,CArrayObj *list_swings,CArrayObj *list_market_structures,const string symbol,const ENUM_TIMEFRAMES timeframe,const uint required=0) : m_bars(0), m_amount(0),m_required(0),m_sync(false)
     {
     this.m_type=OBJECT_DE_TYPE_SERIES_PERIOD; 
     this.m_list_series.Clear();
@@ -172,7 +179,10 @@ class CBarSeriesDE : public CBaseObj
     this.m_list_all_patterns=list;
     this.m_patterns_control=new CBarPatternsControl(this.m_symbol,this.m_timeframe,this.GetList(),this.m_list_all_patterns);
     this.m_list_all_swings=list_swings;
+    this.m_list_all_market_structures=list_market_structures;
     this.m_swing_control=new CBarSwingControl(this.m_symbol,this.m_timeframe,this.GetList(),this.m_list_all_swings);
+    this.m_market_structure_control=new CMarketStructureControl(this.m_symbol,this.m_timeframe,this.GetList(),this.m_list_all_swings,this.m_list_all_market_structures);
+    this.m_swing_control.SetStructureControl(this.m_market_structure_control);
     }
   //+------------------------------------------------------------------+
   //| Destructor                                                       |
@@ -183,6 +193,8 @@ class CBarSeriesDE : public CBaseObj
         delete this.m_patterns_control;
     if(this.m_swing_control!=NULL)
         delete this.m_swing_control;
+    if(this.m_market_structure_control!=NULL)
+        delete this.m_market_structure_control;
     }
   int CBarSeriesDE::Compare(const CObject *node,const int mode=0) 
     {   

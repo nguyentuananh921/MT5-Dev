@@ -19,9 +19,6 @@
  #include "JSONConfig.mqh"
  #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Defines\EventDefines.mqh>
  extern bool g_suppress_del_rescan; 
- // substring - matches both the program path AND the runtime "SignalMarkers(<symbol>)" short name
- #define SIGNALMARKERS_PROGRAM_PATH "Vendors\\Anhnt\\Custom Buildin\\SignalMarkers"
- #define SIGNALMARKERS_NAME_TAG     "SignalMarkers"   
  
  enum ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT
   {
@@ -536,11 +533,6 @@
         return false; //Get New value
        }
 
-     // Don't add SignalMarkers.mq5 to Template      
-      if(new_type == IND_CUSTOM && ::StringFind(new_ind.Name(), SIGNALMARKERS_NAME_TAG) >= 0)
-       {
-        return false;
-       }      
       if(Exists(new_type, new_params))
        {
         return false;
@@ -572,12 +564,6 @@
     int handle = (int)lparam;
     ENUM_INDICATOR type; MqlParam params[];
     if(::IndicatorParameters(handle, type, params) < 0)
-     {
-      return false;
-     }
-    // SignalMarkers.mq5 is EA's own Layer-3 marker-display program (attached by
-    // EnsureMarkerIndicatorAttached), NOT a Template indicator - 
-    if(type == IND_CUSTOM && ArraySize(params) > 0 && ::StringFind(params[0].string_value, SIGNALMARKERS_NAME_TAG) >= 0)
      {
       return false;
      }

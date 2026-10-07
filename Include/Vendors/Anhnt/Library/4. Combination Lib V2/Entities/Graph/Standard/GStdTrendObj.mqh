@@ -26,6 +26,7 @@
       return false;
    this.SetProperty(GRAPH_OBJ_PROP_RAY_LEFT,0,::ObjectGetInteger(chart_id,name,OBJPROP_RAY_LEFT));
    this.SetProperty(GRAPH_OBJ_PROP_RAY_RIGHT,0,::ObjectGetInteger(chart_id,name,OBJPROP_RAY_RIGHT));
+   this.SetWidth(DEF_LINE_WIDTH);   // the default, SetWidth() overrides it
    return true;
   }
  bool CGStdTrendObj::SetFlagRayLeft(const bool flag)

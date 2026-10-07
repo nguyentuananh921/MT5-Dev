@@ -74,14 +74,14 @@
    int row2_y = y + 2 * SETTING_SOUND_ROW_STEP;
    int row3_y = y + 3 * SETTING_SOUND_ROW_STEP;
    m_checkbox_buy_sound.SetText("Buy Sound");
-   if(!CreateCheckBox_SoundEnable(m_checkbox_buy_sound, base_x, row1_y, m_buy_sound_enabled)) return false;
+   if(!CreateCheckBox_Setting(m_checkbox_buy_sound, base_x, row1_y, m_buy_sound_enabled)) return false;
    if(!CreateCombobox_MarkerSelection(m_combo_buy_sound, combo_x, row1_y, SETTING_SOUND_COMBO_WIDTH, files, sel_buy, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
    m_checkbox_sell_sound.SetText("Sell Sound");
-   if(!CreateCheckBox_SoundEnable(m_checkbox_sell_sound, base_x, row2_y, m_sell_sound_enabled)) return false;
+   if(!CreateCheckBox_Setting(m_checkbox_sell_sound, base_x, row2_y, m_sell_sound_enabled)) return false;
    if(!CreateCombobox_MarkerSelection(m_combo_sell_sound, combo_x, row2_y, SETTING_SOUND_COMBO_WIDTH, files, sel_sell, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
    //--- Plays on every real SL modify of ApplyStopLostAndTrailing, through CTradeObj
    m_checkbox_trailing_sound.SetText("Trailing Sound");
-   if(!CreateCheckBox_SoundEnable(m_checkbox_trailing_sound, base_x, row3_y, m_trailing_sound_enabled)) return false;
+   if(!CreateCheckBox_Setting(m_checkbox_trailing_sound, base_x, row3_y, m_trailing_sound_enabled)) return false;
    if(!CreateCombobox_MarkerSelection(m_combo_trailling_sound, combo_x, row3_y, SETTING_SOUND_COMBO_WIDTH, files, sel_trailing, ENUM_TAB_SETTING_MARKERANDSOUND_SOUND)) return false;
    m_btn_save_sound_settings.SetText("Save");
    m_btn_save_sound_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
@@ -110,11 +110,11 @@
        "  \"trailing_sound_enabled\": " + (m_trailing_sound_enabled ? "true" : "false") + "\n" +
        " }";
   }
- //--- On/Off checkbox, its caption (SetText before calling) names the sound
- bool CGUIPannel::CreateCheckBox_SoundEnable(CCheckBox &checkbox, const int x, const int y, const bool pressed)
+ //--- On/Off checkbox, its caption (SetText before calling) names the setting; width 0 = SETTING_SOUND_CAPTION_WIDTH
+ bool CGUIPannel::CreateCheckBox_Setting(CCheckBox &checkbox, const int x, const int y, const bool pressed, const int tab_index, const int width)
   {
-   m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_SOUND, checkbox);
-   if(!checkbox.Create(m_chart_id, m_subwin, "CheckSound" + (string)checkbox.ObjectID(), x, y, SETTING_SOUND_CAPTION_WIDTH, M_CONTROL_HEIGHT)) return false;
+   if(checkbox.Parent() == NULL) m_tabs_setting_markerAndSound.AddToElementsArray(tab_index, checkbox);
+   if(!checkbox.Create(m_chart_id, m_subwin, "CheckSetting" + (string)checkbox.ObjectID(), x, y, (width > 0 ? width : SETTING_SOUND_CAPTION_WIDTH), M_CONTROL_HEIGHT)) return false;
    checkbox.SetState(pressed);
    return true;
   }

@@ -63,13 +63,10 @@ input color InpSellColor           = clrRed;   // Color when related to this cha
 input color InpNonRelatedColor     = clrGray;  // Color when NOT related to this chart's own TF
 input string InpBridgeFolderPath = "";  // Bridge file folder path (empty = root MQL5/Files)
 
-#include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Defines\CommonDefines.mqh>   // DEF_FONT, DEF_FONT_SIZE
-
 // Must match SignalBridgeWriter.mqh (separately compiled, no shared enum)
 #define SIGNAL_BRIDGE_MAGIC                20260919
 #define SIGNAL_BRIDGE_WRITER_EVENT_UPDATED 50000   // file rewritten - reread
 #define SIGNAL_BRIDGE_ROW_EVENT            50001   // one row carried in the event
-#define SWING_LABEL_PREFIX  "SignalMarkers_SwingLbl_"   // OBJ_TEXT HH/LH/HL/LL labels
 
 double BufSingleBuyValue[],    BufSingleBuyColorIdx[];
 double BufSingleSellValue[],   BufSingleSellColorIdx[];
@@ -85,7 +82,7 @@ double BufSwingHighValue[],    BufSwingHighColorIdx[];
 datetime g_rows_time[];   // ascending
 int      g_rows_tf[];
 int      g_rows_dir[];    // +1 buy / -1 sell; swing: +1 low / -1 high
-int      g_rows_source[]; // 0=Indicator, 1=Pattern, 2=Swing
+int      g_rows_source[]; // 0=Indicator, 1=Pattern, 2=Swing (ignored here: CCandleMarker draws it)
 int      g_rows_extra[];  // Swing: 1=HH 2=LH 3=HL 4=LL, else 0
 int      g_row_count = 0;
 
@@ -156,7 +153,6 @@ int OnInit(void)
    string base_name = "SignalBridge_" + ::Symbol() + ".dat";
    g_bridge_file = (InpBridgeFolderPath != "") ? (InpBridgeFolderPath + "/" + base_name) : base_name;
    IndicatorSetString(INDICATOR_SHORTNAME, "SignalMarkers(" + ::Symbol() + ")");
-   ::ObjectsDeleteAll(0, SWING_LABEL_PREFIX, 0, OBJ_TEXT);
    ReadBridgeFile();
    ::EventSetMillisecondTimer(250);
    return(INIT_SUCCEEDED);
@@ -167,7 +163,6 @@ void OnDeinit(const int reason)
    ::EventKillTimer();
    if(IsStaleInstance())
       return;
-   ::ObjectsDeleteAll(0, SWING_LABEL_PREFIX, 0, OBJ_TEXT);
   }
 //+------------------------------------------------------------------+
 //| Bridge events; the 250 ms OnTimer poll is the fallback           |
@@ -333,30 +328,6 @@ int BarIndexAt(const datetime &time[], const int rates_total, const datetime t)
    return(lo - 1);
   }
 //+------------------------------------------------------------------+
-//| HH/LH/HL/LL text beside a Swing marker (PLOT_ARROW has no text)  |
-//+------------------------------------------------------------------+
-void DrawSwingLabel(const datetime bar_time, const double price, const bool is_high, const int structure, const color clr)
-  {
-   string text = (structure == 1) ? "HH" : (structure == 2) ? "LH" : (structure == 3) ? "HL" : (structure == 4) ? "LL" : "";
-   string name = SWING_LABEL_PREFIX + (string)(long)bar_time + (is_high ? "_H" : "_L");
-   if(text == "") { ::ObjectDelete(0, name); return; }
-   if(::ObjectFind(0, name) < 0)
-     {
-      if(!::ObjectCreate(0, name, OBJ_TEXT, 0, bar_time, price)) return;
-      ::ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
-      ::ObjectSetInteger(0, name, OBJPROP_HIDDEN,     true);
-      ::ObjectSetInteger(0, name, OBJPROP_BACK,       true);
-      ::ObjectSetString (0, name, OBJPROP_FONT,       DEF_FONT);
-      ::ObjectSetInteger(0, name, OBJPROP_FONTSIZE,   DEF_FONT_SIZE);
-      ::ObjectSetString (0, name, OBJPROP_TOOLTIP,    "\n");
-     }
-   ::ObjectSetInteger(0, name, OBJPROP_TIME,   bar_time);
-   ::ObjectSetDouble (0, name, OBJPROP_PRICE,  price);
-   ::ObjectSetInteger(0, name, OBJPROP_ANCHOR, is_high ? ANCHOR_LOWER : ANCHOR_UPPER);
-   ::ObjectSetInteger(0, name, OBJPROP_COLOR,  clr);
-   ::ObjectSetString (0, name, OBJPROP_TEXT,   text);
-  }
-//+------------------------------------------------------------------+
 //| Bar i from rows [r_from, r_to): Buy/Sell side and color from own |
 //| TF signals (gray + all-TF side when it has none); Single/Multi/  |
 //| Pattern/Combo shape from all TFs; swings from own TF only        |
@@ -376,20 +347,10 @@ void ComputeBar(const int i, const int r_from, const int r_to, const datetime &t
    BufSwingHighValue[i]   = EMPTY_VALUE; BufSwingHighColorIdx[i]   = 0;
 
    int ind_buy = 0, ind_sell = 0, pat_buy = 0, pat_sell = 0, own_buy = 0, own_sell = 0;
-   //--- Swings: own TF only, own plots, never feed the signal shape/color
-   int swing_low = 0, swing_high = 0;
-   int swing_low_struct = 0, swing_high_struct = 0;
    for(int r = r_from; r < r_to; r++)
      {
-      if(g_rows_source[r] == 2)
-        {
-         if(g_rows_tf[r] != own_tf) continue;
-         if(g_rows_dir[r] > 0)
-           { swing_low++;  swing_low_struct  = g_rows_extra[r]; }
-         else
-           { swing_high++; swing_high_struct = g_rows_extra[r]; }
-         continue;
-        }
+      if(g_rows_source[r] >= 2)
+         continue;   // Swing and Market Structure are CCandleMarker's now
       if(g_rows_source[r] == 0)
         {
          if(g_rows_dir[r] > 0) ind_buy++;
@@ -404,22 +365,6 @@ void ComputeBar(const int i, const int r_from, const int r_to, const datetime &t
         {
          if(g_rows_dir[r] > 0) own_buy++;
          else                  own_sell++;
-        }
-     }
-   //--- Swing marker 2x further out than a signal marker
-   if(swing_low + swing_high > 0)
-     {
-      double swing_gap = (high[i] - low[i]) * 1.0;
-      double label_gap = swing_gap * 0.8;
-      if(swing_low > 0)
-        {
-         BufSwingLowValue[i] = low[i] - swing_gap; BufSwingLowColorIdx[i] = 1;
-         DrawSwingLabel(time[i], BufSwingLowValue[i] - label_gap, false, swing_low_struct, InpBuyColor);
-        }
-      if(swing_high > 0)
-        {
-         BufSwingHighValue[i] = high[i] + swing_gap; BufSwingHighColorIdx[i] = 2;
-         DrawSwingLabel(time[i], BufSwingHighValue[i] + label_gap, true, swing_high_struct, InpSellColor);
         }
      }
    int total_ind = ind_buy + ind_sell;
@@ -480,7 +425,6 @@ int OnCalculate(const int rates_total,
    if(g_dirty)
      {
       //--- One merge pass: bars and rows both ascending
-      ::ObjectsDeleteAll(0, SWING_LABEL_PREFIX, 0, OBJ_TEXT);
       int r = 0;
       for(int i = 0; i < rates_total; i++)
         {

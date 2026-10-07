@@ -40,45 +40,45 @@ class CGBaseObj : public CBaseObj
  {
   private:
   protected:
-    CArrayObj         m_list_events;                      // Object event list
-    ENUM_OBJECT       m_type_graph_obj;                   // Graphical object type
-    ENUM_GRAPH_ELEMENT_TYPE m_type_element;               // Graphical element type
-    ENUM_GRAPH_OBJ_BELONG m_belong;                       // Program affiliation
-    ENUM_GRAPH_OBJ_SPECIES m_species;                     // Graphical object species
-    string            m_name_prefix;                      // Object name prefix
-    long              m_chart_id;                         // Object chart ID
-    long              m_object_id;                        // Object ID
-    long              m_zorder;                           // Priority of a graphical object for receiving the mouse click event
-    int               m_subwindow;                        // Subwindow index
-    int               m_shift_y;                          // Y coordinate shift for the subwindow
-    int               m_timeframes_visible;               // Visibility of an object on timeframes (a set of flags)
-    int               m_digits;                           // Number of decimal places in a quote
+    CArrayObj                         m_list_events;                      // Object event list
+    ENUM_OBJECT                       m_type_graph_obj;                   // Graphical object type
+    ENUM_GRAPH_ELEMENT_TYPE           m_type_element;                   // Graphical element type
+    ENUM_GRAPH_OBJ_BELONG             m_belong;                       // Program affiliation
+    ENUM_GRAPH_OBJ_SPECIES            m_species;                     // Graphical object species
+    string                            m_name_prefix;                      // Object name prefix
+    long                              m_chart_id;                         // Object chart ID
+    long                              m_object_id;                        // Object ID
+    long                              m_zorder;                           // Priority of a graphical object for receiving the mouse click event
+    int                               m_subwindow;                        // Subwindow index
+    int                               m_shift_y;                          // Y coordinate shift for the subwindow
+    int                               m_timeframes_visible;               // Visibility of an object on timeframes (a set of flags)
+    int                               m_digits;                           // Number of decimal places in a quote
    //|Link                      https://www.mql5.com/en/articles/11194  |
-    int               m_group;                            // Graphical object group    
-    bool              m_visible;                          // Object visibility
-    bool              m_back;                             // "Background object" flag
-    bool              m_selected;                         // "Object selection" flag
-    bool              m_selectable;                       // "Object availability" flag
-    bool              m_hidden;                           // "Disable displaying the name of a graphical object in the terminal object list" flag
-    datetime          m_create_time;                      // Object creation time
-    CGBaseObj        *m_parent;
-    CArrayObj         m_list_children;
+    int                               m_group;                            // Graphical object group    
+    bool                              m_visible;                          // Object visibility
+    bool                              m_back;                             // "Background object" flag
+    bool                              m_selected;                         // "Object selection" flag
+    bool                              m_selectable;                       // "Object availability" flag
+    bool                              m_hidden;                           // "Disable displaying the name of a graphical object in the terminal object list" flag
+    datetime                          m_create_time;                      // Object creation time
+    CGBaseObj                        *m_parent;
+    CArrayObj                         m_list_children;
    //--- Create (1) the object structure and (2) the object from the structure
-    virtual bool      ObjectToStruct(void)                      { return true; }
-    virtual void      StructToObject(void)                      {;}
+    virtual bool                      ObjectToStruct(void)                      { return true; }
+    virtual void                      StructToObject(void)                      {;}
 
    //--- Return the list of object events
-    CArrayObj        *GetListEvents(void)                       { return &this.m_list_events;          }
+    CArrayObj                        *GetListEvents(void)                       { return &this.m_list_events;          }
    //--- Create a new object event
-    CEventBaseObj    *CreateNewEvent(const ushort event_id,const long lparam,const double dparam,const string sparam) { return new CEventBaseObj(event_id,lparam,dparam,sparam); }
+    CEventBaseObj                    *CreateNewEvent(const ushort event_id,const long lparam,const double dparam,const string sparam) { return new CEventBaseObj(event_id,lparam,dparam,sparam); }
    //--- Create a new object event and add it to the event list
-    bool              CreateAndAddNewEvent(const ushort event_id,const long lparam,const double dparam,const string sparam) { return this.AddEvent(new CEventBaseObj(event_id,lparam,dparam,sparam)); }
+    bool                              CreateAndAddNewEvent(const ushort event_id,const long lparam,const double dparam,const string sparam) { return this.AddEvent(new CEventBaseObj(event_id,lparam,dparam,sparam)); }
    //--- Add an event object to the event list
-    bool              AddEvent(CEventBaseObj *event)            { return this.m_list_events.Add(event);}
+    bool                              AddEvent(CEventBaseObj *event)            { return this.m_list_events.Add(event);}
    //--- Clear the event list
-    void              ClearEventsList(void)                     { this.m_list_events.Clear();          }
+    void                              ClearEventsList(void)                     { this.m_list_events.Clear();          }
    //--- Return the number of events in the list
-    int               EventsTotal(void)                         { return this.m_list_events.Total();   }
+    int                               EventsTotal(void)                         { return this.m_list_events.Total();   }
 
   public:
    //--- Constructor/destructor
@@ -86,82 +86,82 @@ class CGBaseObj : public CBaseObj
                       ~CGBaseObj(){;}
 
    //--- Containment: the object this one lives in, and the objects living in it
-    CGBaseObj        *Parent(void)                        const { return this.m_parent;                }
-    int               ChildrenTotal(void)                 const { return this.m_list_children.Total(); }
-    CGBaseObj        *Child(const int index);
-    virtual bool      AddChild(CGBaseObj *child);
-    bool              DeleteChild(CGBaseObj *child);
+    CGBaseObj                        *Parent(void)                        const { return this.m_parent;                }
+    int                               ChildrenTotal(void)                 const { return this.m_list_children.Total(); }
+    CGBaseObj                        *Child(const int index);
+    virtual bool                      AddChild(CGBaseObj *child);
+    bool                              DeleteChild(CGBaseObj *child);
 
    //--- Life cycle hooks, empty here: CGElement and CGStdBaseObj override them, a collection calls them through CGBaseObj
-    virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam) { }
-    virtual void      OnTimerEvent(void)                                                                     { }
-    virtual void      SetCovered(const bool covered)                                                         { }   // a window covers the cursor, set by the collection
+    virtual void                      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam) { }
+    virtual void                      OnTimerEvent(void)                                                                     { }
+    virtual void                      SetCovered(const bool covered)                                                         { }   // a window covers the cursor, set by the collection
 
    //--- Return the prefix name
-    string            NamePrefix(void)                    const { return this.m_name_prefix;           }
+    string                            NamePrefix(void)                    const { return this.m_name_prefix;           }
    //--- Set the values of the class variables
-    void              SetObjectID(const long value)             { this.m_object_id=value;              }
-    void              SetBelong(const ENUM_GRAPH_OBJ_BELONG belong){ this.m_belong=belong;             }
-    void              SetTypeGraphObject(const ENUM_OBJECT obj) { this.m_type_graph_obj=obj;           }
-    void              SetTypeElement(const ENUM_GRAPH_ELEMENT_TYPE type) { this.m_type_element=type;   }
-    void              SetSpecies(const ENUM_GRAPH_OBJ_SPECIES species){ this.m_species=species;        }
+    void                              SetObjectID(const long value)             { this.m_object_id=value;              }
+    void                              SetBelong(const ENUM_GRAPH_OBJ_BELONG belong){ this.m_belong=belong;             }
+    void                              SetTypeGraphObject(const ENUM_OBJECT obj) { this.m_type_graph_obj=obj;           }
+    void                              SetTypeElement(const ENUM_GRAPH_ELEMENT_TYPE type) { this.m_type_element=type;   }
+    void                              SetSpecies(const ENUM_GRAPH_OBJ_SPECIES species){ this.m_species=species;        }
    //|Link                      https://www.mql5.com/en/articles/11194  |
-    virtual void      SetGroup(const int value)                 { this.m_group=value;                  }
+    virtual void                      SetGroup(const int value)                 { this.m_group=value;                  }
     
-    void              SetName(const string name)                { this.m_name=name;                    }
-    void              SetDigits(const int value)                { this.m_digits=value;                 }
-    void              SetChartID(const long chart_id)           { this.m_chart_id=(chart_id==NULL || chart_id==0 ? ::ChartID() : chart_id); }
+    void                              SetName(const string name)                { this.m_name=name;                    }
+    void                              SetDigits(const int value)                { this.m_digits=value;                 }
+    void                              SetChartID(const long chart_id)           { this.m_chart_id=(chart_id==NULL || chart_id==0 ? ::ChartID() : chart_id); }
     
    //--- Set the properties
-    bool              SetFlagBack(const bool flag,const bool only_prop);
-    bool              SetFlagSelected(const bool flag,const bool only_prop);
-    bool              SetFlagSelectable(const bool flag,const bool only_prop);
-    bool              SetFlagHidden(const bool flag,const bool only_prop);
-    virtual bool      SetZorder(const long value,const bool only_prop);
-    virtual bool      SetXOffset(const long value);
-    virtual bool      SetYOffset(const long value);
-    virtual bool      SetXSize(const long value);
-    virtual bool      SetYSize(const long value);
-    bool              SetVisibleFlag(const bool flag,const bool only_prop);
-    bool              SetVisibleOnTimeframes(const int flags,const bool only_prop);
-    bool              SetVisibleOnTimeframe(const ENUM_TIMEFRAMES timeframe,const bool only_prop);
-    bool              SetSubwindow(const long chart_id,const string name);
-    bool              SetSubwindow(void);
+    bool                              SetFlagBack(const bool flag,const bool only_prop);
+    bool                              SetFlagSelected(const bool flag,const bool only_prop);
+    bool                              SetFlagSelectable(const bool flag,const bool only_prop);
+    bool                              SetFlagHidden(const bool flag,const bool only_prop);
+    virtual bool                      SetZorder(const long value,const bool only_prop);
+    virtual bool                      SetXOffset(const long value);
+    virtual bool                      SetYOffset(const long value);
+    virtual bool                      SetXSize(const long value);
+    virtual bool                      SetYSize(const long value);
+    bool                              SetVisibleFlag(const bool flag,const bool only_prop);
+    bool                              SetVisibleOnTimeframes(const int flags,const bool only_prop);
+    bool                              SetVisibleOnTimeframe(const ENUM_TIMEFRAMES timeframe,const bool only_prop);
+    bool                              SetSubwindow(const long chart_id,const string name);
+    bool                              SetSubwindow(void);
 
    //--- Return the values of class variables
-    virtual int       XOffset(void)                       const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_XOFFSET); }
-    virtual int       YOffset(void)                       const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_YOFFSET); }
-    virtual int       XSize(void)                         const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_XSIZE);   }
-    virtual int       YSize(void)                         const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_YSIZE);   }
-    ENUM_GRAPH_ELEMENT_TYPE TypeGraphElement(void)        const { return this.m_type_element;       }
-    ENUM_GRAPH_OBJ_BELONG   Belong(void)                  const { return this.m_belong;             }
-    ENUM_GRAPH_OBJ_SPECIES  Species(void)                 const { return this.m_species;            }
-    ENUM_OBJECT       TypeGraphObject(void)               const { return this.m_type_graph_obj;     }
-    datetime          TimeCreate(void)                    const { return this.m_create_time;        }
-    string            Name(void)                          const { return this.m_name;               }
-    long              ChartID(void)                       const { return this.m_chart_id;           }
-    long              ObjectID(void)                      const { return this.m_object_id;          }
-    virtual long      Zorder(void)                        const { return this.m_zorder;             }
-    int               SubWindow(void)                     const { return this.m_subwindow;          }
-    int               ShiftY(void)                        const { return this.m_shift_y;            }
-    int               VisibleOnTimeframes(void)           const { return this.m_timeframes_visible; }
-    int               Digits(void)                        const { return this.m_digits;             }
-    virtual int       Group(void)                         const { return this.m_group;              }
-    bool              IsBack(void)                        const { return this.m_back;               }
-    bool              IsSelected(void)                    const { return this.m_selected;           }
-    bool              IsSelectable(void)                  const { return this.m_selectable;         }
-    bool              IsHidden(void)                      const { return this.m_hidden;             }
-    bool              IsVisible(void)                     const { return this.m_visible;            }
+    virtual int                       XOffset(void)                       const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_XOFFSET); }
+    virtual int                       YOffset(void)                       const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_YOFFSET); }
+    virtual int                       XSize(void)                         const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_XSIZE);   }
+    virtual int                       YSize(void)                         const { return (int)::ObjectGetInteger(this.m_chart_id,this.m_name,OBJPROP_YSIZE);   }
+    ENUM_GRAPH_ELEMENT_TYPE           TypeGraphElement(void)              const { return this.m_type_element;       }
+    ENUM_GRAPH_OBJ_BELONG             Belong(void)                        const { return this.m_belong;             }
+    ENUM_GRAPH_OBJ_SPECIES            Species(void)                       const { return this.m_species;            }
+    ENUM_OBJECT                       TypeGraphObject(void)               const { return this.m_type_graph_obj;     }
+    datetime                          TimeCreate(void)                    const { return this.m_create_time;        }
+    string                            Name(void)                          const { return this.m_name;               }
+    long                              ChartID(void)                       const { return this.m_chart_id;           }
+    long                              ObjectID(void)                      const { return this.m_object_id;          }
+    virtual long                      Zorder(void)                        const { return this.m_zorder;             }
+    int                               SubWindow(void)                     const { return this.m_subwindow;          }
+    int                               ShiftY(void)                        const { return this.m_shift_y;            }
+    int                               VisibleOnTimeframes(void)           const { return this.m_timeframes_visible; }
+    int                               Digits(void)                        const { return this.m_digits;             }
+    virtual int                       Group(void)                         const { return this.m_group;              }
+    bool                              IsBack(void)                        const { return this.m_back;               }
+    bool                              IsSelected(void)                    const { return this.m_selected;           }
+    bool                              IsSelectable(void)                  const { return this.m_selectable;         }
+    bool                              IsHidden(void)                      const { return this.m_hidden;             }
+    bool                              IsVisible(void)                     const { return this.m_visible;            }
 
    //--- Return the graphical object type (ENUM_OBJECT) calculated from the object type (ENUM_OBJECT_DE_TYPE) passed to the method
-    ENUM_OBJECT       GraphObjectType(const ENUM_OBJECT_DE_TYPE obj_type) const { return ENUM_OBJECT(obj_type-OBJECT_DE_TYPE_GSTD_OBJ-1); }
+    ENUM_OBJECT                       GraphObjectType(const ENUM_OBJECT_DE_TYPE obj_type) const { return ENUM_OBJECT(obj_type-OBJECT_DE_TYPE_GSTD_OBJ-1); }
     
    //--- Return the description of the type of the graphical object (1) type, (2, 3) element, (4) affiliation and (5) species
-    string            TypeGraphObjectDescription(void);
-    string            TypeElementDescription(const ENUM_GRAPH_ELEMENT_TYPE type);
-    string            TypeElementDescription(void);
-    string            BelongDescription(void);
-    string            SpeciesDescription(void);
+    string                            TypeGraphObjectDescription(void);
+    string                            TypeElementDescription(const ENUM_GRAPH_ELEMENT_TYPE type);
+    string                            TypeElementDescription(void);
+    string                            BelongDescription(void);
+    string                            SpeciesDescription(void);
   };
 #endif // CGBASEEVENT_MQH_DECLARATION
 #ifndef CGBASEEVENT_MQH_IMPLEMENTATION

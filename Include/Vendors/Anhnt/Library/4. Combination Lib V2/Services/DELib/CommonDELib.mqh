@@ -14,6 +14,7 @@
   //#include "..\..\Defines\Defines.mqh"
   #include "..\..\Entities\Defines\TimeseriesDefines.mqh"
   #include "..\..\Entities\Defines\SwingDefines.mqh"
+  #include "..\..\Entities\Defines\MarketStructureDefines.mqh"
   #include "..\..\Entities\Defines\TradingDefines.mqh"
   #include "..\Message\Message.mqh"
   #include "..\InputData\CommonInpData.mqh"
@@ -452,6 +453,18 @@ string SwingTypeDescription(const ENUM_SWING_TYPE type)
         case SWING_TYPE_HIGH : return "Swing High";
         case SWING_TYPE_LOW  : return "Swing Low";
         default               : return "None";
+      }
+  }
+//+------------------------------------------------------------------+
+//| Return market structure event (BOS / CHoCH) description          |
+//+------------------------------------------------------------------+
+string MarketStructureTypeDescription(const ENUM_MARKET_STRUCTURE_TYPE type)
+  {
+    switch(type)
+      {
+        case MARKET_STRUCTURE_BOS   : return "BOS";
+        case MARKET_STRUCTURE_CHOCH : return "CHoCH";
+        default                      : return "None";
       }
   }
 //+------------------------------------------------------------------+

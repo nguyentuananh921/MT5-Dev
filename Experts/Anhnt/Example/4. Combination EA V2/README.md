@@ -8,7 +8,7 @@
     //Print Debug
       ->Căn lề từ đây.
     Tức là khi Print Debug phải có class và Method để còn lựa mà xóa đi.
-  -Khi EA lớn lên thì print debug thẳng ra file với tên file là class và dong
+  -Khi EA lớn lên thì print debug thẳng ra file với tên file là tên class
  [] Hạn chế dùng number thay vì đó dùng Enum ví dụ thay vì 1 hay 2 nữa mà thay vì thế trong code mình sẽ phải là PRICE_CLOSE và PRICE_OPEN
  [] Log có sẵn trong workspace
  [] Tên của các Properties sẽ dựa trên class thống nhất giữa các layer và class ví dụ
@@ -124,8 +124,7 @@
       └─ m_list: nhiều CBarTimeSeriesDE, mỗi Symbol 1 cái
           └─ m_list_series: nhiều CBarSeriesDE, mỗi Timeframe 1 cái
               └─ m_list_series: nhiều CBar, mỗi Bar 1 Row (28 cột)
-                  └─ BAR_PROP_PATTERNS_TYPE: cache bitmask, FK thật nằm bên Table Patterns (PATTERN_PROP_TIME)
-  [] SignalBridgeWriter: mỗi bar mới bắn Event, mỗi row đi thẳng trong Event (không file). File SignalBridge_<SYMBOL>.dat vẫn được ghi khi rebuild đầy đủ.
+                  └─ BAR_PROP_PATTERNS_TYPE: cache bitmask, FK thật nằm bên Table Patterns (PATTERN_PROP_TIME)  
 4. EA gồm có 
  [] Layer 1:PureData Sử dụng Library của Artyom Trishkin
    - Library link Lib https://www.mql5.com/en/articles/14710
@@ -139,9 +138,7 @@
   - SymbolTFSetting.mqh
   - SymbolTFManager.mqh
   - TradingSetupSetting.mqh, TradingSetupSettingManager.mqh
-  - SwingSettingJSON.mqh
-  - SignalBridgeWriter.mqh, SignalBridgeRow.mqh
-  - SignalLogger.mqh
+  - SwingSettingJSON.mqh  
    [] CIndicatorSetting: dùng để Seting cho mỗi indicator có trong CIndicatorTemplateManager
    [] CIndicatorTemplateManager: dùng để Setting cho một template. Khái niệm template có trên Chart, có trên Table, Indicator TreeView của CGUIPannel, và List các Indicator có trong một symbol + tf
    [] CIndicatorTemplateManager sẽ bắn Event để các component khác tự bắt Event và xử lý.   
@@ -166,7 +163,7 @@
    - Artyom Trishkin 2. DoEasy. Service functions Lib 
    - Artyom Trishkin MVC
   [] Swing: Cần computeatBar nếu có 2 Swing cùng chiều thì cũng chỉ mark 1 thôi, còn đâu thì khi Shift + Hold Over hiển thị cho đủ.
-    [] Swing dày trên chart (nhiều HH/LH/HL/LL gần nhau) quay lại mỗi khi đổi TF; sau khi restart MT5 + build thì thưa. Chưa rõ nguyên nhân (nghi nhãn OBJ_TEXT của TF cũ không bị xóa), cần Print debug. Bridge chứa swing của mọi TF, SignalMarkers chỉ vẽ swing của TF chart.
+    [] Swing dày trên chart (nhiều HH/LH/HL/LL gần nhau) quay lại mỗi khi đổi TF.
   
    [] Công việc dang dở cần check
     - TF column (cột đầu tiên) trong m_table_indicator_PreTradeSymbolMonitor không sync khi thay đổi tf trên Chart.

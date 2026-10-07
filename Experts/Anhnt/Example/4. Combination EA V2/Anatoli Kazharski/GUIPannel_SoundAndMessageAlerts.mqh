@@ -194,8 +194,8 @@
            ENUM_PATTERN_DIRECTION pdir_cb = pat_cb.Direction();
            if(pdir_cb != PATTERN_DIRECTION_BULLISH && pdir_cb != PATTERN_DIRECTION_BEARISH) continue;
            bool is_buy_cb = (pdir_cb == PATTERN_DIRECTION_BULLISH);
-           if(is_buy_cb  && !(PatternSignalBuy(pattern_cb)  && symtf_buy_cb))  continue;
-           if(!is_buy_cb && !(PatternSignalSell(pattern_cb) && symtf_sell_cb)) continue;
+           if(is_buy_cb  && !(m_BarPatterns_Control.PatternSignalBuy(pattern_cb)  && symtf_buy_cb))  continue;
+           if(!is_buy_cb && !(m_BarPatterns_Control.PatternSignalSell(pattern_cb) && symtf_sell_cb)) continue;
            string dir_text_cb = is_buy_cb ? "Buy" : "Sell";
            uint candles_cb = pat_cb.Candles();
            string pat_name_cb = pat_cb.GetProperty(PATTERN_PROP_NAME);
@@ -240,8 +240,8 @@
        m_candle_pattern_last_seen[index] = current;
        m_candle_pattern_last_bar[index]  = bar0_time;
        bool is_bullish = (current == PATTERN_DIRECTION_BULLISH);
-       bool dir_ok = is_bullish ? (PatternSignalBuy(pattern)  && symtf_buy_live)
-                                : (PatternSignalSell(pattern) && symtf_sell_live);
+       bool dir_ok = is_bullish ? (m_BarPatterns_Control.PatternSignalBuy(pattern)  && symtf_buy_live)
+                                : (m_BarPatterns_Control.PatternSignalSell(pattern) && symtf_sell_live);
        if(!dir_ok) continue;
        if(sound_on)
           PlaySoundForDirection(is_bullish);
@@ -294,7 +294,7 @@
          datetime seed = 0;
          for(int s = 0; s < swings_total; s++)
           {
-           CBarSwing *sw = all_swings.At(s);
+           CBarSwingSeries *sw = all_swings.At(s);
            if(sw == NULL || sw.Symbol() != sym || sw.Timeframe() != tf || sw.TypeSwing() != type) continue;
            if(sw.ConfirmedTime() > seed) seed = sw.ConfirmedTime();
           }
@@ -305,7 +305,7 @@
        datetime newest = wm;
        for(int s = 0; s < swings_total; s++)
         {
-         CBarSwing *sw = all_swings.At(s);
+         CBarSwingSeries *sw = all_swings.At(s);
          if(sw == NULL || sw.Symbol() != sym || sw.Timeframe() != tf || sw.TypeSwing() != type) continue;
          datetime ct = sw.ConfirmedTime();
          if(ct <= wm) continue;
@@ -319,6 +319,65 @@
             PlaySoundForDirection(type == SWING_TYPE_LOW);   // Low -> buy sound, High -> sell sound
          if(message_on)
             CMessage::Out(time_text + ";CloseBar;" + tf_text + ";" + name + ";" + price_text);
+        }
+       if(newest > wm)
+          m_signal_logger.SetSignalLogWatermark(wm_key, tf_text, newest);
+      }
+    }
+  }
+ //+------------------------------------------------------------------+
+ //| BOS / CHoCH alerts: closed-bar only, watermark on the time of the |
+ //| candle that broke the Swing; Message only (Sound is not wired yet)|
+ //+------------------------------------------------------------------+
+ void CGUIPannel::CheckMarketStructureAlerts(void)
+  {
+   if(m_SwingSetting == NULL || m_BarTimeSeriesCollection == NULL) return;
+   string sym = ::Symbol();
+   CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
+   CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
+   int series_total = (series_list != NULL) ? series_list.Total() : 0;
+   CArrayObj *all_structures = m_BarTimeSeriesCollection.GetListAllMarketStructures();
+   int structures_total = (all_structures != NULL) ? all_structures.Total() : 0;
+   if(series_total == 0 || structures_total == 0) return;
+   int digits = (int)::SymbolInfoInteger(sym, SYMBOL_DIGITS);
+   ENUM_MARKET_STRUCTURE_TYPE types[2] = {MARKET_STRUCTURE_BOS, MARKET_STRUCTURE_CHOCH};
+   for(int ti = 0; ti < series_total; ti++)
+    {
+     CBarSeriesDE *bar_series = series_list.At(ti);
+     if(bar_series == NULL) continue;
+     ENUM_TIMEFRAMES tf = bar_series.Timeframe();
+     string tf_text = TimeframeDescription(tf);
+     for(int t = 0; t < 2; t++)
+      {
+       ENUM_MARKET_STRUCTURE_TYPE type = types[t];
+       if(!m_SwingSetting.MessageAlert(type)) continue;
+       string wm_key = "Structure_" + ::EnumToString(type);
+       datetime wm = m_signal_logger.GetSignalLogWatermark(wm_key, tf_text);
+       if(wm == 0)
+        {
+         datetime seed = 0;
+         for(int s = 0; s < structures_total; s++)
+          {
+           CMarketStructureSeries *ms = all_structures.At(s);
+           if(ms == NULL || ms.Symbol() != sym || ms.Timeframe() != tf || ms.TypeStructure() != type) continue;
+           if(ms.Time() > seed) seed = ms.Time();
+          }
+         if(seed == 0) seed = ::TimeCurrent();
+         m_signal_logger.SetSignalLogWatermark(wm_key, tf_text, seed);
+         continue;
+        }
+       datetime newest = wm;
+       for(int s = 0; s < structures_total; s++)
+        {
+         CMarketStructureSeries *ms = all_structures.At(s);
+         if(ms == NULL || ms.Symbol() != sym || ms.Timeframe() != tf || ms.TypeStructure() != type) continue;
+         datetime mt = ms.Time();
+         if(mt <= wm) continue;
+         if(mt > newest) newest = mt;
+         string name       = MarketStructureTypeDescription(type) + (ms.Direction() == SIGNAL_BUY ? " (up)" : " (down)");
+         string time_text  = ::TimeToString(mt, TIME_DATE|TIME_MINUTES);
+         string price_text = ::DoubleToString(ms.Level(), digits);
+         CMessage::Out(time_text + ";CloseBar;" + tf_text + ";" + name + ";" + price_text);
         }
        if(newest > wm)
           m_signal_logger.SetSignalLogWatermark(wm_key, tf_text, newest);

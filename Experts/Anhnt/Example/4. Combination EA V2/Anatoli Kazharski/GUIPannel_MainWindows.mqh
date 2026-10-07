@@ -183,7 +183,6 @@
          OpenWindow_SettingTrading();
       else if((int)dparam == MENU_ITEM_SETTINGS_ALERT)
          OpenWindow_SettingMarkerAndSound();
-      ::Print("MY DEBUG CGUIPannel::OnEvent_Window_Main: settings menu item=", (int)dparam, " text=", sparam);
       return;
      }
    //--- "Trading" menu: Stop Lost / Trailling on-off of the New Order Symbol

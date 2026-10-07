@@ -29,7 +29,6 @@
   #define BUBBLE_RPAD        52    // right padding from the chart edge to the tip (fallback)
   #define BUBBLE_LOOKAHEAD   30    // gap between the last bar and the tip
   #define BUBBLE_BDR_W       3     // border thickness
-  #define BUBBLE_LINE_W      3     // level line thickness (native dashes need 1px, so it is solid)
   #define BUBBLE_LINE_GRAB   4     // half height of the draggable band around the level line
  //--- Colors
   #define BUBBLE_CLR_BG         clrWhiteSmoke
@@ -142,7 +141,6 @@
       !this.m_rectanglelabel_body_fill.Create(chart_id,subwin,base+"_bodyf"))
       return false;
    this.m_trend_line.SetStyle(STYLE_SOLID);
-   this.m_trend_line.SetWidth(BUBBLE_LINE_W);
    this.m_trend_line.SetColor(CColors::MixColors(chart_bg,border_clr,180/255.0));
    this.m_triangle_tip_border.SetFlagFill(true);
    this.m_triangle_tip_border.SetColor(border_clr);

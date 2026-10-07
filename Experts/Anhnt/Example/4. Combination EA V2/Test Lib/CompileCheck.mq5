@@ -9,7 +9,7 @@
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\SwingSetting.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Services\DELib\TimeseriesDELib.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Services\Select\TimeseriesSelect.mqh>
-#include <Vendors\Anhnt\Library\4. Combination Lib V2\Timeseries\BarSwingControl\BarSwingControl.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib V2\Timeseries\SmartMoneyControl\BarSwingControl.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Timeseries\BarPatternsControl\BarPatternsControl.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Timeseries\BarSeries\BarTimeSeriesDE.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V2\Timeseries\Indicators\IndicatorDE.mqh>
@@ -42,7 +42,7 @@
 
 bool   g_suppress_del_rescan = false;
 #include "..\Artyom Trishkin\TimeSeriesEngine.mqh"
-#include "..\Services\SignalBridgeWriter.mqh"
+#include "..\Services\CandleMarkerSync.mqh"
 #include "..\Artyom Trishkin\TradingEngine.mqh"
 
 int OnInit(void)

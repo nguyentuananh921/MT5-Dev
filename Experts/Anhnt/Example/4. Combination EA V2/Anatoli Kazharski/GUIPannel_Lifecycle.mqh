@@ -65,8 +65,8 @@
      LoadCandlePatternSetting_FromJSON();
      if(!CreateTable_CandlePatternSetting(0, 0)) return false;
      InitializeTable_CandlePatternSetting();
-     if(!CreateTable_SwingSetting(0, 0)) return false;
-     InitializeTable_SwingSetting();     
+     if(!CreateTable_SmartMoneySetting(0, 0)) return false;
+     InitializeTable_SmartMoneySetting();     
    // Create Setting Trading window implementation in GUIPannel_SettingWindows_Trading.mqh
      if (!CreateWindow_SettingTrading("Setting Trading",30,30))
       {
@@ -135,8 +135,8 @@
                                 m_BarTimeSeriesCollection(NULL),m_IndicatorsCollection(NULL),m_SignalsCollection(NULL),
                                 m_tradingEngine(NULL),m_trading_control(NULL),m_indicator_template_manager(NULL),
                                 m_SymbolTFManager(NULL),m_BarPatterns_Control(NULL),m_SwingSetting(NULL),
-                                m_trading_setup_manager(NULL),m_chart_obj_collection(NULL),m_graph_elements(NULL),
-                                m_candle_info_shown_bar(0),m_chart_id(::ChartID()),m_subwin(0)
+                                m_trading_setup_manager(NULL),m_marker_setting(NULL),m_chart_obj_collection(NULL),m_graph_elements(NULL),
+                                m_candle_info_shown_bar(0),m_candle_info_by_marker(false),m_chart_id(::ChartID()),m_subwin(0)
   {
    //--- Setting parameters for the time counters
     m_gui_timecounter.SetParameters(16, 500);
@@ -220,16 +220,28 @@
   }
  void CGUIPannel::OnTick(const bool new_bar)
   {
+   //Print Debug
+        PERF_BEGIN
    bool redraw_needed = false;
    // --- Status Bar (Deposit Load/Profit/Server Time)
     if(UpdateStatusBar())
       redraw_needed = true;
+    //Print Debug
+        PERF_LAP("GUI.Tick.statusBar")
    // PlaySoundCloseBar();
     if(new_bar)
        CheckIndicatorAlerts();   // closed-bar flips only; live flips arrive as SIGNAL_EVENT_LIVE_FLIP
+    //Print Debug
+        PERF_LAP("GUI.Tick.indicatorAlerts")
     CheckCandlePatternAlerts(new_bar);   // closed-bar part on a new bar only, live bar 0 every tick
+    //Print Debug
+        PERF_LAP("GUI.Tick.patternAlerts")
     if(new_bar)
        CheckSwingAlerts();
+    if(new_bar)
+       CheckMarketStructureAlerts();
+    //Print Debug
+        PERF_LAP("GUI.Tick.swingAndStructureAlerts")
    // Setting Trading window: live tables of the tab being shown
     if(m_window_setting_trading.IsVisible())
      {
@@ -269,6 +281,8 @@
         SyncRunSLTrailingButtonIcons(sl_on, trail_on);   // gear icons gray when off, dirty-checked inside
        }
      }
+   //Print Debug
+       PERF_LAP("GUI.Tick.tables")
    // Redraw the chart if any of the above updates required it
     if(redraw_needed)
            ::ChartRedraw();
@@ -287,22 +301,6 @@
  void CGUIPannel::OnChartEvent(const int id, const long &lparam,
                         const double &dparam, const string &sparam)
   {
-    if(id == CHARTEVENT_KEYDOWN && lparam == 'O')
-     {
-       int total = ::ObjectsTotal(m_chart_id);
-       int trade_objects = 0;
-       ::Print("MY DEBUG CGUIPannel::OnEvent: ObjectsTotal=", total);
-       for(int i = 0; i < total; i++)
-        {
-          string name = ::ObjectName(m_chart_id, i);
-          if(::StringFind(name, "#") != 0) continue;
-          trade_objects++;
-          ::Print("MY DEBUG CGUIPannel::OnEvent: trade object ", name,
-                  " type=", (int)::ObjectGetInteger(m_chart_id, name, OBJPROP_TYPE),
-                  " zorder=", ::ObjectGetInteger(m_chart_id, name, OBJPROP_ZORDER));
-        }
-       ::Print("MY DEBUG CGUIPannel::OnEvent: trade objects found=", trade_objects);
-     }
     if(id == CHARTEVENT_CUSTOM + SIGNAL_EVENT_LIVE_FLIP)
      {
       OnSignalLiveFlip(lparam, (ENUM_SIGNAL_DIR)(int)dparam, sparam);
@@ -366,8 +364,8 @@
   {
    if(m_SymbolTFManager == NULL) return;
    string full_path = m_SymbolTFManager.GetFolderName() + "/Config_Setting.json";   
-   string markers, sound;
-   BuildJsonSection_Markers(markers);
+   string markers = "{\n }", sound;
+   if(m_marker_setting != NULL) m_marker_setting.BuildJsonSection(markers);
    BuildJsonSection_Sound(sound);
    string symbols_tf = "[\n ]", templates = "[\n ]", stoplost = "[\n ]", trail_dri = "2";
    string pattern_alerts, swing = "{\n }";
@@ -379,7 +377,7 @@
      trail_dri = (string)m_trading_setup_manager.TrailingDataRatesIndex();
     }
    BuildJsonSection_PatternAlerts(pattern_alerts);
-   if(m_SwingSetting != NULL) SwingSetting_BuildJsonSection(m_SwingSetting, swing);
+   if(m_SwingSetting != NULL) SmartMoneySetting_BuildJsonSection(m_SwingSetting, swing);
    string json = "{\n"
                  " \"Symbols_TFs_List\": "        + symbols_tf     + ",\n"
                  " \"Indicator_Templates\": "     + templates      + ",\n"

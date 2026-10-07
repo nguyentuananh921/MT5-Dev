@@ -26,6 +26,15 @@
 		},
 		{
 			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
+		},
+		{
+			"path": "../../Example/9. SMC"
+		},
+		{
+			"path": "../../Example/4. Combination EA V3"
+		},
+		{
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib V3"
 		}
 	],
 	"settings": {

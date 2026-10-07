@@ -10,15 +10,16 @@
    CIndicatorTemplateManager  m_IndicatorTemplateManager;
   #include "Services\SymbolTFManager.mqh"
    CSymbolTFManager  m_SymbolTFManager;
+  #include "Services\MarkerSetting.mqh"
+   CMarkerSetting  m_MarkerSetting;
   #include "Services\TradingSetupSettingManager.mqh"
    CTradingSetupSettingManager  m_TradingSetupManager;
-  #include "Services\SignalBridgeWriter.mqh"
-   CSignalBridgeWriter  m_signalBridgeWriter;
   #include <Vendors\Anhnt\Library\4. Combination Lib V2\Collections\ChartObjCollection.mqh>
    CChartObjCollection  m_ChartObjCollection;
   #include "Anatoli Kazharski\GUIPannel.mqh"
   #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Graph\Composite\TradingLevelBubble.mqh>
-  #include <Vendors\Anhnt\Library\4. Combination Lib V2\Entities\Graph\Composite\PatternInfoBox.mqh>
+  #include "Services\CandleMarkerSync.mqh"
+   CCandleMarkerSync m_CandleMarkerSync;
 
    CGUIPannel m_GUIPannel;
    CGraphElementsCollection m_GraphElementsCollection;
@@ -34,21 +35,16 @@
         m_IndicatorTemplateManager.OnInitEvent(&m_ChartObjCollection);
         m_SymbolTFManager.OnInitEvent();
         m_TradingSetupManager.OnInitEvent();
+        m_MarkerSetting.OnInitEvent();
         m_timeSeriesEngine.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());
         m_timeSeriesEngine.OnInitEvent(::Symbol(), (ENUM_TIMEFRAMES)::Period(), &m_SymbolTFManager, &m_IndicatorTemplateManager);
         m_tradingEngine.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
         m_tradingEngine.SetBarTimeSeriesCollection(m_timeSeriesEngine.GetTimeSeriesCollection());
         m_tradingEngine.SetTradingSetupManager(&m_TradingSetupManager);
-        m_signalBridgeWriter.OnInitEvent(m_timeSeriesEngine.GetSignalsCollection(),
-                                         m_timeSeriesEngine.GetIndicatorsCollection(),
-                                         m_timeSeriesEngine.GetTimeSeriesCollection(),
-                                         &m_IndicatorTemplateManager, &m_SymbolTFManager,
-                                         m_timeSeriesEngine.GetPatternsControl(),
-                                         m_timeSeriesEngine.GetSwingSetting());
-        //AttachMarkerIndicatorToChart();   // moved below m_GUIPannel.OnInitEvent: needs the loaded marker settings
         m_GUIPannel.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
         m_GUIPannel.SetSymbolTFManager(&m_SymbolTFManager);
         m_GUIPannel.SetTradingSetupManager(&m_TradingSetupManager);
+        m_GUIPannel.SetMarkerSetting(&m_MarkerSetting);
         m_GUIPannel.SetSymbolsCollection(m_tradingEngine.GetSymbolsCollection());
         m_GUIPannel.SetTimeSeriesCollection(m_timeSeriesEngine.GetTimeSeriesCollection());
         m_GUIPannel.SetIndicatorsCollection(m_timeSeriesEngine.GetIndicatorsCollection());
@@ -77,17 +73,14 @@
           else
              delete bubble;
          }
+        //--- The marker badges are created before the panel windows, so the windows stack above them
+        m_CandleMarkerSync.OnInitEvent(m_timeSeriesEngine.GetSignalsCollection(), m_timeSeriesEngine.GetIndicatorsCollection(),
+                                       m_timeSeriesEngine.GetTimeSeriesCollection(), &m_IndicatorTemplateManager, &m_SymbolTFManager,
+                                       m_timeSeriesEngine.GetPatternsControl(), m_timeSeriesEngine.GetSwingSetting(),
+                                       &m_MarkerSetting, &m_GraphElementsCollection);
+        m_CandleMarkerSync.Sync(true);   // globals survive a chart change: old markers and watermarks are those of the previous symbol/TF
+        m_GraphElementsCollection.OnInit();
         m_GUIPannel.OnInit(_UninitReason);
-        //--- After the windows are registered: the box and its name stack above them
-        CPatternInfoBox *patternBox=new CPatternInfoBox();
-        if(patternBox!=NULL && patternBox.Create(::ChartID(), 0, "PatternHoverBox") && m_GraphElementsCollection.AddChild(patternBox))
-           patternBox.SetSources(m_timeSeriesEngine.GetTimeSeriesCollection(), m_timeSeriesEngine.GetPatternsControl(), &m_SymbolTFManager);
-        else
-           delete patternBox;
-        //--- Per-symbol watermark: full build only for a symbol never built, else no-op/increment; no chart series yet = wait for SYMTF_ADDED
-        if(m_timeSeriesEngine.GetTimeSeriesCollection().IsAvailable(::Symbol(), (ENUM_TIMEFRAMES)::Period()))
-           m_signalBridgeWriter.BuildAndWriteSignalBridge();
-        AttachMarkerIndicatorToChart();
       EventSetMillisecondTimer(16);
       g_ea_init_done = true;
       return (INIT_SUCCEEDED);
@@ -100,13 +93,16 @@
     ::ChartSetInteger(::ChartID(), CHART_SHOW_TRADE_LEVELS, true);
     ::ChartSetInteger(::ChartID(), CHART_SHIFT, g_orig_chart_shift);
     ::ChartSetInteger(::ChartID(), CHART_AUTOSCROLL, true);
-    if(reason != REASON_CHARTCHANGE)
-       ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
   }
 
  void OnTick(void)
   {
+    //Print Debug
+        PERF_BEGIN
+        ulong perf_start=perf_t0;
     m_tradingEngine.OnTickEvent();
+    //Print Debug
+        PERF_LAP("OnTick.tradingEngine")
       SDataCalculate data_calc;
       MqlRates rates[1];
       if(::CopyRates(Symbol(), PERIOD_CURRENT, 0, 1, rates) == 1)
@@ -114,19 +110,48 @@
           data_calc.rates         = rates[0];
           data_calc.rates_total   = ::Bars(Symbol(), PERIOD_CURRENT);
       }
+    //Print Debug
+        PERF_LAP("OnTick.copyRates")
     bool any_new_bar = m_timeSeriesEngine.OnTickEvent(Symbol(), data_calc);
+    //Print Debug
+        PERF_LAP("OnTick.timeSeriesEngine")
     if(any_new_bar)
-       m_signalBridgeWriter.BuildAndWriteSignalBridge();
+       m_CandleMarkerSync.Sync();
+    //Print Debug
+        PERF_LAP("OnTick.markerSync")
     m_GUIPannel.OnTick(any_new_bar);
+    //Print Debug
+        PERF_LAP("OnTick.GUIPannel")
+    //Print Debug
+        g_perf.Add("OnTick.total",::GetMicrosecondCount()-perf_start);
   }
 
  void OnTimer(void)
   {
     if(!g_ea_init_done) return;
-    m_ChartObjCollection.Refresh();
+    //Print Debug
+        PERF_BEGIN
+        ulong perf_start=perf_t0;
+    static ulong chart_obj_refresh_ms=0;   // chart open/close and indicator add/remove are rare: no need to poll every timer tick
+    if(::GetTickCount64()-chart_obj_refresh_ms>=250)
+      {
+       chart_obj_refresh_ms=::GetTickCount64();
+       m_ChartObjCollection.Refresh();
+      }
+    //Print Debug
+        PERF_LAP("OnTimer.chartObjRefresh")
     m_timeSeriesEngine.OnTimerEvent();    
+    //Print Debug
+        PERF_LAP("OnTimer.timeSeriesEngine")
     m_GUIPannel.OnTimerEvent();
+    //Print Debug
+        PERF_LAP("OnTimer.GUIPannel")
     m_GraphElementsCollection.OnTimerEvent();
+    //Print Debug
+        PERF_LAP("OnTimer.graphElements")
+    //Print Debug
+        g_perf.Add("OnTimer.total",::GetMicrosecondCount()-perf_start);
+        g_perf.Dump(::MQLInfoString(MQL_PROGRAM_NAME));
   }
 
  void OnTrade(void)
@@ -139,12 +164,41 @@
                   const string &sparam)
   {
     if(MQLInfoInteger(MQL_TESTER)) return;
+    //Print Debug
+        string perf_ev = "OnChartEvent." + (id == CHARTEVENT_MOUSE_MOVE ? "mouse" : (id == CHARTEVENT_CHART_CHANGE ? "chartChange" : "other")) + ".";
+        PERF_BEGIN
+        ulong perf_start=perf_t0;
     m_timeSeriesEngine.OnChartEvent(id, lparam, dparam, sparam, &m_SymbolTFManager, &m_IndicatorTemplateManager);
+    //Print Debug
+        PERF_LAP(perf_ev+"timeSeriesEngine")
     m_IndicatorTemplateManager.OnChartEvent(id, lparam, dparam, sparam, &m_ChartObjCollection);
-    m_signalBridgeWriter.OnChartEvent(id, lparam, dparam, sparam);
+    //Print Debug
+        PERF_LAP(perf_ev+"indicatorTemplateManager")
+    m_CandleMarkerSync.OnChartEvent(id, lparam, dparam, sparam);   // a Buy/Sell gate or the Swing setting changed: markers restart
+    //Print Debug
+        PERF_LAP(perf_ev+"markerSync")
     m_GraphElementsCollection.OnChartEvent(id, lparam, dparam, sparam);   // before the panel: chart-anchored elements move first
+    //Print Debug
+        PERF_LAP(perf_ev+"graphElements")
+    if(id == CHARTEVENT_CHART_CHANGE)
+       CCandleMarker::Arrange(&m_GraphElementsCollection);                // zoom/scroll changes which badges overlap
+    //Print Debug
+        PERF_LAP(perf_ev+"arrange")
+    if(CCandleMarker::ConsumeRaiseRequest())
+       m_GraphElementsCollection.BringToTopAllCanvElm();                  // a badge was shown again: the panel windows go back on top now
+    //Print Debug
+        PERF_LAP(perf_ev+"raise")
     m_tradingEngine.OnChartEvent(id, lparam, dparam, sparam);
+    //Print Debug
+        PERF_LAP(perf_ev+"tradingEngine")
+    OpenCandleInfo(id, lparam, dparam, sparam);
+    //Print Debug
+        PERF_LAP(perf_ev+"openCandleInfo")
     m_GUIPannel.OnChartEvent(id, lparam, dparam, sparam);
+    //Print Debug
+        PERF_LAP(perf_ev+"GUIPannel")
+    //Print Debug
+        g_perf.Add(perf_ev+"total",::GetMicrosecondCount()-perf_start);
     if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
      {
       ENUM_INDICATOR type = (ENUM_INDICATOR)lparam;
@@ -204,12 +258,10 @@
        m_ChartObjCollection.SetActiveChartSymbolTF(::ChartID(), parts[1], new_tf);
        return;
       }
-     //--- iCustom inputs are fixed at creation: a new marker style means remove + re-attach
+     //--- The marker colors changed: every CCandleMarker is redrawn
      if(id == CHARTEVENT_CUSTOM + GUIPANNEL_EVENT_MARKER_SETTING_CHANGED)
       {
-       ::ChartIndicatorDelete(::ChartID(), 0, SIGNALMARKERS_NAME_TAG + "(" + ::Symbol() + ")");
-       m_signalBridgeWriter.BuildAndWriteSignalBridge(true);   // the new instance only reads the file, rows pushed since the last write live nowhere else
-       AttachMarkerIndicatorToChart();
+       m_CandleMarkerSync.Sync(true);   // the Buy/Sell colors may have changed
        ::ChartRedraw();
        return;
       }
@@ -225,32 +277,45 @@
   {
   }
 
- void AttachMarkerIndicatorToChart(void)
+ //--- Candle information popup: opens on Shift + hover on a candle or on the cursor entering a CCandleMarker badge; the panel closes it
+ void OpenCandleInfo(const int id, const long &lparam, const double &dparam, const string &sparam)
   {
-    //--- Native names, not the polled CChartWnd list: right after a ChartIndicatorDelete that list is still stale
-    int ind_total = ::ChartIndicatorsTotal(::ChartID(), 0);
-    for(int i = 0; i < ind_total; i++)
-       if(::StringFind(::ChartIndicatorName(::ChartID(), 0, i), SIGNALMARKERS_NAME_TAG) == 0)
-          return;
-    int   single_buy, single_sell, multi_buy, multi_sell, pattern_buy, pattern_sell, combo_buy, combo_sell;
-    int   swing_high, swing_low;
-    color buy_clr, sell_clr, nonrelated_clr;
-    m_GUIPannel.GetMarkerSettings(single_buy, single_sell, multi_buy, multi_sell,
-                                  pattern_buy, pattern_sell, combo_buy, combo_sell,
-                                  swing_high, swing_low,
-                                  buy_clr, sell_clr, nonrelated_clr);
-    //--- Positional: must match SignalMarkers.mq5's input order
-    int h = ::iCustom(NULL, 0, SIGNALMARKERS_PROGRAM_PATH,
-                      single_buy, single_sell, multi_buy, multi_sell,
-                      pattern_buy, pattern_sell, combo_buy, combo_sell,
-                      swing_high, swing_low,
-                      buy_clr, sell_clr, nonrelated_clr,
-                      m_signalBridgeWriter.GetFolderName());
-    if(h == INVALID_HANDLE)
-     {
-      ::Print(__FUNCTION__, " > iCustom(SignalMarkers) failed, error ", ::GetLastError());
+   static datetime s_last_bar = 0;   // candle already handled while Shift stays down
+   datetime bar_time = 0;
+   int x = 0, y = 0;
+   bool by_marker = (id == CHARTEVENT_CUSTOM + ON_CANDLE_MARKER_ENTER);
+   if(by_marker)
+    {
+     bar_time = (datetime)lparam;
+     y = (int)dparam;
+    }
+   else if(id == CHARTEVENT_MOUSE_MOVE)
+    {
+     x = (int)lparam;
+     y = (int)dparam;
+     if(m_GUIPannel.IsWindow_CandleInfoVisible())
+        return;
+     bool shift = ((((int)::StringToInteger(sparam)) & MOUSE_BUTT_KEY_STATE_SHIFT) != 0);
+     if(!shift || m_GUIPannel.MouseOverAnyGUIWindow(x, y))
+      {
+       s_last_bar = 0;
+       return;
+      }
+     CChartObj *chart_obj = m_ChartObjCollection.GetChart(::ChartID());
+     if(chart_obj == NULL)
+        return;
+     bar_time = chart_obj.GetBarTimeFromXY(x, y);
+     if(bar_time == 0 || bar_time == s_last_bar)
+        return;
+     s_last_bar = bar_time;
+    }
+   else
       return;
-     }
-    if(!::ChartIndicatorAdd(::ChartID(), 0, h))
-      ::Print(__FUNCTION__, " > ChartIndicatorAdd(SignalMarkers) failed, error ", ::GetLastError());
+   string          row_label[], row_tf[];
+   ENUM_SIGNAL_DIR row_dir[];
+   datetime        row_time[];
+   int             row_source[];
+   int count = m_timeSeriesEngine.GetCandleInfo(bar_time, row_label, row_tf, row_dir, row_time, row_source);
+   if(m_GUIPannel.RefreshWindow_CandleInfo(count, row_label, row_tf, row_dir, row_time, row_source))
+      m_GUIPannel.ShowWindow_CandleInfo(x, y, bar_time, by_marker);
   }

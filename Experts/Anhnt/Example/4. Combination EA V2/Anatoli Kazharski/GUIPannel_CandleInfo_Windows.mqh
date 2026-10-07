@@ -18,15 +18,6 @@
          return true;
    return false;
   }
- datetime CGUIPannel::CalculateAtCandle(const int x, const int y)
-  {
-   datetime t; double price; int sub_window;
-   if(!::ChartXYToTimePrice(m_chart_id, x, y, sub_window, t, price) || sub_window != m_subwin)
-      return 0;
-   int shift = ::iBarShift(::Symbol(), (ENUM_TIMEFRAMES)::Period(), t, false);
-   if(shift < 0) return 0;
-   return ::iTime(::Symbol(), (ENUM_TIMEFRAMES)::Period(), shift);
-  }
  //+------------------------------------------------------------------+
  //| Popup: 3 cols Time | TF (+ source icon) | Information (+ arrow)  |
  //+------------------------------------------------------------------+
@@ -64,8 +55,8 @@
    return true;
   }
  //+------------------------------------------------------------------+
- //| Popup right next to the bar column under the cursor, flipped to  |
- //| the left side when it would leave the chart                       |
+ //| Popup beside the bar column under the cursor, clear of its badge,|
+ //| flipped to the left side when it would leave the chart            |
  //+------------------------------------------------------------------+
  void CGUIPannel::RepositionWindow_CandleInfo(const int cursor_x, const int cursor_y)
   {
@@ -81,9 +72,9 @@
      left  = bar_x - slot_w / 2;
      right = bar_x + slot_w / 2;
     }
-   int x = right + 1;
+   int x = right + CANDLE_INFO_CANDLE_GAP;
    if(x + window_w > chart_w)
-      x = left - window_w;
+      x = left - window_w - CANDLE_INFO_CANDLE_GAP;
    if(x < 0) x = 0;
    int max_x = chart_w - window_w;
    if(max_x < 0) max_x = 0;
@@ -97,8 +88,10 @@
    if(y > max_y) y = max_y;
    m_window_candle_infomation.Move(x, y);
   }
- void CGUIPannel::ShowWindow_CandleInfo(const int cursor_x, const int cursor_y)
+ void CGUIPannel::ShowWindow_CandleInfo(const int cursor_x, const int cursor_y, const datetime bar_time, const bool by_marker)
   {
+   m_candle_info_shown_bar = bar_time;
+   m_candle_info_by_marker = by_marker;
    RepositionWindow_CandleInfo(cursor_x, cursor_y);
    m_window_candle_infomation.Show();
    ::ChartRedraw(m_chart_id);
@@ -106,217 +99,26 @@
  void CGUIPannel::HideWindow_CandleInfo(void)
   {
    m_candle_info_shown_bar = 0;
+   m_candle_info_by_marker = false;
    if(!m_window_candle_infomation.IsVisible()) return;
    m_window_candle_infomation.Hide();
    ::ChartRedraw(m_chart_id);
   }
  //+------------------------------------------------------------------+
- //| Indicator flips, Patterns and Swings inside [bar_time, next bar), |
- //| gated by the same Buy/Sell settings as the markers                |
+ //| Rows built by CTimeSeriesEngine::GetCandleInfo into the table;    |
+ //| false (and no rows) when the candle has none                      |
  //+------------------------------------------------------------------+
- bool CGUIPannel::RefreshWindow_CandleInfo(const datetime bar_time)
+ bool CGUIPannel::RefreshWindow_CandleInfo(const int count, const string &row_label[], const string &row_tf[],
+                                           const ENUM_SIGNAL_DIR &row_dir[], const datetime &row_time[], const int &row_source[])
   {
-   if(m_IndicatorsCollection == NULL || m_SignalsCollection == NULL || m_BarTimeSeriesCollection == NULL ||
-      m_indicator_template_manager == NULL || m_SymbolTFManager == NULL)
-      return false;
-   datetime next_bar_time = bar_time + ::PeriodSeconds();
-   string sym = ::Symbol();
-   CBarTimeSeriesDE *bts = m_BarTimeSeriesCollection.GetTimeseries(sym);
-   CArrayObj *series_list = (bts != NULL) ? bts.GetListSeries() : NULL;
-   int series_total = (series_list != NULL) ? series_list.Total() : 0;
-   //--- TFs ascending M1..MN1
-    int order[];
-    ::ArrayResize(order, series_total);
-    for(int ti = 0; ti < series_total; ti++)
-      order[ti] = ti;
-    for(int a = 0; a < series_total - 1; a++)
-      for(int b = a + 1; b < series_total; b++)
-       {
-        CBarSeriesDE *sa = series_list.At(order[a]);
-        CBarSeriesDE *sb = series_list.At(order[b]);
-        if(sa == NULL || sb == NULL) continue;
-        if(IndexEnumTimeframe(sb.Timeframe()) < IndexEnumTimeframe(sa.Timeframe()))
-         { int tmp = order[a]; order[a] = order[b]; order[b] = tmp; }
-       }
-   string          row_label[];
-   string          row_tf[];
-   ENUM_SIGNAL_DIR row_dir[];
-   datetime        row_time[];
-   int             row_source[];   // 0 = Indicator, 1 = Pattern, 2 = Swing
-   int count = 0;
-   CArrayObj *ind_list = m_IndicatorsCollection.GetList();   // filtered inline below - no Select per mouse move
-   int ind_total = (ind_list != NULL) ? ind_list.Total() : 0;
-   for(int ti = 0; ti < series_total; ti++)
+   if(count == 0)
     {
-     CBarSeriesDE *s = series_list.At(order[ti]);
-     if(s == NULL) continue;
-     ENUM_TIMEFRAMES tf = s.Timeframe();
-     string tf_text = TimeframeDescription(tf);
-     CSymbolTFSetting *symtf_entry = m_SymbolTFManager.FindByIdentity(sym, tf);
-     bool symtf_buy  = (symtf_entry != NULL) ? symtf_entry.BuySignal()  : false;
-     bool symtf_sell = (symtf_entry != NULL) ? symtf_entry.SellSignal() : false;
-     for(int ii = 0; ii < ind_total; ii++)
-      {
-       CIndicatorDE *ind = ind_list.At(ii);
-       if(ind == NULL || ind.Symbol() != sym || ind.Timeframe() != tf) continue;
-       ENUM_INDICATOR ind_type = ind.TypeIndicator();
-       MqlParam ind_params[];
-       ind.GetMqlParams(ind_params);
-       CIndicatorSetting ind_label_setting;
-       ind_label_setting.TypeEnum(ind_type);
-       ind_label_setting.SetRawParams(ind_params);
-       CIndicatorSetting *ind_entry = m_indicator_template_manager.FindByIdentity(ind_type, ind_params);
-       bool ind_buy  = (ind_entry != NULL) ? ind_entry.BuySignal()  : false;
-       bool ind_sell = (ind_entry != NULL) ? ind_entry.SellSignal() : false;
-       CSignalBase *signal = m_SignalsCollection.GetOrCreateSignal(ind);
-       if(signal == NULL) continue;
-       //--- BBands rows carry the line right after the indicator name: -MB / -UB / -LB
-       string row_ind_label = ind_label_setting.DisplayLabel();
-       string label_upper = "", label_lower = "";
-       if(ind_type == IND_BANDS)
-        {
-         int cut = ::StringFind(row_ind_label, "  (");
-         if(cut < 0) cut = ::StringLen(row_ind_label);
-         string head = ::StringSubstr(row_ind_label, 0, cut);
-         string tail = ::StringSubstr(row_ind_label, cut);
-         label_upper   = head + "-UB" + tail;
-         label_lower   = head + "-LB" + tail;
-         row_ind_label = head + "-MB" + tail;
-        }
-       //--- History is oldest->newest: walk back, collect every flip inside the span
-       for(int h = signal.HistoryTotal() - 1; h >= 0; h--)
-        {
-         datetime ht = signal.HistoryTime(h);
-         if(ht >= next_bar_time) continue;
-         if(ht < bar_time) break;
-         ENUM_SIGNAL_DIR d = signal.HistoryDir(h);
-         if(d == SIGNAL_BUY  && !(ind_buy  && symtf_buy))  continue;
-         if(d == SIGNAL_SELL && !(ind_sell && symtf_sell)) continue;
-         ::ArrayResize(row_label,  count + 1);
-         ::ArrayResize(row_tf,     count + 1);
-         ::ArrayResize(row_dir,    count + 1);
-         ::ArrayResize(row_time,   count + 1);
-         ::ArrayResize(row_source, count + 1);
-         row_label[count]  = row_ind_label;
-         row_tf[count]     = tf_text;
-         row_dir[count]    = d;
-         row_time[count]   = ht;
-         row_source[count] = 0;
-         count++;
-        }
-       //--- BBands: Upper/Lower line crosses too; Mid is the primary signal, already collected above
-       if(ind_type == IND_BANDS)
-        {
-         CSignalBollinger *bb = (CSignalBollinger*)signal;
-         for(int li = 0; li < 2; li++)
-          {
-           for(int h = bb.LineHistoryTotal(li) - 1; h >= 0; h--)
-            {
-             datetime ht = bb.LineHistoryTime(li, h);
-             if(ht >= next_bar_time) continue;
-             if(ht < bar_time) break;
-             ENUM_SIGNAL_DIR ld = bb.LineHistoryDir(li, h);
-             if(ld == SIGNAL_BUY  && !(ind_buy  && symtf_buy))  continue;
-             if(ld == SIGNAL_SELL && !(ind_sell && symtf_sell)) continue;
-             ::ArrayResize(row_label,  count + 1);
-             ::ArrayResize(row_tf,     count + 1);
-             ::ArrayResize(row_dir,    count + 1);
-             ::ArrayResize(row_time,   count + 1);
-             ::ArrayResize(row_source, count + 1);
-             row_label[count]  = (li == BBAND_LINE_UPPER) ? label_upper : label_lower;
-             row_tf[count]     = tf_text;
-             row_dir[count]    = ld;
-             row_time[count]   = ht;
-             row_source[count] = 0;
-             count++;
-            }
-          }
-        }
-      }
+     m_table_candle_information_atBar.DeleteAllRows(false);
+     return false;
     }
-   //--- Candle Patterns
-    CArrayObj *all_patterns = m_BarTimeSeriesCollection.GetListAllPatterns();
-    int pat_total = (all_patterns != NULL) ? all_patterns.Total() : 0;
-    for(int p = 0; p < pat_total; p++)
-     {
-      CBarPattern *pat = all_patterns.At(p);
-      if(pat == NULL || pat.Symbol() != sym) continue;
-      datetime pt = pat.Time();
-      if(pt < bar_time || pt >= next_bar_time) continue;
-      ENUM_TIMEFRAMES ptf = pat.Timeframe();
-      ENUM_PATTERN_DIRECTION pdir = pat.Direction();
-      ENUM_SIGNAL_DIR dir = (pdir == PATTERN_DIRECTION_BULLISH) ? SIGNAL_BUY :
-                           (pdir == PATTERN_DIRECTION_BEARISH) ? SIGNAL_SELL : SIGNAL_NONE;
-      if(dir == SIGNAL_NONE) continue;
-      CSymbolTFSetting *pat_symtf = m_SymbolTFManager.FindByIdentity(sym, ptf);
-      bool pat_symtf_buy  = (pat_symtf != NULL) ? pat_symtf.BuySignal()  : false;
-      bool pat_symtf_sell = (pat_symtf != NULL) ? pat_symtf.SellSignal() : false;
-      if(dir == SIGNAL_BUY  && !(PatternSignalBuy(pat.TypePattern())  && pat_symtf_buy))  continue;
-      if(dir == SIGNAL_SELL && !(PatternSignalSell(pat.TypePattern()) && pat_symtf_sell)) continue;
-      uint candles = pat.Candles();
-      string pat_name = pat.GetProperty(PATTERN_PROP_NAME);
-      if(pat_name == "") pat_name = ::EnumToString(pat.TypePattern());
-      ::ArrayResize(row_label,  count + 1);
-      ::ArrayResize(row_tf,     count + 1);
-      ::ArrayResize(row_dir,    count + 1);
-      ::ArrayResize(row_time,   count + 1);
-      ::ArrayResize(row_source, count + 1);
-      row_label[count]  = ((candles > 0) ? "[" + ::IntegerToString(candles) + "B] " : "") + pat_name;
-      row_tf[count]     = TimeframeDescription(ptf);
-      row_dir[count]    = dir;
-      row_time[count]   = pt;
-      row_source[count] = 1;
-      count++;
-     }
-   //--- Swings whose pivot bar is in the span
-    CArrayObj *all_swings = m_BarTimeSeriesCollection.GetListAllSwings();
-    int sw_total = (all_swings != NULL && m_SwingSetting != NULL) ? all_swings.Total() : 0;
-    for(int w = 0; w < sw_total; w++)
-     {
-      CBarSwing *sw = all_swings.At(w);
-      if(sw == NULL || sw.Symbol() != sym) continue;
-      datetime st = sw.Time();
-      if(st < bar_time || st >= next_bar_time) continue;
-      if(!m_SwingSetting.SignalShow(sw.TypeSwing())) continue;
-      ::ArrayResize(row_label,  count + 1);
-      ::ArrayResize(row_tf,     count + 1);
-      ::ArrayResize(row_dir,    count + 1);
-      ::ArrayResize(row_time,   count + 1);
-      ::ArrayResize(row_source, count + 1);
-      int digits = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
-      row_label[count]  = SwingTypeDescription(sw.TypeSwing()) + " (" + SwingStructureDescription(sw.Structure()) + ") " + DoubleToString(sw.Price(), digits);
-      row_tf[count]     = TimeframeDescription(sw.Timeframe());
-      row_dir[count]    = (sw.TypeSwing() == SWING_TYPE_LOW) ? SIGNAL_BUY : SIGNAL_SELL;
-      row_time[count]   = st;
-      row_source[count] = 2;
-      count++;
-     }
-   //--- Pattern-only bar: the box + tooltip already tell it, no popup
-    bool has_non_pattern = false;
-    for(int i = 0; i < count && !has_non_pattern; i++)
-      if(row_source[i] != 1) has_non_pattern = true;
-    if(!has_non_pattern)
-     {
-      m_table_candle_information_atBar.DeleteAllRows(false);
-      return false;
-    }
-   //--- Time ascending, then TF ascending
-   for(int a = 0; a < count - 1; a++)
-      for(int b = a + 1; b < count; b++)
-       {
-        bool need_swap = (row_time[b] < row_time[a]) ||
-                         (row_time[b] == row_time[a] &&
-                          IndexEnumTimeframe(TimestampByDescription(row_tf[b])) < IndexEnumTimeframe(TimestampByDescription(row_tf[a])));
-        if(!need_swap) continue;
-        string          lbl_ = row_label[a];  row_label[a]  = row_label[b];  row_label[b]  = lbl_;
-        string          tf_  = row_tf[a];     row_tf[a]     = row_tf[b];     row_tf[b]     = tf_;
-        ENUM_SIGNAL_DIR d_   = row_dir[a];    row_dir[a]    = row_dir[b];    row_dir[b]    = d_;
-        datetime        tm_  = row_time[a];   row_time[a]   = row_time[b];   row_time[b]   = tm_;
-        int             src_ = row_source[a]; row_source[a] = row_source[b]; row_source[b] = src_;
-       }
-   uint source_img[] = {IMAGE_RESOURCE_BMP16_INDICATOR_BMP, IMAGE_RESOURCE_BMP16_CANDLE_PNG, IMAGE_RESOURCE_BMP16_SIGNAL_PNG};
+   uint source_img[] = {IMAGE_RESOURCE_BMP16_INDICATOR_BMP, IMAGE_RESOURCE_BMP16_CANDLE_PNG, IMAGE_RESOURCE_BMP16_SIGNAL_PNG, IMAGE_RESOURCE_BMP16_SIGNAL_PNG};
    uint dir_img[]    = {IMAGE_RESOURCE_BMP16_ARROW_UP_PNG, IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG};
-   string source_name[] = {"Indicator", "Candle Pattern", "Swing"};
+   string source_name[] = {"Indicator", "Candle Pattern", "Swing", "Market Structure"};
    m_table_candle_information_atBar.DeleteAllRows(false);
    for(int i = 0; i < count; i++)
       m_table_candle_information_atBar.AddRow();
@@ -337,11 +139,17 @@
    return true;
   }
  //+------------------------------------------------------------------+
- //| Shift+hover: box + popup for the bar under the cursor; the popup  |
- //| closes once the cursor is neither on it nor on its bar            |
+ //| Shift+hover or the cursor on a CCandleMarker badge: popup for the |
+ //| bar; the popup closes once the cursor is neither on it, nor on    |
+ //| its bar, nor on the badge that opened it                          |
  //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent_Window_CandleInfor(const int id,const long &lparam, const double &dparam, const string &sparam)
   {
+   if(id == CHARTEVENT_CUSTOM + ON_CANDLE_MARKER_LEAVE)
+    {
+     m_candle_info_by_marker = false;   // the next mouse move closes the popup unless the cursor is on it or on its bar
+     return;
+    }
    //--- Scroll/zoom/new bar: the box and its name follow the candles by themselves
    if(id == CHARTEVENT_CHART_CHANGE)
     {
@@ -355,29 +163,17 @@
    if(id != CHARTEVENT_MOUSE_MOVE) return;
    int x = (int)lparam;
    int y = (int)dparam;
-   static datetime s_last_bar = 0;   // bar already handled while Shift stays down
    //--- Open popup: stays while the cursor is on it or still on its bar
    if(m_candle_info_shown_bar != 0)
     {
      if(m_window_candle_infomation.CursorInsideElement(x, y)) return;
+     if(m_candle_info_by_marker) return;
       bool over_gui = MouseOverAnyGUIWindow(x, y);
-      if(!over_gui && CalculateAtCandle(x, y) == m_candle_info_shown_bar) return;
+      CChartObj *chart_obj = (m_chart_obj_collection != NULL) ? m_chart_obj_collection.GetChart(m_chart_id) : NULL;
+      if(!over_gui && chart_obj != NULL && chart_obj.GetBarTimeFromXY(x, y) == m_candle_info_shown_bar) return;
       if(!over_gui && m_keys.KeyShiftState()) return;
      HideWindow_CandleInfo();
      return;
-    }
-   if(!m_keys.KeyShiftState() || MouseOverAnyGUIWindow(x, y))
-    {
-     s_last_bar = 0;
-     return;
-    }
-   datetime bar_time = CalculateAtCandle(x, y);
-   if(bar_time == 0 || bar_time == s_last_bar) return;
-   s_last_bar = bar_time;
-   if(RefreshWindow_CandleInfo(bar_time))
-    {
-     m_candle_info_shown_bar = bar_time;
-     ShowWindow_CandleInfo(x, y);
     }
   }
 #endif // CGUIPANNEL_CANDLEINFO_WINDOWS_MQH

@@ -12,7 +12,8 @@
    #include <Vendors\Anhnt\Library\4. Combination Lib V2\Collections\IndicatorsCollection.mqh>
    #include "..\Services\IndicatorTemplateManager.mqh"
    #include "..\Services\SymbolTFManager.mqh"
-   #include "..\Services\SwingSettingJSON.mqh"
+   #include "..\Services\SmartMoneySettingJSON.mqh"
+   #include "..\Services\Perf.mqh"
    #include "..\Services\SignalLogger.mqh"
    #include "..\Services\TradingSetupSetting.mqh"
    #include "..\Services\TradingSetupSettingManager.mqh"
@@ -47,7 +48,7 @@
   enum ENUM_GUIPANNEL_EVENT
     {
       GUIPANNEL_EVENT_MARKER_SETTING_CHANGED = SWING_SETTING_EVENT_CHANGED + 1, // Marker style (shape/color) was saved - EA reacts
-                                               // by re-attaching SignalMarkers.mq5 with the new inputs
+                                               // by rebuilding the CCandleMarker badges
     };
  // Define GUI control 
   //Unified width
@@ -265,7 +266,7 @@
      TAB_TAB_SETTING_TIMESERIES_INDICATOR = 0,
      TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,
      TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN,
-     TAB_TAB_SETTING_TIMESERIES_SWING,
+     TAB_TAB_SETTING_TIMESERIES_SMART_MONEY_CONCEPTS,    //TAB_TAB_SETTING_TIMESERIES_SWING,
      TAB_TAB_SETTING_TIMESERIES_TOTAL,
     };
    enum ENUM_TAB_SETTING_TRADING
@@ -279,20 +280,6 @@
      ENUM_TAB_SETTING_MARKERANDSOUND_MARKER = 0,
      ENUM_TAB_SETTING_MARKERANDSOUND_SOUND,
      ENUM_TAB_SETTING_MARKERANDSOUND_TOTAL,
-    };
-  //For marker
-   enum ENUM_MARKER_SHAPE_PREVIEW_ROW
-    {
-      SHAPE_PREVIEW_SINGLE_INDICATOR_BUY  = 0,
-      SHAPE_PREVIEW_SINGLE_INDICATOR_SELL = 1,
-      SHAPE_PREVIEW_MULTI_INDICATOR_BUY   = 2,   //Multi Indicator only
-      SHAPE_PREVIEW_MULTI_INDICATOR_SELL  = 3,
-      SHAPE_PREVIEW_PATTERN_BUY = 4,
-      SHAPE_PREVIEW_PATTERN_SELL= 5,
-      SHAPE_PREVIEW_COMBO_BUY   = 6,   //Combination Indicator and CandlePattern
-      SHAPE_PREVIEW_COMBO_SELL  = 7,
-      SHAPE_PREVIEW_SWING_HIGH  = 8,
-      SHAPE_PREVIEW_SWING_LOW   = 9,
     };
   // =====================================================================
   // --- Layer 2 (GUI) layout descriptor - decided BEFORE CreateAddIndicatorParaInfor/
@@ -342,10 +329,9 @@
    #define TRAIL_FORM_EDIT_WIDTH    70
    #define TRAIL_FORM_FRAME_WIDTH   (M_CONTROL_BORDER_GAP + TRAIL_FORM_CAPTION_WIDTH + TRAIL_FORM_EDIT_WIDTH + M_CONTROL_BORDER_GAP)
    #define TRAIL_TOTAL_WIDTH        (TRAIL_IND_TABLE_WIDTH + M_CONTROL_BORDER_GAP + TRAIL_FORM_FRAME_WIDTH)
-  // SIGNAL_BRIDGE_MAGIC lives only in Services\SignalBridgeWriter.mqh (the only writer)
   // How far INSIDE the popup's near edge the cursor sits when it appears - NOT a gap.
    #define CANDLE_INFO_CURSOR_INSET  15
-   #define PATTERN_HOVER_LABEL_NAME  "GUIPannel_PatternHoverLabel"  
+   #define CANDLE_INFO_CANDLE_GAP    40   // room between the candle column and the popup: clears a CCandleMarker badge
    #define TRADING_FORM_ROWS_TOTAL   9
    #define TRADING_FORM_HEIGHT       (TRADING_FORM_ROWS_TOTAL * M_CONTROL_YDISTANCE + M_CONTROL_HEIGHT)  
 #endif // CGUIPANNELDEFINE_MQH

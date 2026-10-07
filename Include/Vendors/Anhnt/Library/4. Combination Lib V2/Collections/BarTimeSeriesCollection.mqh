@@ -26,6 +26,7 @@
       CListObj                m_list;                    // List of applied symbol timeseries
       CListObj                m_list_all_patterns;       // List of all patterns of all used symbol timeseries
       CListObj                m_list_all_swings;         // List of all swings of all used symbol timeseries
+      CListObj                m_list_all_market_structures; // List of all market structure events (BOS/CHoCH) of all used symbol timeseries
       
     //--- Return the timeseries index by symbol name
       int                     IndexTimeSeries(const string symbol);
@@ -35,6 +36,7 @@
       CArrayObj              *GetList(void)              { return &this.m_list;              }
       CArrayObj              *GetListAllPatterns(void)   { return &this.m_list_all_patterns; }
       CArrayObj              *GetListAllSwings(void)     { return &this.m_list_all_swings;   }
+      CArrayObj              *GetListAllMarketStructures(void) { return &this.m_list_all_market_structures; }
     //--- Return (1) the timeseries object of the specified symbol and (2) the timeseries object of the specified symbol/period
       CBarTimeSeriesDE          *GetTimeseries(const string symbol);
       CBarSeriesDE              *GetSeries(const string symbol,const ENUM_TIMEFRAMES timeframe);
@@ -123,9 +125,6 @@
     //--- Return the flag of using the specified pattern
       bool                    IsUsedPattern(const ENUM_PATTERN_TYPE pattern,MqlParam &param[],const string symbol,const ENUM_TIMEFRAMES timeframe);
     //--- Draw marks of the specified pattern on the chart
-    //--- Widest pattern that opens on the bar, opted in by 'flags' and by the caller's Symbol/TF Buy/Sell switches
-      CBarPattern            *GetPatternAtBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar_time,
-                                              CBarPatternsControl *flags,const bool allow_buy,const bool allow_sell);
     //--- Redraw the bitmap objects of the specified pattern on the chart
     //--- Set chart parameters for pattern management objects on the specified symbol and timeframe
 
@@ -156,6 +155,9 @@
      this.m_list_all_swings.Clear();
      this.m_list_all_swings.Sort();
      this.m_list_all_swings.Type(COLLECTION_SERIES_SWINGS_ID);
+     this.m_list_all_market_structures.Clear();
+     this.m_list_all_market_structures.Sort();
+     this.m_list_all_market_structures.Type(COLLECTION_SERIES_MARKET_STRUCTURES_ID);
    }
   //+------------------------------------------------------------------+
   //| Return the timeseries index by symbol name                       |
@@ -163,7 +165,7 @@
   int CBarTimeSeriesCollection::IndexTimeSeries(const string symbol)
    {
       CArrayObj *list=NULL;
-      const CBarTimeSeriesDE *obj=new CBarTimeSeriesDE(list,list,symbol==NULL || symbol=="" ? ::Symbol() : symbol);
+      const CBarTimeSeriesDE *obj=new CBarTimeSeriesDE(list,list,list,symbol==NULL || symbol=="" ? ::Symbol() : symbol);
       if(obj==NULL)
          return WRONG_VALUE;
       this.m_list.Sort();
@@ -192,7 +194,7 @@
          if(symbol_obj==NULL)
             continue;
          //--- Create a new timeseries object with the current symbol name
-         CBarTimeSeriesDE *timeseries=new CBarTimeSeriesDE(this.GetListAllPatterns(),this.GetListAllSwings(),symbol_obj.Name());
+         CBarTimeSeriesDE *timeseries=new CBarTimeSeriesDE(this.GetListAllPatterns(),this.GetListAllSwings(),this.GetListAllMarketStructures(),symbol_obj.Name());
          //--- If failed to create the timeseries object, move on to the next symbol in the list
          if(timeseries==NULL)
             continue;
@@ -716,7 +718,7 @@
            {
             if(!::SymbolInfoInteger(symbol,SYMBOL_EXIST))
                return false;
-            timeseries=new CBarTimeSeriesDE(this.GetListAllPatterns(),this.GetListAllSwings(),symbol);
+            timeseries=new CBarTimeSeriesDE(this.GetListAllPatterns(),this.GetListAllSwings(),this.GetListAllMarketStructures(),symbol);
             if(timeseries==NULL)
                return false;
             this.m_list.Sort();
@@ -763,11 +765,17 @@
         }
       for(int i=this.m_list_all_swings.Total()-1;i>=0;i--)
         {
-         CBarSwing *swing=this.m_list_all_swings.At(i);
+         CBarSwingSeries *swing=this.m_list_all_swings.At(i);
          if(swing!=NULL && swing.Symbol()==symbol && swing.Timeframe()==timeframe)
             this.m_list_all_swings.Delete(i);
         }
-    //--- ~CBarSeriesDE deletes its bars and its pattern/swing controls
+      for(int i=this.m_list_all_market_structures.Total()-1;i>=0;i--)
+        {
+         CMarketStructureSeries *structure=this.m_list_all_market_structures.At(i);
+         if(structure!=NULL && structure.Symbol()==symbol && structure.Timeframe()==timeframe)
+            this.m_list_all_market_structures.Delete(i);
+        }
+    //--- ~CBarSeriesDE deletes its bars and its pattern/swing/market structure controls
       CArrayObj *list_series=timeseries.GetListSeries();
       bool removed=false;
       for(int i=list_series.Total()-1;i>=0 && !removed;i--)
@@ -1025,55 +1033,6 @@
    {
       CBarTimeSeriesDE *timeseries=this.GetTimeseries(symbol);
       return(timeseries!=NULL ? timeseries.IsUsedPattern(pattern,param,timeframe) : false);
-   }
-  //+------------------------------------------------------------------+
-  //| Widest pattern that opens on the bar, bullish/bearish only,      |
-  //| opted in per type by 'flags' and per Symbol/TF by the caller     |
-  //+------------------------------------------------------------------+
-  CBarPattern *CBarTimeSeriesCollection::GetPatternAtBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar_time,
-                                                         CBarPatternsControl *flags,const bool allow_buy,const bool allow_sell)
-   {
-      CArrayObj *controls=(flags!=NULL ? flags.GetListControls() : NULL);
-      if(controls==NULL)
-         return NULL;
-      datetime next_bar_time=bar_time+(datetime)::PeriodSeconds(timeframe);
-      CBarPattern *best=NULL;
-      int best_candles=0;
-      for(int i=0; i<this.m_list_all_patterns.Total(); i++)
-        {
-         CBarPattern *p=this.m_list_all_patterns.At(i);
-         if(p==NULL || p.Symbol()!=symbol || p.Timeframe()!=timeframe)
-            continue;
-         datetime pt=p.Time();
-         if(pt<bar_time || pt>=next_bar_time)
-            continue;
-         ENUM_PATTERN_DIRECTION dir=p.Direction();
-         bool is_buy =(dir==PATTERN_DIRECTION_BULLISH);
-         bool is_sell=(dir==PATTERN_DIRECTION_BEARISH);
-         if(!is_buy && !is_sell)
-            continue;
-         if((is_buy && !allow_buy) || (is_sell && !allow_sell))
-            continue;
-         bool opted_in=false;
-         for(int k=0; k<controls.Total(); k++)
-           {
-            CBarPatternControl *c=controls.At(k);
-            if(c!=NULL && c.TypePattern()==p.TypePattern())
-              {
-               opted_in=(is_buy ? c.BuySignal() : c.SellSignal());
-               break;
-              }
-           }
-         if(!opted_in)
-            continue;
-         int n=(int)p.Candles();
-         if(best==NULL || n>best_candles)
-           {
-            best=p;
-            best_candles=n;
-           }
-        }
-      return best;
    }
    //+------------------------------------------------------------------+
  #endif // CCBARTIMESERIESCOLLECTION_MQH_IMPLEMENTATION

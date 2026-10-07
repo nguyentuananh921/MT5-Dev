@@ -30,7 +30,7 @@
   }
  bool CGUIPannel::CreateTab_SettingTimeSeries(const int x_gap, const int y_gap)
   {
-   string tabs_names[TAB_TAB_SETTING_TIMESERIES_TOTAL] = {"Indicator", "Symbol TF", "Candle Pattern", "Swing"};
+   string tabs_names[TAB_TAB_SETTING_TIMESERIES_TOTAL] = {"Indicator", "Symbol TF", "Candle Pattern", "Smart Money Concepts"};
    m_tabs_setting_timeseries.PositionMode(TABS_TOP);
    m_tabs_setting_timeseries.AutoXResizeMode(true);
    m_tabs_setting_timeseries.AutoYResizeMode(true);
@@ -219,12 +219,12 @@
          OnCheckTableCandlePatternSetting(row, col, dparam != 0);
       return;
      }
-    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_SwingSetting.ObjectID())
+    if(id == CHARTEVENT_CUSTOM + ON_CLICK_CHECKBOX && lparam == m_table_SmartMoneySetting.ObjectID())
      {
       int col, row;
-      if(!m_table_SwingSetting.CellIndexes(sparam, col, row)) return;
+      if(!m_table_SmartMoneySetting.CellIndexes(sparam, col, row)) return;
       if(col >= 1 && col <= 3)
-         OnCheckTableSwingSetting(row, col, dparam != 0);
+         OnCheckTableSmartMoneySetting(row, col, dparam != 0);
       return;
      }
    //--- Swing Strength spin-edit (Enter or +/-) and Wick checkbox apply live

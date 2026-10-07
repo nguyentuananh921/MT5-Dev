@@ -101,6 +101,7 @@
    header.ColumnsWidth(widths);
    header.TextAlign(align);
    header.ImageXOffset(image_x);
+   m_table_CandlePatternsSetting.View().IsFilterMode(1, true);
    m_table_CandlePatternsSetting.SetHeaderText(0, "Pattern");
    m_table_CandlePatternsSetting.SetHeaderText(1, "No");
    uint img_buy[]     = {IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG};
@@ -171,27 +172,5 @@
    else if(col == 3) c.SellSignal(on);
    else if(col == 5) c.SoundAlert(on);
    else if(col == 6) c.MessageAlert(on);
-  }
- bool CGUIPannel::PatternSignalBuy(const ENUM_PATTERN_TYPE type) const
-  {
-   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
-   int n = (controls != NULL) ? controls.Total() : 0;
-   for(int i = 0; i < n; i++)
-    {
-     CBarPatternControl *c = controls.At(i);
-     if(c != NULL && c.TypePattern() == type) return c.BuySignal();
-    }
-   return false;
-  }
- bool CGUIPannel::PatternSignalSell(const ENUM_PATTERN_TYPE type) const
-  {
-   CArrayObj *controls = (m_BarPatterns_Control != NULL) ? m_BarPatterns_Control.GetListControls() : NULL;
-   int n = (controls != NULL) ? controls.Total() : 0;
-   for(int i = 0; i < n; i++)
-    {
-     CBarPatternControl *c = controls.At(i);
-     if(c != NULL && c.TypePattern() == type) return c.SellSignal();
-    }
-   return false;
   }
 #endif  //CGUIPANNEL_SETTINGWINDOWS_TS_CANDLE_PATTERN_MQH

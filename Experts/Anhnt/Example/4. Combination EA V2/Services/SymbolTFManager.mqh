@@ -34,7 +34,7 @@
                                            // toggled - fired directly by CGUIPannel (no Manager
                                            // method needed, same style as GUIPANNEL_EVENT_
                                            // PATTERN_BUYSELL_CHANGED), no payload - EA's own
-                                           // reaction (CSignalBridgeWriter::ResetSignalBridge)
+                                           // reaction (CCandleMarkerSync::OnChartEvent)
                                            // does a full re-read, not a per-row lookup
   };
 #ifndef CSYMBOLTFMANAGER_MQH_DECLARATION

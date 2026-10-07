@@ -103,6 +103,7 @@
   #define COLLECTION_GRAPH_OBJ_ID        (0x7789)                   // Graphical object collection list ID
   #define COLLECTION_SIGNALS_ID          (0x778A)                   // Indicator signals collection list ID
   #define COLLECTION_SERIES_SWINGS_ID    (0x778B)                   // Timeseries swing list ID
+  #define COLLECTION_SERIES_MARKET_STRUCTURES_ID (0x778C)           // Timeseries market structure list ID
   #define COLLECTION_ID_LIST_END         (COLLECTION_SIGNALS_ID)    // End of collection ID list
  //--- Pending request type IDs
   #define PENDING_REQUEST_ID_TYPE_ERR    (1)                        // Type of a pending request created based on the server return code
@@ -246,6 +247,8 @@
   #define OUTER_AREA_SIZE                               (16)                 // Size of one side of the outer area around the form workspace
   #define DEF_FRAME_WIDTH_SIZE                          (3)                  // Default form/panel/window frame width
   #define DEF_HINT_ICON_SIZE                            (11)                 // Hint object side size
+ //Lines
+  #define DEF_LINE_WIDTH                                (3)                  // Default width of a native line object (solid: a dash style needs width 1)
  //+------------------------------------------------------------------+
  //| Enumerations                                                     |
  //+------------------------------------------------------------------+
@@ -421,6 +424,8 @@
     OBJECT_DE_TYPE_SERIES_PATTERNS_CONTROLLERS,                    // "Patterns management" object type
     OBJECT_DE_TYPE_SERIES_SWING,                                   // "Swing point" object type
     OBJECT_DE_TYPE_SERIES_SWING_CONTROL,                           // "Swing management" object type
+    OBJECT_DE_TYPE_SERIES_MARKET_STRUCTURE,                          // "Market structure event" object type
+    OBJECT_DE_TYPE_SERIES_MARKET_STRUCTURE_CONTROL,                  // "Market structure management" object type
     OBJECT_DE_TYPE_SYMBOL,                                         // "Symbol" object type
     OBJECT_DE_TYPE_SYMBOL_BONDS,                                   // "Bond symbol" object type
     OBJECT_DE_TYPE_SYMBOL_CFD,                                     // "CFD (contract for difference) symbol" object type

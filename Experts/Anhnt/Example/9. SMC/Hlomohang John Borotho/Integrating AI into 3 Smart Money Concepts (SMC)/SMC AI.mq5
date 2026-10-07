@@ -83,20 +83,20 @@ input color              PanelAccent     = clrDodgerBlue;
 //+------------------------------------------------------------------+
 //| GLOBALS                                                          |
 //+------------------------------------------------------------------+
-double   Bid, Ask;
-datetime g_lastBarTime = 0;
+ double   Bid, Ask;
+ datetime g_lastBarTime = 0;
 
 //--- ONNX
-long     g_onnx_model  = INVALID_HANDLE;
-float    g_ai_score    = 0.0f;
+ long     g_onnx_model  = INVALID_HANDLE;
+ float    g_ai_score    = 0.0f;
 
 //--- Panel state
-string   g_panel_signal = "—";
-string   g_panel_origin = "—";
-ENUM_TREND_STR g_trend_str = TS_WEAK;
+ string   g_panel_signal = "—";
+ string   g_panel_origin = "—";
+ ENUM_TREND_STR g_trend_str = TS_WEAK;
 
 //--- OB state
-struct SOrderBlock
+ struct SOrderBlock
   {
    int               direction;
    datetime          time;

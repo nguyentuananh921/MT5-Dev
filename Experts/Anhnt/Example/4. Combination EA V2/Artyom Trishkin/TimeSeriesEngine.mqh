@@ -18,7 +18,8 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib V2\Timeseries\BarPatternsControl\BarPatternsControl.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib V2\Services\DELib\TimeseriesDELib.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib V2\Services\TimeCounter.mqh>
-  #include "..\Services\SwingSettingJSON.mqh"
+  #include "..\Services\SmartMoneySettingJSON.mqh"
+  #include "..\Services\Perf.mqh"
 #ifndef CTIMESERIESENGINE_MQH_DECLARATION
 #define CTIMESERIESENGINE_MQH_DECLARATION
  class CSymbolTFManager;
@@ -38,6 +39,8 @@
        bool                      m_time_series_engine_init_complete;
     //Borrow
       CSymbolsCollection        *m_symbol_collection;    // Symbol collection    
+      CSymbolTFManager          *m_SymbolTFManager;      // EA owns - set by OnInitEvent, read by GetCandleInfo
+      CIndicatorTemplateManager *m_IndicatorTemplateManager;   // EA owns - set by OnInitEvent, read by GetCandleInfo
       CIndicatorDE              *GetIndicatorByIdentity(const string symbol, const ENUM_TIMEFRAMES tf,
                                   const ENUM_INDICATOR type, MqlParam &params[]);
     public:
@@ -56,6 +59,9 @@
       CSignalsCollection          *GetSignalsCollection()                             { return &this.m_SignalsCollection; }
       CBarPatternsControl         *GetPatternsControl()                               { return &m_BarPatterns_Control; }
       CSwingSetting               *GetSwingSetting()                                  { return &m_SwingSetting; }
+    // Rows of the candle information window at bar_time -> Implementation in TimeSeriesEngine_CandleInfo.mqh
+      int                         GetCandleInfo(const datetime bar_time, string &row_label[], string &row_tf[],
+                                    ENUM_SIGNAL_DIR &row_dir[], datetime &row_time[], int &row_source[]);
     // Layer 1: AddAllIndicatorsToNewSeries reads CIndicatorTemplateManager directly (Single
     // Source of Truth, Layer 1 keeps no copy of its own, just a borrowed
         void                        AddAllIndicatorsToNewSeries(const string symbol, const ENUM_TIMEFRAMES timeframe,
@@ -69,5 +75,6 @@
 #define CTIMESERIESENGINE_MQH_IMPLEMENTATION
  #include "TimeSeriesEngine_Lifecycle.mqh"
  #include "TimeSeriesEngine_Indicator.mqh"
+ #include "TimeSeriesEngine_CandleInfo.mqh"
 #endif // CTIMESERIESENGINE_MQH_IMPLEMENTATION
 #endif // CTIMESERIESENGINE_MQH

@@ -14,7 +14,7 @@
  #include "..\..\Entities\Defines\IndicatorPara.mqh"
  #include "..\..\Entities\Bar.mqh"
 #include "..\..\Timeseries\BarPatternsSeries\BarPattern.mqh"
-#include "..\..\Timeseries\BarSwingSeries\BarSwing.mqh"
+#include "..\..\Timeseries\SmartMoney\BarSwingSeries.mqh"
 
  struct SIndicatorCatalogItem
   {
@@ -625,7 +625,7 @@ void BarPatternPrintShort(CBarPattern *pattern,const bool dash=false)
    ::Print(BarPatternHeader(pattern),":\n",(dash ? " - " : ""),pattern.Symbol(),", ",TimeframeDescription(pattern.Timeframe())," ",
            ::TimeToString(pattern.Time()),", ",PatternDirectionDescription(pattern.Direction()));
   }
-void BarSwingPrint(CBarSwing *swing,const bool dash=false)
+void BarSwingPrint(CBarSwingSeries *swing,const bool dash=false)
   {
    ::Print((dash ? " - " : ""),swing.Symbol()," ",TimeframeDescription(swing.Timeframe()),
            " ",SwingTypeDescription(swing.TypeSwing())," (",SwingStructureDescription(swing.Structure()),")",

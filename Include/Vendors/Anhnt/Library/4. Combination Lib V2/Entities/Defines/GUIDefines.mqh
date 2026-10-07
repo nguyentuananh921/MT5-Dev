@@ -59,6 +59,8 @@
   #define ON_BUBBLE_CLOSE             (47)
   #define ON_BRING_TO_TOP             (48)   // a child was shown on top of the windows
   #define ON_BUBBLE_RESTORE           (49)   // a bubble drop was not applied: bubbles show the real levels again
+  #define ON_CANDLE_MARKER_ENTER      (50)   // cursor entered a candle marker: lparam candle time, dparam badge Y
+  #define ON_CANDLE_MARKER_LEAVE      (51)   // cursor left a candle marker: lparam candle time
 // ──────────────────────────────────────────────────────────────────
 // WINDOW / CONTROL SIZES
 // ──────────────────────────────────────────────────────────────────

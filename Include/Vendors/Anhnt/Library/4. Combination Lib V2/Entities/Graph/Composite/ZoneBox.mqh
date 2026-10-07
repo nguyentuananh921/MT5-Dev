@@ -162,14 +162,9 @@
       ty=y-14-this.m_tooltip.Height();
    this.m_tooltip.Moving((tx<0 ? 0 : tx),(ty<0 ? 0 : ty));
   }
+ //--- Shift + left click inside the box: nothing yet
  void CZoneBox::OnShiftClick(const int x,const int y)
   {
-   datetime t=0;
-   double price=0.0;
-   int sub=this.SubWindow();
-   ::ChartXYToTimePrice(this.ChartID(),x,y,sub,t,price);
-   ::Print("MY DEBUG CZoneBox::OnShiftClick: ",this.Name()," kind=",this.m_kind," dir=",(int)this.m_dir,
-           " top=",this.Top()," bottom=",this.Bottom()," price at cursor=",price," time=",::TimeToString(t));
   }
  void CZoneBox::OnTimerEvent(void)
   {

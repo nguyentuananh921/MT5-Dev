@@ -38,6 +38,7 @@ class CBarTimeSeriesDE : public CBaseObjExt
     // Pointer to the list of all patterns of all timeseries of all symbols
       CArrayObj*                   m_list_all_patterns;  
       CArrayObj*                   m_list_all_swings;    // Pointer to the list of all swings of all timeseries of all symbols
+      CArrayObj*                   m_list_all_market_structures; // Pointer to the list of all market structure events of all timeseries of all symbols
 
    public:
       //--- Return (1) itself, full list of (2) timeseries, (3) patterns, (4) specified timeseries object and (5) timeseries object by index
@@ -45,6 +46,7 @@ class CBarTimeSeriesDE : public CBaseObjExt
          CArrayObj* GetListSeries(void) { return &this.m_list_series; }
          CArrayObj* GetListPatterns(void) { return this.m_list_all_patterns; }
          CArrayObj* GetListSwings(void) { return this.m_list_all_swings; }
+         CArrayObj* GetListMarketStructures(void) { return this.m_list_all_market_structures; }
          // Modify GetSeries method
             // Original version
              // CBarSeriesDE* GetSeries(const ENUM_TIMEFRAMES timeframe) { return this.m_list_series.At(this.IndexTimeframe(timeframe)); }
@@ -89,8 +91,9 @@ class CBarTimeSeriesDE : public CBaseObjExt
          this.m_type = OBJECT_DE_TYPE_SERIES_SYMBOL;
          this.m_list_all_patterns = list_all_patterns;
          this.m_list_all_swings = NULL;
+         this.m_list_all_market_structures = NULL;
       }
-      CBarTimeSeriesDE(CArrayObj* list_all_patterns, CArrayObj* list_all_swings, const string symbol);
+      CBarTimeSeriesDE(CArrayObj* list_all_patterns, CArrayObj* list_all_swings, CArrayObj* list_all_market_structures, const string symbol);
 
       //+------------------------------------------------------------------+
       //| Methods for handling patterns                                    |
@@ -107,7 +110,7 @@ class CBarTimeSeriesDE : public CBaseObjExt
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CBarTimeSeriesDE::CBarTimeSeriesDE(CArrayObj* list_all_patterns, CArrayObj* list_all_swings, const string symbol) : m_symbol(symbol)
+ CBarTimeSeriesDE::CBarTimeSeriesDE(CArrayObj* list_all_patterns, CArrayObj* list_all_swings, CArrayObj* list_all_market_structures, const string symbol) : m_symbol(symbol)
   {
    this.m_type = OBJECT_DE_TYPE_SERIES_SYMBOL;
    this.m_list_series.Clear();
@@ -117,6 +120,7 @@ class CBarTimeSeriesDE : public CBaseObjExt
    this.m_new_tick.Refresh();
    this.m_list_all_patterns = list_all_patterns;
    this.m_list_all_swings = list_all_swings;
+   this.m_list_all_market_structures = list_all_market_structures;
   }
  //+------------------------------------------------------------------+
  //| Compare CBarTimeSeriesDE objects by symbol                          |
@@ -145,7 +149,7 @@ class CBarTimeSeriesDE : public CBaseObjExt
  int CBarTimeSeriesDE::IndexTimeframe(const ENUM_TIMEFRAMES timeframe)
   {
       CArrayObj* list = NULL;
-      const CBarSeriesDE* obj = new CBarSeriesDE(list, list, this.m_symbol, (timeframe == PERIOD_CURRENT ? (ENUM_TIMEFRAMES)::Period() : timeframe));
+      const CBarSeriesDE* obj = new CBarSeriesDE(list, list, list, this.m_symbol, (timeframe == PERIOD_CURRENT ? (ENUM_TIMEFRAMES)::Period() : timeframe));
       if (obj == NULL)
          return WRONG_VALUE;
       this.m_list_series.Sort();
@@ -259,7 +263,7 @@ class CBarTimeSeriesDE : public CBaseObjExt
  bool CBarTimeSeriesDE::AddSeries(const ENUM_TIMEFRAMES timeframe, const uint required = 0)
    {   
       bool res = false;
-      CBarSeriesDE* series = new CBarSeriesDE(this.m_list_all_patterns, this.m_list_all_swings, this.m_symbol, timeframe, required);
+      CBarSeriesDE* series = new CBarSeriesDE(this.m_list_all_patterns, this.m_list_all_swings, this.m_list_all_market_structures, this.m_symbol, timeframe, required);
       if (series == NULL)
          return res;
       this.m_list_series.Sort();
