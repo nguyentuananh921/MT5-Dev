@@ -8,7 +8,7 @@
  #include <Canvas\Canvas.mqh>
  #include "GBaseObj.mqh"
  #include "..\Graph\Properties\ColorElement.mqh"
- #include "..\..\Services\Colors.mqh"
+ #include "..\Graph\Properties\Colors.mqh"
  #include "..\..\Services\Mouse.mqh"
  #include "..\Graph\Properties\Image.mqh"
  #include "..\Defines\GUIDefines.mqh"

@@ -9,6 +9,7 @@
 #define __CBASEOBJ_MQH__
   #include <Object.mqh>
   #include "..\Defines\CommonDefines.mqh"
+  #include "..\..\Services\Message\Message.mqh"
   #ifndef CBASEOBJ_MQH_DECLARATION
   #define CBASEOBJ_MQH_DECLARATION
   //+------------------------------------------------------------------+

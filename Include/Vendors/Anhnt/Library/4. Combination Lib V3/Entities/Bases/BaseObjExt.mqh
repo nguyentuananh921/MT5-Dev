@@ -10,7 +10,8 @@
     #include <Arrays\ArrayObj.mqh>
     #include "BaseObj.mqh"
     #include "EventBaseObj.mqh"
-    #include "BaseEvent.mqh"
+    #include "BaseEvent.mqh" 
+    #include "..\..\Services\Pause.mqh"
     #define CONTROLS_TOTAL  (10)
 
  #ifndef CBASEOBJEXT_MQH_DECLARATION
@@ -23,8 +24,7 @@
     private:
       int                    m_long_prop_total;
       int                    m_double_prop_total;
-      template<typename T> bool FillPropertySettings(const int index,T &array[][CONTROLS_TOTAL],T &array_prev[][CONTROLS_TOTAL],int &event_id);
-   
+      template<typename T> bool FillPropertySettings(const int index,T &array[][CONTROLS_TOTAL],T &array_prev[][CONTROLS_TOTAL],int &event_id);   
     protected:
       CArrayObj              m_list_events_base;
       CArrayObj              m_list_events;

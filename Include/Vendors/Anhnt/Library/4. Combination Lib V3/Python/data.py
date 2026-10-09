@@ -14,16 +14,13 @@ TIMEFRAMES = {
 HISTORY_RETRIES = 10
 HISTORY_RETRY_SLEEP = 0.3
 
-
 def connect(path=None):
     ok = mt5.initialize(path) if path else mt5.initialize()
     if not ok:
         raise RuntimeError(f"mt5.initialize failed: {mt5.last_error()}")
 
-
 def disconnect():
     mt5.shutdown()
-
 
 def fetch_closed_bars(symbol, tf_text, count=0):
     if tf_text not in TIMEFRAMES:
@@ -43,11 +40,22 @@ def fetch_closed_bars(symbol, tf_text, count=0):
     if rates is None or len(rates) < 2:
         raise RuntimeError(f"no rates for {symbol} {tf_text}: {mt5.last_error()}")
     df = pd.DataFrame(rates)
-    return df.iloc[:-1].reset_index(drop=True)   # last row is the forming bar
+    df = df.iloc[:-1].reset_index(drop=True)   # last row is the forming bar
+    df.attrs["point"] = symbol_point(symbol)
+    return df
 
+def fetch_forming_bar(symbol, tf_text):
+    rates = mt5.copy_rates_from_pos(symbol, TIMEFRAMES[tf_text], 0, 1)   # the bar that is still forming
+    if rates is None or len(rates) < 1:
+        return None
+    return pd.DataFrame(rates)
 
 def fetch_last_closed_time(symbol, tf_text):
     rates = mt5.copy_rates_from_pos(symbol, TIMEFRAMES[tf_text], 0, 2)   # [last closed bar, forming bar]
     if rates is None or len(rates) < 2:
         return None
     return int(rates[0]["time"])
+
+def symbol_point(symbol):
+    info = mt5.symbol_info(symbol)
+    return float(info.point) if info is not None else 0.0

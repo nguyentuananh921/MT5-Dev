@@ -7,6 +7,16 @@
 #ifndef __GRAPH_DEFINES_MQH__
 #define __GRAPH_DEFINES_MQH__
 //+------------------------------------------------------------------+
+//| Element state colors                                             |
+//+------------------------------------------------------------------+
+enum ENUM_COLOR_STATE
+  {
+   COLOR_STATE_DEFAULT,
+   COLOR_STATE_FOCUSED,
+   COLOR_STATE_PRESSED,
+   COLOR_STATE_BLOCKED,
+  };
+//+------------------------------------------------------------------+
 //| The list of graphical element types                              |
 //+------------------------------------------------------------------+
 enum ENUM_GRAPH_ELEMENT_TYPE

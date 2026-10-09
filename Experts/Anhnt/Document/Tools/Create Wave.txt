@@ -2,6 +2,6 @@ Add-Type -AssemblyName System.Speech
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $synth.Volume = 100
 $synth.Rate = 1
-$synth.SetOutputToWaveFile("E:\Temp\NewBar.wav")
-$synth.Speak("StopLost Change")
+$synth.SetOutputToWaveFile("E:\Temp\OK.wav")
+$synth.Speak("OK")
 $synth.Dispose()
