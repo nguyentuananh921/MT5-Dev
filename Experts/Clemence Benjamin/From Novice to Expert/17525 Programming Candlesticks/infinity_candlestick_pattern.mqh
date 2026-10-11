@@ -1,7 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                 infinity_candlestick_pattern.mqh |
 //|                                   Copyright 2025, Metaquotes Ltd |
-//|                                            https://www.mql5.com/ |
+//|From Novice to Expert                                             |
+//|Programming Candlesticks                                          |
+//|https://www.mql5.com/en/articles/17525                            |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025, Metaquotes Ltd"
 #property link      "https://www.mql5.com/"

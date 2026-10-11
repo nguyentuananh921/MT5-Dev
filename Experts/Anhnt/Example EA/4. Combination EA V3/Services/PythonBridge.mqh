@@ -178,7 +178,6 @@ void CPythonBridge::SendPreTradeSymbolMonitor(void)
   {
    if(this.m_IndicatorsCollection==NULL)
       return;
-   this.m_IndicatorsCollection.Clear();   // Python sends every state again
    this.m_pre_trade_monitor_busy=false;
    this.m_pre_trade_monitor_ms=0;
    this.RequestPreTradeSymbolMonitor();
@@ -194,7 +193,7 @@ void CPythonBridge::RequestPreTradeSymbolMonitor(void)
    if(now-this.m_pre_trade_monitor_ms<PYTHON_PRETRADE_MONITOR_INTERVAL_MS)
       return;
    this.m_pre_trade_monitor_ms=now;
-   this.m_pre_trade_monitor_busy=this.Send("{\"cmd\":\"pre_trade_symbol_monitor\",\"symbol\":\""+::Symbol()+"\"}\n");
+   this.m_pre_trade_monitor_busy=this.Send("{\"cmd\":\"pre_trade_symbol_monitor\"}\n");
    if(!this.m_pre_trade_monitor_busy)
       this.Log("RequestPreTradeSymbolMonitor","send failed, error "+(string)::GetLastError());
   }
@@ -462,6 +461,12 @@ void CPythonBridge::Poll(void)
       if(::StringFind(line,"pre_trade_symbol_monitor|")==0)
         {
          this.StorePreTradeSymbolMonitor(line);
+         continue;
+        }
+      if(::StringFind(line,"timeframe_info|")==0)
+        {
+         if(this.m_symbol_tf_manager!=NULL)
+            this.m_symbol_tf_manager.SetAvailableTimeframes(::StringSubstr(line,15));
          continue;
         }
       if(::StringFind(line,"pattern_info|")==0)

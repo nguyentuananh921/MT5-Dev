@@ -11,7 +11,7 @@
   {
    m_treeview_indicator.LightsHover(true);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR,m_treeview_indicator);
-   return m_treeview_indicator.CreateTreeView(m_chart_id,m_subwin,"TreeIndicatorTemplate",x_gap,y_gap,
+   return m_treeview_indicator.CreateTreeView(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TreeIndicatorTemplate",x_gap,y_gap,
                                               M_TREEVIEW_WIDTH,m_tabs_setting_timeseries.Height()-y_gap-3);
   }
  //--- Groups (ENUM_INDICATOR_GROUP) as roots, catalog types as leaves
@@ -81,7 +81,7 @@
    m_table_indicator_template.AutoYResizeMode(true);
    m_table_indicator_template.AutoYResizeBottomOffset(3);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR,m_table_indicator_template);
-   if(!m_table_indicator_template.CreateTable(m_chart_id,m_subwin,"TableIndicatorTemplate",x,y))
+   if(!m_table_indicator_template.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TableIndicatorTemplate",x,y))
       return false;
    int widths[COLUMNS_INDICATOR_TEMPLATE_TOTAL]            ={M_INDICATOR_PARATEXT_WIDTH,70,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH};
    int image_x[COLUMNS_INDICATOR_TEMPLATE_TOTAL]           ={3,3,2,2,2,2,2};
@@ -178,7 +178,7 @@
       m_frame_indicator_parameter.Hide();
       if(m_current_param_type!=IND_CUSTOM && m_tabs_setting_timeseries.SelectedTab()==TAB_TAB_SETTING_TIMESERIES_INDICATOR)
          ShowCFrame_IndicatorParameter(m_current_param_type);
-      ::ChartRedraw(m_chart_id);
+      ::ChartRedraw(m_ChartObj.GetChartID());
       return;
      }
    //--- Indicator tree: a group label folds it, a type leaf opens the Add form for that type
@@ -196,7 +196,7 @@
          if(m_type_node_id[i]!=item_id)
             continue;
          ShowCFrame_IndicatorParameter(m_type_node_value[i]);
-         ::ChartRedraw(m_chart_id);
+         ::ChartRedraw(m_ChartObj.GetChartID());
          break;
         }
       return;
@@ -213,7 +213,7 @@
          return;
       InitializeTable_IndicatorTemplateSetting();
       SyncTreeView_IndicatorTemplateSetting();
-      ::ChartRedraw(m_chart_id);
+      ::ChartRedraw(m_ChartObj.GetChartID());
       return;
      }
    //--- A row was attached to / detached from the chart (maybe from the chart side): its Show cell follows

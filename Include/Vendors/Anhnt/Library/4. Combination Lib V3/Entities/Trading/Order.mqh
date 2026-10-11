@@ -2,6 +2,7 @@
 //|                                                        Order.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //|Topic link: https://www.mql5.com/en/articles/5654                 |
+//|Link https://www.mql5.com/en/articles/7394                        |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2019, MetaQuotes Software Corp."

@@ -10,7 +10,7 @@
 //| Include files                                                    |
 //+------------------------------------------------------------------+
 #include "..\..\Bases\BaseObj.mqh"
-#include "..\..\Defines\SwingDefines.mqh"
+#include "..\..\Defines\MarketStructureDefines.mqh"
 
 #ifndef CBARSWINGSERIES_MQH_DECLARATION
 #define CBARSWINGSERIES_MQH_DECLARATION

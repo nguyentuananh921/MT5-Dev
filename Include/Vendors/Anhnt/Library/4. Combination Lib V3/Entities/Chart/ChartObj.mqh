@@ -2658,7 +2658,8 @@
    return sub_window;
   }
  //+------------------------------------------------------------------+
- //| Open time of the candle under the chart X and Y coordinates      |
+ //| Open time of the candle under the chart X and Y coordinates,      |
+ //| 0 when the pixel is outside the bars                             |
  //+------------------------------------------------------------------+
  datetime CChartObj::GetBarTimeFromXY(const int x,const int y)
   {
@@ -2670,7 +2671,8 @@
    int shift=::iBarShift(this.Symbol(),this.Timeframe(),time,false);
    if(shift<0)
       return 0;
-   return ::iTime(this.Symbol(),this.Timeframe(),shift);
+   datetime bar_time=::iTime(this.Symbol(),this.Timeframe(),shift);
+   return (time<bar_time+::PeriodSeconds(this.Timeframe())) ? bar_time : 0;
   }
  //+------------------------------------------------------------------+
  //| Create and send a chart event                                    |

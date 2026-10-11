@@ -13,8 +13,7 @@
  //+------------------------------------------------------------------+
  //| Include files                                                    |
  //+------------------------------------------------------------------+
- #include "ListObj.mqh"
- //#include "..\Services\Select\TradingSelect.mqh"
+ #include "ListObj.mqh" 
  #include "..\Entities\Trading\Orders\MarketOrder.mqh"
  #include "..\Entities\Trading\Orders\MarketPending.mqh"
  #include "..\Entities\Trading\Orders\MarketPosition.mqh"
@@ -95,6 +94,7 @@
         double            SumFloatingProfit(const string symbol, const int distance_pts);
      //--- Sum of live Volume() over the positions matching symbol/dir - peer to SumFloatingProfit() above.
        double            SumVolume(const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE);
+       int               PositionsCount(const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE);
      //--- (1) True if the order is an open position matching symbol/dir (""/WRONG_VALUE = any), (2) if symbol has an open position on the given side.
        bool              HasPosition(const COrder *order, const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE);
        bool              HasPosition(const string symbol, const ENUM_POSITION_TYPE dir);
@@ -486,7 +486,7 @@
      return p;
     }
   //+------------------------------------------------------------------+
-  //| Sum of live floating profit over a pre-filtered position list    |
+  //| Sum of live floating profit over the positions matching symbol/dir|
   //+------------------------------------------------------------------+
   double CMarketCollection::SumFloatingProfit(const string symbol, const ENUM_POSITION_TYPE dir)
    {
@@ -499,7 +499,17 @@
     return total;
    }
   //+------------------------------------------------------------------+
-  //| Sum of live Volume() over a pre-filtered position list           |
+  //| Number of open positions matching symbol/dir                     |
+  //+------------------------------------------------------------------+
+  int CMarketCollection::PositionsCount(const string symbol, const ENUM_POSITION_TYPE dir)
+   {
+    int total = 0;
+    for(int i = 0; i < this.m_list_all_orders.Total(); i++)
+       if(this.HasPosition(this.m_list_all_orders.At(i), symbol, dir)) total++;
+    return total;
+   }
+  //+------------------------------------------------------------------+
+  //| Sum of live Volume() over the positions matching symbol/dir      |
   //+------------------------------------------------------------------+
   double CMarketCollection::SumVolume(const string symbol, const ENUM_POSITION_TYPE dir)
    {

@@ -11,7 +11,7 @@
    m_btn_save_SymbolTF.SetText("Save");
    m_btn_save_SymbolTF.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,m_btn_save_SymbolTF);
-   if(!m_btn_save_SymbolTF.Create(m_chart_id,m_subwin,"BtnSaveSymbolTF",x,y+SYMBOLTF_BTN_Y,80,M_CONTROL_HEIGHT))
+   if(!m_btn_save_SymbolTF.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"BtnSaveSymbolTF",x,y+SYMBOLTF_BTN_Y,80,M_CONTROL_HEIGHT))
       return false;
    m_table_SymbolTFSeting.TableSize(COLUMNS_SYMBOLTF_TOTAL,0);
    m_table_SymbolTFSeting.View().ShowHeaders(true);
@@ -23,7 +23,7 @@
    m_table_SymbolTFSeting.AutoYResizeMode(true);
    m_table_SymbolTFSeting.AutoYResizeBottomOffset(3);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,m_table_SymbolTFSeting);
-   if(!m_table_SymbolTFSeting.CreateTable(m_chart_id,m_subwin,"TableSymbolTF",x,y+SYMBOLTF_TABLE_Y))
+   if(!m_table_SymbolTFSeting.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TableSymbolTF",x,y+SYMBOLTF_TABLE_Y))
       return false;
    int widths[COLUMNS_SYMBOLTF_TOTAL]            ={M_SYMBOL_WITHICON_WIDTH,M_TF_WITHICON_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH};
    int image_x[COLUMNS_SYMBOLTF_TOTAL]           ={3,3,2,2,2,2};
@@ -138,7 +138,7 @@
   {
    m_treeview_SymbolTF.LightsHover(true);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,m_treeview_SymbolTF);
-   return m_treeview_SymbolTF.CreateTreeView(m_chart_id,m_subwin,"TreeSymbolTF",x_gap,y_gap,
+   return m_treeview_SymbolTF.CreateTreeView(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TreeSymbolTF",x_gap,y_gap,
                                              M_TREEVIEW_WIDTH,m_tabs_setting_timeseries.Height()-y_gap-3);
   }
  //--- Roots = Market Watch symbols + symbols CSymbolTFManager tracks (sorted), each tracked TF as a leaf
@@ -328,7 +328,7 @@
       this.PopulateTable_SymbolTFSetting();
       this.PopulateTreeView_SymbolTFSetting();
       this.SyncTreeView_SymbolTFSetting();
-      ::ChartRedraw(m_chart_id);
+      ::ChartRedraw(m_ChartObj.GetChartID());
       return;
      }
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
@@ -340,7 +340,7 @@
       this.DeleteRow_SymbolTFSetting(removed_sym,TimeframeDescription(removed_tf));
       this.PopulateTreeView_SymbolTFSetting();
       this.SyncTreeView_SymbolTFSetting();
-      ::ChartRedraw(m_chart_id);
+      ::ChartRedraw(m_ChartObj.GetChartID());
       return;
      }
    //--- A symbol added to / removed from Market Watch: the tree lists them
@@ -349,7 +349,7 @@
      {
       this.PopulateTreeView_SymbolTFSetting();
       this.SyncTreeView_SymbolTFSetting();
-      ::ChartRedraw(m_chart_id);
+      ::ChartRedraw(m_ChartObj.GetChartID());
       return;
      }
    //--- Symbol TF tree: a symbol leaf starts tracking it, a TF leaf asks to navigate there

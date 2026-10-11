@@ -201,27 +201,27 @@
    const int slot_w = INDICATOR_PARAM_LABEL_W + INDICATOR_PARAM_FIELD_W;
    m_frame_indicator_parameter.SetText("Indicator Parameter");
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_frame_indicator_parameter);
-   if(!m_frame_indicator_parameter.CreateFrame(m_chart_id, m_subwin, "FrameIndicatorParam", x_gap, y_gap,
+   if(!m_frame_indicator_parameter.CreateFrame(m_ChartObj.GetChartID(), M_SUBWINDOW_MAIN, "FrameIndicatorParam", x_gap, y_gap,
                                            INDICATOR_FRAME_W, INDICATOR_FRAME_H)) return false;
    for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
     {
      m_frame_indicator_parameter.AddChild(&m_param_edits[i]);
-     if(!m_param_edits[i].CreateTextEdit(m_chart_id, m_subwin, "ParamEdit" + (string)i, M_CONTROL_BORDER_GAP, M_CONTROL_HEIGHT,
+     if(!m_param_edits[i].CreateTextEdit(m_ChartObj.GetChartID(), M_SUBWINDOW_MAIN, "ParamEdit" + (string)i, M_CONTROL_BORDER_GAP, M_CONTROL_HEIGHT,
                                          slot_w, M_CONTROL_HEIGHT, INDICATOR_PARAM_FIELD_W)) return false;
      m_param_combo[i].ItemsTotal(7);   // room for the largest choice list (PRICE_CHOICES)
      m_frame_indicator_parameter.AddChild(&m_param_combo[i]);
-     if(!m_param_combo[i].CreateComboBox(m_chart_id, m_subwin, "ParamCombo" + (string)i, M_CONTROL_BORDER_GAP, M_CONTROL_HEIGHT,
+     if(!m_param_combo[i].CreateComboBox(m_ChartObj.GetChartID(), M_SUBWINDOW_MAIN, "ParamCombo" + (string)i, M_CONTROL_BORDER_GAP, M_CONTROL_HEIGHT,
                                          slot_w, M_CONTROL_HEIGHT, INDICATOR_PARAM_FIELD_W, 140)) return false;
     }
    const int btn_y = M_CONTROL_HEIGHT + INDICATOR_PARAM_ROWS * PARAM_ROW_H;
    m_btn_add_indicator.SetText("Add");
    m_btn_add_indicator.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);
    m_frame_indicator_parameter.AddChild(&m_btn_add_indicator);
-   if(!m_btn_add_indicator.Create(m_chart_id, m_subwin, "BtnAddIndicator", M_CONTROL_BORDER_GAP, btn_y, 80, M_CONTROL_HEIGHT)) return false;
+   if(!m_btn_add_indicator.Create(m_ChartObj.GetChartID(), M_SUBWINDOW_MAIN, "BtnAddIndicator", M_CONTROL_BORDER_GAP, btn_y, 80, M_CONTROL_HEIGHT)) return false;
    m_btn_save_indicator.SetText("Save");
    m_btn_save_indicator.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_INDICATOR, m_btn_save_indicator);
-   if(!m_btn_save_indicator.Create(m_chart_id, m_subwin, "BtnSaveIndicator", x_gap, y_gap + INDICATOR_FRAME_H + M_CONTROL_BORDER_GAP, 80, M_CONTROL_HEIGHT)) return false;
+   if(!m_btn_save_indicator.Create(m_ChartObj.GetChartID(), M_SUBWINDOW_MAIN, "BtnSaveIndicator", x_gap, y_gap + INDICATOR_FRAME_H + M_CONTROL_BORDER_GAP, 80, M_CONTROL_HEIGHT)) return false;
    return true;
   }
  //--- Indicator tree leaf clicked: lay the slots out for this type

@@ -1,7 +1,9 @@
 ﻿//+------------------------------------------------------------------+
-//|                                           AdaptiveLiquidityLifecycleTrader.mq5 |
-//|                                                      Copyright 2026, Clemence Benjamin |
+//|                                Copyright 2026, Clemence Benjamin |
 //|                                         https://www.mql5.com     |
+//|From Novice to Expert                                             |
+//|Adaptive Risk Management for Liquidity               |
+//|                           https://www.mql5.com/en/articles/21759 |
 //+------------------------------------------------------------------+
 #property copyright "Clemence Benjamin"
 #property version   "1.21"

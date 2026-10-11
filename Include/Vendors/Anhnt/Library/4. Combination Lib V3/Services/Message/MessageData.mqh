@@ -901,6 +901,67 @@
       MSG_LIB_SYS_FAILED_ADD_CTRL_POSITION_TO_LIST,
       MSG_LIB_SYS_FAILED_ADD_MODIFIED_ORD_TO_LIST,
       MSG_LIB_TEXT_FAILED_ADD_TO_LIST,
+      MSG_LIB_SYS_FAILED_ADD_ORDER_TO_LIST,
+      MSG_LIB_SYS_FAILED_ADD_DEAL_TO_LIST,
+      MSG_LIB_SYS_NOT_GET_CURR_PRICES,
+      MSG_LIB_SYS_EVENT_ALREADY_IN_LIST,
+      MSG_LIB_SYS_ERROR_NOT_MARKET_LIST,
+      MSG_LIB_SYS_ERROR_NOT_HISTORY_LIST,
+      MSG_LIB_SYS_NOT_SYMBOL_ON_LIST,
+      MSG_LIB_SYS_ERROR_NO_OPEN_POSITION_WITH_TICKET,
+      MSG_LIB_SYS_ERROR_NO_PLACED_ORDER_WITH_TICKET,
+      MSG_LIB_SYS_ERROR_POSITION_BY_ALREADY_CLOSED,
+      MSG_LIB_SYS_ERROR_FAILED_GET_TRADE_OBJ,
+      MSG_LIB_SYS_ERROR_FAILED_GET_ORD_OBJ,
+      MSG_LIB_SYS_ERROR_FAILED_GET_SYM_OBJ,
+      MSG_SYM_MARKET_ORDER_DISABLED,
+      MSG_SYM_LIMIT_ORDER_DISABLED,
+      MSG_SYM_STOP_ORDER_DISABLED,
+      MSG_SYM_STOP_LIMIT_ORDER_DISABLED,
+      MSG_SYM_SL_ORDER_DISABLED,
+      MSG_SYM_TP_ORDER_DISABLED,
+      MSG_SYM_CLOSE_BY_ORDER_DISABLED,
+      MSG_ACC_UNABLE_CLOSE_BY,
+      MSG_ENG_NO_OPEN_POSITIONS,
+      MSG_ENG_NO_PLACED_ORDERS,
+      MSG_LIB_TEXT_TERMINAL_NOT_TRADE_ENABLED,
+      MSG_LIB_TEXT_EA_NOT_TRADE_ENABLED,
+      MSG_LIB_TEXT_ACCOUNT_NOT_TRADE_ENABLED,
+      MSG_LIB_TEXT_ACCOUNT_EA_NOT_TRADE_ENABLED,
+      MSG_LIB_TEXT_REQUEST_REJECTED_DUE,
+      MSG_LIB_TEXT_INVALID_REQUEST,
+      MSG_LIB_TEXT_NOT_ENOUTH_MONEY_FOR,
+      MSG_LIB_TEXT_MAX_VOLUME_LIMIT_EXCEEDED,
+      MSG_LIB_TEXT_REQ_VOL_LESS_MIN_VOLUME,
+      MSG_LIB_TEXT_REQ_VOL_MORE_MAX_VOLUME,
+      MSG_LIB_TEXT_CLOSE_BY_ORDERS_DISABLED,
+      MSG_LIB_TEXT_INVALID_VOLUME_STEP,
+      MSG_LIB_TEXT_CLOSE_BY_SYMBOLS_UNEQUAL,
+      MSG_LIB_TEXT_SL_LESS_STOP_LEVEL,
+      MSG_LIB_TEXT_TP_LESS_STOP_LEVEL,
+      MSG_LIB_TEXT_PRICE_LESS_STOP_LEVEL,
+      MSG_LIB_TEXT_LIMIT_LESS_STOP_LEVEL,
+      MSG_LIB_TEXT_SL_LESS_FREEZE_LEVEL,
+      MSG_LIB_TEXT_TP_LESS_FREEZE_LEVEL,
+      MSG_LIB_TEXT_PR_LESS_FREEZE_LEVEL,
+      MSG_LIB_TEXT_UNSUPPORTED_SL_TYPE,
+      MSG_LIB_TEXT_UNSUPPORTED_TP_TYPE,
+      MSG_LIB_TEXT_UNSUPPORTED_PR_TYPE,
+      MSG_LIB_TEXT_UNSUPPORTED_PL_TYPE,
+      MSG_LIB_TEXT_UNSUPPORTED_PRICE_TYPE_IN_REQ,
+      MSG_LIB_TEXT_TRADING_DISABLE,
+      MSG_LIB_TEXT_TRADING_OPERATION_ABORTED,
+      MSG_LIB_TEXT_CORRECTED_TRADE_REQUEST,
+      MSG_LIB_TEXT_NOT_POSSIBILITY_CORRECT_LOT,
+      MSG_LIB_TEXT_FAILING_CREATE_PENDING_REQ,
+      MSG_LIB_TEXT_TRY_N,
+      MSG_LIB_TEXT_RE_TRY_N,
+      MSG_LIB_TEXT_REQUEST_ACTIVATED,
+      MSG_LIB_TEXT_PEND_REQUEST_CREATED,
+      MSG_LIB_TEXT_PEND_REQUEST_DELETED,
+      MSG_LIB_TEXT_PEND_REQUEST_EXECUTED,
+      MSG_LIB_TEXT_PEND_REQUEST_GETTING_FAILED,
+      MSG_LIB_TEXT_PEND_REQUEST_NO_FREE_IDS,
     };
  //+------------------------------------------------------------------+
  //| Array of execution time error messages (0, 4001 - 4025)          |
@@ -2355,6 +2416,67 @@
    {"Не удалось добавить контрольную позицию ","Failed to add a control position "},  // MSG_LIB_SYS_FAILED_ADD_CTRL_POSITION_TO_LIST
    {"Не удалось добавить модифицированный ордер в список изменённых ордеров","Could not add modified order to list of modified orders"},  // MSG_LIB_SYS_FAILED_ADD_MODIFIED_ORD_TO_LIST
    {"не удалось добавить в список","failed to add to list"},  // MSG_LIB_TEXT_FAILED_ADD_TO_LIST
+   {"Не удалось добавить ордер в список","Could not add order to list"},  // MSG_LIB_SYS_FAILED_ADD_ORDER_TO_LIST
+   {"Не удалось добавить сделку в список","Could not add deal to list"},  // MSG_LIB_SYS_FAILED_ADD_DEAL_TO_LIST
+   {"Не удалось получить текущие цены по символу события ","Failed to get current prices by event symbol "},  // MSG_LIB_SYS_NOT_GET_CURR_PRICES
+   {"Такое событие уже есть в списке","This event already in the list"},  // MSG_LIB_SYS_EVENT_ALREADY_IN_LIST
+   {"Ошибка. Список не является списком рыночной коллекции","Error. The list is not a list of market collection"},  // MSG_LIB_SYS_ERROR_NOT_MARKET_LIST
+   {"Ошибка. Список не является списком исторической коллекции","Error. The list is not a list of history collection"},  // MSG_LIB_SYS_ERROR_NOT_HISTORY_LIST
+   {"Ошибка. Такого символа нет в списке используемых символов: ","Error. This symbol is not in the list of symbols used: "},  // MSG_LIB_SYS_NOT_SYMBOL_ON_LIST
+   {"Ошибка. Нет открытой позиции с тикетом #","Error. No open position with ticket #"},  // MSG_LIB_SYS_ERROR_NO_OPEN_POSITION_WITH_TICKET
+   {"Ошибка. Нет установленного ордера с тикетом #","Error. No placed order with ticket #"},  // MSG_LIB_SYS_ERROR_NO_PLACED_ORDER_WITH_TICKET
+   {"Встречная позиция уже закрыта","Opposite position already closed"},  // MSG_LIB_SYS_ERROR_POSITION_BY_ALREADY_CLOSED
+   {"Ошибка. Не удалось получить торговый объект","Error. Failed to get a trade object"},  // MSG_LIB_SYS_ERROR_FAILED_GET_TRADE_OBJ
+   {"Ошибка. Не удалось получить объект-ордер","Error. Failed to get order object"},  // MSG_LIB_SYS_ERROR_FAILED_GET_ORD_OBJ
+   {"Ошибка. Не удалось получить объект-символ","Error. Failed to get symbol object"},  // MSG_LIB_SYS_ERROR_FAILED_GET_SYM_OBJ
+   {"Торговля рыночными ордерами запрещена","Trading through market orders prohibited"},  // MSG_SYM_MARKET_ORDER_DISABLED
+   {"Установка Limit-ордеров запрещена","Limit orders prohibited"},  // MSG_SYM_LIMIT_ORDER_DISABLED
+   {"Установка Stop-ордеров запрещена","Stop orders prohibited"},  // MSG_SYM_STOP_ORDER_DISABLED
+   {"Установка StopLimit-ордеров запрещена","StopLimit orders prohibited"},  // MSG_SYM_STOP_LIMIT_ORDER_DISABLED
+   {"Установка StopLoss-ордеров запрещена","StopLoss orders prohibited"},  // MSG_SYM_SL_ORDER_DISABLED
+   {"Установка TakeProfit-ордеров запрещена","TakeProfit orders prohibited"},  // MSG_SYM_TP_ORDER_DISABLED
+   {"Установка CloseBy-ордеров запрещена","CloseBy orders prohibited"},  // MSG_SYM_CLOSE_BY_ORDER_DISABLED
+   {"Закрытие встречным доступно только на счетах с типом \"Хеджинг\"","Close by opposite position available only on \"Hedging\" accounts"},  // MSG_ACC_UNABLE_CLOSE_BY
+   {"Нет открытых позиций","No open positions"},  // MSG_ENG_NO_OPEN_POSITIONS
+   {"Нет установленных ордеров","No placed orders"},  // MSG_ENG_NO_PLACED_ORDERS
+   {"В терминале нет разрешения на проведение торговых операций (отключена кнопка \"Авто-торговля\")","No permission to conduct trading operations in terminal (\"AutoTrading\" button disabled)"},  // MSG_LIB_TEXT_TERMINAL_NOT_TRADE_ENABLED
+   {"Для советника нет разрешения на проведение торговых операций (F7 --> Общие --> \"Разрешить автоматическую торговлю\")","EA does not have permission to conduct trading operations (F7 --> Common --> \"Allow Automatic Trading\")"},  // MSG_LIB_TEXT_EA_NOT_TRADE_ENABLED
+   {"Для текущего счёта запрещена торговля","Trading prohibited for the current account"},  // MSG_LIB_TEXT_ACCOUNT_NOT_TRADE_ENABLED
+   {"Для советников на текущем счёте запрещена торговля на стороне торгового сервера","From the side of trade server, trading for EA on the current account prohibited"},  // MSG_LIB_TEXT_ACCOUNT_EA_NOT_TRADE_ENABLED
+   {"Запрос отклонён до отправки на сервер по причине:","Request rejected before being sent to server due to:"},  // MSG_LIB_TEXT_REQUEST_REJECTED_DUE
+   {"Ошибочный запрос:","Invalid request:"},  // MSG_LIB_TEXT_INVALID_REQUEST
+   {"Недостаточно средств для совершения торговой операции","Not enough money to perform trading operation"},  // MSG_LIB_TEXT_NOT_ENOUTH_MONEY_FOR
+   {"Превышен максимальный совокупный объём ордеров и позиций в одном направлении","Exceeded maximum total volume of orders and positions in one direction"},  // MSG_LIB_TEXT_MAX_VOLUME_LIMIT_EXCEEDED
+   {"Объём в запросе меньше минимально-допустимого","Volume in request less than minimum allowable"},  // MSG_LIB_TEXT_REQ_VOL_LESS_MIN_VOLUME
+   {"Объём в запросе больше максимально-допустимого","Volume in request greater than maximum allowable"},  // MSG_LIB_TEXT_REQ_VOL_MORE_MAX_VOLUME
+   {"Закрытие встречным запрещено","CloseBy orders prohibited"},  // MSG_LIB_TEXT_CLOSE_BY_ORDERS_DISABLED
+   {"Объём в запросе не кратен минимальной градации шага изменения лота","Volume in request not a multiple of minimum gradation of step for changing lot"},  // MSG_LIB_TEXT_INVALID_VOLUME_STEP
+   {"Символы встречных позиций не равны","Symbols of two opposite positions not equal"},  // MSG_LIB_TEXT_CLOSE_BY_SYMBOLS_UNEQUAL
+   {"Значение StopLoss нарушает требования по параметру StopLevel символа","StopLoss values violate StopLevel parameter requirements"},  // MSG_LIB_TEXT_SL_LESS_STOP_LEVEL
+   {"Значение TakeProfit нарушает требования по параметру StopLevel символа","TakeProfit values violate StopLevel parameter requirements"},  // MSG_LIB_TEXT_TP_LESS_STOP_LEVEL
+   {"Дистанция установки ордера в пунктах меньше разрешённой параметром StopLevel символа","Distance to place order in points less than allowed by symbol's StopLevel"},  // MSG_LIB_TEXT_PRICE_LESS_STOP_LEVEL
+   {"Дистанция установки лимит-ордера относительно стоп-ордера меньше разрешённой параметром StopLevel символа","Distance to place limit order relative to stop order less than allowed by symbol's StopLevel"},  // MSG_LIB_TEXT_LIMIT_LESS_STOP_LEVEL
+   {"Дистанция от цены до StopLoss меньше разрешённой параметром FreezeLevel символа","Distance from price to StopLoss less than allowed by symbol's FreezeLevel"},  // MSG_LIB_TEXT_SL_LESS_FREEZE_LEVEL
+   {"Дистанция от цены до TakeProfit меньше разрешённой параметром FreezeLevel символа","Distance from price to TakeProfit less than allowed by symbol's FreezeLevel"},  // MSG_LIB_TEXT_TP_LESS_FREEZE_LEVEL
+   {"Дистанция от цены до цены срабатывания ордера меньше разрешённой параметром FreezeLevel символа","Distance from price to order triggering price less than allowed by symbol's FreezeLevel"},  // MSG_LIB_TEXT_PR_LESS_FREEZE_LEVEL
+   {"Неподдерживаемый тип параметра StopLoss (необходимо int или double)","Unsupported StopLoss parameter type (int or double required)"},  // MSG_LIB_TEXT_UNSUPPORTED_SL_TYPE
+   {"Неподдерживаемый тип параметра TakeProfit (необходимо int или double)","Unsupported TakeProfit parameter type (int or double required)"},  // MSG_LIB_TEXT_UNSUPPORTED_TP_TYPE
+   {"Неподдерживаемый тип параметра цены (необходимо int или double)","Unsupported price parameter type (int or double required)"},  // MSG_LIB_TEXT_UNSUPPORTED_PR_TYPE
+   {"Неподдерживаемый тип параметра цены limit-ордера (необходимо int или double)","Unsupported type of price parameter for limit order (int or double required)"},  // MSG_LIB_TEXT_UNSUPPORTED_PL_TYPE
+   {"Неподдерживаемый тип параметра цены в запросе","Unsupported price parameter type in request"},  // MSG_LIB_TEXT_UNSUPPORTED_PRICE_TYPE_IN_REQ
+   {"Торговля отключена для эксперта до устранения причины запрета","Trading for expert disabled till this ban eliminated"},  // MSG_LIB_TEXT_TRADING_DISABLE
+   {"Торговая операция прервана","Trading operation aborted"},  // MSG_LIB_TEXT_TRADING_OPERATION_ABORTED
+   {"Корректировка параметров торгового запроса ...","Correction of trade request parameters ..."},  // MSG_LIB_TEXT_CORRECTED_TRADE_REQUEST
+   {"Нет возможности скорректировать лот","Unable to correct lot"},  // MSG_LIB_TEXT_NOT_POSSIBILITY_CORRECT_LOT
+   {"Не удалось создать отложенный запрос","Failed to create pending request"},  // MSG_LIB_TEXT_FAILING_CREATE_PENDING_REQ
+   {"Торговая попытка #","Trading attempt #"},  // MSG_LIB_TEXT_TRY_N
+   {"Повторная торговая попытка #","Retry trading attempt #"},  // MSG_LIB_TEXT_RE_TRY_N
+   {"Активирован отложенный запрос: #","Pending request activated: #"},  // MSG_LIB_TEXT_REQUEST_ACTIVATED
+   {"Создан отложенный запрос","Pending request created"},  // MSG_LIB_TEXT_PEND_REQUEST_CREATED
+   {"Удалён в связи с окончанием времени его действия","Deleted due to expiration"},  // MSG_LIB_TEXT_PEND_REQUEST_DELETED
+   {"Удалён в связи с его исполнением","Deleted due completed"},  // MSG_LIB_TEXT_PEND_REQUEST_EXECUTED
+   {"Не удалось получить объект-отложенный запрос из списка","Failed to get pending request object from list"},  // MSG_LIB_TEXT_PEND_REQUEST_GETTING_FAILED
+   {"Нет свободных идентификаторов для создания отложенного запроса","No free IDs to create pending request"},  // MSG_LIB_TEXT_PEND_REQUEST_NO_FREE_IDS
   };
  //+------------------------------------------------------------------+
  string messages_ts_ret_code[][TOTAL_LANG]=

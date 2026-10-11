@@ -6,6 +6,7 @@ import socket
 import time
 import traceback
 
+from data import TIMEFRAMES
 from patterns import CANDLES, DIRECTIONS
 
 READ_TIMEOUT = 0.016   # same rhythm as the EA timer
@@ -31,7 +32,6 @@ class Client:
         self.watch_structures = False
         self.watch_signals = False
         self.watch_patterns = False
-        self.pre_trade_symbol = None   # symbol of the PreTradeSymbolMonitor table of that EA
 
 
 class Server:
@@ -159,8 +159,7 @@ class Server:
             elif cmd == "watch":
                 self.watch(client, message)
             elif cmd == "pre_trade_symbol_monitor":
-                client.pre_trade_symbol = message["symbol"]
-                self.send_pre_trade_symbol_monitor(conn, self.model.pre_trade_symbol_monitor(client.pre_trade_symbol))
+                self.send_pre_trade_symbol_monitor(conn, self.model.pre_trade_symbol_monitor())   # every loaded pair: the EA keeps what its tables need
             else:
                 self.send(conn, {"event": "error", "message": f"unknown cmd {cmd}"})
         except OSError:
@@ -186,6 +185,7 @@ class Server:
                                          message.get("count", 0),
                                          on_pair=lambda row: self.send(conn, {"event": "pair", **row}),
                                          indicators=message.get("indicators", []))
+        self.write(conn, ("timeframe_info|" + ";".join(TIMEFRAMES) + "\n").encode("utf-8"))   # every timeframe Python can serve, for any Symbol
         self.send(conn, {"event": "done", "total_ms": report["total_ms"], "pairs": len(report["pairs"]), "skipped": report["skipped"]})
 
     def watch(self, client, message):

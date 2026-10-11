@@ -77,10 +77,11 @@
    if(::JSONConfig_BoolValue(content,"show_smartmoney_markers",bv))  this.m_show_smartmoney =bv;
    return true;
   }
+ // Ready for 
  void CMarkerSetting::GetColorChoices(color &colors[],string &labels[]) const
   {
-   color  c[]={clrLime,clrGreen,clrDodgerBlue,clrOrange,clrYellow,clrRed,clrCrimson,clrMagenta,clrGray,clrSilver,clrWhite,clrBlack};
-   string l[]={"Lime","Green","Dodger Blue","Orange","Yellow","Red","Crimson","Magenta","Gray","Silver","White","Black"};
+   color  c[]={clrLime,clrGreen,clrLimeGreen,clrDodgerBlue,clrOrange,clrYellow,clrRed,clrCrimson,clrMagenta,clrGray,clrSilver,clrWhite,clrBlack};
+   string l[]={"Lime","Green","LimeGreen","  Blue","Orange","Yellow","Red","Crimson","Magenta","Gray","Silver","White","Black"};
    ::ArrayCopy(colors,c);
    ::ArrayCopy(labels,l);
   }

@@ -2,6 +2,7 @@
 //|                                                     TradeObj.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //|Topic link: https://www.mql5.com/en/articles/7229                 |
+//|Link https://www.mql5.com/en/articles/7258                        |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 
 //+------------------------------------------------------------------+
@@ -385,7 +386,7 @@ CTradeObj::CTradeObj(void) : m_magic(0),
    //--- Spread multiplier
     this.m_multiplier=1;
    //--- Set default sounds and flags of using sounds
-    this.m_use_sound=false;
+    this.m_use_sound=false; //Link https://www.mql5.com/en/articles/7258
     this.m_log_level=LOG_LEVEL_ERROR_MSG;
     this.InitSounds();
   }

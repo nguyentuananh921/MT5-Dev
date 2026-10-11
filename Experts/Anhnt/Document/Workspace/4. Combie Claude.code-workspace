@@ -1,40 +1,25 @@
 {
 	"folders": [
 		{
-			"path": "../../../../Include/Vendors/Anhnt/Library/2. DoEasy. Service functions Lib"
-		},
-		{
 			"path": "../../../../Logs"
-		},
-		{
-			"path": "../../../../Include/Vendors/Anhnt/Library/3. MVC Table"
-		},
-		{
-			"path": "../../Example/4. Combination EA V2"
-		},
-		{
-			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib V2"
-		},
-		{
-			"path": "../../Example/8. Swing"
-		},
-		{
-			"path": "../../../Francis Nyoike Thumbi"
-		},
-		{
-			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
-		},
-		{
-			"path": "../../Example/9. SMC"
-		},
-		{
-			"path": "../../Example/4. Combination EA V3"
 		},
 		{
 			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib V3"
 		},
 		{
-			"path": "../../Example/2. DoEasy-Service Functions Anhnt EA"
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib V2"
+		},
+		{
+			"path": "../../Example EA/4. Combination EA V2"
+		},
+		{
+			"path": "../../Example EA/4. Combination EA V3"
+		},
+		{
+			"path": "../../../Stanley Kimathi Kibaara/Market Structure Framework"
+		},
+		{
+			"path": "../../../Francis Nyoike Thumbi"
 		}
 	],
 	"settings": {

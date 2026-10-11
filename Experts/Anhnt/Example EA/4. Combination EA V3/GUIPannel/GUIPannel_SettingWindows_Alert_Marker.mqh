@@ -13,7 +13,7 @@
  #define SETTING_MARKER_LIST_ROWS            8     // visible rows of a dropdown list
  #define SETTING_MARKER_COLOR_COMBO_WIDTH    100
  #define SETTING_MARKER_COLOR_PREVIEW_WIDTH  40
- //--- "Color for Marker" frame: Buy | Sell; "Show Marker" frame under it; Save last
+ //--- "Color for Marker" frame: Buy | Sell, then Non-Related below; "Show Marker" frame under it; Save last
  bool CGUIPannel::CreateTab_SettingConfig_Marker(const int x,const int y)
   {
    if(m_MarkerSetting==NULL)
@@ -25,18 +25,20 @@
    const int frame1_x=x+M_CONTROL_BORDER_GAP;
    const int frame2_x=frame1_x+frame_w+M_CONTROL_BORDER_GAP;
    const int color_frame_w=frame2_x+frame_w-frame1_x;
-   const int color_frame_h=M_CONTROL_HEIGHT+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
+   const int color_frame_h=M_CONTROL_HEIGHT+SETTING_MARKER_ROW_STEP+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
    m_frame_color.SetText("Color for Marker");
    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER,m_frame_color);
-   if(!m_frame_color.CreateFrame(m_chart_id,m_subwin,"FrameMarkerColor",frame1_x,y,color_frame_w,color_frame_h))
+   if(!m_frame_color.CreateFrame(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"FrameMarkerColor",frame1_x,y,color_frame_w,color_frame_h))
       return false;
-   CComboBox *color_combos[2];
+   CComboBox *color_combos[3];
    color_combos[0]=::GetPointer(m_combo_color_buy);
    color_combos[1]=::GetPointer(m_combo_color_sell);
-   string color_captions[2]={"Buy Color","Sell Color"};
-   color  cur_colors[2]    ={m_MarkerSetting.BuyColor(),m_MarkerSetting.SellColor()};
-   int    color_x[2]       ={M_CONTROL_BORDER_GAP,frame2_x-frame1_x+M_CONTROL_BORDER_GAP};
-   for(int i=0;i<2;i++)
+   color_combos[2]=::GetPointer(m_combo_color_nonrelated);
+   string color_captions[3]={"Buy Color","Sell Color","Non-Related Color"};
+   color  cur_colors[3]    ={m_MarkerSetting.BuyColor(),m_MarkerSetting.SellColor(),m_MarkerSetting.NonRelatedColor()};
+   int    color_x[3]       ={M_CONTROL_BORDER_GAP,frame2_x-frame1_x+M_CONTROL_BORDER_GAP,M_CONTROL_BORDER_GAP};
+   int    color_y[3]       ={M_CONTROL_HEIGHT,M_CONTROL_HEIGHT,M_CONTROL_HEIGHT+SETTING_MARKER_ROW_STEP};
+   for(int i=0;i<3;i++)
      {
       int sel=0;
       for(int k=0;k<::ArraySize(mcolors);k++)
@@ -45,10 +47,10 @@
       m_frame_color.AddChild(color_combos[i]);
       m_frame_color.AddChild(::GetPointer(m_colorbutton[i]));
       color_combos[i].SetText(color_captions[i]);
-      if(!CreateCombobox_MarkerSelection(color_combos[i],color_x[i],M_CONTROL_HEIGHT,SETTING_MARKER_COLOR_COMBO_WIDTH,color_labels,sel))
+      if(!CreateCombobox_MarkerSelection(color_combos[i],color_x[i],color_y[i],SETTING_MARKER_COLOR_COMBO_WIDTH,color_labels,sel))
          return false;
       int swatch_x=color_x[i]+SETTING_MARKER_CAPTION_WIDTH+SETTING_MARKER_COLOR_COMBO_WIDTH+M_CONTROL_BORDER_GAP;
-      if(!CreateColorButton_Preview(i,swatch_x,M_CONTROL_HEIGHT,cur_colors[i]))
+      if(!CreateColorButton_Preview(i,swatch_x,color_y[i],cur_colors[i]))
          return false;
      }
    const int source_frame_y=y+color_frame_h+M_CONTROL_BORDER_GAP;
@@ -58,7 +60,7 @@
    m_btn_save_marker_settings.SetText("Save");
    m_btn_save_marker_settings.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER,m_btn_save_marker_settings);
-   if(!m_btn_save_marker_settings.Create(m_chart_id,m_subwin,"BtnSaveMarker",frame1_x,source_frame_y+source_frame_h+M_CONTROL_BORDER_GAP,80,M_CONTROL_HEIGHT))
+   if(!m_btn_save_marker_settings.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"BtnSaveMarker",frame1_x,source_frame_y+source_frame_h+M_CONTROL_BORDER_GAP,80,M_CONTROL_HEIGHT))
       return false;
    return true;
   }
@@ -68,7 +70,7 @@
   {
    m_frame_marker_source.SetText("Show Marker");
    m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER,m_frame_marker_source);
-   if(!m_frame_marker_source.CreateFrame(m_chart_id,m_subwin,"FrameMarkerSource",x,y,w,h))
+   if(!m_frame_marker_source.CreateFrame(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"FrameMarkerSource",x,y,w,h))
       return false;
    CCheckBox *source_boxes[3];
    source_boxes[0]=::GetPointer(m_checkbox_show_indicator_markers);
@@ -98,7 +100,7 @@
    combo.ItemsTotal(n);
    if(combo.Parent()==NULL)
       m_tabs_setting_markerAndSound.AddToElementsArray(tab_index,combo);
-   if(!combo.CreateComboBox(m_chart_id,m_subwin,"ComboAlert"+(string)combo.ObjectID(),x,y,caption_w+combo_w,M_CONTROL_HEIGHT,combo_w,list_h))
+   if(!combo.CreateComboBox(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"ComboAlert"+(string)combo.ObjectID(),x,y,caption_w+combo_w,M_CONTROL_HEIGHT,combo_w,list_h))
       return false;
    combo.GetListViewPointer().Rebuilding(n);
    for(int i=0;i<n;i++)
@@ -112,7 +114,7 @@
   {
    if(checkbox.Parent()==NULL)
       m_tabs_setting_markerAndSound.AddToElementsArray(tab_index,checkbox);
-   if(!checkbox.Create(m_chart_id,m_subwin,"CheckSetting"+(string)checkbox.ObjectID(),x,y,(width>0 ? width : SETTING_MARKER_CAPTION_WIDTH),M_CONTROL_HEIGHT))
+   if(!checkbox.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"CheckSetting"+(string)checkbox.ObjectID(),x,y,(width>0 ? width : SETTING_MARKER_CAPTION_WIDTH),M_CONTROL_HEIGHT))
       return false;
    checkbox.SetState(pressed);
    return true;
@@ -122,7 +124,7 @@
   {
    if(m_colorbutton[row].Parent()==NULL)
       m_tabs_setting_markerAndSound.AddToElementsArray(ENUM_TAB_SETTING_MARKERANDSOUND_MARKER,m_colorbutton[row]);
-   if(!m_colorbutton[row].Create(m_chart_id,m_subwin,"BtnMarkerColor"+(string)row,x,y,SETTING_MARKER_COLOR_PREVIEW_WIDTH,M_CONTROL_HEIGHT))
+   if(!m_colorbutton[row].Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"BtnMarkerColor"+(string)row,x,y,SETTING_MARKER_COLOR_PREVIEW_WIDTH,M_CONTROL_HEIGHT))
       return false;
    UpdateColorPreview(row,clr);
    return true;
@@ -210,6 +212,8 @@
          UpdateColorPreview(0,mcolors[sel]);
       else if(lparam==m_combo_color_sell.ObjectID() && color_ok)
          UpdateColorPreview(1,mcolors[sel]);
+      else if(lparam==m_combo_color_nonrelated.ObjectID() && color_ok)
+         UpdateColorPreview(2,mcolors[sel]);
       return;
      }
    //--- Save: commit what the combos and the check boxes hold, then the model writes its own key and the EA draws again
@@ -221,14 +225,17 @@
       string color_labels[];
       m_MarkerSetting.GetColorChoices(mcolors,color_labels);
       int n_colors=::ArraySize(mcolors);
-      color buy_clr=m_MarkerSetting.BuyColor(),sell_clr=m_MarkerSetting.SellColor();
+      color buy_clr=m_MarkerSetting.BuyColor(),sell_clr=m_MarkerSetting.SellColor(),nonrelated_clr=m_MarkerSetting.NonRelatedColor();
       int sel=m_combo_color_buy.GetListViewPointer().SelectedItemIndex();
       if(sel>=0 && sel<n_colors)
          buy_clr=mcolors[sel];
       sel=m_combo_color_sell.GetListViewPointer().SelectedItemIndex();
       if(sel>=0 && sel<n_colors)
          sell_clr=mcolors[sel];
-      m_MarkerSetting.SetColors(buy_clr,sell_clr,m_MarkerSetting.NonRelatedColor());
+      sel=m_combo_color_nonrelated.GetListViewPointer().SelectedItemIndex();
+      if(sel>=0 && sel<n_colors)
+         nonrelated_clr=mcolors[sel];
+      m_MarkerSetting.SetColors(buy_clr,sell_clr,nonrelated_clr);
       m_MarkerSetting.SetShowMarkers(m_checkbox_show_indicator_markers.State(),m_checkbox_show_candle_markers.State(),
                                      m_checkbox_show_smartMoney_markers.State());
       m_MarkerSetting.Save();

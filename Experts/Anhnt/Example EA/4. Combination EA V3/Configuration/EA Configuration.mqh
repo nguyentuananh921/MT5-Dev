@@ -32,6 +32,12 @@
    CIndicatorsCollection m_IndicatorsCollection;
   #include "..\Services\PythonBridge.mqh"
    CPythonBridge m_PythonBridge;
+  #include "TradingSetupSettingManager.mqh"
+   CTradingSetupSettingManager m_TradingSetupManager;
+  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\MarketCollection.mqh>
+   CMarketCollection m_MarketCollection;
+  #include "..\Services\TradingEngine.mqh"
+   CTradingEngine m_TradingEngine;
   #include "..\GUIPannel\GUIPannel.mqh"
    CGUIPannel m_GUIPannel;
 #endif // __EACONFIGURATION_MQH__

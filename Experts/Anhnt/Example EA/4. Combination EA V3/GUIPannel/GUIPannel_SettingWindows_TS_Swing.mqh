@@ -14,7 +14,7 @@ bool CGUIPannel::CreateTable_SmartMoneySetting(const int x,const int y)
   m_btn_save_swing_config.SetText("Save");
   m_btn_save_swing_config.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SMART_MONEY_CONCEPTS,m_btn_save_swing_config);
-  if(!m_btn_save_swing_config.Create(m_chart_id,m_subwin,"BtnSaveSwing",x+M_CONTROL_BORDER_GAP,
+  if(!m_btn_save_swing_config.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"BtnSaveSwing",x+M_CONTROL_BORDER_GAP,
                                      y+SETTING_BTN_SAVE_SWING_Y_GAP,80,M_CONTROL_HEIGHT))
      return false;
   if(!this.CreateSwingParamControls(x+M_CONTROL_BORDER_GAP+80+20,y+SETTING_BTN_SAVE_SWING_Y_GAP))
@@ -30,7 +30,7 @@ bool CGUIPannel::CreateTable_SmartMoneySetting(const int x,const int y)
   m_table_SmartMoneySetting.AutoYResizeMode(true);
   m_table_SmartMoneySetting.AutoYResizeBottomOffset(3);
   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SMART_MONEY_CONCEPTS,m_table_SmartMoneySetting);
-  if(!m_table_SmartMoneySetting.CreateTable(m_chart_id,m_subwin,"TableSwing",x,table_y))
+  if(!m_table_SmartMoneySetting.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TableSwing",x,table_y))
      return false;
   int widths[COLUMNS_SWING_TOTAL]            ={155,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH};
   int image_x[COLUMNS_SWING_TOTAL]           ={0,2,2,2};
@@ -109,12 +109,12 @@ bool CGUIPannel::CreateSwingParamControls(const int x,const int y)
   m_edit_swing_strength.MaxValue(50);
   m_edit_swing_strength.StepValue(1);
   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SMART_MONEY_CONCEPTS,m_edit_swing_strength);
-  if(!m_edit_swing_strength.CreateTextEdit(m_chart_id,m_subwin,"EditSwingStrength",x,y,120,M_CONTROL_HEIGHT,60))
+  if(!m_edit_swing_strength.CreateTextEdit(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"EditSwingStrength",x,y,120,M_CONTROL_HEIGHT,60))
      return false;
   m_edit_swing_strength.SetValue((string)strength);
   m_checkbox_swing_wick.SetText("Use Wick");
   m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_SMART_MONEY_CONCEPTS,m_checkbox_swing_wick);
-  if(!m_checkbox_swing_wick.Create(m_chart_id,m_subwin,"CheckSwingWick",x+120+15,y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT))
+  if(!m_checkbox_swing_wick.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"CheckSwingWick",x+120+15,y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT))
      return false;
   m_checkbox_swing_wick.SetState(use_wick);
   return true;

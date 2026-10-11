@@ -35,9 +35,16 @@
    PATTERN_MANAGER_EVENT_CATALOG_CHANGED,      // Python sent the pattern catalog and it changed the list
   };
  #define PATTERN_MANAGER_EVENTS_NEXT_CODE  (PATTERN_MANAGER_EVENT_CATALOG_CHANGED+1)
+ enum ENUM_TRADING_SETUP_MANAGER_EVENT
+  {
+   TRADING_SETUP_MANAGER_EVENT_NO_EVENT = PATTERN_MANAGER_EVENTS_NEXT_CODE,
+   TRADING_SETUP_MANAGER_EVENT_ADDED,          // a Symbol's StopLost+Trailing row was added, lparam = row pos, sparam = Symbol
+   TRADING_SETUP_MANAGER_EVENT_CHANGED,        // a row was edited and saved, sparam = Symbol
+  };
+ #define TRADING_SETUP_MANAGER_EVENTS_NEXT_CODE  (TRADING_SETUP_MANAGER_EVENT_CHANGED+1)
  enum ENUM_MW_EVENT
   {
-   MARKET_WATCH_EVENT_NO_EVENT = PATTERN_MANAGER_EVENTS_NEXT_CODE,  // No event
+   MARKET_WATCH_EVENT_NO_EVENT = TRADING_SETUP_MANAGER_EVENTS_NEXT_CODE,  // No event
    MARKET_WATCH_EVENT_SYMBOL_ADD,                           // Adding a symbol to the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_DEL,                           // Removing a symbol from the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_SORT,                          // Sorting symbols in the Market Watch window
@@ -59,6 +66,23 @@
    MOUSE_EVENT_NO_EVENT = CHART_OBJ_EVENTS_NEXT_CODE, // No event
   };
  #define MOUSE_EVENT_NEXT_CODE  (MOUSE_EVENT_NO_EVENT+1)   // The code of the next event after the last mouse event code
+ //+------------------------------------------------------------------+
+ //| Lifecycle of Trendline / Zone / Protected Level. Python decides, |
+ //| the EA only receives: lparam = ENUM_LIFECYCLE_OBJECT_KIND,       |
+ //| sparam = object name                                             |
+ //+------------------------------------------------------------------+
+ enum ENUM_LIFECYCLE_EVENT
+  {
+   LIFECYCLE_EVENT_NO_EVENT = MOUSE_EVENT_NEXT_CODE,        // No event
+   LIFECYCLE_EVENT_BORN,                                    // The object was created (ENUM_LIFECYCLE_SOURCE: auto or user)
+   LIFECYCLE_EVENT_MODIFIED,                                // Its boundaries changed (user drag, or survived a merge)
+   LIFECYCLE_EVENT_TOUCHED,                                 // Price entered the touch band, waiting for the verdict
+   LIFECYCLE_EVENT_BOUNCED,                                 // Rejection confirmed
+   LIFECYCLE_EVENT_BROKEN,                                  // Break confirmed (ghost: still watched)
+   LIFECYCLE_EVENT_RESURRECTED,                             // Back to life after price returned
+   LIFECYCLE_EVENT_DEAD,                                    // The end (ENUM_LIFECYCLE_DEAD_REASON says why)
+  };
+ #define LIFECYCLE_EVENTS_NEXT_CODE  (LIFECYCLE_EVENT_DEAD+1)  // The code of the next event after the last lifecycle event code
  //+------------------------------------------------------------------+
  //| List of trading event flags on the account                       |
  //+------------------------------------------------------------------+

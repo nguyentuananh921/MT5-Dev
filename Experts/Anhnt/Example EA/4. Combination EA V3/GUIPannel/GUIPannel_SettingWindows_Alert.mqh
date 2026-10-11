@@ -15,7 +15,7 @@
    m_window_setting_markerAndSound.MinimumXSize(M_WINDOW_MIN_WIDTH);
    m_window_setting_markerAndSound.MinimumYSize(M_WINDOW_MIN_HEIGHT);
    m_window_setting_markerAndSound.WindowType(W_DIALOG);
-   if(!m_window_setting_markerAndSound.CreateWindow(m_chart_id,m_subwin,caption_text,x_gap,y_gap,M_WINDOW_SETTING_WIDTH,M_WINDOW_SETTING_HEIGHT))
+   if(!m_window_setting_markerAndSound.CreateWindow(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,caption_text,x_gap,y_gap,M_WINDOW_SETTING_WIDTH,M_WINDOW_SETTING_HEIGHT))
       return false;
    m_window_setting_markerAndSound.IconFile(IMAGE_RESOURCE_BMP16_ALERT_ON_PNG);
    return true;
@@ -23,7 +23,7 @@
  void CGUIPannel::OpenWindow_SettingMarkerAndSound(void)
   {
    m_window_setting_markerAndSound.OpenWindow();
-   ::ChartRedraw(m_chart_id);
+   ::ChartRedraw(m_ChartObj.GetChartID());
   }
  bool CGUIPannel::CreateTab_SettingMarkerAndSound(const int x_gap,const int y_gap)
   {
@@ -36,7 +36,7 @@
    for(int i=0;i<ENUM_TAB_SETTING_MARKERANDSOUND_TOTAL;i++)
       m_tabs_setting_markerAndSound.AddTab(tabs_names[i],100);
    m_window_setting_markerAndSound.AddChild(&m_tabs_setting_markerAndSound);
-   return m_tabs_setting_markerAndSound.CreateTabs(m_chart_id,m_subwin,"TabsSettingAlert",x_gap,y_gap);
+   return m_tabs_setting_markerAndSound.CreateTabs(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TabsSettingAlert",x_gap,y_gap);
   }
  //+------------------------------------------------------------------+
  //| What the user did in the Setting Marker and Sound window         |

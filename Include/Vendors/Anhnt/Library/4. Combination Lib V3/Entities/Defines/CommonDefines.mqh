@@ -16,6 +16,9 @@
   #define MBOOKSERIES_MAX_DATA_TOTAL     (200000)                   // Maximum number of stored DOM snapshots of a single symbol
   #define PENDING_REQUEST_ID_TYPE_ERR    (1)                        // Type of a pending request created based on the server return code
   #define PENDING_REQUEST_ID_TYPE_REQ    (2)                        // Type of a pending request created by request
+  #define COLLECTION_HISTORY_ID          (0x777A)                   // Historical collection list ID
+  #define COLLECTION_MARKET_ID           (0x777B)                   // Market collection list ID
+  #define COLLECTION_TRADE_EVENTS_ID     (0x777C)                   // Event collection list ID
   #define COLLECTION_ACCOUNT_ID          (0x777D)                   // Account collection list ID
   #define COLLECTION_SYMBOLS_ID          (0x777E)                   // Symbol collection list ID
 
@@ -25,6 +28,7 @@
    #define DFUN_ERR_LINE                  (__FUNCTION__+(TerminalInfoString(TERMINAL_LANGUAGE)=="Russian" ? ", Page " : ", Line ")+(string)__LINE__+": ")
    #define DFUN                           (__FUNCTION__+": ")        // "Function description"
    #define END_TIME                       (D'31.12.3000 23:59:59')   // End date for account history data requests
+   #define TOTAL_TRADE_TRY                (5)                        // Default number of trading attempts
   //--- Default font, control corner area
    #define DEF_FONT                                      ("Calibri")          // Default font
    #define DEF_FONT_SIZE                                 (10)                  // Default font size
@@ -51,7 +55,14 @@
    SIGNAL_BUY  =  1,                                        // Buy
    SIGNAL_SELL = -1                                         // Sell
   };
-
+ //+------------------------------------------------------------------+
+ //| Possible options of selecting by time                            |
+ //+------------------------------------------------------------------+
+ enum ENUM_SELECT_BY_TIME
+  {
+   SELECT_BY_TIME_OPEN,                                     // By open time (in milliseconds)
+   SELECT_BY_TIME_CLOSE,                                    // By close time (in milliseconds)
+  };
   //+------------------------------------------------------------------+
  //| List of library object types                                     |
  //+------------------------------------------------------------------+
@@ -64,6 +75,7 @@
       OBJECT_DE_TYPE_SYMBOLTF_SETTING,                                // "Symbol+TF config row (CSymbolTFSetting)" object type
       OBJECT_DE_TYPE_PATTERN_SETTING,                                 // "Candle pattern config row (CPatternSetting)" object type
       OBJECT_DE_TYPE_INDICATOR_SETTING,                               // "Indicator template config row (CIndicatorSetting)" object type
+      OBJECT_DE_TYPE_TRADING_SETUP_SETTING,                           // "Per-Symbol StopLost+Trailing config row (CTradingSetupSetting)" object type
     // Time Serries
       OBJECT_DE_TYPE_SERIES_SWING,                                   // "Swing point" object type
       OBJECT_DE_TYPE_SERIES_MARKET_STRUCTURE,                        // "Market structure event" object type
@@ -153,25 +165,7 @@
    CHANGE_TYPE_FLAG_STOP         =  0x4,                    // StopLoss change
    CHANGE_TYPE_FLAG_TAKE         =  0x8,                    // TakeProfit change
    CHANGE_TYPE_FLAG_ORDER        =  0x10                    // Order properties change flag
-  };
- //+------------------------------------------------------------------+
- //| Possible order and position change options                       |
- //+------------------------------------------------------------------+
- enum ENUM_CHANGE_TYPE
-  {
-   CHANGE_TYPE_NO_CHANGE,                                   // No changes
-   CHANGE_TYPE_ORDER_TYPE,                                  // Order type change
-   CHANGE_TYPE_ORDER_PRICE,                                 // Order price change
-   CHANGE_TYPE_ORDER_PRICE_STOP_LOSS,                       // Order and StopLoss price change 
-   CHANGE_TYPE_ORDER_PRICE_TAKE_PROFIT,                     // Order and TakeProfit price change
-   CHANGE_TYPE_ORDER_PRICE_STOP_LOSS_TAKE_PROFIT,           // Order, StopLoss and TakeProfit price change
-   CHANGE_TYPE_ORDER_STOP_LOSS_TAKE_PROFIT,                 // StopLoss and TakeProfit change
-   CHANGE_TYPE_ORDER_STOP_LOSS,                             // Order's StopLoss change
-   CHANGE_TYPE_ORDER_TAKE_PROFIT,                           // Order's TakeProfit change
-   CHANGE_TYPE_POSITION_STOP_LOSS_TAKE_PROFIT,              // Change position's StopLoss and TakeProfit
-   CHANGE_TYPE_POSITION_STOP_LOSS,                          // Change position's StopLoss
-   CHANGE_TYPE_POSITION_TAKE_PROFIT,                        // Change position's TakeProfit
-  };
+  }; 
  //+------------------------------------------------------------------+
  //| Search and sorting data                                          |
  //+------------------------------------------------------------------+

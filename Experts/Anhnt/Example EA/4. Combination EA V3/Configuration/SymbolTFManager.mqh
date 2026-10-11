@@ -31,6 +31,7 @@
        string          m_active_sym;
        ENUM_TIMEFRAMES m_active_tf;       
        bool            m_loaded_from_json;
+       ENUM_TIMEFRAMES m_available_tf[];   // every timeframe Python serves, ascending (not the tracked pairs)
        //Private Method 
        int             ReadSymbolTFEntry(const string &s, int pos, CSymbolTFSetting *&out_row);
        int             ReadSymbolTFEntryArray(const string &s, int pos);
@@ -61,6 +62,9 @@
        bool                LoadSymbolTFSettingFromJSON(const string full_path);
        void                BuildJsonSection(string &out_json)          const;
        bool                Save(void);
+      //--- The timeframes Python can serve for any Symbol, "M1;M2;..." as Python sends them
+       void                SetAvailableTimeframes(const string texts);
+       int                 AvailableTimeframes(ENUM_TIMEFRAMES &out[]) const;
        virtual void        Print(const bool full_prop=false, const bool dash=false);
    };
 #endif // CSYMBOLTFMANAGER_MQH_DECLARATION
@@ -247,6 +251,28 @@
      if(IndexEnumTimeframe(tf) < IndexEnumTimeframe(existing.TFEnum())) return i;
     }
    return m_list.Total();   // new Symbol (own block appended at the end) or fits after the last TF of an existing block
+  }
+ void CSymbolTFManager::SetAvailableTimeframes(const string texts)
+  {
+   string part[];
+   int total = ::StringSplit(texts, ';', part);
+   ::ArrayResize(m_available_tf, 0);
+   for(int i = 0; i < total; i++)
+    {
+     ENUM_TIMEFRAMES tf = TimestampByDescription(part[i]);
+     if(tf == PERIOD_CURRENT) continue;
+     int n = ::ArraySize(m_available_tf);
+     ::ArrayResize(m_available_tf, n + 1);
+     m_available_tf[n] = tf;
+    }
+  }
+ int CSymbolTFManager::AvailableTimeframes(ENUM_TIMEFRAMES &out[]) const
+  {
+   int total = ::ArraySize(m_available_tf);
+   ::ArrayResize(out, total);
+   for(int i = 0; i < total; i++)
+      out[i] = m_available_tf[i];
+   return total;
   }
  //+------------------------------------------------------------------+
  //| Insert a new row at its sorted position - Data only, NULL if the  |

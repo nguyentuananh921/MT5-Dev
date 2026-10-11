@@ -12,6 +12,24 @@
 //| Data for working with orders                                     |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
+ //| Possible order and position change options                       |
+ //+------------------------------------------------------------------+
+ enum ENUM_CHANGE_TYPE
+  {
+   CHANGE_TYPE_NO_CHANGE,                                   // No changes
+   CHANGE_TYPE_ORDER_TYPE,                                  // Order type change
+   CHANGE_TYPE_ORDER_PRICE,                                 // Order price change
+   CHANGE_TYPE_ORDER_PRICE_STOP_LOSS,                       // Order and StopLoss price change 
+   CHANGE_TYPE_ORDER_PRICE_TAKE_PROFIT,                     // Order and TakeProfit price change
+   CHANGE_TYPE_ORDER_PRICE_STOP_LOSS_TAKE_PROFIT,           // Order, StopLoss and TakeProfit price change
+   CHANGE_TYPE_ORDER_STOP_LOSS_TAKE_PROFIT,                 // StopLoss and TakeProfit change
+   CHANGE_TYPE_ORDER_STOP_LOSS,                             // Order's StopLoss change
+   CHANGE_TYPE_ORDER_TAKE_PROFIT,                           // Order's TakeProfit change
+   CHANGE_TYPE_POSITION_STOP_LOSS_TAKE_PROFIT,              // Change position's StopLoss and TakeProfit
+   CHANGE_TYPE_POSITION_STOP_LOSS,                          // Change position's StopLoss
+   CHANGE_TYPE_POSITION_TAKE_PROFIT,                        // Change position's TakeProfit
+  };
+//+------------------------------------------------------------------+
 //| Abstract order type (status)                                     |
 //+------------------------------------------------------------------+
 enum ENUM_ORDER_STATUS

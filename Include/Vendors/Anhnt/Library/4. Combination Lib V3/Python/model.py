@@ -148,9 +148,9 @@ class Model:
             except Exception as error:
                 print(f"live state of {key} failed: {error}")
 
-    def pre_trade_symbol_monitor(self, symbol):
-        """[(key, states)] of every loaded pair of the symbol: the live state, the closed-bar one until the first live calculation."""
-        return [(key, self.live.get(key, self.monitor.get(key, []))) for key in self.bars if key[0] == symbol]
+    def pre_trade_symbol_monitor(self):
+        """[(key, states)] of every loaded pair: the live state, the closed-bar one until the first live calculation."""
+        return [(key, self.live.get(key, self.monitor.get(key, []))) for key in self.bars]
 
     def swings_since(self, symbol, tf_text, from_time):
         swings = self.swings.get((symbol, tf_text))

@@ -17,21 +17,6 @@
          return true;
    return false;
   }
- //--- The candle under a chart pixel: its open time, 0 when the pixel is outside the bars (stand-in for V2 CChartObj::GetBarTimeFromXY)
- datetime CGUIPannel::BarTimeFromXY(const int px,const int py)
-  {
-   datetime time=0;
-   double price=0;
-   int sub=0;
-   if(!::ChartXYToTimePrice(m_chart_id,px,py,sub,time,price) || sub!=0)
-      return 0;
-   ENUM_TIMEFRAMES tf=(ENUM_TIMEFRAMES)::Period();
-   int shift=::iBarShift(::Symbol(),tf,time,false);
-   if(shift<0)
-      return 0;
-   datetime bar_time=::iTime(::Symbol(),tf,shift);
-   return (time<bar_time+::PeriodSeconds(tf)) ? bar_time : 0;
-  }
  //+------------------------------------------------------------------+
  //| Popup: 3 cols Time | TF (+ source icon) | Information (+ arrow)  |
  //+------------------------------------------------------------------+
@@ -44,7 +29,7 @@
    m_window_candle_infomation.CollapseButtonIsUsed(false);
    m_window_candle_infomation.TooltipsButtonIsUsed(false);
    m_window_candle_infomation.FullscreenButtonIsUsed(false);
-   if(!m_window_candle_infomation.CreateWindow(m_chart_id,m_subwin,"Signals at Bar",0,0,CANDLE_INFO_WINDOW_W,CANDLE_INFO_WINDOW_H))
+   if(!m_window_candle_infomation.CreateWindow(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"Signals at Bar",0,0,CANDLE_INFO_WINDOW_W,CANDLE_INFO_WINDOW_H))
       return false;
    m_table_candle_information_atBar.TableSize(COLUMNS_CANDLEINFO_TOTAL,0);
    m_table_candle_information_atBar.View().ShowHeaders(true);
@@ -52,7 +37,7 @@
    m_table_candle_information_atBar.View().LightsHover(true);
    m_table_candle_information_atBar.View().IsSortMode(false);
    m_window_candle_infomation.AddChild(&m_table_candle_information_atBar);
-   if(!m_table_candle_information_atBar.CreateTable(m_chart_id,m_subwin,"TableCandleInfo",1,WINDOW_CAPTION_HEIGHT,
+   if(!m_table_candle_information_atBar.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TableCandleInfo",1,WINDOW_CAPTION_HEIGHT,
                                                     CANDLE_INFO_WINDOW_W-2,CANDLE_INFO_WINDOW_H-WINDOW_CAPTION_HEIGHT-1))
       return false;
    CTableHeaderView *header=m_table_candle_information_atBar.View().GetHeaderViewPointer();
@@ -74,14 +59,14 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::RepositionWindow_CandleInfo(const int cursor_x,const int cursor_y)
   {
-   int chart_w=(int)::ChartGetInteger(m_chart_id,CHART_WIDTH_IN_PIXELS);
-   int chart_h=(int)::ChartGetInteger(m_chart_id,CHART_HEIGHT_IN_PIXELS);
+   int chart_w=(int)::ChartGetInteger(m_ChartObj.GetChartID(),CHART_WIDTH_IN_PIXELS);
+   int chart_h=(int)::ChartGetInteger(m_ChartObj.GetChartID(),CHART_HEIGHT_IN_PIXELS);
    int window_w=m_window_candle_infomation.Width();
    int window_h=m_window_candle_infomation.Height();
-   int slot_w=(int)(1<<(int)::ChartGetInteger(m_chart_id,CHART_SCALE));
+   int slot_w=(int)(1<<(int)::ChartGetInteger(m_ChartObj.GetChartID(),CHART_SCALE));
    int left=cursor_x,right=cursor_x,top=cursor_y-CANDLE_INFO_CURSOR_INSET;
    int bar_x=0,bar_y=0;
-   if(::ChartTimePriceToXY(m_chart_id,m_subwin,m_candle_info_shown_bar,0,bar_x,bar_y))
+   if(::ChartTimePriceToXY(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,m_candle_info_shown_bar,0,bar_x,bar_y))
      {
       left=bar_x-slot_w/2;
       right=bar_x+slot_w/2;
@@ -114,7 +99,7 @@
    m_candle_info_by_marker=by_marker;
    RepositionWindow_CandleInfo(cursor_x,cursor_y);
    m_window_candle_infomation.Show();
-   ::ChartRedraw(m_chart_id);
+   ::ChartRedraw(m_ChartObj.GetChartID());
   }
  void CGUIPannel::HideWindow_CandleInfo(void)
   {
@@ -124,7 +109,7 @@
    if(!m_window_candle_infomation.IsVisible())
       return;
    m_window_candle_infomation.Hide();
-   ::ChartRedraw(m_chart_id);
+   ::ChartRedraw(m_ChartObj.GetChartID());
   }
  //+------------------------------------------------------------------+
  //| Rows built by CPythonBridge::GetCandleInfo into the table;       |
@@ -180,7 +165,7 @@
       if(m_candle_info_shown_bar!=0)
         {
          RepositionWindow_CandleInfo(m_window_candle_infomation.X(),m_window_candle_infomation.Y()+CANDLE_INFO_CURSOR_INSET);
-         ::ChartRedraw(m_chart_id);
+         ::ChartRedraw(m_ChartObj.GetChartID());
         }
       return;
      }
@@ -194,7 +179,7 @@
       return;
    bool over_gui=MouseOverAnyGUIWindow(x,y);
    bool shift=((((int)::StringToInteger(sparam))&MOUSE_BUTT_KEY_STATE_SHIFT)!=0);
-   if(!over_gui && BarTimeFromXY(x,y)==m_candle_info_shown_bar)
+   if(!over_gui && m_ChartObj!=NULL && m_ChartObj.GetBarTimeFromXY(x,y)==m_candle_info_shown_bar)
       return;
    if(!over_gui && shift)
       return;

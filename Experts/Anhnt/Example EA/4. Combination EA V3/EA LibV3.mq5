@@ -15,6 +15,11 @@
    m_IndicatorTemplateManager.OnInitEvent(m_ChartObj);
    m_PatternManager.OnInitEvent();
    m_MarkerSetting.OnInitEvent();
+   m_TradingSetupManager.OnInitEvent();
+   m_TradingEngine.SetSymbolsCollection(&m_SymbolsCollection);
+   m_TradingEngine.SetIndicatorsCollection(&m_IndicatorsCollection);
+   m_TradingEngine.SetMarketCollection(&m_MarketCollection);
+   m_TradingEngine.SetTradingSetupManager(&m_TradingSetupManager);
    g_GraphElementsCollection.OnInit();
    m_SmartMoneySync.OnInitEvent(&g_GraphElementsCollection, &m_SmartMoneySetting, &m_MarkerSetting, &m_IndicatorTemplateManager, &m_PatternManager, m_PythonBridge.Swings(), m_PythonBridge.Structures(), m_PythonBridge.Signals(), m_PythonBridge.Patterns());
    m_PythonBridge.OnInitEvent(&m_SymbolTFManager, &m_SmartMoneySetting, &m_IndicatorTemplateManager, &m_PatternManager, &m_SmartMoneySync, &m_IndicatorsCollection);
@@ -25,7 +30,11 @@
    m_GUIPannel.SetPatternManager(&m_PatternManager);
    m_GUIPannel.SetIndicatorsCollection(&m_IndicatorsCollection);
    m_GUIPannel.SetSymbolsCollection(&m_SymbolsCollection);
+   m_GUIPannel.SetChartObj(m_ChartObj);
    m_GUIPannel.SetMarkerSetting(&m_MarkerSetting);
+   m_GUIPannel.SetTradingSetupManager(&m_TradingSetupManager);
+   m_GUIPannel.SetMarketCollection(&m_MarketCollection);
+   m_GUIPannel.SetTradingEngine(&m_TradingEngine);
    m_GUIPannel.SetGraphElementsCollection(&g_GraphElementsCollection);
    if(!m_GUIPannel.OnInit(_UninitReason))
       return(INIT_FAILED);
@@ -51,12 +60,26 @@
    CMessage::ToFile(::MQLInfoString(MQL_PROGRAM_NAME), "EA", "OnDeinit", "MY DEBUG reason " + (string)reason + ", GUI+Python " + (string)((d1 - d0) / 1000) + " ms, DeleteMarkers " + (string)((::GetMicrosecondCount() - d1) / 1000) + " ms, children before " + (string)children);   //Print Debug
   }
 
+ //--- Positions and orders of the account; nothing consumes the change list yet, so it is emptied
+ void RefreshMarket(void)
+  {
+   m_MarketCollection.Refresh();
+   m_MarketCollection.GetListChanges().Clear();
+  }
+
  void OnTick(void)
   {
    m_PythonBridge.RequestPreTradeSymbolMonitor();   // the PreTradeSymbolMonitor table follows the forming bar
+   RefreshMarket();
+   m_GUIPannel.OnTickEvent();
   }
 
- ulong g_dbg_mouse_n = 0, g_dbg_mouse_coll = 0, g_dbg_mouse_gui = 0, g_dbg_mouse_max = 0;   //Print Debug
+ void OnTrade(void)
+  {
+   RefreshMarket();
+  }
+
+  ulong g_dbg_mouse_n = 0, g_dbg_mouse_coll = 0, g_dbg_mouse_gui = 0, g_dbg_mouse_max = 0;   //Print Debug
  ulong g_dbg_timer_n = 0, g_dbg_timer_poll = 0, g_dbg_timer_gui = 0, g_dbg_timer_coll = 0, g_dbg_timer_max = 0, g_dbg_last_ms = 0;   //Print Debug
  void DebugFlush(void)   //Print Debug
   {
@@ -113,7 +136,7 @@
          s_last_bar = 0;
          return;
         }
-      bar_time = m_GUIPannel.BarTimeFromXY(x, y);
+      bar_time = (m_ChartObj != NULL) ? m_ChartObj.GetBarTimeFromXY(x, y) : 0;
       if(bar_time != s_last_bar)   //Print Debug
          CMessage::ToFile(::MQLInfoString(MQL_PROGRAM_NAME), "EA", "OpenCandleInfo", "MY DEBUG shift hover x=" + (string)x + " y=" + (string)y + " bar=" + TimeToString(bar_time));   //Print Debug
       if(bar_time == 0 || bar_time == s_last_bar)

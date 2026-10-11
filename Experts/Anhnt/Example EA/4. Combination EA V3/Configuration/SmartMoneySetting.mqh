@@ -4,7 +4,6 @@
 //+------------------------------------------------------------------+
 #ifndef __SMARTMONEYSETTING_MQH__
 #define __SMARTMONEYSETTING_MQH__
- #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Defines\SwingDefines.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Defines\MarketStructureDefines.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Bases\BaseObj.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\DELib\CommonDELib.mqh>

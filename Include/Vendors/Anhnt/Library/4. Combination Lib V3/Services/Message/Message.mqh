@@ -1,6 +1,8 @@
 //+------------------------------------------------------------------+
 //|                                                      Message.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
+//|Link https://www.mql5.com/en/articles/7176                        |
+//|Link https://www.mql5.com/en/articles/7258                        |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2019, MetaQuotes Software Corp."

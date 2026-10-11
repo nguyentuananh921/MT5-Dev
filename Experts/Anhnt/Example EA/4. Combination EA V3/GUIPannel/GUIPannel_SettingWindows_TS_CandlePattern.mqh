@@ -13,7 +13,7 @@
    m_btn_save_pattern_config.SetText("Save");
    m_btn_save_pattern_config.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN,m_btn_save_pattern_config);
-   if(!m_btn_save_pattern_config.Create(m_chart_id,m_subwin,"BtnSavePattern",x+M_CONTROL_BORDER_GAP,
+   if(!m_btn_save_pattern_config.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"BtnSavePattern",x+M_CONTROL_BORDER_GAP,
                                         y+SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP,80,M_CONTROL_HEIGHT))
       return false;
    int table_y=y+SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP+M_CONTROL_HEIGHT+SETTING_BTN_SAVE_CANDLE_PATTERN_Y_GAP;
@@ -27,7 +27,7 @@
    m_table_CandlePatternsSetting.AutoYResizeMode(true);
    m_table_CandlePatternsSetting.AutoYResizeBottomOffset(3);
    m_tabs_setting_timeseries.AddToElementsArray(TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN,m_table_CandlePatternsSetting);
-   if(!m_table_CandlePatternsSetting.CreateTable(m_chart_id,m_subwin,"TableCandlePattern",x,table_y))
+   if(!m_table_CandlePatternsSetting.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TableCandlePattern",x,table_y))
       return false;
    int widths[COLUMNS_CANDLE_PATTERN_TOTAL]            ={155,30,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH};
    int image_x[COLUMNS_CANDLE_PATTERN_TOTAL]           ={0,0,2,2,2,2,2,2};
@@ -136,7 +136,7 @@
       if(!m_gui_created)
          return;
       InitializeTable_CandlePatternSetting();
-      ::ChartRedraw(m_chart_id);
+      ::ChartRedraw(m_ChartObj.GetChartID());
       return;
      }
   }

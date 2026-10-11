@@ -2,26 +2,20 @@
 //|                           GUIPannel_MainWindows_TabTrading.mqh |
 //| Trading tab of m_window_main: TF switch, the indicator monitor   |
 //| (what Python calculated), the New Order form and the position    |
-//| tables. Sending an order and the stop loss / trailing wait for   |
-//| the trading engine: their handlers print for now                 |
+//| tables, the order sending and the stop loss / trailing type      |
+//| icons, which read the trading engine                             |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_MAINWINDOWS_TABTRADING_MQH
 #define CGUIPANNEL_MAINWINDOWS_TABTRADING_MQH
  #include "GUIPannel.mqh"
  //+------------------------------------------------------------------+
- //| "All" (only with 2+ TFs) + the TFs of the chart Symbol            |
+ //| "All" (with 0 or 2+ TFs) + the TFs of the chart Symbol. The first |
+ //| call creates the group at x_gap,y_gap, every later call builds    |
+ //| the buttons again when the TFs changed and selects the TF the     |
+ //| chart is on                                                       |
  //+------------------------------------------------------------------+
- bool CGUIPannel::CreateTFSwitchButtons(const int x_gap,const int y_gap)
+ bool CGUIPannel::BuildTFSwitchButtons(const int x_gap,const int y_gap)
   {
-   m_btngroup_tf_switch.RadioButtonsMode(true);
-   m_btngroup_tf_switch.ButtonYSize(M_CONTROL_HEIGHT);
-   m_btngroup_tf_switch.AddButton(0,0,"All",M_TF_WITHOUT_ICON_WIDTH);
-   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btngroup_tf_switch);
-   return m_btngroup_tf_switch.CreateButtonsGroup(m_chart_id,m_subwin,"TFSwitch",x_gap,y_gap);
-  }
- void CGUIPannel::Sync_CButtonsGroup_TFSwitchButtons(void)
-  {
-   bool was_all_selected=(m_btngroup_tf_switch.SelectedButtonText()=="All");
    string symbol=::Symbol();
    string tf_texts[];
    int tf_count=0;
@@ -35,20 +29,36 @@
       tf_texts[tf_count]=TimeframeDescription(row.TFEnum());
       tf_count++;
      }
-   int first_tf_button=(tf_count>1) ? 1 : 0;
-   bool buttons_match=(m_btngroup_tf_switch.ButtonsTotal()==tf_count+first_tf_button);
+   int first_tf_button=(tf_count!=1) ? 1 : 0;
+   bool created=(m_btngroup_tf_switch.ButtonsTotal()>0);
+   bool was_all_selected=(created && m_btngroup_tf_switch.SelectedButtonText()=="All");
+   bool buttons_match=(created && m_btngroup_tf_switch.ButtonsTotal()==tf_count+first_tf_button);
    if(buttons_match && first_tf_button==1)
       buttons_match=(m_btngroup_tf_switch.GetButtonPointer(0).Text()=="All");
    for(int i=0;i<tf_count && buttons_match;i++)
       buttons_match=(m_btngroup_tf_switch.GetButtonPointer(i+first_tf_button).Text()==tf_texts[i]);
    if(!buttons_match)
      {
-      ::Print("MY DEBUG CGUIPannel::Sync_CButtonsGroup_TFSwitchButtons: the buttons are built again, ",tf_count," TF(s), main window locked=",m_window_main.IsLocked());   //Print Debug
-      m_btngroup_tf_switch.DeleteButtons();
+      if(created)
+        {
+         ::Print("MY DEBUG CGUIPannel::BuildTFSwitchButtons: the buttons are built again, ",tf_count," TF(s), main window locked=",m_window_main.IsLocked());   //Print Debug
+         m_btngroup_tf_switch.DeleteButtons();
+        }
+      else
+        {
+         m_btngroup_tf_switch.RadioButtonsMode(true);
+         m_btngroup_tf_switch.ButtonYSize(M_CONTROL_HEIGHT);
+        }
       if(first_tf_button==1)
          m_btngroup_tf_switch.AddButton(0,0,"All",M_TF_WITHOUT_ICON_WIDTH);
       for(int i=0;i<tf_count;i++)
          m_btngroup_tf_switch.AddButton((i+first_tf_button)*(M_TF_WITHOUT_ICON_WIDTH+M_CONTROL_BORDER_GAP),0,tf_texts[i],M_TF_WITHOUT_ICON_WIDTH);
+      if(!created)
+        {
+         m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btngroup_tf_switch);
+         if(!m_btngroup_tf_switch.CreateButtonsGroup(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TFSwitch",x_gap,y_gap))
+            return false;
+        }
      }
    int select_index=WRONG_VALUE;
    if(was_all_selected && first_tf_button==1)
@@ -67,19 +77,9 @@
       select_index=0;
    if(select_index!=WRONG_VALUE && m_btngroup_tf_switch.GetButtonPointer(select_index).Text()!=m_btngroup_tf_switch.SelectedButtonText())
       m_btngroup_tf_switch.SelectButton(select_index);
-   SyncTable_PreTradeSymbolMonitor(symbol);
-  }
- //--- Filter the monitor; a TF button also moves the chart there
- void CGUIPannel::OnClick_CButtonsGroup_TFSwitchButton(void)
-  {
-   string symbol=::Symbol();
-   ENUM_TIMEFRAMES tf=TimestampByDescription(m_btngroup_tf_switch.SelectedButtonText());   // "All" = PERIOD_CURRENT
-   if(tf==PERIOD_CURRENT || symbol=="" || m_SymbolTFManager==NULL || tf==(ENUM_TIMEFRAMES)::Period())
-     {
-      SyncTable_PreTradeSymbolMonitor(symbol,true);
-      return;
-     }
-   m_SymbolTFManager.NotifySettingChanged(symbol,tf);
+   if(created)
+      SyncTable_PreTradeSymbolMonitor(symbol);
+   return true;
   }
  //+------------------------------------------------------------------+
  //| Indicator monitor: every template of every tracked TF of the     |
@@ -99,7 +99,7 @@
    m_table_indicator_PreTradeSymbolMonitor.View().LightsHover(true);
    m_table_indicator_PreTradeSymbolMonitor.View().IsSortMode(false);
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_table_indicator_PreTradeSymbolMonitor);
-   if(!m_table_indicator_PreTradeSymbolMonitor.CreateTable(m_chart_id,m_subwin,"TablePreTradeMonitor",x,y,columns_width_total+20,TRADING_FORM_HEIGHT))
+   if(!m_table_indicator_PreTradeSymbolMonitor.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TablePreTradeMonitor",x,y,columns_width_total+20,TRADING_FORM_HEIGHT))
       return false;
    CTableHeaderView *header=m_table_indicator_PreTradeSymbolMonitor.View().GetHeaderViewPointer();
    header.ColumnsWidth(PRETRADEMON_WIDTH);
@@ -133,7 +133,7 @@
       s_symbol=symbol;
       force=true;
      }
-   ENUM_TIMEFRAMES tf_filter=TimestampByDescription(m_btngroup_tf_switch.SelectedButtonText());   // "All" = PERIOD_CURRENT
+   ENUM_TIMEFRAMES tf_filter=GetTFSwitchSelection();
    //--- The rows: each tracked TF of the Symbol x each template whose indicator Python reported
    string row_tf[];
    int row_template[];
@@ -233,11 +233,11 @@
    m_new_order_is_buy=true;
    m_checkbox_use_RiskPerNewTrade.SetText("Use RPT %");
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_checkbox_use_RiskPerNewTrade);
-   if(!m_checkbox_use_RiskPerNewTrade.Create(m_chart_id,m_subwin,"CheckUseRiskPerTrade",x_gap,row0_y,check_w,M_CONTROL_HEIGHT))
+   if(!m_checkbox_use_RiskPerNewTrade.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"CheckUseRiskPerTrade",x_gap,row0_y,check_w,M_CONTROL_HEIGHT))
       return false;
    m_checkbox_use_RiskPerNewTrade.SetState(false);
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_edit_RiskPerNewTrade);
-   if(!m_edit_RiskPerNewTrade.CreateTextEdit(m_chart_id,m_subwin,"EditRiskPerTrade",x_gap,row1_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
+   if(!m_edit_RiskPerNewTrade.CreateTextEdit(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"EditRiskPerTrade",x_gap,row1_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
       return false;
    m_edit_RiskPerNewTrade.SetValue("1.0");
    m_edit_RiskPerNewTrade.Hide();   // shown while "Use RPT %" is checked
@@ -247,17 +247,17 @@
    m_combobox_order_type.SetValue(2,"Stop");
    m_combobox_order_type.SetValue(3,"Stop Limit");
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_combobox_order_type);
-   if(!m_combobox_order_type.CreateComboBox(m_chart_id,m_subwin,"ComboOrderType",x_gap,row2_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
+   if(!m_combobox_order_type.CreateComboBox(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"ComboOrderType",x_gap,row2_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
       return false;
    m_combobox_order_type.SelectItem(0);
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_edit_order_type_value);
-   if(!m_edit_order_type_value.CreateTextEdit(m_chart_id,m_subwin,"EditOrderTypeValue",x_gap,row3_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
+   if(!m_edit_order_type_value.CreateTextEdit(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"EditOrderTypeValue",x_gap,row3_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
       return false;
    m_edit_order_type_value.SetValue("0.0");
    m_edit_order_type_value.Hide();   // Market is the default: no price to give
    m_btn_send_toTrade.SetText("Buy");
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btn_send_toTrade);
-   if(!m_btn_send_toTrade.Create(m_chart_id,m_subwin,"BtnSendToTrade",x_gap,row4_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT))
+   if(!m_btn_send_toTrade.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"BtnSendToTrade",x_gap,row4_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT))
       return false;
    UpdateSendButtonAppearance();
    return true;
@@ -290,14 +290,24 @@
       m_edit_RiskPerNewTrade.Show();
    else
       m_edit_RiskPerNewTrade.Hide();
+   SyncTable_PositionPretradeView(true);   // the Lot list now, not on the next call
   }
- //--- The trading engine is not ported yet: print what would be sent
  void CGUIPannel::OnClickSendNewOrder(void)
   {
+   if(m_TradingEngine==NULL)
+      return;
+   string symbol=GetNewOrderSymbol();
+   if(symbol=="")
+      return;
+   double lot=GetNewOrderLot();
+   if(lot<=0.0)
+      return;   // the Lot cell reads "N/A": nothing valid to send
+   ENUM_POSITION_TYPE dir=m_new_order_is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
    int order_type_idx=m_combobox_order_type.GetListViewPointer().SelectedItemIndex();
-   ::Print("MY DEBUG CGUIPannel::OnClickSendNewOrder: symbol=",GetNewOrderSymbol()," ",(m_new_order_is_buy ? "BUY" : "SELL"),
-           " lot=",GetNewOrderLot()," order_type=",order_type_idx," price=",m_edit_order_type_value.GetValue(),
-           " use_risk=",m_checkbox_use_RiskPerNewTrade.State()," risk%=",m_edit_RiskPerNewTrade.GetValue());   //Print Debug
+   if(order_type_idx==3)
+      return;   // Stop Limit is not supported yet
+   double price=::StringToDouble(m_edit_order_type_value.GetValue());
+   m_TradingEngine.SendNewOrder(symbol,dir,lot,order_type_idx,price);
   }
  //+------------------------------------------------------------------+
  //| New Order Symbol / Direction / Lot and what the trade would risk  |
@@ -310,7 +320,7 @@
    m_table_position_pretrade_view.View().IsSortMode(false);
    m_table_position_pretrade_view.View().ColumnResizeMode(false);
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_table_position_pretrade_view);
-   if(!m_table_position_pretrade_view.CreateTable(m_chart_id,m_subwin,"TablePretradeView",x,y,m_table_indicator_PreTradeSymbolMonitor.Width(),PRETRADE_VIEW_TABLE_HEIGHT+2))
+   if(!m_table_position_pretrade_view.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TablePretradeView",x,y,m_table_indicator_PreTradeSymbolMonitor.Width(),PRETRADE_VIEW_TABLE_HEIGHT+2))
       return false;
    CTableHeaderView *header=m_table_position_pretrade_view.View().GetHeaderViewPointer();
    header.ColumnsWidth(PRETRADE_VIEW_WIDTH);
@@ -384,18 +394,25 @@
    m_table_position_pretrade_view.SetValue(COL_PTV_SYMBOL,0,new_selected);
    return (new_selected!=selected);
   }
- //--- Without the trading engine: the Lot list is the minimum lot, price and money cells read N/A
+ //--- The Lot list is rebuilt when its inputs change; SL price, SL profit and Risk $ come from the engine on every call
  bool CGUIPannel::SyncTable_PositionPretradeView(bool force=false)
   {
-   static string s_symbol="";
-   static int    s_dir=-1;
+   static string s_scoped_symbol="";
+   static int    s_scoped_dir=-1;
+   static bool   s_use_risk_old=false;
+   static double s_risk_pct_old=EMPTY_VALUE;
+   static double s_free_margin_old=EMPTY_VALUE;   // the Lot list also depends on the Free Margin (CalcMaxLotByRisk margin cap)
    string sym=GetNewOrderSymbol();
+   ENUM_POSITION_TYPE type=m_new_order_is_buy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
    if(sym=="")
       return false;
-   bool identity_changed=(force || sym!=s_symbol);
-   bool dir_changed=((int)m_new_order_is_buy!=s_dir);
-   s_symbol=sym;
-   s_dir=(int)m_new_order_is_buy;
+   bool identity_changed=(force || sym!=s_scoped_symbol);
+   bool dir_changed=((int)type!=s_scoped_dir);
+   s_scoped_symbol=sym;
+   s_scoped_dir=(int)type;
+   CTradingSetupSetting *row_setting=(m_TradingSetupManager!=NULL) ? m_TradingSetupManager.FindByIdentity(sym) : NULL;
+   bool sl_fixed=(row_setting==NULL) || (row_setting.StopLostMode()==SL_MODE_FIXED);
+   bool trail_fixed=(row_setting==NULL) || (row_setting.TrailingMode()==SL_MODE_FIXED);
    if(identity_changed)
      {
       uint sl_type_img[]   ={IMAGE_RESOURCE_BMP16_STOPLOSTGREY_PNG,IMAGE_RESOURCE_BMP16_INDICATOR_BMP};
@@ -407,22 +424,55 @@
       m_table_position_pretrade_view.CellView(COL_PTV_SYMBOL,0).SetImages(sym_img);
       m_table_position_pretrade_view.CellView(COL_PTV_DIR,0).SetImages(dir_img);
       m_table_position_pretrade_view.Cell(COL_PTV_SLPRICE,0).SetDigits((int)::SymbolInfoInteger(sym,SYMBOL_DIGITS));
-      m_table_position_pretrade_view.SetValue(COL_PTV_SLTYPE,0,(long)CANV_ELEMENT_CHEK_STATE_UNCHECKED);
-      m_table_position_pretrade_view.SetValue(COL_PTV_TRAILTYPE,0,(long)CANV_ELEMENT_CHEK_STATE_UNCHECKED);
-      m_table_position_pretrade_view.SetValue(COL_PTV_SLPRICE,0,"N/A");
-      m_table_position_pretrade_view.SetValue(COL_PTV_SLPROFIT,0,"N/A");
-      m_table_position_pretrade_view.SetValue(COL_PTV_RISK,0,"N/A");
+     }
+   //--- Icon / checkbox cells are set on every call: a cell redraws only when its value really changed
+   m_table_position_pretrade_view.SetValue(COL_PTV_SLTYPE,0,(long)(sl_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+   m_table_position_pretrade_view.SetValue(COL_PTV_TRAILTYPE,0,(long)(trail_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+   m_table_position_pretrade_view.CellView(COL_PTV_SYMBOL,0).ChangeImage(sym==::Symbol() ? 0 : 1);
+   m_table_position_pretrade_view.SetValue(COL_PTV_DIR,0,(long)((type==POSITION_TYPE_BUY) ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+   bool use_risk=m_checkbox_use_RiskPerNewTrade.State();
+   //--- A tab or window shown again shows every element again: the visibility is asserted on every call
+   if(use_risk) m_edit_RiskPerNewTrade.Show(); else m_edit_RiskPerNewTrade.Hide();
+   int order_type_idx=m_combobox_order_type.GetListViewPointer().SelectedItemIndex();
+   if(order_type_idx>0) m_edit_order_type_value.Show(); else m_edit_order_type_value.Hide();
+   //--- Unchecked = CalcMaxLotByRisk with 100 %: the most the balance allows
+   double risk_pct=use_risk ? ::StringToDouble(m_edit_RiskPerNewTrade.GetValue()) : 100.0;
+   //--- Rounded: the Free Margin drifts with the floating P&L, the list is rebuilt on real margin changes only
+   double free_margin_rounded=::MathRound(::AccountInfoDouble(ACCOUNT_MARGIN_FREE));
+   if(identity_changed || dir_changed || use_risk!=s_use_risk_old || risk_pct!=s_risk_pct_old || free_margin_rounded!=s_free_margin_old)
+     {
+      s_use_risk_old=use_risk;
+      s_risk_pct_old=risk_pct;
+      s_free_margin_old=free_margin_rounded;
       CSymbol *lot_sym=(m_SymbolsCollection!=NULL) ? m_SymbolsCollection.GetSymbolObjByName(sym) : NULL;
       double min_lot=(lot_sym!=NULL) ? lot_sym.LotsMin() : 0.0;
       double step_lot=(lot_sym!=NULL) ? lot_sym.LotsStep() : 0.0;
-      if(min_lot>0.0 && step_lot>0.0)
+      double max_lot=(m_TradingEngine!=NULL) ? m_TradingEngine.CalcMaxLotByRisk(sym,type,risk_pct) : 0.0;
+      bool lot_enabled=(lot_sym!=NULL) && step_lot>0.0 && min_lot>0.0 && max_lot>=min_lot;
+      if(lot_enabled)
         {
          int lot_digits=(int)::MathMax(0.0,::MathCeil(-::MathLog10(step_lot)-0.0000001));
-         string lot_list[1];
-         lot_list[0]=::DoubleToString(min_lot,lot_digits);
+         int count=(int)::MathRound((max_lot-min_lot)/step_lot)+1;
+         if(count<1)   count=1;
+         if(count>200) count=200;   // LotsMin..LotsMax can be a huge range on some Symbols
+         string lot_list[];
+         ::ArrayResize(lot_list,count);
+         for(int i=0;i<count;i++)
+           {
+            double v=min_lot+i*step_lot;
+            if(v>max_lot) v=max_lot;
+            lot_list[i]=::DoubleToString(v,lot_digits);
+           }
+         //--- The minimum lot, or the lot the user picked before
+         int default_idx=0;
+         if(m_new_order_lot_last>0.0)
+           {
+            int nearest_idx=(int)::MathRound((m_new_order_lot_last-min_lot)/step_lot);
+            if(nearest_idx>=0 && nearest_idx<count) default_idx=nearest_idx;
+           }
          m_table_position_pretrade_view.CellView(COL_PTV_LOT,0).CellType(CELL_COMBOBOX);
          m_table_position_pretrade_view.CellView(COL_PTV_LOT,0).SetValueList(lot_list);
-         m_table_position_pretrade_view.SetValue(COL_PTV_LOT,0,lot_list[0]);
+         m_table_position_pretrade_view.SetValue(COL_PTV_LOT,0,lot_list[default_idx]);
         }
       else
         {
@@ -430,11 +480,18 @@
          m_table_position_pretrade_view.SetValue(COL_PTV_LOT,0,"N/A");
         }
      }
-   if(identity_changed || dir_changed)
-     {
-      m_table_position_pretrade_view.CellView(COL_PTV_SYMBOL,0).ChangeImage(sym==::Symbol() ? 0 : 1);
-      m_table_position_pretrade_view.SetValue(COL_PTV_DIR,0,(long)(m_new_order_is_buy ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
-     }
+   //--- Numbers go in raw: the cell tracks its value and colors the up / down
+   bool sl_price_from_trail;
+   double sl_price=(m_TradingEngine!=NULL) ? m_TradingEngine.GetPreviewSLTargetPrice(sym,type,sl_price_from_trail) : EMPTY_VALUE;
+   CSymbol *sym_obj_for_lot=(m_SymbolsCollection!=NULL) ? m_SymbolsCollection.GetSymbolObjByName(sym) : NULL;
+   double default_lot=(sym_obj_for_lot!=NULL) ? sym_obj_for_lot.LotsMin() : 0.0;
+   double sl_profit=(m_MarketCollection!=NULL && sl_price!=EMPTY_VALUE && default_lot>0.0) ? m_MarketCollection.SumFloatingProfit(sym,type,sl_price,default_lot) : EMPTY_VALUE;
+   double actual_lot=GetNewOrderLot();
+   double risk=(m_MarketCollection!=NULL && sl_price!=EMPTY_VALUE && actual_lot>0.0) ? m_MarketCollection.SumFloatingProfit(sym,type,sl_price,actual_lot) : EMPTY_VALUE;
+   //--- "N/A": the mode is Indicator and the indicator is not served yet, or no StopLost / Trailing is on
+   if(sl_price==EMPTY_VALUE)  m_table_position_pretrade_view.SetValue(COL_PTV_SLPRICE,0,"N/A");  else m_table_position_pretrade_view.SetValue(COL_PTV_SLPRICE,0,sl_price);
+   if(sl_profit==EMPTY_VALUE) m_table_position_pretrade_view.SetValue(COL_PTV_SLPROFIT,0,"N/A"); else m_table_position_pretrade_view.SetValue(COL_PTV_SLPROFIT,0,sl_profit);
+   if(risk==EMPTY_VALUE)      m_table_position_pretrade_view.SetValue(COL_PTV_RISK,0,"N/A");     else m_table_position_pretrade_view.SetValue(COL_PTV_RISK,0,risk);
    return m_table_position_pretrade_view.Update(false);
   }
  //--- Picking another Symbol in the combobox: the chart goes there (the monitor follows the chart Symbol)
@@ -466,18 +523,42 @@
    UpdateSendButtonAppearance();
    SyncTable_PositionPretradeView();
   }
- //--- Stop loss and trailing of the trade to come: the setting is not ported yet
+ //--- Stop loss / trailing icon of the New Order row: the cell already flipped, the setting of the Symbol follows it
  void CGUIPannel::OnClickTogglePretradeSLType(void)
   {
-   ::Print("MY DEBUG CGUIPannel::OnClickTogglePretradeSLType: symbol=",GetNewOrderSymbol());   //Print Debug
+   if(m_TradingSetupManager==NULL)
+      return;
+   string symbol=GetNewOrderSymbol();
+   if(symbol=="")
+      return;
+   CTradingSetupSetting *row_setting=m_TradingSetupManager.FindByIdentity(symbol);
+   if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(symbol);
+   if(row_setting==NULL)
+      return;
+   bool fixed=(m_table_position_pretrade_view.Cell(COL_PTV_SLTYPE,0).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   row_setting.StopLostMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
+   m_TradingSetupManager.NotifySettingChanged(symbol);
+   SyncTable_PositionPretradeView(true);
   }
  void CGUIPannel::OnClickTogglePretradeTrailType(void)
   {
-   ::Print("MY DEBUG CGUIPannel::OnClickTogglePretradeTrailType: symbol=",GetNewOrderSymbol());   //Print Debug
+   if(m_TradingSetupManager==NULL)
+      return;
+   string symbol=GetNewOrderSymbol();
+   if(symbol=="")
+      return;
+   CTradingSetupSetting *row_setting=m_TradingSetupManager.FindByIdentity(symbol);
+   if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(symbol);
+   if(row_setting==NULL)
+      return;
+   bool fixed=(m_table_position_pretrade_view.Cell(COL_PTV_TRAILTYPE,0).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   row_setting.TrailingMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
+   m_TradingSetupManager.NotifySettingChanged(symbol);
+   SyncTable_PositionPretradeView(true);
   }
  //+------------------------------------------------------------------+
  //| Open positions per Symbol and direction with their SL / trailing; |
- //| the rows come with the trading engine                             |
+ //| the rows are the Symbol / direction pairs with an open position   |
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreateTable_PositionsStoplostAndTrailling(const int x,const int y)
   {
@@ -493,7 +574,7 @@
    m_table_positions_StoplostAndTrailling.AutoYResizeMode(true);
    m_table_positions_StoplostAndTrailling.AutoYResizeBottomOffset(M_CONTROL_BORDER_GAP);
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_table_positions_StoplostAndTrailling);
-   if(!m_table_positions_StoplostAndTrailling.CreateTable(m_chart_id,m_subwin,"TablePositionsSLTrail",x,y,table_w))
+   if(!m_table_positions_StoplostAndTrailling.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TablePositionsSLTrail",x,y,table_w))
       return false;
    CTableHeaderView *header=m_table_positions_StoplostAndTrailling.View().GetHeaderViewPointer();
    header.ColumnsWidth(POSITIONS_SLTRAIL_WIDTH);
@@ -526,5 +607,197 @@
    m_table_positions_StoplostAndTrailling.SetHeaderImage(COL_PST_PROFIT,profit_header_img);
    m_table_positions_StoplostAndTrailling.View().Rebuild(true);
    return true;
+  }
+ //--- Rows are the (Symbol, direction) pairs with an open position: built again only when that set changes, otherwise values only
+ bool CGUIPannel::SyncTable_PositionsStoplostAndTrailling(void)
+  {
+   string symbols[];
+   ENUM_POSITION_TYPE dirs[];
+   int count=(m_MarketCollection!=NULL) ? m_MarketCollection.GetDistinctSymbolsAndDirections(symbols,dirs) : 0;
+   static string s_prev_keys[];   // the row structure (Symbol_Direction per row), not a value cache
+   string keys[];
+   ::ArrayResize(keys,count);
+   for(int i=0;i<count;i++)
+      keys[i]=symbols[i]+"_"+(string)dirs[i];
+   bool identity_changed=(::ArraySize(s_prev_keys)!=count);
+   for(int i=0;i<count && !identity_changed;i++)
+      identity_changed=(s_prev_keys[i]!=keys[i]);
+   if(count==0)
+     {
+      if(::ArraySize(s_prev_keys)!=0)
+        {
+         m_table_positions_StoplostAndTrailling.DeleteAllRows(true);
+         ::ArrayResize(s_prev_keys,0);
+         return true;
+        }
+      return false;
+     }
+   if(identity_changed)
+     {
+      ::Print("MY DEBUG CGUIPannel::SyncTable_PositionsStoplostAndTrailling: rows ",::ArraySize(s_prev_keys)," -> ",count);   //Print Debug
+      uint sym_img[]        ={IMAGE_RESOURCE_BMP16_BAR_CHART_BMP,IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP};
+      uint dir_img[]        ={IMAGE_RESOURCE_BMP16_ORDER_BUY_PNG,IMAGE_RESOURCE_BMP16_ORDER_SELL_PNG};
+      uint run_status_img[] ={IMAGE_RESOURCE_BMP16_START_BMP,IMAGE_RESOURCE_BMP16_START_GRAY_BMP};   // 0 = running (colored), 1 = not running (gray)
+      uint sl_type_img[]    ={IMAGE_RESOURCE_BMP16_STOPLOSTGREY_PNG,IMAGE_RESOURCE_BMP16_INDICATOR_BMP};
+      uint trail_type_img[] ={IMAGE_RESOURCE_BMP16_TRAILLING_PNG,IMAGE_RESOURCE_BMP16_INDICATOR_BMP};
+      m_table_positions_StoplostAndTrailling.DeleteAllRows();
+      for(int i=0;i<count;i++)
+         m_table_positions_StoplostAndTrailling.AddRow();
+      ::ArrayResize(s_prev_keys,count);
+      for(int row=0;row<count;row++)
+        {
+         s_prev_keys[row]=keys[row];
+         m_table_positions_StoplostAndTrailling.View().RowView(row).TextAlign(POSITIONS_SLTRAIL_CONTENT_ALIGN);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_SYMBOL,row).SetImages(sym_img);
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SYMBOL,row,symbols[row]);
+         //--- The Buy / Sell icon alone says the direction
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_DIR,row).SetImages(dir_img);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_DIR,row).ChangeImage((dirs[row]==POSITION_TYPE_BUY) ? 0 : 1);
+         m_table_positions_StoplostAndTrailling.Cell(COL_PST_VOLUME,row).SetDigits(2);
+         //--- Click to flip Fixed / Indicator (checkbox value 0 = Fixed, 1 = Indicator)
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_SLTYPE,row).CellType(CELL_CHECKBOX);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_SLTYPE,row).SetImages(sl_type_img);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_SL,row).CellType(CELL_BUTTON);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_SL,row).SetImages(run_status_img);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_TRAILTYPE,row).CellType(CELL_CHECKBOX);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_TRAILTYPE,row).SetImages(trail_type_img);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_TRAIL,row).CellType(CELL_BUTTON);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_TRAIL,row).SetImages(run_status_img);
+         m_table_positions_StoplostAndTrailling.Cell(COL_PST_SLPRICE,row).SetDigits((int)::SymbolInfoInteger(symbols[row],SYMBOL_DIGITS));
+         m_table_positions_StoplostAndTrailling.Cell(COL_PST_SLPROFIT,row).SetDigits(2);
+         m_table_positions_StoplostAndTrailling.Cell(COL_PST_PROFIT,row).SetDigits(2);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_SLPRICE,row).DirectionColors(C'0,160,0',C'200,0,0',clrGray);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_SLPROFIT,row).DirectionColors(C'0,160,0',C'200,0,0',clrGray);
+         m_table_positions_StoplostAndTrailling.CellView(COL_PST_PROFIT,row).DirectionColors(C'0,160,0',C'200,0,0',clrGray);
+        }
+     }
+   //--- Values on every call: a cell redraws only when its value really changed
+   for(int row=0;row<count;row++)
+     {
+      string sym=symbols[row];
+      ENUM_POSITION_TYPE type=dirs[row];
+      m_table_positions_StoplostAndTrailling.CellView(COL_PST_SYMBOL,row).ChangeImage(sym==::Symbol() ? 0 : 1);
+      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_VOLUME,row,m_MarketCollection.SumVolume(sym,type));
+      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_NO,row,(long)m_MarketCollection.PositionsCount(sym,type));
+      //--- Type and run icons: the single source of truth is CTradingSetupSetting
+      CTradingSetupSetting *row_setting=(m_TradingSetupManager!=NULL) ? m_TradingSetupManager.FindByIdentity(sym) : NULL;
+      if(row_setting==NULL && m_TradingSetupManager!=NULL)
+         row_setting=m_TradingSetupManager.Add_TradingSetupSetting(sym);
+      bool sl_fixed=(row_setting==NULL) || (row_setting.StopLostMode()==SL_MODE_FIXED);
+      bool sl_active=(row_setting!=NULL) && row_setting.StopLostActive();
+      bool trail_fixed=(row_setting==NULL) || (row_setting.TrailingMode()==SL_MODE_FIXED);
+      bool trail_active=(row_setting!=NULL) && row_setting.TrailingActive();
+      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLTYPE,row,(long)(sl_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+      m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_SL,row).ChangeImage(sl_active ? 0 : 1);
+      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_TRAILTYPE,row,(long)(trail_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+      m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_TRAIL,row).ChangeImage(trail_active ? 0 : 1);
+      //--- Real positions here: the SL they hold now, the money on their real volume
+      bool sl_price_from_trail;
+      double sl_price=(m_TradingEngine!=NULL) ? m_TradingEngine.GetPreviewSLTargetPrice(sym,type,sl_price_from_trail) : EMPTY_VALUE;
+      double sl_profit=(sl_price!=EMPTY_VALUE) ? m_MarketCollection.SumFloatingProfit(sym,type,sl_price) : EMPTY_VALUE;
+      if(sl_price==EMPTY_VALUE)
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPRICE,row,"N/A");
+      else
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPRICE,row,sl_price);
+      if(sl_profit==EMPTY_VALUE)
+        {
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPROFIT,row,"N/A");
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_PROFIT,row,"N/A");
+        }
+      else
+        {
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLPROFIT,row,sl_profit);
+         m_table_positions_StoplostAndTrailling.SetValue(COL_PST_PROFIT,row,sl_profit);
+        }
+     }
+   return m_table_positions_StoplostAndTrailling.Update(false);
+  }
+ //--- Stop loss / trailing type icon of a position row: the table already flipped the cell, the setting follows it
+ void CGUIPannel::OnClickTogglePositionSLType(const int row)
+  {
+   if(m_TradingSetupManager==NULL)
+      return;
+   string sym=m_table_positions_StoplostAndTrailling.Cell(COL_PST_SYMBOL,row).Value();
+   if(sym=="")
+      return;
+   CTradingSetupSetting *row_setting=m_TradingSetupManager.FindByIdentity(sym);
+   if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(sym);
+   if(row_setting==NULL)
+      return;
+   bool fixed=(m_table_positions_StoplostAndTrailling.Cell(COL_PST_SLTYPE,row).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   row_setting.StopLostMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
+   m_TradingSetupManager.NotifySettingChanged(sym);
+   SyncTable_PositionsStoplostAndTrailling();
+  }
+ void CGUIPannel::OnClickTogglePositionTrailType(const int row)
+  {
+   if(m_TradingSetupManager==NULL)
+      return;
+   string sym=m_table_positions_StoplostAndTrailling.Cell(COL_PST_SYMBOL,row).Value();
+   if(sym=="")
+      return;
+   CTradingSetupSetting *row_setting=m_TradingSetupManager.FindByIdentity(sym);
+   if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(sym);
+   if(row_setting==NULL)
+      return;
+   bool fixed=(m_table_positions_StoplostAndTrailling.Cell(COL_PST_TRAILTYPE,row).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   row_setting.TrailingMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
+   m_TradingSetupManager.NotifySettingChanged(sym);
+   SyncTable_PositionsStoplostAndTrailling();
+  }
+ //--- "Trading" menu: flips StopLostActive / TrailingActive of the New Order Symbol
+ void CGUIPannel::OnClickToggleSLOrTrailing(const bool is_sl)
+  {
+   if(m_TradingSetupManager==NULL)
+      return;
+   string symbol=GetNewOrderSymbol();
+   if(symbol=="")
+      return;
+   CTradingSetupSetting *row_setting=m_TradingSetupManager.FindByIdentity(symbol);
+   if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(symbol);
+   if(row_setting==NULL)
+      return;
+   if(is_sl)
+      row_setting.StopLostActive(!row_setting.StopLostActive());
+   else
+      row_setting.TrailingActive(!row_setting.TrailingActive());
+   m_TradingSetupManager.NotifySettingChanged(symbol);
+   SyncRunSLTrailingButtonIcons(row_setting.StopLostActive(),row_setting.TrailingActive());
+   SyncTable_PositionsStoplostAndTrailling();
+   SyncTable_PositionPretradeView(true);
+  }
+ //--- Colored icon = on, gray = off; painted again only when the state changed
+ void CGUIPannel::SyncRunSLTrailingButtonIcons(const bool sl_active,const bool trail_active)
+  {
+   static int s_sl_state=-1,s_trail_state=-1;   // -1 = never painted
+   if((int)sl_active!=s_sl_state)
+     {
+      s_sl_state=(int)sl_active;
+      CMenuItem *sl_item=m_contextmenu_trading.GetItemPointer(MENU_ITEM_TRADING_STOPLOST);
+      if(sl_item!=NULL)
+        {
+         sl_item.IconFile(sl_active ? IMAGE_RESOURCE_BMP16_STOPLOSTRED_PNG : IMAGE_RESOURCE_BMP16_START_GRAY_BMP);
+         sl_item.Draw(true);
+        }
+     }
+   if((int)trail_active!=s_trail_state)
+     {
+      s_trail_state=(int)trail_active;
+      CMenuItem *trail_item=m_contextmenu_trading.GetItemPointer(MENU_ITEM_TRADING_TRAILLING);
+      if(trail_item!=NULL)
+        {
+         trail_item.IconFile(trail_active ? IMAGE_RESOURCE_BMP16_TRAILLING_PNG : IMAGE_RESOURCE_BMP16_START_GRAY_BMP);
+         trail_item.Draw(true);
+        }
+     }
+  }
+ //--- The colored SL / Trailling cell of the monitor opens the Setting Trading window on its tab
+ void CGUIPannel::OnClickOpenTradingSettingTab(const ENUM_TAB_SETTING_TRADING tab)
+  {
+   OpenWindow_SettingTrading();
+   m_tabs_setting_trading.SelectTab(tab);
+   HideStopLostForm();
+   HideTrailingForm();
+   ::ChartRedraw(m_ChartObj.GetChartID());
   }
 #endif // CGUIPANNEL_MAINWINDOWS_TABTRADING_MQH

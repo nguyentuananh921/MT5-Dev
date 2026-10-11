@@ -172,6 +172,58 @@ string TimeframeDescription(const ENUM_TIMEFRAMES timeframe)
      if(catalog[c].ind_type == type) return catalog[c].group;
    return INDICATOR_GROUP_OSCILLATOR;
   }
+ //+------------------------------------------------------------------+
+ //| Number of buffers of a built-in indicator                        |
+ //+------------------------------------------------------------------+
+ int GetIndicatorBuffersTotal(const ENUM_INDICATOR type)
+  {
+   switch(type)
+     {
+      // --- Trend
+       case IND_SAR:        return 1;
+       case IND_MA:         return 1;
+       case IND_BANDS:      return 3;   // base, upper, lower
+       case IND_ALLIGATOR:  return 3;   // jaw, teeth, lips
+       case IND_ICHIMOKU:   return 5;   // tenkan, kijun, senkou A/B, chikou
+       case IND_ENVELOPES:  return 3;   // base, upper, lower
+       case IND_FRAMA:      return 1;
+       case IND_AMA:        return 1;
+       case IND_DEMA:       return 1;
+       case IND_TEMA:       return 1;
+       case IND_VIDYA:      return 1;
+       case IND_ADX:        return 3;   // main, +DI, -DI
+       case IND_ADXW:       return 3;
+       case IND_STDDEV:     return 1;
+      // --- Oscillator
+       case IND_RSI:        return 1;
+       case IND_MACD:       return 2;   // main, signal
+       case IND_STOCHASTIC: return 2;   // main, signal
+       case IND_CCI:        return 1;
+       case IND_MOMENTUM:   return 1;
+       case IND_DEMARKER:   return 1;
+       case IND_RVI:        return 2;   // main, signal
+       case IND_WPR:        return 1;
+       case IND_OSMA:       return 1;
+       case IND_TRIX:       return 1;
+       case IND_ATR:        return 1;
+       case IND_FORCE:      return 1;
+       case IND_AO:         return 1;
+       case IND_AC:         return 1;
+       case IND_GATOR:      return 4;   // upper, lower + 2 color/histogram buffers
+       case IND_BEARS:      return 1;
+       case IND_BULLS:      return 1;
+       case IND_CHAIKIN:    return 1;
+      // --- Volumes
+       case IND_OBV:        return 1;
+       case IND_AD:         return 1;
+       case IND_MFI:        return 1;
+       case IND_VOLUMES:    return 1;
+       case IND_BWMFI:      return 2;   // value + color index
+      // --- Arrows
+       case IND_FRACTALS:   return 2;   // upper, lower
+       default:             return 1;
+     }
+  }
  //--- Catalog display name (the JSON "m_indicator_type" key / table label), "" if not in the catalog
  string GetIndicatorNameForType(const ENUM_INDICATOR type)
   {
@@ -404,5 +456,146 @@ string TimeframeDescription(const ENUM_TIMEFRAMES timeframe)
       }
     return true;
   }
-
+ //Smart Money Concept  
+ //+------------------------------------------------------------------+
+ //| Return swing type description - plain literal, not routed through |
+ //| CMessage (only 2 fixed labels, not worth a localization entry).   |
+ //+------------------------------------------------------------------+
+ string SwingTypeDescription(const ENUM_SWING_TYPE type)
+  {
+    switch(type)
+      {
+        case SWING_TYPE_HIGH : return "Swing High";
+        case SWING_TYPE_LOW  : return "Swing Low";
+        default               : return "None";
+      }
+  } 
+ //+------------------------------------------------------------------+
+ //| Return market structure event (BOS / CHoCH) description          |
+ //+------------------------------------------------------------------+
+ string MarketStructureTypeDescription(const ENUM_MARKET_STRUCTURE_TYPE type)
+  {
+    switch(type)
+      {
+        case MARKET_STRUCTURE_BOS   : return "BOS";
+        case MARKET_STRUCTURE_CHOCH : return "CHoCH";
+        default                      : return "None";
+      }
+  }
+ //+------------------------------------------------------------------+
+ //| Return swing structure (HH/LH/HL/LL) description                 |
+ //+------------------------------------------------------------------+
+ string SwingStructureDescription(const ENUM_SWING_STRUCTURE structure)
+  {
+    switch(structure)
+      {
+        case SWING_STRUCTURE_HH : return "HH";
+        case SWING_STRUCTURE_LH : return "LH";
+        case SWING_STRUCTURE_HL : return "HL";
+        case SWING_STRUCTURE_LL : return "LL";
+        default                  : return "-";
+      }
+  }
+//Indicators
+ //+------------------------------------------------------------------+
+ //| Return volume description for calculation                        |
+ //+------------------------------------------------------------------+
+ string AppliedVolumeDescription(const ENUM_APPLIED_VOLUME volume)
+  {
+    return StringSubstr(EnumToString(volume),7);
+  }
+ //+------------------------------------------------------------------+
+ //| Return indicator type description                                |
+ //+------------------------------------------------------------------+
+ string IndicatorTypeDescription(const ENUM_INDICATOR indicator)
+  {
+    return StringSubstr(EnumToString(indicator),4);
+  }
+ //+------------------------------------------------------------------+
+ //| Return averaging method description                              |
+ //+------------------------------------------------------------------+
+ string AveragingMethodDescription(const ENUM_MA_METHOD method)
+  {
+    return StringSubstr(EnumToString(method),5);
+  }
+ //+------------------------------------------------------------------+
+ //| Return applied price description                                 |
+ //+------------------------------------------------------------------+
+ string AppliedPriceDescription(const ENUM_APPLIED_PRICE price)
+  {
+    return StringSubstr(EnumToString(price),6);
+  }
+ //+------------------------------------------------------------------+
+ //| Return stochastic price calculation description                  |
+ //+------------------------------------------------------------------+
+ string StochPriceDescription(const ENUM_STO_PRICE price)
+  {
+    return StringSubstr(EnumToString(price),4);
+  }
+ //+------------------------------------------------------------------+
+ //| Return ENUM_APPLIED_PRICE from its description (mirrors           |
+ //| TimestampByDescription) - unrecognized text falls back to Close.  |
+ //+------------------------------------------------------------------+
+ ENUM_APPLIED_PRICE AppliedPriceByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          d=="CLOSE"                ? PRICE_CLOSE    :
+          d=="OPEN"                 ? PRICE_OPEN     :
+          d=="HIGH"                 ? PRICE_HIGH     :
+          d=="LOW"                  ? PRICE_LOW      :
+          d=="MEDIAN"               ? PRICE_MEDIAN   :
+          d=="TYPICAL"              ? PRICE_TYPICAL  :
+          (d=="WEIGHTED" || d=="WCLOSE") ? PRICE_WEIGHTED : // "WClose" = this EA's own short label
+          PRICE_CLOSE
+        );
+  }
+ //+------------------------------------------------------------------+
+ //| Return ENUM_MA_METHOD from its description                       |
+ //+------------------------------------------------------------------+
+ ENUM_MA_METHOD AveragingMethodByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          d=="SMA"  ? MODE_SMA  :
+          d=="EMA"  ? MODE_EMA  :
+          d=="SMMA" ? MODE_SMMA :
+          d=="LWMA" ? MODE_LWMA :
+          MODE_SMA
+        );
+  }
+ //+------------------------------------------------------------------+
+ //| Return ENUM_APPLIED_VOLUME from its description                  |
+ //+------------------------------------------------------------------+
+ ENUM_APPLIED_VOLUME AppliedVolumeByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          d=="TICK" ? VOLUME_TICK :
+          d=="REAL" ? VOLUME_REAL :
+          VOLUME_TICK
+        );
+  }
+ //+------------------------------------------------------------------+
+ //| Return ENUM_STO_PRICE from its description - accepts both the raw |
+ //| EnumToString style ("LOWHIGH") and this EA's own combo label      |
+ //| style ("Low/High") so either source parses correctly.             |
+ //+------------------------------------------------------------------+
+ ENUM_STO_PRICE StochPriceByDescription(const string description)
+  {
+    string d = description;
+    StringToUpper(d);
+    return
+        (
+          (d=="LOWHIGH"    || d=="LOW/HIGH")    ? STO_LOWHIGH    :
+          (d=="CLOSECLOSE" || d=="CLOSE/CLOSE") ? STO_CLOSECLOSE :
+          STO_LOWHIGH
+        );
+  } 
 #endif //__TIMESERIES_DELIB_MQH__

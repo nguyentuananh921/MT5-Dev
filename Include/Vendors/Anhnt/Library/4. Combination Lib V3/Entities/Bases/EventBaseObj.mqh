@@ -1,6 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                 EventBaseObj.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
+//|Link https://www.mql5.com/en/articles/7326                        |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //|--- Pure data. Mirrors: CEventBaseObj in BaseObj.mqh              |
 //+------------------------------------------------------------------+
