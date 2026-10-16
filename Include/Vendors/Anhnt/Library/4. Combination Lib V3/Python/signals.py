@@ -1,6 +1,6 @@
 """Signal rules of the V2 indicator wrappers (CSignalSAR, CSignalMA, CSignalOscillator, CSignalTwoLineCross,
 CSignalZeroCross, CSignalBollinger, CSignalEnvelopes, CSignalADX, CSignalFractals) on the buffers of one indicator.
-ATR and Volumes have no direction: no rule, never a signal.
+ATR has no direction: no rule, never a signal. Volumes is judged against its own moving average only (no other signal is mixed in).
 
 directions(): one value per bar - BUY (1), SELL (-1) or NONE (0), the rule of ComputeAt().
 flips():      the entries of the history - a bar whose direction is not NONE and differs from the previous bar's.
@@ -95,6 +95,10 @@ def fractals(buffers, bars, params):
     upper_known[2:], lower_known[2:] = upper[:-2], lower[:-2]
     return _direction(lower_known & ~upper_known, upper_known)   # an up fractal = swing high = SELL, a down fractal = BUY
 
+def volumes(buffers, bars, params):
+    volume, average = np.asarray(buffers[0], dtype=float), np.asarray(buffers[1], dtype=float)
+    return _direction(volume > average, volume < average)   # activity above its average = BUY, under it = SELL (not the direction of the price)
+
 RULES = {"SAR": sar, "MA": ma, "RSI": rsi, "MACD": macd, "BANDS": bands, "ADX": adx,
          "ADXW": adx,
          "AMA": ma, "FRAMA": ma, "DEMA": ma, "TEMA": ma, "VIDYA": ma,
@@ -106,11 +110,11 @@ RULES = {"SAR": sar, "MA": ma, "RSI": rsi, "MACD": macd, "BANDS": bands, "ADX": 
          "AO": zero_cross(), "AC": zero_cross(), "FORCE": zero_cross(), "OSMA": zero_cross(), "TRIX": zero_cross(),
          "CHAIKIN": zero_cross(), "OBV": zero_cross(), "BEARS": zero_cross(), "BULLS": zero_cross(), "GATOR": zero_cross(),
          "MOMENTUM": zero_cross(100.0),
-         "FRACTALS": fractals}
+         "FRACTALS": fractals, "VOLUMES": volumes}
 
 def directions(name, buffers, bars, params):
     if name not in RULES:
-        return np.zeros(len(bars), dtype=np.int8)   # ATR, Volumes: no direction
+        return np.zeros(len(bars), dtype=np.int8)   # ATR: no direction
     with np.errstate(invalid="ignore"):   # NaN compares as False = NONE
         return RULES[name](buffers, bars, params)
 

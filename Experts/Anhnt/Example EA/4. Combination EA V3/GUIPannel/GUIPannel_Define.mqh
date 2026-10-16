@@ -3,12 +3,13 @@
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNELDEFINE_MQH
 #define CGUIPANNELDEFINE_MQH
+ #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Defines\GUIDefines.mqh>   // M_CONTROL_HEIGHT, M_CONTROL_BORDER_GAP, M_TF_WITHICON_WIDTH, M_LOT_WIDTH
  // The models the panel shows and edits, owned by the EA
   #include "..\Configuration\SymbolTFManager.mqh"
-  #include "..\Configuration\SmartMoneySetting.mqh"
+  #include "..\Configuration\SwingSetting.mqh"
+  #include "..\Configuration\StructureSetting.mqh"
   #include "..\Configuration\IndicatorTemplateManager.mqh"
   #include "..\Configuration\PatternManager.mqh"
-  #include "..\Configuration\MarkerSetting.mqh"
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\IndicatorsCollection.mqh>
  // For GUI controls
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Controls\Window.mqh>
@@ -27,36 +28,30 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\SymbolsCollection.mqh>
  // Root of every canvas element + ZOrder owner
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\GraphElementsCollection.mqh>
- // CGUIPannel's own events: chained off the last event code of the library
-  enum ENUM_GUIPANNEL_EVENT
-    {
-     GUIPANNEL_EVENT_SMARTMONEY_SETTING_CHANGED = MOUSE_EVENT_NEXT_CODE,   // Show of an element or Strength / Wick changed: Python must be told
-     GUIPANNEL_EVENT_MARKER_SETTING_CHANGED,                               // Marker colors / sources saved
-    };
  // Define GUI control
   //Unified width
     #define M_SYMBOL_WITHICON_WIDTH       110  //Unified width for every control/column that displays a Symbol+Icon
-    #define M_TF_WITHICON_WIDTH            65  //Unified width for every control/column that displays a Timeframe+Icon
     #define M_TF_WITHOUT_ICON_WIDTH        45  //Unified width for every control/column that displays a Timeframe
-    #define M_ICON16_WIDTH                 20  //Width for icon 16x16
+    #define M_TABLE_SCROLL_WIDTH           20  //Room for the vertical scroll bar to the right of a table
     #define M_PRICE_WIDTH                  80  //Unified width for every column that displays a price or an Indicator's live Value
-    #define M_LOT_WIDTH                    65  //Unified width for every column that displays a Lot/Volume (incl. an embedded combobox)
     #define M_INDICATOR_PARATEXT_WIDTH    230  //Include LabelText + Icon
-  // Control Height
-    #define M_CONTROL_HEIGHT               22  //Height for MenuBar,Tab, Combobox,Label
+  // Control Height: M_CONTROL_HEIGHT is in GUIDefines.mqh
   // Gap
-    #define M_CONTROL_BORDER_GAP            3  //Gap between border of two control
+    //M_CONTROL_BORDER_GAP is in GUIDefines.mqh
     #define M_CONTROL_YDISTANCE            22  //Gap Between 2 Control
     #define M_SUBWINDOW_MAIN                0  //The EA runs in the main window of its own chart: one EA instance per chart
   //Treeview
     #define M_TREEVIEW_WIDTH               150 //Wide for m_treeview_SymbolTF and m_treeview_indicator
   // Main panel window m_window_main
     #define M_WINDOW_MAIN_WIDTH         600
-    #define M_WINDOW_MAIN_HEIGHT        480
+    #define M_WINDOW_MAIN_HEIGHT        (480+M_CONTROL_BORDER_GAP+M_CONTROL_BORDER_GAP)   //480 and the two gaps the TF switch row added
     #define M_WINDOW_MIN_WIDTH          300
     #define M_WINDOW_MIN_HEIGHT         200
-   //Right Pannel m_tabs_main starts at (x gap, M_TABS_MAIN_Y) inside m_window_main
-    #define M_TABS_MAIN_Y               WINDOW_CAPTION_HEIGHT+M_CONTROL_HEIGHT+M_CONTROL_HEIGHT
+   //Rows of m_window_main from the top, a M_CONTROL_BORDER_GAP between two of them: caption, menu bar, TF switch row, header of m_tabs_main, body of m_tabs_main.
+   //The y of m_tabs_main is the top of its body: its header is the row above it
+    #define M_MENU_BAR_Y                WINDOW_CAPTION_HEIGHT
+    #define M_TF_SWITCH_Y               (M_MENU_BAR_Y+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP)
+    #define M_TABS_MAIN_Y               (M_TF_SWITCH_Y+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP+M_CONTROL_HEIGHT)
    // Setting panel window
     #define M_WINDOW_SETTING_WIDTH      700
     #define M_WINDOW_SETTING_HEIGHT     480
@@ -145,6 +140,17 @@
    const ENUM_ALIGN_MODE PRETRADEMON_CONTENT_ALIGN[COLUMNS_PRETRADEMON_TOTAL] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_RIGHT, ALIGN_LEFT, ALIGN_LEFT};
    const int PRETRADEMON_TEXT_X_OFFSET[COLUMNS_PRETRADEMON_TOTAL] = {5, 5, 5, 5, 5, 5};
    const int PRETRADEMON_IMAGE_X_OFFSET[COLUMNS_PRETRADEMON_TOTAL] = {3, 3, 3, 0, 2, 2};
+   //--- m_table_market_story (GUIPannel_MainWindows_TabMarketStory.mqh)
+   #define COLUMNS_MARKETSTORY_TOTAL 4
+   #define COL_MS_TF           0
+   #define COL_MS_STATE        1
+   #define COL_MS_PHASE        2
+   #define COL_MS_MOVE         3
+   const int MARKETSTORY_WIDTH[COLUMNS_MARKETSTORY_TOTAL] = {M_TF_WITHICON_WIDTH, M_ICON16_WIDTH, M_TF_WITHICON_WIDTH, M_INDICATOR_PARATEXT_WIDTH};   // the State is an icon, the Phase a short word
+   const ENUM_ALIGN_MODE MARKETSTORY_HEADER_ALIGN[COLUMNS_MARKETSTORY_TOTAL] = {ALIGN_CENTER, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+   const ENUM_ALIGN_MODE MARKETSTORY_CONTENT_ALIGN[COLUMNS_MARKETSTORY_TOTAL] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
+   const int MARKETSTORY_TEXT_X_OFFSET[COLUMNS_MARKETSTORY_TOTAL] = {5, 5, 5, 5};
+   const int MARKETSTORY_IMAGE_X_OFFSET[COLUMNS_MARKETSTORY_TOTAL] = {3, 2, 0, 0};
    //--- m_table_position_pretrade_view
    #define COLUMNS_PRETRADE_VIEW_TOTAL 8
    #define COL_PTV_SYMBOL      0
@@ -197,24 +203,26 @@
      {
         MENU_ITEM_SETTINGS_INDICATOR,
         MENU_ITEM_SETTINGS_TRADING,
-        MENU_ITEM_SETTINGS_ALERT,
         MENU_ITEM_SETTINGS_TOTAL,
      };
-  // Status bar items
-   #define STATUS_LABELS_TOTAL 4
+  // Status bar items, left to right
+   #define STATUS_LABELS_TOTAL 3
    enum ENUM_STATUS_BAR_ITEM
     {
-      STATUS_BAR_MESSAGE = 0,   // left free: stretches, empty for now
-      STATUS_BAR_DEPOSIT_LOAD,
+      STATUS_BAR_DEPOSIT_LOAD = 0,   // stretches: it takes what the other two leave
       STATUS_BAR_PROFIT,
       STATUS_BAR_SERVER_TIME,
     };
+   #define M_STATUS_PROFIT_WIDTH       130   // the width of the text each of the other two holds
+   #define M_STATUS_TIME_WIDTH         155
+   const int STATUS_BAR_WIDTH[STATUS_LABELS_TOTAL] = {0, M_STATUS_PROFIT_WIDTH, M_STATUS_TIME_WIDTH};   // 0 = stretches
   //For Tab m_tabs_main
    enum ENUM_TAB_MAIN
     {
      TAB_TAB_MAIN_ACCOUNT_INFO = 0,
      TAB_TAB_MAIN_SYMBOL_INFO,
      TAB_TAB_MAIN_TRADING,
+     TAB_TAB_MAIN_MARKET_STORY,
      TAB_TAB_MAIN_HISTORY,
      TAB_TAB_MAIN_TOTAL,
     };
@@ -224,18 +232,11 @@
      ENUM_TAB_SETTING_TRADING_TRAILLING,
      ENUM_TAB_SETTING_TRADING_TOTAL,
     };
-   enum ENUM_TAB_SETTING_MARKERANDSOUND
-    {
-     ENUM_TAB_SETTING_MARKERANDSOUND_MARKER = 0,
-     ENUM_TAB_SETTING_MARKERANDSOUND_SOUND,
-     ENUM_TAB_SETTING_MARKERANDSOUND_TOTAL,
-    };
    enum ENUM_TAB_SETTING_TIMESERIES
     {
      TAB_TAB_SETTING_TIMESERIES_INDICATOR = 0,
      TAB_TAB_SETTING_TIMESERIES_SYMBOL_TF,
      TAB_TAB_SETTING_TIMESERIES_CANDLE_PATTERN,
-     TAB_TAB_SETTING_TIMESERIES_SMART_MONEY_CONCEPTS,
      TAB_TAB_SETTING_TIMESERIES_TOTAL,
     };
 #endif // CGUIPANNELDEFINE_MQH

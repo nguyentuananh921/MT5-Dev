@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                 PatternManager.mqh |
+//|                                               PatternManager.mqh |
 //|                                     Copyright 2026, Anhnt        |
 //| Single source of truth for the candle pattern settings: the list |
 //| and the "Pattern_Alerts_Setting" key of Config_Setting.json      |
@@ -12,6 +12,11 @@
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Defines\EventDefines.mqh>
  #include "PatternSetting.mqh"
  #include "JSONConfig.mqh"
+//Inputs of the EA: the colours of the candle pattern badges (the flags of each pattern are in its table)
+ input group "=== Candle Patterns: Visual ==="
+ input bool   InpPatternShow      = false;             // Show the candle pattern badges
+ input color  InpPatternBuyColor  = clrDodgerBlue;   // Candle pattern Buy
+ input color  InpPatternSellColor = clrRed;          // Candle pattern Sell
 
 #ifndef CPATTERNMANAGER_MQH_DECLARATION
 #define CPATTERNMANAGER_MQH_DECLARATION
@@ -30,6 +35,11 @@
      int                Total(void)                    const { return m_list.Total();   }
      CPatternSetting   *At(const int index)            const { return m_list.At(index); }
      CPatternSetting   *Find(const string name)        const;
+   //--- The badges of the candle patterns: shown at all, and the colour of each side
+     bool               ShowMarkers(void) const { return InpPatternShow; }
+   //--- The colour of the badge that gathers the patterns of one side (all the Buy patterns of a candle are one badge, all the Sell ones another)
+     color              BuyColor(void)  const { return InpPatternBuyColor;  }
+     color              SellColor(void) const { return InpPatternSellColor; }
    //--- Buy / Sell flag of a pattern by name, false when it is unknown
      bool               PatternSignalBuy(const string name)  const;
      bool               PatternSignalSell(const string name) const;

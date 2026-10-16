@@ -9,79 +9,6 @@
 #define CGUIPANNEL_MAINWINDOWS_TABTRADING_MQH
  #include "GUIPannel.mqh"
  //+------------------------------------------------------------------+
- //| "All" (with 0 or 2+ TFs) + the TFs of the chart Symbol. The first |
- //| call creates the group at x_gap,y_gap, every later call builds    |
- //| the buttons again when the TFs changed and selects the TF the     |
- //| chart is on                                                       |
- //+------------------------------------------------------------------+
- bool CGUIPannel::BuildTFSwitchButtons(const int x_gap,const int y_gap)
-  {
-   string symbol=::Symbol();
-   string tf_texts[];
-   int tf_count=0;
-   int total=(m_SymbolTFManager!=NULL) ? m_SymbolTFManager.Total() : 0;
-   for(int i=0;i<total;i++)
-     {
-      CSymbolTFSetting *row=m_SymbolTFManager.At(i);
-      if(row==NULL || row.Symbol()!=symbol)
-         continue;
-      ::ArrayResize(tf_texts,tf_count+1);
-      tf_texts[tf_count]=TimeframeDescription(row.TFEnum());
-      tf_count++;
-     }
-   int first_tf_button=(tf_count!=1) ? 1 : 0;
-   bool created=(m_btngroup_tf_switch.ButtonsTotal()>0);
-   bool was_all_selected=(created && m_btngroup_tf_switch.SelectedButtonText()=="All");
-   bool buttons_match=(created && m_btngroup_tf_switch.ButtonsTotal()==tf_count+first_tf_button);
-   if(buttons_match && first_tf_button==1)
-      buttons_match=(m_btngroup_tf_switch.GetButtonPointer(0).Text()=="All");
-   for(int i=0;i<tf_count && buttons_match;i++)
-      buttons_match=(m_btngroup_tf_switch.GetButtonPointer(i+first_tf_button).Text()==tf_texts[i]);
-   if(!buttons_match)
-     {
-      if(created)
-        {
-         ::Print("MY DEBUG CGUIPannel::BuildTFSwitchButtons: the buttons are built again, ",tf_count," TF(s), main window locked=",m_window_main.IsLocked());   //Print Debug
-         m_btngroup_tf_switch.DeleteButtons();
-        }
-      else
-        {
-         m_btngroup_tf_switch.RadioButtonsMode(true);
-         m_btngroup_tf_switch.ButtonYSize(M_CONTROL_HEIGHT);
-        }
-      if(first_tf_button==1)
-         m_btngroup_tf_switch.AddButton(0,0,"All",M_TF_WITHOUT_ICON_WIDTH);
-      for(int i=0;i<tf_count;i++)
-         m_btngroup_tf_switch.AddButton((i+first_tf_button)*(M_TF_WITHOUT_ICON_WIDTH+M_CONTROL_BORDER_GAP),0,tf_texts[i],M_TF_WITHOUT_ICON_WIDTH);
-      if(!created)
-        {
-         m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btngroup_tf_switch);
-         if(!m_btngroup_tf_switch.CreateButtonsGroup(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TFSwitch",x_gap,y_gap))
-            return false;
-        }
-     }
-   int select_index=WRONG_VALUE;
-   if(was_all_selected && first_tf_button==1)
-      select_index=0;
-   else
-     {
-      string chart_tf=TimeframeDescription((ENUM_TIMEFRAMES)::Period());
-      for(int i=0;i<tf_count;i++)
-         if(tf_texts[i]==chart_tf)
-           {
-            select_index=i+first_tf_button;
-            break;
-           }
-     }
-   if(select_index==WRONG_VALUE && m_btngroup_tf_switch.ButtonsTotal()>0)
-      select_index=0;
-   if(select_index!=WRONG_VALUE && m_btngroup_tf_switch.GetButtonPointer(select_index).Text()!=m_btngroup_tf_switch.SelectedButtonText())
-      m_btngroup_tf_switch.SelectButton(select_index);
-   if(created)
-      SyncTable_PreTradeSymbolMonitor(symbol);
-   return true;
-  }
- //+------------------------------------------------------------------+
  //| Indicator monitor: every template of every tracked TF of the     |
  //| chart Symbol - TF | signal | indicator | value | SL | trailing    |
  //+------------------------------------------------------------------+
@@ -231,16 +158,6 @@
    int row4_y=y_gap+4*M_CONTROL_YDISTANCE+M_CONTROL_BORDER_GAP;
    int check_w=M_SYMBOL_WITHICON_WIDTH+10;
    m_new_order_is_buy=true;
-   m_checkbox_use_RiskPerNewTrade.SetText("Use RPT %");
-   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_checkbox_use_RiskPerNewTrade);
-   if(!m_checkbox_use_RiskPerNewTrade.Create(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"CheckUseRiskPerTrade",x_gap,row0_y,check_w,M_CONTROL_HEIGHT))
-      return false;
-   m_checkbox_use_RiskPerNewTrade.SetState(false);
-   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_edit_RiskPerNewTrade);
-   if(!m_edit_RiskPerNewTrade.CreateTextEdit(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"EditRiskPerTrade",x_gap,row1_y,M_SYMBOL_WITHICON_WIDTH,M_CONTROL_HEIGHT,M_SYMBOL_WITHICON_WIDTH-1))
-      return false;
-   m_edit_RiskPerNewTrade.SetValue("1.0");
-   m_edit_RiskPerNewTrade.Hide();   // shown while "Use RPT %" is checked
    m_combobox_order_type.ItemsTotal(4);
    m_combobox_order_type.SetValue(0,"Market");
    m_combobox_order_type.SetValue(1,"Limit");
@@ -283,14 +200,6 @@
       m_edit_order_type_value.Show();
    else
       m_edit_order_type_value.Hide();
-  }
- void CGUIPannel::OnClickUseRiskPerNewTradeCheckbox(void)
-  {
-   if(m_checkbox_use_RiskPerNewTrade.State())
-      m_edit_RiskPerNewTrade.Show();
-   else
-      m_edit_RiskPerNewTrade.Hide();
-   SyncTable_PositionPretradeView(true);   // the Lot list now, not on the next call
   }
  void CGUIPannel::OnClickSendNewOrder(void)
   {
@@ -426,17 +335,16 @@
       m_table_position_pretrade_view.Cell(COL_PTV_SLPRICE,0).SetDigits((int)::SymbolInfoInteger(sym,SYMBOL_DIGITS));
      }
    //--- Icon / checkbox cells are set on every call: a cell redraws only when its value really changed
-   m_table_position_pretrade_view.SetValue(COL_PTV_SLTYPE,0,(long)(sl_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
-   m_table_position_pretrade_view.SetValue(COL_PTV_TRAILTYPE,0,(long)(trail_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+   m_table_position_pretrade_view.SetValue(COL_PTV_SLTYPE,0,(long)(sl_fixed ? CANV_ELEMENT_CHECK_STATE_UNCHECKED : CANV_ELEMENT_CHECK_STATE_CHECKED));
+   m_table_position_pretrade_view.SetValue(COL_PTV_TRAILTYPE,0,(long)(trail_fixed ? CANV_ELEMENT_CHECK_STATE_UNCHECKED : CANV_ELEMENT_CHECK_STATE_CHECKED));
    m_table_position_pretrade_view.CellView(COL_PTV_SYMBOL,0).ChangeImage(sym==::Symbol() ? 0 : 1);
-   m_table_position_pretrade_view.SetValue(COL_PTV_DIR,0,(long)((type==POSITION_TYPE_BUY) ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
-   bool use_risk=m_checkbox_use_RiskPerNewTrade.State();
+   m_table_position_pretrade_view.SetValue(COL_PTV_DIR,0,(long)((type==POSITION_TYPE_BUY) ? CANV_ELEMENT_CHECK_STATE_UNCHECKED : CANV_ELEMENT_CHECK_STATE_CHECKED));
+   bool use_risk=(m_TradingSetupManager!=NULL && m_TradingSetupManager.UseRiskPerNewTrade());   // an input of the EA
    //--- A tab or window shown again shows every element again: the visibility is asserted on every call
-   if(use_risk) m_edit_RiskPerNewTrade.Show(); else m_edit_RiskPerNewTrade.Hide();
    int order_type_idx=m_combobox_order_type.GetListViewPointer().SelectedItemIndex();
    if(order_type_idx>0) m_edit_order_type_value.Show(); else m_edit_order_type_value.Hide();
    //--- Unchecked = CalcMaxLotByRisk with 100 %: the most the balance allows
-   double risk_pct=use_risk ? ::StringToDouble(m_edit_RiskPerNewTrade.GetValue()) : 100.0;
+   double risk_pct=use_risk ? m_TradingSetupManager.RiskPerNewTrade() : 100.0;
    //--- Rounded: the Free Margin drifts with the floating P&L, the list is rebuilt on real margin changes only
    double free_margin_rounded=::MathRound(::AccountInfoDouble(ACCOUNT_MARGIN_FREE));
    if(identity_changed || dir_changed || use_risk!=s_use_risk_old || risk_pct!=s_risk_pct_old || free_margin_rounded!=s_free_margin_old)
@@ -519,7 +427,7 @@
   }
  void CGUIPannel::OnClickTogglePretradeDirection(void)
   {
-   m_new_order_is_buy=(m_table_position_pretrade_view.Cell(COL_PTV_DIR,0).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   m_new_order_is_buy=(m_table_position_pretrade_view.Cell(COL_PTV_DIR,0).ValueL()==CANV_ELEMENT_CHECK_STATE_UNCHECKED);
    UpdateSendButtonAppearance();
    SyncTable_PositionPretradeView();
   }
@@ -535,7 +443,7 @@
    if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(symbol);
    if(row_setting==NULL)
       return;
-   bool fixed=(m_table_position_pretrade_view.Cell(COL_PTV_SLTYPE,0).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   bool fixed=(m_table_position_pretrade_view.Cell(COL_PTV_SLTYPE,0).ValueL()==CANV_ELEMENT_CHECK_STATE_UNCHECKED);
    row_setting.StopLostMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
    m_TradingSetupManager.NotifySettingChanged(symbol);
    SyncTable_PositionPretradeView(true);
@@ -551,7 +459,7 @@
    if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(symbol);
    if(row_setting==NULL)
       return;
-   bool fixed=(m_table_position_pretrade_view.Cell(COL_PTV_TRAILTYPE,0).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   bool fixed=(m_table_position_pretrade_view.Cell(COL_PTV_TRAILTYPE,0).ValueL()==CANV_ELEMENT_CHECK_STATE_UNCHECKED);
    row_setting.TrailingMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
    m_TradingSetupManager.NotifySettingChanged(symbol);
    SyncTable_PositionPretradeView(true);
@@ -687,9 +595,9 @@
       bool sl_active=(row_setting!=NULL) && row_setting.StopLostActive();
       bool trail_fixed=(row_setting==NULL) || (row_setting.TrailingMode()==SL_MODE_FIXED);
       bool trail_active=(row_setting!=NULL) && row_setting.TrailingActive();
-      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLTYPE,row,(long)(sl_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_SLTYPE,row,(long)(sl_fixed ? CANV_ELEMENT_CHECK_STATE_UNCHECKED : CANV_ELEMENT_CHECK_STATE_CHECKED));
       m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_SL,row).ChangeImage(sl_active ? 0 : 1);
-      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_TRAILTYPE,row,(long)(trail_fixed ? CANV_ELEMENT_CHEK_STATE_UNCHECKED : CANV_ELEMENT_CHEK_STATE_CHECKED));
+      m_table_positions_StoplostAndTrailling.SetValue(COL_PST_TRAILTYPE,row,(long)(trail_fixed ? CANV_ELEMENT_CHECK_STATE_UNCHECKED : CANV_ELEMENT_CHECK_STATE_CHECKED));
       m_table_positions_StoplostAndTrailling.CellView(COL_PST_RUN_TRAIL,row).ChangeImage(trail_active ? 0 : 1);
       //--- Real positions here: the SL they hold now, the money on their real volume
       bool sl_price_from_trail;
@@ -724,7 +632,7 @@
    if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(sym);
    if(row_setting==NULL)
       return;
-   bool fixed=(m_table_positions_StoplostAndTrailling.Cell(COL_PST_SLTYPE,row).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   bool fixed=(m_table_positions_StoplostAndTrailling.Cell(COL_PST_SLTYPE,row).ValueL()==CANV_ELEMENT_CHECK_STATE_UNCHECKED);
    row_setting.StopLostMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
    m_TradingSetupManager.NotifySettingChanged(sym);
    SyncTable_PositionsStoplostAndTrailling();
@@ -740,7 +648,7 @@
    if(row_setting==NULL) row_setting=m_TradingSetupManager.Add_TradingSetupSetting(sym);
    if(row_setting==NULL)
       return;
-   bool fixed=(m_table_positions_StoplostAndTrailling.Cell(COL_PST_TRAILTYPE,row).ValueL()==CANV_ELEMENT_CHEK_STATE_UNCHECKED);
+   bool fixed=(m_table_positions_StoplostAndTrailling.Cell(COL_PST_TRAILTYPE,row).ValueL()==CANV_ELEMENT_CHECK_STATE_UNCHECKED);
    row_setting.TrailingMode(fixed ? SL_MODE_FIXED : SL_MODE_INDICATOR);
    m_TradingSetupManager.NotifySettingChanged(sym);
    SyncTable_PositionsStoplostAndTrailling();

@@ -95,7 +95,7 @@
       for(int c=0;c<4;c++)
         {
          m_table_SymbolTFSeting.CellView(c+2,row).CellType(CELL_CHECKBOX);
-         m_table_SymbolTFSeting.SetValue(c+2,row,(long)(flags[c] ? CANV_ELEMENT_CHEK_STATE_CHECKED : CANV_ELEMENT_CHEK_STATE_UNCHECKED));
+         m_table_SymbolTFSeting.SetValue(c+2,row,(long)(flags[c] ? CANV_ELEMENT_CHECK_STATE_CHECKED : CANV_ELEMENT_CHECK_STATE_UNCHECKED));
         }
      }
    m_table_SymbolTFSeting.View().Rebuild(true);

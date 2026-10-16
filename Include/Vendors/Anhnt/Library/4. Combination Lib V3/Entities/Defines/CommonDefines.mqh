@@ -24,6 +24,7 @@
 
   #define COLLECTION_CHARTS_ID           (0x7787)                   // Chart collection list ID
   #define COLLECTION_INDICATORS_ID       (0x7782)                   // Indicator collection list ID
+  #define COLLECTION_LIFECYCLE_ID        (0x7790)                   // Lifecycle collection list ID
   //--- Describe the function with the error line number
    #define DFUN_ERR_LINE                  (__FUNCTION__+(TerminalInfoString(TERMINAL_LANGUAGE)=="Russian" ? ", Page " : ", Line ")+(string)__LINE__+": ")
    #define DFUN                           (__FUNCTION__+": ")        // "Function description"
@@ -79,6 +80,7 @@
     // Time Serries
       OBJECT_DE_TYPE_SERIES_SWING,                                   // "Swing point" object type
       OBJECT_DE_TYPE_SERIES_MARKET_STRUCTURE,                        // "Market structure event" object type
+      OBJECT_DE_TYPE_SERIES_LIFECYCLE,                               // "Lifecycle event of a Trendline/Zone/Protected Level" object type
     // Data units
       OBJECT_DE_TYPE_LONG,                                           // "Long type data" object type
       OBJECT_DE_TYPE_DOUBLE,                                         // "Double type data" object type

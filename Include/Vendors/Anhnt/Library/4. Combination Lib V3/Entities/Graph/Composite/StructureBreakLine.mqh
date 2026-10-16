@@ -13,6 +13,7 @@
  //| Swing level from the Swing candle to the candle that broke it,   |
  //| with its name in the middle (above the line for a break up,      |
  //| below it for a break down). Both are native objects bound to time|
+ //| and carry the tooltip of the chart: the weak and the strong level|
  //| and price, drawn in the background (behind the candles and the   |
  //| panel windows), so nothing has to follow scroll or zoom          |
  //+------------------------------------------------------------------+
@@ -24,7 +25,7 @@
    public:
      bool                      Create(const long chart_id,const int subwin,const string name);
      void                      SetBreak(const datetime swing_time,const datetime break_time,const double level,
-                                        const string text,const bool is_up,const color colour);
+                                        const string text,const bool is_up,const color colour,const string tooltip="");
                                CStructureBreakLine(void) {}
   };
 #endif // CSTRUCTURE_BREAK_LINE_COMPOSITE_DECLARATION
@@ -52,8 +53,11 @@
    return true;
   }
  void CStructureBreakLine::SetBreak(const datetime swing_time,const datetime break_time,const double level,
-                                    const string text,const bool is_up,const color colour)
+                                    const string text,const bool is_up,const color colour,const string tooltip="")
   {
+   //--- the tooltip is the native one of the chart (nothing to create, nothing to fade): on the line and on the name
+   this.m_trend_line.SetTooltip(tooltip=="" ? "\n" : tooltip);
+   this.m_text_label.SetTooltip(tooltip=="" ? "\n" : tooltip);
    this.m_trend_line.SetTime(swing_time,0);
    this.m_trend_line.SetPrice(level,0);
    this.m_trend_line.SetTime(break_time,1);

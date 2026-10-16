@@ -13,6 +13,11 @@
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Chart\ChartObj.mqh>
  #include "IndicatorSetting.mqh"
  #include "JSONConfig.mqh"
+//Inputs of the EA: the badges of the indicator signals (the Buy / Sell flags of each template are in its table)
+ input group "=== Indicators: Visual ==="
+ input bool   InpIndicatorShow      = false;             // Show the indicator signal badges
+ input color  InpIndicatorBuyColor  = clrDodgerBlue;   // Indicator Buy
+ input color  InpIndicatorSellColor = clrRed;          // Indicator Sell
 
 #ifndef CINDICATORTEMPLATEMANAGER_MQH_DECLARATION
 #define CINDICATORTEMPLATEMANAGER_MQH_DECLARATION
@@ -33,6 +38,10 @@
                        ~CIndicatorTemplateManager(void) {}
    //--- Loads the "Indicator_Templates" key of Config_Setting.json once, then takes the indicators found on the chart
      bool               OnInitEvent(CChartObj *chart=NULL);
+   //--- The badges of the indicator signals: shown at all, and the colour of each side
+     bool               ShowMarkers(void) const { return InpIndicatorShow;      }
+     color              BuyColor(void)    const { return InpIndicatorBuyColor;  }
+     color              SellColor(void)   const { return InpIndicatorSellColor; }
    //--- The chart side: an indicator added, changed or removed by hand; the identity comes from the chart object, no handle
      bool               OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam, CChartObj *chart);
    //--- Toggle ShowOnChart of a row; fires INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED so the EA attaches / detaches it
@@ -43,6 +52,8 @@
      CIndicatorSetting *FindByIdentity(const ENUM_INDICATOR type, MqlParam &params[]) const;
      bool               Exists(const ENUM_INDICATOR type, MqlParam &params[])        const { return FindByIdentity(type, params) != NULL; }
      bool               Exists(const ENUM_INDICATOR type) const;
+   //--- What the chart holds is not always a row: false = the EA drew it as part of another row (the MA of Volumes); a Volumes of the chart takes the MA parameters of its row
+     bool               ChartIdentity(const ENUM_INDICATOR type, MqlParam &params[]);
    //--- The master switch: every indicator shows (or hides) its Buy and Sell markers; AllBuySell: every flag is on
      void               SetAllBuySell(const bool on);
      bool               AllBuySell(void) const;
@@ -170,8 +181,8 @@
    out_row = new CIndicatorSetting();
    out_row.TypeEnum(type_enum);
    out_row.SetRawParams(raw_params);
-   out_row.BuySignal(buy);
-   out_row.SellSignal(sell);
+   out_row.BuySignal(buy,false);    // loaded from the file: no event, or every row makes the EA draw all markers again
+   out_row.SellSignal(sell,false);
    out_row.SoundAlert(sound);
    out_row.MessageAlert(message);
    out_row.ShowOnChart(false);   // true only after the scan of the chart finds it there
@@ -263,6 +274,33 @@
    this.BuildJsonSection(value);
    string full_path = this.GetFolderName() + "/Config_Setting.json";
    return ::JSONConfig_SaveSection(full_path, "Indicator_Templates", value);
+  }
+ bool CIndicatorTemplateManager::ChartIdentity(const ENUM_INDICATOR type, MqlParam &params[])
+  {
+   //--- the MA drawn over Volumes takes its data from the handle of the Volumes: its Applied Price is not a price
+   if(type == IND_MA && ::ArraySize(params) > 3 && (params[3].integer_value < PRICE_CLOSE || params[3].integer_value > PRICE_WEIGHTED))
+      return false;
+   //--- the chart holds the Volumes alone; the MA period and method are of the row that has the same Applied Volume
+   if(type == IND_VOLUMES && ::ArraySize(params) == 1)
+     {
+      for(int i = 0; i < m_list.Total(); i++)
+        {
+         CIndicatorSetting *row = m_list.At(i);
+         MqlParam row_params[];
+         if(row == NULL || row.TypeEnum() != IND_VOLUMES)
+            continue;
+         row.GetRawParams(row_params);
+         if(::ArraySize(row_params) > 1 && row_params[0].integer_value == params[0].integer_value)
+           {
+            ::ArrayResize(params, ::ArraySize(row_params));
+            for(int p = 1; p < ::ArraySize(row_params); p++)
+               params[p] = row_params[p];
+            return true;
+           }
+        }
+      return false;   // no row for it: the Add form makes the Volumes with its MA
+     }
+   return true;
   }
  CIndicatorSetting *CIndicatorTemplateManager::FindByIdentity(const ENUM_INDICATOR type, MqlParam &params[]) const
   {
@@ -423,8 +461,8 @@
      MqlParam params[];
      if(ind == NULL || !ind.GetIdentity(type, params))
         continue;
-     if(GetIndicatorNameForType(type) == "")
-        continue;   // not in the catalog: never a row
+     if(GetIndicatorNameForType(type) == "" || !ChartIdentity(type, params))
+        continue;   // not in the catalog, or a part of another row: never a row
      CIndicatorSetting *existing = FindByIdentity(type, params);
      if(existing != NULL)
         existing.ShowOnChart(true);   // already tracked: Show follows what the chart really holds
@@ -494,7 +532,7 @@
       ind = chart.GetLastAddedIndicator();   // several events queued: the indexes moved
    ENUM_INDICATOR type;
    MqlParam params[];
-   if(ind == NULL || !ind.GetIdentity(type, params) || GetIndicatorNameForType(type) == "")
+   if(ind == NULL || !ind.GetIdentity(type, params) || GetIndicatorNameForType(type) == "" || !ChartIdentity(type, params))
       return false;
    CIndicatorSetting *entry = FindByIdentity(type, params);
    if(entry == NULL)

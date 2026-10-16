@@ -41,6 +41,13 @@ class CTable : public CGElement
     CTableCell       *Cell(const uint column_index,const uint row_index)         { return(this.m_model.Cell(row_index,column_index)); }
     CTableCellView   *CellView(const uint column_index,const uint row_index)     { CTableRowView *row=this.m_view.RowViewByModel((int)row_index); return(row!=NULL ? row.CellView((int)column_index) : NULL); }
     void              SortData(const uint column_index,const ENUM_CSORT_MODE direction);
+  //--- Which columns show and in which order: only the view changes, the model keeps every column
+    bool              IsColumnShown(const int column)            { return(this.m_view.GetHeaderViewPointer().ColumnShown(column)); }
+    void              ColumnShown(const int column,const bool flag,const bool redraw=true);
+    bool              MoveColumn(const int column,const int delta,const bool redraw=true);
+    string            ColumnsLayout(void)                        { return(this.m_view.GetHeaderViewPointer().ColumnsLayout()); }
+    bool              ColumnsLayout(const string layout,const bool redraw=true);
+    void              ColumnsReset(const bool redraw=true);
     void              AutoXResizeMode(const bool mode)           { this.m_auto_xresize_mode=mode;           }
     void              AutoYResizeMode(const bool mode)           { this.m_auto_yresize_mode=mode;           }
     void              AutoXResizeRightOffset(const int offset)   { this.m_auto_xresize_right_offset=offset; }
@@ -243,6 +250,33 @@ void CTable::OnChartEvent(const int id,const long &lparam,const double &dparam,c
     }
   if(event_id==ON_CLICK_BUTTON || event_id==ON_CLICK_LIST_ITEM)
      this.SendEvent(event_id,dparam,sparam);
+ }
+//+------------------------------------------------------------------+
+//| A change of the columns lays the table out again                 |
+//+------------------------------------------------------------------+
+void CTable::ColumnShown(const int column,const bool flag,const bool redraw=true)
+ {
+  this.m_view.GetHeaderViewPointer().ColumnShown(column,flag);
+  this.m_view.Rebuild(redraw,true);
+ }
+bool CTable::MoveColumn(const int column,const int delta,const bool redraw=true)
+ {
+  if(!this.m_view.GetHeaderViewPointer().MoveColumn(column,delta))
+     return(false);
+  this.m_view.Rebuild(redraw,true);
+  return(true);
+ }
+bool CTable::ColumnsLayout(const string layout,const bool redraw=true)
+ {
+  if(!this.m_view.GetHeaderViewPointer().ColumnsLayout(layout))
+     return(false);
+  this.m_view.Rebuild(redraw,true);
+  return(true);
+ }
+void CTable::ColumnsReset(const bool redraw=true)
+ {
+  this.m_view.GetHeaderViewPointer().ColumnsReset();
+  this.m_view.Rebuild(redraw,true);
  }
 #endif // CTABLE_MQH_IMPLEMENTATION
 #endif // CTABLE_MQH

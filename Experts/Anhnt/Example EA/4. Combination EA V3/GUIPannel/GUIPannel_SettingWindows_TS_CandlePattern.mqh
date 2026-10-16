@@ -88,7 +88,7 @@
             continue;
            }
          m_table_CandlePatternsSetting.CellView(check_cols[k],i).CellType(CELL_CHECKBOX);
-         m_table_CandlePatternsSetting.SetValue(check_cols[k],i,(long)(flags[k] ? CANV_ELEMENT_CHEK_STATE_CHECKED : CANV_ELEMENT_CHEK_STATE_UNCHECKED));
+         m_table_CandlePatternsSetting.SetValue(check_cols[k],i,(long)(flags[k] ? CANV_ELEMENT_CHECK_STATE_CHECKED : CANV_ELEMENT_CHECK_STATE_UNCHECKED));
         }
       m_table_CandlePatternsSetting.CellView(4,i).SetImages(arrow_up);
       m_table_CandlePatternsSetting.CellView(7,i).SetImages(arrow_dn);

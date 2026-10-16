@@ -29,7 +29,7 @@
   }
  bool CGUIPannel::CreateTab_SettingTimeSeries(const int x_gap,const int y_gap)
   {
-   string tabs_names[TAB_TAB_SETTING_TIMESERIES_TOTAL]={"Indicator","Symbol TF","Candle Pattern","Smart Money Concepts"};
+   string tabs_names[TAB_TAB_SETTING_TIMESERIES_TOTAL]={"Indicator","Symbol TF","Candle Pattern"};
    m_tabs_setting_timeseries.PositionMode(TABS_TOP);
    m_tabs_setting_timeseries.AutoXResizeMode(true);
    m_tabs_setting_timeseries.AutoYResizeMode(true);
@@ -64,15 +64,8 @@
          m_SymbolTFManager.Save();
       return;
      }
-   if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON && lparam==m_btn_save_swing_config.ObjectID())
-     {
-      if(m_SmartMoneySetting!=NULL)
-         m_SmartMoneySetting.Save();
-      return;
-     }
    this.OnEvent_Tab_Indicator(id,lparam,dparam,sparam);
    this.OnEvent_Tab_CandlePattern(id,lparam,dparam,sparam);
    this.OnEvent_Tab_SymbolTF(id,lparam,dparam,sparam);
-   this.OnEvent_Tab_SmartMoney(id,lparam,dparam,sparam);
   }
 #endif //CGUIPANNEL_SETTINGTIMESERIES_MQH

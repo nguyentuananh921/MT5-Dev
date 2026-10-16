@@ -13,7 +13,6 @@
    //--- Every window is hidden BEFORE Create: born hidden, children inherit it, m_window_main shown once at the end
     m_window_main.Hide();
     m_window_setting_timeseries.Hide();
-    m_window_setting_markerAndSound.Hide();
     m_window_setting_trading.Hide();
     m_window_candle_infomation.Hide();
    // Create Main Frame window implementation in GUIPannel_MainWindows.mqh
@@ -28,8 +27,8 @@
       Print(__FUNCTION__," > Failed to create Status Bar!");
       return(false);
      }
-    //Create MenuBar right below the caption bar (22px) - always-visible slim strip
-    if(!CreateMenuBar(1,22))
+    //Create MenuBar right below the caption bar - always-visible slim strip
+    if(!CreateMenuBar(1,M_MENU_BAR_Y))
      {
       Print(__FUNCTION__," > Failed to create MenuBar!");
       return(false);
@@ -71,19 +70,6 @@
     if(!CreateTable_CandlePatternSetting(0,0))
        return(false);
     InitializeTable_CandlePatternSetting();
-    if(!CreateTable_SmartMoneySetting(0,0))
-       return(false);
-    InitializeTable_SmartMoneySetting();
-    // Create Setting Marker and Sound window implementation in GUIPannel_SettingWindows_Alert.mqh
-    if(!CreateWindow_SettingMarkerAndSound("Setting Marker and Sound",30,30))
-      {
-       Print(__FUNCTION__," > Failed to create the Marker and Sound window!");
-       return(false);
-      }
-    if(!CreateTab_SettingMarkerAndSound(M_CONTROL_BORDER_GAP,WINDOW_CAPTION_HEIGHT+M_CONTROL_HEIGHT))
-       return(false);
-    if(!CreateTab_SettingConfig_Marker(0,M_CONTROL_BORDER_GAP+5))
-       return(false);
     // Create Setting Trading window implementation in GUIPannel_SettingWindows_Trading.mqh
     if(!CreateWindow_SettingTrading("Setting Trading",30,30))
       {
@@ -112,9 +98,8 @@
        return(false);
       }
     // Trading tab implementation in GUIPannel_MainWindows_TabTrading.mqh
-    int trading_top=M_CONTROL_BORDER_GAP+3;
-    int trading_body_top=trading_top+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;   // below the TF switch row
-    if(!BuildTFSwitchButtons(M_CONTROL_BORDER_GAP,trading_top))
+    int trading_body_top=M_CONTROL_BORDER_GAP+M_CONTROL_BORDER_GAP;   // the TF switch row is above the tabs, in m_window_main
+    if(!BuildTFSwitchButtons(M_CONTROL_BORDER_GAP,M_TF_SWITCH_Y))
        return(false);
     if(!CreateTable_PreTradeSymbolMonitor(M_CONTROL_BORDER_GAP,trading_body_top))
        return(false);
@@ -125,6 +110,8 @@
     OnSymbolToTradeChanged();
     BuildTFSwitchButtons();
     if(!CreateTable_PositionsStoplostAndTrailling(M_CONTROL_BORDER_GAP,trading_body_top+TRADING_FORM_HEIGHT+M_CONTROL_HEIGHT+PRETRADE_VIEW_TABLE_HEIGHT+M_CONTROL_HEIGHT))
+       return(false);
+    if(!CreateTable_MarketStory(M_CONTROL_BORDER_GAP,trading_body_top))
        return(false);
     //--- Default to the Trading tab
     m_tabs_main.SelectTab(TAB_TAB_MAIN_TRADING);
@@ -138,12 +125,13 @@
  //+------------------------------------------------------------------+
  CGUIPannel::CGUIPannel(void) : m_gui_created(false),
                                 m_SymbolTFManager(NULL),
-                                m_SmartMoneySetting(NULL),
                                 m_IndicatorTemplateManager(NULL),
                                 m_PatternManager(NULL),
-                                m_MarkerSetting(NULL),
                                 m_IndicatorsCollection(NULL),
                                 m_SymbolsCollection(NULL),
+                                m_story_conditions(NULL),
+                                m_story_movements(NULL),
+                                m_story_setting(NULL),
                                 m_ChartObj(NULL),
                                 m_TradingSetupManager(NULL),
                                 m_MarketCollection(NULL),
@@ -182,13 +170,13 @@
      m_table_position_pretrade_view.SetValue(COL_PTV_SYMBOL,0,::Symbol());
      OnSymbolToTradeChanged(false);
      BuildTFSwitchButtons();
+     HighlightTable_MarketStory();   // the TF the chart is on; the data come with the answer of Python
     }
    //--- Registration order = stacking order: main at the bottom of the panel, dialogs above it
    if(m_graph_elements!=NULL)
      {
       m_graph_elements.RegisterElement(::GetPointer(m_window_main));
       m_graph_elements.RegisterElement(::GetPointer(m_window_setting_timeseries));
-      m_graph_elements.RegisterElement(::GetPointer(m_window_setting_markerAndSound));
       m_graph_elements.RegisterElement(::GetPointer(m_window_setting_trading));
       m_graph_elements.RegisterElement(::GetPointer(m_window_candle_infomation));
      }
@@ -269,8 +257,6 @@
       ::ChartRedraw(m_ChartObj.GetChartID());
    if(m_window_setting_timeseries.IsVisible())
       m_window_setting_timeseries.OnTimerEvent();
-   if(m_window_setting_markerAndSound.IsVisible())
-      m_window_setting_markerAndSound.OnTimerEvent();
    if(m_window_setting_trading.IsVisible())
       m_window_setting_trading.OnTimerEvent();
    if(m_window_candle_infomation.IsVisible())
@@ -285,23 +271,16 @@
   {
    m_window_main.OnChartEvent(id,lparam,dparam,sparam);
    m_window_setting_timeseries.OnChartEvent(id,lparam,dparam,sparam);
-   m_window_setting_markerAndSound.OnChartEvent(id,lparam,dparam,sparam);
    m_window_setting_trading.OnChartEvent(id,lparam,dparam,sparam);
    m_window_candle_infomation.OnChartEvent(id,lparam,dparam,sparam);
    OnEvent_Window_Main(id,lparam,dparam,sparam);
    OnEvent_Window_SettingTimeSeries(id,lparam,dparam,sparam);
-   OnEvent_Window_SettingMarkerAndSound(id,lparam,dparam,sparam);
    OnEvent_Window_SettingTrading(id,lparam,dparam,sparam);
    OnEvent_Window_CandleInfor(id,lparam,dparam,sparam);
    //--- Esc closes the setting window that is open
    if(id==CHARTEVENT_KEYDOWN && lparam==27 && m_window_setting_timeseries.IsVisible())
      {
       m_window_setting_timeseries.CloseWindow();
-      return;
-     }
-   if(id==CHARTEVENT_KEYDOWN && lparam==27 && m_window_setting_markerAndSound.IsVisible())
-     {
-      m_window_setting_markerAndSound.CloseWindow();
       return;
      }
    if(id==CHARTEVENT_KEYDOWN && lparam==27 && m_window_setting_trading.IsVisible())

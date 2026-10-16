@@ -13,8 +13,47 @@ TIMEFRAMES = {
 
 HISTORY_RETRIES = 10
 HISTORY_RETRY_SLEEP = 0.3
+# The link between this process and the terminal can break while both run (the terminal was busy or restarted): every call then
+# fails with one of these codes and nothing brings it back. A call that fails like that opens the link again and is made once more
+LINK_ERRORS = (mt5.RES_E_INTERNAL_FAIL_SEND, mt5.RES_E_INTERNAL_FAIL_RECEIVE, mt5.RES_E_INTERNAL_FAIL_INIT,
+               mt5.RES_E_INTERNAL_FAIL_CONNECT, mt5.RES_E_INTERNAL_FAIL_TIMEOUT)
+RECONNECT_GAP = 5.0   # seconds: no reconnecting storm while the terminal is down
+_terminal_path = None
+_last_reconnect = 0.0
+
+def link_lost():
+    return mt5.last_error()[0] in LINK_ERRORS
+
+def reconnect():
+    """Open the link to the terminal again; False when it was tried a moment ago or did not work."""
+    global _last_reconnect
+    if time.monotonic() - _last_reconnect < RECONNECT_GAP:
+        return False
+    _last_reconnect = time.monotonic()
+    mt5.shutdown()
+    ok = mt5.initialize(_terminal_path) if _terminal_path else mt5.initialize()
+    print("link to MT5 lost: reconnected" if ok else f"link to MT5 lost: reconnect failed {mt5.last_error()}")
+    return bool(ok)
+
+def with_link(call):
+    """The call again after reconnecting, when it failed because the link is gone."""
+    def wrapper(*args, **kwargs):
+        try:
+            result = call(*args, **kwargs)
+        except RuntimeError:
+            if link_lost() and reconnect():
+                return call(*args, **kwargs)
+            raise
+        if result is None and link_lost() and reconnect():
+            return call(*args, **kwargs)
+        return result
+    wrapper.__name__ = call.__name__
+    wrapper.__doc__ = call.__doc__
+    return wrapper
 
 def connect(path=None):
+    global _terminal_path
+    _terminal_path = path
     ok = mt5.initialize(path) if path else mt5.initialize()
     if not ok:
         raise RuntimeError(f"mt5.initialize failed: {mt5.last_error()}")
@@ -22,6 +61,7 @@ def connect(path=None):
 def disconnect():
     mt5.shutdown()
 
+@with_link
 def fetch_closed_bars(symbol, tf_text, count=0):
     if tf_text not in TIMEFRAMES:
         raise ValueError(f"unknown timeframe {tf_text}")
@@ -44,12 +84,14 @@ def fetch_closed_bars(symbol, tf_text, count=0):
     df.attrs["point"] = symbol_point(symbol)
     return df
 
+@with_link
 def fetch_forming_bar(symbol, tf_text):
     rates = mt5.copy_rates_from_pos(symbol, TIMEFRAMES[tf_text], 0, 1)   # the bar that is still forming
     if rates is None or len(rates) < 1:
         return None
     return pd.DataFrame(rates)
 
+@with_link
 def fetch_last_closed_time(symbol, tf_text):
     rates = mt5.copy_rates_from_pos(symbol, TIMEFRAMES[tf_text], 0, 2)   # [last closed bar, forming bar]
     if rates is None or len(rates) < 2:

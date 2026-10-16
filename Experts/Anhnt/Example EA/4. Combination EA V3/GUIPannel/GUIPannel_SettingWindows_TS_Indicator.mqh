@@ -137,7 +137,7 @@
    for(int c=0;c<5;c++)
      {
       m_table_indicator_template.CellView(c+2,row).CellType(CELL_CHECKBOX);
-      m_table_indicator_template.SetValue(c+2,row,(long)(flags[c] ? CANV_ELEMENT_CHEK_STATE_CHECKED : CANV_ELEMENT_CHEK_STATE_UNCHECKED));
+      m_table_indicator_template.SetValue(c+2,row,(long)(flags[c] ? CANV_ELEMENT_CHECK_STATE_CHECKED : CANV_ELEMENT_CHECK_STATE_UNCHECKED));
      }
   }
  void CGUIPannel::OnClickRemoveIndicator(const int row)

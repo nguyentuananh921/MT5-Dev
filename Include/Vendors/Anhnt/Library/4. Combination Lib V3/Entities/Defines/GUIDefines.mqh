@@ -61,6 +61,10 @@
   #define ON_BUBBLE_RESTORE           (49)   // a bubble drop was not applied: bubbles show the real levels again
   #define ON_CANDLE_MARKER_ENTER      (50)   // cursor entered a candle marker: lparam candle time, dparam badge Y
   #define ON_CANDLE_MARKER_LEAVE      (51)   // cursor left a candle marker: lparam candle time
+  #define ON_TRADE_SETUP_SEND         (52)   // send order clicked: lparam SIGNAL_BUY/SELL, dparam lots, sparam symbol
+  #define ON_TRADE_SETUP_CLOSE        (53)   // close icon clicked: lparam SIGNAL_BUY/SELL, sparam symbol
+  #define ON_TABLE_COLUMNS_CHANGED    (54)   // the columns of a table were shown, hidden or moved: lparam ObjectID of the table
+  #define ON_PYTHON_CONNECTED         (55)   // the EA connected to Python (again): a service that keeps Python up to date sends what it has
 // ──────────────────────────────────────────────────────────────────
 // WINDOW / CONTROL SIZES
 // ──────────────────────────────────────────────────────────────────
@@ -188,6 +192,14 @@
    TO_END_LAST_LINE     = 9
   };
 // ──────────────────────────────────────────────────────────────────
+// UNIFIED SIZES of the controls (the panel and the controls drawn over the chart use the same ones)
+// ──────────────────────────────────────────────────────────────────
+  #define M_CONTROL_HEIGHT               22  //Height for MenuBar,Tab, Combobox,Label, and for every box drawn over the chart
+  #define M_CONTROL_BORDER_GAP            3  //Gap between border of two control
+  #define M_TF_WITHICON_WIDTH            65  //Unified width for every control/column that displays a Timeframe+Icon
+  #define M_LOT_WIDTH                    65  //Unified width for every column that displays a Lot/Volume (incl. an embedded combobox)
+  #define M_ICON16_WIDTH                  20  //Width for icon 16x16
+// ──────────────────────────────────────────────────────────────────
 // MACROS
 // ──────────────────────────────────────────────────────────────────
   #define EXPERT_IN_SUBWINDOW false
@@ -199,15 +211,17 @@
   #define SPIN_DELAY_MSC      (-450)
   #define SPACE               (" ")
   #define STRINGIFY(A)        #A
+  //--- The text of the event is made first, then printed
   #define PRINT_EVENT(SID,ID,L,D,S) \
-   ::Print(__FUNCTION__," > id: ",STRINGIFY(SID)," (",ID,"); lparam: ",L,"; dparam: ",D,"; sparam: ",S);
+   { string event_text=__FUNCTION__+" > id: "+STRINGIFY(SID)+" "+(string)(ID)+" lparam: "+(string)(L)+" dparam: "+(string)(D)+" sparam: "+(string)(S); \
+     ::Print(event_text); }
   //+------------------------------------------------------------------+
   //| Control flag status (checkbox cells of the tables)               |
   //+------------------------------------------------------------------+
-  enum ENUM_CANV_ELEMENT_CHEK_STATE
+  enum ENUM_CANV_ELEMENT_CHECK_STATE
    {
-    CANV_ELEMENT_CHEK_STATE_UNCHECKED,                 // Unchecked
-    CANV_ELEMENT_CHEK_STATE_CHECKED,                   // Checked
-    CANV_ELEMENT_CHEK_STATE_INDETERMINATE,             // Undefined
+    CANV_ELEMENT_CHECK_STATE_UNCHECKED,                 // Unchecked
+    CANV_ELEMENT_CHECK_STATE_CHECKED,                   // Checked
+    CANV_ELEMENT_CHECK_STATE_INDETERMINATE,             // Undefined
    };
 #endif // __GUIDEFINES_MQH__

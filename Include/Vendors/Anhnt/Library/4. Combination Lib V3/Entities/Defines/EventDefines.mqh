@@ -80,9 +80,21 @@
    LIFECYCLE_EVENT_BOUNCED,                                 // Rejection confirmed
    LIFECYCLE_EVENT_BROKEN,                                  // Break confirmed (ghost: still watched)
    LIFECYCLE_EVENT_RESURRECTED,                             // Back to life after price returned
+   LIFECYCLE_EVENT_SUPERSEDED,                              // A newer object of its side took its place: no longer active, it waits and dies
+   LIFECYCLE_EVENT_CONFIRMED,                               // A swing landed on it (the third swing): one more swing on the line
    LIFECYCLE_EVENT_DEAD,                                    // The end (ENUM_LIFECYCLE_DEAD_REASON says why)
   };
  #define LIFECYCLE_EVENTS_NEXT_CODE  (LIFECYCLE_EVENT_DEAD+1)  // The code of the next event after the last lifecycle event code
+ //+------------------------------------------------------------------+
+ //| What Python (the Model) reports about the market structure of the|
+ //| pairs: the EA tells its views, they do not look into the lists   |
+ //+------------------------------------------------------------------+
+ enum ENUM_MARKET_STORY_EVENT
+  {
+   MARKET_STORY_EVENT_NO_EVENT = LIFECYCLE_EVENTS_NEXT_CODE,   // No event
+   MARKET_STORY_EVENT_CHANGED,                              // The answer of a watch is complete, or a State / Phase / leg arrived
+  };
+ #define MARKET_STORY_EVENTS_NEXT_CODE  (MARKET_STORY_EVENT_CHANGED+1)
  //+------------------------------------------------------------------+
  //| List of trading event flags on the account                       |
  //+------------------------------------------------------------------+

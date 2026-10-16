@@ -15,6 +15,10 @@
  #include "TradingSetupSetting.mqh"
  #include "SymbolTFManager.mqh"
  #include "JSONConfig.mqh"
+//Inputs of the EA: the risk of a new trade, the same for every Symbol (it was the "Use RPT %" checkbox and its edit of the Trading tab)
+ input group "=== Trading: risk per new trade ==="
+ input bool   InpUseRiskPerNewTrade = false;   // Use a risk % per new trade
+ input double InpRiskPerNewTrade    = 5.0;     // (% of the balance)
 
 #ifndef CTRADINGSETUPSETTINGMANAGER_MQH_DECLARATION
 #define CTRADINGSETUPSETTINGMANAGER_MQH_DECLARATION
@@ -40,6 +44,9 @@
 
        int                     Total(void)                          const { return m_list.Total();   }
        CTradingSetupSetting   *At(const int index)                  const { return m_list.At(index); }
+      //--- The risk of a new trade: global, an input of the EA (a control that changes it live sets it here later)
+       bool                    UseRiskPerNewTrade(void)             const { return InpUseRiskPerNewTrade; }
+       double                  RiskPerNewTrade(void)                const { return (InpRiskPerNewTrade>0.0 ? InpRiskPerNewTrade : 0.0); }
 
       //--- identity-based lookup - works in POINTERS, not array index
        CTradingSetupSetting   *FindByIdentity(const string symbol)   const;

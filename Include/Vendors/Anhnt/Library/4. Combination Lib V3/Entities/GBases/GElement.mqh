@@ -43,6 +43,7 @@
     ENUM_COLOR_STATE  m_color_state;
     string            m_font;
     int               m_font_size;
+    uchar             m_back_alpha;       // opacity of the background (255 = solid)
     struct EImagesGroup
       {
        CImage            m_image[];
@@ -132,6 +133,8 @@
     string            Font(void)                            const { return this.m_font;             }
     void              FontSize(const int font_size)               { this.m_font_size=font_size;     }
     int               FontSize(void)                        const { return this.m_font_size;        }
+    void              BackAlpha(const uchar alpha)                { this.m_back_alpha=alpha;        }
+    uchar             BackAlpha(void)                       const { return this.m_back_alpha;       }
     virtual bool      CheckMouseFocus(const int x,const int y);
     bool              MouseFocus(void)                      const { return this.m_mouse_focus; }
     ENUM_MOUSE_EVENT  MouseEventLast(void)                  const { return this.m_mouse_event_last; }
@@ -217,7 +220,7 @@
  //+------------------------------------------------------------------+
  //|                                                                  |
  //+------------------------------------------------------------------+
- CGElement::CGElement(void) : m_x(0),m_y(0),m_x_size(0),m_y_size(0),m_x_gap(0),m_y_gap(0),m_state(false),m_color_state(COLOR_STATE_DEFAULT),m_font(DEF_FONT),m_font_size(DEF_FONT_SIZE),
+ CGElement::CGElement(void) : m_x(0),m_y(0),m_x_size(0),m_y_size(0),m_x_gap(0),m_y_gap(0),m_state(false),m_color_state(COLOR_STATE_DEFAULT),m_font(DEF_FONT),m_font_size(DEF_FONT_SIZE),m_back_alpha(255),
                              m_mouse_focus(false),m_focused(false),m_is_pressed(false),m_is_locked(false),m_is_available(true),m_prev_left(false),
                              m_chart_tools_locked(false),m_lock_chart_tools(true),m_mouse_event_last(MOUSE_EVENT_NO_EVENT),m_press_area(0),
                              m_act_shift_left(0),m_act_shift_top(0),m_act_shift_right(0),m_act_shift_bottom(0),
@@ -501,7 +504,7 @@
  void CGElement::DrawFrame(void)
   {
    color back=this.BackColor();
-   this.m_canvas.Erase(back==clrNONE ? 0 : ::ColorToARGB(back,255));
+   this.m_canvas.Erase(back==clrNONE ? 0 : ::ColorToARGB(back,this.m_back_alpha));
    color border=this.BorderColor();
    if(border!=clrNONE)
       this.m_canvas.Rectangle(0,0,this.m_x_size-1,this.m_y_size-1,::ColorToARGB(border,255));

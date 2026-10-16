@@ -50,6 +50,13 @@ class CMarketStructureSeries : public CBaseObj
       datetime                Time(void)          const { return (datetime)this.GetProperty(MARKET_STRUCTURE_PROP_TIME); }
       datetime                SwingTime(void)     const { return (datetime)this.GetProperty(MARKET_STRUCTURE_PROP_SWING_TIME); }
       double                  Level(void)         const { return this.GetProperty(MARKET_STRUCTURE_PROP_LEVEL); }
+   //--- The Market Phase in force when it broke, NONE when nobody said
+      ENUM_MARKET_PHASE       Phase(void)         const { return (ENUM_MARKET_PHASE)this.GetProperty(MARKET_STRUCTURE_PROP_PHASE); }
+      void                    Phase(const ENUM_MARKET_PHASE phase) { this.SetProperty(MARKET_STRUCTURE_PROP_PHASE, phase); }
+   //--- The strong level: the swing the move that broke the structure started from (the broken swing, SwingTime / Level, is the weak one)
+      datetime                StrongTime(void)    const { return (datetime)this.GetProperty(MARKET_STRUCTURE_PROP_STRONG_TIME); }
+      double                  StrongPrice(void)   const { return this.GetProperty(MARKET_STRUCTURE_PROP_STRONG_PRICE); }
+      void                    Strong(const datetime time,const double price) { this.SetProperty(MARKET_STRUCTURE_PROP_STRONG_TIME,time); this.SetProperty(MARKET_STRUCTURE_PROP_STRONG_PRICE,price); }
       string                  Symbol(void)        const { return this.GetProperty(MARKET_STRUCTURE_PROP_SYMBOL); }
  };
 #endif // CMARKETSTRUCTURESERIES_MQH_DECLARATION
@@ -74,7 +81,10 @@ CMarketStructureSeries::CMarketStructureSeries(const ENUM_MARKET_STRUCTURE_TYPE 
    this.SetProperty(MARKET_STRUCTURE_PROP_DIRECTION,  direction);
    this.SetProperty(MARKET_STRUCTURE_PROP_PERIOD,     timeframe);
    this.SetProperty(MARKET_STRUCTURE_PROP_SWING_TIME, swing_time);
+   this.SetProperty(MARKET_STRUCTURE_PROP_PHASE,      MARKET_PHASE_NONE);
    this.SetProperty(MARKET_STRUCTURE_PROP_LEVEL,      level);
+   this.SetProperty(MARKET_STRUCTURE_PROP_STRONG_TIME,  0);
+   this.SetProperty(MARKET_STRUCTURE_PROP_STRONG_PRICE, 0.0);
    this.SetProperty(MARKET_STRUCTURE_PROP_SYMBOL,     symbol);
  }
 //+------------------------------------------------------------------+

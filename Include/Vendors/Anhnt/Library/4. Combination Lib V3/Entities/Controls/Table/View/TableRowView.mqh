@@ -115,7 +115,7 @@ void CTableRowView::DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const in
                                const color back,const color text,const color grid,const bool selected)
  {
   CTableCellView *view=this.CellView(column);
-  if(view==NULL || column>=header.ColumnsTotal())
+  if(view==NULL || column>=header.ColumnsTotal() || !header.ColumnShown(column))
      return;
   int x=header.ColumnX(column);
   if(x>right || x+header.ColumnWidth(column)<=1)
@@ -143,6 +143,8 @@ void CTableRowView::DrawRow(CCanvas &canvas,CTableHeaderView &header,const int y
   uint grid_color=::ColorToARGB(grid,255);
   for(int i=0; i<this.CellsTotal(); i++)
     {
+     if(!header.ColumnShown(i))
+        continue;
      this.DrawCellAt(canvas,header,i,y,h,right,back,text,grid,selected);
      int x2=header.ColumnX(i)+header.ColumnWidth(i)-1;
      if(x2>=1 && x2<=right)

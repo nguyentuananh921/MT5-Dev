@@ -46,6 +46,7 @@
    header.TextXOffset(CANDLEINFO_TEXT_X_OFFSET);
    header.ImageXOffset(CANDLEINFO_IMAGE_X_OFFSET);
    m_table_candle_information_atBar.View().IsFilterMode(COL_CI_SOURCE,true);
+   m_table_candle_information_atBar.View().IsFilterMode(COL_CI_TF,true);
    m_table_candle_information_atBar.SetHeaderText(COL_CI_TIME,"Time");
    m_table_candle_information_atBar.SetHeaderText(COL_CI_SOURCE,"");
    m_table_candle_information_atBar.SetHeaderText(COL_CI_TF,"TF");
@@ -123,9 +124,11 @@
       m_table_candle_information_atBar.DeleteAllRows(false);
       return false;
      }
-   uint source_img[]={IMAGE_RESOURCE_BMP16_INDICATOR_BMP,IMAGE_RESOURCE_BMP16_CANDLE_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG};
+   uint source_img[]={IMAGE_RESOURCE_BMP16_INDICATOR_BMP,IMAGE_RESOURCE_BMP16_CANDLE_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG,
+                      IMAGE_RESOURCE_BMP16_SIGNAL_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_PNG,
+                      IMAGE_RESOURCE_BMP16_CANDLE_PNG};
    uint dir_img[]   ={IMAGE_RESOURCE_BMP16_ARROW_UP_PNG,IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG};
-   string source_name[]={"Indicator","Candle Pattern","Swing","Market Structure"};
+   string source_name[]={"Indicator","Candle Pattern","Swing","Market Structure","Trendline","Zone","Market State","Move","Momentum Candle"};
    m_table_candle_information_atBar.DeleteAllRows(false);
    for(int i=0;i<count;i++)
       m_table_candle_information_atBar.AddRow();

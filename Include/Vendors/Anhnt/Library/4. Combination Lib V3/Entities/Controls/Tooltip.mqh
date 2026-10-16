@@ -36,6 +36,7 @@ class CTooltip : public CGElement
     void              Moving(const int x,const int y)           { this.Move(x,y);      }
     void              ShowTooltip(void);
     void              FadeOutTooltip(void)                      { m_fade_out=(m_alpha>0); }
+    void              HideTooltipNow(void)                      { if(m_alpha>0) { m_alpha=0; m_fade_out=false; this.Hide(); } }   // at once, no fade
     virtual bool      CheckMouseFocus(const int x,const int y)  { m_mouse_focus=false; return(false); }
     virtual void      Draw(const bool chart_redraw);
     virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);

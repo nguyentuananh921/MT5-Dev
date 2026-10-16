@@ -13,7 +13,7 @@
   #ifndef CBASEOBJ_MQH_DECLARATION
   #define CBASEOBJ_MQH_DECLARATION
   //+------------------------------------------------------------------+
-  //| Base object class for all library objects                         |
+  //| Base object class for all library objects                        |
   //+------------------------------------------------------------------+
   class CBaseObj : public CObject
    {

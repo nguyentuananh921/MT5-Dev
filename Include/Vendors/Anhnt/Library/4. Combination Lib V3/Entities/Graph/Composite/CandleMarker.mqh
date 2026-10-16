@@ -18,7 +18,9 @@
   {
    CANDLE_MARKER_SOURCE_INDICATOR = 1,   // Indicator signal
    CANDLE_MARKER_SOURCE_CANDLE    = 2,   // Candle pattern
-   CANDLE_MARKER_SOURCE_SMC       = 4    // Smart Money: Swing, BOS, CHoCH
+   CANDLE_MARKER_SOURCE_SMC       = 4,   // Smart Money: Swing, BOS, CHoCH
+   CANDLE_MARKER_SOURCE_STRUCTURE = 8,   // BOS / CHoCH: always together with SMC (the same icon), it only decides the colour
+   CANDLE_MARKER_SOURCE_MOMENTUM  = 16   // Momentum candle (it has the icon of Smart Money until it has its own)
   };
  #define CANDLE_MARKER_GAP        4      // gap between the candles and the badge
  #define CANDLE_MARKER_BADGE_W    20     // badge width: the icon and a frame
@@ -79,6 +81,7 @@
      void                      Show(void);
      void                      Hide(void);
      int                       Sources(void)                  const { return this.m_sources;   }
+     color                     Colour(void)                   const { return this.m_colour;    }
      virtual void              SetCovered(const bool covered)       { this.m_covered=covered;  }
      virtual void              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
      virtual void              Paint(CCanvas *canvas);
@@ -347,7 +350,8 @@
  //--- Index in g_candle_marker_icon of the icon of the marker's source(s)
  int CCandleMarker::IconIndex(void) const
   {
-   int kinds=((this.m_sources&CANDLE_MARKER_SOURCE_INDICATOR)!=0 ? 1 : 0)+((this.m_sources&CANDLE_MARKER_SOURCE_CANDLE)!=0 ? 1 : 0)+((this.m_sources&CANDLE_MARKER_SOURCE_SMC)!=0 ? 1 : 0);
+   int kinds=((this.m_sources&CANDLE_MARKER_SOURCE_INDICATOR)!=0 ? 1 : 0)+((this.m_sources&CANDLE_MARKER_SOURCE_CANDLE)!=0 ? 1 : 0)+
+             (((this.m_sources&(CANDLE_MARKER_SOURCE_SMC|CANDLE_MARKER_SOURCE_MOMENTUM))!=0) ? 1 : 0);   // a momentum candle is counted with Smart Money: one icon for both
    return (kinds>1                                    ? 3 :
            (this.m_sources&CANDLE_MARKER_SOURCE_INDICATOR)!=0 ? 0 :
            (this.m_sources&CANDLE_MARKER_SOURCE_CANDLE)!=0    ? 1 : 2);

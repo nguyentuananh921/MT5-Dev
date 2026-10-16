@@ -34,6 +34,7 @@ class CComboBox : public CButton
     void              SetValue(const int item_index,const string item_text) { m_listview.SetValue(item_index,item_text); }
     string            GetValue(void)                           { return(m_listview.SelectedItemText());  }
     void              SelectItem(const int item_index);
+    void              SetText(const string text)               { m_button.SetText(text); m_button.Draw(true); }
     void              ChangeComboBoxListState(void);
     virtual void      Show(void);
     virtual void      Hide(void);

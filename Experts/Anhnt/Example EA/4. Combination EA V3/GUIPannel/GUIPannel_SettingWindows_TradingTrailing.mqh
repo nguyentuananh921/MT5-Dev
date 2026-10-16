@@ -233,7 +233,7 @@
                           row_setting.TrailingIndTF()   == tfs[row] &&
                           IsEqualMqlParamArrays(saved_params, ind_params));
        m_table_indicators_trailingsetting.CellView(3, row).CellType(CELL_CHECKBOX);
-       m_table_indicators_trailingsetting.SetValue(3, row, (long)(is_current ? CANV_ELEMENT_CHEK_STATE_CHECKED : CANV_ELEMENT_CHEK_STATE_UNCHECKED));
+       m_table_indicators_trailingsetting.SetValue(3, row, (long)(is_current ? CANV_ELEMENT_CHECK_STATE_CHECKED : CANV_ELEMENT_CHECK_STATE_UNCHECKED));
       }
     }
    for(int row = 0; row < count; row++)
@@ -259,7 +259,7 @@
    if(!commit)
     {
      for(int r = 0; r < (int)m_table_indicators_trailingsetting.Model().RowsTotal(); r++)
-        m_table_indicators_trailingsetting.SetValue(3, r, (long)(r == row ? CANV_ELEMENT_CHEK_STATE_CHECKED : CANV_ELEMENT_CHEK_STATE_UNCHECKED));
+        m_table_indicators_trailingsetting.SetValue(3, r, (long)(r == row ? CANV_ELEMENT_CHECK_STATE_CHECKED : CANV_ELEMENT_CHECK_STATE_UNCHECKED));
      m_table_indicators_trailingsetting.Update(false);
      ::ChartRedraw(m_ChartObj.GetChartID());
      return;

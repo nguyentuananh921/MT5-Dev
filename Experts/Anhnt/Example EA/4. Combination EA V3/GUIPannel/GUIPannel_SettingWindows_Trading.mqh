@@ -152,7 +152,7 @@
       if(row_setting == NULL) return;
       //--- the Indicator picked in the table is a draft too: it goes in with Offset/Start/Step
       for(int r = 0; r < (int)m_table_indicators_trailingsetting.Model().RowsTotal(); r++)
-         if(m_table_indicators_trailingsetting.Cell(3, r).ValueL() == CANV_ELEMENT_CHEK_STATE_CHECKED)
+         if(m_table_indicators_trailingsetting.Cell(3, r).ValueL() == CANV_ELEMENT_CHECK_STATE_CHECKED)
           {
            OnCheckTable_IndicatorsTrailingSetting(r, true);
            break;

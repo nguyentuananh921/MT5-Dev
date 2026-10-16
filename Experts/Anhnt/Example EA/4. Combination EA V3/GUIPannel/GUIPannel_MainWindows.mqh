@@ -33,9 +33,8 @@
  bool CGUIPannel::CreateStatusBar(const int x_gap,const int y_gap)
   {
    //--- Specify the number of parts and set their properties
-   int width[STATUS_LABELS_TOTAL]={0,215,130,155};
    for(int i=0;i<STATUS_LABELS_TOTAL;i++)
-      m_status_bar.AddItem("",width[i]);
+      m_status_bar.AddItem("",STATUS_BAR_WIDTH[i]);
    //--- Create a control element (follows the window's right and bottom edges)
    m_window_main.AddChild(&m_status_bar);
    if(!m_status_bar.CreateStatusBar(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"StatusBar",x_gap,y_gap,M_WINDOW_MAIN_WIDTH-2))
@@ -137,11 +136,10 @@ bool CGUIPannel::UpdateStatusBar(void)
    help_item.IconFile(IMAGE_RESOURCE_BMP16_HELP_DARK_BMP);
    help_item.LabelXGap(22);
    help_item.Draw(false);
-   //--- Dropdown for "Settings": Indicator / Trading / Alert - child of the item that opens it
+   //--- Dropdown for "Settings": TimeSeries / Trading - child of the item that opens it
    m_contextmenu_settings.FixSide(FIX_BOTTOM);
    m_contextmenu_settings.AddItem("TimeSeries",IMAGE_RESOURCE_BMP16_INDICATOR_ON_PNG,IMAGE_RESOURCE_BMP16_INDICATOR_OFF_PNG,MI_SIMPLE);
    m_contextmenu_settings.AddItem("Trading",IMAGE_RESOURCE_BMP16_TRADE_ON_PNG,IMAGE_RESOURCE_BMP16_TRADING_OFF_PNG,MI_SIMPLE);
-   m_contextmenu_settings.AddItem("Alert",IMAGE_RESOURCE_BMP16_ALERT_ON_PNG,IMAGE_RESOURCE_BMP16_ALERT_OFF_PNG,MI_SIMPLE);
    settings_item.AddChild(&m_contextmenu_settings);
    if(!m_contextmenu_settings.CreateContextMenu(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"ContextMenuSettings",120))
       return(false);
@@ -150,7 +148,7 @@ bool CGUIPannel::UpdateStatusBar(void)
  // For Main Tabs m_tabs_main on the right of Main Window m_window_main
  bool CGUIPannel::CreateTab_Main(const int x_gap,const int y_gap)
   {
-   string tabs_names[TAB_TAB_MAIN_TOTAL]={"Account infor","Symbol Info","Trading","History"};
+   string tabs_names[TAB_TAB_MAIN_TOTAL]={"Account infor","Symbol Info","Trading","Market Story","History"};   // the order of ENUM_TAB_MAIN
    //--- Properties
    m_tabs_main.PositionMode(TABS_TOP);
    m_tabs_main.AutoXResizeMode(true);
@@ -167,6 +165,80 @@ bool CGUIPannel::UpdateStatusBar(void)
    return(true);
   }
  //+------------------------------------------------------------------+
+ //| "All" (with 0 or 2+ TFs) + the TFs of the chart Symbol. The first |
+ //| call creates the group at x_gap,y_gap (in m_window_main, above    |
+ //| m_tabs_main), every later call builds                             |
+ //| the buttons again when the TFs changed and selects the TF the     |
+ //| chart is on                                                       |
+ //+------------------------------------------------------------------+
+ bool CGUIPannel::BuildTFSwitchButtons(const int x_gap,const int y_gap)
+  {
+   string symbol=::Symbol();
+   string tf_texts[];
+   int tf_count=0;
+   int total=(m_SymbolTFManager!=NULL) ? m_SymbolTFManager.Total() : 0;
+   for(int i=0;i<total;i++)
+     {
+      CSymbolTFSetting *row=m_SymbolTFManager.At(i);
+      if(row==NULL || row.Symbol()!=symbol)
+         continue;
+      ::ArrayResize(tf_texts,tf_count+1);
+      tf_texts[tf_count]=TimeframeDescription(row.TFEnum());
+      tf_count++;
+     }
+   int first_tf_button=(tf_count!=1) ? 1 : 0;
+   bool created=(m_btngroup_tf_switch.ButtonsTotal()>0);
+   bool was_all_selected=(created && m_btngroup_tf_switch.SelectedButtonText()=="All");
+   bool buttons_match=(created && m_btngroup_tf_switch.ButtonsTotal()==tf_count+first_tf_button);
+   if(buttons_match && first_tf_button==1)
+      buttons_match=(m_btngroup_tf_switch.GetButtonPointer(0).Text()=="All");
+   for(int i=0;i<tf_count && buttons_match;i++)
+      buttons_match=(m_btngroup_tf_switch.GetButtonPointer(i+first_tf_button).Text()==tf_texts[i]);
+   if(!buttons_match)
+     {
+      if(created)
+        {
+         ::Print("MY DEBUG CGUIPannel::BuildTFSwitchButtons: the buttons are built again, ",tf_count," TF(s), main window locked=",m_window_main.IsLocked());   //Print Debug
+         m_btngroup_tf_switch.DeleteButtons();
+        }
+      else
+        {
+         m_btngroup_tf_switch.RadioButtonsMode(true);
+         m_btngroup_tf_switch.ButtonYSize(M_CONTROL_HEIGHT);
+        }
+      if(first_tf_button==1)
+         m_btngroup_tf_switch.AddButton(0,0,"All",M_TF_WITHOUT_ICON_WIDTH);
+      for(int i=0;i<tf_count;i++)
+         m_btngroup_tf_switch.AddButton((i+first_tf_button)*(M_TF_WITHOUT_ICON_WIDTH+M_CONTROL_BORDER_GAP),0,tf_texts[i],M_TF_WITHOUT_ICON_WIDTH);
+      if(!created)
+        {
+         m_window_main.AddChild(&m_btngroup_tf_switch);   // of the window, above the tabs: it stays whichever tab is open
+         if(!m_btngroup_tf_switch.CreateButtonsGroup(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TFSwitch",x_gap,y_gap))
+            return false;
+        }
+     }
+   int select_index=WRONG_VALUE;
+   if(was_all_selected && first_tf_button==1)
+      select_index=0;
+   else
+     {
+      string chart_tf=TimeframeDescription((ENUM_TIMEFRAMES)::Period());
+      for(int i=0;i<tf_count;i++)
+         if(tf_texts[i]==chart_tf)
+           {
+            select_index=i+first_tf_button;
+            break;
+           }
+     }
+   if(select_index==WRONG_VALUE && m_btngroup_tf_switch.ButtonsTotal()>0)
+      select_index=0;
+   if(select_index!=WRONG_VALUE && m_btngroup_tf_switch.GetButtonPointer(select_index).Text()!=m_btngroup_tf_switch.SelectedButtonText())
+      m_btngroup_tf_switch.SelectButton(select_index);
+   if(created)
+      SyncTable_PreTradeSymbolMonitor(symbol);
+   return true;
+  }
+ //+------------------------------------------------------------------+
  //| What the user did in the main window                             |
  //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent_Window_Main(const int id,const long &lparam,const double &dparam,const string &sparam)
@@ -178,8 +250,6 @@ bool CGUIPannel::UpdateStatusBar(void)
          this.OpenWindow_SettingTimeSeries();
       else if((int)dparam==MENU_ITEM_SETTINGS_TRADING)
          this.OpenWindow_SettingTrading();
-      else if((int)dparam==MENU_ITEM_SETTINGS_ALERT)
-         this.OpenWindow_SettingMarkerAndSound();
       return;
      }
    //--- "Trading" menu: Stop Lost / Trailling on-off of the New Order Symbol
@@ -205,6 +275,13 @@ bool CGUIPannel::UpdateStatusBar(void)
    if(id==CHARTEVENT_CUSTOM+ON_CLICK_COMBOBOX_ITEM && lparam==m_table_position_pretrade_view.ObjectID())
      {
       OnSymbolToTradeChanged();
+      return;
+     }
+   //--- Python (the Model) finished the answer of a watch, or sent a new State / Phase / leg: the Market Story table shows it
+   if(id==CHARTEVENT_CUSTOM+MARKET_STORY_EVENT_CHANGED)
+     {
+      if(m_gui_created)
+         SyncTable_MarketStory();
       return;
      }
    //--- The TF switch row (All / M1 / M5 ...)
@@ -243,15 +320,10 @@ bool CGUIPannel::UpdateStatusBar(void)
          OnClickTogglePretradeTrailType();
       return;
      }
-   //--- The Buy / Sell button and the "Use RPT %" checkbox
+   //--- The Buy / Sell button
    if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON && lparam==m_btn_send_toTrade.ObjectID())
      {
       OnClickSendNewOrder();
-      return;
-     }
-   if(id==CHARTEVENT_CUSTOM+ON_CLICK_CHECKBOX && lparam==m_checkbox_use_RiskPerNewTrade.ObjectID())
-     {
-      OnClickUseRiskPerNewTradeCheckbox();
       return;
      }
    //--- The position table: the stop loss / trailing type icons

@@ -57,8 +57,8 @@
        bool                Delete_SymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf);      
        void                GetLastRemoved(string &out_symbol, ENUM_TIMEFRAMES &out_tf) const;
        void                NotifySettingChanged(const string sym, const ENUM_TIMEFRAMES tf);
-      //--- JSON - reads/builds ONLY the "Symbols_TFs_List" section; the file itself is written by
-      //--- CGUIPannel::SaveAllSettingsToJSON (every Save rewrites the whole file from live values)
+      //--- JSON - reads/builds ONLY the "Symbols_TFs_List" section; Save() writes this key alone (JSONConfig_SaveSection),
+      //--- the Save button of its tab calls it: every manager writes its own key of the file
        bool                LoadSymbolTFSettingFromJSON(const string full_path);
        void                BuildJsonSection(string &out_json)          const;
        bool                Save(void);

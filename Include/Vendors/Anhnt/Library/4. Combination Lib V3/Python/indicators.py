@@ -379,7 +379,8 @@ def mfi(df, p):
     return [talib.MFI(h, l, c, df["tick_volume"].to_numpy(dtype=float), int(p["period"]))], {}
 
 def volumes(df, p):
-    return [volume_of(df, p)], {}
+    volume = volume_of(df, p)
+    return [volume, moving_average(volume, int(p["ma_period"]), p["method"])], {}   # the volume and its moving average (the method of the MA indicator): the EA draws both
 
 def bw_mfi(df, p):
     _, h, l, _c = ohlc(df)
@@ -437,7 +438,7 @@ TEMPLATE_TYPES = {
     "On Balance Volume": ("OBV", ("volume",)),
     "Accumulation/Distribution": ("AD", ("volume",)),
     "Money Flow Index": ("MFI", ("period",)),
-    "Volumes": ("VOLUMES", ("volume",)),
+    "Volumes": ("VOLUMES", ("volume", "ma_period", "method")),
     "Market Facilitation Index": ("BWMFI", ()),
     "Fractals": ("FRACTALS", ()),
 }

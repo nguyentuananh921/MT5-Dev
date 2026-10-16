@@ -16,10 +16,8 @@
       bool                                m_gui_created;                       // false until the GUI is built; survives a chart-change re-init so controls are not created twice
      // Private Pointer variables, every model is owned by the EA
       CSymbolTFManager                   *m_SymbolTFManager;
-      CSmartMoneySetting                 *m_SmartMoneySetting;                 // shared Swing Strength + Wick/Body and the Show/Sound/Message flags
       CIndicatorTemplateManager          *m_IndicatorTemplateManager;
       CPatternManager                    *m_PatternManager;
-      CMarkerSetting                     *m_MarkerSetting;                    // colors and sources of the CCandleMarker badges
       CIndicatorsCollection              *m_IndicatorsCollection;             // the indicators with the state Python reports, the Trading tab shows it
       CSymbolsCollection                 *m_SymbolsCollection;                // the Market Watch symbols: the New Order Symbol list
       CGraphElementsCollection           *m_graph_elements;                    // ZOrder of every canvas element
@@ -29,6 +27,7 @@
       CTradingEngine                     *m_TradingEngine;                     // the distances the Setting Trading window shows
      // For Layer 2 GUI Control Elements implementation in GUIPannel_MainWindows.mqh
       CWindow                             m_window_main;
+      CButtonsGroup                       m_btngroup_tf_switch; 
       CStatusBar                          m_status_bar;
       CMenuBar                            m_menu_bar;
       CContextMenu                        m_contextmenu_settings;
@@ -37,27 +36,16 @@
       CTabs                               m_tabs_main;
      // Setting Window for: Indicator, Symbol/TF and Smart Money (Swing, BOS, CHoCH); the Candle Pattern tab comes later
       CWindow                             m_window_setting_timeseries;
-     // Setting Marker and Sound window (GUIPannel_SettingWindows_Alert.mqh); the Sound tab comes later
-      CWindow                             m_window_setting_markerAndSound;
-       CTabs                              m_tabs_setting_markerAndSound;
-       // --- Marker tab (GUIPannel_SettingWindows_Alert_Marker.mqh) ---
-        CFrame                            m_frame_color;                       // Color for Marker
-        CComboBox                         m_combo_color_buy;
-        CComboBox                         m_combo_color_sell;
-        CComboBox                         m_combo_color_nonrelated;
-        CButton                           m_colorbutton[3];                    // color swatch: Buy, Sell, Non-Related
-        CFrame                            m_frame_marker_source;               // Show Marker
-        CCheckBox                         m_checkbox_show_indicator_markers;
-        CCheckBox                         m_checkbox_show_candle_markers;
-        CCheckBox                         m_checkbox_show_smartMoney_markers;
-        CButton                           m_btn_save_marker_settings;
-     // Trading tab of m_window_main (GUIPannel_MainWindows_TabTrading.mqh)
-      CButtonsGroup                       m_btngroup_tf_switch;                // the chart Symbol's TFs (+ "All" with 2+), filters the monitor
+     // Trading tab of m_window_main (GUIPannel_MainWindows_TabTrading.mqh)                     
       CTable                              m_table_indicator_PreTradeSymbolMonitor;
       CTable                              m_table_position_pretrade_view;
       CTable                              m_table_positions_StoplostAndTrailling;
-      CCheckBox                           m_checkbox_use_RiskPerNewTrade;
-      CTextEdit                           m_edit_RiskPerNewTrade;
+     // Market Story tab of m_window_main (GUIPannel_MainWindows_TabMarketStory.mqh)
+      CTable                              m_table_market_story;
+      CArrayObj                           *m_story_conditions;                 // PythonBridge owns: every change of Market State / Phase
+      CArrayObj                           *m_story_movements;                  // PythonBridge owns: every leg between two Swings
+      CMarketConditionSetting             *m_story_setting;                    // EA owns: the colour of each Market Phase
+      
       CComboBox                           m_combobox_order_type;
       CTextEdit                           m_edit_order_type_value;
       CButton                             m_btn_send_toTrade;
@@ -110,11 +98,6 @@
         CTreeView                         m_treeview_SymbolTF;
         CTable                            m_table_SymbolTFSeting;
         CButton                           m_btn_save_SymbolTF;
-       // --- Smart Money Setting tab (GUIPannel_SettingWindows_TS_Swing.mqh) ---
-        CTable                            m_table_SmartMoneySetting;
-        CButton                           m_btn_save_swing_config;
-        CTextEdit                         m_edit_swing_strength;               // N - spin edit, caption "Strength"
-        CCheckBox                         m_checkbox_swing_wick;               // ticked = Wick, unticked = Body
      //Private Method
      // For GUI implemented in GUIPannel_Lifecycle.mqh
       bool                                CreateGUIPannel(void);
@@ -133,29 +116,20 @@
       void                                OpenWindow_SettingTimeSeries(void);
       void                                OnEvent_Window_SettingTimeSeries(const int id,const long &lparam,const double &dparam,const string &sparam);
       bool                                CreateTab_SettingTimeSeries(const int x_gap,const int y_gap);
-     // For the Setting Marker and Sound window implementation in GUIPannel_SettingWindows_Alert.mqh
-      bool                                CreateWindow_SettingMarkerAndSound(const string caption_text,const int x_gap,const int y_gap);
-      void                                OpenWindow_SettingMarkerAndSound(void);
-      bool                                CreateTab_SettingMarkerAndSound(const int x_gap,const int y_gap);
-      void                                OnEvent_Window_SettingMarkerAndSound(const int id,const long &lparam,const double &dparam,const string &sparam);
-     // For the Marker tab implementation in GUIPannel_SettingWindows_Alert_Marker.mqh
-      bool                                CreateTab_SettingConfig_Marker(const int x,const int y);
-      bool                                CreateFrame_MarkerSource(const int x,const int y,const int w,const int h,const int column_x);
-      bool                                CreateCombobox_MarkerSelection(CComboBox &combo,const int x,const int y,const int combo_w,string &labels[],const int selected_index,const int tab_index=ENUM_TAB_SETTING_MARKERANDSOUND_MARKER);
-      bool                                CreateCheckBox_Setting(CCheckBox &checkbox,const int x,const int y,const bool pressed,const int tab_index,const int width);
-      bool                                CreateColorButton_Preview(const int row,const int x,const int y,const color clr);
-      void                                UpdateColorPreview(const int row,const color clr);
-      void                                ApplyShowToAllSmartMoney(const bool on);
-      void                                SyncMarkerSourceCheckBoxes(void);
-      void                                OnEvent_Tab_Marker(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the Trading tab implementation in GUIPannel_MainWindows_TabTrading.mqh
       bool                                BuildTFSwitchButtons(const int x_gap=0,const int y_gap=0);
       ENUM_TIMEFRAMES                     GetTFSwitchSelection(void)  { return TimestampByDescription(m_btngroup_tf_switch.SelectedButtonText()); }   // "All" = PERIOD_CURRENT
       bool                                CreateTable_PreTradeSymbolMonitor(const int x,const int y);
+     // For the Market Story tab implementation in GUIPannel_MainWindows_TabMarketStory.mqh
+      bool                                CreateTable_MarketStory(const int x,const int y);
+      bool                                SyncTable_MarketStory(void);
+      void                                FillRow_MarketStory(const int row,const string tf,const ENUM_MARKET_STATE state,const string phase,const ENUM_MARKET_PHASE phase_value,
+                                                              const string move,const bool images);
+      void                                HighlightTable_MarketStory(void);
+      string                              MarketPhaseText(const ENUM_MARKET_PHASE phase) const;
       bool                                SyncTable_PreTradeSymbolMonitor(const string symbol,bool force=false);
       bool                                CreateTradingForm(const int x_gap,const int y_gap);
       void                                UpdateSendButtonAppearance(void);
-      void                                OnClickUseRiskPerNewTradeCheckbox(void);
       void                                OnClickSendNewOrder(void);
       bool                                CreateTable_PositionPretradeView(const int x,const int y);
       bool                                SyncComboBox_NewOrderSymbol(void);
@@ -235,13 +209,6 @@
       void                                DeleteRow_SymbolTFSetting(const string sym,const string tf_text);
       void                                OnCheckTableSymbolTFSetting(const string sym,const string tf_text,const int col,const bool on);
       void                                OnEvent_Tab_SymbolTF(const int id,const long &lparam,const double &dparam,const string &sparam);
-     // For Smart Money Setting implementation in GUIPannel_SettingWindows_TS_Swing.mqh
-      bool                                CreateTable_SmartMoneySetting(const int x,const int y);
-      void                                InitializeTable_SmartMoneySetting(void);
-      void                                OnCheckTableSmartMoneySetting(const int row,const int col,const bool on);
-      bool                                CreateSwingParamControls(const int x,const int y);
-      void                                OnChangeSwingParams(void);
-      void                                OnEvent_Tab_SmartMoney(const int id,const long &lparam,const double &dparam,const string &sparam);
     public:
      // Lifecycle methods implemented in GUIPannel_Lifecycle.mqh
                                           CGUIPannel(void);
@@ -259,12 +226,12 @@
       void                                ShowWindow_CandleInfo(const int cursor_x,const int cursor_y,const datetime bar_time,const bool by_marker);
      // For Pointer
       void                                SetSymbolTFManager(CSymbolTFManager *manager)               { m_SymbolTFManager=manager;      }
-      void                                SetSmartMoneySetting(CSmartMoneySetting *setting)           { m_SmartMoneySetting=setting;    }
       void                                SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_IndicatorTemplateManager=manager; }
       void                                SetPatternManager(CPatternManager *manager)                  { m_PatternManager=manager;      }
-      void                                SetMarkerSetting(CMarkerSetting *setting)                    { m_MarkerSetting=setting;       }
       void                                SetIndicatorsCollection(CIndicatorsCollection *collection)   { m_IndicatorsCollection=collection; }
       void                                SetSymbolsCollection(CSymbolsCollection *collection)        { m_SymbolsCollection=collection; }
+      void                                SetMarketStory(CArrayObj *conditions,CArrayObj *movements,CMarketConditionSetting *setting)
+                                                                                                      { m_story_conditions=conditions; m_story_movements=movements; m_story_setting=setting; }
       void                                SetChartObj(CChartObj *chart)                               { m_ChartObj=chart;               }
       void                                SetGraphElementsCollection(CGraphElementsCollection *coll)  { m_graph_elements=coll;          }
       void                                SetTradingSetupManager(CTradingSetupSettingManager *manager) { m_TradingSetupManager=manager; }
@@ -275,14 +242,12 @@
  #include "GUIPannel_Lifecycle.mqh"                    //Implementation of Init, Deinit and other lifecycle events
  #include "GUIPannel_MainWindows.mqh"                  //Implementation of Main Window m_window_main
   #include "GUIPannel_MainWindows_TabTrading.mqh"
+  #include "GUIPannel_MainWindows_TabMarketStory.mqh"
  #include "GUIPannel_SettingWindows_TimeSeries.mqh"    //Implementation of the Setting Time Series window
   #include "GUIPannel_SettingWindows_TS_Indicator.mqh"
   #include "GUIPannel_SettingWindows_TS_IndicatorAddForm.mqh"
   #include "GUIPannel_SettingWindows_TS_SymbolTF.mqh"
   #include "GUIPannel_SettingWindows_TS_CandlePattern.mqh"
-  #include "GUIPannel_SettingWindows_TS_Swing.mqh"
- #include "GUIPannel_SettingWindows_Alert.mqh"                   //Implementation of the Setting Marker and Sound window
-  #include "GUIPannel_SettingWindows_Alert_Marker.mqh"
  #include "GUIPannel_SettingWindows_Trading.mqh"                 //Implementation of the Setting Trading window
   #include "GUIPannel_SettingWindows_TradingStopLost.mqh"
   #include "GUIPannel_SettingWindows_TradingTrailing.mqh"

@@ -16,7 +16,7 @@
 #property indicator_plots   0
 
 //--- Architectural Inclusion
-#include <SmartTrendline2\TrendlineManager.mqh>
+#include "SmartTrendline2\TrendlineManager.mqh"
 
 //+------------------------------------------------------------------+
 //| Input Parameters                                                 |

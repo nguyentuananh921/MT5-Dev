@@ -8,30 +8,48 @@
    g_ea_init_done = false;
    m_SymbolsCollection.OnInitEvent();
    m_SymbolTFManager.OnInitEvent();
-   m_SmartMoneySetting.OnInitEvent();
    if(m_ChartObj != NULL)
       delete m_ChartObj;
    m_ChartObj = new CChartObj(::ChartID());
    m_IndicatorTemplateManager.OnInitEvent(m_ChartObj);
    m_PatternManager.OnInitEvent();
-   m_MarkerSetting.OnInitEvent();
    m_TradingSetupManager.OnInitEvent();
    m_TradingEngine.SetSymbolsCollection(&m_SymbolsCollection);
    m_TradingEngine.SetIndicatorsCollection(&m_IndicatorsCollection);
    m_TradingEngine.SetMarketCollection(&m_MarketCollection);
    m_TradingEngine.SetTradingSetupManager(&m_TradingSetupManager);
    g_GraphElementsCollection.OnInit();
-   m_SmartMoneySync.OnInitEvent(&g_GraphElementsCollection, &m_SmartMoneySetting, &m_MarkerSetting, &m_IndicatorTemplateManager, &m_PatternManager, m_PythonBridge.Swings(), m_PythonBridge.Structures(), m_PythonBridge.Signals(), m_PythonBridge.Patterns());
-   m_PythonBridge.OnInitEvent(&m_SymbolTFManager, &m_SmartMoneySetting, &m_IndicatorTemplateManager, &m_PatternManager, &m_SmartMoneySync, &m_IndicatorsCollection);
+   m_SmartMoneySync.OnInitEvent(&g_GraphElementsCollection, &m_SwingSetting, &m_StructureSetting, &m_IndicatorTemplateManager, &m_PatternManager, m_PythonBridge.Swings(), m_PythonBridge.Structures(), m_PythonBridge.Signals(), m_PythonBridge.Patterns());
+   m_PythonBridge.OnInitEvent(&m_SymbolTFManager, &m_SwingSetting, &m_TrendlineSetting, &m_SupportResistanceSetting, &m_MarketConditionSetting, &m_IndicatorTemplateManager, &m_PatternManager, &m_SmartMoneySync, &m_IndicatorsCollection);
+   m_LifecycleSync.OnInitEvent(&g_GraphElementsCollection, &m_LifecycleCollection);
+   m_PythonBridge.SetLifecycle(&m_LifecycleCollection, &m_LifecycleSync);
+   m_PythonBridge.SetMomentumCandleSetting(&m_MomentumCandleSetting);
+   m_SmartMoneySync.SetMomentumCandleSetting(&m_MomentumCandleSetting);
+   m_LifecycleSync.SetSmartMoney(&m_SmartMoneySync);
+   m_PythonBridge.SetSymbolsCollection(&m_SymbolsCollection);
+   m_SmartMoneySync.SetMovements(m_PythonBridge.Movements());
+   m_SmartMoneySync.SetMarketConditionSetting(&m_MarketConditionSetting);
+   m_LifecycleSync.SetView(LIFECYCLE_OBJECT_TRENDLINE, m_TrendlineSetting.ShowSupport(), m_TrendlineSetting.ShowResistance(), m_TrendlineSetting.ShowDead(), m_TrendlineSetting.MaxDead(), m_TrendlineSetting.Nearest());
+   m_LifecycleSync.SetView(LIFECYCLE_OBJECT_ZONE, m_SupportResistanceSetting.ShowSupport(), m_SupportResistanceSetting.ShowResistance(), m_SupportResistanceSetting.ShowDead(), m_SupportResistanceSetting.MaxDead());
+   m_LifecycleSync.SetColors(LIFECYCLE_OBJECT_TRENDLINE, m_TrendlineSetting.SupportColor(), m_TrendlineSetting.ResistanceColor(), m_TrendlineSetting.DeadColor());
+   m_LifecycleSync.SetColors(LIFECYCLE_OBJECT_ZONE, m_SupportResistanceSetting.SupportColor(), m_SupportResistanceSetting.ResistanceColor(), m_SupportResistanceSetting.DeadColor());
+   m_LifecycleSync.SetView(LIFECYCLE_OBJECT_SUPPLYDEMAND, m_SupplyDemandSetting.ShowDemand(), m_SupplyDemandSetting.ShowSupply(), m_SupplyDemandSetting.ShowDead(), m_SupplyDemandSetting.MaxDead());
+   m_LifecycleSync.SetColors(LIFECYCLE_OBJECT_SUPPLYDEMAND, m_SupplyDemandSetting.DemandColor(), m_SupplyDemandSetting.SupplyColor(), m_SupplyDemandSetting.DeadColor());
+   m_LifecycleSync.SetView(LIFECYCLE_OBJECT_FVG, m_FvgSetting.ShowBullish(), m_FvgSetting.ShowBearish(), m_FvgSetting.ShowDead(), m_FvgSetting.MaxDead());
+   m_LifecycleSync.SetOpenNewest(LIFECYCLE_OBJECT_ZONE, m_SupportResistanceSetting.OpenNewestSupport(), m_SupportResistanceSetting.OpenNewestResistance());
+   m_LifecycleSync.SetOpenNewest(LIFECYCLE_OBJECT_SUPPLYDEMAND, m_SupplyDemandSetting.OpenNewestDemand(), m_SupplyDemandSetting.OpenNewestSupply());
+   m_LifecycleSync.SetOpenNewest(LIFECYCLE_OBJECT_FVG, m_FvgSetting.OpenNewestBullish(), m_FvgSetting.OpenNewestBearish());
+   m_LifecycleSync.SetColors(LIFECYCLE_OBJECT_FVG, m_FvgSetting.BullishColor(), m_FvgSetting.BearishColor(), m_FvgSetting.DeadColor());
+   m_LifecycleSync.SetView(LIFECYCLE_OBJECT_MOMENTUM, m_MomentumCandleSetting.Show(), m_MomentumCandleSetting.Show(), true, 0);
    m_PythonBridge.Start();
+   m_TradeHistorySync.OnInitEvent(&m_PythonBridge);
    m_GUIPannel.SetSymbolTFManager(&m_SymbolTFManager);
-   m_GUIPannel.SetSmartMoneySetting(&m_SmartMoneySetting);
    m_GUIPannel.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
    m_GUIPannel.SetPatternManager(&m_PatternManager);
    m_GUIPannel.SetIndicatorsCollection(&m_IndicatorsCollection);
    m_GUIPannel.SetSymbolsCollection(&m_SymbolsCollection);
+   m_GUIPannel.SetMarketStory(m_PythonBridge.Conditions(), m_PythonBridge.Movements(), &m_MarketConditionSetting);
    m_GUIPannel.SetChartObj(m_ChartObj);
-   m_GUIPannel.SetMarkerSetting(&m_MarkerSetting);
    m_GUIPannel.SetTradingSetupManager(&m_TradingSetupManager);
    m_GUIPannel.SetMarketCollection(&m_MarketCollection);
    m_GUIPannel.SetTradingEngine(&m_TradingEngine);
@@ -57,6 +75,7 @@
    ulong d1 = ::GetMicrosecondCount();   //Print Debug
    int children = g_GraphElementsCollection.ChildrenTotal();   //Print Debug
    m_SmartMoneySync.DeleteMarkers();
+   m_LifecycleSync.DeleteAll();
    CMessage::ToFile(::MQLInfoString(MQL_PROGRAM_NAME), "EA", "OnDeinit", "MY DEBUG reason " + (string)reason + ", GUI+Python " + (string)((d1 - d0) / 1000) + " ms, DeleteMarkers " + (string)((::GetMicrosecondCount() - d1) / 1000) + " ms, children before " + (string)children);   //Print Debug
   }
 
@@ -64,6 +83,7 @@
  void RefreshMarket(void)
   {
    m_MarketCollection.Refresh();
+   m_TradeHistorySync.OnMarketChanges(m_MarketCollection.GetListChanges());   // told to Python before it is forgotten
    m_MarketCollection.GetListChanges().Clear();
   }
 
@@ -74,9 +94,10 @@
    m_GUIPannel.OnTickEvent();
   }
 
- void OnTrade(void)
+  void OnTrade(void)
   {
    RefreshMarket();
+   m_TradeHistorySync.OnTradeEvent();
   }
 
   ulong g_dbg_mouse_n = 0, g_dbg_mouse_coll = 0, g_dbg_mouse_gui = 0, g_dbg_mouse_max = 0;   //Print Debug
@@ -163,9 +184,14 @@
   {
    ulong d0 = ::GetMicrosecondCount();   //Print Debug
    g_GraphElementsCollection.OnChartEvent(id, lparam, dparam, sparam);
+   m_LifecycleSync.OnChartEvent(id, lparam, dparam, sparam);
+   m_TradeHistorySync.OnChartEvent(id, lparam, dparam, sparam);
    ulong d1 = ::GetMicrosecondCount();   //Print Debug
    if(id == CHARTEVENT_CHART_CHANGE)
+     {
       CCandleMarker::Arrange(&g_GraphElementsCollection);
+      CZoneTagBox::Arrange(&g_GraphElementsCollection);   // scroll, zoom, resize: the tags follow their zones
+     }
    //--- The chart side of the Indicator tab: an indicator added, changed or removed by hand
    m_IndicatorTemplateManager.OnChartEvent(id, lparam, dparam, sparam, m_ChartObj);
    //--- A new row, or its Show flag: the indicator is attached to / detached from the chart
@@ -205,14 +231,14 @@
       m_ChartObj.RemoveIndicatorFromChart(type, params);
       ::ChartRedraw();
      }
-   //--- What Python calculates depends on the tracked pairs and on the Swing setting: tell it again
+   //--- What Python calculates depends on the tracked pairs and the indicator templates: tell it again
    if(id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_ADDED || id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_DELETE ||
-      id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED || id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE ||
-      id == CHARTEVENT_CUSTOM + GUIPANNEL_EVENT_SMARTMONEY_SETTING_CHANGED)
+      id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED || id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
       m_PythonBridge.Reconfigure();
-   //--- Marker colors saved, or the Buy / Sell flag of an indicator or a candle pattern changed: every marker is drawn again
-   if(id == CHARTEVENT_CUSTOM + GUIPANNEL_EVENT_MARKER_SETTING_CHANGED || id == CHARTEVENT_CUSTOM + PATTERN_MANAGER_EVENT_BUYSELL_CHANGED ||
-      id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED)
+   //--- The Buy / Sell flag of an indicator or a candle pattern changed: every marker is drawn again
+   //--- (not while the answer of Python is still arriving: its end draws them, once)
+   if((id == CHARTEVENT_CUSTOM + PATTERN_MANAGER_EVENT_BUYSELL_CHANGED ||
+       id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED) && m_PythonBridge.WatchDone())
      {
       m_SmartMoneySync.DeleteMarkers();
       m_SmartMoneySync.Sync();

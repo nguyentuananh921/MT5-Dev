@@ -122,6 +122,8 @@
       CWndInd          *GetIndicator(const int win_num,const int ind_index);      
     //--- (1) Check, (2) attach and (3) detach an indicator of the chart by its type and parameters
       bool              IsIndicatorShownOnChart(const ENUM_INDICATOR type,MqlParam &params[]);
+   //--- The parameters of the indicator the chart holds: Volumes keeps only its Applied Volume (its MA period is for the average drawn with it)
+      void              ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[]);
       void              ShowIndicatorOnChart(const ENUM_INDICATOR type,MqlParam &params[]);
       void              RemoveIndicatorFromChart(const ENUM_INDICATOR type,MqlParam &params[]);
     //--- Return the flag of the object supporting this property
@@ -2747,11 +2749,24 @@
    ::ChartRedraw(this.ID());
   }
 //+------------------------------------------------------------------+
+//| The parameters the chart indicator is made with: Volumes keeps   |
+//| only its Applied Volume (the MA period is for the average)       |
+//+------------------------------------------------------------------+
+void CChartObj::ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[])
+  {
+   int count=(type==IND_VOLUMES ? ::MathMin(1,::ArraySize(params)) : ::ArraySize(params));
+   ::ArrayResize(out,count);
+   for(int i=0;i<count;i++)
+      out[i]=params[i];
+  }
+//+------------------------------------------------------------------+
 //| The identity is read from the chart itself (CWndInd), not from   |
 //| the list: no event is sent and nothing is stale                  |
 //+------------------------------------------------------------------+
 bool CChartObj::IsIndicatorShownOnChart(const ENUM_INDICATOR type,MqlParam &params[])
   {
+   MqlParam wanted[];
+   this.ChartParams(type,params,wanted);
    int windows=(int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL);
    for(int win=0;win<windows;win++)
      {
@@ -2761,7 +2776,7 @@ bool CChartObj::IsIndicatorShownOnChart(const ENUM_INDICATOR type,MqlParam &para
          CWndInd ind(this.m_chart_id,win,k);
          ENUM_INDICATOR line_type;
          MqlParam line_params[];
-         if(ind.GetIdentity(line_type,line_params) && line_type==type && IsEqualMqlParamArrays(line_params,params))
+         if(ind.GetIdentity(line_type,line_params) && line_type==type && IsEqualMqlParamArrays(line_params,wanted))
             return true;
         }
      }
@@ -2773,17 +2788,28 @@ bool CChartObj::IsIndicatorShownOnChart(const ENUM_INDICATOR type,MqlParam &para
 //+------------------------------------------------------------------+
 void CChartObj::ShowIndicatorOnChart(const ENUM_INDICATOR type,MqlParam &params[])
   {
-   int handle=::IndicatorCreate(this.Symbol(),this.Timeframe(),type,::ArraySize(params),params);
+   MqlParam chart_params[];
+   this.ChartParams(type,params,chart_params);
+   int handle=::IndicatorCreate(this.Symbol(),this.Timeframe(),type,::ArraySize(chart_params),chart_params);
    if(handle==INVALID_HANDLE)
       return;
    int sub_window=(GetIndicatorGroupForType(type)==INDICATOR_GROUP_TREND ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
    ::ChartIndicatorAdd(this.m_chart_id,sub_window,handle);
+   //--- Volumes comes with its moving average: it takes the data of the volumes and goes to the same window
+   if(type==IND_VOLUMES && ::ArraySize(params)>2)
+     {
+      int average=::iMA(this.Symbol(),this.Timeframe(),(int)params[1].integer_value,0,(ENUM_MA_METHOD)params[2].integer_value,handle);
+      if(average!=INVALID_HANDLE)
+         ::ChartIndicatorAdd(this.m_chart_id,sub_window,average);
+     }
   }
 //+------------------------------------------------------------------+
 //| Detach the first indicator with this type and parameters         |
 //+------------------------------------------------------------------+
 void CChartObj::RemoveIndicatorFromChart(const ENUM_INDICATOR type,MqlParam &params[])
   {
+   MqlParam wanted[];
+   this.ChartParams(type,params,wanted);
    int windows=(int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL);
    for(int win=0;win<windows;win++)
      {
@@ -2793,8 +2819,16 @@ void CChartObj::RemoveIndicatorFromChart(const ENUM_INDICATOR type,MqlParam &par
          CWndInd ind(this.m_chart_id,win,k);
          ENUM_INDICATOR line_type;
          MqlParam line_params[];
-         if(ind.GetIdentity(line_type,line_params) && line_type==type && IsEqualMqlParamArrays(line_params,params))
+         if(ind.GetIdentity(line_type,line_params) && line_type==type && IsEqualMqlParamArrays(line_params,wanted))
            {
+            //--- the moving average of the volumes goes first: it lives in the same window, after the volumes
+            if(type==IND_VOLUMES)
+               for(int a=::ChartIndicatorsTotal(this.m_chart_id,win)-1;a>k;a--)
+                 {
+                  string average_name=::ChartIndicatorName(this.m_chart_id,win,a);
+                  if(::StringFind(average_name,"MA(")==0)
+                     ::ChartIndicatorDelete(this.m_chart_id,win,average_name);
+                 }
             ::ChartIndicatorDelete(this.m_chart_id,win,ind.Name());
             return;
            }

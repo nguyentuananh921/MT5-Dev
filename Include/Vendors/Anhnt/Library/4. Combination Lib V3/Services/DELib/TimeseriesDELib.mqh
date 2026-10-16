@@ -408,7 +408,9 @@ string TimeframeDescription(const ENUM_TIMEFRAMES timeframe)
          return 1;
        case IND_VOLUMES:
          E(0,"Applied Volume","0",VOLUME_CHOICES)
-         return 1;
+         I(1,"MA period",TYPE_INT,"20")   // the moving average drawn with it, and the signal is the volume against it
+         E(2,"MA method","0",CALCULATION_METHOD_CHOICES)
+         return 3;
        case IND_BWMFI:
          return 0;
 

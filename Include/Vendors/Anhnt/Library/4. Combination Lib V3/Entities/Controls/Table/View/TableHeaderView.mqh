@@ -34,10 +34,20 @@ class CTableHeaderView : public CGBaseObj
     bool              m_filter_enabled[];
     bool              m_filter_active[];
     bool              m_resizable[];
+    bool              m_shown[];    // a hidden column takes no room: its data stays in the model
+    int               m_order[];    // display position -> column of the model
   public:
     void              Bind(CTableHeader *header)                 { this.m_header=header;    }
     void              ColumnsInit(const int total);
     int               ColumnsTotal(void)                   const { return(::ArraySize(this.m_width)); }
+    bool              ColumnShown(const int column)        const { return(column>=0 && column<this.ColumnsTotal() ? this.m_shown[column] : false); }
+    void              ColumnShown(const int column,const bool flag);
+    int               ColumnOrder(const int position)      const { return(position>=0 && position<this.ColumnsTotal() ? this.m_order[position] : WRONG_VALUE); }
+    int               ColumnPosition(const int column)     const;
+    bool              MoveColumn(const int column,const int delta);   // delta -1 = one place to the left
+    string            ColumnsLayout(void) const;                      // "order|shown", e.g. "2,0,1|1,0,1" (shown by column of the model)
+    bool              ColumnsLayout(const string layout);
+    void              ColumnsReset(void);
     void              DefaultWidth(const int width)              { this.m_default_width=width; }
     void              DefaultTextAlign(const ENUM_ALIGN_MODE align) { this.m_default_text_align=align; }
     void              ColumnsWidth(const int &array[]);
@@ -50,7 +60,7 @@ class CTableHeaderView : public CGBaseObj
     int               ColumnsWidthTotal(void);
     void              ShiftX(const int shift)                    { this.m_shift_x=shift;  }
     int               ShiftX(void)                         const { return(this.m_shift_x); }
-    int               ColumnWidth(const int column)        const { return(this.m_width[column]);          }
+    int               ColumnWidth(const int column)        const { return(this.m_shown[column] ? this.m_width[column] : 0); }
     void              ColumnWidth(const int column,const int width);
     ENUM_ALIGN_MODE   ColumnTextAlign(const int column)    const { return(this.m_header_align[column]);     }
     int               ColumnTextXOffset(const int column)  const { return(this.m_text_x_offset[column]);  }
@@ -102,8 +112,12 @@ void CTableHeaderView::ColumnsInit(const int total)
   ::ArrayResize(this.m_filter_active,total);
   ::ArrayResize(this.m_filter_enabled,total);
   ::ArrayResize(this.m_resizable,total);
+  ::ArrayResize(this.m_shown,total);
+  ::ArrayResize(this.m_order,total);
   for(int i=size; i<total; i++)
     {
+     this.m_shown[i]         =true;
+     this.m_order[i]         =i;
      this.m_filter_active[i] =false;
      this.m_filter_enabled[i]=false;
      this.m_resizable[i]     =this.m_default_resizable;
@@ -177,18 +191,25 @@ void CTableHeaderView::SetHeaderImage(const uint column_index,const uint &resour
 int CTableHeaderView::ColumnX(const int column)
  {
   int x=1-this.m_shift_x;
-  for(int i=0; i<column && i<this.ColumnsTotal(); i++)
-     x+=this.m_width[i];
+  for(int p=0; p<this.ColumnsTotal(); p++)
+    {
+     int i=this.m_order[p];
+     if(i==column)
+        break;
+     if(this.m_shown[i])
+        x+=this.m_width[i];
+    }
   return(x);
  }
 //+------------------------------------------------------------------+
-//|                                                                  |
+//| What the shown columns take                                      |
 //+------------------------------------------------------------------+
 int CTableHeaderView::ColumnsWidthTotal(void)
  {
   int width=0;
   for(int i=0; i<this.ColumnsTotal(); i++)
-     width+=this.m_width[i];
+     if(this.m_shown[i])
+        width+=this.m_width[i];
   return(width);
  }
 //+------------------------------------------------------------------+
@@ -197,8 +218,11 @@ int CTableHeaderView::ColumnsWidthTotal(void)
 int CTableHeaderView::ColumnAt(const int x)
  {
   int left=1-this.m_shift_x;
-  for(int i=0; i<this.ColumnsTotal(); i++)
+  for(int p=0; p<this.ColumnsTotal(); p++)
     {
+     int i=this.m_order[p];
+     if(!this.m_shown[i])
+        continue;
      if(x>=left && x<left+this.m_width[i])
         return(i);
      left+=this.m_width[i];
@@ -211,8 +235,11 @@ int CTableHeaderView::ColumnAt(const int x)
 int CTableHeaderView::ColumnBorderAt(const int x,const int tolerance)
  {
   int right=-this.m_shift_x;
-  for(int i=0; i<this.ColumnsTotal(); i++)
+  for(int p=0; p<this.ColumnsTotal(); p++)
     {
+     int i=this.m_order[p];
+     if(!this.m_shown[i])
+        continue;
      right+=this.m_width[i];
      if(this.m_resizable[i] && ::MathAbs(x-right)<=tolerance)
         return(i);
@@ -271,6 +298,100 @@ int CTableHeaderView::FilterButtonAt(const int x)
   return(x>=this.ColumnX(column)+this.m_width[column]-TABLE_FILTER_BUTTON_WIDTH ? column : WRONG_VALUE);
  }
 //+------------------------------------------------------------------+
+//| Show or hide a column (the last shown column cannot be hidden)   |
+//+------------------------------------------------------------------+
+void CTableHeaderView::ColumnShown(const int column,const bool flag)
+ {
+  if(column<0 || column>=this.ColumnsTotal() || this.m_shown[column]==flag)
+     return;
+  if(!flag)
+    {
+     int shown=0;
+     for(int i=0; i<this.ColumnsTotal(); i++)
+        if(this.m_shown[i])
+           shown++;
+     if(shown<=1)
+        return;
+    }
+  this.m_shown[column]=flag;
+ }
+int CTableHeaderView::ColumnPosition(const int column) const
+ {
+  for(int p=0; p<this.ColumnsTotal(); p++)
+     if(this.m_order[p]==column)
+        return(p);
+  return(WRONG_VALUE);
+ }
+//+------------------------------------------------------------------+
+//| One place left (-1) or right (+1) in the display order          |
+//+------------------------------------------------------------------+
+bool CTableHeaderView::MoveColumn(const int column,const int delta)
+ {
+  int from=this.ColumnPosition(column);
+  int to=from+delta;
+  if(from==WRONG_VALUE || to<0 || to>=this.ColumnsTotal())
+     return(false);
+  int other=this.m_order[to];
+  this.m_order[to]=column;
+  this.m_order[from]=other;
+  return(true);
+ }
+void CTableHeaderView::ColumnsReset(void)
+ {
+  for(int i=0; i<this.ColumnsTotal(); i++)
+    {
+     this.m_order[i]=i;
+     this.m_shown[i]=true;
+    }
+ }
+//+------------------------------------------------------------------+
+//| "2,0,1|1,0,1": the model column of each place, then the shown flag |
+//| of each column of the model                                      |
+//+------------------------------------------------------------------+
+string CTableHeaderView::ColumnsLayout(void) const
+ {
+  string order="",shown="";
+  for(int i=0; i<this.ColumnsTotal(); i++)
+    {
+     order+=(i>0 ? "," : "")+(string)this.m_order[i];
+     shown+=(i>0 ? "," : "")+(this.m_shown[i] ? "1" : "0");
+    }
+  return(order+"|"+shown);
+ }
+//+------------------------------------------------------------------+
+//| A layout that does not fit the columns of the table is refused   |
+//+------------------------------------------------------------------+
+bool CTableHeaderView::ColumnsLayout(const string layout)
+ {
+  string parts[],order[],shown[];
+  int total=this.ColumnsTotal();
+  if(::StringSplit(layout,'|',parts)!=2 || ::StringSplit(parts[0],',',order)!=total || ::StringSplit(parts[1],',',shown)!=total)
+     return(false);
+  bool seen[];
+  ::ArrayResize(seen,total);
+  ::ArrayInitialize(seen,false);
+  int new_order[];
+  ::ArrayResize(new_order,total);
+  int any=0;
+  for(int i=0; i<total; i++)
+    {
+     int column=(int)::StringToInteger(order[i]);
+     if(column<0 || column>=total || seen[column])
+        return(false);
+     seen[column]=true;
+     new_order[i]=column;
+     any+=(shown[i]=="1" ? 1 : 0);
+    }
+  if(any<1)
+     return(false);
+  for(int i=0; i<total; i++)
+    {
+     this.m_order[i]=new_order[i];
+     this.m_shown[i]=(shown[i]=="1");
+    }
+  return(true);
+ }
+//+------------------------------------------------------------------+
 //| Caption strip with the column grid, clipped at right             |
 //+------------------------------------------------------------------+
 void CTableHeaderView::DrawHeader(CCanvas &canvas,const int y,const int h,const int right,const color back,const color back_hover,const color text,const color grid,const color filter_active)
@@ -279,8 +400,11 @@ void CTableHeaderView::DrawHeader(CCanvas &canvas,const int y,const int h,const 
   uint grid_color=::ColorToARGB(grid,255);
   canvas.Line(1,y+h-1,right,y+h-1,grid_color);
   int x=1-this.m_shift_x;
-  for(int i=0; i<this.ColumnsTotal() && x<=right; i++)
+  for(int p=0; p<this.ColumnsTotal() && x<=right; p++)
     {
+     int i=this.m_order[p];
+     if(!this.m_shown[i])
+        continue;
      int w=this.m_width[i];
      if(x+w<=1)
        {
