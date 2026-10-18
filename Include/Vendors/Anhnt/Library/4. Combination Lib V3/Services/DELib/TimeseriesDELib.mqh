@@ -79,6 +79,14 @@ string TimeframeDescription(const ENUM_TIMEFRAMES timeframe)
   {
     return StringSubstr(EnumToString((timeframe>PERIOD_CURRENT ? timeframe : (ENUM_TIMEFRAMES)Period())),7);
   } 
+//+------------------------------------------------------------------+
+//| Return Symbol and timeframe as text: XAUUSD (M1). The chart's    |
+//| own Symbol and timeframe when they are not given                 |
+//+------------------------------------------------------------------+
+string SymbolTFText(const string symbol="",const ENUM_TIMEFRAMES timeframe=PERIOD_CURRENT)
+  {
+    return (symbol=="" ? Symbol() : symbol)+" ("+TimeframeDescription(timeframe)+")";
+  }
 
  struct SIndicatorCatalogItem
   {

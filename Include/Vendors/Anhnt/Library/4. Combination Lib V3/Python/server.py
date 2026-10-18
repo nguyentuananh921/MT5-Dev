@@ -8,7 +8,8 @@ import traceback
 
 from data import TIMEFRAMES
 from patterns import CANDLES, DIRECTIONS
-from trades import TradeStores
+from model import Model
+from tradesync import TradeSync
 
 READ_TIMEOUT = 0.016   # same rhythm as the EA timer
 SEND_TIMEOUT = 30.0    # the EA reads on its timer, a big batch needs far longer than one read slice
@@ -16,6 +17,7 @@ POLL_INTERVAL = 0.2    # seconds between two new-bar checks
 LISTEN_BACKLOG = 5
 OTHER_TF_BARS = 5000   # bars of the TFs that are not the chart's the EA is given with a watch
 COMMON_TFS = ["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN1"]   # loaded first in the background, the other TFs follow
+TRADES_INTERVAL = 0.5  # seconds between two looks at the trades of the terminal
 LIVE_INTERVAL = 0.5    # seconds between two refreshes of the live state of the indicators
 SOURCE_FILES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "*.py")
 
@@ -40,11 +42,24 @@ class Client:
         self.watch_lifecycle = False
         self.watch_conditions = False
         self.watch_movements = False
+        self.tagged = False            # asked for variants: every line it gets carries the variant after its type; one that did not gets the lines as they always were
+        self.variants = [""]          # the ids of the Swing kinds it follows, in the order it asked
+        self.variant_params = {"": (5, True)}   # id -> (strength, use_wick)
+
+
+def variant_id(strength, use_wick):
+    """"3b" = Swing of 3 candles on the body, "5w" = of 5 candles on the wicks."""
+    return f"{int(strength)}{'w' if use_wick else 'b'}"
+
+
+def tag_lines(lines, variant):
+    """swing|XAUUSD|M5|... becomes swing|5w|XAUUSD|M5|...: the variant goes after the type of the line."""
+    return [line.replace("|", "|" + variant + "|", 1) for line in lines] if variant else lines
 
 
 class Server:
     def __init__(self, model, host="127.0.0.1", port=9090):
-        self.model = model
+        self.models = {"": model}   # variant id -> the model that calculates for it; the first one is the one the data that does not depend on the Swing comes from
         self.host = host
         self.port = port
         self.stop = False
@@ -53,7 +68,8 @@ class Server:
         self.last_live = 0.0
         self.restart = False
         self.started_with = source_stamp()
-        self.trade_stores = TradeStores()   # the deals and the orders of each account, in SQLite
+        self.trade_sync = TradeSync()   # the trades of the account, read from the terminal and written to its SQLite file; the EAs only read it
+        self.last_trades = 0.0
 
     def source_changed(self):
         if source_stamp() == self.started_with:
@@ -92,7 +108,8 @@ class Server:
         for client in list(self.clients):
             self.drop(client)
         listener.close()
-        self.model.save_all()   # what the next start reads instead of calculating it
+        for model in self.models.values():
+            model.save_all()   # what the next start reads instead of calculating it
 
     def drop(self, client):
         if client in self.clients:
@@ -121,51 +138,72 @@ class Server:
             if line.strip():
                 self.handle(client, line)
 
+    def primary(self):
+        """The model that data which does not depend on the Swing (signals, patterns, the live state of the indicators) comes from: the first one."""
+        return next(iter(self.models.values()), None)
+
+    def send_new(self, client, variant, key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements):
+        """What one new bar of a pair brings, for one variant, to one client. What does not depend on the Swing is sent with the first variant of the client only."""
+        conn = client.conn
+        tag = variant if client.tagged else ""
+        shared = ("*" if client.tagged else "") if variant == client.variants[0] else None
+        self.send_swings(conn, key, new_swings, tag)
+        if client.watch_structures:
+            self.send_structures(conn, key, new_structures, tag)
+        if client.watch_signals and shared is not None:
+            self.send_signals(conn, key, new_signals, shared)
+        if client.watch_patterns and shared is not None:
+            self.send_patterns(conn, key, new_patterns, shared)
+        if client.watch_lifecycle:
+            self.send_lifecycle(conn, key, new_lifecycle, tag)
+        if client.watch_conditions:
+            self.send_conditions(conn, key, new_conditions, tag)
+        if client.watch_movements:
+            self.send_movements(conn, key, new_movements, tag)
+
     def poll(self):
         now = time.monotonic()
         if now - self.last_poll < POLL_INTERVAL:
             return
         self.last_poll = now
-        if self.source_changed() or not self.clients:
+        if self.source_changed():
             return
-        try:
-            for key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements in self.model.check_new_bars():
-                for client in list(self.clients):
-                    if client.watching is None or key[0] != client.watching[0] or (key != client.watching and key[1] not in client.watch_tfs):
-                        continue   # the EA gets the TFs of the symbol it watches that it shows
-                    try:
-                        conn = client.conn
-                        self.send_swings(conn, key, new_swings)
-                        if client.watch_structures:
-                            self.send_structures(conn, key, new_structures)
-                        if client.watch_signals:
-                            self.send_signals(conn, key, new_signals)
-                        if client.watch_patterns:
-                            self.send_patterns(conn, key, new_patterns)
-                        if client.watch_lifecycle:
-                            self.send_lifecycle(conn, key, new_lifecycle)
-                        if client.watch_conditions:
-                            self.send_conditions(conn, key, new_conditions)
-                        if client.watch_movements:
-                            self.send_movements(conn, key, new_movements)
-                    except OSError:
-                        self.drop(client)
-        except Exception as error:
-            print(f"poll failed: {error}")
-        try:
-            self.model.save_dirty()   # a pair with new bars, written to the disk again (one per round)
-        except Exception as error:
-            print(f"cache not written: {error}")
-        try:
-            loaded = self.model.load_next()   # nobody asked for anything: the next pair that is calculated but not loaded yet
-            if loaded is not None:
-                print(f"loaded {loaded['symbol']} {loaded['tf']}" + (f" ({loaded['error']})" if "error" in loaded else "") + f", {len(self.model.queue)} to go")
-        except Exception as error:
-            print(f"background load failed: {error}")
+        if now - self.last_trades >= TRADES_INTERVAL:   # the trades are kept up to date whether an EA is connected or not
+            self.last_trades = now
+            try:
+                self.trade_sync.poll()
+            except Exception as error:
+                print(f"trade sync failed: {error}")
+        if not self.clients:
+            return
+        for variant, model in list(self.models.items()):
+            try:
+                for key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements in model.check_new_bars():
+                    for client in list(self.clients):
+                        if variant not in client.variants:
+                            continue
+                        if client.watching is None or key[0] != client.watching[0] or (key != client.watching and key[1] not in client.watch_tfs):
+                            continue   # the EA gets the TFs of the symbol it watches that it shows
+                        try:
+                            self.send_new(client, variant, key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements)
+                        except OSError:
+                            self.drop(client)
+            except Exception as error:
+                print(f"poll failed: {error}")
+            try:
+                model.save_dirty()   # a pair with new bars, written to the disk again (one per round)
+            except Exception as error:
+                print(f"cache not written: {error}")
+            try:
+                loaded = model.load_next()   # nobody asked for anything: the next pair that is calculated but not loaded yet
+                if loaded is not None:
+                    print(f"loaded {loaded['symbol']} {loaded['tf']}" + (f" ({loaded['error']})" if "error" in loaded else "") + (f" [{variant}]" if variant else "") + f", {len(model.queue)} to go")
+            except Exception as error:
+                print(f"background load failed: {error}")
         if now - self.last_live >= LIVE_INTERVAL:
             self.last_live = now
             try:
-                self.model.refresh_live()   # nobody asks: the data is kept up to date, whoever needs it asks and gets it at once
+                self.primary().refresh_live()   # nobody asks: the data is kept up to date, whoever needs it asks and gets it at once
             except Exception as error:
                 print(f"live refresh failed: {error}")
 
@@ -184,11 +222,8 @@ class Server:
                 self.init(client, message)
             elif cmd == "watch":
                 self.watch(client, message)
-            elif cmd == "trades":
-                count = self.trade_stores.store(message)   # no answer: the EA sends again whatever it is not sure of, a line is written by its ticket
-                print(f"stored {count} trade line(s) of account {message.get('account')}")
             elif cmd == "pre_trade_symbol_monitor":
-                self.send_pre_trade_symbol_monitor(conn, self.model.pre_trade_symbol_monitor())   # every loaded pair: the EA keeps what its tables need
+                self.send_pre_trade_symbol_monitor(conn, self.primary().pre_trade_symbol_monitor())   # every loaded pair: the EA keeps what its tables need
             else:
                 self.send(conn, {"event": "error", "message": f"unknown cmd {cmd}"})
         except OSError:
@@ -218,27 +253,58 @@ class Server:
             for symbol in symbols:
                 if [symbol, tf] not in union:
                     union.append([symbol, tf])
-        swing = message.get("swing", {})
-        report = self.model.apply_config(union,
-                                         swing.get("strength", 5),
-                                         swing.get("use_wick", True),
-                                         message.get("count", 0),
-                                         on_pair=lambda row: self.send(conn, {"event": "pair", **row}),
-                                         indicators=message.get("indicators", []),
-                                         trendline=message.get("trendline", {}),
-                                         zone=message.get("zone", {}),
-                                         momentum=message.get("momentum", {}),
-                                         market_condition=message.get("condition", {}),
-                                         priority=shown)
+        # The kinds of Swing: an EA that asks for "variants" gets every kind it asked for, each line tagged; one that does not gets the one kind it always had
+        client.variant_params = {}
+        asked = message.get("variants")
+        if asked:
+            client.tagged = True
+            client.variants = []
+            for row in asked:
+                strength, use_wick = int(row.get("strength", 5)), bool(row.get("use_wick", True))
+                vid = variant_id(strength, use_wick)
+                if vid not in client.variants:
+                    client.variants.append(vid)
+                    client.variant_params[vid] = (strength, use_wick)
+        else:
+            swing = message.get("swing", {})
+            client.tagged = False
+            client.variants = [""]
+            client.variant_params[""] = (int(swing.get("strength", 5)), bool(swing.get("use_wick", True)))
+        wanted = {}   # what every connected EA follows: the models are the union of it, and a kind nobody follows any more is dropped
+        for other in self.clients:
+            wanted.update(other.variant_params)
+        for vid in list(self.models):
+            if vid not in wanted:
+                del self.models[vid]
+        for vid in wanted:
+            if vid not in self.models:
+                self.models[vid] = Model(vid)
+        total_ms, pairs, skipped = 0.0, 0, []
+        for vid, (strength, use_wick) in wanted.items():
+            report = self.models[vid].apply_config(union,
+                                                   strength,
+                                                   use_wick,
+                                                   message.get("count", 0),
+                                                   on_pair=lambda row, vid=vid: self.send(conn, {"event": "pair", **({"variant": vid} if client.tagged else {}), **row}),
+                                                   indicators=message.get("indicators", []),
+                                                   trendline=message.get("trendline", {}),
+                                                   zone=message.get("zone", {}),
+                                                   momentum=message.get("momentum", {}),
+                                                   market_condition=message.get("condition", {}),
+                                                   priority=shown)
+            total_ms += report["total_ms"]
+            pairs = max(pairs, len(report["pairs"]))
+            skipped = report["skipped"]
         self.write(conn, ("timeframe_info|" + ";".join(TIMEFRAMES) + "\n").encode("utf-8"))   # every timeframe Python can serve, for any Symbol
-        self.send(conn, {"event": "done", "total_ms": report["total_ms"], "pairs": len(report["pairs"]), "skipped": report["skipped"]})
+        self.send(conn, {"event": "done", "total_ms": round(total_ms, 1), "pairs": pairs, "skipped": skipped, **({"variants": client.variants} if client.tagged else {})})
 
     def watch(self, client, message):
         conn = client.conn
         key = (message["symbol"], message["tf"])
         from_time = int(message.get("from_time", 0))
         signals_from = int(message.get("signals_from", from_time))
-        if self.model.swings_since(key[0], key[1], from_time) is None:
+        models = [(vid, self.models[vid]) for vid in client.variants if vid in self.models]
+        if not models or models[0][1].swings_since(key[0], key[1], from_time) is None:
             self.send(conn, {"event": "error", "message": f"{key[0]} {key[1]} is not loaded"})
             return
         client.watching = key
@@ -250,88 +316,101 @@ class Server:
         client.watch_movements = bool(message.get("movements", False))
         client.watch_tfs = set(message["tfs"]) if "tfs" in message else set(tf for symbol, tf in client.pairs if symbol == key[0])
         reply = {"event": "watch", "symbol": key[0], "tf": key[1]}
-        reply.update(self.send_pair(client, key, from_time, signals_from))
-        # The other TFs of the symbol are sent too: the EA draws the chart's TF only, its candle window lists them all.
-        # Only the bars the chart shows, and at most OTHER_TF_BARS of their own: a small TF under a big chart is not sent whole
-        for other in self.model.keys_of(key[0]):
-            if other != key and other[1] in client.watch_tfs:
-                since = self.model.time_of_bar(other, OTHER_TF_BARS)
-                self.send_pair(client, other, max(from_time, since), max(signals_from, since))
+        for vid, model in models:
+            counts = self.send_pair(client, model, vid, key, from_time, signals_from)
+            if vid == models[0][0]:
+                reply.update(counts)
+            # The other TFs of the symbol are sent too: the EA draws the chart's TF only, its candle window lists them all.
+            # Only the bars the chart shows, and at most OTHER_TF_BARS of their own: a small TF under a big chart is not sent whole
+            for other in model.keys_of(key[0]):
+                if other != key and other[1] in client.watch_tfs:
+                    since = model.time_of_bar(other, OTHER_TF_BARS)
+                    self.send_pair(client, model, vid, other, max(from_time, since), max(signals_from, since))
+        if client.tagged:
+            reply["variants"] = client.variants
         self.send(conn, reply)
 
-    def send_pair(self, client, key, from_time, signals_from):
-        """Send what the client asked for about one pair; returns the counts."""
+    def send_pair(self, client, model, variant, key, from_time, signals_from):
+        """Send what the client asked for about one pair, for one variant; returns the counts."""
         conn = client.conn
-        swings = self.model.swings_since(key[0], key[1], from_time)
-        self.send_swings(conn, key, swings)
+        tag = variant if client.tagged else ""
+        shared = ("*" if client.tagged else "") if variant == client.variants[0] else None   # what does not depend on the Swing is sent once
+        swings = model.swings_since(key[0], key[1], from_time)
+        self.send_swings(conn, key, swings, tag)
         counts = {"items": len(swings)}
         if client.watch_structures:
-            structures = self.model.structures_since(key[0], key[1], from_time)
-            self.send_structures(conn, key, structures)
+            structures = model.structures_since(key[0], key[1], from_time)
+            self.send_structures(conn, key, structures, tag)
             counts["structures"] = len(structures)
-        if client.watch_signals:
-            signals = self.model.signals_since(key[0], key[1], signals_from)
-            self.send_signals(conn, key, signals)
+        if client.watch_signals and shared is not None:
+            signals = model.signals_since(key[0], key[1], signals_from)
+            self.send_signals(conn, key, signals, shared)
             counts["signals"] = len(signals)
-        if client.watch_patterns:
-            patterns = self.model.patterns_since(key[0], key[1], signals_from)
-            self.send_patterns(conn, key, patterns)
+        if client.watch_patterns and shared is not None:
+            patterns = model.patterns_since(key[0], key[1], signals_from)
+            self.send_patterns(conn, key, patterns, shared)
             counts["patterns"] = len(patterns)
         if client.watch_lifecycle:
-            lifecycle = self.model.lifecycle_since(key[0], key[1], signals_from)
-            self.send_lifecycle(conn, key, lifecycle)
+            lifecycle = model.lifecycle_since(key[0], key[1], signals_from)
+            self.send_lifecycle(conn, key, lifecycle, tag)
             counts["lifecycle"] = len(lifecycle)
         if client.watch_conditions:
-            conditions = self.model.conditions_since(key[0], key[1], from_time)
-            self.send_conditions(conn, key, conditions)
+            conditions = model.conditions_since(key[0], key[1], from_time)
+            self.send_conditions(conn, key, conditions, tag)
             counts["conditions"] = len(conditions)
         if client.watch_movements:
-            movements = self.model.movements_since(key[0], key[1], from_time)
-            self.send_movements(conn, key, movements)
+            movements = model.movements_since(key[0], key[1], from_time)
+            self.send_movements(conn, key, movements, tag)
             counts["movements"] = len(movements)
         return counts
 
-    def send_swings(self, conn, key, swings):
+    def send_swings(self, conn, key, swings, tag=""):
         lines = [f"swing|{key[0]}|{key[1]}|{int(r.time)}|{int(r.confirmed_time)}|{r.type}|{float(r.price)!r}|{r.structure}"
                  for r in swings.itertuples()]
+        lines = tag_lines(lines, tag)
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
-        print(f"sent {len(lines)} swing line(s) for {key[0]} {key[1]}")
+        print(f"sent {len(lines)} swing line(s) for {key[0]} {key[1]}" + (f" [{tag}]" if tag else ""))
 
-    def send_structures(self, conn, key, structures):
+    def send_structures(self, conn, key, structures, tag=""):
         lines = [f"structure|{key[0]}|{key[1]}|{int(r.break_time)}|{int(r.swing_time)}|{r.type}|{r.dir}|{float(r.level)!r}|{r.phase}|{int(r.strong_time)}|{float(r.strong_price)!r}"
                  for r in structures.itertuples()]
+        lines = tag_lines(lines, tag)
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
-        print(f"sent {len(lines)} structure line(s) for {key[0]} {key[1]}")
+        print(f"sent {len(lines)} structure line(s) for {key[0]} {key[1]}" + (f" [{tag}]" if tag else ""))
 
-    def send_signals(self, conn, key, signals):
+    def send_signals(self, conn, key, signals, tag=""):
         lines = [f"signal|{key[0]}|{key[1]}|{int(r.time)}|{r.label}|{r.dir}|{int(r.template)}" for r in signals.itertuples()]
+        lines = tag_lines(lines, tag)
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
-        print(f"sent {len(lines)} signal line(s) for {key[0]} {key[1]}")
+        print(f"sent {len(lines)} signal line(s) for {key[0]} {key[1]}" + (f" [{tag}]" if tag else ""))
 
-    def send_lifecycle(self, conn, key, events):
+    def send_lifecycle(self, conn, key, events, tag=""):
         # one line per event; every line carries the two anchors, so a line can be drawn from any of its events. The reason is NONE when there is none
         lines = [f"lifecycle|{key[0]}|{key[1]}|{r.kind}|{int(r.origin_time)}|{int(r.time)}|{r.event}|{r.dir}|{int(r.t1)}|{float(r.p1)!r}|{int(r.t2)}|{float(r.p2)!r}|AUTO|{r.reason or 'NONE'}"
                  for r in events.itertuples()]
+        lines = tag_lines(lines, tag)
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
-        print(f"sent {len(lines)} lifecycle line(s) for {key[0]} {key[1]}")
+        print(f"sent {len(lines)} lifecycle line(s) for {key[0]} {key[1]}" + (f" [{tag}]" if tag else ""))
 
-    def send_conditions(self, conn, key, events):
+    def send_conditions(self, conn, key, events, tag=""):
         lines = [f"condition|{key[0]}|{key[1]}|{int(r.time)}|{r.state}|{r.phase}" for r in events.itertuples()]
+        lines = tag_lines(lines, tag)
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
-        print(f"sent {len(lines)} condition line(s) for {key[0]} {key[1]}")
+        print(f"sent {len(lines)} condition line(s) for {key[0]} {key[1]}" + (f" [{tag}]" if tag else ""))
 
-    def send_movements(self, conn, key, legs):
+    def send_movements(self, conn, key, legs, tag=""):
         # movement|symbol|tf|time|start_time|start_price|end_time|end_price|dir|move|length_atr|bars|retracement|depth
         lines = [f"movement|{key[0]}|{key[1]}|{int(r.time)}|{int(r.start_time)}|{float(r.start_price)!r}|{int(r.end_time)}|{float(r.end_price)!r}|"
                  f"{r.dir}|{r.move}|{float(r.length_atr)!r}|{int(r.bars)}|{float(r.retracement)!r}|{r.depth}" for r in legs.itertuples()]
+        lines = tag_lines(lines, tag)
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
-        print(f"sent {len(lines)} movement line(s) for {key[0]} {key[1]}")
+        print(f"sent {len(lines)} movement line(s) for {key[0]} {key[1]}" + (f" [{tag}]" if tag else ""))
 
     def send_pre_trade_symbol_monitor(self, conn, states):
         lines = [f"pre_trade_symbol_monitor|{key[0]}|{key[1]}|{template}|{float(value)!r}|{float(previous)!r}|{direction}"
@@ -340,9 +419,9 @@ class Server:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
         self.write(conn, (json.dumps({"event": "pre_trade_symbol_monitor", "lines": len(lines)}) + "\n").encode("utf-8"))   # the EA asks again after this one
 
-    def send_patterns(self, conn, key, patterns):
+    def send_patterns(self, conn, key, patterns, tag=""):
         info = "pattern_info|" + ";".join(f"{name}:{candles}:{DIRECTIONS[name]}" for name, candles in CANDLES.items())   # the catalog: every pattern, its candle count and its sides
-        lines = [info] + [f"pattern|{key[0]}|{key[1]}|{int(r.time)}|{r.label}|{r.dir}" for r in patterns.itertuples()]   # Inside Bar comes as BOTH: no marker, only the candle information window shows it
+        lines = [info] + tag_lines([f"pattern|{key[0]}|{key[1]}|{int(r.time)}|{r.label}|{r.dir}" for r in patterns.itertuples()], tag)   # Inside Bar comes as BOTH: no marker, only the candle information window shows it
         if lines:
             self.write(conn, ("\n".join(lines) + "\n").encode("utf-8"))
         print(f"sent {len(lines)} pattern line(s) for {key[0]} {key[1]}")

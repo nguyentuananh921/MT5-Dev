@@ -19,12 +19,11 @@ class CTableHeaderView : public CGBaseObj
     CTableHeader     *m_header;
     int               m_width[];    
     ENUM_ALIGN_MODE   m_header_align[];                  //Align for Header
+    ENUM_ALIGN_MODE   m_content_align[];                 //Align for the content of the cells of the column (a row can say otherwise for itself)
     int               m_text_x_offset[];
     int               m_image_x_offset[];
     CImage            m_header_image[];
-    int               m_default_width;
     bool              m_default_resizable;
-    ENUM_ALIGN_MODE   m_default_text_align;
     int               m_is_sorted_column_index;
     ENUM_CSORT_MODE   m_last_sort_direction;
     int               m_header_index_focus;
@@ -48,11 +47,11 @@ class CTableHeaderView : public CGBaseObj
     string            ColumnsLayout(void) const;                      // "order|shown", e.g. "2,0,1|1,0,1" (shown by column of the model)
     bool              ColumnsLayout(const string layout);
     void              ColumnsReset(void);
-    void              DefaultWidth(const int width)              { this.m_default_width=width; }
-    void              DefaultTextAlign(const ENUM_ALIGN_MODE align) { this.m_default_text_align=align; }
     void              ColumnsWidth(const int &array[]);
     void              TextAlign(const ENUM_ALIGN_MODE &array[]);
     void              TextAlign(const uint column_index,const ENUM_ALIGN_MODE align);
+    void              ContentAlign(const uint column_index,const ENUM_ALIGN_MODE align);
+    ENUM_ALIGN_MODE   ColumnContentAlign(const int column) const { return(this.m_content_align[column]); }
     void              TextXOffset(const int &array[]);
     void              ImageXOffset(const int &array[]);
     void              SetHeaderImage(const uint column_index,const uint &resource_index[]);
@@ -83,12 +82,10 @@ class CTableHeaderView : public CGBaseObj
 #ifndef CTABLEHEADERVIEW_MQH_IMPLEMENTATION
 #define CTABLEHEADERVIEW_MQH_IMPLEMENTATION
 //+------------------------------------------------------------------+
-//| Kazharski defaults: width 100, centered                          |
+//| Kazharski defaults: a column is 100 wide, its caption centered   |
 //+------------------------------------------------------------------+
 CTableHeaderView::CTableHeaderView(void) : m_header(NULL),
-                                           m_default_width(100),
                                            m_default_resizable(false),
-                                           m_default_text_align(ALIGN_CENTER),
                                            m_is_sorted_column_index(WRONG_VALUE),
                                            m_last_sort_direction(SORT_ASCEND),
                                            m_header_index_focus(WRONG_VALUE),
@@ -106,6 +103,7 @@ void CTableHeaderView::ColumnsInit(const int total)
   int size=::ArraySize(this.m_width);
   ::ArrayResize(this.m_width,total);
   ::ArrayResize(this.m_header_align,total);
+  ::ArrayResize(this.m_content_align,total);
   ::ArrayResize(this.m_text_x_offset,total);
   ::ArrayResize(this.m_image_x_offset,total);
   ::ArrayResize(this.m_header_image,total);
@@ -121,8 +119,9 @@ void CTableHeaderView::ColumnsInit(const int total)
      this.m_filter_active[i] =false;
      this.m_filter_enabled[i]=false;
      this.m_resizable[i]     =this.m_default_resizable;
-     this.m_width[i]         =this.m_default_width;
-     this.m_header_align[i]    =this.m_default_text_align;
+     this.m_width[i]         =100;   // a column the EA has not given a width
+     this.m_header_align[i]    =ALIGN_CENTER;   // the caption of a new column is centered
+     this.m_content_align[i]   =ALIGN_LEFT;     // its cells are on the left
      this.m_text_x_offset[i] =5;
      this.m_image_x_offset[i]=3;
     }
@@ -146,6 +145,11 @@ void CTableHeaderView::TextAlign(const ENUM_ALIGN_MODE &array[])
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+void CTableHeaderView::ContentAlign(const uint column_index,const ENUM_ALIGN_MODE align)
+ {
+  if(column_index<(uint)this.ColumnsTotal())
+     this.m_content_align[column_index]=align;
+ }
 void CTableHeaderView::TextAlign(const uint column_index,const ENUM_ALIGN_MODE align)
  {
   if(column_index<(uint)this.ColumnsTotal())

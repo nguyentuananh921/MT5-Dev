@@ -14,6 +14,7 @@
  #define PYTHON_SCRIPT              "\\MQL5\\Include\\Vendors\\Anhnt\\Library\\4. Combination Lib V3\\Python\\main.py"
  #define PYTHON_CONNECT_TIMEOUT_MS  (100)
  #define PYTHON_RETRY_MS            (500)
+ #define SEND_RETRY_MS              (300)     // a message that does not go at once (Python has not read the last one) is sent again for this long at most
  #define PYTHON_WAIT_MS             (20000)
  #define PYTHON_RELAUNCH_BLOCK_MS   (30000)
  #define PYTHON_WINDOW_SHOW         (1)
@@ -62,6 +63,7 @@
      ulong                     m_wait_start_ms;
      ulong                     m_last_try_ms;
      int                       m_connect_error;
+     bool                      m_indicator_state_changed;              // an indicator of this answer reported a value or a signal that is not the same
      bool                      m_pre_trade_monitor_busy;               // an ask for the indicator states is on its way
      ulong                     m_pre_trade_monitor_ms;                 // when it was sent
      bool                      m_watch_done;
@@ -102,9 +104,6 @@
      void                      RequestPreTradeSymbolMonitor(void);
    //--- The tracked pairs or the Swing setting changed: send the configuration and the chart again
      void                      Reconfigure(void);
-   //--- What Python found on one candle of the chart (PythonBridge_CandleInfo.mqh)
-     int                       GetCandleInfo(const datetime bar_time,string &row_label[],string &row_tf[],
-                                             ENUM_SIGNAL_DIR &row_dir[],datetime &row_time[],int &row_source[]);
    //--- quit_python: also tell Python to shut down (EA removed), otherwise it keeps running
      void                      Stop(const bool quit_python);
      CArrayObj                *Swings(void)                  { return &this.m_swings;      }
@@ -118,9 +117,6 @@
      void                      SetSymbolsCollection(CSymbolsCollection *collection) { this.m_SymbolsCollection=collection; }
    //--- true when the answer of the last watch is complete: the markers are drawn from it, once, by Poll
      bool                      WatchDone(void)                  const { return this.m_watch_done;     }
-   //--- For a service that talks to Python on its own (CTradeHistorySync): connected, and one line of JSON (ends with a new line)
-     bool                      IsReady(void)                    const { return this.m_state==PYTHON_STATE_READY; }
-     bool                      SendLine(const string text)            { return this.m_state==PYTHON_STATE_READY && this.Send(text); }
                                CPythonBridge(void);
   };
 //+------------------------------------------------------------------+
@@ -135,6 +131,7 @@ CPythonBridge::CPythonBridge(void) : m_symbol_tf_manager(NULL),
                                      m_SupportResistanceSetting(NULL),
                                      m_MomentumCandleSetting(NULL),
                                      m_MarketConditionSetting(NULL),
+                                     m_indicator_state_changed(false),
                                      m_pre_trade_monitor_busy(false),
                                      m_pre_trade_monitor_ms(0),
                                      m_IndicatorTemplateManager(NULL),
@@ -174,7 +171,25 @@ bool CPythonBridge::Send(const string text)
   {
    uchar data[];
    int len=::StringToCharArray(text,data,0,WHOLE_ARRAY,CP_UTF8)-1;   // drop the terminating zero
-   return ::SocketSend(this.m_socket,data,len)==len;
+   //--- A big message does not go in one call when Python has not read the last one yet: what is left is sent again, for a short time at most
+   int sent=0;
+   ulong start=::GetTickCount64();
+   while(sent<len)
+     {
+      uchar rest[];
+      ::ArrayCopy(rest,data,0,sent,len-sent);
+      int n=::SocketSend(this.m_socket,rest,len-sent);
+      if(n<0)
+         return false;
+      sent+=n;
+      if(sent<len)
+        {
+         if(::GetTickCount64()-start>SEND_RETRY_MS)
+            return false;
+         ::Sleep(1);
+        }
+     }
+   return true;
   }
 //+------------------------------------------------------------------+
 string CPythonBridge::BuildInit(void)
@@ -304,6 +319,8 @@ void CPythonBridge::StorePreTradeSymbolMonitor(const string line)
       return;
    indicator.SetState((part[4]=="nan" ? EMPTY_VALUE : ::StringToDouble(part[4])),(part[5]=="nan" ? EMPTY_VALUE : ::StringToDouble(part[5])),
                       (part[6]=="BUY" ? SIGNAL_BUY : part[6]=="SELL" ? SIGNAL_SELL : SIGNAL_NONE));
+   if(indicator.IsEvent())
+      this.m_indicator_state_changed=true;
   }
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
@@ -556,7 +573,6 @@ bool CPythonBridge::TryConnect(void)
       return false;
      }
    this.m_state=PYTHON_STATE_READY;
-   ::EventChartCustom(::ChartID(),(ushort)ON_PYTHON_CONNECTED,0,0.0,"");   // whoever keeps Python up to date sends what it has
    this.SendInit();
    this.SendWatch();
    this.SendPreTradeSymbolMonitor();
@@ -726,6 +742,11 @@ void CPythonBridge::Poll(void)
       if(::StringFind(line,"\"event\": \"pre_trade_symbol_monitor\"")>=0)
         {
          this.m_pre_trade_monitor_busy=false;   // the answer is complete: the next ask may go
+         if(this.m_indicator_state_changed)
+           {
+            this.m_indicator_state_changed=false;
+            ::EventChartCustom(::ChartID(),(ushort)INDICATOR_STATE_EVENT_CHANGED,0,0.0,"");   // the tables that show the indicators follow
+           }
          continue;
         }
       this.Log("Poll","Python: "+line);
@@ -753,5 +774,4 @@ void CPythonBridge::Poll(void)
    this.m_rx=::StringSubstr(this.m_rx,pos);   // keep the unfinished last line
   }
 //+------------------------------------------------------------------+
-#include "PythonBridge_CandleInfo.mqh"
 #endif // __PYTHONBRIDGE_MQH__

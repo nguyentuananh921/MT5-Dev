@@ -8,6 +8,7 @@
  #include "TableCellView.mqh"
  #include "TableHeaderView.mqh"
  #include "..\Model\TableRow.mqh"
+ #define TABLE_ALIGN_NOT_SET   (-1)   // a row has not set the alignment of a cell
 #ifndef CTABLEROWVIEW_MQH_DECLARATION
 #define CTABLEROWVIEW_MQH_DECLARATION
 //+------------------------------------------------------------------+
@@ -17,7 +18,7 @@ class CTableRowView : public CGBaseObj
  {
   private:
     CTableRow        *m_row;
-    ENUM_ALIGN_MODE   m_text_align[];      //Align for content in cell.
+    ENUM_ALIGN_MODE   m_text_align[];      //Align for content in cell: only what this row says for itself, the rest is TABLE_ALIGN_NOT_SET (the column decides)
   public:
     bool              Bind(CTableRow *row);
     CTableRow        *Row(void)                            const { return(this.m_row); }
@@ -29,6 +30,7 @@ class CTableRowView : public CGBaseObj
      void              TextAlign(const ENUM_ALIGN_MODE &array[]);
      void              TextAlign(const uint column_index,const ENUM_ALIGN_MODE align);
      ENUM_ALIGN_MODE   ColumnTextAlign(const int column) const;
+     bool              HasTextAlign(const int column) const;   // true when this row says its own for the column
     void              DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
                                  const color back,const color text,const color grid,const bool selected);
     void              DrawRow(CCanvas &canvas,CTableHeaderView &header,const int y,const int h,const int right,
@@ -92,21 +94,35 @@ void CTableRowView::ResetChanged(void)
  }
 void CTableRowView::TextAlign(const ENUM_ALIGN_MODE &array[])
  {
-   int total=::MathMin(::ArraySize(array),this.CellsTotal());
-   ::ArrayResize(this.m_text_align,total);
-   for(int i=0; i<total; i++)
+   int cells=this.CellsTotal();
+   int old=::ArraySize(this.m_text_align);
+   ::ArrayResize(this.m_text_align,cells);
+   for(int i=old; i<cells; i++)
+      this.m_text_align[i]=(ENUM_ALIGN_MODE)TABLE_ALIGN_NOT_SET;
+   for(int i=0; i<::MathMin(::ArraySize(array),cells); i++)
       this.m_text_align[i]=array[i];
  }
 void CTableRowView::TextAlign(const uint column_index,const ENUM_ALIGN_MODE align)
  {
-   if(column_index<(uint)this.CellsTotal())
-      this.m_text_align[column_index]=align;
+   int cells=this.CellsTotal();
+   if(column_index>=(uint)cells)
+      return;
+   int old=::ArraySize(this.m_text_align);
+   if(old<cells)
+     {
+      ::ArrayResize(this.m_text_align,cells);
+      for(int i=old; i<cells; i++)
+         this.m_text_align[i]=(ENUM_ALIGN_MODE)TABLE_ALIGN_NOT_SET;
+     }
+   this.m_text_align[column_index]=align;
+ }
+bool CTableRowView::HasTextAlign(const int column) const
+ {
+   return(column>=0 && column<::ArraySize(this.m_text_align) && (int)this.m_text_align[column]!=TABLE_ALIGN_NOT_SET);
  }
 ENUM_ALIGN_MODE CTableRowView::ColumnTextAlign(const int column) const
  {
-   if(column>=0 && column<::ArraySize(this.m_text_align))
-      return(this.m_text_align[column]);
-   return(ALIGN_LEFT);
+   return(this.HasTextAlign(column) ? this.m_text_align[column] : ALIGN_LEFT);
  }
 //+------------------------------------------------------------------+
 //| One cell, clipped at right, skipped when scrolled out at left    |
@@ -129,7 +145,7 @@ void CTableRowView::DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const in
               h,
               back,
               text,
-              this.ColumnTextAlign(column),
+              (this.HasTextAlign(column) ? this.ColumnTextAlign(column) : header.ColumnContentAlign(column)),   // the row's own, else the column's
               header.ColumnTextXOffset(column),
               header.ColumnImageXOffset(column),
               selected);

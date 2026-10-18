@@ -26,10 +26,18 @@
 		},
 		{
 			"path": "../../../Hlomohang John Borotho"
+		},
+		{
+			"path": "../../../Niquel Mendoza"
+		},
+		{
+			"path": "../../Example EA/4. Combination EA V3 Old"
 		}
 	],
 	"settings": {
 		"clangd.fallbackFlags": [
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Francis Nyoike Thumbi",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Francis Nyoike Thumbi/Include",
 			"-xc++",
 			"-std=c++17",
 			"-D__MQL__",
@@ -46,8 +54,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Francis Nyoike Thumbi",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Francis Nyoike Thumbi/Include"
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V3",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V3/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

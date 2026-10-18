@@ -26,6 +26,7 @@ class CLabel : public CGElement
     void              SetText(const string text)                  { this.m_text=text;      }
     string            Text(void)                            const { return this.m_text;    }
     void              LabelXGap(const int x_gap)                  { this.m_text_x=x_gap; this.m_text_align=TA_LEFT; }
+    void              LabelRightGap(const int x_gap)              { this.m_text_x=x_gap; this.m_text_align=TA_RIGHT; }   // the text ends x_gap before the right edge
                      CLabel(void);
                     ~CLabel(void) {}
  };

@@ -21,6 +21,7 @@ class CWindow : public CGElement
     CButton           m_button_fullscreen;
     CButton           m_button_collapse;
     CButtonTriggered  m_button_tooltip;
+    CGElement         m_Rectangle_Caption;   // the caption bar: transparent, holds the buttons, the text and whatever is added to it
     CPointer          m_xy_resize;
     bool              m_xy_resize_mode;
     int               m_resize_mode_index;
@@ -39,11 +40,11 @@ class CWindow : public CGElement
     ENUM_WINDOW_TYPE  m_window_type;
     int               m_full_height;
     int               m_caption_height;
+    ENUM_ALIGN_MODE   m_caption_align;
     color             m_caption_color;
     color             m_caption_color_hover;
     color             m_caption_color_locked;
     color             m_back_color;
-    string            m_label_text;
     bool              m_close_button;
     bool              m_fullscreen_button;
     bool              m_collapse_button;
@@ -55,6 +56,11 @@ class CWindow : public CGElement
 
     bool              CreateButtons(void);
     bool              CreateButton(CButton &button_obj,const string suffix,const uint icon_index,const bool is_close);
+    bool              CreateCaptionBar(void);
+    bool              CreateCaption(const string text);
+    CLabel           *CaptionTitle(void);   // the text of the caption bar: the first child of m_Rectangle_Caption
+    string            CaptionText(void);
+    void              ArrangeCaption(void);
     void              ArrangeButtons(void);
     void              Collapse(void);
     void              Expand(void);
@@ -79,6 +85,10 @@ class CWindow : public CGElement
     CButtonTriggered *GetTooltipButtonPointer(void)                   { return(::GetPointer(m_button_tooltip));    }
     ENUM_WINDOW_TYPE  WindowType(void)                          const { return(m_window_type);                     }
     void              WindowType(const ENUM_WINDOW_TYPE flag)         { m_window_type=flag;                        }
+    CGElement        *GetCaptionPointer(void)                         { return(::GetPointer(m_Rectangle_Caption)); }
+    void              Caption(const string text);
+    void              CaptionAlign(const ENUM_ALIGN_MODE align)       { m_caption_align=align; this.ArrangeCaption(); }   // ALIGN_RIGHT: the text ends at the buttons
+    int               CaptionRightLimit(void)                   const { return(m_right_limit);                     }   // the room the caption buttons take at the right edge
     void              CaptionHeight(const int height)                 { m_caption_height=height;                   }
     int               CaptionHeight(void)                       const { return(m_caption_height);                  }
     void              CaptionColor(const color clr)                   { m_caption_color=clr;                       }
@@ -132,12 +142,12 @@ CWindow::CWindow(void) : m_is_movable(false),
                          m_minimum_y_size(0),
                          m_window_type(W_MAIN),
                          m_full_height(0),
-                         m_caption_height(WINDOW_CAPTION_HEIGHT),
+                         m_caption_height(M_CONTROL_HEIGHT),
+                         m_caption_align(ALIGN_LEFT),
                          m_caption_color(C'77,118,201'),
                          m_caption_color_hover(C'77,118,201'),
                          m_caption_color_locked(C'188,165,219'),
                          m_back_color(clrWhiteSmoke),
-                         m_label_text(""),
                          m_close_button(false),
                          m_fullscreen_button(false),
                          m_collapse_button(false),
@@ -195,7 +205,6 @@ void CWindow::IconFile(const uint resource_index)
 //+------------------------------------------------------------------+
 bool CWindow::CreateWindow(const long chart_id,const int subwin,const string caption_text,const int x,const int y,const int w,const int h)
  {
-  this.m_label_text=caption_text;
   this.m_full_height=h;
   if(this.m_window_type==W_POPUP)
      this.m_is_movable=false;
@@ -204,6 +213,10 @@ bool CWindow::CreateWindow(const long chart_id,const int subwin,const string cap
   if(this.ImagesTotal(0)<1)
      this.IconFile(this.DefaultIcon());
   if(!this.Create(chart_id,subwin,"window_"+caption_text,x,y,w,h))
+     return(false);
+  if(!this.CreateCaptionBar())
+     return(false);
+  if(!this.CreateCaption(caption_text))
      return(false);
   if(!this.CreateButtons())
      return(false);
@@ -238,11 +251,11 @@ bool CWindow::CreateButtons(void)
 //+------------------------------------------------------------------+
 bool CWindow::CreateButton(CButton &button_obj,const string suffix,const uint icon_index,const bool is_close)
  {
-  this.AddChild(&button_obj);
+  this.m_Rectangle_Caption.AddChild(&button_obj);
   button_obj.IconFile(icon_index);
   button_obj.IconFileLocked(icon_index);
-  int y_gap=(this.m_caption_height-WINDOW_BUTTON_SIZE)/2;
-  if(!button_obj.Create(this.m_chart_id,this.m_subwindow,this.Name()+suffix,0,y_gap,WINDOW_BUTTON_SIZE,WINDOW_BUTTON_SIZE))
+  int y_gap=(this.m_caption_height-M_CONTROL_HEIGHT)/2;
+  if(!button_obj.Create(this.m_chart_id,this.m_subwindow,this.Name()+suffix,0,y_gap,M_CONTROL_HEIGHT,M_CONTROL_HEIGHT))
      return(false);
   color hover  =(is_close ? C'242,27,45'  : C'90,139,232');
   color pressed=(is_close ? C'149,68,116' : C'67,103,173');
@@ -255,11 +268,86 @@ bool CWindow::CreateButton(CButton &button_obj,const string suffix,const uint ic
   return(true);
  }
 //+------------------------------------------------------------------+
+//| The caption bar: transparent, over the top of the window         |
+//+------------------------------------------------------------------+
+bool CWindow::CreateCaptionBar(void)
+ {
+  this.AddChild(&this.m_Rectangle_Caption);
+  if(!this.m_Rectangle_Caption.Create(this.m_chart_id,this.m_subwindow,this.Name()+"_caption_bar",0,0,this.m_x_size,this.m_caption_height))
+     return(false);
+  this.m_Rectangle_Caption.GetBackColorControl().InitColors(clrNONE,clrNONE,clrNONE,clrNONE);
+  this.m_Rectangle_Caption.GetBorderColorControl().InitColors(clrNONE,clrNONE,clrNONE,clrNONE);
+  this.m_Rectangle_Caption.GetBackColorActControl().InitColors(clrNONE,clrNONE,clrNONE,clrNONE);
+  this.m_Rectangle_Caption.GetBorderColorActControl().InitColors(clrNONE,clrNONE,clrNONE,clrNONE);
+  this.m_Rectangle_Caption.ColorChange(COLOR_STATE_DEFAULT);
+  this.m_Rectangle_Caption.Move(this.m_x,this.m_y);
+  this.m_Rectangle_Caption.Draw(false);
+  return(true);
+ }
+//+------------------------------------------------------------------+
+//| The caption text is a child label, white on the caption color    |
+//+------------------------------------------------------------------+
+bool CWindow::CreateCaption(const string text)
+ {
+  CLabel *title=new CLabel();   // made with new: the caption bar frees it with its other children
+  if(title==NULL)
+     return(false);
+  this.m_Rectangle_Caption.AddChild(title);
+  title.SetText(text);
+  if(!title.Create(this.m_chart_id,this.m_subwindow,this.Name()+"_caption",0,0,1,this.m_caption_height))
+     return(false);
+  title.GetForeColorControl().InitColors(clrWhite,clrWhite,clrWhite,clrBlack);
+  title.ColorChange(COLOR_STATE_DEFAULT);
+  this.ArrangeCaption();
+  return(true);
+ }
+//+------------------------------------------------------------------+
+//| The text of the caption bar, asked from the caption bar          |
+//+------------------------------------------------------------------+
+CLabel *CWindow::CaptionTitle(void)
+ {
+  return(dynamic_cast<CLabel *>(this.m_Rectangle_Caption.Child(0)));
+ }
+string CWindow::CaptionText(void)
+ {
+  CLabel *title=this.CaptionTitle();
+  return(title!=NULL ? title.Text() : "");
+ }
+void CWindow::Caption(const string text)
+ {
+  CLabel *title=this.CaptionTitle();
+  if(title==NULL)
+     return;
+  title.SetText(text);
+  title.Draw(true);
+ }
+//+------------------------------------------------------------------+
+//| From the icon to the first button, the text on its side          |
+//+------------------------------------------------------------------+
+void CWindow::ArrangeCaption(void)
+ {
+  CLabel *title=this.CaptionTitle();
+  if(title==NULL)
+     return;
+  if(this.m_caption_align==ALIGN_RIGHT)
+     title.LabelRightGap(6);
+  else
+     title.LabelXGap(0);
+  title.Move(this.m_x+24,this.m_y);
+  title.Resize(::MathMax(this.m_x_size-24-this.m_right_limit,1),this.m_caption_height);
+  title.Draw(false);
+ }
+//+------------------------------------------------------------------+
 //| Keeps the caption buttons anchored to the right edge             |
 //+------------------------------------------------------------------+
 void CWindow::ArrangeButtons(void)
  {
-  int y_gap=(this.m_caption_height-WINDOW_BUTTON_SIZE)/2;
+  if(this.m_Rectangle_Caption.Parent()==::GetPointer(this))
+    {
+     this.m_Rectangle_Caption.Move(this.m_x,this.m_y);
+     this.m_Rectangle_Caption.Resize(this.m_x_size,this.m_caption_height);
+    }
+  int y_gap=(this.m_caption_height-M_CONTROL_HEIGHT)/2;
   int i=0;
   this.m_right_limit=0;
   CButton *buttons[4];
@@ -269,9 +357,9 @@ void CWindow::ArrangeButtons(void)
   buttons[3]=::GetPointer(this.m_button_tooltip);
   for(int b=0; b<4; b++)
     {
-     if(buttons[b].Parent()!=::GetPointer(this))
+     if(buttons[b].Parent()!=::GetPointer(this.m_Rectangle_Caption))
         continue;
-     this.m_right_limit+=WINDOW_BUTTON_SIZE-((i<3) ? 0 : 1);
+     this.m_right_limit+=M_CONTROL_HEIGHT-((i<3) ? 0 : 1);
      i++;
      buttons[b].Move(this.m_x+this.m_x_size-this.m_right_limit,this.m_y+y_gap);
     }
@@ -279,24 +367,22 @@ void CWindow::ArrangeButtons(void)
   this.SetControlAreaY(0);
   this.SetControlAreaWidth(this.m_x_size-this.m_right_limit);
   this.SetControlAreaHeight(this.m_caption_height);
+  this.ArrangeCaption();
  }
 //+------------------------------------------------------------------+
-//| True for the four caption buttons                                |
+//| True for the caption bar: it stays when the window is collapsed  |
 //+------------------------------------------------------------------+
 bool CWindow::IsCaptionButton(CGBaseObj *obj)
  {
-  return(obj==::GetPointer(this.m_button_close) || obj==::GetPointer(this.m_button_fullscreen) ||
-         obj==::GetPointer(this.m_button_collapse) || obj==::GetPointer(this.m_button_tooltip));
+  return(obj==::GetPointer(this.m_Rectangle_Caption));
  }
 //+------------------------------------------------------------------+
-//| Body below the caption and the caption text                      |
+//| Body below the caption                                           |
 //+------------------------------------------------------------------+
 void CWindow::DrawContent(void)
  {
   if(!this.m_is_minimized)
      this.m_canvas.FillRectangle(1,this.m_caption_height,this.m_x_size-2,this.m_y_size-2,::ColorToARGB(this.m_back_color,255));
-  this.m_canvas.FontSet(this.m_font,-this.m_font_size*10);
-  this.m_canvas.TextOut(24,this.m_caption_height/2,this.m_label_text,::ColorToARGB(this.ForeColor(),255),TA_LEFT|TA_VCENTER);
  }
 //+------------------------------------------------------------------+
 //| Caption left of the buttons = DoEasy control area                |
@@ -365,9 +451,9 @@ void CWindow::OnRelease(const int x,const int y)
   if(this.m_clamping_area_mouse==PRESSED_INSIDE_BORDER)
     {
      if(this.m_resize_mode_index==2)
-        this.SendEvent(ON_WINDOW_CHANGE_YSIZE,this.m_y_size,this.m_label_text);
+        this.SendEvent(ON_WINDOW_CHANGE_YSIZE,this.m_y_size,this.CaptionText());
      else
-        this.SendEvent(ON_WINDOW_CHANGE_XSIZE,this.m_x_size,this.m_label_text);
+        this.SendEvent(ON_WINDOW_CHANGE_XSIZE,this.m_x_size,this.CaptionText());
     }
   this.m_clamping_area_mouse=NOT_PRESSED;
   this.ZeroResizeVariables();
@@ -487,7 +573,7 @@ void CWindow::AfterResize(void)
 //+------------------------------------------------------------------+
 bool CWindow::OnClickCloseButton(const long id)
  {
-  if(this.m_button_close.Parent()!=::GetPointer(this) || id!=this.m_button_close.ObjectID())
+  if(this.m_button_close.Parent()!=::GetPointer(this.m_Rectangle_Caption) || id!=this.m_button_close.ObjectID())
      return(false);
   if(this.m_window_type==W_MAIN)
     {
@@ -517,7 +603,7 @@ void CWindow::OpenWindow(void)
  {
   this.Show();
   ::ChartRedraw(this.m_chart_id);
-  this.SendEvent(ON_OPEN_DIALOG_BOX,this.m_window_type,this.m_label_text);
+  this.SendEvent(ON_OPEN_DIALOG_BOX,this.m_window_type,this.CaptionText());
  }
 //+------------------------------------------------------------------+
 //| Hide and shout; dparam = window type                             |
@@ -526,14 +612,14 @@ void CWindow::CloseWindow(void)
  {
   this.Hide();
   ::ChartRedraw(this.m_chart_id);
-  this.SendEvent(ON_CLOSE_DIALOG_BOX,this.m_window_type,this.m_label_text);
+  this.SendEvent(ON_CLOSE_DIALOG_BOX,this.m_window_type,this.CaptionText());
  }
 //+------------------------------------------------------------------+
 //| To full chart size or back to the previous size                  |
 //+------------------------------------------------------------------+
 bool CWindow::OnClickFullScreenButton(const long id)
  {
-  if(this.m_button_fullscreen.Parent()!=::GetPointer(this) || id!=this.m_button_fullscreen.ObjectID())
+  if(this.m_button_fullscreen.Parent()!=::GetPointer(this.m_Rectangle_Caption) || id!=this.m_button_fullscreen.ObjectID())
      return(false);
   if(this.m_is_minimized)
      return(true);
@@ -563,7 +649,7 @@ bool CWindow::OnClickFullScreenButton(const long id)
     }
   this.m_button_fullscreen.Draw(false);
   this.AfterResize();
-  this.SendEvent(ON_WINDOW_CHANGE_XSIZE,this.m_x_size,this.m_label_text);
+  this.SendEvent(ON_WINDOW_CHANGE_XSIZE,this.m_x_size,this.CaptionText());
   return(true);
  }
 //+------------------------------------------------------------------+
@@ -571,7 +657,7 @@ bool CWindow::OnClickFullScreenButton(const long id)
 //+------------------------------------------------------------------+
 bool CWindow::OnClickCollapseButton(const long id)
  {
-  if(this.m_button_collapse.Parent()!=::GetPointer(this) || id!=this.m_button_collapse.ObjectID())
+  if(this.m_button_collapse.Parent()!=::GetPointer(this.m_Rectangle_Caption) || id!=this.m_button_collapse.ObjectID())
      return(false);
   if(this.m_is_minimized)
      this.Expand();
@@ -597,7 +683,7 @@ void CWindow::Collapse(void)
   this.m_button_collapse.IconFile(IMAGE_RESOURCE_BMP16_DOWN_THIN_WHITE_BMP);
   this.m_button_collapse.IconFileLocked(IMAGE_RESOURCE_BMP16_DOWN_THIN_WHITE_BMP);
   this.m_button_collapse.Draw(false);
-  this.SendEvent(ON_WINDOW_COLLAPSE,this.m_subwindow,this.m_label_text);
+  this.SendEvent(ON_WINDOW_COLLAPSE,this.m_subwindow,this.CaptionText());
  }
 //+------------------------------------------------------------------+
 //| Full height back, the content is shown again                     |
@@ -615,16 +701,16 @@ void CWindow::Expand(void)
   this.m_button_collapse.IconFile(IMAGE_RESOURCE_BMP16_UP_THIN_WHITE_BMP);
   this.m_button_collapse.IconFileLocked(IMAGE_RESOURCE_BMP16_UP_THIN_WHITE_BMP);
   this.m_button_collapse.Draw(false);
-  this.SendEvent(ON_WINDOW_EXPAND,this.m_subwindow,this.m_label_text);
+  this.SendEvent(ON_WINDOW_EXPAND,this.m_subwindow,this.CaptionText());
  }
 //+------------------------------------------------------------------+
 //| The tooltip button flips its own state, the window shouts it     |
 //+------------------------------------------------------------------+
 bool CWindow::OnClickTooltipsButton(const long id)
  {
-  if(this.m_button_tooltip.Parent()!=::GetPointer(this) || id!=this.m_button_tooltip.ObjectID())
+  if(this.m_button_tooltip.Parent()!=::GetPointer(this.m_Rectangle_Caption) || id!=this.m_button_tooltip.ObjectID())
      return(false);
-  this.SendEvent(ON_WINDOW_TOOLTIPS,(this.m_button_tooltip.State() ? 1 : 0),this.m_label_text);
+  this.SendEvent(ON_WINDOW_TOOLTIPS,(this.m_button_tooltip.State() ? 1 : 0),this.CaptionText());
   return(true);
  }
 //+------------------------------------------------------------------+

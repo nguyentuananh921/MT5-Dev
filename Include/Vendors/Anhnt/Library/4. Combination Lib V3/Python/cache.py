@@ -39,8 +39,9 @@ def fingerprint(strength, use_wick, count, definitions):
     return hashlib.sha1(repr((strength, use_wick, count, definitions, code_hash())).encode()).hexdigest()
 
 
-def file_of(key):
-    return cache_dir() / f"{key[0]}_{key[1]}.pkl"
+def file_of(key, variant=""):
+    """A variant (a kind of Swing the EA asked for) has its own file; the one without a variant keeps the name it always had."""
+    return cache_dir() / (f"{key[0]}_{key[1]}.pkl" if not variant else f"{key[0]}_{key[1]}__{variant}.pkl")
 
 
 def pack(frame):
@@ -61,7 +62,7 @@ def unpack(light, types):
     return frame
 
 
-def write(key, fingerprint_text, parts):
+def write(key, fingerprint_text, parts, variant=""):
     """parts = {name: DataFrame, ...} and anything else picklable under other names; written aside and put in place whole."""
     if not ENABLED:
         return
@@ -70,16 +71,16 @@ def write(key, fingerprint_text, parts):
     packed = {}
     for name, value in parts.items():
         packed[name] = ("frame",) + pack(value) + (dict(value.attrs),) if isinstance(value, pd.DataFrame) else ("value", value)
-    target = file_of(key)
+    target = file_of(key, variant)
     temporary = target.with_suffix(".tmp")
     with open(temporary, "wb") as handle:
         pickle.dump({"fingerprint": fingerprint_text, "parts": packed}, handle, protocol=pickle.HIGHEST_PROTOCOL)
     os.replace(temporary, target)
 
 
-def read(key, fingerprint_text):
+def read(key, fingerprint_text, variant=""):
     """The parts kept for a pair, None when there is no file, it is of other settings or other code, or it cannot be read."""
-    target = file_of(key)
+    target = file_of(key, variant)
     if not ENABLED or not target.exists():
         return None
     try:

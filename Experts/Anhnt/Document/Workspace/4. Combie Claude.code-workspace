@@ -13,9 +13,6 @@
 			"path": "../../Example EA/4. Combination EA V2"
 		},
 		{
-			"path": "../../Example EA/4. Combination EA V3"
-		},
-		{
 			"path": "../../../Stanley Kimathi Kibaara/Market Structure Framework"
 		},
 		{
@@ -26,6 +23,12 @@
 		},
 		{
 			"path": "../../../Christian Benjamin/Price Action Analysis Toolkit Development/Swing"
+		},
+		{
+			"path": "../../Example EA/4. Combination EA V3"
+		},
+		{
+			"path": "../../Example EA/4. Combination EA V3 Old"
 		}
 	],
 	"settings": {

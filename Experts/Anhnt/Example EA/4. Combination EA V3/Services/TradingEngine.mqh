@@ -10,7 +10,7 @@
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\SymbolsCollection.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\IndicatorsCollection.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\MarketCollection.mqh>
- #include "..\Configuration\TradingSetupSettingManager.mqh"
+ #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\Settings\TradingSetupSettingManager.mqh>
  #ifndef CTRADING_ENGINE_MQH_DECLARATION
  #define CTRADING_ENGINE_MQH_DECLARATION
   class CTradingEngine
@@ -53,7 +53,7 @@
  int CTradingEngine::GetCurrent_StopLostDistance_Point(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override)
   {
    if(m_trading_setup_manager == NULL) return -1;
-   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+   CTradingSetupSetting *row_setting = m_trading_setup_manager.Setting();
    if(row_setting == NULL) return -1;
    ENUM_STOPLOST_TRAILING_MODE mode = (mode_override == WRONG_VALUE) ? row_setting.StopLostMode() : mode_override;
    if(mode == SL_MODE_FIXED)
@@ -86,7 +86,7 @@
  int CTradingEngine::GetCurrent_TrailingDistance_Points(const string symbol, const ENUM_STOPLOST_TRAILING_MODE mode_override)
   {
    if(m_trading_setup_manager == NULL) return -1;
-   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+   CTradingSetupSetting *row_setting = m_trading_setup_manager.Setting();
    if(row_setting == NULL) return -1;
    ENUM_STOPLOST_TRAILING_MODE mode = (mode_override == WRONG_VALUE) ? row_setting.TrailingMode() : mode_override;
    int offset_pts = row_setting.TrailingOffsetPts();
@@ -108,7 +108,7 @@
   {
    out_value = EMPTY_VALUE;
    if(m_trading_setup_manager == NULL || m_indicators_collection == NULL) return false;
-   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+   CTradingSetupSetting *row_setting = m_trading_setup_manager.Setting();
    if(row_setting == NULL || row_setting.TrailingIndType() == WRONG_VALUE) return false;
    MqlParam saved_params[];
    row_setting.GetTrailingIndParams(saved_params);
@@ -142,7 +142,7 @@
  double CTradingEngine::Get_Trailing_TargetPrice(const string symbol, const ENUM_POSITION_TYPE type)
   {
    if(m_trading_setup_manager == NULL) return EMPTY_VALUE;
-   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+   CTradingSetupSetting *row_setting = m_trading_setup_manager.Setting();
    if(row_setting == NULL) return EMPTY_VALUE;
    CSymbol *sym = (m_symbols_collection != NULL) ? m_symbols_collection.GetSymbolObjByName(symbol) : NULL;
    double point = (sym != NULL) ? sym.Point() : ::SymbolInfoDouble(symbol, SYMBOL_POINT);
@@ -175,7 +175,7 @@
    double current_sl = (m_market_collection != NULL) ? m_market_collection.GetSL(symbol, type) : 0.0;
    if(current_sl > 0.0) return current_sl;
    if(m_trading_setup_manager == NULL) return EMPTY_VALUE;
-   CTradingSetupSetting *row_setting = m_trading_setup_manager.FindByIdentity(symbol);
+   CTradingSetupSetting *row_setting = m_trading_setup_manager.Setting();
    if(row_setting == NULL) return EMPTY_VALUE;
    bool sl_active    = row_setting.StopLostActive();
    bool trail_active = row_setting.TrailingActive();

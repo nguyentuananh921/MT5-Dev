@@ -30,7 +30,7 @@
  class CChartObj : public CBaseObjExt
   {
    private:
-       CArrayObj         m_list_ind;                                  // The indicators of all chart windows: name, type and parameters
+      CArrayObj         m_list_ind;                                  // The indicators of all chart windows: name, type and parameters
       CArrayObj         m_list_ind_del;                              // The indicators removed from the chart windows
       CArrayObj         m_list_ind_param;                            // The indicators whose parameters were changed (the old type and parameters)
       long              m_long_prop[CHART_PROP_INTEGER_TOTAL];       // Integer properties

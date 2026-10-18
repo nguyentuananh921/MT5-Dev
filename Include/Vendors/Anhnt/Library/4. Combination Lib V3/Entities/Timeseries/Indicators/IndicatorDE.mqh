@@ -89,6 +89,13 @@
    this.SetProperty(INDICATOR_PROP_VALUE,EMPTY_VALUE);
    this.SetProperty(INDICATOR_PROP_PREVIOUS,EMPTY_VALUE);
    this.SetProperty(INDICATOR_PROP_SYMBOL,symbol);
+   //--- Any change of what Python reports is an event: a table that shows it is told, it does not look
+   this.SetControlledValueINC(INDICATOR_PROP_VALUE,0.0);
+   this.SetControlledValueDEC(INDICATOR_PROP_VALUE,0.0);
+   this.SetControlledValueINC(INDICATOR_PROP_PREVIOUS,0.0);
+   this.SetControlledValueDEC(INDICATOR_PROP_PREVIOUS,0.0);
+   this.SetControlledValueINC(INDICATOR_PROP_SIGNAL_DIR,0);
+   this.SetControlledValueDEC(INDICATOR_PROP_SIGNAL_DIR,0);
    int total=::ArraySize(mql_params);
    ::ArrayResize(this.m_mql_param,total);
    for(int i=0;i<total;i++)
@@ -116,6 +123,7 @@
    this.SetProperty(INDICATOR_PROP_PREVIOUS,previous);
    this.SetProperty(INDICATOR_PROP_SIGNAL_DIR,dir);
    this.Refresh();
+   this.CheckEvents();   // IsEvent() tells whether the value, the one before it or the signal is not the same
   }
  void CIndicatorDE::Refresh(void)
   {

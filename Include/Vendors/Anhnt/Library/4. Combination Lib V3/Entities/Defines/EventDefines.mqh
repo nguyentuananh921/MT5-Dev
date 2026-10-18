@@ -13,9 +13,10 @@
    SYMBOLTF_MANAGER_EVENT_DELETE,
    SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED,
    SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED,
+   SYMBOLTF_MANAGER_EVENT_TIMEFRAMES_CHANGED,   // Python sent the timeframes it can serve
   };
   
- #define SYMBOLTF_MANAGER_EVENTS_NEXT_CODE  (SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED+1)
+ #define SYMBOLTF_MANAGER_EVENTS_NEXT_CODE  (SYMBOLTF_MANAGER_EVENT_TIMEFRAMES_CHANGED+1)
  enum ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT
   {
    INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT = SYMBOLTF_MANAGER_EVENTS_NEXT_CODE,
@@ -95,6 +96,16 @@
    MARKET_STORY_EVENT_CHANGED,                              // The answer of a watch is complete, or a State / Phase / leg arrived
   };
  #define MARKET_STORY_EVENTS_NEXT_CODE  (MARKET_STORY_EVENT_CHANGED+1)
+ //+------------------------------------------------------------------+
+ //| What Python (the Model) reports about the indicators: the tables |
+ //| that show their values are told only when one is not the same    |
+ //+------------------------------------------------------------------+
+ enum ENUM_INDICATOR_STATE_EVENT
+  {
+   INDICATOR_STATE_EVENT_NO_EVENT = MARKET_STORY_EVENTS_NEXT_CODE,   // No event
+   INDICATOR_STATE_EVENT_CHANGED,                           // The answer about the indicators is complete and a value or a signal changed
+  };
+ #define INDICATOR_STATE_EVENTS_NEXT_CODE  (INDICATOR_STATE_EVENT_CHANGED+1)
  //+------------------------------------------------------------------+
  //| List of trading event flags on the account                       |
  //+------------------------------------------------------------------+

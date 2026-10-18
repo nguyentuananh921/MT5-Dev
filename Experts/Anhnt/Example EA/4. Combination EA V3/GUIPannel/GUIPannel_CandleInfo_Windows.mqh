@@ -1,17 +1,19 @@
 //+------------------------------------------------------------------+
 //|                                 GUIPannel_CandleInfo_Windows.mqh |
 //| Shift+hover on a bar or the cursor on a marker: the popup that   |
-//| lists what Python found on that candle                           |
+//| lists what is found on that candle. The EA decides when it opens |
+//| and gives the rows; here it is shown, moved and closed           |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_CANDLEINFO_WINDOWS_MQH
 #define CGUIPANNEL_CANDLEINFO_WINDOWS_MQH
  #include "GUIPannel.mqh"
  bool CGUIPannel::MouseOverAnyGUIWindow(const int px,const int py)
   {
-   CWindow *windows[3];
+   CWindow *windows[4];
    windows[0]=::GetPointer(m_window_main);
-   windows[1]=::GetPointer(m_window_setting_timeseries);
-   windows[2]=::GetPointer(m_window_candle_infomation);
+   windows[1]=::GetPointer(m_window_addIndicator);
+   windows[2]=::GetPointer(m_window_tradeManage);
+   windows[3]=::GetPointer(m_window_candle_infomation);
    for(int w=0;w<::ArraySize(windows);w++)
       if(windows[w].IsVisible() && windows[w].CursorInsideElement(px,py))
          return true;
@@ -29,7 +31,7 @@
    m_window_candle_infomation.CollapseButtonIsUsed(false);
    m_window_candle_infomation.TooltipsButtonIsUsed(false);
    m_window_candle_infomation.FullscreenButtonIsUsed(false);
-   if(!m_window_candle_infomation.CreateWindow(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"Signals at Bar",0,0,CANDLE_INFO_WINDOW_W,CANDLE_INFO_WINDOW_H))
+   if(!m_window_candle_infomation.CreateWindow(this.m_chart_id,M_SUBWINDOW_MAIN,"Signals at Bar",0,0,CANDLE_INFO_WINDOW_W,CANDLE_INFO_WINDOW_H))
       return false;
    m_table_candle_information_atBar.TableSize(COLUMNS_CANDLEINFO_TOTAL,0);
    m_table_candle_information_atBar.View().ShowHeaders(true);
@@ -37,8 +39,8 @@
    m_table_candle_information_atBar.View().LightsHover(true);
    m_table_candle_information_atBar.View().IsSortMode(false);
    m_window_candle_infomation.AddChild(&m_table_candle_information_atBar);
-   if(!m_table_candle_information_atBar.CreateTable(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,"TableCandleInfo",1,WINDOW_CAPTION_HEIGHT,
-                                                    CANDLE_INFO_WINDOW_W-2,CANDLE_INFO_WINDOW_H-WINDOW_CAPTION_HEIGHT-1))
+   if(!m_table_candle_information_atBar.CreateTable(this.m_chart_id,M_SUBWINDOW_MAIN,"TableCandleInfo",1,M_CONTROL_HEIGHT,
+                                                    CANDLE_INFO_WINDOW_W-2,CANDLE_INFO_WINDOW_H-M_CONTROL_HEIGHT-1))
       return false;
    CTableHeaderView *header=m_table_candle_information_atBar.View().GetHeaderViewPointer();
    header.ColumnsWidth(CANDLEINFO_WIDTH);
@@ -55,23 +57,30 @@
    return true;
   }
  //+------------------------------------------------------------------+
+ //| The x of the column of the shown bar and the width of a bar slot |
+ //+------------------------------------------------------------------+
+ bool CGUIPannel::ShownBarColumn(int &left,int &right)
+  {
+   int bar_x=0,bar_y=0;
+   if(m_candle_info_shown_bar==0 || !::ChartTimePriceToXY(this.m_chart_id,M_SUBWINDOW_MAIN,m_candle_info_shown_bar,0,bar_x,bar_y))
+      return false;
+   int slot_w=(int)(1<<(int)::ChartGetInteger(this.m_chart_id,CHART_SCALE));
+   left=bar_x-slot_w/2;
+   right=bar_x+slot_w/2;
+   return true;
+  }
+ //+------------------------------------------------------------------+
  //| Popup beside the bar column under the cursor, clear of its badge,|
  //| flipped to the left side when it would leave the chart            |
  //+------------------------------------------------------------------+
  void CGUIPannel::RepositionWindow_CandleInfo(const int cursor_x,const int cursor_y)
   {
-   int chart_w=(int)::ChartGetInteger(m_ChartObj.GetChartID(),CHART_WIDTH_IN_PIXELS);
-   int chart_h=(int)::ChartGetInteger(m_ChartObj.GetChartID(),CHART_HEIGHT_IN_PIXELS);
+   int chart_w=(int)::ChartGetInteger(this.m_chart_id,CHART_WIDTH_IN_PIXELS);
+   int chart_h=(int)::ChartGetInteger(this.m_chart_id,CHART_HEIGHT_IN_PIXELS);
    int window_w=m_window_candle_infomation.Width();
    int window_h=m_window_candle_infomation.Height();
-   int slot_w=(int)(1<<(int)::ChartGetInteger(m_ChartObj.GetChartID(),CHART_SCALE));
    int left=cursor_x,right=cursor_x,top=cursor_y-CANDLE_INFO_CURSOR_INSET;
-   int bar_x=0,bar_y=0;
-   if(::ChartTimePriceToXY(m_ChartObj.GetChartID(),M_SUBWINDOW_MAIN,m_candle_info_shown_bar,0,bar_x,bar_y))
-     {
-      left=bar_x-slot_w/2;
-      right=bar_x+slot_w/2;
-     }
+   this.ShownBarColumn(left,right);
    int x=right+CANDLE_INFO_CANDLE_GAP;
    if(x+window_w>chart_w)
       x=left-window_w-CANDLE_INFO_CANDLE_GAP;
@@ -100,7 +109,7 @@
    m_candle_info_by_marker=by_marker;
    RepositionWindow_CandleInfo(cursor_x,cursor_y);
    m_window_candle_infomation.Show();
-   ::ChartRedraw(m_ChartObj.GetChartID());
+   ::ChartRedraw(this.m_chart_id);
   }
  void CGUIPannel::HideWindow_CandleInfo(void)
   {
@@ -110,10 +119,10 @@
    if(!m_window_candle_infomation.IsVisible())
       return;
    m_window_candle_infomation.Hide();
-   ::ChartRedraw(m_ChartObj.GetChartID());
+   ::ChartRedraw(this.m_chart_id);
   }
  //+------------------------------------------------------------------+
- //| Rows built by CPythonBridge::GetCandleInfo into the table;       |
+ //| The rows the EA gives into the table;                            |
  //| false (and no rows) when the candle has none                     |
  //+------------------------------------------------------------------+
  bool CGUIPannel::RefreshWindow_CandleInfo(const int count,const string &row_label[],const string &row_tf[],
@@ -168,7 +177,7 @@
       if(m_candle_info_shown_bar!=0)
         {
          RepositionWindow_CandleInfo(m_window_candle_infomation.X(),m_window_candle_infomation.Y()+CANDLE_INFO_CURSOR_INSET);
-         ::ChartRedraw(m_ChartObj.GetChartID());
+         ::ChartRedraw(this.m_chart_id);
         }
       return;
      }
@@ -182,7 +191,8 @@
       return;
    bool over_gui=MouseOverAnyGUIWindow(x,y);
    bool shift=((((int)::StringToInteger(sparam))&MOUSE_BUTT_KEY_STATE_SHIFT)!=0);
-   if(!over_gui && m_ChartObj!=NULL && m_ChartObj.GetBarTimeFromXY(x,y)==m_candle_info_shown_bar)
+   int left=0,right=0;
+   if(!over_gui && this.ShownBarColumn(left,right) && x>=left && x<=right)
       return;
    if(!over_gui && shift)
       return;

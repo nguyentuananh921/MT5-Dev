@@ -1,27 +1,28 @@
 //+------------------------------------------------------------------+
-//|                                                ColumnsWindow.mqh |
-//| A small window to show, hide and move the columns of a CTable at |
+//|                                              TableColumnView.mqh |
+//| The view of a table that chooses its columns: a small window, a  |
+//| child of the CTable (it makes it, shows it when it is asked, and |
+//| hears the chart events for it), to show, hide and move columns at|
 //| run time: a list with a check for each column (in the order the  |
 //| table shows them), Up and Down for the selected one, Reset       |
 //+------------------------------------------------------------------+
 #property strict
 
-#ifndef CCOLUMNSWINDOW_MQH
-#define CCOLUMNSWINDOW_MQH
- #include "..\Window.mqh"
- #include "..\ListView.mqh"
- #include "..\Button.mqh"
- #include "Table.mqh"
- #define COLUMNS_WINDOW_WIDTH     190
- #define COLUMNS_WINDOW_ROWS_MAX  12
-#ifndef CCOLUMNSWINDOW_MQH_DECLARATION
-#define CCOLUMNSWINDOW_MQH_DECLARATION
+#ifndef CTABLECOLUMNVIEW_MQH
+#define CTABLECOLUMNVIEW_MQH
+ #include "..\..\Window.mqh"
+ #include "..\..\ListView.mqh"
+ #include "..\..\Button.mqh"
+ #define TABLE_COLUMN_VIEW_WIDTH     190
+ #define TABLE_COLUMN_VIEW_ROWS_MAX  12
+#ifndef CTABLECOLUMNVIEW_MQH_DECLARATION
+#define CTABLECOLUMNVIEW_MQH_DECLARATION
 //+------------------------------------------------------------------+
 //| Asks the table what it shows and tells it what the user chose;   |
 //| tells the outside with ON_TABLE_COLUMNS_CHANGED (lparam = the    |
 //| ObjectID of the table), for whoever keeps the layout             |
 //+------------------------------------------------------------------+
-class CColumnsWindow : public CWindow
+class CTableColumnView : public CWindow
  {
   private:
     CTable           *m_table;          // not owned
@@ -32,30 +33,30 @@ class CColumnsWindow : public CWindow
     int               m_column_at[];    // the column of the table in each row of the list
     string            CaptionOf(const int column);
     void              Fill(const int select_column);
-    void              Notify(void);
   public:
-    bool              CreateColumnsWindow(const long chart_id,const int subwin,const int x,const int y,CTable *table);
+    bool              CreateColumnView(const long chart_id,const int subwin,const int x,const int y,CTable *table);
     void              Open(void);       // the list is filled again, then the window is shown
     virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-                     CColumnsWindow(void) : m_table(NULL) {}
-                    ~CColumnsWindow(void) {}
+                     CTableColumnView(void) : m_table(NULL) {}
+                    ~CTableColumnView(void) {}
  };
-#endif // CCOLUMNSWINDOW_MQH_DECLARATION
-#ifndef CCOLUMNSWINDOW_MQH_IMPLEMENTATION
-#define CCOLUMNSWINDOW_MQH_IMPLEMENTATION
- bool CColumnsWindow::CreateColumnsWindow(const long chart_id,const int subwin,const int x,const int y,CTable *table)
+#endif // CTABLECOLUMNVIEW_MQH_DECLARATION
+#ifndef CTABLECOLUMNVIEW_MQH_IMPLEMENTATION
+#define CTABLECOLUMNVIEW_MQH_IMPLEMENTATION
+ bool CTableColumnView::CreateColumnView(const long chart_id,const int subwin,const int x,const int y,CTable *table)
   {
    if(table==NULL)
       return false;
    this.m_table=table;
-   int total=table.View().GetHeaderViewPointer().ColumnsTotal();
-   int rows=::MathMin(total,COLUMNS_WINDOW_ROWS_MAX);
+   int total=table.ColumnsTotal();
+   int rows=::MathMin(total,TABLE_COLUMN_VIEW_ROWS_MAX);
    int item_h=20;
    int list_h=rows*item_h+4;
-   int top=WINDOW_CAPTION_HEIGHT+M_CONTROL_BORDER_GAP;
+   int top=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
    int buttons_y=top+list_h+M_CONTROL_BORDER_GAP;
    int height=buttons_y+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP+2;
    this.Hide();   // born hidden: the children inherit it
+   this.WindowType(W_DIALOG);   // its close button hides the window (the button of a main window removes the program)
    this.FontSize(DEF_FONT_SIZE);
    this.IsMovable(true);
    this.ResizeMode(false);
@@ -63,9 +64,9 @@ class CColumnsWindow : public CWindow
    this.CollapseButtonIsUsed(false);
    this.TooltipsButtonIsUsed(false);
    this.FullscreenButtonIsUsed(false);
-   if(!this.CreateWindow(chart_id,subwin,"Columns",x,y,COLUMNS_WINDOW_WIDTH,height))
+   if(!this.CreateWindow(chart_id,subwin,"Columns",x,y,TABLE_COLUMN_VIEW_WIDTH,height))
       return false;
-   int inner=COLUMNS_WINDOW_WIDTH-2*M_CONTROL_BORDER_GAP;
+   int inner=TABLE_COLUMN_VIEW_WIDTH-2*M_CONTROL_BORDER_GAP;
    this.m_list.CheckBoxMode(true);
    this.m_list.LightsHover(true);
    this.m_list.ItemYSize(item_h);
@@ -89,36 +90,31 @@ class CColumnsWindow : public CWindow
    return true;
   }
  //--- The caption of the header, or "Column n" when the header has only an icon
- string CColumnsWindow::CaptionOf(const int column)
+ string CTableColumnView::CaptionOf(const int column)
   {
-   string caption=this.m_table.Model().Header().Caption(column);
+   string caption=this.m_table.ColumnCaption(column);
    return (caption=="" ? "Column "+(string)(column+1) : caption);
   }
  //--- The list follows the table: one row for each column, in the order the table shows them, checked when shown
- void CColumnsWindow::Fill(const int select_column)
+ void CTableColumnView::Fill(const int select_column)
   {
-   CTableHeaderView *header=this.m_table.View().GetHeaderViewPointer();
-   int total=header.ColumnsTotal();
+   int total=this.m_table.ColumnsTotal();
    ::ArrayResize(this.m_column_at,total);
    this.m_list.Rebuilding(total,false);
    int select=0;
    for(int p=0;p<total;p++)
      {
-      int column=header.ColumnOrder(p);
+      int column=this.m_table.ColumnAtPosition(p);
       this.m_column_at[p]=column;
       this.m_list.SetValue(p,this.CaptionOf(column));
-      this.m_list.SetState(p,header.ColumnShown(column));
+      this.m_list.SetState(p,this.m_table.IsColumnShown(column));
       if(column==select_column)
          select=p;
      }
    this.m_list.SelectItem(select,false);
    this.m_list.Draw(true);
   }
- void CColumnsWindow::Notify(void)
-  {
-   ::EventChartCustom(this.ChartID(),(ushort)ON_TABLE_COLUMNS_CHANGED,(long)this.m_table.ObjectID(),0.0,"");
-  }
- void CColumnsWindow::Open(void)
+ void CTableColumnView::Open(void)
   {
    if(this.m_table==NULL)
       return;
@@ -130,7 +126,7 @@ class CColumnsWindow : public CWindow
  //| A click on a row (it flips the check): the table shows or hides  |
  //| the column; Up and Down move the selected one; Reset: as made    |
  //+------------------------------------------------------------------+
- void CColumnsWindow::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+ void CTableColumnView::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
    CWindow::OnChartEvent(id,lparam,dparam,sparam);
    if(this.m_table==NULL || !this.IsVisible() || id<CHARTEVENT_CUSTOM)
@@ -144,7 +140,7 @@ class CColumnsWindow : public CWindow
          return;
       this.m_table.ColumnShown(column,this.m_list.GetState(selected));
       this.Fill(column);   // the table refuses to hide the last column: the list shows what the table has
-      this.Notify();
+      this.SendEvent(ON_TABLE_COLUMNS_CHANGED,0,"");   // done: tells its parent
      }
    else if(event==ON_CLICK_BUTTON)
      {
@@ -155,16 +151,16 @@ class CColumnsWindow : public CWindow
          if(this.m_table.MoveColumn(column,lparam==(long)this.m_button_up.ObjectID() ? -1 : 1))
            {
             this.Fill(column);
-            this.Notify();
+            this.SendEvent(ON_TABLE_COLUMNS_CHANGED,0,"");   // done: tells its parent
            }
         }
       else if(lparam==(long)this.m_button_reset.ObjectID())
         {
          this.m_table.ColumnsReset();
          this.Fill(column);
-         this.Notify();
+         this.SendEvent(ON_TABLE_COLUMNS_CHANGED,0,"");   // done: tells its parent
         }
      }
   }
-#endif // CCOLUMNSWINDOW_MQH_IMPLEMENTATION
-#endif // CCOLUMNSWINDOW_MQH
+#endif // CTABLECOLUMNVIEW_MQH_IMPLEMENTATION
+#endif // CTABLECOLUMNVIEW_MQH

@@ -48,12 +48,12 @@
      bool                       Wanted(const CLifecycleSeries *last) const;
      string                     StateText(const CLifecycleSeries *last) const;
      string                     InfoText(const CLifecycleSeries *last) const;
-     bool                       IsNearest(const CLifecycleSeries *last) const;
-     bool                       DrawLine(CLifecycleSeries *last);
+     bool                       IsNearest(const CLifecycleSeries *last,CArrayObj *current=NULL) const;   // current: the records of the kind, taken once by the caller
+     bool                       DrawLine(CLifecycleSeries *last,CArrayObj *current=NULL);
      bool                       DrawZone(CLifecycleSeries *last);
      ENUM_LIFECYCLE_OBJECT_KIND ZoneKindOfTag(const string words) const;
      bool                       DrawMomentum(CLifecycleSeries *last);
-     bool                       Draw(CLifecycleSeries *last);
+     bool                       Draw(CLifecycleSeries *last,CArrayObj *current=NULL);
      int                        SyncKind(const ENUM_LIFECYCLE_OBJECT_KIND kind);
    public:
      void                       OnInitEvent(CGraphElementsCollection *collection,CLifecycleCollection *lifecycle);
@@ -258,12 +258,16 @@
  //| Is it one of the nearest living lines of its side: the lines whose |
  //| value now is closest to the price are the ones it can break next  |
  //+------------------------------------------------------------------+
- bool CLifecycleSync::IsNearest(const CLifecycleSeries *last) const
+ bool CLifecycleSync::IsNearest(const CLifecycleSeries *last,CArrayObj *current=NULL) const
   {
    datetime now=::iTime(::Symbol(),::Period(),0);
    double price=::iClose(::Symbol(),::Period(),0);
-   CArrayObj current;   // points at the records, owns nothing
-   this.m_LifecycleCollection.Current(current,last.Kind());
+   CArrayObj own;   // points at the records, owns nothing
+   if(current==NULL)
+     {
+      this.m_LifecycleCollection.Current(own,last.Kind());
+      current=&own;
+     }
    double mine=0.0;
    int closer=0;
    for(int pass=0;pass<2;pass++)
@@ -289,7 +293,7 @@
  //+------------------------------------------------------------------+
  //| Draw (or update) the line of one trendline from its newest event |
  //+------------------------------------------------------------------+
- bool CLifecycleSync::DrawLine(CLifecycleSeries *last)
+ bool CLifecycleSync::DrawLine(CLifecycleSeries *last,CArrayObj *current=NULL)
   {
    if(last==NULL || last.Kind()!=LIFECYCLE_OBJECT_TRENDLINE)
       return false;
@@ -332,7 +336,7 @@
      }
    else if(time_2!=time_1)   // alive: the nearest ones go to the current bar, the others are dashed and thin and stop at their own last swing
      {
-      bool near=this.IsNearest(last);
+      bool near=this.IsNearest(last,current);
       if(!near)
         {
          style=STYLE_DASH;
@@ -447,13 +451,13 @@
   {
    return (record!=NULL && record.Timeframe()==(ENUM_TIMEFRAMES)::Period() && record.Symbol()==::Symbol());
   }
- bool CLifecycleSync::Draw(CLifecycleSeries *last)
+ bool CLifecycleSync::Draw(CLifecycleSeries *last,CArrayObj *current=NULL)
   {
    if(!this.OnChart(last))
       return false;
    switch(last.Kind())
      {
-      case LIFECYCLE_OBJECT_TRENDLINE: return this.DrawLine(last);
+      case LIFECYCLE_OBJECT_TRENDLINE: return this.DrawLine(last,current);
       case LIFECYCLE_OBJECT_ZONE:      return this.DrawZone(last);
       case LIFECYCLE_OBJECT_SUPPLYDEMAND: return this.DrawZone(last);
       case LIFECYCLE_OBJECT_FVG:       return this.DrawZone(last);
@@ -479,7 +483,7 @@
          continue;   // the collection holds every TF of the symbol, the chart shows its own
       if(record.Event()==LIFECYCLE_EVENT_DEAD)
          dead.Add(record);
-      else if(this.Draw(record))
+      else if(this.Draw(record,&current))
          drawn++;
      }
    dead.Sort(SORT_BY_LIFECYCLE_TIME);   // oldest first: the newest ones are at the end
@@ -496,15 +500,21 @@
   }
  void CLifecycleSync::Sync(void)
   {
+   ulong d0=::GetMicrosecondCount();   //Print Debug
    int lines=this.SyncKind(LIFECYCLE_OBJECT_TRENDLINE);
+   ulong d1=::GetMicrosecondCount();   //Print Debug
    int zones=this.SyncKind(LIFECYCLE_OBJECT_ZONE)+this.SyncKind(LIFECYCLE_OBJECT_SUPPLYDEMAND)+this.SyncKind(LIFECYCLE_OBJECT_FVG);
+   ulong d2=::GetMicrosecondCount();   //Print Debug
    this.OpenNewest();
+   ulong d3=::GetMicrosecondCount();   //Print Debug
    CZoneTagBox::Arrange(this.m_GraphElementsCollection);   // the tags of the zones are put
+   ulong d4=::GetMicrosecondCount();   //Print Debug
    if(this.SyncKind(LIFECYCLE_OBJECT_MOMENTUM)>0)
       CCandleMarker::Arrange(this.m_GraphElementsCollection);   // the markers of the momentum candles are stacked with the others
    ::ChartRedraw();
    CMessage::ToFile(this.GetFolderName(),"CLifecycleSync","Sync",(string)lines+" trendline(s) and "+(string)zones+" zone(s) drawn of "+
-                    (string)this.m_LifecycleCollection.Total()+" event(s) in the collection");
+                    (string)this.m_LifecycleCollection.Total()+" event(s) in the collection: trendlines "+(string)((d1-d0)/1000)+" ms, zones "+(string)((d2-d1)/1000)+
+                    " ms, OpenNewest "+(string)((d3-d2)/1000)+" ms, tags Arrange "+(string)((d4-d3)/1000)+" ms, momentum "+(string)((::GetMicrosecondCount()-d4)/1000)+" ms");   //Print Debug
   }
  void CLifecycleSync::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {

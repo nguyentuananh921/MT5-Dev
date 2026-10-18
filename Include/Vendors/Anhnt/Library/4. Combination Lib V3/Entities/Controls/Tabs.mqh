@@ -42,6 +42,8 @@ class CTabs : public CGElement
     bool              IsTabsOverflow(void);
     void              CheckTabIndex(void);
     void              ShiftTabsHeader(void);
+    bool              IsVerticalHeader(void) const { return(this.m_position_mode==TABS_LEFT || this.m_position_mode==TABS_RIGHT); }
+    int               HeaderY(void) const;
     bool              OnClickTab(const long id,const int index);
     bool              OnClickScrollLeft(const long id);
     bool              OnClickScrollRight(const long id);
@@ -98,6 +100,13 @@ void CTabs::InitColors(void)
   this.m_color_background_act.InitColors(clrWhite,clrWhite,clrWhite,clrWhite);
   this.m_color_foreground_act.InitColors(clrBlack,clrBlack,clrBlack,clrGray);
   this.m_color_border_act.InitColors(C'217,217,217',C'217,217,217',C'217,217,217',C'217,217,217');
+ }
+//+------------------------------------------------------------------+
+//| Y of the header row: above the content, or below it for BOTTOM   |
+//+------------------------------------------------------------------+
+int CTabs::HeaderY(void) const
+ {
+  return(this.m_position_mode==TABS_BOTTOM ? this.m_y+this.m_y_size-1 : this.m_y-this.m_tab_y_size+1);
  }
 //+------------------------------------------------------------------+
 //| Adds a tab before CreateTabs                                     |
@@ -174,8 +183,8 @@ bool CTabs::CreateScrollButtons(void)
      return(false);
   if(!this.CreateScrollButton(this.m_btn_scroll_right,"_scroll_right",IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_BLACK_BMP,IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_WHITE_BMP))
      return(false);
-  this.m_btn_scroll_left.Move(this.m_x+this.m_x_size-30,this.m_y-this.m_tab_y_size+1);
-  this.m_btn_scroll_right.Move(this.m_x+this.m_x_size-15,this.m_y-this.m_tab_y_size+1);
+  this.m_btn_scroll_left.Move(this.m_x+this.m_x_size-30,this.HeaderY());
+  this.m_btn_scroll_right.Move(this.m_x+this.m_x_size-15,this.HeaderY());
   return(true);
  }
 //+------------------------------------------------------------------+
@@ -211,7 +220,7 @@ int CTabs::SumWidthTabs(void)
 //+------------------------------------------------------------------+
 bool CTabs::IsTabsOverflow(void)
  {
-  return(this.SumWidthTabs()>this.m_x_size);
+  return(!this.IsVerticalHeader() && this.SumWidthTabs()>this.m_x_size);   // a column of tabs does not scroll
  }
 //+------------------------------------------------------------------+
 //| Checking the index of the selected tab                           |
@@ -235,12 +244,22 @@ void CTabs::ShiftTabsHeader(void)
   int offset=0;
   for(int i=0; i<this.m_scroll_first_visible; i++)
      offset+=this.m_tab_width[i]-1;
-  int header_y=this.m_y-this.m_tab_y_size+1;
+  int header_y=this.HeaderY();
   int x=0;
   for(int i=0; i<this.TabsTotal(); i++)
     {
      CButtonTriggered *button=this.m_tabs.GetButtonPointer(i);
      int new_x=x-offset;
+     if(this.IsVerticalHeader())   // LEFT: the column touches the content on its left, RIGHT: on its right
+       {
+        int column_x=(this.m_position_mode==TABS_LEFT ? this.m_x-this.m_tab_width[i]+1 : this.m_x+this.m_x_size-1);
+        button.Move(column_x,this.m_y+i*(this.m_tab_y_size-1));
+        if(this.IsVisible())
+           button.Show();
+        else
+           button.Hide();
+        continue;
+       }
      button.Move(this.m_x+new_x,header_y);
      bool in_view=(!overflow || (new_x>=0 && new_x+this.m_tab_width[i]<=this.m_x_size-30));
      if(this.IsVisible() && in_view)
@@ -336,7 +355,7 @@ void CTabs::ChangeWidthByRightWindowSide(void)
      if(width>0 && width!=this.m_x_size)
        {
         this.Resize(width,this.m_y_size);
-        int header_y=this.m_y-this.m_tab_y_size+1;
+        int header_y=this.HeaderY();
         this.m_btn_scroll_left.Move(this.m_x+this.m_x_size-30,header_y);
         this.m_btn_scroll_right.Move(this.m_x+this.m_x_size-15,header_y);
         this.ShiftTabsHeader();
@@ -354,7 +373,11 @@ void CTabs::ChangeHeightByBottomWindowSide(void)
     {
      int height=parent.Height()-this.m_y_gap-this.m_auto_yresize_bottom_offset;
      if(height>0 && height!=this.m_y_size)
+       {
         this.Resize(this.m_x_size,height);
+        if(this.m_position_mode!=TABS_TOP)
+           this.ShiftTabsHeader();   // the header follows the bottom or right side
+       }
     }
   CGElement::ChangeHeightByBottomWindowSide();
  }

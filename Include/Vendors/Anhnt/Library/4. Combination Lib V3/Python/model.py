@@ -154,7 +154,8 @@ class LifecycleTracker:
 
 
 class Model:
-    def __init__(self):
+    def __init__(self, variant=""):
+        self.variant = variant   # the kind of Swing this model calculates for ("3b", "5w"...): its cache files carry it; "" = the single one of the first EAs
         self.strength = DEFAULT_STRENGTH
         self.use_wick = DEFAULT_USE_WICK
         self.count = 0
@@ -243,7 +244,7 @@ class Model:
                        structures=len(self.structures[key]), signals=len(self.signals[key]),
                        patterns=len(self.patterns[key]), lifecycle=len(self.lifecycle[key]), conditions=len(self.conditions[key]))
             return row
-        kept = cache.read(key, self.fingerprint)
+        kept = cache.read(key, self.fingerprint, self.variant)
         if kept is not None:   # made by an earlier run with the same settings and code: read it, calculate only the bars that came since
             started = time.perf_counter()
             try:
@@ -516,7 +517,7 @@ class Model:
                                                 "conditions": self.conditions[key], "movements": self.movements[key],
                                                 "condition_state": {k: v for k, v in vars(self.condition_trackers[key]).items() if k != "p"},
                                                 "movement_state": {k: v for k, v in vars(self.movement_trackers[key]).items() if k != "p"},
-                                                "derived_key": self.derived_key()})
+                                                "derived_key": self.derived_key()}, self.variant)
             self.saved_at[key] = time.monotonic()
             self.dirty.discard(key)
         except Exception as error:

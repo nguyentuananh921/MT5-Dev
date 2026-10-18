@@ -13,6 +13,7 @@
 //| Model (data) + View (child element) + controller (this class):   |
 //| view actions change the model, events go out with this table's id|
 //+------------------------------------------------------------------+
+class CTableColumnView;   // the window of the columns: a child of the table, defined below
 class CTable : public CGElement
  {
   private:
@@ -22,6 +23,7 @@ class CTable : public CGElement
     bool              m_auto_yresize_mode;
     int               m_auto_xresize_right_offset;
     int               m_auto_yresize_bottom_offset;
+    CTableColumnView   *m_columns;   // the window to choose the columns, made when it is first asked for
 
     void              SetCellFromText(CTableCell *cell,const string text);
   protected:
@@ -35,6 +37,7 @@ class CTable : public CGElement
     CTableRow        *AddRow(const int row_index=WRONG_VALUE,const bool redraw=false);
     void              DeleteRow(const int row_index,const bool redraw=false);
     void              DeleteAllRows(const bool redraw=false);
+    void              ColumnContentAlign(const uint column_index,const ENUM_ALIGN_MODE align) { this.m_view.GetHeaderViewPointer().ContentAlign(column_index,align); }
     void              SetHeaderText(const uint column_index,const string value)   { this.m_model.Header().SetCaption((int)column_index,value); }
     void              SetHeaderImage(const uint column_index,const uint &resource_index[]) { this.m_view.GetHeaderViewPointer().SetHeaderImage(column_index,resource_index); }
     template<typename T> void SetValue(const uint column_index,const uint row_index,const T value) { this.m_model.CellSetValue(row_index,column_index,value); }
@@ -42,12 +45,19 @@ class CTable : public CGElement
     CTableCellView   *CellView(const uint column_index,const uint row_index)     { CTableRowView *row=this.m_view.RowViewByModel((int)row_index); return(row!=NULL ? row.CellView((int)column_index) : NULL); }
     void              SortData(const uint column_index,const ENUM_CSORT_MODE direction);
   //--- Which columns show and in which order: only the view changes, the model keeps every column
+    int               ColumnsTotal(void)                         { return(this.m_view.GetHeaderViewPointer().ColumnsTotal()); }
     bool              IsColumnShown(const int column)            { return(this.m_view.GetHeaderViewPointer().ColumnShown(column)); }
+    int               ColumnAtPosition(const int position)       { return(this.m_view.GetHeaderViewPointer().ColumnOrder(position)); }   // the column of the model shown at this place
+    string            ColumnCaption(const int column)            { return(this.m_model.Header().Caption(column)); }
     void              ColumnShown(const int column,const bool flag,const bool redraw=true);
     bool              MoveColumn(const int column,const int delta,const bool redraw=true);
     string            ColumnsLayout(void)                        { return(this.m_view.GetHeaderViewPointer().ColumnsLayout()); }
     bool              ColumnsLayout(const string layout,const bool redraw=true);
     void              ColumnsReset(const bool redraw=true);
+  //--- Asked from outside (a button of the EA): the table shows its own window to choose the columns and looks after it
+    void              ShowColumns(void);
+  //--- The window to choose the columns (NULL before the first ShowColumns): a program that stacks its windows registers it too, or the others cover it
+    CGElement        *ColumnsWindow(void);
     void              AutoXResizeMode(const bool mode)           { this.m_auto_xresize_mode=mode;           }
     void              AutoYResizeMode(const bool mode)           { this.m_auto_yresize_mode=mode;           }
     void              AutoXResizeRightOffset(const int offset)   { this.m_auto_xresize_right_offset=offset; }
@@ -56,10 +66,12 @@ class CTable : public CGElement
     virtual void      ChangeWidthByRightWindowSide(void);
     virtual void      ChangeHeightByBottomWindowSide(void);
     virtual void      OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+    virtual void      OnTimerEvent(void);
                      CTable(void);
-                    ~CTable(void) {}
+                    ~CTable(void);
  };
 #endif // CTABLE_MQH_DECLARATION
+ #include "View\TableColumnView.mqh"   // after the declaration of the table: the window works with it
 #ifndef CTABLE_MQH_IMPLEMENTATION
 #define CTABLE_MQH_IMPLEMENTATION
 //+------------------------------------------------------------------+
@@ -68,8 +80,14 @@ class CTable : public CGElement
 CTable::CTable(void) : m_auto_xresize_mode(false),
                        m_auto_yresize_mode(false),
                        m_auto_xresize_right_offset(0),
-                       m_auto_yresize_bottom_offset(0)
+                       m_auto_yresize_bottom_offset(0),
+                       m_columns(NULL)
  {
+ }
+CTable::~CTable(void)
+ {
+  if(this.m_columns!=NULL)
+     delete this.m_columns;
  }
 //+------------------------------------------------------------------+
 //| The shell itself draws nothing                                   |
@@ -208,6 +226,13 @@ void CTable::ChangeHeightByBottomWindowSide(void)
 //+------------------------------------------------------------------+
 void CTable::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
  {
+  if(this.m_columns!=NULL)
+     this.m_columns.OnChartEvent(id,lparam,dparam,sparam);   // its child hears what the table hears
+  if(id==CHARTEVENT_CUSTOM+ON_TABLE_COLUMNS_CHANGED && this.m_columns!=NULL && lparam==this.m_columns.ObjectID())
+    {
+     this.SendEvent(ON_TABLE_COLUMNS_CHANGED,0,"");   // the child did what it was asked: the table tells the outside, with its own id
+     return;
+    }
   CGElement::OnChartEvent(id,lparam,dparam,sparam);
   if(id<=CHARTEVENT_CUSTOM || lparam!=this.m_view.ObjectID())
      return;
@@ -277,6 +302,40 @@ void CTable::ColumnsReset(const bool redraw=true)
  {
   this.m_view.GetHeaderViewPointer().ColumnsReset();
   this.m_view.Rebuild(redraw,true);
+ }
+void CTable::OnTimerEvent(void)
+ {
+  CGElement::OnTimerEvent();
+  if(this.m_columns!=NULL)
+     this.m_columns.OnTimerEvent();
+ }
+//+------------------------------------------------------------------+
+//| The window of the columns is made the first time it is asked for,|
+//| near the top left of the table, then shown; what the user does in|
+//| it the table does by itself (it tells the outside with           |
+//| ON_TABLE_COLUMNS_CHANGED)                                        |
+//+------------------------------------------------------------------+
+void CTable::ShowColumns(void)
+ {
+  if(this.m_columns==NULL)
+    {
+     this.m_columns=new CTableColumnView();
+     if(this.m_columns==NULL)
+        return;
+     int x=(int)::ObjectGetInteger(this.m_chart_id,this.Name(),OBJPROP_XDISTANCE)+40;
+     int y=(int)::ObjectGetInteger(this.m_chart_id,this.Name(),OBJPROP_YDISTANCE)+30;
+     if(!this.m_columns.CreateColumnView(this.m_chart_id,this.m_subwindow,x,y,&this))
+       {
+        delete this.m_columns;
+        this.m_columns=NULL;
+        return;
+       }
+    }
+  this.m_columns.Open();
+ }
+CGElement *CTable::ColumnsWindow(void)
+ {
+  return(this.m_columns);
  }
 #endif // CTABLE_MQH_IMPLEMENTATION
 #endif // CTABLE_MQH

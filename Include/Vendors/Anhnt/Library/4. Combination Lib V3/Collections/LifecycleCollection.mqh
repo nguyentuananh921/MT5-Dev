@@ -8,6 +8,7 @@
 //+------------------------------------------------------------------+
 #ifndef __LIFECYCLECOLLECTION_MQH__
 #define __LIFECYCLECOLLECTION_MQH__
+#include <Generic\HashMap.mqh>
  #include "ListObj.mqh"
  #include "..\Entities\Bases\BaseObj.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
@@ -124,7 +125,7 @@
   {
    out.FreeMode(false);
    out.Clear();
-   string keys[];   // keys[i] is the key of out[i]
+   CHashMap<string,int> at_of_key;   // the position in out of the object a key names
    for(int i=this.m_list.Total()-1;i>=0;i--)
      {
       CLifecycleSeries *record=this.m_list.At(i);
@@ -132,16 +133,9 @@
          continue;
       string key=record.ObjectKey();
       int at=WRONG_VALUE;
-      for(int k=ArraySize(keys)-1;k>=0;k--)
-         if(keys[k]==key)
-           {
-            at=k;
-            break;
-           }
-      if(at==WRONG_VALUE)
+      if(!at_of_key.TryGetValue(key,at))
         {
-         ArrayResize(keys,ArraySize(keys)+1);
-         keys[ArraySize(keys)-1]=key;
+         at_of_key.Add(key,out.Total());
          out.Add(record);
         }
       else if(this.IsNewer(record,out.At(at)))

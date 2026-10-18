@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                              Test_HistoryTable.mq5 |
+//|                                            Test_HistoryTable.mq5 |
 //| Isolated test: CHistoryCollection shown in a CWindow with a      |
 //| CTable. The Columns button opens a small window to show, hide    |
 //| and move the columns at run time (only the view changes, the     |
@@ -10,7 +10,7 @@
 #property strict
 
 #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\HistoryCollection.mqh>
-#include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Controls\Table\ColumnsWindow.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Controls\Table\Table.mqh>
 
 input int  InpMaxRows        = 300;   // the newest lines of the history shown
 input int  InpRefreshSeconds = 5;     // the history is read again this often
@@ -45,7 +45,6 @@ CWindow            g_window;
 CTable             g_table;
 CButton            g_button_columns;
 CButton            g_button_refresh;
-CColumnsWindow     g_columns;
 int                g_listed=-1;       // how many lines of the history the table shows now
 datetime           g_last_refresh=0;
 //+------------------------------------------------------------------+
@@ -154,8 +153,6 @@ bool CreateWindowAndTable(void)
       g_table.SetHeaderText(c,HISTORY_CAPTION[c]);
    g_table.View().Rebuild(true);
    //--- the window of the columns, beside the history window
-   if(!g_columns.CreateColumnsWindow(chart,0,HISTORY_WINDOW_W+30,40,&g_table))
-      return false;
    LoadLayout();
    return true;
   }
@@ -184,7 +181,6 @@ void OnTick() {}
 void OnTimer()
   {
    g_window.OnTimerEvent();
-   g_columns.OnTimerEvent();
    if(::TimeLocal()-g_last_refresh<InpRefreshSeconds)
       return;
    g_last_refresh=::TimeLocal();
@@ -197,11 +193,10 @@ void OnTimer()
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
    g_window.OnChartEvent(id,lparam,dparam,sparam);
-   g_columns.OnChartEvent(id,lparam,dparam,sparam);
    if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON)
      {
       if(lparam==(long)g_button_columns.ObjectID())
-         g_columns.Open();
+         g_table.ShowColumns();   // the table shows its own window to choose the columns
       else if(lparam==(long)g_button_refresh.ObjectID())
         {
          g_history.Refresh();

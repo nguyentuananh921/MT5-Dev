@@ -26,15 +26,19 @@
     + CTradingEngine    CSymbolsCollection        -> m_symbol_collection;
     + Biến Pointer sẽ phải trùng tên và note rõ class nào hold nó ví dụ
   - CSymbolsCollection         *m_symbol_collection; //CTradingEngine owns
-   = Tên của các method liên quan đến Table và TreeView, SymbolTFSetting,IndicatorTemplateSetting
-    + Create: Create<Which>_<Which>
-    + CreateTable_IndicatorTemplateSetting(),
-    + CreateTable_SymbolTFSetting()
-    + CreateTreeView_IndicatorTemplateSetting()
-    + CreateTreeView_SymbolTFSetting()
-    + Update lần đầu InitializeTabble>_<Which>,InitializeTable_IndicatorTemplateSetting()    
+   = Tên của các method liên quan đến cái gì thì đặt tên cho dễ hiểu
+    + Create: Create<Which>_<Which> 
+      - CreateTable_IndicatorTemplateSetting(),
+      - CreateTable_IndicatorTemplateSetting(),
+      - CreateTable_SymbolTFSetting()    
+    + Update lần đầu InitializeTabble>_<Which>,
+     - InitializeTable_IndicatorTemplateSetting()  
+     - UpdateWindowCaption_MainWindow(), UpdateStatusBar_SymbolSpread()  
     + Modify số lượng nhỏ   AddRow_<Which>,DeleteRow_<Which>,HighLightRow_<Which>, UpdateRow_<Which>
-    + Hành vi sửa hàng loạt:   SyncTable_<Which>,
+    + Hành vi sửa hàng loạt:   SyncTable_<Which>,   
+   = CWindow: chữ tiêu đề là một con CLabel của nó (GetCaptionPointer, Caption(text), CaptionAlign(ALIGN_RIGHT)), không còn TextOut trực tiếp.
+     Các Window khác (Setting TimeSeries, Setting Trading, CandleInfo) mang sang thì vẫn CreateWindow(caption), cần đổi chữ thì Caption(text).
+      
   - Với Table SymbolTFSetting chỉ có 3 method
     + PopulateTable_SymbolTFSetting
     + CreateTable_SymbolTFSetting

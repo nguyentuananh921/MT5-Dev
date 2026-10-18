@@ -59,6 +59,8 @@
      void                      Add(CMovementSeries *leg);
      void                      Add(CIndicatorSignalSeries *signal,const int source);
      void                      DeleteMarkers(void);
+   //--- The Buy / Sell flag of an indicator or a pattern changed: only the signal sources of the markers are taken off and put again, nothing else is deleted
+     void                      RefreshSignals(void);
                                CSmartMoneySync(void);
   };
 //+------------------------------------------------------------------+
@@ -346,6 +348,40 @@ void CSmartMoneySync::Add(CIndicatorSignalSeries *signal,const int source)
       CCandleMarker::Arrange(this.m_GraphElementsCollection);
       ::ChartRedraw();
      }
+  }
+//+------------------------------------------------------------------+
+void CSmartMoneySync::RefreshSignals(void)
+  {
+   const int signal_sources=CANDLE_MARKER_SOURCE_INDICATOR|CANDLE_MARKER_SOURCE_CANDLE;
+   const string symbol=::Symbol();
+   const ENUM_TIMEFRAMES timeframe=(ENUM_TIMEFRAMES)::Period();
+   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
+     {
+      CCandleMarker *marker=dynamic_cast<CCandleMarker *>(this.m_GraphElementsCollection.Child(i));
+      if(marker==NULL || (marker.Sources()&signal_sources)==0)
+         continue;
+      int rest=marker.Sources()&~signal_sources;
+      if(rest==0)
+        {
+         this.m_GraphElementsCollection.DeleteChild(marker);
+         delete marker;
+         continue;
+        }
+      //--- the name tells the candle and the side: SMC_Marker_<time>_B / _S
+      string text=::StringSubstr(marker.Name(),::StringLen(SMC_MARKER_NAME));
+      datetime time=(datetime)::StringToInteger(text);
+      bool is_buy=(::StringSubstr(text,::StringLen(text)-1)=="B");
+      int shift=::iBarShift(symbol,timeframe,time,false);
+      if(shift>=0)
+         marker.SetMarker(time,::iHigh(symbol,timeframe,shift),::iLow(symbol,timeframe,shift),is_buy,this.MarkerColour(rest,is_buy),rest);
+     }
+   datetime from_time=::iTime(symbol,timeframe,SMC_DRAW_BARS-1);   // 0 when the chart holds fewer bars
+   this.ReserveList(this.m_signals,CANDLE_MARKER_SOURCE_INDICATOR,from_time);
+   this.ReserveList(this.m_patterns,CANDLE_MARKER_SOURCE_CANDLE,from_time);
+   this.MarkList(this.m_signals,CANDLE_MARKER_SOURCE_INDICATOR,from_time);
+   this.MarkList(this.m_patterns,CANDLE_MARKER_SOURCE_CANDLE,from_time);
+   CCandleMarker::Arrange(this.m_GraphElementsCollection);
+   ::ChartRedraw();
   }
 //+------------------------------------------------------------------+
 void CSmartMoneySync::DeleteMarkers(void)

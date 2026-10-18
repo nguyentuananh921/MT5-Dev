@@ -204,17 +204,18 @@ bool CMessage::ToFTP(const string filename,const string ftp_path=NULL)
    return true;
   }
 //+------------------------------------------------------------------+
-//| Write Debug text to Files/<folder>/Debug_<class_name>.txt        |
+//| Write Debug text to Files/<folder>/Debug/Debug_<class_name>.txt: |
+//| the                                                              |
+//| file holds the last print only                                   |
 //|  Add Since V10 (by Anhnt, 2026-09-01)                            |
 //+------------------------------------------------------------------+
 void CMessage::ToFile(const string folder,const string class_name,const string method_name,const string message)
   {
-   string filepath=(folder!="" ? folder+"/" : "")+"Debug_"+class_name+".txt";
-   int fh=::FileOpen(filepath,FILE_READ|FILE_WRITE|FILE_TXT|FILE_ANSI);
+   string filepath=(folder!="" ? folder+"/" : "")+"Debug/Debug_"+class_name+".txt";   // the Debug folder of the program folder
+   //--- No adding up: every print is the whole content of the file (without FILE_READ the file is emptied)
+   int fh=::FileOpen(filepath,FILE_WRITE|FILE_TXT|FILE_ANSI);
    if(fh==INVALID_HANDLE)
       return;
-   if(::FileSize(fh)>0)
-      ::FileSeek(fh,0,SEEK_END);
    ::FileWrite(fh,::TimeToString(::TimeLocal(),TIME_DATE|TIME_SECONDS)+"  "+class_name+"::"+method_name+"  "+message);
    ::FileClose(fh);
   }
