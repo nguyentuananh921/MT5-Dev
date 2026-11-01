@@ -8,12 +8,7 @@
  //--- Symbol TF marker tab: the Market Watch tree (left) and the CSymbolTFManager table (right)
  bool CGUIPannel::CreateTable_SymbolTFSetting(const int x,const int y)
   {
-   //--- The Save button at the right of the tab, the table below it
-   m_btn_save_SymbolTF.SetText("Save");
-   m_btn_save_SymbolTF.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
-   m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_SYMBOL_TF,m_btn_save_SymbolTF);
-   if(!m_btn_save_SymbolTF.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnSaveSymbolTF",m_tabs_quickSetting.Width()-M_BUTTON_SAVE_WIDTH-M_CONTROL_BORDER_GAP,y+M_CONTROL_BORDER_GAP,M_BUTTON_SAVE_WIDTH,M_CONTROL_HEIGHT))
-      return false;
+   //--- Every change is written to the database at once: the tab has no Save button
    m_table_SymbolTFSeting.TableSize(COLUMNS_SYMBOLTF_TOTAL,0);
    m_table_SymbolTFSeting.View().ShowHeaders(true);
    m_table_SymbolTFSeting.View().SelectableRow(true);
@@ -24,7 +19,7 @@
    m_table_SymbolTFSeting.AutoYResizeMode(true);
    m_table_SymbolTFSeting.AutoYResizeBottomOffset(3);
    m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_SYMBOL_TF,m_table_SymbolTFSeting);
-   if(!m_table_SymbolTFSeting.CreateTable(this.m_chart_id,M_SUBWINDOW_MAIN,"TableSymbolTF",x,y+M_CONTROL_BORDER_GAP+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP))
+   if(!m_table_SymbolTFSeting.CreateTable(this.m_chart_id,M_SUBWINDOW_MAIN,"TableSymbolTF",x,y+M_CONTROL_BORDER_GAP))
       return false;
    int widths[COLUMNS_SYMBOLTF_TOTAL]            ={M_SYMBOL_WITHICON_WIDTH,M_TF_WITHICON_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH};
    int image_x[COLUMNS_SYMBOLTF_TOTAL]           ={3,3,2,2,2,2};
@@ -51,15 +46,14 @@
   {
    if(m_SymbolTFManager==NULL)
       return;
-   int total=m_SymbolTFManager.Total();
+   string pair_symbols[];
+   ENUM_TIMEFRAMES pair_tfs[];
+   int total=m_SymbolTFManager.Pairs(pair_symbols,pair_tfs);
    bool in_sync=((int)m_table_SymbolTFSeting.Model().RowsTotal()==total);
    for(int i=0;i<total && in_sync;i++)
      {
-      CSymbolTFSetting *entry=m_SymbolTFManager.At(i);
-      if(entry==NULL)
-         continue;
-      if(m_table_SymbolTFSeting.Cell(0,i).ValueS()!=entry.Symbol() ||
-         m_table_SymbolTFSeting.Cell(1,i).ValueS()!=entry.TFText())
+      if(m_table_SymbolTFSeting.Cell(0,i).ValueS()!=pair_symbols[i] ||
+         m_table_SymbolTFSeting.Cell(1,i).ValueS()!=TimeframeDescription(pair_tfs[i]))
          in_sync=false;
      }
    if(!in_sync)
@@ -76,23 +70,24 @@
       return;
    uint delete_icon[]={IMAGE_RESOURCE_BMP16_CLOSE_RED_PNG};
    uint start_icon[] ={IMAGE_RESOURCE_BMP16_START_BMP};
-   int total=::MathMin(m_SymbolTFManager.Total(),(int)m_table_SymbolTFSeting.Model().RowsTotal());
+   string pair_symbols[];
+   ENUM_TIMEFRAMES pair_tfs[];
+   bool pair_buy[],pair_sell[],pair_sound[],pair_message[];
+   int total=::MathMin(m_SymbolTFManager.Pairs(pair_symbols,pair_tfs,pair_buy,pair_sell,pair_sound,pair_message),(int)m_table_SymbolTFSeting.Model().RowsTotal());
    for(int row=0;row<total;row++)
      {
-      CSymbolTFSetting *entry=m_SymbolTFManager.At(row);
-      if(entry==NULL)
-         continue;
-      bool is_current=(entry.Symbol()==::Symbol() && entry.TFText()==TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
+      string tf_text=TimeframeDescription(pair_tfs[row]);
+      bool is_current=(pair_symbols[row]==::Symbol() && tf_text==TimeframeDescription((ENUM_TIMEFRAMES)::Period()));
       m_table_SymbolTFSeting.CellView(0,row).CellType(CELL_BUTTON);
       if(is_current) m_table_SymbolTFSeting.CellView(0,row).SetImages(start_icon);
       else           m_table_SymbolTFSeting.CellView(0,row).SetImages(delete_icon);
-      m_table_SymbolTFSeting.SetValue(0,row,entry.Symbol());
-      m_table_SymbolTFSeting.SetValue(1,row,entry.TFText());
+      m_table_SymbolTFSeting.SetValue(0,row,pair_symbols[row]);
+      m_table_SymbolTFSeting.SetValue(1,row,tf_text);
       bool flags[4];
-      flags[0]=entry.BuySignal();
-      flags[1]=entry.SellSignal();
-      flags[2]=entry.SoundAlert();
-      flags[3]=entry.MessageAlert();
+      flags[0]=pair_buy[row];
+      flags[1]=pair_sell[row];
+      flags[2]=pair_sound[row];
+      flags[3]=pair_message[row];
       for(int c=0;c<4;c++)
         {
          m_table_SymbolTFSeting.CellView(c+2,row).CellType(CELL_CHECKBOX);
@@ -117,23 +112,23 @@
   {
    if(m_SymbolTFManager==NULL)
       return;
-   CSymbolTFSetting *entry=m_SymbolTFManager.FindByIdentity(sym,TimestampByDescription(tf_text));
-   if(entry==NULL)
+   ENUM_TIMEFRAMES tf=TimestampByDescription(tf_text);
+   if(!m_SymbolTFManager.Exists(sym,tf))
       return;
    if(col==2)
      {
-      entry.BuySignal(on);
+      m_SymbolTFManager.BuySignal(sym,tf,on);
       ::EventChartCustom(::ChartID(),(ushort)SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED,0,0.0,"");
      }
    else if(col==3)
      {
-      entry.SellSignal(on);
+      m_SymbolTFManager.SellSignal(sym,tf,on);
       ::EventChartCustom(::ChartID(),(ushort)SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED,0,0.0,"");
      }
    else if(col==4)
-      entry.SoundAlert(on);
+      m_SymbolTFManager.SoundAlert(sym,tf,on);
    else if(col==5)
-      entry.MessageAlert(on);
+      m_SymbolTFManager.MessageAlert(sym,tf,on);
   }
  bool CGUIPannel::CreateTreeView_SymbolTFSetting(const int x_gap,const int y_gap)
   {
@@ -147,7 +142,9 @@
   {
    if(m_SymbolTFManager==NULL)
       return;
-   int total=m_SymbolTFManager.Total();
+   string pair_symbols[];
+   ENUM_TIMEFRAMES pair_tfs[];
+   int total=m_SymbolTFManager.Pairs(pair_symbols,pair_tfs);
    string names[];
    int mw_total=::SymbolsTotal(true);
    for(int i=0;i<mw_total+total;i++)
@@ -156,11 +153,7 @@
       if(i<mw_total)
          name=::SymbolName(i,true);
       else
-        {
-         CSymbolTFSetting *entry=m_SymbolTFManager.At(i-mw_total);
-         if(entry!=NULL)
-            name=entry.Symbol();
-        }
+         name=pair_symbols[i-mw_total];
       if(name=="")
          continue;
       bool dup=false;
@@ -216,12 +209,11 @@
       string tfs[];
       for(int i=0;i<total;i++)
         {
-         CSymbolTFSetting *entry=m_SymbolTFManager.At(i);
-         if(entry==NULL || entry.Symbol()!=names[s])
+         if(pair_symbols[i]!=names[s])
             continue;
          int sz=::ArraySize(tfs);
          ::ArrayResize(tfs,sz+1);
-         tfs[sz]=entry.TFText();
+         tfs[sz]=TimeframeDescription(pair_tfs[i]);
         }
       //--- Leaves already match the Manager (same TFs, same order): nothing to do
       bool same=(sym_item.ChildrenTotal()==::ArraySize(tfs));
@@ -296,16 +288,6 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent_Tab_SymbolTF(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
-   //--- The Save button
-   if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON && lparam==m_btn_save_SymbolTF.ObjectID())
-     {
-      if(m_SymbolTFManager!=NULL)
-         m_SymbolTFManager.SaveToJSON();
-      return;
-     }
-   //--- The window changed its width: the Save button stays at the right of the tab
-   if(id==CHARTEVENT_CUSTOM+ON_WINDOW_CHANGE_XSIZE && lparam==m_window_main.ObjectID())
-      m_btn_save_SymbolTF.Move(m_tabs_quickSetting.X()+m_tabs_quickSetting.Width()-M_BUTTON_SAVE_WIDTH-M_CONTROL_BORDER_GAP,m_btn_save_SymbolTF.Y());
    //--- m_table_SymbolTFSeting: col 0 = delete button (not the chart's own pair)
    if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON && lparam==m_table_SymbolTFSeting.ObjectID())
      {

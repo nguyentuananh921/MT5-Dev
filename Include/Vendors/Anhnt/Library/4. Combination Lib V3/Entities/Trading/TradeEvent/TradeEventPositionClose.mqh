@@ -101,7 +101,7 @@
       string opposite=
        (
         this.IsPresentEventFlag(TRADE_EVENT_FLAG_BY_POS)   ? 
-        " "+CMessage::Text(MSG_LIB_TEXT_CLOSED_BY)+" "+this.SymbolCloseBy()+" "+
+        " "+CMessage::Text(MSG_LIB_TEXT_CLOSED_BY)+" "+this.Symbol()+" "+
         this.TypeOrderDealDescription()+" #"+(string)this.PositionByID()+(this.MagicCloseBy()> 0 ? "("+(string)this.MagicCloseBy()+")" : "")
                                                          : ""
        );

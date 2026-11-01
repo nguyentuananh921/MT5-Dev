@@ -52,6 +52,8 @@
  //+------------------------------------------------------------------+
  bool CHistoryPending::SupportProperty(ENUM_ORDER_PROP_DOUBLE property)
   {
+    if(property==ORDER_PROP_BID || property==ORDER_PROP_ASK)   // only a deal has them
+       return false;
    if(property==ORDER_PROP_COMMISSION        ||
       property==ORDER_PROP_SWAP              ||
       property==ORDER_PROP_PROFIT            ||

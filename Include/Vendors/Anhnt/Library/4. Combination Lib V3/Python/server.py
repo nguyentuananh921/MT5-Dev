@@ -6,10 +6,13 @@ import socket
 import time
 import traceback
 
+import numpy as np
+
 from data import TIMEFRAMES
 from patterns import CANDLES, DIRECTIONS
 from model import Model
 from tradesync import TradeSync
+from libdb import LibDatabase
 
 READ_TIMEOUT = 0.016   # same rhythm as the EA timer
 SEND_TIMEOUT = 30.0    # the EA reads on its timer, a big batch needs far longer than one read slice
@@ -42,6 +45,7 @@ class Client:
         self.watch_lifecycle = False
         self.watch_conditions = False
         self.watch_movements = False
+        self.new_bar_events = False    # it tells which pairs got a new bar (cmd new_bar): Python does not have to look for them for it
         self.tagged = False            # asked for variants: every line it gets carries the variant after its type; one that did not gets the lines as they always were
         self.variants = [""]          # the ids of the Swing kinds it follows, in the order it asked
         self.variant_params = {"": (5, True)}   # id -> (strength, use_wick)
@@ -68,7 +72,8 @@ class Server:
         self.last_live = 0.0
         self.restart = False
         self.started_with = source_stamp()
-        self.trade_sync = TradeSync()   # the trades of the account, read from the terminal and written to its SQLite file; the EAs only read it
+        self.lib_db = LibDatabase()   # the database of the library: the account the terminal is logged in to has a row in it
+        self.trade_sync = TradeSync(self.lib_db)   # the trades of the account, read from the terminal and written to its SQLite file; the EAs only read it
         self.last_trades = 0.0
 
     def source_changed(self):
@@ -161,6 +166,32 @@ class Server:
         if client.watch_movements:
             self.send_movements(conn, key, new_movements, tag)
 
+    def push(self, variant, found):
+        """The new lines of the pairs that got a new bar go to the EAs that follow them."""
+        for key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements in found:
+            for client in list(self.clients):
+                if variant not in client.variants:
+                    continue
+                if client.watching is None or key[0] != client.watching[0] or (key != client.watching and key[1] not in client.watch_tfs):
+                    continue   # the EA gets the TFs of the symbol it watches that it shows
+                try:
+                    self.send_new(client, variant, key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements)
+                except OSError:
+                    self.drop(client)
+
+    def new_bar(self, client, message):
+        """The EA saw a new bar on these TFs of a symbol: those pairs are brought up to date now and the new lines go out."""
+        client.new_bar_events = True
+        symbol = message["symbol"]
+        for variant, model in list(self.models.items()):
+            found = []
+            for tf in message.get("tfs", []):
+                if (symbol, tf) in model.bars:
+                    result = model.update_pair((symbol, tf))
+                    if result is not None:
+                        found.append(result)
+            self.push(variant, found)
+
     def poll(self):
         now = time.monotonic()
         if now - self.last_poll < POLL_INTERVAL:
@@ -174,22 +205,19 @@ class Server:
                 self.trade_sync.poll()
             except Exception as error:
                 print(f"trade sync failed: {error}")
+            try:
+                self.lib_db.watch_account()
+            except Exception as error:
+                print(f"library database failed: {error}")
         if not self.clients:
             return
+        events_only = all(client.new_bar_events for client in self.clients)   # every EA tells the new bars: nothing to look for
         for variant, model in list(self.models.items()):
-            try:
-                for key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements in model.check_new_bars():
-                    for client in list(self.clients):
-                        if variant not in client.variants:
-                            continue
-                        if client.watching is None or key[0] != client.watching[0] or (key != client.watching and key[1] not in client.watch_tfs):
-                            continue   # the EA gets the TFs of the symbol it watches that it shows
-                        try:
-                            self.send_new(client, variant, key, new_swings, new_structures, new_signals, new_patterns, new_lifecycle, new_conditions, new_movements)
-                        except OSError:
-                            self.drop(client)
-            except Exception as error:
-                print(f"poll failed: {error}")
+            if not events_only:
+                try:
+                    self.push(variant, model.check_new_bars())
+                except Exception as error:
+                    print(f"poll failed: {error}")
             try:
                 model.save_dirty()   # a pair with new bars, written to the disk again (one per round)
             except Exception as error:
@@ -222,6 +250,10 @@ class Server:
                 self.init(client, message)
             elif cmd == "watch":
                 self.watch(client, message)
+            elif cmd == "new_bar":
+                self.new_bar(client, message)
+            elif cmd == "candle_info":
+                self.candle_info(client, message)
             elif cmd == "pre_trade_symbol_monitor":
                 self.send_pre_trade_symbol_monitor(conn, self.primary().pre_trade_symbol_monitor())   # every loaded pair: the EA keeps what its tables need
             else:
@@ -238,6 +270,10 @@ class Server:
         conn = client.conn
         client.pairs = message.get("pairs", [])
         client.symbols = message.get("symbols", [])
+        try:
+            self.lib_db.register_symbols(client.symbols)   # the Market Watch of the account: its lines in symbol_account (the EA sends init again when it changes)
+        except Exception as error:
+            print(f"library database (symbols) failed: {error}")
         shown, symbols = [], []   # what the model holds is the pairs of every connected EA: one must not drop the pairs of another
         for other in self.clients:
             for pair in other.pairs:
@@ -329,6 +365,63 @@ class Server:
         if client.tagged:
             reply["variants"] = client.variants
         self.send(conn, reply)
+
+    def candle_info(self, client, message):
+        """Every line that falls on one candle of the watched symbol, on every TF the EA shows: the candle window of the EA asks for it
+        when the user picks a candle, whatever its age. The lines are the ones of a watch, the EA keeps them with the rest."""
+        symbol, start = message["symbol"], int(message["time"])
+        end = start + int(message["seconds"])
+        for vid in client.variants:
+            model = self.models.get(vid)
+            if model is None:
+                continue
+            for key in model.keys_of(symbol):
+                if key[1] in client.watch_tfs:
+                    self.send_candle(client, model, vid, key, start, end)
+        self.send(client.conn, {"event": "candle_info", "symbol": symbol, "time": start})
+
+    def send_candle(self, client, model, variant, key, start, end):
+        """The lines of one pair with their time in [start, end); nothing is sent (or printed) for what is empty."""
+        conn = client.conn
+        tag = variant if client.tagged else ""
+        shared = ("*" if client.tagged else "") if variant == client.variants[0] else None
+
+        def inside(frame, column):
+            """The rows with their time in [start, end): the times are sorted, so two searches cut them out (a mask would read every row)."""
+            if frame is None:
+                return None
+            values = frame[column].to_numpy()
+            if len(values) and not frame[column].is_monotonic_increasing:
+                return frame[(frame[column] >= start) & (frame[column] < end)]
+            return frame.iloc[np.searchsorted(values, start, "left"):np.searchsorted(values, end, "left")]
+
+        swings = inside(model.swings.get(key), "time")
+        if swings is not None and len(swings):
+            self.send_swings(conn, key, swings, tag)
+        if client.watch_structures:
+            structures = inside(model.structures.get(key), "break_time")
+            if structures is not None and len(structures):
+                self.send_structures(conn, key, structures, tag)
+        if client.watch_signals and shared is not None:
+            signals = inside(model.signals.get(key), "time")
+            if signals is not None and len(signals):
+                self.send_signals(conn, key, signals, shared)
+        if client.watch_patterns and shared is not None:
+            patterns = inside(model.patterns.get(key), "time")
+            if patterns is not None and len(patterns):
+                self.send_patterns(conn, key, patterns, shared)
+        if client.watch_lifecycle:
+            lifecycle = inside(model.lifecycle.get(key), "time")
+            if lifecycle is not None and len(lifecycle):
+                self.send_lifecycle(conn, key, lifecycle, tag)
+        if client.watch_conditions:
+            conditions = inside(model.conditions.get(key), "time")
+            if conditions is not None and len(conditions):
+                self.send_conditions(conn, key, conditions, tag)
+        if client.watch_movements:
+            movements = inside(model.movements.get(key), "end_time")   # a leg is on the candle where it ends
+            if movements is not None and len(movements):
+                self.send_movements(conn, key, movements, tag)
 
     def send_pair(self, client, model, variant, key, from_time, signals_from):
         """Send what the client asked for about one pair, for one variant; returns the counts."""

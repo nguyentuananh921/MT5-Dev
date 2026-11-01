@@ -184,8 +184,25 @@
   };
  //+------------------------------------------------------------------+
  //| Market Phase: the 4 recurring market cycles. It follows from the |
- //| Market State and the trend that came before it               |
+ //| Market State and the trend that came before it                   | 
  //+------------------------------------------------------------------+
+ //|1. Developing a Multi-Timeframe Indicator                         |
+ //|                          https://www.mql5.com/en/articles/21330  |
+ //|2. Automating the Strategy with an Expert Advisor                 |
+ //|                          https://www.mql5.com/en/articles/21135  |
+ //|3. Defining Structural Validity Beyond Simple Highs/Lows          |
+ //|                          https://www.mql5.com/en/articles/21888  |
+ //|4. Dynamic Pullback Depth Using Volatility Models                 |
+ //|                          https://www.mql5.com/en/articles/22807  |
+ //|enum MarketState                                                  |
+ //| {
+ //|  ACCUMULATION,      // Range after a downtrend
+ //|  EXPANSION,         // Uptrend
+ //|  DISTRIBUTION,      // Range after an uptrend
+ //|  REVERSAL           // Downtrend
+ //|};
+ //|5. Filtering Weak Swings Using Candle Imbalance                   |
+ //|                          https://www.mql5.com/en/articles/23613  |
  enum ENUM_MARKET_PHASE
   {
    MARKET_PHASE_NONE = 0,                                   // Not known yet

@@ -36,16 +36,16 @@
    PATTERN_MANAGER_EVENT_CATALOG_CHANGED,      // Python sent the pattern catalog and it changed the list
   };
  #define PATTERN_MANAGER_EVENTS_NEXT_CODE  (PATTERN_MANAGER_EVENT_CATALOG_CHANGED+1)
- enum ENUM_TRADING_SETUP_MANAGER_EVENT
+ enum ENUM_RISK_MANAGEMENT_MANAGER_EVENT
   {
-   TRADING_SETUP_MANAGER_EVENT_NO_EVENT = PATTERN_MANAGER_EVENTS_NEXT_CODE,
-   TRADING_SETUP_MANAGER_EVENT_ADDED,          // a Symbol's StopLost+Trailing row was added, lparam = row pos, sparam = Symbol
-   TRADING_SETUP_MANAGER_EVENT_CHANGED,        // a row was edited and saved, sparam = Symbol
+   RISK_MANAGEMENT_MANAGER_EVENT_NO_EVENT = PATTERN_MANAGER_EVENTS_NEXT_CODE,
+   RISK_MANAGEMENT_MANAGER_EVENT_ADDED,          // a Symbol's StopLost+Trailing row was added, lparam = row pos, sparam = Symbol
+   RISK_MANAGEMENT_MANAGER_EVENT_CHANGED,        // a row was edited and saved, sparam = Symbol
   };
- #define TRADING_SETUP_MANAGER_EVENTS_NEXT_CODE  (TRADING_SETUP_MANAGER_EVENT_CHANGED+1)
+ #define RISK_MANAGEMENT_MANAGER_EVENTS_NEXT_CODE  (RISK_MANAGEMENT_MANAGER_EVENT_CHANGED+1)
  enum ENUM_MW_EVENT
   {
-   MARKET_WATCH_EVENT_NO_EVENT = TRADING_SETUP_MANAGER_EVENTS_NEXT_CODE,  // No event
+   MARKET_WATCH_EVENT_NO_EVENT = RISK_MANAGEMENT_MANAGER_EVENTS_NEXT_CODE,  // No event
    MARKET_WATCH_EVENT_SYMBOL_ADD,                           // Adding a symbol to the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_DEL,                           // Removing a symbol from the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_SORT,                          // Sorting symbols in the Market Watch window

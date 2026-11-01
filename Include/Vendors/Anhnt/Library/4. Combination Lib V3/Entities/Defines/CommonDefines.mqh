@@ -37,7 +37,7 @@
   //Lines
    #define DEF_LINE_WIDTH                                (3)                  // Default width of a native line object (solid: a dash style needs width 1)
    
-//+------------------------------------------------------------------+
+ //+------------------------------------------------------------------+
  //|  Logging level                                                   |
  //+------------------------------------------------------------------+
  enum ENUM_LOG_LEVEL
@@ -73,10 +73,9 @@
     OBJECT_DE_TYPE_BASE,                                           // Base object for all library objects
     OBJECT_DE_TYPE_BASE_EXT,                                       // Extended base object for all library objects
     // Pure Data
-      OBJECT_DE_TYPE_SYMBOLTF_SETTING,                                // "Symbol+TF config row (CSymbolTFSetting)" object type
       OBJECT_DE_TYPE_PATTERN_SETTING,                                 // "Candle pattern config row (CPatternSetting)" object type
       OBJECT_DE_TYPE_INDICATOR_SETTING,                               // "Indicator template config row (CIndicatorSetting)" object type
-      OBJECT_DE_TYPE_TRADING_SETUP_SETTING,                           // "Per-Symbol StopLost+Trailing config row (CTradingSetupSetting)" object type
+      OBJECT_DE_TYPE_RISK_MANAGEMENT_SETTING,                           // "Per-Symbol StopLost+Trailing config row (CRiskManagementSetting)" object type
     // Time Serries
       OBJECT_DE_TYPE_SERIES_SWING,                                   // "Swing point" object type
       OBJECT_DE_TYPE_SERIES_MARKET_STRUCTURE,                        // "Market structure event" object type

@@ -14,13 +14,13 @@
 //+------------------------------------------------------------------+
 class CMarketStateMachine
   {
-private:
-   ENUM_MARKET_STATE    m_currentState;                                                      // current market state (BULLISH, BEARISH, TRANSITION, RANGE, UNKNOWN)
-   CEventBus           *m_eventBus;                                                          // pointer to the central event bus for publishing state changes
+   private:
+    ENUM_MARKET_STATE    m_currentState;                                                      // current market state (BULLISH, BEARISH, TRANSITION, RANGE, UNKNOWN)
+    CEventBus           *m_eventBus;                                                          // pointer to the central event bus for publishing state changes
 
-   void                SetState(ENUM_MARKET_STATE newState, const SStructureEvent &trigger); // transition to a new state and publish a STATE_CHANGED event
+    void                SetState(ENUM_MARKET_STATE newState, const SStructureEvent &trigger); // transition to a new state and publish a STATE_CHANGED event
 
-public:
+  public:
                      CMarketStateMachine();
    void                Init(CEventBus *bus);                                                 // reset the machine and attach to the event bus
    void                ProcessBreakEvent(const SStructureEvent &event, int trend);           // evaluate a new break event and possibly change state

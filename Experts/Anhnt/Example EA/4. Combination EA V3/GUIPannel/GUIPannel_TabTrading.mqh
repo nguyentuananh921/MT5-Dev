@@ -40,7 +40,7 @@
  void CGUIPannel::OnEvent_Tab_Trading(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
    //--- An indicator reported something new, the tab was opened, or the Stop Loss / Trailing setting was saved: the table of the indicators shows it
-   if((id==CHARTEVENT_CUSTOM+INDICATOR_STATE_EVENT_CHANGED || id==CHARTEVENT_CUSTOM+ON_CLICK_TAB || id==CHARTEVENT_CUSTOM+TRADING_SETUP_MANAGER_EVENT_CHANGED) && !m_first_start &&
+   if((id==CHARTEVENT_CUSTOM+INDICATOR_STATE_EVENT_CHANGED || id==CHARTEVENT_CUSTOM+ON_CLICK_TAB || id==CHARTEVENT_CUSTOM+RISK_MANAGEMENT_MANAGER_EVENT_CHANGED) && !m_first_start &&
       m_tabs_monitor.IsVisible() && m_tabs_monitor.SelectedTab()==TAB_MONITOR_INDICATOR)
      {
       if(this.SyncTable_PreTradeSymbolMonitor(::Symbol()))

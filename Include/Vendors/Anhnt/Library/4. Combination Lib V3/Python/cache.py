@@ -1,16 +1,20 @@
 import hashlib
 import os
 import pickle
+import zlib
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 # What Python calculated for a pair is kept on disk, so that the next start reads it instead of calculating it again (about 1.5 s a pair
 # against about 0.1 s). A file is only used when it was made with the same settings and the same calculation code: the fingerprint says it.
-# Only the slow part is kept (bars, swings, structures, indicator signals, candle patterns); the lifecycle and the market condition are
-# quick to calculate from them and depend on settings that are not in the fingerprint, so they are calculated again.
+# Only the slow part is kept (swings, structures, indicator signals, candle patterns); the lifecycle and the market condition are
+# quick to calculate from them and depend on settings that are not in the fingerprint, so they are calculated again. The bars are NOT
+# kept: they are the terminal's own, read from it again (about the time of reading them from the disk); the file only remembers the
+# last bar it was made on. The numbers are kept in the smallest integer type and the file is compressed.
 
-FORMAT = 1   # raise it when the shape of what is kept changes (or indicator_flips of model.py changes)
+FORMAT = 2   # raise it when the shape of what is kept changes (or indicator_flips of model.py changes)
 CALC_FILES = ("swing.py", "structure.py", "indicators.py", "signals.py", "patterns.py")
 SOURCE = Path(__file__).resolve().parent
 ENABLED = os.environ.get("MT5_PYTHON_CACHE", "").lower() != "off"   # the tests switch it off
@@ -41,23 +45,37 @@ def fingerprint(strength, use_wick, count, definitions):
 
 def file_of(key, variant=""):
     """A variant (a kind of Swing the EA asked for) has its own file; the one without a variant keeps the name it always had."""
-    return cache_dir() / (f"{key[0]}_{key[1]}.pkl" if not variant else f"{key[0]}_{key[1]}__{variant}.pkl")
+    return cache_dir() / (f"{key[0]}_{key[1]}.pkz" if not variant else f"{key[0]}_{key[1]}__{variant}.pkz")
+
+
+def narrow(series):
+    """An integer column in the smallest integer type that holds all of it (the same numbers)."""
+    if series.empty:
+        return series
+    low, high = int(series.min()), int(series.max())
+    for kind in (np.uint8, np.int8, np.uint16, np.int16, np.uint32, np.int32):
+        limits = np.iinfo(kind)
+        if limits.min <= low and high <= limits.max:
+            return series.astype(kind)
+    return series
 
 
 def pack(frame):
-    """A frame with its text columns as categories (a label repeats thousands of times): smaller on disk, the types are kept."""
+    """A frame with its text columns as categories (a label repeats thousands of times) and its integers narrow: smaller on disk, the types are kept."""
     types = frame.dtypes.to_dict()
     light = frame.copy()
     for name, kind in types.items():
         if kind == object or str(kind).startswith("string"):
             light[name] = light[name].astype("category")
+        elif isinstance(kind, np.dtype) and kind.kind in "iu":
+            light[name] = narrow(light[name])
     return light, types
 
 
 def unpack(light, types):
     frame = light.copy()
     for name, kind in types.items():
-        if str(frame[name].dtype) == "category":
+        if str(frame[name].dtype) == "category" or frame[name].dtype != kind:
             frame[name] = frame[name].astype(kind)
     return frame
 
@@ -73,8 +91,9 @@ def write(key, fingerprint_text, parts, variant=""):
         packed[name] = ("frame",) + pack(value) + (dict(value.attrs),) if isinstance(value, pd.DataFrame) else ("value", value)
     target = file_of(key, variant)
     temporary = target.with_suffix(".tmp")
+    raw = pickle.dumps({"fingerprint": fingerprint_text, "parts": packed}, protocol=pickle.HIGHEST_PROTOCOL)
     with open(temporary, "wb") as handle:
-        pickle.dump({"fingerprint": fingerprint_text, "parts": packed}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        handle.write(zlib.compress(raw, 1))   # level 1: a third of the time of the default for almost the same size
     os.replace(temporary, target)
 
 
@@ -85,7 +104,7 @@ def read(key, fingerprint_text, variant=""):
         return None
     try:
         with open(target, "rb") as handle:
-            data = pickle.load(handle)
+            data = pickle.loads(zlib.decompress(handle.read()))
         if data.get("fingerprint") != fingerprint_text:
             return None
         parts = {}

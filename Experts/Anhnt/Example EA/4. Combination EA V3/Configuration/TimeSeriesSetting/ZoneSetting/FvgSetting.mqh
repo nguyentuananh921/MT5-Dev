@@ -38,7 +38,7 @@
      color             BullishColor(void) const { return InpFvgBullishColor; }
      color             BearishColor(void) const { return InpFvgBearishColor; }
      color             DeadColor(void)    const { return InpFvgDeadColor;    }
-                       CFvgSetting(void) : m_show_bullish(InpFvgShowBullish),m_show_bearish(InpFvgShowBearish),m_show_dead(InpFvgShowDead),m_max_dead(InpFvgMaxDead),m_open_newest_bullish(InpFvgOpenNewestBullish),m_open_newest_bearish(InpFvgOpenNewestBearish) {}
+                       CFvgSetting(void) : m_show_bullish(true),m_show_bearish(true),m_show_dead(false),m_max_dead(5),m_open_newest_bullish(3),m_open_newest_bearish(3) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CFVGSETTING_MQH_DECLARATION
 #endif // __FVGSETTING_MQH__

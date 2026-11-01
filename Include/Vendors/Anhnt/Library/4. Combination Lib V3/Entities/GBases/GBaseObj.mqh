@@ -64,7 +64,6 @@ class CGBaseObj : public CBaseObj
    //--- Create (1) the object structure and (2) the object from the structure
     virtual bool                      ObjectToStruct(void)                      { return true; }
     virtual void                      StructToObject(void)                      {;}
-
    //--- Return the list of object events
     CArrayObj                        *GetListEvents(void)                       { return &this.m_list_events;          }
    //--- Create a new object event

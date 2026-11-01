@@ -21,7 +21,7 @@
  //+------------------------------------------------------------------+
  bool CGUIPannel::CreateSetupForm(const int x_gap,const int y_gap)
   {
-   CTradingSetupSettingManager *manager=m_TradingSetupManager;
+   CRiskManagementSettingManager *manager=m_RiskManagementManager;
    const int box_w=SETUP_BOX_WIDTH;
    //--- Save: its place is the top right of the tab (ArrangeSections_Setup)
    m_btn_save_RiskSetup.SetText("Save");
@@ -76,7 +76,7 @@
      {
       m_edit_risk_percent.Move(x+M_SECTION_BODY_INDENT,y);
       m_edit_risk_percent.Show();
-      y+=M_CONTROL_YDISTANCE+M_CONTROL_BORDER_GAP;
+      y+=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
      }
    else
       m_edit_risk_percent.Hide();
@@ -127,7 +127,7 @@
    //--- Save commits the risk of a new trade and the Risk Reward Ratio: the same for every Symbol
    if(lparam==m_btn_save_RiskSetup.ObjectID())
      {
-      if(m_TradingSetupManager==NULL)
+      if(m_RiskManagementManager==NULL)
          return;
       double percent=::StringToDouble(m_edit_risk_percent.GetValue());
       if(percent<=0.0)
@@ -135,13 +135,13 @@
       if(percent>100.0)
          percent=100.0;
       m_edit_risk_percent.SetValue(::DoubleToString(percent,2));   // what is kept
-      m_TradingSetupManager.SetRisk(m_btn_setup_toggle[SETUP_SECTION_RISK].State(),percent);
-      m_TradingSetupManager.UseRiskRewardRatio(m_btn_setup_toggle[SETUP_SECTION_RRR].State());
+      m_RiskManagementManager.SetRisk(m_btn_setup_toggle[SETUP_SECTION_RISK].State(),percent);
+      m_RiskManagementManager.UseRiskRewardRatio(m_btn_setup_toggle[SETUP_SECTION_RRR].State());
       int index=m_combobox_rrr.GetListViewPointer().SelectedItemIndex();
       if(index>=0 && index<RISK_REWARD_RATIOS_TOTAL)
-         m_TradingSetupManager.RiskRewardRatio((ENUM_RISK_REWARD_RATIO)index);
-      m_TradingSetupManager.NotifySettingChanged();
-      m_TradingSetupManager.SaveToJSON();
+         m_RiskManagementManager.RiskRewardRatio((ENUM_RISK_REWARD_RATIO)index);
+      m_RiskManagementManager.NotifySettingChanged();
+      m_RiskManagementManager.SaveToJSON();
       ::ChartRedraw(this.m_chart_id);
      }
   }

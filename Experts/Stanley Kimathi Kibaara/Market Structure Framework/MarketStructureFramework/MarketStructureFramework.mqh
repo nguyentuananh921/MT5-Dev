@@ -22,76 +22,76 @@
 //+------------------------------------------------------------------+
 class CMarketStructureFramework
   {
-private:
-   CSwingDetector        m_internalSwingDetector;                                                            // swing detection on the current timeframe
-   CSwingDetector        m_externalSwingDetector;                                                            // swing detection on the higher timeframe
-   CStructureManager     m_internalStructure;                                                                // internal structure analysis pipeline
-   CStructureManager     m_externalStructure;                                                                // external structure analysis pipeline
-   CMarketStateMachine   m_stateMachine;                                                                     // market state machine (consumes break events)
-   CEventBus             m_eventBus;                                                                         // central event bus for all events
-   CPersistence          m_persistence;                                                                      // CSV logging subsystem
-   CEventIdCounter       m_eventIdCounter;                                                                   // monotonic event ID generator
+   private:
+    CSwingDetector        m_internalSwingDetector;                                                            // swing detection on the current timeframe
+    CSwingDetector        m_externalSwingDetector;                                                            // swing detection on the higher timeframe
+    CStructureManager     m_internalStructure;                                                                // internal structure analysis pipeline
+    CStructureManager     m_externalStructure;                                                                // external structure analysis pipeline 
+    CMarketStateMachine   m_stateMachine;                                                                     // market state machine (consumes break eve nts )
+    CEventBus             m_eventBus;                                                                         // central event bus for all even  ts
+    CPersistence          m_persistence;                                                                      // CSV logging sub  system
+    CEventIdCounter       m_eventIdCounter;                                                                   // monotonic event ID generator
 
-   ENUM_TIMEFRAMES       m_externalTF;                                                                       // higher timeframe for external structure
-   datetime              m_externalLastBarTime;                                                              // last bar time processed for the external TF
-   double                m_externalHighBuffer[];                                                             // array of external TF high prices (series)
-   double                m_externalLowBuffer[];                                                              // array of external TF low prices (series)
-   double                m_externalCloseBuffer[];                                                            // array of external TF close prices (series)
-   datetime              m_externalTimeBuffer[];                                                             // array of external TF bar times (series)
-   int                   m_externalBarCount;                                                                 // number of bars currently stored in external buffers
-   int                   m_extWindowSize;                                                                    // size of the external history window (bars)
+    ENUM_TIMEFRAMES       m_externalTF;                                                                       // higher timeframe for external structure
+    datetime              m_externalLastBarTime;                                                              // last bar time processed for the external TF
+    double                m_externalHighBuffer[];                                                             // array of external TF high prices (series )
+    double                m_externalLowBuffer[];                                                              // array of external TF low prices (se ries )
+    double                m_externalCloseBuffer[];                                                            // array of external TF close prices (s e ries)
+    datetime              m_externalTimeBuffer[];                                                             // array of external TF bar times (ser i es )
+    int                   m_externalBarCount;                                                                 // number of bars currently stored in external   bu ffers
+    int                   m_extWindowSize;                                                                    // size of the external history window (bar s) 
 
-   int                   m_atrHandle;                                                                        // handle for internal TF ATR indicator
-   int                   m_atrHandleExt;                                                                     // handle for external TF ATR indicator
-   double                m_atrValue;                                                                         // current ATR value for the internal TF
-   double                m_atrValueExt;                                                                      // current ATR value for the external TF
+    int                   m_atrHandle;                                                                        // handle for internal TF ATR i nd icator
+    int                   m_atrHandleExt;                                                                     // handle for external TF ATR indic ator
+    double                m_atrValue;                                                                         // current ATR value for the int ernal TF
+    double                m_atrValueExt;                                                                      // current ATR value for the external TF
 
-   int                   m_internalStrength;                                                                 // swing detection strength for internal TF
-   int                   m_externalStrength;                                                                 // swing detection strength for external TF
-   int                   m_maxSwingHistory;                                                                  // maximum bars to scan for swing detection
-   bool                  m_persistenceEnabled;                                                               // true if CSV logging is active
-   int                   m_flushInterval;                                                                    // number of writes between forced file flushes
-   ENUM_STRUCTURE_LEVEL  m_stateMachineSource;                                                               // which structure drives the market state machine
+    int                   m_internalStrength;                                                                 // swing detection strength for internal T F  
+    int                   m_externalStrength;                                                                 // swing detection strength for extern al   TF
+    int                   m_maxSwingHistory;                                                                  // maximum bars to scan for swing det ec  tion
+    bool                  m_persistenceEnabled;                                                               // true if CSV logging is ac t i  ve
+    int                   m_flushInterval;                                                                    // number of writes between forced file  f  lushe  s 
+    ENUM_STRUCTURE_LEVEL  m_stateMachineSource;                                                               // which structure drives the market state m  ac hin e 
 
-   datetime              m_lastPersistedEventTime;                                                           // time of the newest event already written to CSV
-   datetime              m_lastStateEventTime;                                                               // time of the newest break event processed by the state machine
+    datetime              m_lastPersistedEventTime;                                                           // time of the newest event already written   t o CS V
+    datetime              m_lastStateEventTime;                                                               // time of the newest break event  processed by the state mac hine
+ 
+    ENUM_FRAMEWORK_STATUS m_status;                                                                           // current operational status of the frame  work
+    bool                  m_extDataWaitingLogged;                                                             // flag to log "waiting for external data" o nly  once 
+    bool                  m_atrDataWaitingLogged;                                                             // flag to log "waiting for ATR" only once 
 
-   ENUM_FRAMEWORK_STATUS m_status;                                                                           // current operational status of the framework
-   bool                  m_extDataWaitingLogged;                                                             // flag to log "waiting for external data" only once
-   bool                  m_atrDataWaitingLogged;                                                             // flag to log "waiting for ATR" only once
+    void                  UpdateExternalData();                                                                 // fetches new external TF bars if a new bar has appeared
 
-   void                UpdateExternalData();                                                                 // fetches new external TF bars if a new bar has appeared
-
-public:
+   public:
                      CMarketStructureFramework();
-   bool                Init(int internalStrength, int externalStrength,
+    bool                Init(int internalStrength, int externalStrength,
                             ENUM_TIMEFRAMES externalTF, bool persistenceEnabled,
                             string symbol, ENUM_TIMEFRAMES currentTF,
                             int extWindowSize, int maxSwingHistory,
                             ENUM_STRUCTURE_LEVEL stateSource,
                             int flushInterval=10);
-   void                OnCalculate(const datetime &time[],
+    void                OnCalculate(const datetime &time[],
                                    const double &high[],
                                    const double &low[],
                                    const double &close[],
                                    int rates_total);
-   void                OnDeinit();
+    void                OnDeinit();
 
-   ENUM_MARKET_STATE   GetCurrentState();                                                                    // current market state
-   int                 GetCurrentBias();                                                                     // 1=bullish, -1=bearish, 0=neutral/unknown
-   bool                GetLastBOS(SStructureEvent &out, ENUM_STRUCTURE_LEVEL level=LEVEL_EXTERNAL);
-   bool                GetLastCHoCH(SStructureEvent &out, ENUM_STRUCTURE_LEVEL level=LEVEL_EXTERNAL);
-   int                 GetSwingCount(bool isHigh, ENUM_STRUCTURE_LEVEL level);
-   bool                GetSwingPoint(bool isHigh, ENUM_STRUCTURE_LEVEL level, int index, SSwingPoint &out);
-   int                 GetRecentEventsCount();                                                               // total events in the bus
-   bool                GetRecentEvent(int index, SStructureEvent &out);                                      // retrieve event by index (0 = newest)
+    ENUM_MARKET_STATE   GetCurrentState();                                                                    // current market stat  e
+    int                 GetCurrentBias();                                                                     // 1=bullish, -1=bearish, 0=neutral/unkno  w  n
+    bool                GetLastBOS(SStructureEvent &out, ENUM_STRUCTURE_LEVEL level=LEVEL_EXTE  R  NAL) ;
+    bool                GetLastCHoCH(SStructureEvent &out, ENUM_STRUCTURE_LEVEL level=LEVEL_EXTERN    AL );
+    int                 GetSwingCount(bool isHigh, ENUM_STRUCTURE_LEVEL   lev   el);
+    bool                GetSwingPoint(bool isHigh, ENUM_STRUCTURE_LEVEL level, int index, SSwingPoin  t &o ut);
+    int                 GetRecentEventsCount();                                                               // total events in  the bus
+    bool                GetRecentEvent(int index, SStructureEvent &out);                                      // retrieve event by index (0 = newest)
 
-   long                GetLastEventId() const { return m_eventIdCounter.Current(); }
-   bool                HasNewEvents(long &lastSeenId, long &fromId, long &toId);
-   bool                GetEventById(long eventId, SStructureEvent &out);
-   bool                GetCurrentStructureSnapshot(SStructureSnapshot &snap);
-   bool                GetProtectedLevels(double &high, double &low);
-   ENUM_FRAMEWORK_STATUS GetStatus() const { return m_status; }
+    long                GetLastEventId() const { return m_eventIdCounter.Current(); }
+    bool                HasNewEvents(long &lastSeenId, long &fromId, long &toId) ;
+    bool                GetEventById(long eventId, SStructureEvent & out);
+    bool                GetCurrentStructureSnapshot(SStructureSnapshot &sna p);
+    bool                GetProtectedLevels(double &high, double  &low);
+    ENUM_FRAMEWORK_STATUS GetStatus() const { return m_status; }
   };
 
 //+------------------------------------------------------------------+

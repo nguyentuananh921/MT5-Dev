@@ -42,6 +42,12 @@
      CTrendlineLine            *FindLine(const string name) const;
      CZoneTagBox               *FindZone(const string name) const;
      CSmartMoneySync           *m_SmartMoney;                // EA owns - it draws the markers of the momentum candles
+   //--- The settings of the Smart Money tab that say what is drawn: EA owns them, this class only reads them (ApplyView)
+     CTrendlineSetting         *m_TrendlineSetting;
+     CSupportResistanceSetting *m_SupportResistanceSetting;
+     CSupplyDemandSetting      *m_SupplyDemandSetting;
+     CFvgSetting               *m_FvgSetting;
+     CMomentumCandleSetting    *m_MomentumCandleSetting;
      void                       RemoveObject(const string name);
      void                       TrimDead(const ENUM_LIFECYCLE_OBJECT_KIND kind);
      bool                       OnChart(const CLifecycleSeries *record) const;   // the TF the chart shows: the others are held, not drawn
@@ -58,6 +64,10 @@
    public:
      void                       OnInitEvent(CGraphElementsCollection *collection,CLifecycleCollection *lifecycle);
      void                       SetSmartMoney(CSmartMoneySync *sync) { this.m_SmartMoney=sync; }
+     void                       SetSettings(CTrendlineSetting *trendline,CSupportResistanceSetting *support_resistance,CSupplyDemandSetting *supply_demand,
+                                            CFvgSetting *fvg,CMomentumCandleSetting *momentum);
+   //--- What is drawn of the zones and the lines: read from the settings, at the start and every time one changes
+     void                       ApplyView(void);
    //--- What is drawn (the inputs of the EA)
      void                       SetView(const ENUM_LIFECYCLE_OBJECT_KIND kind,const bool support,const bool resistance,const bool dead,const int max_dead,const int nearest=3);
      void                       SetColors(const ENUM_LIFECYCLE_OBJECT_KIND kind,const color support,const color resistance,const color dead);
@@ -81,7 +91,8 @@
 #endif // CLIFECYCLESYNC_MQH_DECLARATION
 #ifndef CLIFECYCLESYNC_MQH_IMPLEMENTATION
 #define CLIFECYCLESYNC_MQH_IMPLEMENTATION
- CLifecycleSync::CLifecycleSync(void) : m_GraphElementsCollection(NULL),m_LifecycleCollection(NULL),m_SmartMoney(NULL)
+ CLifecycleSync::CLifecycleSync(void) : m_GraphElementsCollection(NULL),m_LifecycleCollection(NULL),m_SmartMoney(NULL),m_TrendlineSetting(NULL),m_SupportResistanceSetting(NULL),
+                                        m_SupplyDemandSetting(NULL),m_FvgSetting(NULL),m_MomentumCandleSetting(NULL)
   {
    for(int k=0;k<LIFECYCLE_KINDS;k++)
      {
@@ -101,6 +112,32 @@
   {
    this.m_GraphElementsCollection=collection;
    this.m_LifecycleCollection=lifecycle;
+  }
+ void CLifecycleSync::SetSettings(CTrendlineSetting *trendline,CSupportResistanceSetting *support_resistance,CSupplyDemandSetting *supply_demand,
+                                  CFvgSetting *fvg,CMomentumCandleSetting *momentum)
+  {
+   this.m_TrendlineSetting=trendline;
+   this.m_SupportResistanceSetting=support_resistance;
+   this.m_SupplyDemandSetting=supply_demand;
+   this.m_FvgSetting=fvg;
+   this.m_MomentumCandleSetting=momentum;
+  }
+ void CLifecycleSync::ApplyView(void)
+  {
+   if(this.m_TrendlineSetting==NULL || this.m_SupportResistanceSetting==NULL || this.m_SupplyDemandSetting==NULL || this.m_FvgSetting==NULL || this.m_MomentumCandleSetting==NULL)
+      return;
+   this.SetView(LIFECYCLE_OBJECT_TRENDLINE,this.m_TrendlineSetting.ShowSupport(),this.m_TrendlineSetting.ShowResistance(),this.m_TrendlineSetting.ShowDead(),this.m_TrendlineSetting.MaxDead(),this.m_TrendlineSetting.Nearest());
+   this.SetColors(LIFECYCLE_OBJECT_TRENDLINE,this.m_TrendlineSetting.SupportColor(),this.m_TrendlineSetting.ResistanceColor(),this.m_TrendlineSetting.DeadColor());
+   this.SetView(LIFECYCLE_OBJECT_ZONE,this.m_SupportResistanceSetting.ShowSupport(),this.m_SupportResistanceSetting.ShowResistance(),this.m_SupportResistanceSetting.ShowDead(),this.m_SupportResistanceSetting.MaxDead());
+   this.SetColors(LIFECYCLE_OBJECT_ZONE,this.m_SupportResistanceSetting.SupportColor(),this.m_SupportResistanceSetting.ResistanceColor(),this.m_SupportResistanceSetting.DeadColor());
+   this.SetOpenNewest(LIFECYCLE_OBJECT_ZONE,this.m_SupportResistanceSetting.OpenNewestSupport(),this.m_SupportResistanceSetting.OpenNewestResistance());
+   this.SetView(LIFECYCLE_OBJECT_SUPPLYDEMAND,this.m_SupplyDemandSetting.ShowDemand(),this.m_SupplyDemandSetting.ShowSupply(),this.m_SupplyDemandSetting.ShowDead(),this.m_SupplyDemandSetting.MaxDead());
+   this.SetColors(LIFECYCLE_OBJECT_SUPPLYDEMAND,this.m_SupplyDemandSetting.DemandColor(),this.m_SupplyDemandSetting.SupplyColor(),this.m_SupplyDemandSetting.DeadColor());
+   this.SetOpenNewest(LIFECYCLE_OBJECT_SUPPLYDEMAND,this.m_SupplyDemandSetting.OpenNewestDemand(),this.m_SupplyDemandSetting.OpenNewestSupply());
+   this.SetView(LIFECYCLE_OBJECT_FVG,this.m_FvgSetting.ShowBullish(),this.m_FvgSetting.ShowBearish(),this.m_FvgSetting.ShowDead(),this.m_FvgSetting.MaxDead());
+   this.SetColors(LIFECYCLE_OBJECT_FVG,this.m_FvgSetting.BullishColor(),this.m_FvgSetting.BearishColor(),this.m_FvgSetting.DeadColor());
+   this.SetOpenNewest(LIFECYCLE_OBJECT_FVG,this.m_FvgSetting.OpenNewestBullish(),this.m_FvgSetting.OpenNewestBearish());
+   this.SetView(LIFECYCLE_OBJECT_MOMENTUM,this.m_MomentumCandleSetting.Show(),this.m_MomentumCandleSetting.Show(),true,0);
   }
  void CLifecycleSync::SetView(const ENUM_LIFECYCLE_OBJECT_KIND kind,const bool support,const bool resistance,const bool dead,const int max_dead,const int nearest=3)
   {

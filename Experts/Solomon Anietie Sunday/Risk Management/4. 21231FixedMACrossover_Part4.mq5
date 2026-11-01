@@ -3,6 +3,22 @@
 //|                                    Copyright 2026, soloharbinger |
 //|                      https://www.mql5.com/en/users/soloharbinger |
 //+------------------------------------------------------------------+
+//|Building Your Personal Expert Advisor                             |
+//|1. From Fragile Script to Working EA                              |
+//|                           https://www.mql5.com/en/articles/23429 |
+//|2. Risk Management and Dynamic Lot Sizing                         |
+//|                           https://www.mql5.com/en/articles/23638 |
+//|3. Margin and Allowable Risk                                      |
+//|                           https://www.mql5.com/en/articles/23897 |
+//|4. Risk Models and Order Execution                                |
+//|                           https://www.mql5.com/en/articles/21231 |
+//|5. Basket Risk and Strategy-Specific Sizing                       |
+//|                           https://www.mql5.com/en/articles/24331 |
+//|6. Portfolio and Correlated Risk                                  |
+//|                           https://www.mql5.com/en/articles/24392 |
+//|7. Consolidating the Risk Framework                               |
+//|                           https://www.mql5.com/en/articles/24477 |
+//+------------------------------------------------------------------+
 #property copyright "Copyright 2026, soloharbinger"
 #property link      "https://www.mql5.com/en/users/soloharbinger"
 #property version   "1.00"
@@ -39,45 +55,45 @@ enum ENUM_OFFSET_MODE
 
 //--- Input Parameters
 input group "Trading Signal"
-input int              FastMA = 10;                      // Fast MA period
-input int              SlowMA = 20;                      // Slow MA period
+input int              InpFastMA = 10;                      // Fast MA period
+input int              InpSlowMA = 20;                      // Slow MA period
 
 input group "Risk Model"
-input ENUM_RISK_MODE   RiskMode = RISK_PERCENT;          // How risk per trade is defined
-input ENUM_RISK_BASE   RiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
-input double           RiskPercent = 1.0;                // Risk per trade [%] (percent mode)
-input double           FixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
-input double           FixedLotSize = 0.10;              // Lot size (fixed-lot mode)
-input bool             AllowMinLotOverRisk = true;       // Trade min lot even if it exceeds intended risk
+input ENUM_RISK_MODE   InpRiskMode = RISK_PERCENT;          // How risk per trade is defined
+input ENUM_RISK_BASE   InpRiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
+input double           InpRiskPercent = 1.0;                // Risk per trade [%] (percent mode)
+input double           InpFixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
+input double           InpFixedLotSize = 0.10;              // Lot size (fixed-lot mode)
+input bool             InpAllowMinLotOverRisk = true;       // Trade min lot even if it exceeds intended risk
 
 input group "Trade Settings"
-input bool             AllowHedging = false;             // Allow opposing position (hedging)
-input int              ATRPeriod = 14;                   // ATR Period for Volatility Calculation
-input double           ATRMultiplier = 1.5;              // ATR Multiplier for Stop-Loss Distance
-input double           TPRatio = 2.0;                    // Take Profit Ratio
-input double           MaxSpreadPips = 2.0;              // Maximum allowed spread
+input bool             InpAllowHedging = false;             // Allow opposing position (hedging)
+input int              InpATRPeriod = 14;                   // ATR Period for Volatility Calculation
+input double           InpATRMultiplier = 1.5;              // ATR Multiplier for Stop-Loss Distance
+input double           InpTPRatio = 2.0;                    // Take Profit Ratio
+input double           InpMaxSpreadPips = 2.0;              // Maximum allowed spread
 
 input group "Order Execution"
-input ENUM_ENTRY_MODE  EntryMode = ENTRY_MARKET;         // Order type used to enter
-input ENUM_OFFSET_MODE PendingOffsetMode = OFFSET_ATR;   // How the pending entry offset is measured
-input double           PendingOffsetATR = 0.5;           // Pending offset as ATR multiple (ATR mode)
-input int              PendingOffsetPoints = 150;        // Pending offset in points (points mode)
-input int              PendingExpiryBars = 10;           // Delete untriggered pending after N bars [0 = never]
+input ENUM_ENTRY_MODE  InpEntryMode = ENTRY_MARKET;         // Order type used to enter
+input ENUM_OFFSET_MODE InpPendingOffsetMode = OFFSET_ATR;   // How the pending entry offset is measured
+input double           InpPendingOffsetATR = 0.5;           // Pending offset as ATR multiple (ATR mode)
+input int              InpPendingOffsetPoints = 150;        // Pending offset in points (points mode)
+input int              InpPendingExpiryBars = 10;           // Delete untriggered pending after N bars [0 = never]
 
 input group "Adaptive Risk (Drawdown)"
-input bool             EnableAdaptiveRisk  = false;      // Reduce risk during drawdowns
-input double           DDLevel             = 3.0;        // Drawdown % that triggers reduced risk
-input double           RiskReductionFactor = 0.5;        // Adaptive risk multiplier when triggered [0.5 = half risk]
-input bool             ApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot during drawdowns
+input bool             InpEnableAdaptiveRisk  = false;      // Reduce risk during drawdowns
+input double           InpDDLevel             = 3.0;        // Drawdown % that triggers reduced risk
+input double           InpRiskReductionFactor = 0.5;        // Adaptive risk multiplier when triggered [0.5 = half risk]
+input bool             InpApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot during drawdowns
 
 input group "Broker & Margin Safety"
-input double           MaxMarginUsagePercent   = 50.0;   // Max % of free margin one new trade may use
-input bool             EnableAdaptiveMarginCap = false;  // Scale the margin cap with account-wide margin level
-input double           MarginLevelSafe         = 500.0;  // Margin safe level [%] full cap applies
-input double           MarginLevelDanger       = 150.0;  // Margin caution level [%] new trades are blocked
+input double           InpMaxMarginUsagePercent   = 50.0;   // Max % of free margin one new trade may use
+input bool             InpEnableAdaptiveMarginCap = false;  // Scale the margin cap with account-wide margin level
+input double           InpMarginLevelSafe         = 500.0;  // Margin safe level [%] full cap applies
+input double           InpMarginLevelDanger       = 150.0;  // Margin caution level [%] new trades are blocked
 
 input group "General"
-input int              MagicNumber = 12345;              // EA Magic Number
+input int              InpMagicNumber = 12345;              // EA Magic Number
 
 //+------------------------------------------------------------------+
 //| A fully-specified trade before anything is sent to the broker.   |
@@ -97,9 +113,9 @@ struct STradePlan
 
 //--- Global Variables
 CTrade trade;
-int fastHandle, slowHandle;
+int fastMaHandle, slowMaHandle;
 int atrHandle;
-double g_PeakEquity = 0.0;
+double g_peakEquity = 0.0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -107,93 +123,93 @@ double g_PeakEquity = 0.0;
 int OnInit()
   {
 //--- Set the Magic Number for all trades
-   trade.SetExpertMagicNumber(MagicNumber);
+   trade.SetExpertInpMagicNumber(InpMagicNumber);
 
 //--- Initialize Handles
-   fastHandle = iMA(_Symbol, _Period, FastMA, 0, MODE_SMA, PRICE_CLOSE);
-   slowHandle = iMA(_Symbol, _Period, SlowMA, 0, MODE_SMA, PRICE_CLOSE);
-   atrHandle = iATR(_Symbol, _Period, ATRPeriod);
+   fastMaHandle = iMA(_Symbol, _Period, InpFastMA, 0, MODE_SMA, PRICE_CLOSE);
+   slowMaHandle = iMA(_Symbol, _Period, InpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
+   atrHandle = iATR(_Symbol, _Period, InpATRPeriod);
 
-   if(fastHandle == INVALID_HANDLE || slowHandle == INVALID_HANDLE || atrHandle == INVALID_HANDLE)
+   if(fastMaHandle == INVALID_HANDLE || slowMaHandle == INVALID_HANDLE || atrHandle == INVALID_HANDLE)
      {
       return INIT_FAILED;
      }
 
 //--- Validate signal inputs
-   if(FastMA <= 0 || SlowMA <= 0)
+   if(InpFastMA <= 0 || InpSlowMA <= 0)
      {
       Print("Moving Average periods must be greater than zero.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(FastMA >= SlowMA)
+   if(InpFastMA >= InpSlowMA)
      {
-      Print("FastMA should be smaller than SlowMA.");
+      Print("InpFastMA should be smaller than InpSlowMA.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
 //--- Validate only the risk input the selected mode actually uses
-   if(RiskMode == RISK_PERCENT && RiskPercent <= 0)
+   if(InpRiskMode == RISK_PERCENT && InpRiskPercent <= 0)
      {
       Print("Risk per trade [%] must be greater than zero in percentage mode.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(RiskMode == RISK_FIXED_CASH && FixedCashRisk <= 0)
+   if(InpRiskMode == RISK_FIXED_CASH && InpFixedCashRisk <= 0)
      {
       Print("Fixed cash risk must be greater than zero in cash mode.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(RiskMode == RISK_FIXED_LOT && FixedLotSize <= 0)
+   if(InpRiskMode == RISK_FIXED_LOT && InpFixedLotSize <= 0)
      {
       Print("Fixed lot size must be greater than zero in fixed-lot mode.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(ATRPeriod <= 0 || ATRMultiplier <= 0)
+   if(InpATRPeriod <= 0 || InpATRMultiplier <= 0)
      {
       Print("ATR parameters must be greater than zero.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(TPRatio <= 0)
+   if(InpTPRatio <= 0)
      {
       Print("Take Profit ratio must be greater than zero.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
 //--- Validate pending-order inputs only when a pending entry is selected
-   if(EntryMode != ENTRY_MARKET)
+   if(InpEntryMode != ENTRY_MARKET)
      {
-      if(PendingOffsetMode == OFFSET_ATR && PendingOffsetATR <= 0)
+      if(InpPendingOffsetMode == OFFSET_ATR && InpPendingOffsetATR <= 0)
         {
          Print("Pending offset (ATR multiple) must be greater than zero.");
          return INIT_PARAMETERS_INCORRECT;
         }
 
-      if(PendingOffsetMode == OFFSET_POINTS && PendingOffsetPoints <= 0)
+      if(InpPendingOffsetMode == OFFSET_POINTS && InpPendingOffsetPoints <= 0)
         {
          Print("Pending offset (points) must be greater than zero.");
          return INIT_PARAMETERS_INCORRECT;
         }
 
-      if(PendingExpiryBars < 0)
+      if(InpPendingExpiryBars < 0)
         {
          Print("Pending expiry bars cannot be negative.");
          return INIT_PARAMETERS_INCORRECT;
         }
      }
 
-   if(MaxMarginUsagePercent <= 0 || MaxMarginUsagePercent > 100)
+   if(InpMaxMarginUsagePercent <= 0 || InpMaxMarginUsagePercent > 100)
      {
-      Print("MaxMarginUsagePercent must be between 0 and 100.");
+      Print("InpMaxMarginUsagePercent must be between 0 and 100.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(EnableAdaptiveMarginCap && MarginLevelSafe <= MarginLevelDanger)
+   if(InpEnableAdaptiveMarginCap && InpMarginLevelSafe <= InpMarginLevelDanger)
      {
-      Print("MarginLevelSafe must be greater than MarginLevelDanger.");
+      Print("InpMarginLevelSafe must be greater than InpMarginLevelDanger.");
       return INIT_PARAMETERS_INCORRECT;
      }
 //--- EA initialization successful
@@ -206,8 +222,8 @@ int OnInit()
 void OnDeinit(const int reason)
   {
 //--- Deinitialize indicator
-   IndicatorRelease(fastHandle);
-   IndicatorRelease(slowHandle);
+   IndicatorRelease(fastMaHandle);
+   IndicatorRelease(slowMaHandle);
    IndicatorRelease(atrHandle);
   }
 
@@ -235,8 +251,8 @@ void OnTick()
    ManagePendingOrders();
 
 //--- Ensure indicators are ready
-   if(BarsCalculated(fastHandle) < 3 ||
-      BarsCalculated(slowHandle) < 3 ||
+   if(BarsCalculated(fastMaHandle) < 3 ||
+      BarsCalculated(slowMaHandle) < 3 ||
       BarsCalculated(atrHandle) < 1)
      {
       Print("Indicators are not ready yet.");
@@ -247,8 +263,8 @@ void OnTick()
    double fast[], slow[];
    ArraySetAsSeries(fast, true);
    ArraySetAsSeries(slow, true);
-   int fastCopied = CopyBuffer(fastHandle, 0, 0, 3, fast);
-   int slowCopied = CopyBuffer(slowHandle, 0, 0, 3, slow);
+   int fastCopied = CopyBuffer(fastMaHandle, 0, 0, 3, fast);
+   int slowCopied = CopyBuffer(slowMaHandle, 0, 0, 3, slow);
 
 //--- Validate that we have enough MA data
    if(fastCopied < 3 || slowCopied < 3)
@@ -320,7 +336,7 @@ int CountOpenPositions()
       if(PositionSelectByTicket(ticket))
         {
          if(PositionGetString(POSITION_SYMBOL) == _Symbol &&
-            PositionGetInteger(POSITION_MAGIC) == MagicNumber)
+            PositionGetInteger(POSITION_MAGIC) == InpMagicNumber)
            {
             count++;
            }
@@ -342,7 +358,7 @@ int CountOpenPositionsByDirection(int direction)
       if(PositionSelectByTicket(ticket))
         {
          if(PositionGetString(POSITION_SYMBOL) == _Symbol &&
-            PositionGetInteger(POSITION_MAGIC) == MagicNumber &&
+            PositionGetInteger(POSITION_MAGIC) == InpMagicNumber &&
             PositionGetInteger(POSITION_TYPE) == posType)
            {
             count++;
@@ -393,7 +409,7 @@ int CountPendingOrders()
       if(ticket == 0)
          continue;
       if(OrderGetString(ORDER_SYMBOL) == _Symbol &&
-         OrderGetInteger(ORDER_MAGIC) == MagicNumber)
+         OrderGetInteger(ORDER_MAGIC) == InpMagicNumber)
         {
          count++;
         }
@@ -413,7 +429,7 @@ int CountPendingOrdersByDirection(int direction)
       if(ticket == 0)
          continue;
       if(OrderGetString(ORDER_SYMBOL) != _Symbol ||
-         OrderGetInteger(ORDER_MAGIC) != MagicNumber)
+         OrderGetInteger(ORDER_MAGIC) != InpMagicNumber)
          continue;
 
       ENUM_ORDER_TYPE orderType = (ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
@@ -428,7 +444,7 @@ int CountPendingOrdersByDirection(int direction)
 //+------------------------------------------------------------------+
 void ManagePendingOrders()
   {
-   if(PendingExpiryBars <= 0)
+   if(InpPendingExpiryBars <= 0)
       return;
 
    int barSeconds = PeriodSeconds(_Period);
@@ -443,7 +459,7 @@ void ManagePendingOrders()
       if(ticket == 0)
          continue;
       if(OrderGetString(ORDER_SYMBOL) != _Symbol ||
-         OrderGetInteger(ORDER_MAGIC) != MagicNumber)
+         OrderGetInteger(ORDER_MAGIC) != InpMagicNumber)
          continue;
 
       datetime setupTime = (datetime)OrderGetInteger(ORDER_TIME_SETUP);
@@ -451,12 +467,12 @@ void ManagePendingOrders()
          continue;
 
       int barsElapsed = (int)((now - setupTime) / barSeconds);
-      if(barsElapsed < PendingExpiryBars)
+      if(barsElapsed < InpPendingExpiryBars)
          continue;
 
       if(trade.OrderDelete(ticket))
          PrintFormat("Pending order #%I64u expired after %d bars (limit %d). Deleted.",
-                     ticket, barsElapsed, PendingExpiryBars);
+                     ticket, barsElapsed, InpPendingExpiryBars);
       else
          PrintFormat("Failed to delete expired pending order #%I64u. Retcode: %u (%s)",
                      ticket, trade.ResultRetcode(), trade.ResultRetcodeDescription());
@@ -473,11 +489,11 @@ bool IsSpreadAcceptable()
       return false;
    double spreadPoints = (tick.ask - tick.bid) / _Point;
 
-   if(spreadPoints > MaxSpreadPips * 10.0)
+   if(spreadPoints > InpMaxSpreadPips * 10.0)
      {
       PrintFormat("Spread too high: %.1f points (Maximum %.1f pips)",
                   spreadPoints,
-                  MaxSpreadPips);
+                  InpMaxSpreadPips);
       return false;
      }
    return true;
@@ -488,25 +504,25 @@ bool IsSpreadAcceptable()
 //+------------------------------------------------------------------+
 double GetDrawdownRiskFactor()
   {
-   if(!EnableAdaptiveRisk)
+   if(!InpEnableAdaptiveRisk)
       return 1.0;
 
    double equity = AccountInfoDouble(ACCOUNT_EQUITY);
 
 //--- Initialize or update the peak
-   if(g_PeakEquity == 0.0 || equity > g_PeakEquity)
-      g_PeakEquity = equity;
+   if(g_peakEquity == 0.0 || equity > g_peakEquity)
+      g_peakEquity = equity;
 
 //--- Calculate current drawdown from peak
    double drawdownPercent = 0.0;
-   if(g_PeakEquity > 0.0)
-      drawdownPercent = (g_PeakEquity - equity) / g_PeakEquity * 100.0;
+   if(g_peakEquity > 0.0)
+      drawdownPercent = (g_peakEquity - equity) / g_peakEquity * 100.0;
 
-   if(drawdownPercent >= DDLevel)
+   if(drawdownPercent >= InpDDLevel)
      {
       PrintFormat("Adaptive Risk | Drawdown: %.2f%% >= %.2f%% | Risk scaled by %.2f",
-                  drawdownPercent, DDLevel, RiskReductionFactor);
-      return RiskReductionFactor;
+                  drawdownPercent, InpDDLevel, InpRiskReductionFactor);
+      return InpRiskReductionFactor;
      }
 
    return 1.0;
@@ -519,17 +535,17 @@ double GetRiskAmount()
   {
    double riskAmount = 0.0;
 
-   if(RiskMode == RISK_FIXED_CASH)
+   if(InpRiskMode == RISK_FIXED_CASH)
      {
-      riskAmount = FixedCashRisk;
+      riskAmount = InpFixedCashRisk;
      }
    else
      {
       //--- Balance ignores open floating P/L; equity includes it
-      double riskBaseValue = (RiskBase == RISK_BASE_EQUITY)
+      double riskBaseValue = (InpRiskBase == RISK_BASE_EQUITY)
                              ? AccountInfoDouble(ACCOUNT_EQUITY)
                              : AccountInfoDouble(ACCOUNT_BALANCE);
-      riskAmount = riskBaseValue * (RiskPercent / 100.0);
+      riskAmount = riskBaseValue * (InpRiskPercent / 100.0);
      }
 
 //--- Drawdown reduction scales the final amount
@@ -569,12 +585,12 @@ double CalculateLotSize(double stopDistance, double riskAmount)
 
    double rawLot = 0.0;
 
-   if(RiskMode == RISK_FIXED_LOT)
+   if(InpRiskMode == RISK_FIXED_LOT)
      {
       //--- The trader dictates the volume; risk becomes an outcome, not an input
-      rawLot = FixedLotSize;
+      rawLot = InpFixedLotSize;
 
-      if(EnableAdaptiveRisk && ApplyDrawdownToFixedLot)
+      if(InpEnableAdaptiveRisk && InpApplyDrawdownToFixedLot)
         {
          double ddFactor = GetDrawdownRiskFactor();
          if(ddFactor < 1.0)
@@ -626,7 +642,7 @@ double CalculateLotSize(double stopDistance, double riskAmount)
 //--- Below the minimum tradable volume the intended risk is unreachable
    if(lotSize < minLot)
      {
-      if(!AllowMinLotOverRisk)
+      if(!InpAllowMinLotOverRisk)
         {
          PrintFormat("Risk-correct volume (%.4f) is below the minimum lot (%.2f). Trade skipped to avoid over-risking.",
                      rawLot, minLot);
@@ -646,34 +662,34 @@ double CalculateLotSize(double stopDistance, double riskAmount)
 //+------------------------------------------------------------------+
 double GetMarginUsageCap()
   {
-   if(!EnableAdaptiveMarginCap)
-      return MaxMarginUsagePercent;
+   if(!InpEnableAdaptiveMarginCap)
+      return InpMaxMarginUsagePercent;
 
 //--- No margin currently used anywhere on the account (flat)
    double marginUsed = AccountInfoDouble(ACCOUNT_MARGIN);
    if(marginUsed <= 0.0)
-      return MaxMarginUsagePercent;
+      return InpMaxMarginUsagePercent;
 
    double marginLevel = AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
 
 //--- Account-wide margin level already stressed - block new exposure
-   if(marginLevel <= MarginLevelDanger)
+   if(marginLevel <= InpMarginLevelDanger)
      {
       PrintFormat("Adaptive Margin Cap | Margin Level: %.1f%% at/below danger threshold (%.1f%%). New trades blocked.",
-                  marginLevel, MarginLevelDanger);
+                  marginLevel, InpMarginLevelDanger);
       return 0.0;
      }
 
 //--- Margin level healthy - full cap applies
-   if(marginLevel >= MarginLevelSafe)
-      return MaxMarginUsagePercent;
+   if(marginLevel >= InpMarginLevelSafe)
+      return InpMaxMarginUsagePercent;
 
 //--- Scale linearly between the danger and safe thresholds
-   double ratio = (marginLevel - MarginLevelDanger) / (MarginLevelSafe - MarginLevelDanger);
-   double cap = MaxMarginUsagePercent * ratio;
+   double ratio = (marginLevel - InpMarginLevelDanger) / (InpMarginLevelSafe - InpMarginLevelDanger);
+   double cap = InpMaxMarginUsagePercent * ratio;
 
    PrintFormat("Adaptive Margin Cap | Margin Level: %.1f%% | Cap Scaled To: %.1f%% (baseline %.1f%%)",
-               marginLevel, cap, MaxMarginUsagePercent);
+               marginLevel, cap, InpMaxMarginUsagePercent);
 
    return cap;
   }
@@ -738,7 +754,7 @@ ENUM_ORDER_TYPE ResolveOrderType(int direction)
   {
    if(direction == 1)
      {
-      switch(EntryMode)
+      switch(InpEntryMode)
         {
          case ENTRY_LIMIT:
             return ORDER_TYPE_BUY_LIMIT;
@@ -749,7 +765,7 @@ ENUM_ORDER_TYPE ResolveOrderType(int direction)
         }
      }
 
-   switch(EntryMode)
+   switch(InpEntryMode)
      {
       case ENTRY_LIMIT:
          return ORDER_TYPE_SELL_LIMIT;
@@ -765,10 +781,10 @@ ENUM_ORDER_TYPE ResolveOrderType(int direction)
 //+------------------------------------------------------------------+
 double GetPendingOffset(double atrValue)
   {
-   if(PendingOffsetMode == OFFSET_POINTS)
-      return PendingOffsetPoints * _Point;
+   if(InpPendingOffsetMode == OFFSET_POINTS)
+      return InpPendingOffsetPoints * _Point;
 
-   return atrValue * PendingOffsetATR;
+   return atrValue * InpPendingOffsetATR;
   }
 
 //+------------------------------------------------------------------+
@@ -862,7 +878,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
 
    plan.direction = direction;
    plan.orderType = ResolveOrderType(direction);
-   plan.isPending = (EntryMode != ENTRY_MARKET);
+   plan.isPending = (InpEntryMode != ENTRY_MARKET);
 
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
@@ -876,7 +892,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
    plan.entryPrice = NormalizeDouble(plan.entryPrice, digits);
 
 //--- Volatility-based stop distance, widened if the broker demands it
-   double stopDistance = atrValue * ATRMultiplier;
+   double stopDistance = atrValue * InpATRMultiplier;
    double minStop      = GetMinStopDistance(tick);
 
    if(stopDistance < minStop)
@@ -890,12 +906,12 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
    if(direction == 1)
      {
       plan.stopLoss   = NormalizeDouble(plan.entryPrice - stopDistance, digits);
-      plan.takeProfit = NormalizeDouble(plan.entryPrice + (stopDistance * TPRatio), digits);
+      plan.takeProfit = NormalizeDouble(plan.entryPrice + (stopDistance * InpTPRatio), digits);
      }
    else
      {
       plan.stopLoss   = NormalizeDouble(plan.entryPrice + stopDistance, digits);
-      plan.takeProfit = NormalizeDouble(plan.entryPrice - (stopDistance * TPRatio), digits);
+      plan.takeProfit = NormalizeDouble(plan.entryPrice - (stopDistance * InpTPRatio), digits);
      }
 
 //--- Re-derive the sizing distance from the plan's own entry and stop.
@@ -907,7 +923,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
      }
 
 //--- Resolved once here, then handed to the sizing function
-   plan.riskAmount = (RiskMode == RISK_FIXED_LOT) ? 0.0 : GetRiskAmount();
+   plan.riskAmount = (InpRiskMode == RISK_FIXED_LOT) ? 0.0 : GetRiskAmount();
    plan.lotSize    = CalculateLotSize(plan.stopDistance, plan.riskAmount);
 
    if(plan.lotSize <= 0)
@@ -925,7 +941,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
 bool ValidateTradePlan(STradePlan &plan, const MqlTick &tick)
   {
 //--- Exposure awareness now covers pending orders too.
-   if(AllowHedging)
+   if(InpAllowHedging)
      {
       if(CountOpenPositionsByDirection(plan.direction) > 0 ||
          CountPendingOrdersByDirection(plan.direction) > 0)

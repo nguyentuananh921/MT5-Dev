@@ -1,64 +1,68 @@
 //+------------------------------------------------------------------+
 //|                                        SymbolTFManager.mqh       |
 //|                                     Copyright 2026, Anhnt        |
-//| Center Point of Data (Single Source of Truth) for Symbol+TF rows -|
-//| same pattern as CIndicatorTemplateManager, including its own      |
-//| event chain (ADDED/DELETE) so both CGUIPannel (Table/TreeView     |
-//| refresh) and EA (future Layer 1 series management) can react      |
+//| Center Point of Data (Single Source of Truth) for the pairs      |
+//| Symbol+TF the EA cares about: they live in the table             |
+//| Setting_SymbolTF of the database (one list for each account), the|
+//| manager keeps no copy and asks the database each time. Its own   |
+//| event chain (ADDED/DELETE) lets both CGUIPannel (Table/TreeView  |
+//| refresh) and EA (future Layer 1 series management) react         |
 //| independently, same split already established for indicators.    |
 //+------------------------------------------------------------------+
-//+------------------------------------------------------------------------------------+
-//| CSymbolTFManager - Center Point of Data (Single Source of Truth).                  |
-//| Owns the CArrayObj list + "Symbols_TFs_List" JSON section.                         |
-//+------------------------------------------------------------------------------------+
 #ifndef CSYMBOLTFMANAGER_MQH
 #define CSYMBOLTFMANAGER_MQH
- #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Settings\SymbolTFSetting.mqh> 
- #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\JSONConfig.mqh>
- #include <Arrays\ArrayObj.mqh>
+ #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\JSONConfig.mqh>     // JSONConfig_AccountKey(): the key of the account
+ #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\LibDatabase.mqh>   // the file of the database (LIB_DATABASE_FILE)
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Defines\EventDefines.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Bases\BaseObj.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Chart\ChartObj.mqh>
- #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\DELib\TimeseriesDELib.mqh>  
- //#include "IndicatorTemplateManager.mqh" 
+ #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\DELib\TimeseriesDELib.mqh>
 #ifndef CSYMBOLTFMANAGER_MQH_DECLARATION
 #define CSYMBOLTFMANAGER_MQH_DECLARATION
  class CSymbolTFManager : public CBaseObj
    {
      private:
-       CArrayObj   m_list;   //List of CSymbolTFSetting* in Template       
-       bool            m_loaded_from_json;
-       ENUM_TIMEFRAMES m_available_tf[];   // every timeframe Python serves, ascending (not the tracked pairs)
-       //Private Method 
-       int             ReadSymbolTFEntry(const string &s, int pos, CSymbolTFSetting *&out_row);
-       int             ReadSymbolTFEntryArray(const string &s, int pos);
-       int             FindInsertIndex(const string sym, const ENUM_TIMEFRAMES tf) const;
+       int             m_db;                // the open database: Setting_SymbolTF is asked here, nothing is copied
+       ENUM_TIMEFRAMES m_available_tf[];    // every timeframe Python serves, ascending (not the tracked pairs)
+       //Private Method
+       bool            Open(void);
+       string          Quoted(const string text) const;
+       string          Key(void) const { return JSONConfig_AccountKey(); }
+       string          Where(const string symbol, const ENUM_TIMEFRAMES tf) const;
+       bool            SetFlag(const string symbol, const ENUM_TIMEFRAMES tf, const string column, const bool on);
+       bool            GetFlag(const string symbol, const ENUM_TIMEFRAMES tf, const string column) const;
+       int             Fetch(string &symbols[], ENUM_TIMEFRAMES &tfs[], bool &buy[], bool &sell[], bool &sound[], bool &message[]) const;
 
      public:
-                     CSymbolTFManager(void) :
-                                               m_loaded_from_json(false) {}
-                    ~CSymbolTFManager(void) {}       
-      //--- Lifecycle - same convention as CIndicatorTemplateManager::OnInitEvent.
+                     CSymbolTFManager(void) : m_db(INVALID_HANDLE) {}
+                    ~CSymbolTFManager(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
+      //--- Lifecycle - same convention as CIndicatorTemplateManager::OnInitEvent: opens the database, the pair of the chart joins the list
        bool                OnInitEvent(void);
       //--- What it announced itself: a pair picked (NotifySettingChanged), the chart goes there. The EA only passes the event on
        bool                OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam, CChartObj *chart);
 
-       int                 Total(void)                                        const { return m_list.Total();   }
-       CSymbolTFSetting   *At(const int index)                                const { return m_list.At(index); }
+      //--- The pairs of this account, asked to the database each time: Symbol-grouped (in the order a Symbol first appeared), TF-ascending within a Symbol.
+      //--- A pair whose symbol does not exist on this server is left out
+       int                 Total(void) const;
+       int                 Pairs(string &symbols[], ENUM_TIMEFRAMES &tfs[]) const;
+       int                 Pairs(string &symbols[], ENUM_TIMEFRAMES &tfs[], bool &buy[], bool &sell[], bool &sound[], bool &message[]) const;
+       int                 TimeframesOf(const string symbol, ENUM_TIMEFRAMES &tfs[]) const;   // the TFs of one Symbol, ascending
+       bool                Exists(const string symbol, const ENUM_TIMEFRAMES tf) const;
 
-      //--- identity-based lookup - works in POINTERS, not array index
-       CSymbolTFSetting   *FindByIdentity(const string sym, const ENUM_TIMEFRAMES tf) const;
-       bool                Exists(const string sym, const ENUM_TIMEFRAMES tf)         const { return FindByIdentity(sym, tf) != NULL; }
+      //--- The four flags of a pair (Buy / Sell signal into the Signal Bridge, sound alert, message alert): read, and set (written at once)
+       bool                BuySignal(const string symbol, const ENUM_TIMEFRAMES tf) const            { return this.GetFlag(symbol, tf, "buy_signal");     }
+       bool                BuySignal(const string symbol, const ENUM_TIMEFRAMES tf, const bool on)   { return this.SetFlag(symbol, tf, "buy_signal", on);  }
+       bool                SellSignal(const string symbol, const ENUM_TIMEFRAMES tf) const           { return this.GetFlag(symbol, tf, "sell_signal");    }
+       bool                SellSignal(const string symbol, const ENUM_TIMEFRAMES tf, const bool on)  { return this.SetFlag(symbol, tf, "sell_signal", on); }
+       bool                SoundAlert(const string symbol, const ENUM_TIMEFRAMES tf) const           { return this.GetFlag(symbol, tf, "sound_alert");    }
+       bool                SoundAlert(const string symbol, const ENUM_TIMEFRAMES tf, const bool on)  { return this.SetFlag(symbol, tf, "sound_alert", on); }
+       bool                MessageAlert(const string symbol, const ENUM_TIMEFRAMES tf) const         { return this.GetFlag(symbol, tf, "message_alert");  }
+       bool                MessageAlert(const string symbol, const ENUM_TIMEFRAMES tf, const bool on){ return this.SetFlag(symbol, tf, "message_alert", on); }
 
-      //--Add,Remove in Template base on Symbol+TF identity
-       CSymbolTFSetting   *Add_SymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf);   // NULL if identity already exists
-       bool                Delete_SymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf);      
-       void                NotifySettingChanged(const string sym, const ENUM_TIMEFRAMES tf);
-      //--- JSON - reads/builds ONLY the "Symbols_TFs_List" section; SaveToJSON() writes this key alone (JSONConfig_SaveSection),
-      //--- the Save button of its tab calls it: every manager writes its own key of the file
-       bool                LoadSymbolTFSettingFromJSON(const string full_path);
-       void                BuildJsonSection(string &out_json)          const;
-       bool                SaveToJSON(void);
+      //--Add, Remove a pair: written to the database at once, then the event
+       bool                Add_SymbolTFSetting(const string symbol, const ENUM_TIMEFRAMES tf);      // false if the pair exists or the symbol is not joined (symbol_account)
+       bool                Delete_SymbolTFSetting(const string symbol, const ENUM_TIMEFRAMES tf);
+       void                NotifySettingChanged(const string symbol, const ENUM_TIMEFRAMES tf);
       //--- The timeframes Python can serve for any Symbol, "M1;M2;..." as Python sends them
        void                SetAvailableTimeframes(const string texts);
        int                 AvailableTimeframes(ENUM_TIMEFRAMES &out[]) const;
@@ -66,188 +70,202 @@
    };
 #endif // CSYMBOLTFMANAGER_MQH_DECLARATION
 #ifndef CSYMBOLTFMANAGER_MQH_IMPLEMENTATION
-#define CSYMBOLTFMANAGER_MQH_IMPLEMENTATION 
- int CSymbolTFManager::ReadSymbolTFEntry(const string &s, int pos, CSymbolTFSetting *&out_row)
+#define CSYMBOLTFMANAGER_MQH_IMPLEMENTATION
+ //+------------------------------------------------------------------+
+ //| Open the database once: it stays open while the EA runs. Python   |
+ //| writes to the same file, so a write waits for it                  |
+ //+------------------------------------------------------------------+
+ bool CSymbolTFManager::Open(void)
   {
-   out_row = NULL;
-   pos = JSONConfig_SkipSpace(s, pos);
-   if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '{') return pos;
-   pos++; // skip '{'
-   pos = JSONConfig_SkipSpace(s, pos);
-   string symbol = "", tf_text = "";
-   bool   buy = true, sell = true, sound = true, message = true;
-   while(pos < StringLen(s) && StringGetCharacter(s, pos) != '}')
+   m_db = ::DatabaseOpen(LIB_DATABASE_FILE, DATABASE_OPEN_READWRITE);
+   if(m_db == INVALID_HANDLE)
     {
-     string key;
-     pos = JSONConfig_ReadString(s, pos, key);
-     pos = JSONConfig_SkipSpace(s, pos);
-     if(pos < StringLen(s) && StringGetCharacter(s, pos) == ':') pos++;
-      pos = JSONConfig_SkipSpace(s, pos);
-     if(key == "m_symbol")
-      pos = JSONConfig_ReadString(s, pos, symbol);
-     else if(key == "tf_text") 
-      pos = JSONConfig_ReadString(s, pos, tf_text);
-     else if(key == "m_buy_signal")
-      pos = IndicatorConfig_ReadBool(s, pos, buy);
-     else if(key == "m_sell_signal")
-      pos = IndicatorConfig_ReadBool(s, pos, sell);
-     else if(key == "m_sound_alert")
-      pos = IndicatorConfig_ReadBool(s, pos, sound);
-     else if(key == "m_message_alert")
-      pos = IndicatorConfig_ReadBool(s, pos, message);
-     else
-      pos = JSONConfig_SkipValue(s, pos);   // unrecognized key - skip its value, keep pos in sync
-      pos = JSONConfig_SkipSpace(s, pos);
-    }
-   if(pos < StringLen(s) && StringGetCharacter(s, pos) == '}') pos++;
-   if(symbol == "") return pos;   // malformed/empty slot - skip
-   out_row = new CSymbolTFSetting();
-   out_row.Symbol(symbol);
-   out_row.TFEnum(TimestampByDescription(tf_text));
-   out_row.BuySignal(buy);
-   out_row.SellSignal(sell);
-   out_row.SoundAlert(sound);
-   out_row.MessageAlert(message);
-     return pos;
-  }
- //+------------------------------------------------------------------+
- //| Parse the "Symbols_TFs_List" array, appending 1 row per entry     |
- //+------------------------------------------------------------------+
- int CSymbolTFManager::ReadSymbolTFEntryArray(const string &s, int pos)
-  {
-   pos = JSONConfig_SkipSpace(s, pos);
-   if(pos >= StringLen(s) || StringGetCharacter(s, pos) != '[') return pos;
-   pos++; // skip '['
-   pos = JSONConfig_SkipSpace(s, pos);
-   while(pos < StringLen(s) && StringGetCharacter(s, pos) != ']')
-    {
-     CSymbolTFSetting *row = NULL;
-     pos = ReadSymbolTFEntry(s, pos, row);
-     if(row != NULL && !::SymbolInfoInteger(row.Symbol(), SYMBOL_EXIST))
-      {
-       ::Print(__FUNCTION__, " > skipped ", row.Symbol(), " ", row.TFText(), ": symbol does not exist on this server");
-       delete row;
-       row = NULL;
-      }
-     if(row != NULL)
-      {
-       // Insert sorted here too (not just Add_SymbolTFSetting) - self-heals m_list's Symbol-grouped/
-       // TF-ascending invariant even if Config_Setting.json was ever hand-edited out of order
-       int insert_at = FindInsertIndex(row.Symbol(), row.TFEnum());
-       bool inserted = (insert_at >= m_list.Total()) ? m_list.Add(row) : m_list.Insert(row, insert_at);
-       if(!inserted) delete row;
-      }
-     pos = JSONConfig_SkipSpace(s, pos);
-    }
-   if(pos < StringLen(s) && StringGetCharacter(s, pos) == ']') pos++;
-   return pos;
-  }
- //+------------------------------------------------------------------+
- //| Load Config_Setting.json's "Symbols_TFs_List" section straight    |
- //| into m_list - clears whatever was there first.                    |
- //+------------------------------------------------------------------+
- bool CSymbolTFManager::LoadSymbolTFSettingFromJSON(const string full_path)
-  {
-   string content = JSONConfig_ReadWholeFile(full_path);
-   if(content == "") return false;
-   string clean = JSONConfig_StripComments(content);
-   m_list.Clear();
-   int pos = JSONConfig_SkipSpace(clean, 0);
-   if(pos >= StringLen(clean) || StringGetCharacter(clean, pos) != '{')
-    {
-     ::Print(__FUNCTION__, " > top-level JSON must be an object");
+     ::Print(__FUNCTION__, " > the database ", LIB_DATABASE_FILE, " is not opened, error ", ::GetLastError());
      return false;
     }
-   pos++; // skip '{'
-   pos = JSONConfig_SkipSpace(clean, pos);
-   while(pos < StringLen(clean) && StringGetCharacter(clean, pos) != '}')
-    {
-     string key;
-     pos = JSONConfig_ReadString(clean, pos, key);
-     pos = JSONConfig_SkipSpace(clean, pos);
-     if(pos < StringLen(clean) && StringGetCharacter(clean, pos) == ':') pos++;
-     pos = JSONConfig_SkipSpace(clean, pos);
-     if(key == "Symbols_TFs_List")
-      pos = ReadSymbolTFEntryArray(clean, pos);
-     else
-      pos = JSONConfig_SkipValue(clean, pos);   // not this Manager's key - e.g. "Indicator_Templates"
-     pos = JSONConfig_SkipSpace(clean, pos);
-    }
-   ::Print("Complete ", __FUNCTION__, " > loaded ", m_list.Total(), " symbol/TF pair(s) from ", full_path);
+   ::DatabaseExecute(m_db, "PRAGMA busy_timeout=5000");
+   ::Print("Complete ", __FUNCTION__, " > ", LIB_DATABASE_FILE, " opened");
    return true;
   }
- //+------------------------------------------------------------------+
- //| Writes the "Symbols_TFs_List" key of Config_Setting.json, the     |
- //| other keys stay as they are                                       |
- //+------------------------------------------------------------------+
- bool CSymbolTFManager::SaveToJSON(void)
+ //--- A text as it goes into a SQL string: the quote is doubled
+ string CSymbolTFManager::Quoted(const string text) const
   {
-   string value;
-   this.BuildJsonSection(value);
-   string full_path = this.GetFolderName() + CONFIG_SETTING_FILE;
-   return ::JSONConfig_SaveSection(full_path, "Symbols_TFs_List", value);
+   string result = text;
+   ::StringReplace(result, "'", "''");
+   return result;
+  }
+ //--- The WHERE of one pair of this account: the symbol is the name this account gives it (symbol_account joins it to ours)
+ string CSymbolTFManager::Where(const string symbol, const ENUM_TIMEFRAMES tf) const
+  {
+   return "t.account_key = '" + this.Key() + "' AND a.account_symbol = '" + this.Quoted(symbol) + "' AND t.tf_enum = " + (string)(int)tf;
   }
  //+------------------------------------------------------------------+
- //| Build ONLY the "Symbols_TFs_List": [...] text - caller still owns |
- //| FileOpen/write + preserving the OTHER sections, same "each Save   |
- //| builds only its own section" rule the Indicator side follows.     |
+ //| The pairs of this account, in the order the rows were written:    |
+ //| grouped by Symbol (the order a Symbol first appears), then        |
+ //| TF-ascending in a group                                           |
  //+------------------------------------------------------------------+
- void CSymbolTFManager::BuildJsonSection(string &out_json) const
+ int CSymbolTFManager::Fetch(string &symbols[], ENUM_TIMEFRAMES &tfs[], bool &buy[], bool &sell[], bool &sound[], bool &message[]) const
   {
-   //--- m_list is already Symbol-grouped/TF-ascending (Add_SymbolTFSetting inserts at its sorted
-   //--- position directly, via FindInsertIndex) - just walk it in order, no local re-sort needed
-    int total = m_list.Total();
-   out_json = "[\n";
-   int saved = 0;
-   for(int oi = 0; oi < total; oi++)
+   ::ArrayResize(symbols, 0);
+   ::ArrayResize(tfs, 0);
+   ::ArrayResize(buy, 0);
+   ::ArrayResize(sell, 0);
+   ::ArrayResize(sound, 0);
+   ::ArrayResize(message, 0);
+   if(m_db == INVALID_HANDLE)
+      return 0;
+   int request = ::DatabasePrepare(m_db, "SELECT a.account_symbol, t.tf_enum, t.buy_signal, t.sell_signal, t.sound_alert, t.message_alert FROM Setting_SymbolTF t "
+                                         "JOIN symbol_account a ON a.account_key = t.account_key AND a.symbol_id = t.symbol_id WHERE t.account_key = '" + this.Key() + "' ORDER BY t.rowid");
+   if(request == INVALID_HANDLE)
     {
-     CSymbolTFSetting *row = m_list.At(oi);
-     if(row == NULL || row.Symbol() == "") continue;
-     if(saved > 0) out_json += ",\n";
-     saved++;
-     out_json += "  { \"m_symbol\": \"" + row.Symbol() + "\", \"tf_text\": \"" + row.TFText() +
-                 "\", \"m_buy_signal\": " + (row.BuySignal() ? "true" : "false") +
-                 ", \"m_sell_signal\": " + (row.SellSignal() ? "true" : "false") +
-                 ", \"m_sound_alert\": " + (row.SoundAlert() ? "true" : "false") +
-                 ", \"m_message_alert\": " + (row.MessageAlert() ? "true" : "false") + " }";
+     ::Print(__FUNCTION__, " > the query is not accepted, error ", ::GetLastError());
+     return 0;
     }
-   out_json += "\n ]";
-  }
- //+------------------------------------------------------------------+
- //| Identity-based lookup - returns the row itself, not an index      |
- //+------------------------------------------------------------------+
- CSymbolTFSetting *CSymbolTFManager::FindByIdentity(const string sym, const ENUM_TIMEFRAMES tf) const
-   {
-     for(int i = 0; i < m_list.Total(); i++)
-      {
-       CSymbolTFSetting *row = m_list.At(i);
-       if(row != NULL && row.Symbol() == sym && row.TFEnum() == tf) return row;
-      }
-     return NULL;
-   }
- //+------------------------------------------------------------------+
- //| Insert position for (sym,tf) that keeps m_list itself Symbol-grouped
- //| (each Symbol's own block stays together, in the order that Symbol
- //| first appeared) then TF-ascending within each group - same rule
- //| every consumer (JSON save, Monitor table, ...) used to re-sort for
- //| itself. Sorting m_list ONCE here means none of them need to anymore
- //+------------------------------------------------------------------+
- int CSymbolTFManager::FindInsertIndex(const string sym, const ENUM_TIMEFRAMES tf) const
-  {
-   bool in_group = false;
-   for(int i = 0; i < m_list.Total(); i++)
+   string          row_symbol[];
+   ENUM_TIMEFRAMES row_tf[];
+   bool            row_buy[], row_sell[], row_sound[], row_message[];
+   int rows = 0;
+   while(::DatabaseRead(request))
     {
-     CSymbolTFSetting *existing = m_list.At(i);
-     if(existing == NULL) continue;
-     if(existing.Symbol() != sym)
+     string symbol;
+     long tf, b, s, so, m;
+     ::DatabaseColumnText(request, 0, symbol);
+     ::DatabaseColumnLong(request, 1, tf);
+     ::DatabaseColumnLong(request, 2, b);
+     ::DatabaseColumnLong(request, 3, s);
+     ::DatabaseColumnLong(request, 4, so);
+     ::DatabaseColumnLong(request, 5, m);
+     if(!::SymbolInfoInteger(symbol, SYMBOL_EXIST))
       {
-       if(in_group) return i;   // just passed this Symbol's own block - insert here
+       ::Print(__FUNCTION__, " > skipped ", symbol, " ", TimeframeDescription((ENUM_TIMEFRAMES)(int)tf), ": symbol does not exist on this server");
        continue;
       }
-     in_group = true;
-     if(IndexEnumTimeframe(tf) < IndexEnumTimeframe(existing.TFEnum())) return i;
+     ::ArrayResize(row_symbol, rows + 1);
+     ::ArrayResize(row_tf, rows + 1);
+     ::ArrayResize(row_buy, rows + 1);
+     ::ArrayResize(row_sell, rows + 1);
+     ::ArrayResize(row_sound, rows + 1);
+     ::ArrayResize(row_message, rows + 1);
+     row_symbol[rows]  = symbol;
+     row_tf[rows]      = (ENUM_TIMEFRAMES)(int)tf;
+     row_buy[rows]     = (b != 0);
+     row_sell[rows]    = (s != 0);
+     row_sound[rows]   = (so != 0);
+     row_message[rows] = (m != 0);
+     rows++;
     }
-   return m_list.Total();   // new Symbol (own block appended at the end) or fits after the last TF of an existing block
+   ::DatabaseFinalize(request);
+   //--- the order of the Symbols: the order they first appear
+   string order[];
+   for(int i = 0; i < rows; i++)
+    {
+     bool known = false;
+     for(int k = 0; k < ::ArraySize(order) && !known; k++)
+        known = (order[k] == row_symbol[i]);
+     if(!known)
+      {
+       ::ArrayResize(order, ::ArraySize(order) + 1);
+       order[::ArraySize(order) - 1] = row_symbol[i];
+      }
+    }
+   int total = 0;
+   for(int g = 0; g < ::ArraySize(order); g++)
+    {
+     int first = total;
+     for(int i = 0; i < rows; i++)
+      {
+       if(row_symbol[i] != order[g])
+          continue;
+       ::ArrayResize(symbols, total + 1);
+       ::ArrayResize(tfs, total + 1);
+       ::ArrayResize(buy, total + 1);
+       ::ArrayResize(sell, total + 1);
+       ::ArrayResize(sound, total + 1);
+       ::ArrayResize(message, total + 1);
+       //--- inserted at its place in the group (TF-ascending)
+       int at = total;
+       while(at > first && IndexEnumTimeframe(row_tf[i]) < IndexEnumTimeframe(tfs[at - 1]))
+        {
+         symbols[at] = symbols[at - 1];
+         tfs[at]     = tfs[at - 1];
+         buy[at]     = buy[at - 1];
+         sell[at]    = sell[at - 1];
+         sound[at]   = sound[at - 1];
+         message[at] = message[at - 1];
+         at--;
+        }
+       symbols[at] = row_symbol[i];
+       tfs[at]     = row_tf[i];
+       buy[at]     = row_buy[i];
+       sell[at]    = row_sell[i];
+       sound[at]   = row_sound[i];
+       message[at] = row_message[i];
+       total++;
+      }
+    }
+   return total;
+  }
+ int CSymbolTFManager::Pairs(string &symbols[], ENUM_TIMEFRAMES &tfs[], bool &buy[], bool &sell[], bool &sound[], bool &message[]) const
+  {
+   return this.Fetch(symbols, tfs, buy, sell, sound, message);
+  }
+ int CSymbolTFManager::Pairs(string &symbols[], ENUM_TIMEFRAMES &tfs[]) const
+  {
+   bool buy[], sell[], sound[], message[];
+   return this.Fetch(symbols, tfs, buy, sell, sound, message);
+  }
+ int CSymbolTFManager::Total(void) const
+  {
+   string symbols[];
+   ENUM_TIMEFRAMES tfs[];
+   return this.Pairs(symbols, tfs);
+  }
+ int CSymbolTFManager::TimeframesOf(const string symbol, ENUM_TIMEFRAMES &out[]) const
+  {
+   string symbols[];
+   ENUM_TIMEFRAMES tfs[];
+   int total = this.Pairs(symbols, tfs);
+   ::ArrayResize(out, 0);
+   int count = 0;
+   for(int i = 0; i < total; i++)
+    {
+     if(symbols[i] != symbol)
+        continue;
+     ::ArrayResize(out, count + 1);
+     out[count++] = tfs[i];
+    }
+   return count;
+  }
+ bool CSymbolTFManager::Exists(const string symbol, const ENUM_TIMEFRAMES tf) const
+  {
+   if(m_db == INVALID_HANDLE)
+      return false;
+   int request = ::DatabasePrepare(m_db, "SELECT 1 FROM Setting_SymbolTF t JOIN symbol_account a ON a.account_key = t.account_key AND a.symbol_id = t.symbol_id WHERE " + this.Where(symbol, tf) + " LIMIT 1");
+   if(request == INVALID_HANDLE)
+      return false;
+   bool found = ::DatabaseRead(request);
+   ::DatabaseFinalize(request);
+   return found;
+  }
+ bool CSymbolTFManager::GetFlag(const string symbol, const ENUM_TIMEFRAMES tf, const string column) const
+  {
+   if(m_db == INVALID_HANDLE)
+      return false;
+   int request = ::DatabasePrepare(m_db, "SELECT t." + column + " FROM Setting_SymbolTF t JOIN symbol_account a ON a.account_key = t.account_key AND a.symbol_id = t.symbol_id WHERE " + this.Where(symbol, tf));
+   if(request == INVALID_HANDLE)
+      return false;
+   long value = 0;
+   if(::DatabaseRead(request))
+      ::DatabaseColumnLong(request, 0, value);
+   ::DatabaseFinalize(request);
+   return (value != 0);
+  }
+ bool CSymbolTFManager::SetFlag(const string symbol, const ENUM_TIMEFRAMES tf, const string column, const bool on)
+  {
+   if(m_db == INVALID_HANDLE)
+      return false;
+   return ::DatabaseExecute(m_db, "UPDATE Setting_SymbolTF SET " + column + " = " + (on ? "1" : "0") + " WHERE account_key = '" + this.Key() + "' AND tf_enum = " + (string)(int)tf +
+                                  " AND symbol_id = (SELECT symbol_id FROM symbol_account WHERE account_key = '" + this.Key() + "' AND account_symbol = '" + this.Quoted(symbol) + "')");
   }
  void CSymbolTFManager::SetAvailableTimeframes(const string texts)
   {
@@ -273,65 +291,66 @@
    return total;
   }
  //+------------------------------------------------------------------+
- //| Insert a new row at its sorted position - Data only, NULL if the  |
- //| identity already exists.                                          |
+ //| Add a pair: written at once, then the event. False when the pair  |
+ //| exists, the symbol does not exist on this server, or it is not    |
+ //| joined to one of ours (symbol_account)                            |
  //+------------------------------------------------------------------+
- CSymbolTFSetting *CSymbolTFManager::Add_SymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf)
+ bool CSymbolTFManager::Add_SymbolTFSetting(const string symbol, const ENUM_TIMEFRAMES tf)
   {
-   if(Exists(sym, tf))
+   if(m_db == INVALID_HANDLE || this.Exists(symbol, tf))
+      return false;
+   if(!::SymbolInfoInteger(symbol, SYMBOL_EXIST))
     {
-     return NULL;
-    }
-   if(!::SymbolInfoInteger(sym, SYMBOL_EXIST))
-    {
-     ::Print(__FUNCTION__, " > rejected ", sym, ": symbol does not exist on this server");
-     return NULL;
-    }
-   CSymbolTFSetting *row = new CSymbolTFSetting();   // constructor already defaults buy/sell to true
-   row.Symbol(sym);
-   row.TFEnum(tf);
-   int insert_at = FindInsertIndex(sym, tf);
-   bool inserted = (insert_at >= m_list.Total()) ? m_list.Add(row) : m_list.Insert(row, insert_at);
-   if(!inserted)
-    {
-     delete row;
-     return NULL;
-    }
-   // --- Identity (symbol via sparam, TF via lparam), NOT insert_at - EventChartCustom is queued/
-   // async, and a sorted Insert() (unlike a plain Add()) can shift this row's position before the
-   // event is dequeued if another row gets added in between; an index captured now can go stale by
-   // the time a listener reads it. Passing identity directly is immune to that.
-   ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ADDED, (long)tf, 0.0, sym);
-   return row;
-  }
- //+------------------------------------------------------------------+
- //| Remove a row by identity - Data only                              |
- //+------------------------------------------------------------------+
- bool CSymbolTFManager::Delete_SymbolTFSetting(const string sym, const ENUM_TIMEFRAMES tf)
-  {
-   if(sym == ::Symbol() && tf == (ENUM_TIMEFRAMES)::Period())
-    {
-     ::Print(__FUNCTION__, " > rejected: ", sym, " ", EnumToString(tf), " is this chart's own pair");
+     ::Print(__FUNCTION__, " > rejected ", symbol, ": symbol does not exist on this server");
      return false;
     }
-   for(int i = 0; i < m_list.Total(); i++)
+   if(!::DatabaseExecute(m_db, "INSERT INTO Setting_SymbolTF (account_key, symbol_id, tf_enum) SELECT '" + this.Key() + "', symbol_id, " + (string)(int)tf +
+                               " FROM symbol_account WHERE account_key = '" + this.Key() + "' AND account_symbol = '" + this.Quoted(symbol) + "' AND symbol_id IS NOT NULL"))
     {
-     CSymbolTFSetting *row = m_list.At(i);
-     if(row == NULL || row.Symbol() != sym || row.TFEnum() != tf) continue;
-      if(!m_list.Delete(i)) return false;   // FreeMode default true - deletes the CSymbolTFSetting too
-      ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_DELETE, (long)tf, 0.0, sym);
-     return true;
+     ::Print(__FUNCTION__, " > ", symbol, " ", TimeframeDescription(tf), " not written, error ", ::GetLastError());
+     return false;
     }
-   ::Print(__FUNCTION__, " > rejected: no row for this identity");
-   return false;
+   if(!this.Exists(symbol, tf))
+    {
+     ::Print(__FUNCTION__, " > rejected ", symbol, ": it is not joined to a symbol of ours (symbol_account)");
+     return false;
+    }
+   // --- Identity (symbol via sparam, TF via lparam), NOT a position - EventChartCustom is queued/async, a position captured now can go stale
+   // by the time a listener reads it. Passing identity directly is immune to that.
+   ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_ADDED, (long)tf, 0.0, symbol);
+   return true;
+  }
+ //+------------------------------------------------------------------+
+ //| Remove a pair: written at once, then the event                    |
+ //+------------------------------------------------------------------+
+ bool CSymbolTFManager::Delete_SymbolTFSetting(const string symbol, const ENUM_TIMEFRAMES tf)
+  {
+   if(symbol == ::Symbol() && tf == (ENUM_TIMEFRAMES)::Period())
+    {
+     ::Print(__FUNCTION__, " > rejected: ", symbol, " ", EnumToString(tf), " is this chart's own pair");
+     return false;
+    }
+   if(m_db == INVALID_HANDLE || !this.Exists(symbol, tf))
+    {
+     ::Print(__FUNCTION__, " > rejected: no row for this identity");
+     return false;
+    }
+   if(!::DatabaseExecute(m_db, "DELETE FROM Setting_SymbolTF WHERE account_key = '" + this.Key() + "' AND tf_enum = " + (string)(int)tf +
+                               " AND symbol_id = (SELECT symbol_id FROM symbol_account WHERE account_key = '" + this.Key() + "' AND account_symbol = '" + this.Quoted(symbol) + "')"))
+    {
+     ::Print(__FUNCTION__, " > ", symbol, " ", TimeframeDescription(tf), " not removed, error ", ::GetLastError());
+     return false;
+    }
+   ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_DELETE, (long)tf, 0.0, symbol);
+   return true;
   }
  //+------------------------------------------------------------------+
  //| No row Add/Delete - see declaration comment.                      |
  //+------------------------------------------------------------------+
- void CSymbolTFManager::NotifySettingChanged(const string sym, const ENUM_TIMEFRAMES tf)
+ void CSymbolTFManager::NotifySettingChanged(const string symbol, const ENUM_TIMEFRAMES tf)
    {
      // The same payload as ADDED / DELETE: the identity of the pair, symbol via sparam and TF via lparam
-     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, (long)tf, 0.0, sym);
+     ::EventChartCustom(::ChartID(), (ushort)SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED, (long)tf, 0.0, symbol);
    }
  //+------------------------------------------------------------------+
  //| Lifecycle - same convention as CIndicatorTemplateManager::        |
@@ -339,20 +358,16 @@
  //+------------------------------------------------------------------+
  bool CSymbolTFManager::OnInitEvent(void)
    {
-     bool ok = true;
-     if(!m_loaded_from_json)   // skip on a CHARTCHANGE reinit - see m_loaded_from_json declaration
-      {
-       string full_path = this.GetFolderName() + CONFIG_SETTING_FILE;
-       ok = LoadSymbolTFSettingFromJSON(full_path);
-       m_loaded_from_json = true;
-      }
+     bool ok = (m_db != INVALID_HANDLE) || this.Open();   // a CHARTCHANGE reinit keeps the database open
+     if(!ok)
+        return false;
      string cur_sym = ::Symbol();
      ENUM_TIMEFRAMES cur_tf = (ENUM_TIMEFRAMES)::Period();
      if(!Exists(cur_sym, cur_tf))
        Add_SymbolTFSetting(cur_sym, cur_tf);
-     return ok;
+     return true;
    }
- 
+
  //+------------------------------------------------------------------+
  //| A pair was picked (NotifySettingChanged): sparam = its Symbol,   |
  //| lparam = its TF. The chart goes there                            |
@@ -368,13 +383,13 @@
  //+------------------------------------------------------------------+
  void CSymbolTFManager::Print(const bool full_prop=false, const bool dash=false)
    {
-     ::Print("CSymbolTFManager::Print total=", m_list.Total());
-     for(int i = 0; i < m_list.Total(); i++)
-      {
-       CSymbolTFSetting *row = m_list.At(i);
-       if(row != NULL) row.Print(full_prop, true);
-      }
+     string symbols[];
+     ENUM_TIMEFRAMES tfs[];
+     bool buy[], sell[], sound[], message[];
+     int total = this.Pairs(symbols, tfs, buy, sell, sound, message);
+     ::Print("CSymbolTFManager::Print total=", total);
+     for(int i = 0; i < total; i++)
+        ::Print((dash ? " - " : ""), "CSymbolTFManager::Print symbol=", symbols[i], " tf=", TimeframeDescription(tfs[i]), " buy=", buy[i], " sell=", sell[i], " sound=", sound[i], " message=", message[i]);
    }
 #endif // CSYMBOLTFMANAGER_MQH_IMPLEMENTATION
 #endif // CSYMBOLTFMANAGER_MQH
-

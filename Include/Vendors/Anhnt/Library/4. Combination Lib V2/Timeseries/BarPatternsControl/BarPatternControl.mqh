@@ -57,7 +57,7 @@ enum ENUM_BARPATTERN_CONTROL_EVENT
     #define PATTERN_DEF_PINBAR_SMALLER_SHADOW        30.0   // PinBar param[3]
    //For Pivot Point Reversal
     //#define PATTERN_DEF_PPR_MIN_BODY_SIZE            30     // PivotPointReversal param[0] 30 Point not 30%
-    #define PATTERN_DEF_PPR_RATIO_CANDLE_SIZE         20.0   // PivotPointReversal param[0] - min % of bar1's own High-Low range
+    #define PATTERN_DEF_PPR_RATIO_CANDLE_SIZE         20.0    // PivotPointReversal param[0] - min % of bar1's own High-Low range
  //+------------------------------------------------------------------+
  //| Include Custom files                                             |
  //+------------------------------------------------------------------+

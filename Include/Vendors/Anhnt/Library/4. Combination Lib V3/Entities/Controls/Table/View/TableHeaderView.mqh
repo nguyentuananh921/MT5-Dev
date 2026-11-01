@@ -28,6 +28,9 @@ class CTableHeaderView : public CGBaseObj
     ENUM_CSORT_MODE   m_last_sort_direction;
     int               m_header_index_focus;
     int               m_shift_x;
+    int               m_fixed_left;    // how many shown columns, from the left, stay still while the others scroll
+    int               m_fixed_right;   // the same, from the right
+    int               m_view_width;    // the room of the columns (set by the table view)
     CImage            m_sort_arrows[2];
     CImage            m_filter_arrow;
     bool              m_filter_enabled[];
@@ -35,6 +38,8 @@ class CTableHeaderView : public CGBaseObj
     bool              m_resizable[];
     bool              m_shown[];    // a hidden column takes no room: its data stays in the model
     int               m_order[];    // display position -> column of the model
+    bool              FixedState(int &shown,int &left_count,int &right_count,int &left_w,int &right_w);
+    void              DrawHeaderColumn(CCanvas &canvas,const int column,const int x,const int y,const int h,const color back_hover,const color text,const color grid,const color filter_active);
   public:
     void              Bind(CTableHeader *header)                 { this.m_header=header;    }
     void              ColumnsInit(const int total);
@@ -58,6 +63,13 @@ class CTableHeaderView : public CGBaseObj
     int               ColumnX(const int column);
     int               ColumnsWidthTotal(void);
     void              ShiftX(const int shift)                    { this.m_shift_x=shift;  }
+  //--- Fixed columns: the first and the last shown columns stay still, only the ones between them scroll
+    void              FixedColumns(const int left,const int right)  { this.m_fixed_left=::MathMax(left,0); this.m_fixed_right=::MathMax(right,0); }
+    int               FixedLeft(void)                      const { return(this.m_fixed_left);  }
+    int               FixedRight(void)                     const { return(this.m_fixed_right); }
+    void              ViewWidth(const int width)                 { this.m_view_width=width;    }
+    bool              FixedLayout(int &left_end,int &right_start);   // true while the fixed columns work: x where the scrolled ones start and stop
+    int               ColumnRegion(const int column);               // 0 scrolled, 1 fixed at left, 2 fixed at right
     int               ShiftX(void)                         const { return(this.m_shift_x); }
     int               ColumnWidth(const int column)        const { return(this.m_shown[column] ? this.m_width[column] : 0); }
     void              ColumnWidth(const int column,const int width);
@@ -89,7 +101,10 @@ CTableHeaderView::CTableHeaderView(void) : m_header(NULL),
                                            m_is_sorted_column_index(WRONG_VALUE),
                                            m_last_sort_direction(SORT_ASCEND),
                                            m_header_index_focus(WRONG_VALUE),
-                                           m_shift_x(0)
+                                           m_shift_x(0),
+                                           m_fixed_left(0),
+                                           m_fixed_right(0),
+                                           m_view_width(0)
  {
   this.m_sort_arrows[0].ReadImageData(IMAGE_RESOURCE_BMP16_ARROW_UP_PNG);
   this.m_sort_arrows[1].ReadImageData(IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG);
@@ -190,20 +205,103 @@ void CTableHeaderView::SetHeaderImage(const uint column_index,const uint &resour
   this.m_header_image[column_index].ReadImageData(resource_index[0]);
  }
 //+------------------------------------------------------------------+
-//| Left edge inside the table border, minus the horizontal shift    |
+//| The fixed columns work only when the columns do not fit the room |
+//| and the fixed ones leave some room for the others                |
+//+------------------------------------------------------------------+
+bool CTableHeaderView::FixedState(int &shown,int &left_count,int &right_count,int &left_w,int &right_w)
+ {
+  shown=0;
+  left_count=0;
+  right_count=0;
+  left_w=0;
+  right_w=0;
+  if((this.m_fixed_left<1 && this.m_fixed_right<1) || this.m_view_width<1)
+     return(false);
+  int total=0;
+  for(int i=0; i<this.ColumnsTotal(); i++)
+     if(this.m_shown[i])
+       {
+        shown++;
+        total+=this.m_width[i];
+       }
+  if(total<=this.m_view_width)
+     return(false);
+  left_count =::MathMin(this.m_fixed_left,shown);
+  right_count=::MathMin(this.m_fixed_right,shown-left_count);
+  int sp=0;
+  for(int p=0; p<this.ColumnsTotal(); p++)
+    {
+     int i=this.m_order[p];
+     if(!this.m_shown[i])
+        continue;
+     if(sp<left_count)
+        left_w+=this.m_width[i];
+     else if(sp>=shown-right_count)
+        right_w+=this.m_width[i];
+     sp++;
+    }
+  return(left_w+right_w<this.m_view_width-30);
+ }
+//+------------------------------------------------------------------+
+//| x where the scrolled columns start and stop (they pass under the |
+//| fixed ones), true while the fixed columns work                   |
+//+------------------------------------------------------------------+
+bool CTableHeaderView::FixedLayout(int &left_end,int &right_start)
+ {
+  int shown,left_count,right_count,left_w,right_w;
+  left_end=0;
+  right_start=0;
+  if(!this.FixedState(shown,left_count,right_count,left_w,right_w))
+     return(false);
+  left_end=1+left_w;
+  right_start=1+this.m_view_width-right_w;
+  return(true);
+ }
+//+------------------------------------------------------------------+
+//| 0 scrolled (or nothing is fixed), 1 fixed at left, 2 fixed right|
+//+------------------------------------------------------------------+
+int CTableHeaderView::ColumnRegion(const int column)
+ {
+  int shown,left_count,right_count,left_w,right_w;
+  if(!this.FixedState(shown,left_count,right_count,left_w,right_w))
+     return(0);
+  int sp=0;
+  for(int p=0; p<this.ColumnsTotal(); p++)
+    {
+     int i=this.m_order[p];
+     if(!this.m_shown[i])
+        continue;
+     if(i==column)
+        return(sp<left_count ? 1 : (sp>=shown-right_count ? 2 : 0));
+     sp++;
+    }
+  return(0);
+ }
+//+------------------------------------------------------------------+
+//| Left edge inside the table border: the scrolled columns move by  |
+//| the horizontal shift, the fixed ones stay where they are         |
 //+------------------------------------------------------------------+
 int CTableHeaderView::ColumnX(const int column)
  {
-  int x=1-this.m_shift_x;
+  int shown,left_count,right_count,left_w,right_w;
+  bool fixed=this.FixedState(shown,left_count,right_count,left_w,right_w);
+  int before=0,sp=0;
   for(int p=0; p<this.ColumnsTotal(); p++)
     {
      int i=this.m_order[p];
      if(i==column)
         break;
      if(this.m_shown[i])
-        x+=this.m_width[i];
+       {
+        before+=this.m_width[i];
+        sp++;
+       }
     }
-  return(x);
+  if(fixed && sp<left_count)
+     return(1+before);
+  if(fixed && sp>=shown-right_count)
+     return(1+this.m_view_width-this.ColumnsWidthTotal()+before);
+  return(1-this.m_shift_x+before);
  }
 //+------------------------------------------------------------------+
 //| What the shown columns take                                      |
@@ -217,19 +315,23 @@ int CTableHeaderView::ColumnsWidthTotal(void)
   return(width);
  }
 //+------------------------------------------------------------------+
-//| Column under local x, WRONG_VALUE past the last one              |
+//| Column under local x, WRONG_VALUE past the last one; a scrolled  |
+//| column is not under x where a fixed one covers it                |
 //+------------------------------------------------------------------+
 int CTableHeaderView::ColumnAt(const int x)
  {
-  int left=1-this.m_shift_x;
+  int left_end,right_start;
+  bool fixed=this.FixedLayout(left_end,right_start);
   for(int p=0; p<this.ColumnsTotal(); p++)
     {
      int i=this.m_order[p];
      if(!this.m_shown[i])
         continue;
-     if(x>=left && x<left+this.m_width[i])
+     int left=this.ColumnX(i);
+     if(x<left || x>=left+this.m_width[i])
+        continue;
+     if(!fixed || this.ColumnRegion(i)!=0 || (x>=left_end && x<right_start))
         return(i);
-     left+=this.m_width[i];
     }
   return(WRONG_VALUE);
  }
@@ -238,14 +340,17 @@ int CTableHeaderView::ColumnAt(const int x)
 //+------------------------------------------------------------------+
 int CTableHeaderView::ColumnBorderAt(const int x,const int tolerance)
  {
-  int right=-this.m_shift_x;
+  int left_end,right_start;
+  bool fixed=this.FixedLayout(left_end,right_start);
   for(int p=0; p<this.ColumnsTotal(); p++)
     {
      int i=this.m_order[p];
-     if(!this.m_shown[i])
+     if(!this.m_shown[i] || !this.m_resizable[i])
         continue;
-     right+=this.m_width[i];
-     if(this.m_resizable[i] && ::MathAbs(x-right)<=tolerance)
+     int right=this.ColumnX(i)+this.m_width[i]-1;
+     if(fixed && this.ColumnRegion(i)==0 && (right<left_end || right>=right_start))
+        continue;
+     if(::MathAbs(x-right)<=tolerance)
         return(i);
     }
   return(WRONG_VALUE);
@@ -396,51 +501,68 @@ bool CTableHeaderView::ColumnsLayout(const string layout)
   return(true);
  }
 //+------------------------------------------------------------------+
-//| Caption strip with the column grid, clipped at right             |
+//| One caption at x: hover, image, filter, sort arrow, text, grid   |
+//+------------------------------------------------------------------+
+void CTableHeaderView::DrawHeaderColumn(CCanvas &canvas,const int column,const int x,const int y,const int h,const color back_hover,const color text,const color grid,const color filter_active)
+ {
+  int i=column;
+  uint grid_color=::ColorToARGB(grid,255);
+  int w=this.m_width[i];
+  if(i==this.m_header_index_focus)
+     canvas.FillRectangle(::MathMax(x,1),y,x+w-2,y+h-2,::ColorToARGB(back_hover,255));
+  if(this.m_header_image[i].Width()>0)
+     this.m_header_image[i].Draw(canvas,x+this.m_image_x_offset[i],y+(h-1-(int)this.m_header_image[i].Height())/2);
+  int button=(this.m_filter_enabled[i] ? TABLE_FILTER_BUTTON_WIDTH : 0);
+  if(this.m_filter_enabled[i])
+    {
+     int ax=x+w-TABLE_FILTER_BUTTON_WIDTH+(TABLE_FILTER_BUTTON_WIDTH-(int)this.m_filter_arrow.Width())/2;
+     this.m_filter_arrow.Draw(canvas,ax,y+(h-1-(int)this.m_filter_arrow.Height())/2);
+     if(this.m_filter_active[i])
+        canvas.FillCircle(x+w-5,y+4,3,::ColorToARGB(filter_active,255));
+    }
+  if(i==this.m_is_sorted_column_index)
+    {
+     int a=(this.m_last_sort_direction==SORT_ASCEND ? 0 : 1);
+     this.m_sort_arrows[a].Draw(canvas,x+w-2-button-(int)this.m_sort_arrows[a].Width(),y+(h-1-(int)this.m_sort_arrows[a].Height())/2);
+    }
+  string caption=(this.m_header!=NULL && this.m_header_image[i].Width()<1 ? this.m_header.Caption(i) : "");   // a picture takes the place of the text
+  if(this.m_header_align[i]==ALIGN_LEFT)
+     canvas.TextOut(x+this.m_text_x_offset[i],y+(h-1)/2,caption,::ColorToARGB(text,255),TA_LEFT|TA_VCENTER);
+  else if(this.m_header_align[i]==ALIGN_RIGHT)
+     canvas.TextOut(x+w-1-this.m_text_x_offset[i],y+(h-1)/2,caption,::ColorToARGB(text,255),TA_RIGHT|TA_VCENTER);
+  else
+     canvas.TextOut(x+w/2,y+(h-1)/2,caption,::ColorToARGB(text,255),TA_CENTER|TA_VCENTER);
+  canvas.Line(x+w-1,y,x+w-1,y+h-1,grid_color);
+ }
+//+------------------------------------------------------------------+
+//| Caption strip with the column grid, clipped at right; the        |
+//| scrolled columns first, the fixed ones over them                 |
 //+------------------------------------------------------------------+
 void CTableHeaderView::DrawHeader(CCanvas &canvas,const int y,const int h,const int right,const color back,const color back_hover,const color text,const color grid,const color filter_active)
  {
   canvas.FillRectangle(1,y,right,y+h-1,::ColorToARGB(back,255));
   uint grid_color=::ColorToARGB(grid,255);
   canvas.Line(1,y+h-1,right,y+h-1,grid_color);
-  int x=1-this.m_shift_x;
-  for(int p=0; p<this.ColumnsTotal() && x<=right; p++)
+  int left_end,right_start;
+  bool fixed=this.FixedLayout(left_end,right_start);
+  for(int pass=0; pass<(fixed ? 2 : 1); pass++)
     {
-     int i=this.m_order[p];
-     if(!this.m_shown[i])
-        continue;
-     int w=this.m_width[i];
-     if(x+w<=1)
+     if(pass==1)   // the scrolled captions that went past the fixed ones at right (over the scrollbar too) are covered
+        canvas.FillRectangle(right_start,y,right,y+h-2,::ColorToARGB(back,255));
+     for(int p=0; p<this.ColumnsTotal(); p++)
        {
-        x+=w;
-        continue;
+        int i=this.m_order[p];
+        if(!this.m_shown[i])
+           continue;
+        if(fixed && (this.ColumnRegion(i)!=0)!=(pass==1))
+           continue;
+        int x=this.ColumnX(i);
+        if(x>right || x+this.m_width[i]<=1)
+           continue;
+        if(pass==1)
+           canvas.FillRectangle(x,y,x+this.m_width[i]-2,y+h-2,::ColorToARGB(back,255));
+        this.DrawHeaderColumn(canvas,i,x,y,h,back_hover,text,grid,filter_active);
        }
-     if(i==this.m_header_index_focus)
-        canvas.FillRectangle(::MathMax(x,1),y,::MathMin(x+w-2,right),y+h-2,::ColorToARGB(back_hover,255));
-     if(this.m_header_image[i].Width()>0)
-        this.m_header_image[i].Draw(canvas,x+this.m_image_x_offset[i],y+(h-1-(int)this.m_header_image[i].Height())/2);
-     int button=(this.m_filter_enabled[i] ? TABLE_FILTER_BUTTON_WIDTH : 0);
-     if(this.m_filter_enabled[i])
-       {
-        int ax=x+w-TABLE_FILTER_BUTTON_WIDTH+(TABLE_FILTER_BUTTON_WIDTH-(int)this.m_filter_arrow.Width())/2;
-        this.m_filter_arrow.Draw(canvas,ax,y+(h-1-(int)this.m_filter_arrow.Height())/2);
-        if(this.m_filter_active[i])
-           canvas.FillCircle(x+w-5,y+4,3,::ColorToARGB(filter_active,255));
-       }
-     if(i==this.m_is_sorted_column_index)
-       {
-        int a=(this.m_last_sort_direction==SORT_ASCEND ? 0 : 1);
-        this.m_sort_arrows[a].Draw(canvas,x+w-2-button-(int)this.m_sort_arrows[a].Width(),y+(h-1-(int)this.m_sort_arrows[a].Height())/2);
-       }
-     string caption=(this.m_header!=NULL ? this.m_header.Caption(i) : "");
-     if(this.m_header_align[i]==ALIGN_LEFT)
-        canvas.TextOut(x+this.m_text_x_offset[i],y+(h-1)/2,caption,::ColorToARGB(text,255),TA_LEFT|TA_VCENTER);
-     else if(this.m_header_align[i]==ALIGN_RIGHT)
-        canvas.TextOut(x+w-1-this.m_text_x_offset[i],y+(h-1)/2,caption,::ColorToARGB(text,255),TA_RIGHT|TA_VCENTER);
-     else
-        canvas.TextOut(x+w/2,y+(h-1)/2,caption,::ColorToARGB(text,255),TA_CENTER|TA_VCENTER);
-     x+=w;
-     canvas.Line(x-1,y,x-1,y+h-1,grid_color);
     }
  }
 #endif // CTABLEHEADERVIEW_MQH_IMPLEMENTATION

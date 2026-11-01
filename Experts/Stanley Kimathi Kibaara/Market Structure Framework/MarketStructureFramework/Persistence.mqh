@@ -13,26 +13,26 @@
 //+------------------------------------------------------------------+
 class CPersistence
   {
-private:
-   bool                 m_enabled;                                                  // true if persistence is active
-   string               m_filename;                                                 // full path and name of the output CSV file
-   int                  m_fileHandle;                                               // handle to the open file (INVALID_HANDLE when closed)
-   string               m_symbol;                                                   // symbol for which events are being logged
-   ENUM_TIMEFRAMES      m_tfInternal;                                               // internal timeframe (chart period)
-   ENUM_TIMEFRAMES      m_tfExternal;                                               // external higher timeframe
-   int                  m_flushInterval;                                            // number of writes between forced flushes to disk
-   int                  m_flushCounter;                                             // current count of writes since last flush
-   string               m_sessionUUID;                                              // unique identifier for this logging session
+   private:
+    bool                 m_enabled;                                                  // true if persistence is active
+    string               m_filename;                                                 // full path and name of the output CSV file
+    int                  m_fileHandle;                                               // handle to the open file (INVALID_HANDLE when closed)
+    string               m_symbol;                                                   // symbol for which events are being logged
+    ENUM_TIMEFRAMES      m_tfInternal;                                               // internal timeframe (chart period)
+    ENUM_TIMEFRAMES      m_tfExternal;                                               // external higher timeframe
+    int                  m_flushInterval;                                            // number of writes between forced flushes to disk
+    int                  m_flushCounter;                                             // current count of writes since last flush
+    string               m_sessionUUID;                                              // unique identifier for this logging session
 
-   void                WriteHeader();                                               // write version, UUID, and column names to the file
+    void                WriteHeader();                                               // write version, UUID, and column names to the file
 
-public:
+   public:
                      CPersistence();
-   void                Init(bool enable, string symbol,
+    void                Init(bool enable, string symbol,
                             ENUM_TIMEFRAMES internalTF, ENUM_TIMEFRAMES externalTF,
                             int flushInterval=10);                                  // initialise the logger and open the file
-   void                WriteEvent(const SStructureEvent &event);                    // log a single event row
-   void                Close();                                                     // flush and close the file
+    void                WriteEvent(const SStructureEvent &event);                    // log a single event row
+    void                Close();                                                     // flush and close the file
   };
 
 //+------------------------------------------------------------------+

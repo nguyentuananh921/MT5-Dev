@@ -9,14 +9,17 @@
 #ifndef CMARKETCONDITIONSETTING_MQH_DECLARATION
 #define CMARKETCONDITIONSETTING_MQH_DECLARATION
  //+------------------------------------------------------------------+
- //| The Market State / Phase settings of the EA. They are the inputs |
- //| of the EA, so they are read-only here and change with the Inputs |
- //| table: the calculation ones go to Python (Json, in the init      |
- //| message), the colours of the Phases are read by the Market Story |
- //| table                                                            |
+ //| The Market State / Phase settings of the EA. The colours and the |
+ //| calculation ones are inputs of the EA (the calculation ones go   |
+ //| to Python: Json, in the init message; the colours of the Phases  |
+ //| are read by the Market Story table); the legs between the Swings |
+ //| are shown or not by the Smart Money tab                          |
  //+------------------------------------------------------------------+
  class CMarketConditionSetting : public CBaseObj
   {
+   private:
+     bool              m_show_moves;
+     bool              m_show_unclassified;
    public:
    //--- The colour of a Market Phase in the Market Story table; clrNONE when the phase is not known
      color             PhaseColor(const ENUM_MARKET_PHASE phase) const
@@ -30,16 +33,18 @@
            default:                        return clrNONE;
           }
        }
-   //--- The legs between the Swings: drawn at all, and the colour of each kind
-     bool              ShowMoves(void)        const { return InpMoveShow; }
-     bool              ShowUnclassified(void) const { return InpMoveShowUnclassified; }
+   //--- The legs between the Swings: drawn at all, the legs of a Market Range too, and the colour of each kind
+     bool              ShowMoves(void)        const { return m_show_moves; }
+     void              ShowMoves(const bool on)                { m_show_moves=on; }
+     bool              ShowUnclassified(void) const { return m_show_unclassified; }
+     void              ShowUnclassified(const bool on)         { m_show_unclassified=on; }
      color             MoveColor(const ENUM_MOVE_TYPE move) const
        {
         return (move==MOVE_TYPE_IMPULSE ? InpMoveImpulseColor : move==MOVE_TYPE_PULLBACK ? InpMovePullbackColor : InpMoveNoneColor);
        }
    //--- What Python calculates, as a JSON object
      string            Json(void) const;
-                       CMarketConditionSetting(void) {}
+                       CMarketConditionSetting(void) : m_show_moves(true),m_show_unclassified(true) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CMARKETCONDITIONSETTING_MQH_DECLARATION
 #ifndef CMARKETCONDITIONSETTING_MQH_IMPLEMENTATION

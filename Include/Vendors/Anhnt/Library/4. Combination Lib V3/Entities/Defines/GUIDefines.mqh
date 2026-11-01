@@ -70,9 +70,24 @@
 // ──────────────────────────────────────────────────────────────────
   #define M_CONTROL_HEIGHT               22  //Height for MenuBar,Tab, Combobox,Label, and for every box drawn over the chart
   #define M_CONTROL_BORDER_GAP            3  //Gap between border of two control
-  #define M_TF_WITHICON_WIDTH            65  //Unified width for every control/column that displays a Timeframe+Icon
-  #define M_LOT_WIDTH                    65  //Unified width for every column that displays a Lot/Volume (incl. an embedded combobox)
+  #define M_LOT_WIDTH                    65  //Unified width for every column that displays a Lot/Volume (incl. an embedded combobox); its header is "Vol"
   #define M_ICON16_WIDTH                 22  //Width for icon 16x16
+  #define M_TF_WITHOUT_ICON_WIDTH        43  //Unified width for every control/column that displays a Timeframe without an icon (a TF button)
+  #define M_TF_WITHICON_WIDTH            (M_TF_WITHOUT_ICON_WIDTH+M_ICON16_WIDTH)  //Unified width for every control/column that displays a Timeframe+Icon
+  #define M_SYMBOL_WITHICON_WIDTH       110  //Unified width for every column that displays a Symbol+Icon
+  #define M_PRICE_WIDTH                  80  //Unified width for every column that displays a price or the live Value of an indicator
+ //For Date time Column in table
+  #define M_DATETIME_WIDTH              150  //Unified width for every column that displays a date and a time, YYYY-MM-DD HH:MM
+  #define M_TIME_WIDTH                   50  //Unified width for every column that displays a time HH:MM
+  #define M_DATETIME_SEC_WIDTH          (M_DATETIME_WIDTH+20)  //Unified width for every column that displays a date and a time with the seconds, YYYY-MM-DD HH:MM:SS (follows M_DATETIME_WIDTH)
+  #define M_DURATION_WIDTH               80  //Unified width for every column that displays a duration, [Nd ]HH:MM:SS
+  #define M_EVENT_WIDTH                  90  //Unified width for every column that displays the name of an event (SL, TP, DEAL IN...)
+  #define M_TICKET_WIDTH                100  //Unified width for every column that displays a ticket, a position or a deal number of the terminal
+  #define M_INDICATOR_PARATEXT_WIDTH    230  //Unified width for every column that displays LabelText + Icon: the Indicator column
+  #define M_SPREAD_WIDTH                 50  //Unified width for every column that displays a Spread in points (its header is the icon SPREADRED)
+  #define M_MONEY_WIDTH                  75  //Unified width for every column that displays an amount of money (commission, swap, fee, profit, net)
+  #define M_REASON_WIDTH                 70  //Unified width for every column that displays the source of a deal (CLIENT, MOBILE, EXPERT...)
+  #define M_TEXT_WIDTH                  130  //Unified width for every column that displays a free text (a comment)  
 // ──────────────────────────────────────────────────────────────────
 // ENUMERATIONS
 // ──────────────────────────────────────────────────────────────────
@@ -81,30 +96,7 @@
    W_MAIN   = 0,
    W_DIALOG = 1,
    W_POPUP  = 2
-  };
- enum ENUM_ELEMENT_TYPE
-  {
-   E_CONTEXT_MENU    = 0,
-   E_COMBO_BOX       = 1,
-   E_SPLIT_BUTTON    = 2,
-   E_MENU_BAR        = 3,
-   E_MENU_ITEM       = 4,
-   E_DROP_LIST       = 5,
-   E_SCROLL          = 6,
-   E_TABLE           = 7,
-   E_TABS            = 8,
-   E_SLIDER          = 9,
-   E_CALENDAR        = 10,
-   E_DROP_CALENDAR   = 11,
-   E_SUB_CHART       = 12,
-   E_PICTURES_SLIDER = 13,
-   E_TIME_EDIT       = 14,
-   E_TEXT_BOX        = 15,
-   E_TREE_VIEW       = 16,
-   E_FILE_NAVIGATOR  = 17,
-   E_TOOLTIP         = 18,
-   E_FRAME           = 19
-  };
+  }; 
  enum ENUM_MOUSE_POINTER
   {
    MP_CUSTOM            = 0,

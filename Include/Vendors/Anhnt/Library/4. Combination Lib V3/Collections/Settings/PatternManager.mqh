@@ -2,8 +2,8 @@
 //|                                               PatternManager.mqh |
 //|                                     Copyright 2026, Anhnt        |
 //| Single source of truth for the candle pattern settings: the list |
-//| and the "Pattern_Alerts_Setting" key of Config_Setting.json      |
-//| (V2 CBarPatternsControl without the calculation)                 |
+//| and the tables Setting_Pattern / Setting_PatternManager of the   |
+//| database (V2 CBarPatternsControl without the calculation)        |
 //+------------------------------------------------------------------+
 #ifndef CPATTERNMANAGER_MQH
 #define CPATTERNMANAGER_MQH
@@ -11,7 +11,7 @@
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Bases\BaseObj.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Defines\EventDefines.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Settings\PatternSetting.mqh>
- #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\JSONConfig.mqh>
+ #include <Vendors\Anhnt\Library\4. Combination Lib V3\Services\LibDatabase.mqh>   // the file of the database (LIB_DATABASE_FILE)
  //Inputs of the EA: in EA Configuration.mqh (section: Candle patterns)
 
 #ifndef CPATTERNMANAGER_MQH_DECLARATION
@@ -20,16 +20,16 @@
   {
     private:
      CArrayObj          m_list;                // CPatternSetting*, in the order of the Python catalog once it arrived
-     bool               m_loaded_from_json;
+     bool               m_loaded;              // the list was read from the database once: a chart-change re-init keeps what the user changed
      bool               m_show_markers;        // the badges are shown: the EA sets it from its input in OnInit (SetMarkers), the check box of the Quick Setting tab changes it
      color              m_buy_color;           // the colour of the Buy badge
      color              m_sell_color;          // the colour of the Sell badge
      int                IndexOf(const string name) const;
      CPatternSetting   *Add(const string name);
     public:
-                        CPatternManager(void) : m_loaded_from_json(false),m_show_markers(false),m_buy_color(clrDodgerBlue),m_sell_color(clrRed) {}
+                        CPatternManager(void) : m_loaded(false),m_show_markers(false),m_buy_color(clrDodgerBlue),m_sell_color(clrRed) {}
                        ~CPatternManager(void) {}
-   //--- Loads the "Pattern_Alerts_Setting" key of Config_Setting.json once: the names and flags it holds
+   //--- Loads the list from the database once: the names and flags it holds
      bool               OnInitEvent(void);
      int                Total(void)                    const { return m_list.Total();   }
      CPatternSetting   *At(const int index)            const { return m_list.At(index); }
@@ -51,11 +51,9 @@
    //--- The master switch: every pattern shows (or hides) its Buy and Sell markers
      void               SetAllBuySell(const bool on);
      bool               AllBuySell(void) const;
-     bool               LoadFromJSON(const string full_path);
-   //--- Value of the "Pattern_Alerts_Setting" key; the caller places it in the file
-     void               BuildJsonSection(string &out_json) const;
-   //--- Writes the "Pattern_Alerts_Setting" key of Config_Setting.json, the other keys stay as they are
-     bool               SaveToJSON(void);
+   //--- The database (tables Setting_Pattern and Setting_PatternManager, the same set for every account): Load reads it, Save replaces it
+     bool               LoadFromDatabase(void);
+     bool               SaveToDatabase(void);
      virtual void       Print(const bool full_prop=false,const bool dash=false);
   };
 #endif // CPATTERNMANAGER_MQH_DECLARATION
@@ -186,66 +184,102 @@
      }
    return true;
   }
- bool CPatternManager::LoadFromJSON(const string full_path)
+ //+------------------------------------------------------------------+
+ //| Read the patterns (Setting_Pattern, in the order of the rows) and |
+ //| the check box (Setting_PatternManager) into the list - clears     |
+ //| whatever was there first                                          |
+ //+------------------------------------------------------------------+
+ bool CPatternManager::LoadFromDatabase(void)
   {
-   string content = JSONConfig_ReadWholeFile(full_path);
-   if(content == "")
+   ulong started = ::GetMicrosecondCount();
+   int db = ::DatabaseOpen(LIB_DATABASE_FILE, DATABASE_OPEN_READONLY);
+   if(db == INVALID_HANDLE)
+     {
+      ::Print(__FUNCTION__, " > the database ", LIB_DATABASE_FILE, " is not opened, error ", ::GetLastError());
       return false;
-   string clean = JSONConfig_StripComments(content);
-   string section = JSONConfig_ExtractRawSection(clean, "Pattern_Alerts_Setting");
-   if(section == "")
+     }
+   int request = ::DatabasePrepare(db, "SELECT name, buy_signal, sell_signal, sound_alert, message_alert FROM Setting_Pattern ORDER BY rowid");
+   if(request == INVALID_HANDLE)
+     {
+      ::Print(__FUNCTION__, " > the query is not accepted, error ", ::GetLastError());
+      ::DatabaseClose(db);
       return false;
+     }
    m_list.Clear();
-   int pos = JSONConfig_SkipSpace(section, 0);
-   if(pos >= ::StringLen(section) || ::StringGetCharacter(section, pos) != '{')
-      return false;
-   pos = JSONConfig_SkipSpace(section, pos + 1);
-   while(pos < ::StringLen(section) && ::StringGetCharacter(section, pos) != '}')
+   while(::DatabaseRead(request))
      {
       string name;
-      pos = JSONConfig_ReadString(section, pos, name);
-      pos = JSONConfig_SkipSpace(section, pos);
-      if(pos < ::StringLen(section) && ::StringGetCharacter(section, pos) == ':')
-         pos++;
-      pos = JSONConfig_SkipSpace(section, pos);
-      int end = JSONConfig_SkipValue(section, pos);
-      string obj = ::StringSubstr(section, pos, end - pos);
-      pos = JSONConfig_SkipSpace(section, end);
+      long buy, sell, sound, message;
+      ::DatabaseColumnText(request, 0, name);
+      ::DatabaseColumnLong(request, 1, buy);
+      ::DatabaseColumnLong(request, 2, sell);
+      ::DatabaseColumnLong(request, 3, sound);
+      ::DatabaseColumnLong(request, 4, message);
       if(name == "" || Find(name) != NULL)
          continue;
       CPatternSetting *row = Add(name);
       if(row == NULL)
          continue;
-      bool v = row.BuySignal();
-      if(JSONConfig_BoolValue(obj, "m_pattern_signal_buy", v))    row.BuySignal(v, false);
-      v = row.SellSignal();
-      if(JSONConfig_BoolValue(obj, "m_pattern_signal_sell", v))   row.SellSignal(v, false);
-      v = row.SoundAlert();
-      if(JSONConfig_BoolValue(obj, "m_pattern_alert_sound", v))   row.SoundAlert(v);
-      v = row.MessageAlert();
-      if(JSONConfig_BoolValue(obj, "m_pattern_alert_message", v)) row.MessageAlert(v);
+      row.BuySignal(buy != 0, false);
+      row.SellSignal(sell != 0, false);
+      row.SoundAlert(sound != 0);
+      row.MessageAlert(message != 0);
      }
-   ::Print("Complete ", __FUNCTION__, " > loaded ", m_list.Total(), " candle pattern(s) from ", full_path);
+   ::DatabaseFinalize(request);
+   request = ::DatabasePrepare(db, "SELECT show_markers FROM Setting_PatternManager WHERE id = 1");
+   if(request != INVALID_HANDLE)
+     {
+      long show;
+      if(::DatabaseRead(request) && ::DatabaseColumnLong(request, 0, show))
+         m_show_markers = (show != 0);
+      ::DatabaseFinalize(request);
+     }
+   ::DatabaseClose(db);
+   ::Print("Complete ", __FUNCTION__, " > loaded ", m_list.Total(), " candle pattern(s) from ", LIB_DATABASE_FILE, " in ", ::GetMicrosecondCount() - started, " us");
    return true;
   }
- void CPatternManager::BuildJsonSection(string &out_json) const
+ //+------------------------------------------------------------------+
+ //| Write the list and the check box: the rows of Setting_Pattern are |
+ //| replaced                                                          |
+ //+------------------------------------------------------------------+
+ bool CPatternManager::SaveToDatabase(void)
   {
-   out_json = "{\n";
-   int written = 0;
-   for(int i = 0; i < m_list.Total(); i++)
+   ulong started = ::GetMicrosecondCount();
+   int db = ::DatabaseOpen(LIB_DATABASE_FILE, DATABASE_OPEN_READWRITE);
+   if(db == INVALID_HANDLE)
+     {
+      ::Print(__FUNCTION__, " > the database ", LIB_DATABASE_FILE, " is not opened, error ", ::GetLastError());
+      return false;
+     }
+   ::DatabaseExecute(db, "PRAGMA busy_timeout=5000");   // Python writes to the same file
+   ::DatabaseTransactionBegin(db);
+   bool ok = ::DatabaseExecute(db, "DELETE FROM Setting_Pattern");
+   int saved = 0;
+   for(int i = 0; ok && i < m_list.Total(); i++)
      {
       CPatternSetting *row = m_list.At(i);
       if(row == NULL)
          continue;
-      if(written > 0)
-         out_json += ",\n";
-      written++;
-      out_json += "  \"" + row.Name() + "\": { \"m_pattern_signal_buy\": " + (row.BuySignal() ? "true" : "false") +
-                  ", \"m_pattern_signal_sell\": " + (row.SellSignal() ? "true" : "false") +
-                  ", \"m_pattern_alert_sound\": " + (row.SoundAlert() ? "true" : "false") +
-                  ", \"m_pattern_alert_message\": " + (row.MessageAlert() ? "true" : "false") + " }";
+      string name = row.Name();
+      ::StringReplace(name, "'", "''");
+      ok = ::DatabaseExecute(db, "INSERT OR REPLACE INTO Setting_Pattern (name, buy_signal, sell_signal, sound_alert, message_alert) VALUES ('" + name + "'," +
+                                 (row.BuySignal() ? "1" : "0") + "," + (row.SellSignal() ? "1" : "0") + "," + (row.SoundAlert() ? "1" : "0") + "," + (row.MessageAlert() ? "1" : "0") + ")");
+      if(ok)
+         saved++;
      }
-   out_json += "\n }";
+   if(ok)
+      ok = ::DatabaseExecute(db, "INSERT OR REPLACE INTO Setting_PatternManager (id, show_markers) VALUES (1," + (m_show_markers ? "1" : "0") + ")");
+   if(ok)
+      ::DatabaseTransactionCommit(db);
+   else
+     {
+      ::Print(__FUNCTION__, " > not written, error ", ::GetLastError());
+      ::DatabaseTransactionRollback(db);
+     }
+   ::DatabaseClose(db);
+   if(ok)
+      ::Print("Complete ", __FUNCTION__, " > ", saved, " candle pattern(s) written to ", LIB_DATABASE_FILE, " in ", ::GetMicrosecondCount() - started, " us");
+   return ok;
   }
  void CPatternManager::ShowMarkers(const bool on)
   {
@@ -254,27 +288,12 @@
    m_show_markers = on;
    ::EventChartCustom(::ChartID(), (ushort)PATTERN_MANAGER_EVENT_BUYSELL_CHANGED, 0, 0.0, "");
   }
- bool CPatternManager::SaveToJSON(void)
-  {
-   string value;
-   this.BuildJsonSection(value);
-   string full_path = this.GetFolderName() + CONFIG_SETTING_FILE;
-   bool ok = ::JSONConfig_SaveSection(full_path, "Pattern_Alerts_Setting", value);
-   return ::JSONConfig_SaveSection(full_path, "Pattern_Show_Markers", (m_show_markers ? "true" : "false")) && ok;   // the check box of the tab
-  }
  bool CPatternManager::OnInitEvent(void)
   {
-   if(m_loaded_from_json)
+   if(m_loaded)
       return true;   // a chart-change re-init keeps what the user already changed
-   m_loaded_from_json = true;
-   bool ok = LoadFromJSON(this.GetFolderName() + CONFIG_SETTING_FILE);
-   //--- the check box of the tab was saved: it is set over the input of the EA
-   string config_path = this.GetFolderName() + CONFIG_SETTING_FILE;
-   string content = JSONConfig_ReadWholeFile(config_path);
-   string saved = JSONConfig_ExtractRawSection(content, "Pattern_Show_Markers");
-   if(saved == "true" || saved == "false")
-      m_show_markers = (saved == "true");
-   return ok;
+   m_loaded = true;
+   return LoadFromDatabase();   // the check box of the tab was saved too: it is set over the input of the EA
   }
  void CPatternManager::Print(const bool full_prop=false,const bool dash=false)
   {

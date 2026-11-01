@@ -31,7 +31,7 @@
      void                    SignalShow(const ENUM_SWING_TYPE type,const bool show);
    //--- The colour of a Swing: a High is marked above the candle, a Low below it
      color                   Colour(const ENUM_SWING_TYPE type) const { return (type==SWING_TYPE_LOW ? InpSwingLowColor : InpSwingHighColor); }
-                             CSwingSetting(void) : m_strength(InpSwingStrength),m_use_wick(InpSwingUseWick),m_show_high(InpShowSwingHigh),m_show_low(InpShowSwingLow) {}
+                             CSwingSetting(void) : m_strength(5),m_use_wick(true),m_show_high(true),m_show_low(true) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CSWINGSETTING_MQH_DECLARATION
 #ifndef CSWINGSETTING_MQH_IMPLEMENTATION

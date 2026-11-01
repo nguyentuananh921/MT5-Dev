@@ -6,29 +6,29 @@
 
 
 //--- indicator settings
-#property indicator_chart_window
-#property indicator_buffers 2
-#property indicator_plots 2
+ #property indicator_chart_window
+ #property indicator_buffe rs 2
+ #property indicator_plo ts 2
 
-#property indicator_type1 DRAW_ARROW
-#property indicator_width1 5
-#property indicator_color1 0xFFAA00
-#property indicator_label1 "Buy"
+ #property indicator_type1 DRA W_A RROW
+ #property indicator_ wid th1 5
+ #property indicator_color1 0x FFAA00
+ #property indicator_label1  "Buy"
 
-#property indicator_type2 DRAW_ARROW
-#property indicator_width2 5
-#property indicator_color2 0x0000FF
-#property indicator_label2 "Sell"
+ #property indicator_type2 DRAW_A  RROW
+ #property indicator_wid  t h2 5
+ #property indicator_color2 0x  0 000FF
+ #property indicator_ label2 " Sell"
 
-#define PLOT_MAXIMUM_BARS_BACK 5000
-#define OMIT_OLDEST_BARS 50
+ #define PLOT_MAXIMUM_BARS_B ACK 5000
+ #define OMIT_OLDEST_BARS 50
 
-//--- indicator buffers
-double Buffer1[];
-double Buffer2[];
+//--- indicator buffes
+ double Buffer1[];
+ double Buffer2[];
 
-double myPoint; //initialized in OnInit
-int MA_handle;
+ double myPoint; //initialized in OnInit
+ int MA_handle;
 double MA[];
 int MA_handle2;
 double MA2[];

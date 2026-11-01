@@ -31,7 +31,7 @@
      color             SellColor(void)  const { return InpMomentumCandleSellColor; }
    //--- What Python calculates, as a JSON object
      string            Json(void) const;
-                       CMomentumCandleSetting(void) : m_bars(InpMomentumCandleBars),m_multiplier(InpMomentumCandleMultiplier),m_show(InpMomentumCandleShow) {}
+                       CMomentumCandleSetting(void) : m_bars(3),m_multiplier(2.0),m_show(true) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CMOMENTUMCANDLESETTING_MQH_DECLARATION
 #ifndef CMOMENTUMCANDLESETTING_MQH_IMPLEMENTATION

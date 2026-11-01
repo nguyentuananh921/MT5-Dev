@@ -44,13 +44,12 @@
    if(m_IndicatorsCollection == NULL || m_SymbolTFManager == NULL || m_IndicatorTemplateManager == NULL) return 0;
    CArrayObj *ind_list = m_IndicatorsCollection.GetList();
    int ind_total   = (ind_list != NULL) ? ind_list.Total() : 0;
-   int symtf_total = m_SymbolTFManager.Total();
+   ENUM_TIMEFRAMES symbol_tfs[];
+   int symtf_total = m_SymbolTFManager.TimeframesOf(symbol, symbol_tfs);
    int tmpl_total  = m_IndicatorTemplateManager.Total();
    for(int si = 0; si < symtf_total; si++)
     {
-     CSymbolTFSetting *symtf = m_SymbolTFManager.At(si);
-     if(symtf == NULL || symtf.Symbol() != symbol) continue;
-     ENUM_TIMEFRAMES tf = symtf.TFEnum();
+     ENUM_TIMEFRAMES tf = symbol_tfs[si];
      for(int ti = 0; ti < tmpl_total; ti++)
       {
        CIndicatorSetting *entry = m_IndicatorTemplateManager.At(ti);
@@ -97,7 +96,7 @@
     {
      ::ArrayResize(s_inds_old, count);
      uint tf_img[] = {IMAGE_RESOURCE_BMP16_BAR_CHART_BMP, IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP};
-     CTradingSetupSetting *row_setting = (m_TradingSetupManager != NULL) ? m_TradingSetupManager.Setting() : NULL;
+     CRiskManagementSetting *row_setting = (m_RiskManagementManager != NULL) ? m_RiskManagementManager.Setting() : NULL;
      MqlParam saved_params[];
      if(row_setting != NULL) row_setting.GetTrailingIndParams(saved_params);
      m_table_indicators_trailingsetting.DeleteAllRows();
@@ -154,7 +153,7 @@
      return;
     }
    string symbol = ::Symbol();
-   if(symbol == "" || m_TradingSetupManager == NULL) return;
+   if(symbol == "" || m_RiskManagementManager == NULL) return;
    string want_tf_text  = m_table_indicators_trailingsetting.Cell(0, row).ValueS();
    string want_ind_text = m_table_indicators_trailingsetting.Cell(1, row).ValueS();
    CIndicatorDE   *inds[];
@@ -168,12 +167,12 @@
      ind_label_setting.TypeEnum(inds[i].TypeIndicator());
      ind_label_setting.SetRawParams(ind_params);
      if(TimeframeDescription(tfs[i]) != want_tf_text || ind_label_setting.DisplayLabel() != want_ind_text) continue;
-     CTradingSetupSetting *row_setting = m_TradingSetupManager.Setting();
+     CRiskManagementSetting *row_setting = m_RiskManagementManager.Setting();
      row_setting.TrailingMode(SL_MODE_INDICATOR);
      row_setting.TrailingIndTF(tfs[i]);
      row_setting.TrailingIndType(inds[i].TypeIndicator());
      row_setting.SetTrailingIndParams(ind_params);
-     m_TradingSetupManager.NotifySettingChanged();
+     m_RiskManagementManager.NotifySettingChanged();
      SyncTable_IndicatorsTrailingSetting(symbol, true);
      return;
     }
@@ -198,7 +197,7 @@
     {
      edits[i].SetText(captions[i]);
      m_frame_trailling_setting_fixedmode.AddChild(edits[i]);
-     if(!edits[i].CreateTextEdit(this.m_chart_id, M_SUBWINDOW_MAIN, names[i], M_CONTROL_BORDER_GAP + (i % 2) * (field_w + M_CONTROL_BORDER_GAP), in_row0_y + (i / 2) * M_CONTROL_YDISTANCE, field_w, M_CONTROL_HEIGHT, TRAIL_FORM_EDIT_WIDTH)) return false;
+     if(!edits[i].CreateTextEdit(this.m_chart_id, M_SUBWINDOW_MAIN, names[i], M_CONTROL_BORDER_GAP + (i % 2) * (field_w + M_CONTROL_BORDER_GAP), in_row0_y + (i / 2) * M_CONTROL_HEIGHT, field_w, M_CONTROL_HEIGHT, TRAIL_FORM_EDIT_WIDTH)) return false;
     }
    //--- Save commits both Indicator mode (table pick) and Fixed mode: outside the frame, at its right, on its last row
    m_btn_save_Trailing_Setting.SetText("Save");
@@ -206,11 +205,11 @@
    m_tabs_riskManagement.AddToElementsArray(TAB_RISK_MANAGEMENT_STOP_TRAILLING, m_btn_save_Trailing_Setting);
    if(!m_btn_save_Trailing_Setting.Create(this.m_chart_id, M_SUBWINDOW_MAIN, "BtnSaveTrailing", x_gap + TRAIL_FORM_FRAME_WIDTH + M_CONTROL_BORDER_GAP, y_gap + frame_h - M_CONTROL_HEIGHT, M_BUTTON_SAVE_WIDTH, M_CONTROL_HEIGHT)) return false;
    //--- What is saved: the setting is the same for every Symbol, so it is set once, here
-   CTradingSetupSetting *setting = (m_TradingSetupManager != NULL) ? m_TradingSetupManager.Setting() : NULL;
+   CRiskManagementSetting *setting = (m_RiskManagementManager != NULL) ? m_RiskManagementManager.Setting() : NULL;
    m_edit_Trailing_Offset.SetValue((string)((setting != NULL) ? setting.TrailingOffsetPts() : 0));
    m_edit_Trailing_Start.SetValue((string)((setting != NULL) ? setting.TrailingStartPts() : 0));
    m_edit_Trailing_Step.SetValue((string)((setting != NULL) ? setting.TrailingStepPts() : 0));
-   m_edit_Trailing_DataRatesIndex.SetValue((string)((m_TradingSetupManager != NULL) ? m_TradingSetupManager.TrailingDataRatesIndex() : 2));
+   m_edit_Trailing_DataRatesIndex.SetValue((string)((m_RiskManagementManager != NULL) ? m_RiskManagementManager.TrailingDataRatesIndex() : 2));
    return true;
   }
  //--- The form stays at the bottom of the body when the window changes its size
@@ -251,8 +250,8 @@
    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_Trailing_Setting.ObjectID())
      {
       string symbol = ::Symbol();
-      if(m_TradingSetupManager == NULL) return;
-      CTradingSetupSetting *row_setting = m_TradingSetupManager.Setting();
+      if(m_RiskManagementManager == NULL) return;
+      CRiskManagementSetting *row_setting = m_RiskManagementManager.Setting();
       //--- the Indicator picked in the table is a draft too: it goes in with Offset/Start/Step
       for(int r = 0; r < (int)m_table_indicators_trailingsetting.Model().RowsTotal(); r++)
          if(m_table_indicators_trailingsetting.Cell(3, r).ValueL() == CANV_ELEMENT_CHECK_STATE_CHECKED)
@@ -263,9 +262,9 @@
       row_setting.TrailingOffsetPts((int)::StringToInteger(m_edit_Trailing_Offset.GetValue()));
       row_setting.TrailingStartPts((int)::StringToInteger(m_edit_Trailing_Start.GetValue()));
       row_setting.TrailingStepPts((int)::StringToInteger(m_edit_Trailing_Step.GetValue()));
-      m_TradingSetupManager.TrailingDataRatesIndex((int)::StringToInteger(m_edit_Trailing_DataRatesIndex.GetValue()));
-      m_TradingSetupManager.NotifySettingChanged();
-      m_TradingSetupManager.SaveToJSON();
+      m_RiskManagementManager.TrailingDataRatesIndex((int)::StringToInteger(m_edit_Trailing_DataRatesIndex.GetValue()));
+      m_RiskManagementManager.NotifySettingChanged();
+      m_RiskManagementManager.SaveToJSON();
       ::ChartRedraw(this.m_chart_id);
       return;
      }

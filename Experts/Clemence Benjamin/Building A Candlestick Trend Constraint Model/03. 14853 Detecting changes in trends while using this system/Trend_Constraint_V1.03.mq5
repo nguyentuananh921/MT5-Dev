@@ -5,23 +5,23 @@
 #property description "A model that seek to produce sell signal when D1 candle is Bearish only and  buy signal when it is Bullish"
 
 //--- indicator settings
-#property indicator_chart_window
-#property indicator_buffers 4
-#property indicator_plots 4
+ #property indicator_chart_window
+ #property indicator_buffers 4
+ #property indicator_plots 4
 
-#property indicator_type1 DRAW_ARROW
-#property indicator_width1 5
-#property indicator_color1 0xFF3C00
-#property indicator_label1 "Buy"
+ #property indicator_type1 DRAW_ARROW
+ #property indicator_width1 5
+ #property indicator_color1 0xFF3C00
+ #property indicator_label1 "Buy"
 
-#property indicator_type2 DRAW_ARROW
-#property indicator_width2 5
-#property indicator_color2 0x0000FF
-#property indicator_label2 "Sell"
+ #property indicator_type2 DRAW_ARROW
+ #property indicator_width2 5
+ #property indicator_color2 0x0000FF
+ #property indicator_label2 "Se ll"
 
-#property indicator_type3 DRAW_ARROW
-#property indicator_width3 1
-#property indicator_color3 0x04CC04
+#property indicator_type3 DRAW _ARROW
+#property indicator_w idth3 1
+#property indicator_color3  0x04CC04
 #property indicator_label3 "Buy"
 
 #property indicator_type4 DRAW_ARROW

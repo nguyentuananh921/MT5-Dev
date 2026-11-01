@@ -112,16 +112,16 @@
      {
       total_h+=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
       if(m_btn_section_header[s].State())
-         total_h+=m_section_rows[s]*M_CONTROL_YDISTANCE+M_CONTROL_BORDER_GAP;
+         total_h+=m_section_rows[s]*M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
      }
    m_scroll_smart_money.ChangeYSize(::MathMax(bottom-top-M_CONTROL_BORDER_GAP,1));
    m_scroll_smart_money.Move(m_tabs_quickSetting.X()+m_tabs_quickSetting.Width()-m_scroll_smart_money.ScrollWidth()-1,top+1);
-   m_scroll_smart_money.ChangeThumbSize((total_h+M_CONTROL_YDISTANCE-1)/M_CONTROL_YDISTANCE,::MathMax((bottom-top)/M_CONTROL_YDISTANCE,1));
+   m_scroll_smart_money.ChangeThumbSize((total_h+M_CONTROL_HEIGHT-1)/M_CONTROL_HEIGHT,::MathMax((bottom-top)/M_CONTROL_HEIGHT,1));
    if(m_scroll_smart_money.IsScroll())
       m_scroll_smart_money.Show();
    else
       m_scroll_smart_money.Hide();
-   int y=top+M_CONTROL_BORDER_GAP-m_scroll_smart_money.CurrentPos()*M_CONTROL_YDISTANCE;
+   int y=top+M_CONTROL_BORDER_GAP-m_scroll_smart_money.CurrentPos()*M_CONTROL_HEIGHT;
    for(int s=0;s<SMART_MONEY_SECTION_TOTAL;s++)
      {
       bool in_view=(y>=top && y+M_CONTROL_HEIGHT<=bottom);
@@ -142,7 +142,7 @@
       for(int k=0;k<m_section_body_total[s];k++)
         {
          int i=s*SMART_MONEY_BODY_MAX+k;
-         int yc=y+m_section_body_row[i]*M_CONTROL_YDISTANCE;
+         int yc=y+m_section_body_row[i]*M_CONTROL_HEIGHT;
          if(opened && yc>=top && yc+M_CONTROL_HEIGHT<=bottom)
            {
             m_section_body[i].Move(x+M_SECTION_BODY_INDENT+m_section_body_x[i],yc);
@@ -152,7 +152,7 @@
             m_section_body[i].Hide();
         }
       if(opened)
-         y+=m_section_rows[s]*M_CONTROL_YDISTANCE+M_CONTROL_BORDER_GAP;
+         y+=m_section_rows[s]*M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
      }
    ::ChartRedraw(this.m_chart_id);
   }
@@ -168,6 +168,7 @@
       case SMART_MONEY_SECTION_SUPPLY_DEMAND:   return(m_SupplyDemandSetting!=NULL && (m_SupplyDemandSetting.ShowDemand() || m_SupplyDemandSetting.ShowSupply() || m_SupplyDemandSetting.ShowDead()));
       case SMART_MONEY_SECTION_TRENDLINE:       return(m_TrendlineSetting!=NULL && (m_TrendlineSetting.ShowSupport() || m_TrendlineSetting.ShowResistance() || m_TrendlineSetting.ShowDead()));
       case SMART_MONEY_SECTION_SUPPORT_RESISTANCE: return(m_SupportResistanceSetting!=NULL && (m_SupportResistanceSetting.ShowSupport() || m_SupportResistanceSetting.ShowResistance() || m_SupportResistanceSetting.ShowDead()));
+      case SMART_MONEY_SECTION_MOVEMENT:        return(m_story_setting!=NULL && (m_story_setting.ShowMoves() || m_story_setting.ShowUnclassified()));
       default: return(false);
      }
   }
@@ -241,6 +242,15 @@
          m_check_sr_support.SetState(on);
          m_check_sr_resistance.SetState(on);
          m_check_sr_dead.SetState(on);
+         break;
+      case SMART_MONEY_SECTION_MOVEMENT:
+         if(m_story_setting!=NULL)
+           {
+            m_story_setting.ShowMoves(on);
+            m_story_setting.ShowUnclassified(on);
+           }
+         m_check_move_show.SetState(on);
+         m_check_move_unclassified.SetState(on);
          break;
       default: break;
      }
@@ -519,6 +529,19 @@
    AddSectionBody(SMART_MONEY_SECTION_SUPPORT_RESISTANCE,m_check_sr_revive,1,5);
    if(!m_check_sr_revive.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"CheckSrRevive",0,0,box_w,M_CONTROL_HEIGHT))
       return false;
+   //--- The legs between the Swings: the Impulses and the Pullbacks, and the legs of a Market Range too
+   if(!CreateSection(SMART_MONEY_SECTION_MOVEMENT,"Impulse / Pullback",SectionOn(SMART_MONEY_SECTION_MOVEMENT)))
+      return false;
+   m_check_move_show.SetText("Show Impulse / Pullback legs");
+   m_check_move_show.SetState(m_story_setting!=NULL && m_story_setting.ShowMoves());
+   AddSectionBody(SMART_MONEY_SECTION_MOVEMENT,m_check_move_show,0,0);
+   if(!m_check_move_show.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"CheckMoveShow",0,0,box_w,M_CONTROL_HEIGHT))
+      return false;
+   m_check_move_unclassified.SetText("Show legs in Market Range too");
+   m_check_move_unclassified.SetState(m_story_setting!=NULL && m_story_setting.ShowUnclassified());
+   AddSectionBody(SMART_MONEY_SECTION_MOVEMENT,m_check_move_unclassified,1,0);
+   if(!m_check_move_unclassified.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"CheckMoveUnclassified",0,0,box_w,M_CONTROL_HEIGHT))
+      return false;
    //--- Save: the settings are applied and saved on its click
    m_btn_save_smartmoney.SetText("Save");
    m_btn_save_smartmoney.IconFile(IMAGE_RESOURCE_BMP16_SAVE_PNG);
@@ -633,6 +656,13 @@
             m_SupportResistanceSetting.ShowDead(on);
          else if(lparam==m_check_sr_revive.ObjectID())
             m_SupportResistanceSetting.Revive(on);
+        }
+      if(m_story_setting!=NULL)
+        {
+         if(lparam==m_check_move_show.ObjectID())
+            m_story_setting.ShowMoves(on);
+         else if(lparam==m_check_move_unclassified.ObjectID())
+            m_story_setting.ShowUnclassified(on);
         }
       this.UpdateSectionToggles();
       return;

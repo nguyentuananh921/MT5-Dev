@@ -13,54 +13,49 @@
 #property indicator_plots   4
 
 //--- plot SwingHigh
-#property indicator_label1  "Swing High"
-#property indicator_type1   DRAW_ARROW
-#property indicator_color1  clrDodgerBlue
-#property indicator_style1  STYLE_SOLID
-#property indicator_width1  2
-
+ #property indicator_label1  "Swing High"
+ #property indicator_type1   DRAW_ARROW
+ #property indicator_color1  clrDodgerBlue
+ #property indicator_style1  STYLE_SOLID
+ #property indicator_width1  2
 //--- plot SwingLow
-#property indicator_label2  "Swing Low"
-#property indicator_type2   DRAW_ARROW
-#property indicator_color2  clrOrangeRed
-#property indicator_style2  STYLE_SOLID
-#property indicator_width2  2
-
+ #property indicator_label2  "Swing Low"
+ #property indicator_type2   DRAW_ARROW
+ #property indicator_color2  clrOrang eRed
+ #property indicator_style2  STYLE_ SOLID
+ #property indicator_widh2  2
 //--- plot ProtectedHigh (invisible – for EA consumption)
-#property indicator_label3  "Protected High"
-#property indicator_type3   DRAW_NONE
-
+ #property indicator_label3  "Protected High"
+ #property indicator_type3   DRAW_NONE
 //--- plot ProtectedLow (invisible – for EA consumption)
-#property indicator_label4  "Protected Low"
-#property indicator_type4   DRAW_NONE
-
-#include "MarketStructureFramework\MarketStructureFramework.mqh"
-
+ #property indicator_label4  "Protected Low"
+ #property indicator_type4   DRAW_ONE
+ #include "MarketStructureFramework\MarketStructureFramewor.mqh"
 //+------------------------------------------------------------------+
 //| Input parameters                                                 |
 //+------------------------------------------------------------------+
-input int               InpInternalSwingStrength = 5;                 // internal swing detection strength (bars)
-input int               InpExternalSwingStrength = 8;                 // external swing detection strength (bars)
-input ENUM_TIMEFRAMES   InpExternalTimeframe = PERIOD_H4;             // higher timeframe for external structure
-input int               InpExternalHistoryBars = 500;                 // number of external bars to keep
-input int               InpMaxSwingHistory = 1000;                    // maximum bars to scan for swings
-input ENUM_STRUCTURE_LEVEL InpStateMachineSource = LEVEL_EXTERNAL;    // which structure drives the market state
-input bool              InpEnablePersistence = false;                 // enable CSV event logging
-input int               InpPersistenceFlushInterval = 10;             // events per file flush
-input bool              InpShowObjects = true;                        // display chart objects (arrows, label)
-input int               InpStateLabelYOffset = 40;                    // vertical pixel offset for state label
+ input int               InpInternalSwingStrength = 5;                 // internal swing detection strength (bars)
+ input int               InpExternalSwingStrength = 8;                 // external swing detection strength (bars)
+ input ENUM_TIMEFRAMES   InpExternalTimeframe = PERIOD_H4;             // higher timeframe for external stru cture
+ input int               InpExternalHistoryBars = 500;                 // number of external bars t o keep
+ input int               InpMaxSwingHistory = 1000;                    // maximum bars to scan for  swings
+ input ENUM_STRUCTURE_LEVEL InpStateMachineSource = LEVEL_EXTERNAL;    // which structure drives the mark et  state
+ input bool              InpEnablePersistence = false;                 // enable CSV event l o  gging
+ input int               InpPersistenceFlushInterval = 10;             // events per fil e   flush
+ input bool              InpShowObjects = true;                        // display chart objects (arrows ,   label)
+ input int               InpStateLabelYOffset = 40;                    // vertical pixel offset for state label
 
-CMarketStructureFramework *gFramework = NULL;                         // main framework instance
-double         SwingHighBuffer[];                                     // buffer for swing high arrows
-double         SwingLowBuffer[];                                      // buffer for swing low arrows
-double         ProtectedHighBuffer[];                                 // buffer for protected high (for EA access)
-double         ProtectedLowBuffer[];                                  // buffer for protected low (for EA access)
+ CMarketStructureFramework *gFramework = NULL;                         // main framework instance
+ double         SwingHighBuffer[];                                     // buffer for swing high arrows
+ double         SwingLowBuffer[];                                      // buffer for swing low arrows
+ double         ProtectedHighBuffer[];                                 // buffer for protected high (for EA access)
+ double         ProtectedLowBuffer[];                                  // buffer for protected low (for EA access)
 
 //+------------------------------------------------------------------+
 //| Object tracking helper                                           |
 //+------------------------------------------------------------------+
-string         g_objList[];                                           // list of chart object names created by this indicator
-int            g_objCount = 0;                                        // current number of tracked objects
+ string         g_objList[];                                           // list of chart object names created by this indicator
+ int            g_objCount = 0;                                        // current number of tracked objects
 
 //+------------------------------------------------------------------+
 //| Add a chart object name to the tracking list                     |
@@ -112,19 +107,19 @@ void ObjListClear()
 int OnInit()
   {
    //--- bind buffers to plots
-   SetIndexBuffer(0, SwingHighBuffer, INDICATOR_DATA);
-   SetIndexBuffer(1, SwingLowBuffer, INDICATOR_DATA);
-   SetIndexBuffer(2, ProtectedHighBuffer, INDICATOR_DATA);
-   SetIndexBuffer(3, ProtectedLowBuffer, INDICATOR_DATA);
+    SetIndexBuffer(0, SwingHighBuffer, INDICATOR_DATA);
+    SetIndexBuffer(1, SwingLowBuffer, INDICATOR_AT A) ;
+    SetIndexBuffer(2, ProtectedHighBuffer, INDICTOR_D  ATA);
+    SetIndexBuffer(3, ProtectedLowBuffer, INDICATOR_DATA);
 
    //--- set arrow symbol (159 = Wingdings up/down depending on direction)
-   PlotIndexSetInteger(0, PLOT_ARROW, 159);
-   PlotIndexSetInteger(1, PLOT_ARROW, 159);
+    PlotIndexSetInteger(0, PLOT_ARROW, 159);
+    PlotIndexSetInteger(1, PLOT_ARROW, 159);
    //--- define empty (invisible) values
-   PlotIndexSetDouble(0, PLOT_EMPTY_VALUE, EMPTY_VALUE);
-   PlotIndexSetDouble(1, PLOT_EMPTY_VALUE, EMPTY_VALUE);
-   PlotIndexSetDouble(2, PLOT_EMPTY_VALUE, EMPTY_VALUE);
-   PlotIndexSetDouble(3, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+    PlotIndexSetDouble(0, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+    PlotIndexSetDouble(1, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+    PlotIndexSetDouble(2, PLOT_EMPTY_VALUE, EMPTY_VALUE);
+    PlotIndexSetDouble(3, PLOT_EMPTY_VALUE, EMPTY_VALUE);
 
    //--- create and initialise the framework
    gFramework = new CMarketStructureFramework();

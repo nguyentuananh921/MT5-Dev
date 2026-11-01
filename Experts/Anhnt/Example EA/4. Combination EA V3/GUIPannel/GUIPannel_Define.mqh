@@ -11,9 +11,8 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Controls\Tabs.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Controls\TreeView.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Entities\Controls\Frame.mqh>
-  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\Settings\TradingSetupSettingManager.mqh>
+  #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\Settings\RiskManagementSettingManager.mqh>
   #include <Vendors\Anhnt\Library\4. Combination Lib V3\Collections\IndicatorsCollection.mqh>
-  #include "..\Services\TradingEngine.mqh"
   #include "..\Configuration\TimeSeriesSetting\SwingSetting.mqh"   // the settings the Smart Money tab edits
   #include "..\Configuration\TimeSeriesSetting\StructureSetting.mqh"
   #include "..\Configuration\TimeSeriesSetting\ZoneSetting\FvgSetting.mqh"
@@ -48,19 +47,16 @@
     #define M_WINDOW_MIN_WIDTH          300
     #define M_WINDOW_MIN_HEIGHT         200
     #define M_SYMBOLTF_COMBO_WIDTH      130
-    #define M_INDICATOR_PARATEXT_WIDTH  230   // LabelText + Icon: the Indicator column
     #define M_SYMBOLTF_COMBO_LIST_HEIGHT 110
     #define M_MENU_BAR_Y                M_CONTROL_HEIGHT   //The menu bar is right below the caption
    //Rows of m_window_main from the top, a M_CONTROL_BORDER_GAP between two of them: caption, menu bar, header of m_tabs_main, body of m_tabs_main.
    //The y of m_tabs_main is the top of its body: its header is the row above it
     #define M_TF_SWITCH_Y               (M_MENU_BAR_Y+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP)   // the TF buttons are right below the menu bar
-    #define M_TF_WITHOUT_ICON_WIDTH     45    // a TF button
     #define M_TABS_MAIN_Y               (M_TF_SWITCH_Y+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP+M_CONTROL_HEIGHT)
   //For menu
     enum ENUM_MENU_ITEM
      {
         MENU_ITEM_HELP,
-        MENU_ITEM_TOTAL,
      };
     #define ENUM_MENU_ITEM_WIDTH         85
   //For Tab m_tabs_main
@@ -95,6 +91,15 @@
       TAB_MONITOR_MARKET_PHASE,
       TAB_MONITOR_TOTAL
      };
+  //FOr m_tabs_tradeManage
+   enum ENUM_TAB_TRADE
+     {
+      TAB_TRADE_OPEN_POSITION_BY_SYMBOL,
+      TAB_TRADE_OPEN_POSITION,
+      TAB_TRADE_PENDING_POSITION,
+      TAB_TRADE_HISTORY_POSITION,
+      TAB_TRADE_TOTAL
+     };
     #define M_TAB_QUICK_SETTING_WIDTH   40   // the icon is 32x32
     #define M_CHECKBOX_SHOW_WIDTH       250  //Checkbox width on Tab Candle Setting
     #define M_BUTTON_SAVE_WIDTH         80
@@ -121,21 +126,19 @@
     #define COL_CI_SOURCE   1
     #define COL_CI_TF       2
     #define COL_CI_INFO     3
-    const int CANDLEINFO_WIDTH[COLUMNS_CANDLEINFO_TOTAL] = {50, M_ICON16_WIDTH, M_TF_WITHICON_WIDTH, M_INDICATOR_PARATEXT_WIDTH};
+    const int CANDLEINFO_WIDTH[COLUMNS_CANDLEINFO_TOTAL] = {M_TIME_WIDTH, M_ICON16_WIDTH, M_TF_WITHICON_WIDTH, M_INDICATOR_PARATEXT_WIDTH};
     const ENUM_ALIGN_MODE CANDLEINFO_HEADER_ALIGN[COLUMNS_CANDLEINFO_TOTAL] = {ALIGN_CENTER, ALIGN_CENTER, ALIGN_CENTER, ALIGN_LEFT};
     const ENUM_ALIGN_MODE CANDLEINFO_CONTENT_ALIGN[COLUMNS_CANDLEINFO_TOTAL] = {ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT, ALIGN_LEFT};
     const int CANDLEINFO_TEXT_X_OFFSET[COLUMNS_CANDLEINFO_TOTAL] = {5, 5, 5, 5};
     const int CANDLEINFO_IMAGE_X_OFFSET[COLUMNS_CANDLEINFO_TOTAL] = {0, 2, 3, 3};
    //Risk Management tab: the forms of the Stop Loss and Trailing tabs (the Symbol is the one of the chart)
-    #define M_PRICE_WIDTH              80    // a column that displays a price or the live Value of an indicator
-    #define M_CONTROL_YDISTANCE        22    // a control and the row under it
     #define SL_FORM_CAPTION_WIDTH      120
     #define SL_FORM_FIELD_WIDTH        150   // a box of a number, and the button of the ATR choice ("ATR(14) M15")
     #define SL_FORM_FRAME_WIDTH        (M_WINDOW_MAIN_WIDTH - 2 - 2 * M_CONTROL_BORDER_GAP - M_TAB_QUICK_SETTING_WIDTH)   // the frames take the width of the tab
     #define TRAIL_FORM_CAPTION_WIDTH   90
     #define TRAIL_FORM_EDIT_WIDTH      60
     #define TRAIL_FORM_FRAME_WIDTH     (3 * M_CONTROL_BORDER_GAP + 2 * (TRAIL_FORM_CAPTION_WIDTH + TRAIL_FORM_EDIT_WIDTH))   // two fields in a row
-    #define TRAIL_FORM_FRAME_HEIGHT    (M_CONTROL_HEIGHT + 2 * M_CONTROL_YDISTANCE + M_CONTROL_BORDER_GAP)   // the caption cut into the border, two rows
+    #define TRAIL_FORM_FRAME_HEIGHT    (M_CONTROL_HEIGHT + 2 * M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP)   // the caption cut into the border, two rows
     #define TRAIL_IND_TABLE_WIDTH      (2 + 16 + M_TF_WITHICON_WIDTH + M_INDICATOR_PARATEXT_WIDTH - 17 + M_PRICE_WIDTH + M_ICON16_WIDTH)   // border + scrollbar + columns
     #define COLUMNS_IND_TRAIL_TOTAL 4
     const int IND_TRAIL_WIDTH[COLUMNS_IND_TRAIL_TOTAL] = { M_TF_WITHICON_WIDTH, M_INDICATOR_PARATEXT_WIDTH - 17, M_PRICE_WIDTH, M_ICON16_WIDTH };
@@ -148,20 +151,53 @@
     #define M_WINDOW_TRADEMANAGE_WIDTH   900
     #define M_WINDOW_TRADEMANAGE_HEIGHT  380
     #define POSITION_ROWS_MAX            500    // the newest positions shown
-    #define POSITION_LAYOUT_FILE         "/Configuration/Table Position Columns.txt"   // under MQL5\Files\<program name>
+   //Configuration for Table
+    #define TRADE_HISTORY_LAYOUT_FILE    "/Configuration/m_table_trade_history_column.txt"   // under MQL5\Files\<program name>: the columns of the History tab (the deals)
+    #define POSITION_LAYOUT_FILE         "/Configuration/m_table_position_column.txt"   // under MQL5\Files\<program name>: the columns of the Open tab
     enum ENUM_COLUMN_POSITION
      {
-      COL_P_POSITION,COL_P_SYMBOL,COL_P_SIDE,COL_P_VOLUME,COL_P_OPEN_TICKET,COL_P_OPEN_TIME,COL_P_OPEN_PRICE,COL_P_OPEN_BID,COL_P_OPEN_ASK,COL_P_OPEN_SPREAD,COL_P_OPEN_SOURCE,
-      COL_P_CLOSE_TICKET,COL_P_CLOSE_TIME,COL_P_CLOSE_PRICE,COL_P_CLOSE_BID,COL_P_CLOSE_ASK,COL_P_CLOSE_SPREAD,COL_P_CLOSE_SOURCE,COL_P_NET,
+      COL_P_POSITION_ID,COL_P_SYMBOL,COL_P_DIRECTION,COL_P_VOLUME,COL_P_OPEN_TICKET,COL_P_OPEN_TIME,COL_P_OPEN_PRICE,COL_P_OPEN_BID,COL_P_OPEN_ASK,COL_P_OPEN_SPREAD,COL_P_OPEN_SOURCE,
+      COL_P_CLOSE_TICKET,COL_P_CLOSE_TIME,COL_P_CLOSE_PRICE,COL_P_CLOSE_BID,COL_P_CLOSE_ASK,COL_P_CLOSE_SPREAD,COL_P_CLOSE_SOURCE,COL_P_NET,COL_P_DETAIL,
       COLUMNS_POSITION_TOTAL
      };
-    const string POSITION_CAPTION[COLUMNS_POSITION_TOTAL]={"Position","Symbol","Side","Volume","Open ticket","Open time","Open price","Open bid","Open ask","Open spread","Open source",
-                                                           "Close ticket","Close time","Close price","Close bid","Close ask","Close spread","Close source","Net"};
-    const int    POSITION_WIDTH[COLUMNS_POSITION_TOTAL]={80,70,50,55,90,150,80,80,80,80,80,90,150,80,80,80,80,80,70};
+    const string POSITION_CAPTION[COLUMNS_POSITION_TOTAL]={"Position ID","Symbol","Direction","Vol","Open ticket","Open time","Open price","Open bid","Open ask","Open spread","Open source",
+                                                           "Close ticket","Close time","Close price","Close bid","Close ask","Close spread","Close source","Net","Detail"};
+    const int    POSITION_WIDTH[COLUMNS_POSITION_TOTAL]={M_TICKET_WIDTH,M_SYMBOL_WITHICON_WIDTH,M_ICON16_WIDTH,M_LOT_WIDTH,M_TICKET_WIDTH,M_DATETIME_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_SPREAD_WIDTH,M_REASON_WIDTH,
+                                                            M_TICKET_WIDTH,M_DATETIME_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_SPREAD_WIDTH,M_REASON_WIDTH,M_MONEY_WIDTH,M_ICON16_WIDTH};
+    const int    POSITION_SPREAD_COLUMNS[]={COL_P_OPEN_SPREAD,COL_P_CLOSE_SPREAD};
     const int    POSITION_NUMBER_COLUMNS[]={COL_P_VOLUME,COL_P_OPEN_PRICE,COL_P_OPEN_BID,COL_P_OPEN_ASK,COL_P_OPEN_SPREAD,COL_P_CLOSE_PRICE,COL_P_CLOSE_BID,COL_P_CLOSE_ASK,COL_P_CLOSE_SPREAD,COL_P_NET};
+   //The History tab: the trades, one row for each position that was closed. Its deals (IN and OUT, with the Bid and the Ask) are in the Order detail window,
+   //the Profit and the costs here are the sums of its deals
+    #define TRADE_ROWS_MAX               500    // the newest trades shown
+    enum ENUM_COLUMN_TRADE
+     {
+      COL_T_SYMBOL,COL_T_DIRECTION,COL_T_REASON,COL_T_VOLUME,COL_T_TIME_HOLD,COL_T_COMMISSION,COL_T_SWAP,COL_T_POSITION_ID,
+      COL_T_TIME_OPEN,COL_T_TIME_CLOSE,COL_T_PRICE_OPEN,COL_T_PRICE_CLOSE,COL_T_FEE,COL_T_PROFIT,COL_T_DETAIL,
+      COLUMNS_TRADE_TOTAL
+     };
+    const string TRADE_CAPTION[COLUMNS_TRADE_TOTAL]={"Symbol","Direction","Reason","Vol","Time hold","Commission","Swap","Position ID","Time open","Time close","Price open","Price close","Fee","Profit","Detail"};
+    const int    TRADE_WIDTH[COLUMNS_TRADE_TOTAL]={M_SYMBOL_WITHICON_WIDTH,M_ICON16_WIDTH,M_REASON_WIDTH,M_LOT_WIDTH,M_DURATION_WIDTH,M_MONEY_WIDTH,M_MONEY_WIDTH,M_TICKET_WIDTH,
+                                                  M_DATETIME_WIDTH,M_DATETIME_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_MONEY_WIDTH,M_MONEY_WIDTH,M_ICON16_WIDTH};
+    const int    TRADE_NUMBER_COLUMNS[]={COL_T_VOLUME,COL_T_TIME_HOLD,COL_T_COMMISSION,COL_T_SWAP,COL_T_FEE,COL_T_PRICE_OPEN,COL_T_PRICE_CLOSE,COL_T_PROFIT};
+   //The colours of the Profit and the Net: a gain is green, a loss is red
+    #define M_COLOR_PROFIT               C'0,160,0'
+    #define M_COLOR_LOSS                 C'200,0,0'
+   //The Order detail window (GUIPannel_Window_OrderDetail.mqh): what happened to a position, from its order to its deals
+    #define M_WINDOW_ORDERDETAIL_WIDTH   M_WINDOW_TRADEMANAGE_WIDTH
+    #define M_WINDOW_ORDERDETAIL_HEIGHT  300
+    #define ORDER_DETAIL_ROWS_MAX        200
+    enum ENUM_COLUMN_ORDER_DETAIL   // starts as the trades do: Symbol, Direction; the widths are the ones of the trades
+     {
+      COL_O_SYMBOL,COL_O_DIRECTION,COL_O_TIME,COL_O_EVENT,COL_O_PRICE_OPEN,COL_O_SL,COL_O_TP,COL_O_VOLUME,COL_O_BID,COL_O_ASK,COL_O_SPREAD,
+      COLUMNS_ORDER_DETAIL_TOTAL
+     };
+    const string ORDER_DETAIL_CAPTION[COLUMNS_ORDER_DETAIL_TOTAL]={"Symbol","Direction","Time","Event","Price open","SL","TP","Vol","Bid","Ask","Spread"};
+    const int    ORDER_DETAIL_WIDTH[COLUMNS_ORDER_DETAIL_TOTAL]={M_SYMBOL_WITHICON_WIDTH,M_ICON16_WIDTH,M_DATETIME_SEC_WIDTH,M_EVENT_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_LOT_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_SPREAD_WIDTH};
+    const int    ORDER_DETAIL_NUMBER_COLUMNS[]={COL_O_PRICE_OPEN,COL_O_SL,COL_O_TP,COL_O_VOLUME,COL_O_BID,COL_O_ASK,COL_O_SPREAD};
+    const int    ORDER_DETAIL_SPREAD_COLUMNS[]={COL_O_SPREAD};
    //m_table_indicator_PreTradeSymbolMonitor (GUIPannel_TabTrading_MonitorIndicator.mqh)
     #define TRADING_FORM_ROWS_TOTAL   9
-    #define TRADING_FORM_HEIGHT       (TRADING_FORM_ROWS_TOTAL * M_CONTROL_YDISTANCE + M_CONTROL_HEIGHT)   // the height of the table: a header and nine rows
+    #define TRADING_FORM_HEIGHT       (TRADING_FORM_ROWS_TOTAL * M_CONTROL_HEIGHT + M_CONTROL_HEIGHT)   // the height of the table: a header and nine rows
     #define COLUMNS_PRETRADEMON_TOTAL 6
     const int PRETRADEMON_WIDTH[COLUMNS_PRETRADEMON_TOTAL] = {M_TF_WITHICON_WIDTH, M_ICON16_WIDTH, M_INDICATOR_PARATEXT_WIDTH, M_PRICE_WIDTH, M_ICON16_WIDTH, M_ICON16_WIDTH};
     const ENUM_ALIGN_MODE PRETRADEMON_HEADER_ALIGN[COLUMNS_PRETRADEMON_TOTAL] = {ALIGN_CENTER, ALIGN_CENTER, ALIGN_CENTER, ALIGN_RIGHT, ALIGN_CENTER, ALIGN_CENTER};
@@ -189,6 +225,7 @@
       SMART_MONEY_SECTION_SUPPLY_DEMAND,
       SMART_MONEY_SECTION_TRENDLINE,
       SMART_MONEY_SECTION_SUPPORT_RESISTANCE,
+      SMART_MONEY_SECTION_MOVEMENT,           // the legs between the Swings: Impulse and Pullback
       SMART_MONEY_SECTION_TOTAL
      };
     enum ENUM_SETUP_SECTION   // the sections of the Setup tab of the Risk Management tab
@@ -208,7 +245,6 @@
    //m_table_SymbolTFSeting: Symbol, TF, Buy, Sell, Sound, Message
     #define COLUMNS_SYMBOLTF_TOTAL 6
     #define M_TREEVIEW_WIDTH            110   // m_treeview_SymbolTF
-    #define M_SYMBOL_WITHICON_WIDTH     110   // a column that displays a Symbol+Icon
    //m_table_CandlePatternsSetting: Pattern, No, Buy, Sell, up-arrow legend, Sound, Message, down-arrow legend
     #define COLUMNS_CANDLE_PATTERN_TOTAL 8
   // Status bar items, left to right

@@ -687,6 +687,9 @@
       MSG_ORD_PRICE_OPEN,
       MSG_ORD_PRICE_CLOSE,
       MSG_ORD_PRICE_STOP_LIMIT,
+      MSG_ORD_BID,
+      MSG_ORD_ASK,
+      MSG_ORD_SYMBOL_ID,
       MSG_ORD_COMMISSION,
       MSG_ORD_SWAP,
       MSG_ORD_VOLUME,
@@ -871,7 +874,6 @@
       MSG_EVN_PRICE_TP_BEFORE,
       MSG_EVN_PRICE_EVENT_ASK,
       MSG_EVN_PRICE_EVENT_BID,
-      MSG_EVN_SYMBOL_BY_POS,
       MSG_EVN_STATUS_MARKET_PENDING,
       MSG_EVN_STATUS_HISTORY_PENDING,
       MSG_EVN_NO_EVENT,
@@ -2202,6 +2204,9 @@
    {"Цена открытия","Price open"},  // MSG_ORD_PRICE_OPEN
    {"Цена закрытия","Price close"},  // MSG_ORD_PRICE_CLOSE
    {"Цена постановки Limit ордера при активации StopLimit ордера","Price of placing Limit order when StopLimit order activated"},  // MSG_ORD_PRICE_STOP_LIMIT
+   {"Bid на момент сделки","Bid at the time of the deal"},  // MSG_ORD_BID
+   {"Ask на момент сделки","Ask at the time of the deal"},  // MSG_ORD_ASK
+   {"ID нашего символа (таблица symbols)","ID of our symbol (table symbols)"},  // MSG_ORD_SYMBOL_ID
    {"Комиссия","Comission"},  // MSG_ORD_COMMISSION
    {"Своп","Swap"},  // MSG_ORD_SWAP
    {"Объём","Volume"},  // MSG_ORD_VOLUME
@@ -2386,7 +2391,6 @@
    {"Цена TakeProfit до модификации","Price TakeProfit before modification"},  // MSG_EVN_PRICE_TP_BEFORE
    {"Цена Ask в момент события","Price Ask at the time of event"},  // MSG_EVN_PRICE_EVENT_ASK
    {"Цена Bid в момент события","Price Bid at the time of event"},  // MSG_EVN_PRICE_EVENT_BID
-   {"Символ встречной позиции","Symbol of opposite position"},  // MSG_EVN_SYMBOL_BY_POS
    {"Установлен отложенный ордер","Pending order placed"},  // MSG_EVN_STATUS_MARKET_PENDING
    {"Удален отложенный ордер","Pending order removed"},  // MSG_EVN_STATUS_HISTORY_PENDING
    {"Нет торгового события","No trade event"},  // MSG_EVN_NO_EVENT

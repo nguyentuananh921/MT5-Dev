@@ -54,7 +54,8 @@
      void              SwingsTried(const int swings)             { m_swings_tried=(swings<2 ? 2 : swings); }
    //--- What Python calculates, as a JSON object
      string            Json(void) const;
-                       CTrendlineSetting(void) : m_show_support(InpTrendlineShowSupport),m_show_resistance(InpTrendlineShowResistance),m_show_dead(InpTrendlineShowDead),m_max_dead(InpTrendlineMaxDead),m_nearest(InpTrendlineNearest),m_confirm_atr(InpTrendlineConfirmATR),m_confirm_closes(InpTrendlineConfirmCloses),m_min_move_atr(InpTrendlineMinMoveATR),m_min_swing_atr(InpTrendlineMinSwingATR),m_swings_tried(InpTrendlineSwingsTried) {}
+                       CTrendlineSetting(void) : m_show_support(false),m_show_resistance(false),m_show_dead(false),m_max_dead(20),m_nearest(3),
+                                             m_confirm_atr(1.0),m_confirm_closes(2),m_min_move_atr(0.2),m_min_swing_atr(0.8),m_swings_tried(50) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CTRENDLINESETTING_MQH_DECLARATION
 #ifndef CTRENDLINESETTING_MQH_IMPLEMENTATION

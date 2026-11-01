@@ -63,10 +63,12 @@
    int row_template[];
    CIndicatorDE *row_indicator[];
    int count=0;
-   for(int si=0;si<m_SymbolTFManager.Total();si++)
+   ENUM_TIMEFRAMES symbol_tfs[];
+   int symbol_tf_total=m_SymbolTFManager.TimeframesOf(symbol,symbol_tfs);
+   for(int si=0;si<symbol_tf_total;si++)
      {
-      CSymbolTFSetting *symtf=m_SymbolTFManager.At(si);
-      if(symtf==NULL || symtf.Symbol()!=symbol || (tf_filter!=PERIOD_CURRENT && symtf.TFEnum()!=tf_filter))
+      ENUM_TIMEFRAMES symtf_tf=symbol_tfs[si];
+      if(tf_filter!=PERIOD_CURRENT && symtf_tf!=tf_filter)
          continue;
       for(int ti=0;ti<m_IndicatorTemplateManager.Total();ti++)
         {
@@ -75,13 +77,13 @@
             continue;
          MqlParam params[];
          entry.GetRawParams(params);
-         CIndicatorDE *indicator=m_IndicatorsCollection.GetIndicator(entry.TypeEnum(),params,symbol,symtf.TFEnum());
+         CIndicatorDE *indicator=m_IndicatorsCollection.GetIndicator(entry.TypeEnum(),params,symbol,symtf_tf);
          if(indicator==NULL)
             continue;
          ::ArrayResize(row_tf,count+1);
          ::ArrayResize(row_template,count+1);
          ::ArrayResize(row_indicator,count+1);
-         row_tf[count]=TimeframeDescription(symtf.TFEnum());
+         row_tf[count]=TimeframeDescription(symtf_tf);
          row_template[count]=ti;
          row_indicator[count]=indicator;
          count++;
@@ -114,7 +116,7 @@
         }
      }
    //--- The indicator the Stop Loss and the Trailing are set to (the same for every Symbol): its row has the icon in colour
-   CTradingSetupSetting *setting=(m_TradingSetupManager!=NULL) ? m_TradingSetupManager.Setting() : NULL;
+   CRiskManagementSetting *setting=(m_RiskManagementManager!=NULL) ? m_RiskManagementManager.Setting() : NULL;
    MqlParam sl_params[],trail_params[];
    if(setting!=NULL)
      {

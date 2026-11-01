@@ -137,228 +137,227 @@
         void                       PlaySoundErrorModifyTP(const int action);
         void                       PlaySoundErrorModifyPrice(const int action);
         
-      public:
-       //--- Constructor
-                                    CTradeObj();
+    public:
+     //--- Constructor
+                                  CTradeObj();
 
-       //--- Set/return the spread multiplier
-        void                       SetSpreadMultiplier(const uint value)        { this.m_multiplier=(value==0 ? 1 : value);  }
-        uint                       SpreadMultiplier(void)                 const { return this.m_multiplier;                  }
-       //--- Set default values
-        void                       Init(const string symbol,
-                                        const ulong magic,
-                                        const double volume,
-                                        const ulong deviation,
-                                        const int stoplimit,
-                                        const datetime expiration,
-                                        const bool async_mode,
-                                        const ENUM_ORDER_TYPE_FILLING type_filling,
-                                        const ENUM_ORDER_TYPE_TIME type_expiration,
-                                        ENUM_LOG_LEVEL log_level);
-       //Working with sound
-        //--- Set default sounds and flags of using sounds,
-         void                       InitSounds(const bool use_sound=false,
-                                              const string sound_open=NULL,
-                                              const string sound_close=NULL,
-                                              const string sound_sl=NULL,
-                                              const string sound_tp=NULL,
-                                              const string sound_price=NULL,
-                                              const string sound_error=NULL);
-        //--- Allow working with sounds and set standard sounds
-         void                       SetSoundsStandard(void);
-        //--- Set the flag of using the sound of (1) opening/placing a specified position/order type,
-        //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
-        //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
-         void                       UseSoundOpen(const int action,const bool flag);
-         void                       UseSoundClose(const int action,const bool flag);
-         void                       UseSoundModifySL(const int action,const bool flag);
-         void                       UseSoundModifyTP(const int action,const bool flag);
-         void                       UseSoundModifyPrice(const int action,const bool flag);
-        //--- Return the flag of using the sound of (1) opening/placing a specified position/order type,
-        //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
-        //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
-         bool                       UseSoundOpen(const int action)            const;
-         bool                       UseSoundClose(const int action)           const;
-         bool                       UseSoundModifySL(const int action)        const;
-         bool                       UseSoundModifyTP(const int action)        const;
-         bool                       UseSoundModifyPrice(const int action)     const;
-        //--- Set the sound of (1) opening/placing a specified position/order type,
-        //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
-        //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
-         void                       SetSoundOpen(const ENUM_ORDER_TYPE action,const string sound);
-         void                       SetSoundClose(const ENUM_ORDER_TYPE action,const string sound);
-         void                       SetSoundModifySL(const ENUM_ORDER_TYPE action,const string sound);
-         void                       SetSoundModifyTP(const ENUM_ORDER_TYPE action,const string sound);
-         void                       SetSoundModifyPrice(const ENUM_ORDER_TYPE action,const string sound);
-         //--- Set the error sound of (1) opening/placing a specified position/order type,
-         //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
-         //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
-          void                       SetSoundErrorOpen(const ENUM_ORDER_TYPE action,const string sound);
-          void                       SetSoundErrorClose(const ENUM_ORDER_TYPE action,const string sound);
-          void                       SetSoundErrorModifySL(const ENUM_ORDER_TYPE action,const string sound);
-          void                       SetSoundErrorModifyTP(const ENUM_ORDER_TYPE action,const string sound);
-          void                       SetSoundErrorModifyPrice(const ENUM_ORDER_TYPE action,const string sound);
-         //--- Return the sound of (1) opening/placing a specified position/order type,
-         //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
-         //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
-          string                     GetSoundOpen(const ENUM_ORDER_TYPE action)               const;
-          string                     GetSoundClose(const ENUM_ORDER_TYPE action)              const;
-          string                     GetSoundModifySL(const ENUM_ORDER_TYPE action)           const;
-          string                     GetSoundModifyTP(const ENUM_ORDER_TYPE action)           const;
-          string                     GetSoundModifyPrice(const ENUM_ORDER_TYPE action)        const;
-         //--- Return the error sound of (1) opening/placing a specified position/order type,
-         //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
-         //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
-          string                     GetSoundErrorOpen(const ENUM_ORDER_TYPE action)          const;
-          string                     GetSoundErrorClose(const ENUM_ORDER_TYPE action)         const;
-          string                     GetSoundErrorModifySL(const ENUM_ORDER_TYPE action)      const;
-          string                     GetSoundErrorModifyTP(const ENUM_ORDER_TYPE action)      const;
-          string                     GetSoundErrorModifyPrice(const ENUM_ORDER_TYPE action)   const;
+     //--- Set/return the spread multiplier
+      void                       SetSpreadMultiplier(const uint value)        { this.m_multiplier=(value==0 ? 1 : value);  }
+      uint                       SpreadMultiplier(void)                 const { return this.m_multiplier;                  }
+     //--- Set default values
+      void                       Init(const string symbol,
+                                      const ulong magic,
+                                      const double volume,
+                                      const ulong deviation,
+                                      const int stoplimit,
+                                      const datetime expiration,
+                                      const bool async_mode,
+                                      const ENUM_ORDER_TYPE_FILLING type_filling,
+                                      const ENUM_ORDER_TYPE_TIME type_expiration,
+                                      ENUM_LOG_LEVEL log_level);
+     //Working with sound
+     //--- Set default sounds and flags of using sounds,
+        void                       InitSounds(const bool use_sound=false,
+                                            const string sound_open=NULL,
+                                            const string sound_close=NULL,
+                                            const string sound_sl=NULL,
+                                            const string sound_tp=NULL,
+                                            const string sound_price=NULL,
+                                            const string sound_error=NULL);
+     //--- Allow working with sounds and set standard sounds
+        void                       SetSoundsStandard(void);
+     //--- Set the flag of using the sound of (1) opening/placing a specified position/order type,
+     //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
+     //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
+        void                       UseSoundOpen(const int action,const bool flag);
+        void                       UseSoundClose(const int action,const bool flag);
+        void                       UseSoundModifySL(const int action,const bool flag);
+        void                       UseSoundModifyTP(const int action,const bool flag);
+        void                       UseSoundModifyPrice(const int action,const bool flag);
+     //--- Return the flag of using the sound of (1) opening/placing a specified position/order type,
+     //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
+     //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
+        bool                       UseSoundOpen(const int action)            const;
+        bool                       UseSoundClose(const int action)           const;
+        bool                       UseSoundModifySL(const int action)        const;
+        bool                       UseSoundModifyTP(const int action)        const;
+        bool                       UseSoundModifyPrice(const int action)     const;
+     //--- Set the sound of (1) opening/placing a specified position/order type,
+     //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
+     //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
+        void                       SetSoundOpen(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundClose(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundModifySL(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundModifyTP(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundModifyPrice(const ENUM_ORDER_TYPE action,const string sound);
+     //--- Set the error sound of (1) opening/placing a specified position/order type,
+     //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
+     //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
+        void                       SetSoundErrorOpen(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundErrorClose(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundErrorModifySL(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundErrorModifyTP(const ENUM_ORDER_TYPE action,const string sound);
+        void                       SetSoundErrorModifyPrice(const ENUM_ORDER_TYPE action,const string sound);
+     //--- Return the sound of (1) opening/placing a specified position/order type,
+     //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
+     //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
+        string                     GetSoundOpen(const ENUM_ORDER_TYPE action)               const;
+        string                     GetSoundClose(const ENUM_ORDER_TYPE action)              const;
+        string                     GetSoundModifySL(const ENUM_ORDER_TYPE action)           const;
+        string                     GetSoundModifyTP(const ENUM_ORDER_TYPE action)           const;
+        string                     GetSoundModifyPrice(const ENUM_ORDER_TYPE action)        const;
+     //--- Return the error sound of (1) opening/placing a specified position/order type,
+     //--- (2) closing/removal of a specified position/order type, (3) StopLoss modification for a specified position/order type,
+     //--- (4) TakeProfit modification for a specified position/order type, (5) placement price modification for a specified order type
+        string                     GetSoundErrorOpen(const ENUM_ORDER_TYPE action)          const;
+        string                     GetSoundErrorClose(const ENUM_ORDER_TYPE action)         const;
+        string                     GetSoundErrorModifySL(const ENUM_ORDER_TYPE action)      const;
+        string                     GetSoundErrorModifyTP(const ENUM_ORDER_TYPE action)      const;
+        string                     GetSoundErrorModifyPrice(const ENUM_ORDER_TYPE action)   const;
+     //--- Play a sound of a specified trading event for a set position/order type
+        void                       PlaySoundSuccess(const ENUM_ACTION_TYPE action,const int order,bool sl=false,bool tp=false,bool pr=false);
+     //--- Play an error sound of a specified trading event for a set position/order type
+        void                       PlaySoundError(const ENUM_ACTION_TYPE action,const int order,bool sl=false,bool tp=false,bool pr=false);
+     //Working with Order
+     //--- (1) Return the margin calculation mode, (2) hedge account flag
+        ENUM_ACCOUNT_MARGIN_MODE   GetMarginMode(void)                                const { return this.m_margin_mode;           }
+        bool                       IsHedge(void) const { return this.GetMarginMode()==ACCOUNT_MARGIN_MODE_RETAIL_HEDGING;          }
+     //--- (1) Set, (2) return the filling policy
+        void                       SetTypeFilling(const ENUM_ORDER_TYPE_FILLING type)       { this.m_type_filling=type;            }
+        ENUM_ORDER_TYPE_FILLING    GetTypeFilling(void)                               const { return this.m_type_filling;          }
+     //--- (1) Set, (2) return order expiration type
+        void                       SetTypeExpiration(const ENUM_ORDER_TYPE_TIME type)       { this.m_type_time=type;               }
+        ENUM_ORDER_TYPE_TIME       GetTypeExpiration(void)                            const { return this.m_type_time;             }
+     //--- (1) Set, (2) return the magic number
+        void                       SetMagic(const ulong magic)                              { this.m_magic=magic;                  }
+        ulong                      GetMagic(void)                                     const { return this.m_magic;                 }
+     //--- (1) Set, (2) return a symbol
+        void                       SetSymbol(const string symbol)                           { this.m_symbol=symbol;                }
+        string                     GetSymbol(void)                                    const { return this.m_symbol;                }
+     //--- (1) Set, (2) return a comment
+        void                       SetComment(const string comment)                         { this.m_comment=comment;              }
+        string                     GetComment(void)                                   const { return this.m_comment;               }
+     //--- (1) Set, (2) return slippage
+        void                       SetDeviation(const ulong deviation)                      { this.m_deviation=deviation;          }
+        ulong                      GetDeviation(void)                                 const { return this.m_deviation;             }
+     //--- (1) Set, (2) return volume
+        void                       SetVolume(const double volume)                           { this.m_volume=volume;                }
+        double                     GetVolume(void)                                    const { return this.m_volume;                }
+     //--- (1) Set, (2) return order expiration date
+        void                       SetExpiration(const datetime time)                       { this.m_expiration=time;              }
+        datetime                   GetExpiration(void)                                const { return this.m_expiration;            }
+     //--- (1) Set, (2) return the flag of the asynchronous sending of a trading request
+        void                       SetAsyncMode(const bool async)                           { this.m_async_mode=async;             }
+        bool                       IsAsyncMode(void)                                  const { return this.m_async_mode;            }
+     //--- Last request data:
+     //--- Return (1) executed action type, (2) magic number, (3) order ticket, (4) volume,
+     //--- (5) open, (6) StopLimit order, (7) StopLoss, (8) TakeProfit price, (9) deviation,
+     //--- type of (10) order, (11) execution, (12) lifetime, (13) order expiration date,
+     //--- (14) comment, (15) position ticket, (16) opposite position ticket
+      ENUM_TRADE_REQUEST_ACTIONS GetLastRequestAction(void)                         const { return this.m_request.action;        }
+      ulong                      GetLastRequestMagic(void)                          const { return this.m_request.magic;         }
+      ulong                      GetLastRequestOrder(void)                          const { return this.m_request.order;         }
+      double                     GetLastRequestVolume(void)                         const { return this.m_request.volume;        }
+      double                     GetLastRequestPrice(void)                          const { return this.m_request.price;         }
+      double                     GetLastRequestStopLimit(void)                      const { return this.m_request.stoplimit;     }
+      double                     GetLastRequestStopLoss(void)                       const { return this.m_request.sl;            }
+      double                     GetLastRequestTakeProfit(void)                     const { return this.m_request.tp;            }
+      ulong                      GetLastRequestDeviation(void)                      const { return this.m_request.deviation;     }
+      ENUM_ORDER_TYPE            GetLastRequestType(void)                           const { return this.m_request.type;          }
+      ENUM_ORDER_TYPE_FILLING    GetLastRequestTypeFilling(void)                    const { return this.m_request.type_filling;  }
+      ENUM_ORDER_TYPE_TIME       GetLastRequestTypeTime(void)                       const { return this.m_request.type_time;     }
+      datetime                   GetLastRequestExpiration(void)                     const { return this.m_request.expiration;    }
+      string                     GetLastRequestComment(void)                        const { return this.m_request.comment;       }
+      ulong                      GetLastRequestPosition(void)                       const { return this.m_request.position;      }
+      ulong                      GetLastRequestPositionBy(void)                     const { return this.m_request.position_by;   }
 
-        //--- Play a sound of a specified trading event for a set position/order type
-          void                       PlaySoundSuccess(const ENUM_ACTION_TYPE action,const int order,bool sl=false,bool tp=false,bool pr=false);
-        //--- Play an error sound of a specified trading event for a set position/order type
-          void                       PlaySoundError(const ENUM_ACTION_TYPE action,const int order,bool sl=false,bool tp=false,bool pr=false);
-       //Working with Order
-        //--- (1) Return the margin calculation mode, (2) hedge account flag
-          ENUM_ACCOUNT_MARGIN_MODE   GetMarginMode(void)                                const { return this.m_margin_mode;           }
-          bool                       IsHedge(void) const { return this.GetMarginMode()==ACCOUNT_MARGIN_MODE_RETAIL_HEDGING;          }
-        //--- (1) Set, (2) return the filling policy
-          void                       SetTypeFilling(const ENUM_ORDER_TYPE_FILLING type)       { this.m_type_filling=type;            }
-          ENUM_ORDER_TYPE_FILLING    GetTypeFilling(void)                               const { return this.m_type_filling;          }
-        //--- (1) Set, (2) return order expiration type
-          void                       SetTypeExpiration(const ENUM_ORDER_TYPE_TIME type)       { this.m_type_time=type;               }
-          ENUM_ORDER_TYPE_TIME       GetTypeExpiration(void)                            const { return this.m_type_time;             }
-        //--- (1) Set, (2) return the magic number
-          void                       SetMagic(const ulong magic)                              { this.m_magic=magic;                  }
-          ulong                      GetMagic(void)                                     const { return this.m_magic;                 }
-        //--- (1) Set, (2) return a symbol
-          void                       SetSymbol(const string symbol)                           { this.m_symbol=symbol;                }
-          string                     GetSymbol(void)                                    const { return this.m_symbol;                }
-        //--- (1) Set, (2) return a comment
-          void                       SetComment(const string comment)                         { this.m_comment=comment;              }
-          string                     GetComment(void)                                   const { return this.m_comment;               }
-        //--- (1) Set, (2) return slippage
-          void                       SetDeviation(const ulong deviation)                      { this.m_deviation=deviation;          }
-          ulong                      GetDeviation(void)                                 const { return this.m_deviation;             }
-        //--- (1) Set, (2) return volume
-          void                       SetVolume(const double volume)                           { this.m_volume=volume;                }
-          double                     GetVolume(void)                                    const { return this.m_volume;                }
-        //--- (1) Set, (2) return order expiration date
-          void                       SetExpiration(const datetime time)                       { this.m_expiration=time;              }
-          datetime                   GetExpiration(void)                                const { return this.m_expiration;            }
-        //--- (1) Set, (2) return the flag of the asynchronous sending of a trading request
-          void                       SetAsyncMode(const bool async)                           { this.m_async_mode=async;             }
-          bool                       IsAsyncMode(void)                                  const { return this.m_async_mode;            }
-       //--- Last request data:
-       //--- Return (1) executed action type, (2) magic number, (3) order ticket, (4) volume,
-       //--- (5) open, (6) StopLimit order, (7) StopLoss, (8) TakeProfit price, (9) deviation,
-       //--- type of (10) order, (11) execution, (12) lifetime, (13) order expiration date,
-       //--- (14) comment, (15) position ticket, (16) opposite position ticket
-        ENUM_TRADE_REQUEST_ACTIONS GetLastRequestAction(void)                         const { return this.m_request.action;        }
-        ulong                      GetLastRequestMagic(void)                          const { return this.m_request.magic;         }
-        ulong                      GetLastRequestOrder(void)                          const { return this.m_request.order;         }
-        double                     GetLastRequestVolume(void)                         const { return this.m_request.volume;        }
-        double                     GetLastRequestPrice(void)                          const { return this.m_request.price;         }
-        double                     GetLastRequestStopLimit(void)                      const { return this.m_request.stoplimit;     }
-        double                     GetLastRequestStopLoss(void)                       const { return this.m_request.sl;            }
-        double                     GetLastRequestTakeProfit(void)                     const { return this.m_request.tp;            }
-        ulong                      GetLastRequestDeviation(void)                      const { return this.m_request.deviation;     }
-        ENUM_ORDER_TYPE            GetLastRequestType(void)                           const { return this.m_request.type;          }
-        ENUM_ORDER_TYPE_FILLING    GetLastRequestTypeFilling(void)                    const { return this.m_request.type_filling;  }
-        ENUM_ORDER_TYPE_TIME       GetLastRequestTypeTime(void)                       const { return this.m_request.type_time;     }
-        datetime                   GetLastRequestExpiration(void)                     const { return this.m_request.expiration;    }
-        string                     GetLastRequestComment(void)                        const { return this.m_request.comment;       }
-        ulong                      GetLastRequestPosition(void)                       const { return this.m_request.position;      }
-        ulong                      GetLastRequestPositionBy(void)                     const { return this.m_request.position_by;   }
+     //--- Set the error code in the last request result
+      void                       SetResultRetcode(const uint retcode)                     { this.m_result.retcode=retcode;       }
+      void                       SetResultComment(const string comment)                   { this.m_result.comment=comment;       }
+     //--- Data on the last request result:
+     //--- Return (1) operation result code, (2) performed deal ticket, (3) placed order ticket,
+     //--- (4) deal volume confirmed by a broker, (5) deal price confirmed by a broker,
+     //--- (6) current market Bid (requote) price, (7) current market Ask (requote) price
+     //--- (8) broker comment to operation (by default, it is filled by the trade server return code description),
+     //--- (9) request ID set by the terminal when sending, (10) external trading system return code
+      uint                       GetResultRetcode(void)                             const { return this.m_result.retcode;        }
+      ulong                      GetResultDeal(void)                                const { return this.m_result.deal;           }
+      ulong                      GetResultOrder(void)                               const { return this.m_result.order;          }
+      double                     GetResultVolume(void)                              const { return this.m_result.volume;         }
+      double                     GetResultPrice(void)                               const { return this.m_result.price;          }
+      double                     GetResultBid(void)                                 const { return this.m_result.bid;            }
+      double                     GetResultAsk(void)                                 const { return this.m_result.ask;            }
+      string                     GetResultComment(void)                             const { return this.m_result.comment;        }
+      uint                       GetResultRequestID(void)                           const { return this.m_result.request_id;     }
+      uint                       GetResultRetcodeEXT(void)                          const { return this.m_result.retcode_external;}
 
-       //--- Set the error code in the last request result
-        void                       SetResultRetcode(const uint retcode)                     { this.m_result.retcode=retcode;       }
-        void                       SetResultComment(const string comment)                   { this.m_result.comment=comment;       }
-       //--- Data on the last request result:
-       //--- Return (1) operation result code, (2) performed deal ticket, (3) placed order ticket,
-       //--- (4) deal volume confirmed by a broker, (5) deal price confirmed by a broker,
-       //--- (6) current market Bid (requote) price, (7) current market Ask (requote) price
-       //--- (8) broker comment to operation (by default, it is filled by the trade server return code description),
-       //--- (9) request ID set by the terminal when sending, (10) external trading system return code
-        uint                       GetResultRetcode(void)                             const { return this.m_result.retcode;        }
-        ulong                      GetResultDeal(void)                                const { return this.m_result.deal;           }
-        ulong                      GetResultOrder(void)                               const { return this.m_result.order;          }
-        double                     GetResultVolume(void)                              const { return this.m_result.volume;         }
-        double                     GetResultPrice(void)                               const { return this.m_result.price;          }
-        double                     GetResultBid(void)                                 const { return this.m_result.bid;            }
-        double                     GetResultAsk(void)                                 const { return this.m_result.ask;            }
-        string                     GetResultComment(void)                             const { return this.m_result.comment;        }
-        uint                       GetResultRequestID(void)                           const { return this.m_result.request_id;     }
-        uint                       GetResultRetcodeEXT(void)                          const { return this.m_result.retcode_external;}
+     //--- Return the description of the (1) executed action type, (2) magic number, (3) order ticket, (4) volume,
+     //--- (5) open, (6) StopLimit order, (7) StopLoss, (8) TakeProfit price, (9) deviation,
+     //--- type of (10) order, (11) execution, (12) lifetime, (13) order expiration date,
+     //--- (14) comment, (15) position ticket, (16) opposite position ticket
+      string                     GetRequestActionDescription(void)                  const { return RequestActionDescription(this.m_request);       }
+      string                     GetRequestMagicDescription(void)                   const { return RequestMagicDescription(this.m_request);        }
+      string                     GetRequestOrderDescription(void)                   const { return RequestOrderDescription(this.m_request);        }
+      string                     GetRequestSymbolDescription(void)                  const { return RequestSymbolDescription(this.m_request);       }
+      string                     GetRequestVolumeDescription(void)                  const { return RequestVolumeDescription(this.m_request);       }
+      string                     GetRequestPriceDescription(void)                   const { return RequestPriceDescription(this.m_request);        }
+      string                     GetRequestStopLimitDescription(void)               const { return RequestStopLimitDescription(this.m_request);    }
+      string                     GetRequestStopLossDescription(void)                const { return RequestStopLossDescription(this.m_request);     }
+      string                     GetRequestTakeProfitDescription(void)              const { return RequestTakeProfitDescription(this.m_request);   }
+      string                     GetRequestDeviationDescription(void)               const { return RequestDeviationDescription(this.m_request);    }
+      string                     GetRequestTypeDescription(void)                    const { return RequestTypeDescription(this.m_request);         }
+      string                     GetRequestTypeFillingDescription(void)             const { return RequestTypeFillingDescription(this.m_request);  }
+      string                     GetRequestTypeTimeDescription(void)                const { return RequestTypeTimeDescription(this.m_request);     }
+      string                     GetRequestExpirationDescription(void)              const { return RequestExpirationDescription(this.m_request);   }
+      string                     GetRequestCommentDescription(void)                 const { return RequestCommentDescription(this.m_request);      }
+      string                     GetRequestPositionDescription(void)                const { return RequestPositionDescription(this.m_request);     }
+      string                     GetRequestPositionByDescription(void)              const { return RequestPositionByDescription(this.m_request);   }
 
-       //--- Return the description of the (1) executed action type, (2) magic number, (3) order ticket, (4) volume,
-       //--- (5) open, (6) StopLimit order, (7) StopLoss, (8) TakeProfit price, (9) deviation,
-       //--- type of (10) order, (11) execution, (12) lifetime, (13) order expiration date,
-       //--- (14) comment, (15) position ticket, (16) opposite position ticket
-        string                     GetRequestActionDescription(void)                  const { return RequestActionDescription(this.m_request);       }
-        string                     GetRequestMagicDescription(void)                   const { return RequestMagicDescription(this.m_request);        }
-        string                     GetRequestOrderDescription(void)                   const { return RequestOrderDescription(this.m_request);        }
-        string                     GetRequestSymbolDescription(void)                  const { return RequestSymbolDescription(this.m_request);       }
-        string                     GetRequestVolumeDescription(void)                  const { return RequestVolumeDescription(this.m_request);       }
-        string                     GetRequestPriceDescription(void)                   const { return RequestPriceDescription(this.m_request);        }
-        string                     GetRequestStopLimitDescription(void)               const { return RequestStopLimitDescription(this.m_request);    }
-        string                     GetRequestStopLossDescription(void)                const { return RequestStopLossDescription(this.m_request);     }
-        string                     GetRequestTakeProfitDescription(void)              const { return RequestTakeProfitDescription(this.m_request);   }
-        string                     GetRequestDeviationDescription(void)               const { return RequestDeviationDescription(this.m_request);    }
-        string                     GetRequestTypeDescription(void)                    const { return RequestTypeDescription(this.m_request);         }
-        string                     GetRequestTypeFillingDescription(void)             const { return RequestTypeFillingDescription(this.m_request);  }
-        string                     GetRequestTypeTimeDescription(void)                const { return RequestTypeTimeDescription(this.m_request);     }
-        string                     GetRequestExpirationDescription(void)              const { return RequestExpirationDescription(this.m_request);   }
-        string                     GetRequestCommentDescription(void)                 const { return RequestCommentDescription(this.m_request);      }
-        string                     GetRequestPositionDescription(void)                const { return RequestPositionDescription(this.m_request);     }
-        string                     GetRequestPositionByDescription(void)              const { return RequestPositionByDescription(this.m_request);   }
-
-       //--- Open a position
-        bool                       OpenPosition(const ENUM_POSITION_TYPE type,
-                                                const double volume,
-                                                const double sl=0,
-                                                const double tp=0,
-                                                const ulong magic=ULONG_MAX,
+     //--- Open a position
+      bool                       OpenPosition(const ENUM_POSITION_TYPE type,
+                                              const double volume,
+                                              const double sl=0,
+                                              const double tp=0,
+                                              const ulong magic=ULONG_MAX,
+                                              const string comment=NULL,
+                                              const ulong deviation=ULONG_MAX,
+                                              const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+     //--- Close a position
+      bool                       ClosePosition(const ulong ticket,
                                                 const string comment=NULL,
-                                                const ulong deviation=ULONG_MAX,
-                                                const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-       //--- Close a position
-        bool                       ClosePosition(const ulong ticket,
-                                                  const string comment=NULL,
-                                                  const ulong deviation=ULONG_MAX);
-       //--- Close a position partially
-        bool                       ClosePositionPartially(const ulong ticket,
-                                                          const double volume,
-                                                          const string comment=NULL,
-                                                          const ulong deviation=ULONG_MAX);
-       //--- Close a position by an opposite one
-        bool                       ClosePositionBy(const ulong ticket,const ulong ticket_by);
-       //--- Modify a position
-        bool                       ModifyPosition(const ulong ticket,const double sl=WRONG_VALUE,const double tp=WRONG_VALUE);
-       //--- Place an order
-        bool                       SetOrder(const ENUM_ORDER_TYPE type,
-                                            const double volume,
-                                            const double price,
-                                            const double sl=0,
-                                            const double tp=0,
-                                            const double price_stoplimit=0,
-                                            const ulong magic=ULONG_MAX,
-                                            const string comment=NULL,
-                                            const datetime expiration=0,
-                                            const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                            const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
-       //--- Remove an order
-        bool                       DeleteOrder(const ulong ticket);
-       //--- Modify an order
-        bool                       ModifyOrder(const ulong ticket,
-                                                const double price=WRONG_VALUE,
-                                                const double sl=WRONG_VALUE,
-                                                const double tp=WRONG_VALUE,
-                                                const double price_stoplimit=WRONG_VALUE,
-                                                const datetime expiration=WRONG_VALUE,
-                                                const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
-                                                const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+                                                const ulong deviation=ULONG_MAX);
+     //--- Close a position partially
+      bool                       ClosePositionPartially(const ulong ticket,
+                                                        const double volume,
+                                                        const string comment=NULL,
+                                                        const ulong deviation=ULONG_MAX);
+     //--- Close a position by an opposite one
+      bool                       ClosePositionBy(const ulong ticket,const ulong ticket_by);
+     //--- Modify a position
+      bool                       ModifyPosition(const ulong ticket,const double sl=WRONG_VALUE,const double tp=WRONG_VALUE);
+     //--- Place an order
+      bool                       SetOrder(const ENUM_ORDER_TYPE type,
+                                          const double volume,
+                                          const double price,
+                                          const double sl=0,
+                                          const double tp=0,
+                                          const double price_stoplimit=0,
+                                          const ulong magic=ULONG_MAX,
+                                          const string comment=NULL,
+                                          const datetime expiration=0,
+                                          const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                          const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
+     //--- Remove an order
+      bool                       DeleteOrder(const ulong ticket);
+     //--- Modify an order
+      bool                       ModifyOrder(const ulong ticket,
+                                              const double price=WRONG_VALUE,
+                                              const double sl=WRONG_VALUE,
+                                              const double tp=WRONG_VALUE,
+                                              const double price_stoplimit=WRONG_VALUE,
+                                              const datetime expiration=WRONG_VALUE,
+                                              const ENUM_ORDER_TYPE_TIME type_time=WRONG_VALUE,
+                                              const ENUM_ORDER_TYPE_FILLING type_filling=WRONG_VALUE);
     
     };
  #endif // CTRADEOBJ_MQH_DECLARATION

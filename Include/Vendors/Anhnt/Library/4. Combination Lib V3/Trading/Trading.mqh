@@ -2,6 +2,7 @@
 //|                                                      Trading.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
+//|Link https://www.mql5.com/en/articles/7229                        |
 //|Link https://www.mql5.com/en/articles/7326                        |
 //|Link https://www.mql5.com/en/articles/7258                        |
 //|Link https://www.mql5.com/en/articles/7394                        |
@@ -16,21 +17,21 @@
 //+------------------------------------------------------------------+
 //| Include files                                                    |
 //+------------------------------------------------------------------+
-#include <Arrays\ArrayInt.mqh>
-#include "..\Entities\Trading\TradeObj.mqh"
-#include "..\Entities\Trading\PendRequest\PendReqOpen.mqh"
-#include "..\Entities\Trading\PendRequest\PendReqSLTP.mqh"
-#include "..\Entities\Trading\PendRequest\PendReqClose.mqh"
-#include "..\Entities\Trading\PendRequest\PendReqPlace.mqh"
-#include "..\Entities\Trading\PendRequest\PendReqModify.mqh"
-#include "..\Entities\Trading\PendRequest\PendReqRemove.mqh"
-#include "..\Collections\AccountsCollection.mqh"
-#include "..\Collections\SymbolsCollection.mqh"
-#include "..\Collections\MarketCollection.mqh"
-#include "..\Collections\HistoryCollection.mqh"
-#include "..\Collections\TradeEventsCollection.mqh"
- #ifndef CTRADING_MQH_DECLARATION
- #define CTRADING_MQH_DECLARATION
+ #include <Arrays\ArrayInt.mqh>
+ #include "..\Entities\Trading\TradeObj.mqh"
+ #include "..\Entities\Trading\PendRequest\PendReqOpen.mqh"
+ #include "..\Entities\Trading\PendRequest\PendReqSLTP.mqh"
+ #include "..\Entities\Trading\PendRequest\PendReqClose.mqh"
+ #include "..\Entities\Trading\PendRequest\PendReqPlace.mqh"
+ #include "..\Entities\Trading\PendRequest\PendReqModify.mqh"
+ #include "..\Entities\Trading\PendRequest\PendReqRemove.mqh"
+ #include "..\Collections\AccountsCollection.mqh"
+ #include "..\Collections\SymbolsCollection.mqh"
+ #include "..\Collections\MarketCollection.mqh"
+ #include "..\Collections\HistoryCollection.mqh"
+ #include "..\Collections\TradeEventsCollection.mqh"
+#ifndef CTRADING_MQH_DECLARATION
+#define CTRADING_MQH_DECLARATION
  //+------------------------------------------------------------------+
  //| Trading class                                                    |
  //+------------------------------------------------------------------+
@@ -137,7 +138,7 @@
                                                   const CSymbol *symbol_obj,
                                                   const string source_method,
                                                   double sl=0,
-                                                double tp=0);
+                                                  double tp=0);
     //--- Check if the funds are sufficient
      bool                    CheckMoneyFree(const double volume,
                                           const double price,

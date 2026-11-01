@@ -151,7 +151,7 @@
    if(id==CHARTEVENT_CUSTOM+ON_CLICK_BUTTON && lparam==m_btn_save_pattern_config.ObjectID())
      {
       if(m_PatternManager!=NULL)
-         m_PatternManager.SaveToJSON();
+         m_PatternManager.SaveToDatabase();
       return;
      }
    //--- m_table_CandlePatternsSetting: cols 2,3,5,6 = checkboxes, dparam = the new state

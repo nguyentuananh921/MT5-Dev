@@ -15,10 +15,12 @@
     m_window_addIndicator.Hide();
     m_window_candle_infomation.Hide();
     m_window_tradeManage.Hide();
+    m_window_order_detail.Hide();
     this.AddChild(&m_window_main);
     this.AddChild(&m_window_addIndicator);
     this.AddChild(&m_window_candle_infomation);
     this.AddChild(&m_window_tradeManage);
+    this.AddChild(&m_window_order_detail);
    // Create Main Frame window implementation in GUIPannel_MainWindows.mqh
     if(!CreateWindow_Main("EXPERT PANEL Ver3",1,1))
      {
@@ -89,6 +91,12 @@
       ::Print(__FUNCTION__," > Failed to create the Trade Manage window!");
       return(false);
      }
+    // Create the Order detail window (hidden): the Detail button of a row of its tables opens it
+    if(!CreateWindow_OrderDetail("Order Detail",60,60))
+     {
+      ::Print(__FUNCTION__," > Failed to create the Order Detail window!");
+      return(false);
+     }
     // Create the Candle information popup (hidden): the EA opens it
     if(!CreateWindow_CandleInfo())
       {
@@ -117,12 +125,11 @@
                                 m_TrendlineSetting(NULL),
                                 m_SupportResistanceSetting(NULL),
                                 m_IndicatorsCollection(NULL),
-                                m_TradingSetupManager(NULL),
-                                m_TradingEngine(NULL),
+                                m_RiskManagementManager(NULL),
+                                m_TradingControl(NULL),
                                 m_story_conditions(NULL),
                                 m_story_movements(NULL),
                                 m_story_setting(NULL),
-                                m_position_reload_at(0),
                                 m_candle_info_shown_bar(0),
                                 m_candle_info_by_marker(false)
   {
@@ -158,6 +165,7 @@
       m_graph_elements.RegisterElement(::GetPointer(m_window_main));
       m_graph_elements.RegisterElement(::GetPointer(m_window_addIndicator));
       m_graph_elements.RegisterElement(::GetPointer(m_window_tradeManage));
+      m_graph_elements.RegisterElement(::GetPointer(m_window_order_detail));
       m_graph_elements.RegisterElement(::GetPointer(m_window_candle_infomation));   // the last one: on top
      }
    return(true);
@@ -188,7 +196,23 @@
   {
    if(!m_first_start)
       this.UpdateStatusBar_Balance();
-   m_position_reload_at=::GetTickCount64()+1500;   // the positions file is written by Python a moment later: OnTimerEvent reads it then
+  }
+ //+------------------------------------------------------------------+
+ //| A deal was done: its Bid and Ask go to the file at once, then    |
+ //| the tables of the Trade Manage window show it                    |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::OnTradeTransaction(const MqlTradeTransaction &trans)
+  {
+   if(trans.type!=TRADE_TRANSACTION_DEAL_ADD)
+      return;
+   CTradeDatabase database;
+   if(!database.SaveDeal(trans.deal))
+      ::Print(__FUNCTION__," > ",database.Error());   // Python reads the deal from the history later
+   if(m_first_start || !m_window_tradeManage.IsVisible())
+      return;
+   this.FillTable_Position();
+   this.FillTable_TradeHistory();
+   ::ChartRedraw(this.m_chart_id);
   }
  //+------------------------------------------------------------------+
  //| Deinit                                                           |

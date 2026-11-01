@@ -56,12 +56,11 @@
    ENUM_MARKET_STATE row_state[];
    ENUM_MARKET_PHASE row_phase_value[];
    int count=0;
-   for(int i=0;i<m_SymbolTFManager.Total();i++)
+   ENUM_TIMEFRAMES symbol_tfs[];
+   int symbol_tf_total=m_SymbolTFManager.TimeframesOf(symbol,symbol_tfs);
+   for(int i=0;i<symbol_tf_total;i++)
      {
-      CSymbolTFSetting *setting=m_SymbolTFManager.At(i);
-      if(setting==NULL || setting.Symbol()!=symbol)
-         continue;
-      ENUM_TIMEFRAMES tf=setting.TFEnum();
+      ENUM_TIMEFRAMES tf=symbol_tfs[i];
       ::ArrayResize(row_tf,count+1);
       ::ArrayResize(row_state,count+1);
       ::ArrayResize(row_phase,count+1);

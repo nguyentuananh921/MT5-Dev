@@ -1,9 +1,6 @@
 {
 	"folders": [
 		{
-			"path": "../../../../Logs"
-		},
-		{
 			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib V3"
 		},
 		{
@@ -13,49 +10,19 @@
 			"path": "../../Example EA/4. Combination EA V2"
 		},
 		{
-			"path": "../../../Stanley Kimathi Kibaara/Market Structure Framework"
+			"path": "../../Example EA/4. Combination EA V3 Old"
 		},
 		{
-			"path": "../../../Francis Nyoike Thumbi"
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib"
 		},
 		{
-			"path": "../../../Hlomohang John Borotho/Swing Extremes and Pullbacks"
+			"path": "../../../../Include/Vendors/Anhnt/Library/4. Combination Lib V4"
 		},
 		{
-			"path": "../../../Christian Benjamin/Price Action Analysis Toolkit Development/Swing"
+			"path": "../../Example EA/4. Combination EA V4"
 		},
 		{
 			"path": "../../Example EA/4. Combination EA V3"
-		},
-		{
-			"path": "../../Example EA/4. Combination EA V3 Old"
 		}
-	],
-	"settings": {
-		"clangd.fallbackFlags": [
-			"-xc++",
-			"-std=c++17",
-			"-D__MQL__",
-			"-D__MQL5__",
-			"-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.63-universal/files/mql_clangd_compat.h",
-			"-fms-extensions",
-			"-fms-compatibility",
-			"-ferror-limit=0",
-			"-Wno-invalid-token-paste",
-			"-Wno-unused-value",
-			"-Wno-unknown-pragmas",
-			"-Wno-writable-strings",
-			"-Xclang",
-			"-Wno-invalid-pp-directive",
-			"-Wno-unknown-directives",
-			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example/4. Combination EA/Include"
-		],
-		"files.associations": {
-			"*.mqh": "cpp",
-			"*.mq4": "cpp",
-			"*.mq5": "cpp"
-		}
-	}
+	]
 }

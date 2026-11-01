@@ -13,11 +13,11 @@
    const int caption_w = SL_FORM_CAPTION_WIDTH;
    const int field_w   = SL_FORM_FIELD_WIDTH;
    const int in_row0_y = M_CONTROL_HEIGHT;                                  // below the frame caption cut into the top border
-   const int in_row1_y = in_row0_y + M_CONTROL_YDISTANCE;
-   const int in_row2_y = in_row0_y + 2*M_CONTROL_YDISTANCE;
+   const int in_row1_y = in_row0_y + M_CONTROL_HEIGHT;
+   const int in_row2_y = in_row0_y + 2*M_CONTROL_HEIGHT;
    const int frame_w   = SL_FORM_FRAME_WIDTH;
    const int frame_h   = in_row2_y + M_CONTROL_HEIGHT + pad;
-   const int frame_y   = y_gap + M_CONTROL_YDISTANCE + M_CONTROL_BORDER_GAP;
+   const int frame_y   = y_gap + M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP;
    m_label_StopLost_MinPts.SetText("Min Stop Lot - 0");
    m_tabs_riskManagement.AddToElementsArray(TAB_RISK_MANAGEMENT_STOP_LOST, m_label_StopLost_MinPts);
    if(!m_label_StopLost_MinPts.Create(this.m_chart_id, M_SUBWINDOW_MAIN, "LabelSLMinPts", x_gap, y_gap, frame_w, M_CONTROL_HEIGHT)) return false;
@@ -60,7 +60,7 @@
    m_tabs_riskManagement.AddToElementsArray(TAB_RISK_MANAGEMENT_STOP_LOST, m_btn_save_StopLost_Setting);
    if(!m_btn_save_StopLost_Setting.Create(this.m_chart_id, M_SUBWINDOW_MAIN, "BtnSaveStopLost", x_gap, fixed_y + frame_h + M_CONTROL_BORDER_GAP, 80, M_CONTROL_HEIGHT)) return false;
    //--- What is saved: the setting is the same for every Symbol, so it is set once, here
-   CTradingSetupSetting *setting = (m_TradingSetupManager != NULL) ? m_TradingSetupManager.Setting() : NULL;
+   CRiskManagementSetting *setting = (m_RiskManagementManager != NULL) ? m_RiskManagementManager.Setting() : NULL;
    //--- Which mode the Stop Loss uses: the switch of each frame, one of them is ON
    bool indicator_mode = (setting != NULL && setting.StopLostMode() == SL_MODE_INDICATOR);
    if(!CreateSwitch(m_btn_stoplost_switch[0], indicator_mode, m_frame_stoplost_setting_indicatormode, "SwitchSLIndicator", frame_w - M_SECTION_TOGGLE_WIDTH - pad, 0)) return false;
@@ -162,12 +162,12 @@
    double mult = ::StringToDouble(m_edit_ATR_Multiplexer.GetValue());
    ENUM_TIMEFRAMES tf;
    int             period;
-   if(m_TradingEngine != NULL && GetSelectedATRChoice(tf, period))
+   if(m_TradingControl != NULL && GetSelectedATRChoice(tf, period))
     {
      MqlParam raw_params[1];
      raw_params[0].type          = TYPE_INT;
      raw_params[0].integer_value = period;
-     int pts = m_TradingEngine.GetIndicator_StopLostDistance_Points(symbol, tf, IND_ATR, raw_params, mult);
+     int pts = m_TradingControl.GetIndicator_StopLostDistance_Points(symbol, tf, IND_ATR, raw_params, mult);
      if(pts >= 0) ind_text = ::StringFormat("%d P", pts);
     }
    bool changed = false;
@@ -212,8 +212,8 @@
    if(id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED || id == CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE ||
       id == CHARTEVENT_CUSTOM + SYMBOLTF_MANAGER_EVENT_TIMEFRAMES_CHANGED)
      {
-      if(m_first_start || m_TradingSetupManager == NULL) return;
-      CTradingSetupSetting *setting = m_TradingSetupManager.Setting();
+      if(m_first_start || m_RiskManagementManager == NULL) return;
+      CRiskManagementSetting *setting = m_RiskManagementManager.Setting();
       int atr_period = 14;
       MqlParam sl_ind_p[];
       setting.GetStopLostIndParams(sl_ind_p);
@@ -226,8 +226,8 @@
    if(id == CHARTEVENT_CUSTOM + ON_CLICK_BUTTON && lparam == m_btn_save_StopLost_Setting.ObjectID())
      {
       string symbol = ::Symbol();
-      if(m_TradingSetupManager == NULL) return;
-      CTradingSetupSetting *row_setting = m_TradingSetupManager.Setting();
+      if(m_RiskManagementManager == NULL) return;
+      CRiskManagementSetting *row_setting = m_RiskManagementManager.Setting();
       row_setting.StopLostFixedMultiplier(::StringToDouble(m_edit_StopLost_FixedPoint.GetValue()));
       row_setting.StopLostIndMultiplier(::StringToDouble(m_edit_ATR_Multiplexer.GetValue()));
       row_setting.StopLostMode(m_btn_stoplost_switch[0].State() ? SL_MODE_INDICATOR : SL_MODE_FIXED);   // the frame that is ON
@@ -243,15 +243,12 @@
         row_setting.SetStopLostIndParams(sl_ind_p);
         //--- Python calculates the tracked pairs only: the pair of the choice joins them (the events keep the panel and Python in step)
         if(m_SymbolTFManager != NULL && !m_SymbolTFManager.Exists(symbol, tf))
-         {
-          m_SymbolTFManager.Add_SymbolTFSetting(symbol, tf);
-          m_SymbolTFManager.SaveToJSON();
-         }
+           m_SymbolTFManager.Add_SymbolTFSetting(symbol, tf);
         if(m_IndicatorsCollection != NULL && m_IndicatorsCollection.GetIndicator(IND_ATR, sl_ind_p, symbol, tf) == NULL)
            m_IndicatorsCollection.CreateIndicator(IND_ATR, sl_ind_p, symbol, tf);
        }
-      m_TradingSetupManager.NotifySettingChanged();
-      m_TradingSetupManager.SaveToJSON();
+      m_RiskManagementManager.NotifySettingChanged();
+      m_RiskManagementManager.SaveToJSON();
       UpdateStopLostPreview(symbol);
       ::ChartRedraw(this.m_chart_id);
       return;

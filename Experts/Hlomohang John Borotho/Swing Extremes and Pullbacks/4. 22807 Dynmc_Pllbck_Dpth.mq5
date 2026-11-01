@@ -286,7 +286,6 @@ void OnTick()
 
       UpdateAvgCandleSize();
       UpdateATRValues();            // refresh ATR + regime
-
       DetectSwingCandidates();
       ValidateSwings();
       AnalyzePullbackDepth();       // NEW LAYER 2.5

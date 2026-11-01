@@ -24,12 +24,13 @@
      CSupplyDemandSetting      *m_SupplyDemandSetting;
      CTrendlineSetting         *m_TrendlineSetting;
      CSupportResistanceSetting *m_SupportResistanceSetting;
+     CMarketConditionSetting   *m_MarketConditionSetting;
      bool                       m_loaded_from_json;
      string                     Text(const bool on) const { return (on ? "true" : "false"); }
      bool                       LoadFromJSON(const string full_path);
    public:
      void                       OnInitEvent(CSwingSetting *swing,CStructureSetting *structure,CFvgSetting *fvg,CMomentumCandleSetting *momentum,
-                                            CSupplyDemandSetting *supply_demand,CTrendlineSetting *trendline,CSupportResistanceSetting *support_resistance);
+                                            CSupplyDemandSetting *supply_demand,CTrendlineSetting *trendline,CSupportResistanceSetting *support_resistance,CMarketConditionSetting *market_condition);
      void                       BuildJsonSection(string &out_json) const;
    //--- Writes the "Smart_Money_Setting" key of Config_Setting.json, the other keys stay as they are
      bool                       SaveToJSON(void);
@@ -39,11 +40,11 @@
 #ifndef CSMARTMONEYSETTINGMANAGER_MQH_IMPLEMENTATION
 #define CSMARTMONEYSETTINGMANAGER_MQH_IMPLEMENTATION
  CSmartMoneySettingManager::CSmartMoneySettingManager(void) : m_SwingSetting(NULL),m_StructureSetting(NULL),m_FvgSetting(NULL),m_MomentumCandleSetting(NULL),
-                                                              m_SupplyDemandSetting(NULL),m_TrendlineSetting(NULL),m_SupportResistanceSetting(NULL),m_loaded_from_json(false)
+                                                              m_SupplyDemandSetting(NULL),m_TrendlineSetting(NULL),m_SupportResistanceSetting(NULL),m_MarketConditionSetting(NULL),m_loaded_from_json(false)
   {
   }
  void CSmartMoneySettingManager::OnInitEvent(CSwingSetting *swing,CStructureSetting *structure,CFvgSetting *fvg,CMomentumCandleSetting *momentum,
-                                             CSupplyDemandSetting *supply_demand,CTrendlineSetting *trendline,CSupportResistanceSetting *support_resistance)
+                                             CSupplyDemandSetting *supply_demand,CTrendlineSetting *trendline,CSupportResistanceSetting *support_resistance,CMarketConditionSetting *market_condition)
   {
    this.m_SwingSetting=swing;
    this.m_StructureSetting=structure;
@@ -52,6 +53,7 @@
    this.m_SupplyDemandSetting=supply_demand;
    this.m_TrendlineSetting=trendline;
    this.m_SupportResistanceSetting=support_resistance;
+   this.m_MarketConditionSetting=market_condition;
    if(this.m_loaded_from_json)
       return;   // a chart-change re-init: the settings keep what the tab changed
    this.LoadFromJSON(this.GetFolderName()+CONFIG_SETTING_FILE);
@@ -74,6 +76,7 @@
    out_json+="  \"trendline\": {\"show_support\":"+this.Text(this.m_TrendlineSetting.ShowSupport())+",\"show_resistance\":"+this.Text(this.m_TrendlineSetting.ShowResistance())+",\"show_dead\":"+this.Text(this.m_TrendlineSetting.ShowDead())+
              ",\"max_dead\":"+(string)this.m_TrendlineSetting.MaxDead()+",\"nearest\":"+(string)this.m_TrendlineSetting.Nearest()+",\"confirm_atr\":"+::DoubleToString(this.m_TrendlineSetting.ConfirmATR(),4)+",\"confirm_closes\":"+(string)this.m_TrendlineSetting.ConfirmCloses()+
              ",\"min_move_atr\":"+::DoubleToString(this.m_TrendlineSetting.MinMoveATR(),4)+",\"min_swing_atr\":"+::DoubleToString(this.m_TrendlineSetting.MinSwingATR(),4)+",\"swings_tried\":"+(string)this.m_TrendlineSetting.SwingsTried()+"},\n";
+   out_json+="  \"movement\": {\"show_moves\":"+this.Text(this.m_MarketConditionSetting.ShowMoves())+",\"show_unclassified\":"+this.Text(this.m_MarketConditionSetting.ShowUnclassified())+"},\n";
    out_json+="  \"support_resistance\": {\"show_support\":"+this.Text(this.m_SupportResistanceSetting.ShowSupport())+",\"show_resistance\":"+this.Text(this.m_SupportResistanceSetting.ShowResistance())+",\"show_dead\":"+this.Text(this.m_SupportResistanceSetting.ShowDead())+
              ",\"max_dead\":"+(string)this.m_SupportResistanceSetting.MaxDead()+",\"open_support\":"+(string)this.m_SupportResistanceSetting.OpenNewestSupport()+",\"open_resistance\":"+(string)this.m_SupportResistanceSetting.OpenNewestResistance()+",\"min_score\":"+(string)this.m_SupportResistanceSetting.MinScore()+",\"confirm_closes\":"+(string)this.m_SupportResistanceSetting.ConfirmCloses()+
              ",\"ghost_bars\":"+(string)this.m_SupportResistanceSetting.GhostBars()+",\"revive\":"+this.Text(this.m_SupportResistanceSetting.Revive())+",\"max_age_bars\":"+(string)this.m_SupportResistanceSetting.MaxAgeBars()+
@@ -138,6 +141,9 @@
    if(::JSONConfig_DoubleValue(group,"min_move_atr",value)) this.m_TrendlineSetting.MinMoveATR(value);
    if(::JSONConfig_DoubleValue(group,"min_swing_atr",value)) this.m_TrendlineSetting.MinSwingATR(value);
    if(::JSONConfig_IntValue(group,"swings_tried",count))  this.m_TrendlineSetting.SwingsTried(count);
+   group=::JSONConfig_ExtractRawSection(section,"movement");
+   if(::JSONConfig_BoolValue(group,"show_moves",flag))   this.m_MarketConditionSetting.ShowMoves(flag);
+   if(::JSONConfig_BoolValue(group,"show_unclassified",flag)) this.m_MarketConditionSetting.ShowUnclassified(flag);
    group=::JSONConfig_ExtractRawSection(section,"support_resistance");
    if(::JSONConfig_BoolValue(group,"show_support",flag))  this.m_SupportResistanceSetting.ShowSupport(flag);
    if(::JSONConfig_BoolValue(group,"show_resistance",flag)) this.m_SupportResistanceSetting.ShowResistance(flag);

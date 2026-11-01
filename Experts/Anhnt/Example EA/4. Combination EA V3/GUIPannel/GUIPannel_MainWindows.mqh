@@ -95,19 +95,10 @@
    const string symbol=::Symbol();
    const ENUM_TIMEFRAMES chart_tf=(ENUM_TIMEFRAMES)::Period();
    ENUM_TIMEFRAMES tfs[];
-   int tf_count=0;
+   int tf_count=(m_SymbolTFManager!=NULL) ? m_SymbolTFManager.TimeframesOf(symbol,tfs) : 0;
    bool chart_listed=false;
-   int total=(m_SymbolTFManager!=NULL) ? m_SymbolTFManager.Total() : 0;
-   for(int i=0;i<total;i++)
-     {
-      CSymbolTFSetting *row=m_SymbolTFManager.At(i);
-      if(row==NULL || row.Symbol()!=symbol)
-         continue;
-      ::ArrayResize(tfs,tf_count+1);
-      tfs[tf_count++]=row.TFEnum();
-      if(row.TFEnum()==chart_tf)
-         chart_listed=true;
-     }
+   for(int i=0;i<tf_count;i++)
+      chart_listed|=(tfs[i]==chart_tf);
    if(!chart_listed)
      {
       ::ArrayResize(tfs,tf_count+1);

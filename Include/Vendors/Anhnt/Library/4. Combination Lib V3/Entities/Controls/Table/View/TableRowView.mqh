@@ -33,6 +33,8 @@ class CTableRowView : public CGBaseObj
      bool              HasTextAlign(const int column) const;   // true when this row says its own for the column
     void              DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
                                  const color back,const color text,const color grid,const bool selected);
+    void              DrawCellOnly(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
+                                   const color back,const color text,const color grid,const bool selected);
     void              DrawRow(CCanvas &canvas,CTableHeaderView &header,const int y,const int h,const int right,
                               const color back,const color text,const color grid,const bool selected);
                      CTableRowView(void) : m_row(NULL) {}
@@ -125,19 +127,27 @@ ENUM_ALIGN_MODE CTableRowView::ColumnTextAlign(const int column) const
    return(this.HasTextAlign(column) ? this.m_text_align[column] : ALIGN_LEFT);
  }
 //+------------------------------------------------------------------+
-//| One cell, clipped at right, skipped when scrolled out at left    |
+//| One cell, clipped at right, skipped when scrolled out at left;   |
+//| a scrolled cell stops where the fixed columns at right start     |
 //+------------------------------------------------------------------+
-void CTableRowView::DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
-                               const color back,const color text,const color grid,const bool selected)
+void CTableRowView::DrawCellOnly(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
+                                 const color back,const color text,const color grid,const bool selected)
  {
   CTableCellView *view=this.CellView(column);
   if(view==NULL || column>=header.ColumnsTotal() || !header.ColumnShown(column))
      return;
   int x=header.ColumnX(column);
-  if(x>right || x+header.ColumnWidth(column)<=1)
+  int limit=right;
+  int left_end,right_start;
+  if(header.FixedLayout(left_end,right_start) && header.ColumnRegion(column)==0)
+    {
+     limit=::MathMin(right,right_start-1);
+     if(x+header.ColumnWidth(column)<=left_end)
+        return;
+    }
+  if(x>limit || x+header.ColumnWidth(column)<=1)
      return;
-  int w=::MathMin(header.ColumnWidth(column),right-x+2);
-  //view.DrawCell(canvas,x,y,w,h,back,text,header.ColumnTextAlign(column),header.ColumnTextXOffset(column),header.ColumnImageXOffset(column),selected);
+  int w=::MathMin(header.ColumnWidth(column),limit-x+2);
   view.DrawCell(canvas,
               x,
               y,
@@ -151,21 +161,43 @@ void CTableRowView::DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const in
               selected);
  }
 //+------------------------------------------------------------------+
-//| Every cell, then the row's grid                                  |
+//| One cell; a scrolled cell that reaches under the fixed columns   |
+//| at left is followed by those cells, drawn over it                |
+//+------------------------------------------------------------------+
+void CTableRowView::DrawCellAt(CCanvas &canvas,CTableHeaderView &header,const int column,const int y,const int h,const int right,
+                               const color back,const color text,const color grid,const bool selected)
+ {
+  this.DrawCellOnly(canvas,header,column,y,h,right,back,text,grid,selected);
+  int left_end,right_start;
+  if(!header.FixedLayout(left_end,right_start) || header.ColumnRegion(column)!=0 || header.ColumnX(column)>=left_end)
+     return;
+  for(int c=0; c<this.CellsTotal(); c++)
+     if(header.ColumnRegion(c)==1)
+        this.DrawCellOnly(canvas,header,c,y,h,right,back,text,grid,selected);
+  canvas.Line(left_end-1,y,left_end-1,y+h-1,::ColorToARGB(grid,255));
+ }
+//+------------------------------------------------------------------+
+//| Every cell, then the row's grid: the scrolled cells first, the   |
+//| fixed ones over them                                             |
 //+------------------------------------------------------------------+
 void CTableRowView::DrawRow(CCanvas &canvas,CTableHeaderView &header,const int y,const int h,const int right,
                             const color back,const color text,const color grid,const bool selected)
  {
   uint grid_color=::ColorToARGB(grid,255);
-  for(int i=0; i<this.CellsTotal(); i++)
-    {
-     if(!header.ColumnShown(i))
-        continue;
-     this.DrawCellAt(canvas,header,i,y,h,right,back,text,grid,selected);
-     int x2=header.ColumnX(i)+header.ColumnWidth(i)-1;
-     if(x2>=1 && x2<=right)
-        canvas.Line(x2,y,x2,y+h-1,grid_color);
-    }
+  int left_end,right_start;
+  bool fixed=header.FixedLayout(left_end,right_start);
+  for(int pass=0; pass<(fixed ? 2 : 1); pass++)
+     for(int i=0; i<this.CellsTotal(); i++)
+       {
+        if(!header.ColumnShown(i))
+           continue;
+        if(fixed && (header.ColumnRegion(i)!=0)!=(pass==1))
+           continue;
+        this.DrawCellOnly(canvas,header,i,y,h,right,back,text,grid,selected);
+        int x2=header.ColumnX(i)+header.ColumnWidth(i)-1;
+        if(x2>=1 && x2<=right)
+           canvas.Line(x2,y,x2,y+h-1,grid_color);
+       }
   canvas.Line(1,y+h-1,right,y+h-1,grid_color);
  }
 #endif // CTABLEROWVIEW_MQH_IMPLEMENTATION

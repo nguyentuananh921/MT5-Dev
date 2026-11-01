@@ -134,9 +134,8 @@ class CTradeEvent : public CObject
       double            PriceEventAsk(void)                                const { return this.GetProperty(EVENT_PROP_PRICE_EVENT_ASK);                        }
       double            PriceEventBid(void)                                const { return this.GetProperty(EVENT_PROP_PRICE_EVENT_BID);                        }
 
-     //--- Return the (1) symbol and (2) opposite position symbol
+     //--- Return the symbol
       string            Symbol(void)                                       const { return this.GetProperty(EVENT_PROP_SYMBOL);                                 }
-      string            SymbolCloseBy(void)                                const { return this.GetProperty(EVENT_PROP_SYMBOL_BY_ID);                           }
       
      //+------------------------------------------------------------------+
      //| Descriptions of the order object properties                      |
@@ -510,11 +509,7 @@ class CTradeEvent : public CObject
   //+------------------------------------------------------------------+
   string CTradeEvent::GetPropertyDescription(ENUM_EVENT_PROP_STRING property)
    {
-      return
-      (
-      property==EVENT_PROP_SYMBOL ? CMessage::Text(MSG_LIB_PROP_SYMBOL)+": \""+this.GetProperty(property)+"\"" :
-      CMessage::Text(MSG_EVN_SYMBOL_BY_POS)+": \""+this.GetProperty(property)+"\""
-      );
+      return CMessage::Text(MSG_LIB_PROP_SYMBOL)+": \""+this.GetProperty(property)+"\"";
    }
   //+------------------------------------------------------------------+
   //| Return the event status name                                     |

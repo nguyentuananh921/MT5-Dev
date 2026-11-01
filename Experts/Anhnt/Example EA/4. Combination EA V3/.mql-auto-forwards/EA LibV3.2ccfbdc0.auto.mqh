@@ -7,7 +7,7 @@
 include void ApplyLifecycleView(void);
 #line 25 "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V3/EA LibV3.mq5"
 void RedrawSmartMoney(void);
-#line 137 "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V3/EA LibV3.mq5"
+#line 142 "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V3/EA LibV3.mq5"
 void OpenCandleInfo(const int id, const long &lparam, const double &dparam, const string &sparam);
 
 #endif

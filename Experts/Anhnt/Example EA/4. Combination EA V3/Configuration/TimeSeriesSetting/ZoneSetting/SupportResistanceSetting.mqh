@@ -61,9 +61,9 @@
      void              VolumeMABars(const int bars)              { m_volume_bars=(bars<1 ? 1 : bars); }
    //--- What Python calculates, as a JSON object
      string            Json(void) const;
-                       CSupportResistanceSetting(void) : m_show_support(InpSupportResistanceShowSupport),m_show_resistance(InpSupportResistanceShowResistance),m_show_dead(InpSupportResistanceShowDead),m_max_dead(InpSupportResistanceMaxDead),
-                                                         m_open_newest_support(InpSupportResistanceOpenNewestSupport),m_open_newest_resistance(InpSupportResistanceOpenNewestResistance),
-                                                         m_min_score(InpSupportResistanceMinScore),m_confirm_closes(InpSupportResistanceConfirmCloses),m_ghost_bars(InpSupportResistanceGhostBars),m_revive(InpSupportResistanceRevive),m_max_age_bars(InpSupportResistanceMaxAgeBars),m_volume_bars(InpSupportResistanceVolumeMABars) {}
+                       CSupportResistanceSetting(void) : m_show_support(false),m_show_resistance(false),m_show_dead(false),m_max_dead(20),
+                                                         m_open_newest_support(3),m_open_newest_resistance(3),
+                                                         m_min_score(50),m_confirm_closes(2),m_ghost_bars(10),m_revive(true),m_max_age_bars(500),m_volume_bars(14) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CSUPPORTRESISTANCESETTING_MQH_DECLARATION
 #ifndef CSUPPORTRESISTANCESETTING_MQH_IMPLEMENTATION

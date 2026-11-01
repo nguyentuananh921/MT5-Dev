@@ -20,6 +20,7 @@
  #define PYTHON_WINDOW_SHOW         (1)
  #define PYTHON_PRETRADE_MONITOR_INTERVAL_MS (250)    // the indicator states are asked for at most this often
  #define PYTHON_PRETRADE_MONITOR_TIMEOUT_MS  (3000)   // an unanswered ask is dropped after this long
+ #define PYTHON_CANDLE_TIMEOUT_MS            (3000)   // the same for the ask of the candle window
  enum ENUM_PYTHON_STATE
   {
    PYTHON_STATE_DISCONNECTED,
@@ -67,6 +68,11 @@
      bool                      m_pre_trade_monitor_busy;               // an ask for the indicator states is on its way
      ulong                     m_pre_trade_monitor_ms;                 // when it was sent
      bool                      m_watch_done;
+     bool                      m_candle_mode;                          // the lines of the answer for one candle are arriving: they are kept like the others, not drawn or announced
+     bool                      m_candle_done;                          // that answer is complete
+     datetime                  m_candle_time;                          // the candle it was asked for
+     ulong                     m_candle_ms;                            // when it was asked
+     int                       m_candle_waiting;                       // asked and not answered yet: the answer is complete when none is left
      void                      Log(const string method,const string text) const;
      bool                      Send(const string text);
      string                    BuildInit(void);
@@ -115,6 +121,12 @@
    //--- Where the lifecycle events go (the collection keeps them, the sync draws them)
      void                      SetLifecycle(CLifecycleCollection *collection,CLifecycleSync *sync) { this.m_LifecycleCollection=collection; this.m_LifecycleSync=sync; }
      void                      SetSymbolsCollection(CSymbolsCollection *collection) { this.m_SymbolsCollection=collection; }
+   //--- A new bar was seen on these TFs of a symbol (by the time engine of the EA): Python calculates those pairs and sends the new lines
+     bool                      SendNewBar(const string symbol,const ENUM_TIMEFRAMES &tfs[]);
+   //--- Ask Python for every line that falls on the candle that starts at bar_time, on every TF the EA shows; false when it cannot be asked now
+     bool                      RequestCandleInfo(const datetime bar_time);
+   //--- true once, when the answer to the last RequestCandleInfo is complete; bar_time = the candle it was for
+     bool                      CandleInfoDone(datetime &bar_time);
    //--- true when the answer of the last watch is complete: the markers are drawn from it, once, by Poll
      bool                      WatchDone(void)                  const { return this.m_watch_done;     }
                                CPythonBridge(void);
@@ -134,6 +146,11 @@ CPythonBridge::CPythonBridge(void) : m_symbol_tf_manager(NULL),
                                      m_indicator_state_changed(false),
                                      m_pre_trade_monitor_busy(false),
                                      m_pre_trade_monitor_ms(0),
+                                     m_candle_mode(false),
+                                     m_candle_done(false),
+                                     m_candle_time(0),
+                                     m_candle_ms(0),
+                                     m_candle_waiting(0),
                                      m_IndicatorTemplateManager(NULL),
                                      m_PatternManager(NULL),
                                      m_SmartMoneySync(NULL),
@@ -197,12 +214,13 @@ string CPythonBridge::BuildInit(void)
    //--- The pairs the EA shows (its CSymbolTFManager) and the chart's own: Python has them loaded before it answers
    string pairs="";
    bool chart_listed=false;
-   for(int i=0;i<this.m_symbol_tf_manager.Total();i++)
+   string pair_symbols[];
+   ENUM_TIMEFRAMES pair_tfs[];
+   int pair_total=this.m_symbol_tf_manager.Pairs(pair_symbols,pair_tfs);
+   for(int i=0;i<pair_total;i++)
      {
-      CSymbolTFSetting *row=this.m_symbol_tf_manager.At(i);
-      if(row==NULL) continue;
-      pairs+=(pairs=="" ? "" : ",")+"[\""+row.Symbol()+"\",\""+row.TFText()+"\"]";
-      chart_listed|=(row.Symbol()==::Symbol() && row.TFEnum()==(ENUM_TIMEFRAMES)::Period());
+      pairs+=(pairs=="" ? "" : ",")+"[\""+pair_symbols[i]+"\",\""+TimeframeDescription(pair_tfs[i])+"\"]";
+      chart_listed|=(pair_symbols[i]==::Symbol() && pair_tfs[i]==(ENUM_TIMEFRAMES)::Period());
      }
    if(!chart_listed)
       pairs+=(pairs=="" ? "" : ",")+"[\""+::Symbol()+"\",\""+TimeframeDescription((ENUM_TIMEFRAMES)::Period())+"\"]";
@@ -258,14 +276,19 @@ void CPythonBridge::SendWatch(void)
       this.m_LifecycleSync.DeleteAll();
    this.m_SmartMoneySync.DeleteMarkers();
    this.m_watch_done=false;
+   this.m_candle_mode=false;
+   this.m_candle_done=false;
+   this.m_candle_waiting=0;
    string tf_text=TimeframeDescription((ENUM_TIMEFRAMES)::Period());
    //--- The TFs of this symbol the EA shows (its CSymbolTFManager): the candle window lists them, Python sends no other
    string tfs="\""+tf_text+"\"";
-   for(int i=0;i<this.m_symbol_tf_manager.Total();i++)
+   ENUM_TIMEFRAMES own_tfs[];
+   int own_total=this.m_symbol_tf_manager.TimeframesOf(::Symbol(),own_tfs);
+   for(int i=0;i<own_total;i++)
      {
-      CSymbolTFSetting *row=this.m_symbol_tf_manager.At(i);
-      if(row!=NULL && row.Symbol()==::Symbol() && ::StringFind(tfs,"\""+row.TFText()+"\"")<0)
-         tfs+=",\""+row.TFText()+"\"";
+      string own_text=TimeframeDescription(own_tfs[i]);
+      if(::StringFind(tfs,"\""+own_text+"\"")<0)
+         tfs+=",\""+own_text+"\"";
      }
    //--- Everything is asked for the bars that are drawn only (SMC_DRAW_BARS), 0 when the chart holds fewer bars
    string drawn_from=(string)(long)::iTime(::Symbol(),::Period(),SMC_DRAW_BARS-1);
@@ -276,6 +299,46 @@ void CPythonBridge::SendWatch(void)
    else
       this.Log("SendWatch","send failed, error "+(string)::GetLastError());
   }
+bool CPythonBridge::SendNewBar(const string symbol,const ENUM_TIMEFRAMES &tfs[])
+  {
+   if(this.m_state!=PYTHON_STATE_READY)
+      return false;
+   string list="";
+   for(int i=0;i<::ArraySize(tfs);i++)
+      list+=(list=="" ? "" : ",")+"\""+TimeframeDescription(tfs[i])+"\"";
+   if(this.Send("{\"cmd\":\"new_bar\",\"symbol\":\""+symbol+"\",\"tfs\":["+list+"]}\n"))
+      return true;
+   this.Log("SendNewBar","send failed, error "+(string)::GetLastError());
+   return false;
+  }
+//+------------------------------------------------------------------+
+bool CPythonBridge::RequestCandleInfo(const datetime bar_time)
+  {
+   if(this.m_state!=PYTHON_STATE_READY || !this.m_watch_done)
+      return false;   // the first answer is still arriving: the lines of this one would be taken for part of it
+   this.m_candle_time=bar_time;
+   this.m_candle_done=false;
+   string text="{\"cmd\":\"candle_info\",\"symbol\":\""+::Symbol()+"\",\"time\":"+(string)(long)bar_time+",\"seconds\":"+(string)::PeriodSeconds()+"}\n";
+   if(!this.Send(text))
+     {
+      this.Log("RequestCandleInfo","send failed, error "+(string)::GetLastError());
+      return false;
+     }
+   this.m_candle_waiting++;
+   this.m_candle_mode=true;
+   this.m_candle_ms=::GetTickCount64();
+   return true;
+  }
+//+------------------------------------------------------------------+
+bool CPythonBridge::CandleInfoDone(datetime &bar_time)
+  {
+   if(!this.m_candle_done)
+      return false;
+   this.m_candle_done=false;
+   bar_time=this.m_candle_time;
+   return true;
+  }
+//+------------------------------------------------------------------+
 void CPythonBridge::SendPreTradeSymbolMonitor(void)
   {
    if(this.m_IndicatorsCollection==NULL)
@@ -364,6 +427,8 @@ void CPythonBridge::StoreSwing(const string line)
       return;
      }
    this.m_swings.InsertSort(swing);
+   if(this.m_candle_mode)
+      return;   // asked for by the candle window: kept, not news
    this.Log("StoreSwing","new "+part[5]+" "+part[7]+" at "+::TimeToString(swing.Time())+" price "+part[6]);
    this.m_SmartMoneySync.Add(swing);
   }
@@ -394,6 +459,8 @@ void CPythonBridge::StoreStructure(const string line)
       return;
      }
    this.m_structures.InsertSort(ms);
+   if(this.m_candle_mode)
+      return;
    this.Log("StoreStructure","new "+part[5]+" "+part[6]+" at "+::TimeToString(ms.Time())+" level "+part[7]);
    this.m_SmartMoneySync.Add(ms);
   }
@@ -424,7 +491,8 @@ void CPythonBridge::StoreLifecycle(const string line)
                                                  (part[12]=="USER" ? LIFECYCLE_SOURCE_USER : LIFECYCLE_SOURCE_AUTO),
                                                  this.LifecycleReasonByText(part[13]));
    //--- the first burst after a watch is history, not news: it is kept without announcing it, and drawn once when it ends
-   if(this.m_LifecycleCollection.Add(record,this.m_watch_done) && this.m_watch_done)
+   bool news=(this.m_watch_done && !this.m_candle_mode);   // what the candle window asked for is kept, not announced
+   if(this.m_LifecycleCollection.Add(record,news) && news)
       this.Log("StoreLifecycle","new "+part[6]+" "+part[3]+" "+part[7]+" at "+::TimeToString((datetime)::StringToInteger(part[5])));
   }
 //+------------------------------------------------------------------+
@@ -462,6 +530,8 @@ void CPythonBridge::StoreCondition(const string line)
       return;
      }
    this.m_conditions.InsertSort(condition);
+   if(this.m_candle_mode)
+      return;
    this.Log("StoreCondition","new "+part[4]+" / "+part[5]+" at "+::TimeToString(condition.Time())+" on "+part[2]);
    ::EventChartCustom(::ChartID(),(ushort)MARKET_STORY_EVENT_CHANGED,0,0.0,"");   // the Market Story table follows
   }
@@ -504,6 +574,8 @@ void CPythonBridge::StoreMovement(const string line)
       return;
      }
    this.m_movements.InsertSort(leg);
+   if(this.m_candle_mode)
+      return;
    this.Log("StoreMovement","new "+part[9]+" "+part[8]+" leg ending at "+::TimeToString(leg.EndTime())+" on "+part[2]);
    this.m_SmartMoneySync.Add(leg);
    ::EventChartCustom(::ChartID(),(ushort)MARKET_STORY_EVENT_CHANGED,0,0.0,"");
@@ -556,6 +628,8 @@ void CPythonBridge::StoreSignal(const string line,CArrayObj &list,const int sour
       return;
      }
    list.InsertSort(signal);
+   if(this.m_candle_mode)
+      return;
    this.Log("StoreSignal","new "+part[5]+" "+part[4]+" at "+::TimeToString(signal.Time()));
    this.m_SmartMoneySync.Add(signal,source);
   }
@@ -645,7 +719,10 @@ void CPythonBridge::Poll(void)
      }
    if(this.m_state!=PYTHON_STATE_READY)
       return;
+   if(this.m_candle_mode && now-this.m_candle_ms>PYTHON_CANDLE_TIMEOUT_MS)
      {
+      this.m_candle_mode=false;   // dropped: the lines after this are news again
+      this.m_candle_waiting=0;
      }
    ulong p0=::GetMicrosecondCount();   //Print Debug
    uint n=::SocketIsReadable(this.m_socket);
@@ -746,6 +823,18 @@ void CPythonBridge::Poll(void)
            {
             this.m_indicator_state_changed=false;
             ::EventChartCustom(::ChartID(),(ushort)INDICATOR_STATE_EVENT_CHANGED,0,0.0,"");   // the tables that show the indicators follow
+           }
+         continue;
+        }
+      if(::StringFind(line,"\"event\": \"candle_info\"")>=0)
+        {
+         if(this.m_candle_waiting>0)
+            this.m_candle_waiting--;
+         if(this.m_candle_waiting==0)
+           {
+            this.m_candle_mode=false;
+            this.m_candle_done=true;   // the answer of the last ask is complete (an older one may have ended just before)
+            this.Log("Poll","MY DEBUG candle info answered "+(string)(::GetTickCount64()-this.m_candle_ms)+" ms after the ask");   //Print Debug
            }
          continue;
         }

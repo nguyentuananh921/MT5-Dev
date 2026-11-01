@@ -17,7 +17,7 @@
   #ifndef CACCOUNTSCOLLECTION_MQH_DECLARATION
   #define CACCOUNTSCOLLECTION_MQH_DECLARATION
   //+------------------------------------------------------------------+
-  //| Account collection                                               |
+  //| Account collection inherit from CBaseObjExt not CBaseObj                                                |
   //+------------------------------------------------------------------+
   class CAccountsCollection : public CBaseObjExt
    {

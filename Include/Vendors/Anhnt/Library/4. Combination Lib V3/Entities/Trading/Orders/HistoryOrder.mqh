@@ -58,6 +58,8 @@
   //+------------------------------------------------------------------+
   bool CHistoryOrder::SupportProperty(ENUM_ORDER_PROP_DOUBLE property)
    {
+    if(property==ORDER_PROP_BID || property==ORDER_PROP_ASK)   // only a deal has them
+       return false;
      if(
       #ifdef __MQL5__
       property==ORDER_PROP_PROFIT                  || 

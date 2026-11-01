@@ -74,8 +74,9 @@ enum ENUM_ORDER_PROP_INTEGER
    ORDER_PROP_GROUP_ID2,                                    // Second order/position group ID
    ORDER_PROP_PEND_REQ_ID,                                  // Pending request ID
    ORDER_PROP_DIRECTION,                                    // Direction (Buy, Sell)
+   ORDER_PROP_SYMBOL_ID,                                    // ID of OUR symbol (table symbols), 0 = not joined to one of ours yet
   }; 
-#define ORDER_PROP_INTEGER_TOTAL    (26)                    // Total number of integer properties
+#define ORDER_PROP_INTEGER_TOTAL    (27)                    // Total number of integer properties
 #define ORDER_PROP_INTEGER_SKIP     (0)                     // Number of order properties not used in sorting
 //+------------------------------------------------------------------+
 //| Order, deal, position real properties                            |
@@ -94,8 +95,10 @@ enum ENUM_ORDER_PROP_DOUBLE
    ORDER_PROP_VOLUME_CURRENT,                               // Unexecuted volume
    ORDER_PROP_PROFIT_FULL,                                  // Profit+commission+swap
    ORDER_PROP_PRICE_STOP_LIMIT,                             // Limit order price when StopLimit order is activated
+   ORDER_PROP_BID,                                          // Bid of the tick at the open time of a deal (what the exchange quoted when it was done)
+   ORDER_PROP_ASK,                                          // Ask of the tick at the open time of a deal; the spread is (Ask-Bid)/point, not kept
   };
-#define ORDER_PROP_DOUBLE_TOTAL     (12)                    // Total number of real properties
+#define ORDER_PROP_DOUBLE_TOTAL     (14)                    // Total number of real properties
 //+------------------------------------------------------------------+
 //| Order, deal, position string properties                          |
 //+------------------------------------------------------------------+
@@ -141,6 +144,7 @@ enum ENUM_SORT_ORDERS_MODE
     SORT_BY_ORDER_GROUP_ID2,                                 // Sort by the second order/position group ID
     SORT_BY_ORDER_PEND_REQ_ID,                               // Sort by a pending request ID
     SORT_BY_ORDER_DIRECTION,                                 // Sort by direction (Buy, Sell)
+    SORT_BY_ORDER_SYMBOL_ID,                                 // Sort by the ID of our symbol
     //--- Sort by real properties
     SORT_BY_ORDER_PRICE_OPEN = FIRST_ORD_DBL_PROP,           // Sort by open price
     SORT_BY_ORDER_PRICE_CLOSE,                               // Sort by close price
@@ -154,6 +158,8 @@ enum ENUM_SORT_ORDERS_MODE
     SORT_BY_ORDER_VOLUME_CURRENT,                            // Sort by unexecuted volume
     SORT_BY_ORDER_PROFIT_FULL,                               // Sort by profit+commission+swap
     SORT_BY_ORDER_PRICE_STOP_LIMIT,                          // Sort by Limit order when StopLimit order is activated
+    SORT_BY_ORDER_BID,                                       // Sort by the Bid of a deal
+    SORT_BY_ORDER_ASK,                                       // Sort by the Ask of a deal
     //--- Sort by string properties
     SORT_BY_ORDER_SYMBOL = FIRST_ORD_STR_PROP,               // Sort by symbol
     SORT_BY_ORDER_COMMENT,                                   // Sort by comment
@@ -284,10 +290,9 @@ enum ENUM_EVENT_PROP_DOUBLE
 //+------------------------------------------------------------------+
 enum ENUM_EVENT_PROP_STRING
   {
-   EVENT_PROP_SYMBOL = (EVENT_PROP_INTEGER_TOTAL+EVENT_PROP_DOUBLE_TOTAL), // Order symbol
-   EVENT_PROP_SYMBOL_BY_ID                                  // Opposite position symbol
+   EVENT_PROP_SYMBOL = (EVENT_PROP_INTEGER_TOTAL+EVENT_PROP_DOUBLE_TOTAL) // Order symbol
   };
-#define EVENT_PROP_STRING_TOTAL     (2)                     // Total number of event's string properties
+#define EVENT_PROP_STRING_TOTAL     (1)                     // Total number of event's string properties
 //+------------------------------------------------------------------+
 //| Possible event sorting criteria                                  |
 //+------------------------------------------------------------------+
@@ -323,8 +328,7 @@ enum ENUM_SORT_EVENTS_MODE
     SORT_BY_EVENT_VOLUME_POSITION_EXECUTED,                  // Sort by the current executed position volume after a deal
     SORT_BY_EVENT_PROFIT,   // Sort by profit
    //--- Sort by string properties
-    SORT_BY_EVENT_SYMBOL = FIRST_EVN_STR_PROP,               // Sort by order/position/deal symbol
-    SORT_BY_EVENT_SYMBOL_BY_ID                               // Sort by an opposite position symbol
+    SORT_BY_EVENT_SYMBOL = FIRST_EVN_STR_PROP                // Sort by order/position/deal symbol
   };
 //+------------------------------------------------------------------+
 //| Data for working with accounts                                   |

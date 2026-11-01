@@ -381,7 +381,6 @@
         event.SetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED,0);                     // Executed position volume
         event.SetProperty(EVENT_PROP_PROFIT,0);                                       // Profit
         event.SetProperty(EVENT_PROP_SYMBOL,order.Symbol());                          // Order symbol
-        event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order.Symbol());                    // Opposite position symbol
        //--- Decode the event code and set the event type
         event.SetTypeEvent();
        //--- Add the event object if it is not in the list
@@ -456,7 +455,6 @@
            event.SetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED,0);                                 // Executed position volume
            event.SetProperty(EVENT_PROP_PROFIT,order.Profit());                                      // Profit
            event.SetProperty(EVENT_PROP_SYMBOL,order.Symbol());                                      // Order symbol
-           event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order.Symbol());                                // Opposite position symbol
           //--- Decode the event code and set the event type
            event.SetTypeEvent();
           //--- Add the event object if it is not in the list
@@ -525,7 +523,6 @@
            event.SetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED,0);                                 // Executed position volume
            event.SetProperty(EVENT_PROP_PROFIT,order.Profit());                                      // Profit
            event.SetProperty(EVENT_PROP_SYMBOL,order.Symbol());                                      // Order symbol
-           event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order.Symbol());                                // Opposite position symbol
           //--- Decode the event code and set the event type
            event.SetTypeEvent();
           //--- Add the event object if it is not in the list
@@ -601,7 +598,6 @@
             event.SetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED,order.Volume());                    // Executed position volume
             event.SetProperty(EVENT_PROP_PROFIT,order.Profit());                                      // Profit
             event.SetProperty(EVENT_PROP_SYMBOL,order.Symbol());                                      // Order symbol
-            event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order.Symbol());                                // Opposite position symbol
             //--- Decode the event code and set the event type
             event.SetTypeEvent();
             //--- Add the event object if it is not in the list
@@ -660,7 +656,6 @@
           double close_by_volume=order.Volume();
           ulong  close_by_ticket=order.Ticket();
           long   close_by_magic=order.Magic();
-          string close_by_symbol=order.Symbol();
           //--- If the list of historical orders features an order with a closed position ID, the position is closed by an opposite one
           if(order_close_by!=NULL)
             {
@@ -668,7 +663,6 @@
             close_by_type=(ENUM_ORDER_TYPE)order_close_by.TypeOrder();
             close_by_ticket=order_close_by.Ticket();
             close_by_magic=order_close_by.Magic();
-            close_by_symbol=order_close_by.Symbol();
             close_by_volume=order_close_by.Volume();
             //--- set the "close by" reason
             reason=EVENT_REASON_DONE_BY_POS;
@@ -736,7 +730,6 @@
             event.SetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED,order.Volume());                    // Executed position volume
             event.SetProperty(EVENT_PROP_PROFIT,order.Profit());                                      // Profit
             event.SetProperty(EVENT_PROP_SYMBOL,order.Symbol());                                      // Order symbol
-            event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,close_by_symbol);                               // Opposite position symbol
             //--- Decode the event code and set the event type
             event.SetTypeEvent();
             //--- Add the event object if it is not in the list
@@ -809,7 +802,6 @@
               event.SetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED,order.Volume());        // Executed position volume
               event.SetProperty(EVENT_PROP_PROFIT,order.Profit());                          // Profit
               event.SetProperty(EVENT_PROP_SYMBOL,order.Symbol());                          // Order symbol
-              event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order.Symbol());                    // Opposite position symbol
               //--- Decode the event code and set the event type
                event.SetTypeEvent();
               //--- Add the event object if it is not in the list
@@ -903,7 +895,6 @@
                event.SetProperty(EVENT_PROP_TICKET_ORD_POS_BEFORE,order_first.Ticket());           // Position order ticket before changing direction
                event.SetProperty(EVENT_PROP_TYPE_ORD_POS_CURRENT,order_first.TypeOrder());         // Current position order type
                event.SetProperty(EVENT_PROP_TICKET_ORD_POS_CURRENT,order_first.Ticket());          // Current position order ticket
-               event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,deal.Symbol());                           // Opposite position symbol
               //---
                event.SetProperty(EVENT_PROP_PRICE_OPEN_BEFORE,order_first.PriceOpen());            // Order price before modification
                event.SetProperty(EVENT_PROP_PRICE_SL_BEFORE,order_first.StopLoss());               // StopLoss price before modification
@@ -1008,7 +999,6 @@
                    event.SetProperty(EVENT_PROP_TICKET_ORD_POS_BEFORE,order_first.Ticket());           // Position order ticket before changing direction
                    event.SetProperty(EVENT_PROP_TYPE_ORD_POS_CURRENT,order_first.TypeOrder());         // Current position order type
                    event.SetProperty(EVENT_PROP_TICKET_ORD_POS_CURRENT,order_first.Ticket());          // Current position order ticket
-                   event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order_last.Symbol());                     // Opposite position symbol
                  //---
                    event.SetProperty(EVENT_PROP_PRICE_OPEN_BEFORE,order_first.PriceOpen());            // Order price before modification
                    event.SetProperty(EVENT_PROP_PRICE_SL_BEFORE,order_first.StopLoss());               // StopLoss price before modification
@@ -1117,7 +1107,6 @@
                   event.SetProperty(EVENT_PROP_TICKET_ORD_POS_BEFORE,order_first.Ticket());           // Position order ticket before changing direction
                   event.SetProperty(EVENT_PROP_TYPE_ORD_POS_CURRENT,order_first.TypeOrder());         // Current position order type
                   event.SetProperty(EVENT_PROP_TICKET_ORD_POS_CURRENT,order_first.Ticket());          // Current position order ticket
-                  event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,order_close_by.Symbol());                 // Opposite position symbol
                   //---
                   event.SetProperty(EVENT_PROP_PRICE_OPEN_BEFORE,order_first.PriceOpen());            // Order price before modification
                   event.SetProperty(EVENT_PROP_PRICE_SL_BEFORE,order_first.StopLoss());               // StopLoss price before modification
@@ -1265,7 +1254,6 @@
             event.SetProperty(EVENT_PROP_PRICE_EVENT,deal.PriceOpen());                      // Event price (position open price)
             event.SetProperty(EVENT_PROP_PROFIT,deal.ProfitFull());                          // Profit
             event.SetProperty(EVENT_PROP_SYMBOL,deal.Symbol());                              // Order symbol
-            event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,deal.Symbol());                        // Opposite position symbol
             event.SetProperty(EVENT_PROP_POSITION_ID,deal.PositionID());                     // Position ID
 
             //--- Event order parameters
@@ -1351,7 +1339,6 @@
             event.SetProperty(EVENT_PROP_PRICE_EVENT,deal.PriceOpen());                      // Event price (position open price)
             event.SetProperty(EVENT_PROP_PROFIT,deal.ProfitFull());                          // Profit
             event.SetProperty(EVENT_PROP_SYMBOL,deal.Symbol());                              // Order symbol
-            event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,deal.Symbol());                        // Opposite position symbol
             event.SetProperty(EVENT_PROP_POSITION_ID,deal.PositionID());                     // Position ID
 
             //--- Event order parameters
@@ -1445,7 +1432,6 @@
             event.SetProperty(EVENT_PROP_PRICE_EVENT,deal.PriceOpen());                      // Event price (position open price)
             event.SetProperty(EVENT_PROP_PROFIT,deal.ProfitFull());                          // Profit
             event.SetProperty(EVENT_PROP_SYMBOL,deal.Symbol());                              // Order symbol
-            event.SetProperty(EVENT_PROP_SYMBOL_BY_ID,deal.Symbol());                        // Opposite position symbol
             event.SetProperty(EVENT_PROP_POSITION_ID,deal.PositionID());                     // Position ID
 
             //--- Event order parameters

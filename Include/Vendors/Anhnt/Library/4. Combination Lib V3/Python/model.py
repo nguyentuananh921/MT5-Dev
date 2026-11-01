@@ -471,8 +471,13 @@ class Model:
         return found
 
     def adopt(self, key, kept):
-        """Take what the disk kept for a pair; the lifecycle and the market condition are calculated from it."""
-        bars = kept["bars"]
+        """Take what the disk kept for a pair; the lifecycle and the market condition are calculated from it. The bars come from the terminal,
+        up to the last bar the file was made on (the ones after it are calculated by update_pair): raises when that bar is not the same."""
+        last_time, last_close = kept["bars_last"]
+        fetched = fetch_closed_bars(key[0], key[1], self.count)
+        bars = fetched[fetched["time"] <= last_time].reset_index(drop=True)
+        if bars.empty or int(bars["time"].iloc[-1]) != last_time or float(bars["close"].iloc[-1]) != last_close:
+            raise ValueError("the bars of the terminal are not the ones the file was made on")
         bars.attrs["point"] = kept["point"]
         self.bars[key], self.swings[key], self.signals[key] = bars, kept["swings"], kept["signals"]
         self.patterns[key], self.monitor[key] = kept["patterns"], kept["monitor"]
@@ -510,7 +515,8 @@ class Model:
 
     def write_cache(self, key):
         try:
-            cache.write(key, self.fingerprint, {"bars": self.bars[key], "swings": self.swings[key],
+            bars = self.bars[key]   # not kept: the file remembers the last bar it was made on (adopt reads the bars from the terminal)
+            cache.write(key, self.fingerprint, {"bars_last": (int(bars["time"].iloc[-1]), float(bars["close"].iloc[-1])), "swings": self.swings[key],
                                                 "structures": self.structures[key].drop(columns=["phase", "strong_time", "strong_price"], errors="ignore"),
                                                 "signals": self.signals[key], "patterns": self.patterns[key], "monitor": self.monitor[key],
                                                 "point": self.bars[key].attrs.get("point"),

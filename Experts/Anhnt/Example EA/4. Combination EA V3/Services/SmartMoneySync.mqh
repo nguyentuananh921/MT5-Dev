@@ -20,12 +20,12 @@
      CGraphElementsCollection  *m_GraphElementsCollection;   // EA owns
      CSwingSetting             *m_SwingSetting;              // EA owns - which Swings are drawn
      CStructureSetting         *m_StructureSetting;          // EA owns - which BOS / CHoCH are drawn
-     CMomentumCandleSetting          *m_MomentumCandleSetting;           // EA owns - the colours of the momentum candle markers
+     CMomentumCandleSetting    *m_MomentumCandleSetting;     // EA owns - the colours of the momentum candle markers
      CMarketConditionSetting   *m_MarketConditionSetting;    // EA owns - what is drawn of the legs and their colours
      CArrayObj                 *m_movements;                 // EA owns - CMovementSeries received from Python
      CIndicatorTemplateManager *m_IndicatorTemplateManager;  // EA owns - the Buy / Sell flag of every indicator
      CPatternManager           *m_PatternManager;            // EA owns - the Buy / Sell flag of every candle pattern
-     CArrayObj                 *m_swings;                   // EA owns - CBarSwingSeries received from Python
+     CArrayObj                 *m_swings;                    // EA owns - CBarSwingSeries received from Python
      CArrayObj                 *m_structures;                // EA owns - CMarketStructureSeries received from Python
      CArrayObj                 *m_signals;                   // EA owns - CIndicatorSignalSeries received from Python
      CArrayObj                 *m_patterns;                  // EA owns - candle patterns received from Python

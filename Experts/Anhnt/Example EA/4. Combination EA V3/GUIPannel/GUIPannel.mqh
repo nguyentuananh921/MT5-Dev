@@ -28,11 +28,11 @@
       CTrendlineSetting                  *m_TrendlineSetting;
       CSupportResistanceSetting          *m_SupportResistanceSetting;
       CIndicatorsCollection              *m_IndicatorsCollection;             // the indicators with the state Python reports: the ATR value, the indicators to trail by
-      CTradingSetupSettingManager        *m_TradingSetupManager;              // the Stop Loss and Trailing of each Symbol
+      CRiskManagementSettingManager        *m_RiskManagementManager;              // the Stop Loss and Trailing of each Symbol
       CArrayObj                          *m_story_conditions;                 // Python's State / Phase changes: the Market Phase table
       CArrayObj                          *m_story_movements;                  // its legs between two Swings
       CMarketConditionSetting            *m_story_setting;                    // the colours of the Phases
-      CTradingEngine                     *m_TradingEngine;                    // the distances the Stop Loss tab shows
+      CTradingControl                    *m_TradingControl;                    // the distances the Stop Loss tab shows
       CIndicatorTemplateManager          *m_IndicatorTemplateManager;         // the indicator templates of the Quick Setting tab
      // For Layer 2 GUI Control Elements implementation in GUIPannel_MainWindows.mqh
       CWindow                             m_window_main;
@@ -41,101 +41,29 @@
       CComboBox                           m_combobox_SymbolTF;                 // a child of the caption bar of m_window_main: the Symbols of the CSymbolsCollection
       CButtonsGroup                       m_btngroup_tf_switch;                // a child of m_window_main above the tabs: the TFs of the chart Symbol
      // Main Tabs
-      CTabs                               m_tabs_main;    
+      CTabs                               m_tabs_main; 
+     //Trade tab    
+      CButton                             m_btn_tradeManage;                   // in the Trading tab: opens m_window_tradeManage
      //Tab Monitor
       CTabs                               m_tabs_monitor;                      // a child of the Trading tab: Indicator, Market Phase
         CTable                            m_table_indicator_PreTradeSymbolMonitor;   // in TAB_MONITOR_INDICATOR
         CTable                            m_table_market_story;                      // in TAB_MONITOR_MARKET_PHASE
      // Quick Setting tab of m_tabs_main (GUIPannel_TabQuickSetting.mqh)
       CTabs                               m_tabs_quickSetting;
-      //Candle Tab
-        CTable                            m_table_CandlePatternsSetting;
-        CButton                           m_btn_save_pattern_config;
-        CCheckBox                         m_check_pattern_show;                // the badges of the candle patterns: InpPatternShow at the start
       //Indicator tab
         CTable                            m_table_indicator_template;
         CButton                           m_btn_save_indicator;
         CButton                           m_btn_add_indicator;                 // in the tab: opens m_window_addIndicator
-        CCheckBox                         m_check_indicator_show;              // the badges of the indicator templates: InpPatternShow at the start
-     // Add Indicator window (GUIPannel_TabQuickSetting_AddIndicator.mqh): the tree of the types and the form of the parameters
-      CWindow                             m_window_addIndicator;
-     // Trade Manage window (GUIPannel_TabTrading_TradeManage.mqh): the positions of the account
-      CWindow                             m_window_tradeManage;
-      CTable                              m_table_position;
-      CButton                             m_btn_position_columns;
-      CButton                             m_btn_tradeManage;                   // in the Trading tab: opens m_window_tradeManage
-      ulong                               m_position_reload_at;                // when the table is asked again after a trade event, 0 = not asked
-     // Candle information popup (GUIPannel_CandleInfo_Windows.mqh)
-      CWindow                             m_window_candle_infomation;
-      CTable                              m_table_candle_information_atBar;
-      datetime                            m_candle_info_shown_bar;             // 0 = popup hidden
-      bool                                m_candle_info_by_marker;             // opened by a CCandleMarker: stays while the cursor is on it
-        CTreeView                         m_treeview_indicator;
-        long                              m_type_node_id[];                    // CTreeView item id of each indicator type leaf
-        ENUM_INDICATOR                    m_type_node_value[];                 // ENUM_INDICATOR of that leaf
-        CFrame                            m_frame_indicator_parameter;         // the form
-        CTextEdit                         m_param_edits[INDICATOR_PARAM_SLOTS_MAX];   // plain numeric params, caption = param name
-        CComboBox                         m_param_combo[INDICATOR_PARAM_SLOTS_MAX];   // enum-like params (Method, Applied Price...)
-        CButton                           m_btn_add_indicator_form;            // in the form: gives the manager the new template
-        ENUM_INDICATOR                    m_current_param_type;                // type the form shows, IND_CUSTOM = none
+        CCheckBox                         m_check_indicator_show;              // the badges of the indicator templates: off at the start
       //Symbol TF tab
-        CTreeView                         m_treeview_SymbolTF;
-        CTable                            m_table_SymbolTFSeting;        
-        CButton                           m_btn_save_SymbolTF;
+       CTreeView                         m_treeview_SymbolTF;
+       CTable                            m_table_SymbolTFSeting;        
+      //Candle Tab
+        CTable                            m_table_CandlePatternsSetting;
+        CButton                           m_btn_save_pattern_config;
+        CCheckBox                         m_check_pattern_show;                // the badges of the candle patterns: off at the start
       //Risk Management Tab
-        CTabs                             m_tabs_riskManagement;               //A child of the Quick Setting tab of m_tabs_main: it shows and hides with it
-       //Smart Money tab of m_tabs_quickSetting (GUIPannel_TabQuickSetting_SmartMoney.mqh): the sections one under the other
-        CButton                           m_btn_save_smartmoney;               // the settings are applied and saved when it is clicked, not on every change
-        CScrollV                          m_scroll_smart_money;                // the sections are taller than the tab: the scroll moves them
-        CButtonTriggered                  m_btn_section_header[SMART_MONEY_SECTION_TOTAL];   // the arrow and the name: opens and closes the body below
-        CButtonTriggered                  m_btn_section_toggle[SMART_MONEY_SECTION_TOTAL];    // ON: every Show of the section is on, OFF: every one is off
-        CGElement                        *m_section_body[SMART_MONEY_SECTION_TOTAL*SMART_MONEY_BODY_MAX];   // the controls of each body
-        int                               m_section_body_x[SMART_MONEY_SECTION_TOTAL*SMART_MONEY_BODY_MAX];   // their x in the body, and the row
-        int                               m_section_body_row[SMART_MONEY_SECTION_TOTAL*SMART_MONEY_BODY_MAX];
-        int                               m_section_body_total[SMART_MONEY_SECTION_TOTAL];
-        int                               m_section_rows[SMART_MONEY_SECTION_TOTAL];                          // the rows of each body
-        CTextEdit                         m_edit_swing_strength;               // candles on each side of a Swing
-        CCheckBox                         m_check_swing_wick;                  // found on the wicks
-        CCheckBox                         m_check_swing_high;                  // the Swing Highs are drawn
-        CCheckBox                         m_check_swing_low;                   // the Swing Lows are drawn
-        CCheckBox                         m_check_structure_bos;
-        CCheckBox                         m_check_structure_choch;
-        CCheckBox                         m_check_fvg_bullish;
-        CCheckBox                         m_check_fvg_bearish;
-        CCheckBox                         m_check_fvg_dead;                    // the filled gaps are drawn
-        CTextEdit                         m_edit_fvg_maxdead;                  // how many filled gaps are kept
-        CTextEdit                         m_edit_fvg_open_bullish;             // the newest bullish gaps shown from the start
-        CTextEdit                         m_edit_fvg_open_bearish;             // the newest bearish gaps shown from the start
-        CTextEdit                         m_edit_momentum_bars;                // candles before the momentum candle
-        CTextEdit                         m_edit_momentum_multiplier;          // its body against the biggest body before it
-        CCheckBox                         m_check_sd_demand;
-        CCheckBox                         m_check_sd_supply;
-        CCheckBox                         m_check_sd_dead;                     // the filled zones are drawn
-        CTextEdit                         m_edit_sd_maxdead;                   // how many filled zones are kept
-        CTextEdit                         m_edit_sd_open_demand;               // the newest demand zones shown from the start
-        CTextEdit                         m_edit_sd_open_supply;               // the newest supply zones shown from the start
-        CCheckBox                         m_check_tl_support;
-        CCheckBox                         m_check_tl_resistance;
-        CCheckBox                         m_check_tl_dead;                     // the dead lines are drawn
-        CTextEdit                         m_edit_tl_maxdead;                   // how many dead lines are kept
-        CTextEdit                         m_edit_tl_nearest;                   // the living lines drawn solid per side
-        CTextEdit                         m_edit_tl_confirm_atr;               // what Python calculates for the trendlines
-        CTextEdit                         m_edit_tl_confirm_closes;
-        CTextEdit                         m_edit_tl_min_move;
-        CTextEdit                         m_edit_tl_min_swing;
-        CTextEdit                         m_edit_tl_swings_tried;
-        CCheckBox                         m_check_sr_support;
-        CCheckBox                         m_check_sr_resistance;
-        CCheckBox                         m_check_sr_dead;                     // the dead zones are drawn
-        CTextEdit                         m_edit_sr_maxdead;                   // how many dead zones are kept
-        CTextEdit                         m_edit_sr_open_support;              // the newest support zones shown from the start
-        CTextEdit                         m_edit_sr_open_resistance;           // the newest resistance zones shown from the start
-        CTextEdit                         m_edit_sr_min_score;                 // what Python calculates for the zones
-        CTextEdit                         m_edit_sr_confirm_closes;
-        CTextEdit                         m_edit_sr_ghost_bars;
-        CTextEdit                         m_edit_sr_max_age;
-        CTextEdit                         m_edit_sr_volume_ma;
-        CCheckBox                         m_check_sr_revive;                   // a broken zone may come back
+       CTabs                             m_tabs_riskManagement;               //A child of the Quick Setting tab of m_tabs_main: it shows and hides with it
        //Stop Loss tab of m_tabs_riskManagement (GUIPannel_TabQuickSetting_RiskManagement_StopLost.mqh)
         CFrame                            m_frame_stoplost_setting_fixedmode;
         CFrame                            m_frame_stoplost_setting_indicatormode;
@@ -149,8 +77,8 @@
         CButtonTriggered                  m_btn_stoplost_switch[2];            // in the frames: which mode the Stop Loss uses, [0] Indicator, [1] Fixed; one of them is ON
        //Setup tab of m_tabs_riskManagement (GUIPannel_TabQuickSetting_RiskManagement_Setup.mqh): the risk of a new trade and the Risk Reward Ratio
         CButtonTriggered                  m_btn_setup_header[SETUP_SECTION_TOTAL];   // the arrow and the name: opens and closes the body below
-        CButtonTriggered                  m_btn_setup_toggle[SETUP_SECTION_TOTAL];   // ON: the risk of a new trade is used (InpUseRiskPerNewTrade at the start) / the take profit is put by the ratio
-        CTextEdit                         m_edit_risk_percent;                 // InpRiskPerNewTrade at the start
+        CButtonTriggered                  m_btn_setup_toggle[SETUP_SECTION_TOTAL];   // ON: the risk of a new trade is used (off at the start) / the take profit is put by the ratio
+        CTextEdit                         m_edit_risk_percent;                 // 5 % at the start
         CComboBox                         m_combobox_rrr;                      // 1 : 1 ... 1 : 6
         CButton                           m_btn_save_RiskSetup;
        //Trailing tab of m_tabs_riskManagement (GUIPannel_TabQuickSetting_RiskManagement_Trailing.mqh)
@@ -161,6 +89,86 @@
         CTextEdit                         m_edit_Trailing_Step;                // minimum improvement in points before SL moves
         CTextEdit                         m_edit_Trailing_DataRatesIndex;      // EA-wide M1 bar shift of the Trailing-by-Value base price
         CButton                           m_btn_save_Trailing_Setting;
+      //Smart Money tab of m_tabs_quickSetting (GUIPannel_TabQuickSetting_SmartMoney.mqh): the sections one under the other
+       CButton                           m_btn_save_smartmoney;               // the settings are applied and saved when it is clicked, not on every change
+       CScrollV                          m_scroll_smart_money;                // the sections are taller than the tab: the scroll moves them
+       CButtonTriggered                  m_btn_section_header[SMART_MONEY_SECTION_TOTAL];   // the arrow and the name: opens and closes the body below
+       CButtonTriggered                  m_btn_section_toggle[SMART_MONEY_SECTION_TOTAL];    // ON: every Show of the section is on, OFF: every one is off
+       CGElement                        *m_section_body[SMART_MONEY_SECTION_TOTAL*SMART_MONEY_BODY_MAX];   // the controls of each body
+       int                               m_section_body_x[SMART_MONEY_SECTION_TOTAL*SMART_MONEY_BODY_MAX];   // their x in the body, and the row
+       int                               m_section_body_row[SMART_MONEY_SECTION_TOTAL*SMART_MONEY_BODY_MAX];
+       int                               m_section_body_total[SMART_MONEY_SECTION_TOTAL];
+       int                               m_section_rows[SMART_MONEY_SECTION_TOTAL];                          // the rows of each body
+       CTextEdit                         m_edit_swing_strength;               // candles on each side of a Swing
+       CCheckBox                         m_check_swing_wick;                  // found on the wicks
+       CCheckBox                         m_check_swing_high;                  // the Swing Highs are drawn
+       CCheckBox                         m_check_swing_low;                   // the Swing Lows are drawn
+       CCheckBox                         m_check_structure_bos;
+       CCheckBox                         m_check_structure_choch;
+       CCheckBox                         m_check_fvg_bullish;
+       CCheckBox                         m_check_fvg_bearish;
+       CCheckBox                         m_check_fvg_dead;                    // the filled gaps are drawn
+       CTextEdit                         m_edit_fvg_maxdead;                  // how many filled gaps are kept
+       CTextEdit                         m_edit_fvg_open_bullish;             // the newest bullish gaps shown from the start
+       CTextEdit                         m_edit_fvg_open_bearish;             // the newest bearish gaps shown from the start
+       CTextEdit                         m_edit_momentum_bars;                // candles before the momentum candle
+       CTextEdit                         m_edit_momentum_multiplier;          // its body against the biggest body before it
+       CCheckBox                         m_check_sd_demand;
+       CCheckBox                         m_check_sd_supply;
+       CCheckBox                         m_check_sd_dead;                     // the filled zones are drawn
+       CTextEdit                         m_edit_sd_maxdead;                   // how many filled zones are kept
+       CTextEdit                         m_edit_sd_open_demand;               // the newest demand zones shown from the start
+       CTextEdit                         m_edit_sd_open_supply;               // the newest supply zones shown from the start
+       CCheckBox                         m_check_tl_support;
+       CCheckBox                         m_check_tl_resistance;
+       CCheckBox                         m_check_tl_dead;                     // the dead lines are drawn
+       CTextEdit                         m_edit_tl_maxdead;                   // how many dead lines are kept
+       CTextEdit                         m_edit_tl_nearest;                   // the living lines drawn solid per side
+       CTextEdit                         m_edit_tl_confirm_atr;               // what Python calculates for the trendlines
+       CTextEdit                         m_edit_tl_confirm_closes;
+       CTextEdit                         m_edit_tl_min_move;
+       CTextEdit                         m_edit_tl_min_swing;
+       CTextEdit                         m_edit_tl_swings_tried;
+       CCheckBox                         m_check_sr_support;
+       CCheckBox                         m_check_sr_resistance;
+       CCheckBox                         m_check_sr_dead;                     // the dead zones are drawn
+       CTextEdit                         m_edit_sr_maxdead;                   // how many dead zones are kept
+       CTextEdit                         m_edit_sr_open_support;              // the newest support zones shown from the start
+       CTextEdit                         m_edit_sr_open_resistance;           // the newest resistance zones shown from the start
+       CTextEdit                         m_edit_sr_min_score;                 // what Python calculates for the zones
+       CTextEdit                         m_edit_sr_confirm_closes;
+       CTextEdit                         m_edit_sr_ghost_bars;
+       CTextEdit                         m_edit_sr_max_age;
+       CTextEdit                         m_edit_sr_volume_ma;
+       CCheckBox                         m_check_sr_revive;                   // a broken zone may come back
+       CCheckBox                         m_check_move_show;                   // the legs between the Swings are drawn
+       CCheckBox                         m_check_move_unclassified;           // the legs of a Market Range too
+     // Add Indicator window (GUIPannel_TabQuickSetting_AddIndicator.mqh): the tree of the types and the form of the parameters
+      CWindow                             m_window_addIndicator;
+      CTreeView                         m_treeview_indicator;
+      long                              m_type_node_id[];                    // CTreeView item id of each indicator type leaf
+      ENUM_INDICATOR                    m_type_node_value[];                 // ENUM_INDICATOR of that leaf
+      CFrame                            m_frame_indicator_parameter;         // the form
+      CTextEdit                         m_param_edits[INDICATOR_PARAM_SLOTS_MAX];   // plain numeric params, caption = param name
+      CComboBox                         m_param_combo[INDICATOR_PARAM_SLOTS_MAX];   // enum-like params (Method, Applied Price...)
+      CButton                           m_btn_add_indicator_form;            // in the form: gives the manager the new template
+      ENUM_INDICATOR                    m_current_param_type;                // type the form shows, IND_CUSTOM = none 
+     // Trade Manage window (GUIPannel_TabTrading_TradeManage.mqh): the positions of the account
+      CWindow                             m_window_tradeManage;
+      CTabs                               m_tabs_tradeManage;
+      CButtonTriggered                    m_btn_table_columns;    //To filter columns display in table: ON while the Columns window is open
+      CTable                              m_table_position;
+     //Trade history tab
+      CTable                              m_table_trade_history;   
+     // Order detail
+      CWindow                             m_window_order_detail;
+      CTable                              m_table_order_detail;
+     // Candle information popup (GUIPannel_CandleInfo_Windows.mqh)
+      CWindow                             m_window_candle_infomation;
+      CTable                              m_table_candle_information_atBar;
+      datetime                            m_candle_info_shown_bar;             // 0 = popup hidden
+      bool                                m_candle_info_by_marker;             // opened by a CCandleMarker: stays while the cursor is on it
+      
      //Private Method
      // For GUI implemented in GUIPannel_Lifecycle.mqh
       bool                                CreateGUIPannel(void);
@@ -171,9 +179,20 @@
      // The Trading tab (GUIPannel_TabTrading.mqh and its monitor and Trade Manage modules)
       bool                                CreateButton_TradeManage(const int x_gap,const int y_gap);
       bool                                CreateWindow_TradeManage(const string caption_text,const int x_gap,const int y_gap);
-      void                                SaveLayout_Position(void);
-      void                                LoadLayout_Position(void);
+      bool                                CreateTabs_TradeManage(void);
+      bool                                CreateTable_Trade(CTable &table,const string name,const int tab,const int columns,const string &captions[],const int &widths[],const int &numbers[],
+                                                            const int direction_column,const int &spread_columns[],const int detail_column);
+      void                                FormatTradeRows(CTable &table,const int rows,const int symbol_column,const int direction_column,const int profit_column,const int detail_column);
+      bool                                CreateWindow_OrderDetail(const string caption_text,const int x_gap,const int y_gap);
+      void                                OpenOrderDetail(const long position_id);
+      void                                FillTable_OrderDetail(const long position_id);
+      void                                SaveLayout_Table(CTable &table,const string file);
+      void                                LoadLayout_Table(CTable &table,const string file);
+      int                                 FillTable_Trade(CTable &table,const string sql,const int columns_expected,const int symbol_column,const int &spread_columns[],
+                                                          const int fee_column,const int volume_column,const int commission_column,const int swap_column);
       void                                FillTable_Position(void);
+      bool                                CreateTable_TradeHistory(void);
+      void                                FillTable_TradeHistory(void);
       void                                OnEvent_Window_TradeManage(const int id,const long &lparam,const double &dparam,const string &sparam);
       bool                                CreateTabs_Monitor(const int x_gap,const int y_gap);
       void                                OnEvent_Tab_Trading(const int id,const long &lparam,const double &dparam,const string &sparam);
@@ -269,7 +288,7 @@
       void                                OnDeinit(const int reason);
       void                                OnTickEvent(void);
       void                                OnTradeEvent(void);
-      void                                OnTimerEvent(void);
+      void                                OnTradeTransaction(const MqlTradeTransaction &trans);
       virtual void                        OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the Candle information popup: the EA decides when it opens, OnEvent_Window_CandleInfor closes it
       bool                                MouseOverAnyGUIWindow(const int px,const int py);
@@ -291,8 +310,8 @@
       void                                SetTrendlineSetting(CTrendlineSetting *setting)             { m_TrendlineSetting=setting; }
       void                                SetSupportResistanceSetting(CSupportResistanceSetting *setting) { m_SupportResistanceSetting=setting; }
       void                                SetIndicatorsCollection(CIndicatorsCollection *collection)  { m_IndicatorsCollection=collection; }
-      void                                SetTradingSetupManager(CTradingSetupSettingManager *manager) { m_TradingSetupManager=manager; }
-      void                                SetTradingEngine(CTradingEngine *engine)                    { m_TradingEngine=engine; }
+      void                                SetRiskManagementManager(CRiskManagementSettingManager *manager) { m_RiskManagementManager=manager; }
+      void                                SetTradingControl(CTradingControl *control)                 { m_TradingControl=control; }
       void                                SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_IndicatorTemplateManager=manager; }
       void                                SetMarketStory(CArrayObj *conditions,CArrayObj *movements,CMarketConditionSetting *setting)
                                                                                                    { m_story_conditions=conditions; m_story_movements=movements; m_story_setting=setting; }
@@ -312,7 +331,10 @@
    #include "GUIPannel_TabTrading.mqh"                      //The Trading tab: the monitor tabs
   #include "GUIPannel_TabTrading_MonitorIndicator.mqh"      //  its Indicator tab
   #include "GUIPannel_TabTrading_MonitorMarketPhase.mqh"    //  its Market Phase tab
-  #include "GUIPannel_TabTrading_TradeManage.mqh"           //  the Trade Manage button and its window
+  #include "GUIPannel_TabTrading_TradeManage.mqh"           //  the Trade Manage button
+  #include "GUIPannel_TradeManagerWindow.mqh"                  //  the Trade Manage window
+  #include "GUIPannel_TradeManagerWindow_History.mqh"    //    its History tab
+ #include "GUIPannel_Window_OrderDetail.mqh"                 //The Order detail window: what happened to an order, any table can open it
  #include "GUIPannel_CandleInfo_Windows.mqh"                  //Implementation of the Candle information popup
  #include "GUIPannel_TabQuickSetting_AddIndicator.mqh"    //The Add Indicator window the Indicator marker tab opens
 #endif // __GUIPANNEL_MQH__

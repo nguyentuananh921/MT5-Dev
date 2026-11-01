@@ -24,18 +24,18 @@ CTrade trade;
 //+------------------------------------------------------------------+
 //| Input Parameters                                                 |
 //+------------------------------------------------------------------+
-input ENUM_TIMEFRAMES HTF = PERIOD_H1;      // Higher Timeframe
-input ENUM_TIMEFRAMES LTF = PERIOD_M5;      // Lower Timeframe
-input int             SwingBars = 3;        // Bars for swing detection
-input double          RiskPercent = 1.0;    // Risk per trade (%)
-input int             Stop_Loss = 2000;     // StopLoss
-input bool            Visualize = true;     // Show swing points & structure
+ input ENUM_TIMEFRAMES HTF = PERIOD_H1;      // Higher Timeframe
+ input ENUM_TIMEFRAMES LTF = PERIOD_M5;      // Lower Timeframe
+ input int             SwingBars = 3;        // Bars for swing detection
+ input double          RiskPercent = 1.0;    // Risk per trade (%)
+ input int             Stop_Loss = 2000;     // StopLoss
+ input bool            Visualize = true;     // Show swing points & structure
 
 //+------------------------------------------------------------------+
 //| Swing Point Structure                                            |
 //+------------------------------------------------------------------+
 struct SwingPoint
-{
+ {
    datetime          time;
    double            price;
    int               type;     // 1 = High, -1 = Low
@@ -48,17 +48,17 @@ struct SwingPoint
       type = 0;
       barIndex = 0;
    }
-};
+ };
 
 //+------------------------------------------------------------------+
 //| Market Structure States                                          |
 //+------------------------------------------------------------------+
 enum STRUCTURE_STATE
-{
+ {
    STRUCT_NEUTRAL,
    STRUCT_BULLISH,
    STRUCT_BEARISH
-};
+ };
 
 //+------------------------------------------------------------------+
 //| Global Variables                                                 |

@@ -25,7 +25,7 @@
    //--- The colour of a break: up (Buy) or down (Sell)
      color                   BuyColor(void)  const { return InpStructureBuyColor;  }
      color                   SellColor(void) const { return InpStructureSellColor; }
-                             CStructureSetting(void) : m_show_bos(InpShowBOS),m_show_choch(InpShowCHoCH) {}
+                             CStructureSetting(void) : m_show_bos(true),m_show_choch(true) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CSTRUCTURESETTING_MQH_DECLARATION
 #ifndef CSTRUCTURESETTING_MQH_IMPLEMENTATION

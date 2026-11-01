@@ -54,6 +54,8 @@ class CTable : public CGElement
     string            ColumnsLayout(void)                        { return(this.m_view.GetHeaderViewPointer().ColumnsLayout()); }
     bool              ColumnsLayout(const string layout,const bool redraw=true);
     void              ColumnsReset(const bool redraw=true);
+  //--- Fixed columns: the first <left> and the last <right> shown columns stay still, the scrollbar moves only the ones between them
+    void              FixedColumns(const int left,const int right,const bool redraw=true);
   //--- Asked from outside (a button of the EA): the table shows its own window to choose the columns and looks after it
     void              ShowColumns(void);
   //--- The window to choose the columns (NULL before the first ShowColumns): a program that stacks its windows registers it too, or the others cover it
@@ -282,6 +284,11 @@ void CTable::OnChartEvent(const int id,const long &lparam,const double &dparam,c
 void CTable::ColumnShown(const int column,const bool flag,const bool redraw=true)
  {
   this.m_view.GetHeaderViewPointer().ColumnShown(column,flag);
+  this.m_view.Rebuild(redraw,true);
+ }
+void CTable::FixedColumns(const int left,const int right,const bool redraw=true)
+ {
+  this.m_view.GetHeaderViewPointer().FixedColumns(left,right);
   this.m_view.Rebuild(redraw,true);
  }
 bool CTable::MoveColumn(const int column,const int delta,const bool redraw=true)

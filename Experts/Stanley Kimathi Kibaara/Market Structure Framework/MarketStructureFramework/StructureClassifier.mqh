@@ -26,7 +26,7 @@ ENUM_EVENT_TYPE CStructureClassifier::Classify(const SBreakEvent &breakEv, int t
   {
    bool isInternal = (level == LEVEL_INTERNAL); 
    //--- High break classification
-   if(breakEv.isHighBreak)
+    if(breakEv.isHighBreak)
      {
       if(trend == 1)                                                                                                    // bullish trend + high break → bullish continuation (BOS)
          return isInternal ? EVENT_INTERNAL_BOS_BULLISH : EVENT_EXTERNAL_BOS_BULLISH;
@@ -35,7 +35,7 @@ ENUM_EVENT_TYPE CStructureClassifier::Classify(const SBreakEvent &breakEv, int t
       else                                                                                                              // neutral trend → default to BOS (continuation assumption)
          return isInternal ? EVENT_INTERNAL_BOS_BULLISH : EVENT_EXTERNAL_BOS_BULLISH;
      }
-   else                                                                                                                 // Low break classification
+    else                                                                                                                 // Low break classification
      {
       if(trend == -1)                                                                                                   // bearish trend + low break → bearish continuation (BOS)
          return isInternal ? EVENT_INTERNAL_BOS_BEARISH : EVENT_EXTERNAL_BOS_BEARISH;

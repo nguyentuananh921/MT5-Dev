@@ -125,6 +125,7 @@
       long              GroupID1(void)                                     const { return this.GetProperty(ORDER_PROP_GROUP_ID1);                  }
       long              GroupID2(void)                                     const { return this.GetProperty(ORDER_PROP_GROUP_ID2);                  }
       long              PendReqID(void)                                    const { return this.GetProperty(ORDER_PROP_PEND_REQ_ID);                }
+      long              SymbolId(void)                                     const { return this.GetProperty(ORDER_PROP_SYMBOL_ID);                  }
       long              TypeOrder(void)                                    const { return this.GetProperty(ORDER_PROP_TYPE);                       }
       bool              IsCloseByStopLoss(void)                            const { return (bool)this.GetProperty(ORDER_PROP_CLOSE_BY_SL);          }
       bool              IsCloseByTakeProfit(void)                          const { return (bool)this.GetProperty(ORDER_PROP_CLOSE_BY_TP);          }
@@ -150,6 +151,10 @@
       double            TakeProfit(void)                                   const { return this.GetProperty(ORDER_PROP_TP);                         }
       double            Fee(void)                                          const { return this.GetProperty(ORDER_PROP_FEE);                        }
       double            PriceStopLimit(void)                               const { return this.GetProperty(ORDER_PROP_PRICE_STOP_LIMIT);           }
+      double            Bid(void)                                          const { return this.GetProperty(ORDER_PROP_BID);                        }
+      double            Ask(void)                                          const { return this.GetProperty(ORDER_PROP_ASK);                        }
+      void              SetBidAsk(const double bid,const double ask)             { this.SetProperty(ORDER_PROP_BID,bid); this.SetProperty(ORDER_PROP_ASK,ask); }
+      bool              BidAskFromTicks(void);   // a deal: the last tick at or before its time, false when the terminal has none
    
     //--- Return (1) symbol, (2) comment, (3) ID at an exchange
       string            Symbol(void)                                       const { return this.GetProperty(ORDER_PROP_SYMBOL);                     }
@@ -165,6 +170,7 @@
       void              SetGroupID1(const long group_id)                         { this.SetProperty(ORDER_PROP_GROUP_ID1,group_id);                }
       void              SetGroupID2(const long group_id)                         { this.SetProperty(ORDER_PROP_GROUP_ID2,group_id);                }
       void              SetPendReqID(const long req_id)                          { this.SetProperty(ORDER_PROP_PEND_REQ_ID,req_id);                }
+      void              SetSymbolId(const long symbol_id)                        { this.SetProperty(ORDER_PROP_SYMBOL_ID,symbol_id);               }
       void              SetCommentExt(const string comment_ext)                  { this.SetProperty(ORDER_PROP_COMMENT_EXT,comment_ext);           }
    
     //+------------------------------------------------------------------+
@@ -233,6 +239,8 @@
     this.m_double_prop[this.IndexProp(ORDER_PROP_FEE)]                = this.DealFee();
     this.m_double_prop[this.IndexProp(ORDER_PROP_VOLUME_CURRENT)]     = this.OrderVolumeCurrent();
     this.m_double_prop[this.IndexProp(ORDER_PROP_PRICE_STOP_LIMIT)]   = this.OrderPriceStopLimit();
+    this.m_double_prop[this.IndexProp(ORDER_PROP_BID)]                = 0;   // not a property of the terminal: set by SetBidAsk() or BidAskFromTicks()
+    this.m_double_prop[this.IndexProp(ORDER_PROP_ASK)]                = 0;
    //--- Save string properties
     this.m_string_prop[this.IndexProp(ORDER_PROP_SYMBOL)]             = this.OrderSymbol();
     this.m_string_prop[this.IndexProp(ORDER_PROP_COMMENT)]            = this.OrderComment();
@@ -247,6 +255,7 @@
     this.m_long_prop[ORDER_PROP_GROUP_ID1]                            = this.GetGroupID1((uint)this.GetProperty(ORDER_PROP_MAGIC));
     this.m_long_prop[ORDER_PROP_GROUP_ID2]                            = this.GetGroupID2((uint)this.GetProperty(ORDER_PROP_MAGIC));
     this.m_long_prop[ORDER_PROP_PEND_REQ_ID]                          = this.GetPendReqID((uint)this.GetProperty(ORDER_PROP_MAGIC));   
+    this.m_long_prop[ORDER_PROP_SYMBOL_ID]                            = 0;   // not a property of the terminal: set by SetSymbolId() when the symbol is joined to one of ours
    //--- Save additional real properties
     this.m_double_prop[this.IndexProp(ORDER_PROP_PROFIT_FULL)]        = this.ProfitFull();
    //--- Save additional string properties
@@ -376,6 +385,29 @@ long COrder::OrderTicketTo(void) const
       if(::StringFind(order_comment,"to #")>WRONG_VALUE) ticket=::StringToInteger(::StringSubstr(order_comment,4));
    #endif
    return ticket;
+ }
+//+------------------------------------------------------------------+
+//| Bid and Ask of a deal: the terminal does not keep them in the    |
+//| deal, the last tick at or before DEAL_TIME_MSC has them          |
+//+------------------------------------------------------------------+
+bool COrder::BidAskFromTicks(void)
+ {
+  #ifdef __MQL4__
+   return false;
+  #else
+   if(this.Status()!=ORDER_STATUS_DEAL)
+      return false;
+   long msc=this.GetProperty(ORDER_PROP_TIME_OPEN);
+   MqlTick ticks[];
+   int total=::CopyTicksRange(this.Symbol(),ticks,COPY_TICKS_INFO,(ulong)(msc-3000),(ulong)msc);
+   for(int i=total-1; i>=0; i--)
+      if((long)ticks[i].time_msc<=msc && ticks[i].bid>0 && ticks[i].ask>0)
+        {
+         this.SetBidAsk(ticks[i].bid,ticks[i].ask);
+         return true;
+        }
+   return false;
+  #endif
  }
 //+------------------------------------------------------------------+
 //| Return position ID                                               |
@@ -1398,6 +1430,10 @@ string COrder::GetPropertyDescription(ENUM_ORDER_PROP_INTEGER property)
          (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :
           ": "+(string)this.GetProperty(property)
          )  :
+      property==ORDER_PROP_SYMBOL_ID         ?  CMessage::Text(MSG_ORD_SYMBOL_ID)+
+         (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :
+          ": "+(string)this.GetProperty(property)
+         )  :
       ""
      );
   }
@@ -1452,6 +1488,14 @@ string COrder::GetPropertyDescription(ENUM_ORDER_PROP_DOUBLE property)
           ": "+::DoubleToString(this.GetProperty(property),dgl)
           ) :
       property==ORDER_PROP_PRICE_STOP_LIMIT  ?  CMessage::Text(MSG_ORD_PRICE_STOP_LIMIT)+
+         (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :
+          ": "+::DoubleToString(this.GetProperty(property),dg)
+          ) :
+      property==ORDER_PROP_BID               ?  CMessage::Text(MSG_ORD_BID)+
+         (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :
+          ": "+::DoubleToString(this.GetProperty(property),dg)
+          ) :
+      property==ORDER_PROP_ASK               ?  CMessage::Text(MSG_ORD_ASK)+
          (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :
           ": "+::DoubleToString(this.GetProperty(property),dg)
           ) :

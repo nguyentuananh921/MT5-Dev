@@ -28,7 +28,6 @@ protected:
    CColor            m_focused;
    CColor            m_pressed;
    CColor            m_blocked;
-
    color             RGBToColor(const double r,const double g,const double b) const;
    void              ColorToRGB(const color clr,double &r,double &g,double &b);
    double            GetR(const color clr)                     { return clr&0xFF;                           }

@@ -38,7 +38,7 @@
      color             DemandColor(void) const { return InpSupplyDemandDemandColor; }
      color             SupplyColor(void) const { return InpSupplyDemandSupplyColor; }
      color             DeadColor(void)   const { return InpSupplyDemandDeadColor;   }
-                       CSupplyDemandSetting(void) : m_show_demand(InpSupplyDemandShowDemand),m_show_supply(InpSupplyDemandShowSupply),m_show_dead(InpSupplyDemandShowDead),m_max_dead(InpSupplyDemandMaxDead),m_open_newest_demand(InpSupplyDemandOpenNewestDemand),m_open_newest_supply(InpSupplyDemandOpenNewestSupply) {}
+                       CSupplyDemandSetting(void) : m_show_demand(true),m_show_supply(true),m_show_dead(true),m_max_dead(20),m_open_newest_demand(3),m_open_newest_supply(3) {}   // the values before the first Save of the Smart Money tab
   };
 #endif // CSUPPLYDEMANDSETTING_MQH_DECLARATION
 #endif // __SUPPLYDEMANDSETTING_MQH__

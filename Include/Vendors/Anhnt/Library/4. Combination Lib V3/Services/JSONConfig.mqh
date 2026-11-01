@@ -191,7 +191,7 @@
      return pos;
    }
  //--- read a bare number (as raw text) starting at pos, return pos after the number - shared by
- //--- IndicatorTemplateManager.mqh and TradingSetupSettingManager.mqh, both need it.
+ //--- IndicatorTemplateManager.mqh and RiskManagementSettingManager.mqh, both need it.
  int JSONConfig_ReadRawNumber(const string &s, int pos, string &out)
   {
    int len = StringLen(s);
@@ -220,6 +220,16 @@
        return pos + 5;
      return pos;
    }
+ //--- Makes the folders of a path (MQL5\Files\<path>), one level after the other, so that a file can be written there; nothing happens to the ones that exist
+ void JSONConfig_MakeFolders(const string path)
+  {
+   for(int i = 0; i < StringLen(path); i++)
+     {
+      ushort c = StringGetCharacter(path, i);
+      if(i > 0 && (c == '/' || c == '\\'))
+         FolderCreate(StringSubstr(path, 0, i));
+     }
+  }
  //--- Writes the value of one top-level key into the shared file and leaves every other key as it is: the key is replaced
  //--- in place when the file has it, added at the end otherwise (the file is created when it is missing)
  bool JSONConfig_SaveSection(const string full_path, const string key, const string value)
@@ -258,12 +268,58 @@
      }
    if(content != "")
       FileCopy(full_path, 0, full_path + ".bak", FILE_REWRITE);   // the file as it was, one step back
+   JSONConfig_MakeFolders(full_path);   // the folder of an account is made the first time it is written
    int fh = FileOpen(full_path, FILE_TXT | FILE_WRITE | FILE_ANSI | FILE_SHARE_READ);
    if(fh == INVALID_HANDLE)
       return false;
    FileWriteString(fh, result);
    FileClose(fh);
    return true;
+  }
+ //--- What depends on the account (the symbols are not the same from an account to another) is kept in a folder of that account, made the first time
+ //--- the account writes: MQL5\Files\<program name>\Configuration\<server>_<login>\Config_Setting.json. A manager of such data reads and writes this file
+ //--- (JSONConfig_AccountFile) and the other managers keep the shared one (CONFIG_SETTING_FILE). The key is the one of the trade database of the account too
+ string JSONConfig_AccountKey(void)
+  {
+   string server = AccountInfoString(ACCOUNT_SERVER);
+   string safe = "";
+   bool gap = false;
+   for(int i = 0; i < StringLen(server); i++)
+     {
+      ushort c = StringGetCharacter(server, i);
+      bool keep = ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '.' || c == '-');
+      if(keep)
+        {
+         safe += ShortToString(c);
+         gap = false;
+        }
+      else if(!gap)
+        {
+         safe += "_";
+         gap = true;
+        }
+     }
+   while(StringLen(safe) > 0 && StringGetCharacter(safe, 0) == '_')
+      safe = StringSubstr(safe, 1);
+   while(StringLen(safe) > 0 && StringGetCharacter(safe, StringLen(safe) - 1) == '_')
+      safe = StringSubstr(safe, 0, StringLen(safe) - 1);
+   if(safe == "")
+      safe = "account";
+   return safe + "_" + (string)AccountInfoInteger(ACCOUNT_LOGIN);
+  }
+ string JSONConfig_AccountFile(void)
+  {
+   return "/Configuration/" + JSONConfig_AccountKey() + "/Config_Setting.json";
+  }
+ //--- The first time an account is used its file is not there: a key that was saved before in the shared file is copied to it (the shared file keeps it)
+ bool JSONConfig_CopySection(const string from_path, const string to_path, const string key)
+  {
+   string content = JSONConfig_ReadWholeFile(from_path);
+   string raw = JSONConfig_ExtractRawSection(content, key);
+   if(raw == "")
+      return false;
+   Print(__FUNCTION__, " > \"", key, "\" of ", from_path, " is the start of ", to_path);
+   return JSONConfig_SaveSection(to_path, key, raw);
   }
 #endif // JSONCONFIG_MQH
 

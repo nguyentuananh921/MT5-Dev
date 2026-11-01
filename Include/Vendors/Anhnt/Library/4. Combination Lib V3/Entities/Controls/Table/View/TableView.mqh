@@ -423,6 +423,7 @@ void CTableView::RecalculateAndResizeTable(const bool redraw)
      this.m_scrollv.Hide();
   this.m_scrollv.MovingThumb(this.m_visible_table_from_index);
   int view_w   =this.m_x_size-2-(need_v ? 16 : 0);
+  this.m_header_view.ViewWidth(view_w);   // the fixed columns need it
   int max_shift=::MathMax(columns-view_w,0);
   int shift    =::MathMin(this.m_header_view.ShiftX(),max_shift);
   this.m_header_view.ShiftX(shift);
@@ -472,6 +473,7 @@ void CTableView::DrawHeaderStrip(void)
 //+------------------------------------------------------------------+
 void CTableView::DrawContent(void)
  {
+  this.m_header_view.ViewWidth(this.ContentRight());
   this.DrawHeaderStrip();
   int visible=this.VisibleRowsTotal();
   for(int r=0; r<visible; r++)

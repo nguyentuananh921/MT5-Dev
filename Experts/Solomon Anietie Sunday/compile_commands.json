@@ -8,6 +8,35 @@
             "-D__MQL__",
             "-D__MQL5__",
             "-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.63-universal/files/mql_clangd_compat.h",
+            "-includec:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/.mql-auto-forwards/MeanReversionSizing_Demo.35120f63.auto.mqh",
+            "-fms-extensions",
+            "-fms-compatibility",
+            "-ferror-limit=0",
+            "-Wno-invalid-token-paste",
+            "-Wno-unused-value",
+            "-Wno-unknown-pragmas",
+            "-Wno-writable-strings",
+            "-Xclang",
+            "-Wno-invalid-pp-directive",
+            "-Wno-unknown-directives",
+            "-Wno-language-extension-token",
+            "-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday",
+            "-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Include",
+            "-D__MQL5_BUILD__",
+            "-c",
+            "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include/MeanReversionSizing_Demo.mq5"
+        ],
+        "file": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include/MeanReversionSizing_Demo.mq5"
+    },
+    {
+        "directory": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday",
+        "arguments": [
+            "clang++",
+            "-xc++",
+            "-std=c++17",
+            "-D__MQL__",
+            "-D__MQL5__",
+            "-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.63-universal/files/mql_clangd_compat.h",
             "-includec:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/.mql-auto-forwards/6. 24392 FixedMACrossover_Part6.63efd833.auto.mqh",
             "-fms-extensions",
             "-fms-compatibility",
@@ -95,7 +124,7 @@
             "-D__MQL__",
             "-D__MQL5__",
             "-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.63-universal/files/mql_clangd_compat.h",
-            "-includec:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/.mql-auto-forwards/MeanReversionSizing_Demo.35120f63.auto.mqh",
+            "-includec:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/.mql-auto-forwards/MeanReversionSizing_Part7.b0fb0de8.auto.mqh",
             "-fms-extensions",
             "-fms-compatibility",
             "-ferror-limit=0",
@@ -111,8 +140,37 @@
             "-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Include",
             "-D__MQL5_BUILD__",
             "-c",
-            "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include/MeanReversionSizing_Demo.mq5"
+            "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/7. 24477 Consolidating the Risk Framework/MeanReversionSizing_Part7.mq5"
         ],
-        "file": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include/MeanReversionSizing_Demo.mq5"
+        "file": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/7. 24477 Consolidating the Risk Framework/MeanReversionSizing_Part7.mq5"
+    },
+    {
+        "directory": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday",
+        "arguments": [
+            "clang++",
+            "-xc++",
+            "-std=c++17",
+            "-D__MQL__",
+            "-D__MQL5__",
+            "-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.1.63-universal/files/mql_clangd_compat.h",
+            "-includec:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/.mql-auto-forwards/FixedMACrossover_Part7.2ec07781.auto.mqh",
+            "-fms-extensions",
+            "-fms-compatibility",
+            "-ferror-limit=0",
+            "-Wno-invalid-token-paste",
+            "-Wno-unused-value",
+            "-Wno-unknown-pragmas",
+            "-Wno-writable-strings",
+            "-Xclang",
+            "-Wno-invalid-pp-directive",
+            "-Wno-unknown-directives",
+            "-Wno-language-extension-token",
+            "-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday",
+            "-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Include",
+            "-D__MQL5_BUILD__",
+            "-c",
+            "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/7. 24477 Consolidating the Risk Framework/FixedMACrossover_Part7.mq5"
+        ],
+        "file": "c:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/7. 24477 Consolidating the Risk Framework/FixedMACrossover_Part7.mq5"
     }
 ]

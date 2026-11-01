@@ -112,7 +112,7 @@ class CBarSeriesDE : public CBaseObj
     bool              SyncData(const uint required,const uint rates_total);
    //--- (1) Create and (2) update the timeseries list
     int               Create(const uint required=0);
-    void              Refresh(SDataCalculate &data_calculate);
+    void              Refresh(SDataCalculate &data_calculate);    
    //--- Copy the specified double property of the timeseries to the array
    //--- Regardless of the array indexing direction, copying is performed the same way as copying to a timeseries array
     bool              CopyToBufferAsSeries(const ENUM_BAR_PROP_DOUBLE property,double &array[],const double empty=EMPTY_VALUE);
