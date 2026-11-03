@@ -17,7 +17,7 @@
    public:
                       CIndWPR(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_WPR,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_WPR),GetIndicatorNameForType(IND_WPR),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_WPR; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_WPR; }
   };
 #endif // CINDWPR_MQH_DECLARATION
 #endif // __INDWPR_MQH__

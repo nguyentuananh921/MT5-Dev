@@ -21,7 +21,7 @@
   {
    public:
    //--- Constructor
-                     CMarketPosition(const ulong ticket=0) : COrder(ORDER_STATUS_MARKET_POSITION,ticket) { this.m_type=OBJECT_DE_TYPE_MARKET_POSITION; }
+                     CMarketPosition(const ulong ticket=0) : COrder(ORDER_STATUS_MARKET_POSITION,ticket) { this.m_object_type=OBJECT_DE_TYPE_MARKET_POSITION; }
    //--- Supported position properties (1) real, (2) integer
     virtual bool      SupportProperty(ENUM_ORDER_PROP_INTEGER property);
     virtual bool      SupportProperty(ENUM_ORDER_PROP_DOUBLE property);

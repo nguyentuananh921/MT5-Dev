@@ -12,7 +12,7 @@
  #include <Arrays\ArrayObj.mqh>
  #include "..\Bases\BaseObjExt.mqh"
  #include "..\Defines\EventDefines.mqh"
- #include "..\..\Services\LibDatabase.mqh"
+ #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Collections\Settings\SyncManager.mqh"
  #include "Signal.mqh"
  #include "Standard\SignalSAR.mqh"
@@ -41,7 +41,7 @@
     CArrayObj         m_list_Pending_SignalsCollection;   // RAM only: the rows not in the table yet (FreeMode false: m_list_Table_SignalsCollection owns them)
     datetime          m_judged_to;                    // RAM only: the newest closed bar the template is judged to (0: not judged yet)
     int               m_db;                           // CSignalsCollection holds it: the file of the account
-    long              m_symbol_id;                    // The id of the symbol (symbol_account)
+    long              m_symbol_id;                    // The id of the symbol (symbols)
     long              m_sync_object;                  // The collection the rows are of (its m_type): sync_object of Setting_Sync
     CSyncManager     *m_SyncManager;                  // The EA holds it: the progress of the template (Setting_Sync, RAM)
    //--- The judge of the type (V2 GetOrCreateSignal: the class of its type), NULL for a type that is not a standard indicator
@@ -92,7 +92,7 @@
  CSignalSeriesDE::CSignalSeriesDE(void) : m_template_id(0),m_ind_type(IND_AC),m_timeframe(PERIOD_CURRENT),m_judge(NULL),m_judged_to(0),
                                           m_db(INVALID_HANDLE),m_symbol_id(0),m_sync_object(0),m_SyncManager(NULL)
   {
-   this.m_type=OBJECT_DE_TYPE_SIGNAL_SERIES;
+   this.m_object_type=OBJECT_DE_TYPE_SIGNAL_SERIES;
    this.m_list_Table_SignalsCollection.Sort();
    this.m_list_Pending_SignalsCollection.FreeMode(false);
   }
@@ -210,7 +210,7 @@
    CBar *newest=list.At(list.Total()-1);
    if(oldest==NULL || newest==NULL)
       return -1;
-   int request=::DatabasePrepare(this.m_db,"SELECT bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
+   int request=LibDatabase_Prepare(this.m_db,"SELECT bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
                                            " AND template_id = "+(string)this.m_template_id+" AND bar_time >= "+(string)(long)oldest.Time()+" AND bar_time <= "+(string)(long)newest.Time());
    if(request==INVALID_HANDLE)
      {

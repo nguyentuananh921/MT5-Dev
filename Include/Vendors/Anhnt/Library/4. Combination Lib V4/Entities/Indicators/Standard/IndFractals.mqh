@@ -17,7 +17,7 @@
    public:
                       CIndFractals(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_FRACTALS,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_FRACTALS),GetIndicatorNameForType(IND_FRACTALS),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_FRACTALS; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_FRACTALS; }
   };
 #endif // CINDFRACTALS_MQH_DECLARATION
 #endif // __INDFRACTALS_MQH__

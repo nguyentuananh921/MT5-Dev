@@ -17,7 +17,7 @@
    public:
                       CIndCHO(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_CHAIKIN,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_CHAIKIN),GetIndicatorNameForType(IND_CHAIKIN),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_CHAIKIN; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_CHAIKIN; }
   };
 #endif // CINDCHO_MQH_DECLARATION
 #endif // __INDCHAIKIN_MQH__

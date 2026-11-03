@@ -22,7 +22,6 @@
    private:
     string            m_symbol;
     ENUM_TIMEFRAMES   m_timeframe;
-    string            m_period_description;           // Timeframe string description (the table timeframes, CIndicatorDE::SetTimeframeDescription)
     ENUM_INDICATOR    m_ind_type;                     // Indicator type
     long              m_ind_id;                       // Indicator ID (the template)
     int               m_ind_handle;                   // Not owned: CIndicatorDE releases it
@@ -45,7 +44,6 @@
     int               IndBuffersTotal(void)         const { return this.m_buffers_total;     }
     long              IndID(void)                   const { return this.m_ind_id;            }
     void              SetIndID(const long id)             { this.m_ind_id=id;                }
-    void              SetPeriodDescription(const string text) { this.m_period_description=text; }
     void              SetIndicator(const string symbol,const ENUM_TIMEFRAMES timeframe,const ENUM_INDICATOR ind_type,const int handle,const int handle_average,const int buffers_total);
    //--- (1) Create the list (0: the indicator is not calculated yet), (2) update it: the forming bar and the bar that just closed
     int               Create(const uint required=0);
@@ -58,7 +56,7 @@
     double            BufferValue(const int buffer_num,const uint shift);
                       CIndicatorSeriesDE(void) : m_timeframe(PERIOD_CURRENT),m_ind_type(IND_AC),m_ind_id(WRONG_VALUE),m_ind_handle(INVALID_HANDLE),m_ind_handle_average(INVALID_HANDLE),
                                                  m_buffers_total(0),m_amount(0)
-                         { this.m_type=OBJECT_DE_TYPE_IND_DATA_LIST; this.m_list_data.Sort(SORT_BY_IND_DATA_TIME); }
+                         { this.m_object_type=OBJECT_DE_TYPE_IND_DATA_LIST; this.m_list_data.Sort(SORT_BY_IND_DATA_TIME); }
   };
 #endif // CINDICATORSERIESDE_MQH_DECLARATION
 #ifndef CINDICATORSERIESDE_MQH_IMPLEMENTATION
@@ -188,10 +186,7 @@
  //+------------------------------------------------------------------+
  CIndicatorData *CIndicatorSeriesDE::CreateNewDataInd(const int buffer_num,const datetime time,const double value)
   {
-   CIndicatorData *data_ind=new CIndicatorData(this.m_ind_type,this.m_ind_id,buffer_num,this.m_symbol,this.m_timeframe,time,value);
-   if(data_ind!=NULL)
-      data_ind.SetPeriodDescription(this.m_period_description);
-   return data_ind;
+   return new CIndicatorData(this.m_ind_type,this.m_ind_id,buffer_num,this.m_symbol,this.m_timeframe,time,value);
   }
  //+------------------------------------------------------------------+
  //| Return indicator data object by time and buffer number: the list |

@@ -17,7 +17,7 @@
    public:
                       CIndMomentum(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_MOMENTUM,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_MOMENTUM),GetIndicatorNameForType(IND_MOMENTUM),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_MOMENTUM; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_MOMENTUM; }
   };
 #endif // CINDMOMENTUM_MQH_DECLARATION
 #endif // __INDMOMENTUM_MQH__

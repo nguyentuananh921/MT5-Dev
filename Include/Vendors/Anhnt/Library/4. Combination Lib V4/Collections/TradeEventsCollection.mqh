@@ -17,7 +17,7 @@
  #include "ListObj.mqh"
  #include "SymbolsCollection.mqh"
  #include "Settings\SyncManager.mqh"
- #include "..\Services\LibDatabase.mqh"
+ #include "..\Services\DELib\DatabaseDELib.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "..\Entities\Trading\Order.mqh"
  #include "..\Entities\Trading\OrderControl.mqh"
@@ -136,7 +136,7 @@
   CTradeEventsCollection::CTradeEventsCollection(void) : m_trade_event(TRADE_EVENT_NO_EVENT),m_trade_event_code(TRADE_EVENT_FLAG_NO_EVENT),m_SymbolsCollection(NULL),m_SyncManager(NULL),m_db(INVALID_HANDLE)
    {
      this.m_list_pending.FreeMode(false);   // m_list_trade_events owns them
-     this.m_type=COLLECTION_TRADE_EVENTS_ID;
+     this.m_object_type=COLLECTION_TRADE_EVENTS_ID;
      this.m_list_trade_events.Clear();
      this.m_list_trade_events.Sort(SORT_BY_EVENT_TIME_EVENT);
      //https://www.mql5.com/en/articles/6211
@@ -1883,7 +1883,7 @@
       return false;
      }
     if(!table_was_there && this.m_SyncManager!=NULL)
-       this.m_SyncManager.ResetObject_SyncManager(this.m_type);
+       this.m_SyncManager.ResetObject_SyncManager(this.m_object_type);
     ::Print("Complete ",__FUNCTION__," > ",LibDatabase_AccountFile()," opened");
     return true;
    }

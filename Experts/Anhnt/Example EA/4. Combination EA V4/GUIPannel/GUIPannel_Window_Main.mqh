@@ -34,7 +34,9 @@
    int total=(m_SymbolsCollection!=NULL) ? m_SymbolsCollection.GetList().Total() : 0;
    m_combobox_SymbolTF.ItemsTotal(::MathMax(total,1));
    m_window_main.GetCaptionPointer().AddChild(&m_combobox_SymbolTF);
-   if(!m_combobox_SymbolTF.CreateComboBox(this.m_chart_id,M_SUBWINDOW_MAIN,"ComboSymbolTF",x_gap,y_gap,M_SYMBOLTF_COMBO_WIDTH,M_CONTROL_HEIGHT,M_SYMBOLTF_COMBO_WIDTH,M_SYMBOLTF_COMBO_LIST_HEIGHT))
+   //--- The frame of the labels: inside the caption by M_CAPTION_LABEL_Y at the top and the bottom, M_CAPTION_LABEL_GAP from the caption buttons
+   if(!m_combobox_SymbolTF.CreateComboBox(this.m_chart_id,M_SUBWINDOW_MAIN,"ComboSymbolTF",x_gap-M_CAPTION_LABEL_GAP,y_gap+M_CAPTION_LABEL_Y,M_SYMBOLTF_COMBO_WIDTH,M_CONTROL_HEIGHT-M_CAPTION_LABEL_Y*2,
+                                          M_SYMBOLTF_COMBO_WIDTH,M_SYMBOLTF_COMBO_LIST_HEIGHT))
       return(false);
    //--- On the caption bar as the labels of the positions: a light background, black text and arrow, light gray on hover and press
    CButtonTriggered *button=m_combobox_SymbolTF.GetButtonPointer();
@@ -58,8 +60,8 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::ArrangeComboBox_SymbolTF(void)
   {
-   int x=m_window_main.X()+m_window_main.Width()-m_window_main.CaptionRightLimit()-M_SYMBOLTF_COMBO_WIDTH;
-   m_combobox_SymbolTF.Move(x,m_window_main.Y());
+   int x=m_window_main.X()+m_window_main.Width()-m_window_main.CaptionRightLimit()-M_SYMBOLTF_COMBO_WIDTH-M_CAPTION_LABEL_GAP;
+   m_combobox_SymbolTF.Move(x,m_window_main.Y()+M_CAPTION_LABEL_Y);
    this.UpdateCaption_Position();   // the labels stay left of the combobox
   }
  //+------------------------------------------------------------------+
@@ -72,12 +74,24 @@
    labels[1]=::GetPointer(m_label_PositionSell);
    labels[2]=::GetPointer(m_label_Profit);
    string names[3]={"CaptionPositionBuy","CaptionPositionSell","CaptionProfit"};
+   int height=M_CONTROL_HEIGHT-M_CAPTION_LABEL_Y*2;
    for(int i=0;i<3;i++)
      {
       m_window_main.GetCaptionPointer().AddChild(labels[i]);
-      labels[i].LabelXGap(M_CAPTION_LABEL_PADDING);
+      //--- The icon instead of the word: Buy, Sell, Profit (green: index 0, red: index 1, chosen by the sign in UpdateCaption_Position)
+      labels[i].AddImagesGroup(M_CAPTION_LABEL_PADDING,::MathMax((height-M_CAPTION_LABEL_ICON)/2,0));
+      if(i==0)
+         labels[i].AddImage(0,IMAGE_RESOURCE_BMP16_ORDER_BUY_PNG);
+      else if(i==1)
+         labels[i].AddImage(0,IMAGE_RESOURCE_BMP16_ORDER_SELL_PNG);
+      else
+        {
+         labels[i].AddImage(0,IMAGE_RESOURCE_BMP16_PROFIT_GREEN_PNG);
+         labels[i].AddImage(0,IMAGE_RESOURCE_BMP16_PROFIT_RED_PNG);
+        }
+      labels[i].LabelXGap(M_CAPTION_LABEL_PADDING+M_CAPTION_LABEL_ICON+M_CAPTION_LABEL_ICON_GAP);
       labels[i].FontWeight(FW_BOLD);
-      if(!labels[i].Create(this.m_chart_id,M_SUBWINDOW_MAIN,names[i],0,M_CAPTION_LABEL_Y,M_CAPTION_LABEL_PADDING*2,M_CONTROL_HEIGHT-M_CAPTION_LABEL_Y*2))
+      if(!labels[i].Create(this.m_chart_id,M_SUBWINDOW_MAIN,names[i],0,M_CAPTION_LABEL_Y,M_CAPTION_LABEL_PADDING*2,height))
          return(false);
       //--- A light background: the text stands out on the blue caption
       labels[i].GetBackColorControl().InitColors(M_COLOR_CAPTION_LABEL_BACK,M_COLOR_CAPTION_LABEL_BACK,M_COLOR_CAPTION_LABEL_BACK,M_COLOR_CAPTION_LABEL_BACK);
@@ -88,7 +102,7 @@
   }
  //+------------------------------------------------------------------+
  //| Right to left from the combobox: the profit, the Sell number, the|
- //| Buy number ("Sell 5", "Profit 12.30"; collapsed: only the values)|
+ //| Buy number, each after its icon (ORDER_SELL 5, PROFIT_GREEN 12.30)|
  //| a side without a position is hidden. The positions are the ones  |
  //| of CMarketCollection (RAM), the profit the one of CAccount        |
  //| (ACCOUNT_PROP_PROFIT event). A label is as wide as its text       |
@@ -99,16 +113,15 @@
    int sells=(m_MarketCollection!=NULL ? m_MarketCollection.PositionsCount("",POSITION_TYPE_SELL) : 0);
    CAccount *account=(m_AccountsCollection!=NULL ? m_AccountsCollection.GetCurrentAccount() : NULL);
    double profit=(account!=NULL ? account.Profit() : 0);
-   bool collapsed=m_window_main.IsMinimized();
    CLabel *labels[3];
    labels[0]=::GetPointer(m_label_Profit);
    labels[1]=::GetPointer(m_label_PositionSell);
    labels[2]=::GetPointer(m_label_PositionBuy);
    bool   shown[3] ={buys+sells>0,sells>0,buys>0};
-   string texts[3] ={(collapsed ? "" : "Profit ")+::DoubleToString(profit,2),(collapsed ? "" : "Sell ")+(string)sells,(collapsed ? "" : "Buy ")+(string)buys};
+   string texts[3] ={::DoubleToString(profit,2),(string)sells,(string)buys};   // the icon says what the number is
    color  colors[3]={(profit>0 ? M_COLOR_PROFIT : profit<0 ? M_COLOR_LOSS : clrBlack),M_COLOR_LOSS,M_COLOR_PROFIT};
    ::TextSetFont(DEF_FONT,-DEF_FONT_SIZE*10,FW_BOLD);   // the font of the labels (CLabel: DEF_FONT, FW_BOLD): the width of each text
-   int x=m_window_main.X()+m_window_main.Width()-m_window_main.CaptionRightLimit()-M_SYMBOLTF_COMBO_WIDTH;
+   int x=m_window_main.X()+m_window_main.Width()-m_window_main.CaptionRightLimit()-M_SYMBOLTF_COMBO_WIDTH-M_CAPTION_LABEL_GAP;   // the left edge of the combobox
    int y=m_window_main.Y()+M_CAPTION_LABEL_Y;
    for(int i=0;i<3;i++)
      {
@@ -119,11 +132,13 @@
         }
       uint text_w=0,text_h=0;
       ::TextGetSize(texts[i],text_w,text_h);
-      int w=(int)text_w+M_CAPTION_LABEL_PADDING*2+M_CAPTION_LABEL_SLACK;   // CLabel keeps 2 px more at the right (TextMaxWidth): the last digit is not cut
+      int w=(int)text_w+M_CAPTION_LABEL_PADDING*2+M_CAPTION_LABEL_ICON+M_CAPTION_LABEL_ICON_GAP+M_CAPTION_LABEL_SLACK;   // CLabel keeps 2 px more at the right (TextMaxWidth): the last digit is not cut
       x-=w+M_CAPTION_LABEL_GAP;
-      bool same=(labels[i].IsVisible() && labels[i].X()==x && labels[i].Y()==y && labels[i].Width()==w && labels[i].Text()==texts[i]);   // the color goes with the text
+      bool same=(labels[i].IsVisible() && labels[i].X()==x && labels[i].Y()==y && labels[i].Width()==w && labels[i].Text()==texts[i]);   // the color and the icon go with the text
       if(same)
          continue;   // only what changed is drawn again (the profit moves at each tick)
+      if(i==0)
+         labels[i].ChangeImage(0,profit<0 ? 1 : 0);   // PROFIT_RED for a loss, PROFIT_GREEN otherwise
       labels[i].Resize(w,labels[i].Height());
       labels[i].Move(x,y);
       labels[i].GetForeColorControl().InitColors(colors[i],colors[i],colors[i],colors[i]);

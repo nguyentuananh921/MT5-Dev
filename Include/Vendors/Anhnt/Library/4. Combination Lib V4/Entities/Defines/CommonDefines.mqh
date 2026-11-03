@@ -143,6 +143,10 @@
     OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_PLACE,                    // "Pending request to place a pending order" object type
     OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_REMOVE,                   // "Pending request to delete a pending order" object type
     OBJECT_DE_TYPE_PENDING_REQUEST_ORDER_MODIFY,                   // "Pending request to modify pending order parameters" object type
+   //--- Settings: a row of a table of a manager, in RAM (added here: the numbers before stay the same)
+    OBJECT_DE_TYPE_SYMBOLTF_SETTING,                               // "Pair Symbol + TF setting" object type (CSymbolTFSetting: a row of Setting_SymbolTF)
+    OBJECT_DE_TYPE_INDICATOR_SETTING,                              // "Indicator template setting" object type (V2 / V3 CIndicatorSetting: a row of Setting_IndicatorTemplate)
+    OBJECT_DE_TYPE_BAR_INFORMATION_SETTING,                        // "Bar information setting" object type (V3 CPatternSetting: a row of Setting_BarInformation, its rows of Setting_BarSetup)
    //--- Standard graphical objects (keep last: values are OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_xxx)
     OBJECT_DE_TYPE_GSTD_OBJ,                                       // Standard graphical object
     OBJECT_DE_TYPE_GSTD_TREND              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TREND,            // "Trend line" object type
@@ -154,7 +158,7 @@
     COLLECTION_HISTORY_ID                  =  0x777A,                                         // CHistoryCollection: the historical orders and deals of the account
     COLLECTION_MARKET_ID                   =  0x777B,                                         // CMarketCollection: the pending orders and positions of the account
     COLLECTION_TRADE_EVENTS_ID             =  0x777C,                                         // CTradeEventsCollection: the trading events of the account
-    COLLECTION_ACCOUNT_ID                  =  0x777D,                                         // CAccountsCollection: tables accounts, symbol_account
+    COLLECTION_ACCOUNT_ID                  =  0x777D,                                         // CAccountsCollection: table accounts
     COLLECTION_SYMBOLS_ID                  =  0x777E,                                         // CSymbolsCollection: tables symbols, timeframes
     COLLECTION_SERIES_ID                   =  0x777F,                                         // CBarTimeSeriesCollection: tables BarSeriesDE, BarTimeSeriesCollection
     COLLECTION_SIGNALS_ID                  =  0x778A,                                         // CSignalsCollection: table SignalsCollection (the value of V2)
@@ -169,7 +173,7 @@
   {
    SIGNAL_DIRECTION_BUY,                                    // The Buy direction (up)
    SIGNAL_DIRECTION_SELL,                                   // The Sell direction (down)
-   SIGNAL_DIRECTION_NONE,                                   // No direction: the type has none (Inside Bar), the markers do not draw it
+   SIGNAL_DIRECTION_NONE,                                   // No direction (a rule that does not say a side on a bar), the markers do not draw it
   }; 
  //--- Timeseries parameters
   #define SERIES_DEFAULT_BARS_COUNT      (1000)                     // Required default amount of timeseries data
@@ -202,7 +206,7 @@
   #define DEF_FONT_SIZE                  (10)                       // Default font size
   #define DEF_CONTROL_CORNER_AREA        (4)                        // Number of pixels defining the corner area to resize
   #define DEF_LINE_WIDTH                 (3)                        // Default width of a native line object (solid: a dash style needs width 1)
-
+ //Old Plan to remove after implemenation CDatabaseService
  //--- The timeframes of the library, shortest first (the table timeframes of the database has the same ones)
   #define LIB_TIMEFRAMES_TOTAL           (21)
   const ENUM_TIMEFRAMES LIB_TIMEFRAMES[LIB_TIMEFRAMES_TOTAL] = {PERIOD_M1, PERIOD_M2, PERIOD_M3, PERIOD_M4, PERIOD_M5, PERIOD_M6, PERIOD_M10, PERIOD_M12, PERIOD_M15, PERIOD_M20, PERIOD_M30,

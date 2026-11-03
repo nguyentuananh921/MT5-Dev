@@ -4,11 +4,17 @@ row is the bar of the swing, and `since` is compared with the bar that confirmed
 import numpy as np
 import pandas as pd
 
+import libdb
+
 NAME_HIGH = "Swing High"
 NAME_LOW = "Swing Low"
 PARAM_STRENGTH = "swing_strength"   # BAR_PARAM_SWING_STRENGTH
 PARAM_PRICE_BASIS = "price_basis"   # BAR_PARAM_PRICE_BASIS
-PRICE_BASIS_WICK = 0                # SWING_PRICE_BASIS_WICK of BarDefines.mqh (High / Low), 1 = the body (Open / Close)
+
+
+def use_wick(params):
+    """price_basis is High / Low (SWING_PRICE_BASIS_WICK, from the EA)."""
+    return int(params[PARAM_PRICE_BASIS]) == libdb.setting_int("swing_price_basis_wick")
 
 
 def context(params):
@@ -46,7 +52,7 @@ def find_swings(df, strength, use_wick):
 
 def swings_of(bars, params):
     """Both kinds, from the parameters of a type (the same strength and basis for the two kinds of the pair of the types are not assumed: each type has its own)."""
-    return find_swings(bars, context(params), int(params[PARAM_PRICE_BASIS]) == PRICE_BASIS_WICK)
+    return find_swings(bars, context(params), use_wick(params))
 
 
 def calculate(high, bars, params, since=0, until=None):

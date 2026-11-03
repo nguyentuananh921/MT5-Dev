@@ -45,7 +45,7 @@
    //--- How many bars before the bar that confirms it the swing is (its row is on the pivot bar)
     virtual int       Shift(void) const { return (int)::fmax(1,this.Param(BAR_PARAM_SWING_STRENGTH)); }
    //--- The judge, and a row: the pivot bar with the type, its group and the side found on it
-                      CBarSwing(void) : m_list(NULL) { this.m_type=OBJECT_DE_TYPE_SERIES_SWING; }
+                      CBarSwing(void) : m_list(NULL) { this.m_object_type=OBJECT_DE_TYPE_SERIES_SWING; }
                       CBarSwing(CBar *bar,const long type,const long group,const long direction);
   };
 #endif // CBARSWING_MQH_DECLARATION
@@ -57,7 +57,7 @@
  CBarSwing::CBarSwing(CBar *bar,const long type,const long group,const long direction) : m_list(NULL)
   {
    this.SetBar(bar);
-   this.m_type=OBJECT_DE_TYPE_SERIES_SWING;
+   this.m_object_type=OBJECT_DE_TYPE_SERIES_SWING;
    this.SetProperty(BAR_PROP_INFOR_GROUP,group);
    this.SetProperty(BAR_PROP_INFOR_TYPE,type);
    this.SetProperty(BAR_PROP_SIGNAL_DIRECTION,direction);

@@ -17,7 +17,7 @@
    public:
                       CIndEnvelopes(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_ENVELOPES,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ENVELOPES),GetIndicatorNameForType(IND_ENVELOPES),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_ENVELOPES; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ENVELOPES; }
   };
 #endif // CINDENVELOPES_MQH_DECLARATION
 #endif // __INDENVELOPES_MQH__

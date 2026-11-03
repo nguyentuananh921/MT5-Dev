@@ -17,7 +17,7 @@
  #include "..\Bar\BarCHoCH.mqh"
  #include "..\Bases\BaseObjExt.mqh"
  #include "..\Defines\EventDefines.mqh"
- #include "..\..\Services\LibDatabase.mqh"
+ #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Services\DELib\CommonDELib.mqh"
  #include "..\..\Collections\Settings\SyncManager.mqh"
  #include "..\Defines\BarDefines.mqh"
@@ -47,7 +47,7 @@
     datetime          m_judged_to;                     // RAM only: the newest closed bar every type of the pair is judged to (0: not judged yet)
     CSyncManager     *m_SyncManager;                   // The EA holds it: the progress of each type (Setting_Sync)
     int               m_db;                            // CBarTimeSeriesCollection holds it: the file of the account
-    long              m_symbol_id;                     // The id of the symbol (symbol_account)
+    long              m_symbol_id;                     // The id of the symbol (symbols)
     long              m_sync_object;                   // The collection the rows are of (its m_type): sync_object of Setting_Sync
    //--- The bar of the series by its time
     CBar             *GetBar(const datetime time);
@@ -104,7 +104,7 @@
  CBarControl::CBarControl(void) : m_BarInformationManager(NULL),m_list_series(NULL),m_symbol(NULL),m_timeframe(PERIOD_CURRENT),m_judged_to(0),
                                  m_SyncManager(NULL),m_db(INVALID_HANDLE),m_symbol_id(0),m_sync_object(0)
   {
-   this.m_type=OBJECT_DE_TYPE_SERIES_BAR_CONTROL;
+   this.m_object_type=OBJECT_DE_TYPE_SERIES_BAR_CONTROL;
    this.m_list_Pending_BarTimeSeriesCollection.FreeMode(false);
   }
  //+------------------------------------------------------------------+
@@ -259,7 +259,7 @@
    CBar *newest=this.m_list_series.At(this.m_list_series.Total()-1);
    if(oldest==NULL || newest==NULL)
       return false;
-   int request=::DatabasePrepare(this.m_db,"SELECT type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
+   int request=LibDatabase_Prepare(this.m_db,"SELECT type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
                                            " AND bar_time >= "+(string)(long)oldest.Time()+" AND bar_time <= "+(string)(long)newest.Time());
    if(request==INVALID_HANDLE)
      {
@@ -490,7 +490,7 @@
    ::ArrayResize(sides,0);
    if(this.m_db==INVALID_HANDLE)
       return 0;
-   int request=::DatabasePrepare(this.m_db,"SELECT type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
+   int request=LibDatabase_Prepare(this.m_db,"SELECT type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
                                            " AND bar_time >= "+(string)(long)from_time+" AND bar_time <= "+(string)(long)to_time+" AND ((signal_direction = "+(string)(int)SIGNAL_DIRECTION_BUY+
                                            " AND type_infor IN ("+LibDatabase_InList(buy_types)+")) OR (signal_direction = "+(string)(int)SIGNAL_DIRECTION_SELL+" AND type_infor IN ("+LibDatabase_InList(sell_types)+")))");
    if(request==INVALID_HANDLE)

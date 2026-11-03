@@ -21,7 +21,7 @@
   {
    public:
      //--- Constructor
-                     CHistoryPending(const ulong ticket) : COrder(ORDER_STATUS_HISTORY_PENDING,ticket) { this.m_type=OBJECT_DE_TYPE_HISTORY_ORDER_PENDING; }
+                     CHistoryPending(const ulong ticket) : COrder(ORDER_STATUS_HISTORY_PENDING,ticket) { this.m_object_type=OBJECT_DE_TYPE_HISTORY_ORDER_PENDING; }
      //--- Supported order properties (1) real, (2) integer
      virtual bool      SupportProperty(ENUM_ORDER_PROP_DOUBLE property);
      virtual bool      SupportProperty(ENUM_ORDER_PROP_INTEGER property);

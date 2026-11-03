@@ -31,7 +31,7 @@
   enum ENUM_INDICATOR_PROP_INTEGER
    {
     INDICATOR_PROP_STATUS = 0,                               // Indicator status (from enumeration ENUM_INDICATOR_STATUS)
-    INDICATOR_PROP_TYPE,                                     // Indicator type (from enumeration ENUM_INDICATOR)
+    INDICATOR_PROP_TYPE,                                     // Indicator type (from standard MT5 enumeration ENUM_INDICATOR)
     INDICATOR_PROP_TIMEFRAME,                                // Indicator timeframe
     INDICATOR_PROP_GROUP,                                    // Indicator group
     INDICATOR_PROP_ID,                                       // Indicator ID (the id of the template, Setting_IndicatorTemplate)

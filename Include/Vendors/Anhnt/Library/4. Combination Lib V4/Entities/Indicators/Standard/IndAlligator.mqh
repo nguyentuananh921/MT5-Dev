@@ -17,7 +17,7 @@
    public:
                       CIndAlligator(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_ALLIGATOR,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ALLIGATOR),GetIndicatorNameForType(IND_ALLIGATOR),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_ALLIGATOR; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ALLIGATOR; }
   };
 #endif // CINDALLIGATOR_MQH_DECLARATION
 #endif // __INDALLIGATOR_MQH__

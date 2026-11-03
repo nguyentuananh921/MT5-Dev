@@ -16,7 +16,7 @@
  #include "..\Bar\Bar.mqh"
  #include "BarControl.mqh"
  #include "..\Bases\BaseObjExt.mqh"
- #include "..\..\Services\LibDatabase.mqh"
+ #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Services\DELib\CommonDELib.mqh"
  #include "..\..\Collections\Settings\SyncManager.mqh"
  #ifndef EA_STORE_BARS
@@ -46,7 +46,7 @@
     CBarControl       m_BarControl;                                      // What is found on the bars of this series: it judges, keeps the rows and writes them (V2: m_patterns_control)
    //Add db in V4
     int               m_db;                                              // CBarTimeSeriesCollection holds it: the file of the account
-    long              m_symbol_id;                                       // The id of the symbol (symbol_account)
+    long              m_symbol_id;                                       // The id of the symbol (symbols)
    //--- Set the very first date by a period symbol at the moment and the new time of opening the last bar by a period symbol
     void              SetServerDate(void);
    //--- The newest bar of the pair in BarSeriesDE (0: Python has not taken its first chunk yet), and the closed bars after from_time written there
@@ -108,7 +108,7 @@
  CBarSeriesDE::CBarSeriesDE(const string symbol,const ENUM_TIMEFRAMES timeframe,const uint required=0) : m_timeframe(PERIOD_CURRENT),m_firstdate(0),m_lastbar_date(0),m_bars(0),m_amount(0),m_required(0),m_sync(false),m_bars_in_table(0),
                                                                                                     m_db(INVALID_HANDLE),m_symbol_id(0)
   {
-   this.m_type=OBJECT_DE_TYPE_SERIES_PERIOD;
+   this.m_object_type=OBJECT_DE_TYPE_SERIES_PERIOD;
    this.m_list_Table_BarSeriesDE.Clear();
    this.m_list_Table_BarSeriesDE.Sort(SORT_BY_BAR_TIME);
    this.SetSymbolPeriod(symbol,timeframe);
@@ -155,7 +155,7 @@
  //+------------------------------------------------------------------+
  datetime CBarSeriesDE::ReadNewestBar_BarSeriesDE(void)
   {
-   int request=::DatabasePrepare(this.m_db,"SELECT COALESCE(MAX(bar_time), 0) FROM BarSeriesDE WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe);
+   int request=LibDatabase_Prepare(this.m_db,"SELECT COALESCE(MAX(bar_time), 0) FROM BarSeriesDE WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe);
    if(request==INVALID_HANDLE)
       return 0;
    long newest=0;

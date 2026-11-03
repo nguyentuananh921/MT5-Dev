@@ -4,18 +4,21 @@
 //| Single source of truth for the information of a bar (candle      |
 //| patterns, momentum candle, swing, BOS, CHoCH): the tables        |
 //| Setting_BarInformation (what a type is, and what the user wants  |
-//| for it), Setting_BarSetup (the parameters of a type) and        |
-//| the database. The manager keeps no copy and asks the database    |
-//| each time. It makes the tables and fills what a type IS in OnInit|
-//| (V2 CBarPatternControl without the calculation, Python finds     |
-//| the patterns). Methods come from V3 one by one when a class asks |
+//| for it), Setting_BarSetup (the parameters of a type) of the      |
+//| database. It makes the tables and fills what a type IS in OnInit,|
+//| then reads them once to m_list (Live on RAM); a change is written|
+//| to the table at once (Save on DB: Python reads it). V2           |
+//| CBarPatternControl without the calculation, Python finds them    |
 //+------------------------------------------------------------------+
+//--- Change from V3 Collections\Settings\PatternManager.mqh: the rows are read from the two tables (V3: the catalog of Python), CBarInformationSetting keeps the parameters
 #ifndef CBARINFORMATIONMANAGER_MQH
 #define CBARINFORMATIONMANAGER_MQH
- #include "..\..\Services\LibDatabase.mqh"
+ #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Entities\Defines\BarDefines.mqh"
  #include "..\..\Entities\Defines\EventDefines.mqh"
  #include "..\..\Entities\Bases\BaseObj.mqh"
+ #include "..\..\Entities\Settings\BarInformationSetting.mqh"
+ #include "..\ListObj.mqh"
 #ifndef CBARINFORMATIONMANAGER_MQH_DECLARATION
 #define CBARINFORMATIONMANAGER_MQH_DECLARATION
  struct SBarInforCatalogItem
@@ -38,35 +41,40 @@
  class CBarInformationManager : public CBaseObj
   {
     private:
-     int                m_db;                 // the open database: the tables are asked here, nothing is copied
+     int                m_db;                 // the open database: a change is written here
+     CListObj           m_list;               // the types (CBarInformationSetting, each with its parameters), in the order of type_infor
      //Private Method
      bool               Open(void);
      bool               MakeInformation(void);
      void               DropColumn(const string table, const string column);   // a column the table of an older EA has and the code does not know any more
      bool               MakeSetup(void);
-     bool               ChangeFlag(const ENUM_BAR_INFOR_TYPE type, const string column, const string needs, const bool on);
+     bool               SyncDataFromDB(void);
+     bool               ChangeFlag(const ENUM_BAR_INFOR_TYPE type, const string column, const bool on);
    //--- What every type and every parameter IS: the catalog the tables are filled from in OnInit
      void               Catalog(SBarInforCatalogItem &out[]) const;
      void               SetupCatalog(SBarSetupCatalogItem &out[]) const;
      string             ParamDisplay(const string param) const;
     public:
-                        CBarInformationManager(void) : m_db(INVALID_HANDLE) {}
+                        CBarInformationManager(void) : m_db(INVALID_HANDLE) { this.m_list.Type(OBJECT_DE_TYPE_BAR_INFORMATION_SETTING); }
+   //--- The index of a type in m_list (WRONG_VALUE: none), the type itself (NULL: none)
+     int                IndexSetting(const ENUM_BAR_INFOR_TYPE type) const;
+     CBarInformationSetting *GetSetting(const ENUM_BAR_INFOR_TYPE type) const;
                        ~CBarInformationManager(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
    //--- Lifecycle - same convention as the other managers: opens the database, makes the tables when they are not there, fills what every type is
      bool               OnInitEvent(void);
    //--- The text of a group: the caption of its section in the Candle tab
      string             GroupDescription(const ENUM_BAR_INFORMATION_GROUP group) const;
-   //--- The group of a type, asked to the table (the one source of the group: CBar keeps it in RAM only, BAR_PROP_INFOR_GROUP)
+   //--- The group of a type, of the table (the one source of the group: CBar keeps it in RAM only, BAR_PROP_INFOR_GROUP)
      ENUM_BAR_INFORMATION_GROUP Group(const ENUM_BAR_INFOR_TYPE type) const;
-   //--- The types, asked to the database each time, in the order of type_infor: what a type is (name, group, candles, the sides it can have) and what the user wants for it
+   //--- The types (m_list), in the order of type_infor: what a type is (name, group, candles, the sides it can have) and what the user wants for it
      int                Informations(ENUM_BAR_INFOR_TYPE &types[], string &names[], ENUM_BAR_INFORMATION_GROUP &groups[], int &candles[], bool &have_buy[], bool &have_sell[],
                                      bool &sound[], bool &message[], bool &show_buy[], bool &show_sell[]) const;
    //--- The flags of a type: written at once, only for a side (or an alert) the type has. Show Buy / Show Sell tell the listeners
-     bool               SoundAlert(const ENUM_BAR_INFOR_TYPE type, const bool on)   { return this.ChangeFlag(type, "sound_alert", "(have_buy_signal = 1 OR have_sell_signal = 1)", on);   }
-     bool               MessageAlert(const ENUM_BAR_INFOR_TYPE type, const bool on) { return this.ChangeFlag(type, "message_alert", "(have_buy_signal = 1 OR have_sell_signal = 1)", on); }
+     bool               SoundAlert(const ENUM_BAR_INFOR_TYPE type, const bool on)   { return this.ChangeFlag(type, "sound_alert", on);   }
+     bool               MessageAlert(const ENUM_BAR_INFOR_TYPE type, const bool on) { return this.ChangeFlag(type, "message_alert", on); }
    //--- Show or hide the markers of a side on the chart (the same as Show on chart of an indicator template)
-     bool               ShowBuySignal(const ENUM_BAR_INFOR_TYPE type, const bool on)  { return this.ChangeFlag(type, "show_buy_signal", "have_buy_signal = 1", on);   }
-     bool               ShowSellSignal(const ENUM_BAR_INFOR_TYPE type, const bool on) { return this.ChangeFlag(type, "show_sell_signal", "have_sell_signal = 1", on); }
+     bool               ShowBuySignal(const ENUM_BAR_INFOR_TYPE type, const bool on)  { return this.ChangeFlag(type, "show_buy_signal", on);   }
+     bool               ShowSellSignal(const ENUM_BAR_INFOR_TYPE type, const bool on) { return this.ChangeFlag(type, "show_sell_signal", on); }
    //--- The switch of a group of the tab: ON when the markers of any type of the group are shown. Setting it shows or hides the markers of every type of the group at once
      bool               AnyShow(const ENUM_BAR_INFORMATION_GROUP group) const;
      bool               AnyAlert(const ENUM_BAR_INFORMATION_GROUP group) const;            // the sound or the message alert of any type of the group is on
@@ -100,21 +108,12 @@
     }
   }
  //+------------------------------------------------------------------+
- //| The group of a type, from the table                              |
+ //| The group of a type, of the table (m_list)                        |
  //+------------------------------------------------------------------+
  ENUM_BAR_INFORMATION_GROUP CBarInformationManager::Group(const ENUM_BAR_INFOR_TYPE type) const
   {
-   long group = BAR_INFORMATION_SMART_MONEY;
-   int request = (m_db != INVALID_HANDLE ? ::DatabasePrepare(m_db, "SELECT group_infor FROM Setting_BarInformation WHERE type_infor = " + (string)(int)type) : INVALID_HANDLE);
-   if(request == INVALID_HANDLE)
-     {
-      ::Print("MY DEBUG    CBarInformationManager::Group the group of the type ", (int)type, " is not asked, error ", ::GetLastError());
-      return (ENUM_BAR_INFORMATION_GROUP)group;
-     }
-   if(::DatabaseRead(request))
-      ::DatabaseColumnLong(request, 0, group);
-   ::DatabaseFinalize(request);
-   return (ENUM_BAR_INFORMATION_GROUP)group;
+   CBarInformationSetting *row = this.GetSetting(type);
+   return (row != NULL ? row.Group() : BAR_INFORMATION_SMART_MONEY);
   }
  void CBarInformationManager::Catalog(SBarInforCatalogItem &out[]) const
   {
@@ -150,7 +149,7 @@
         {BAR_INFOR_TYPE_PIN_BAR,              "Pin Bar",              BAR_INFORMATION_PRICE_ACTION_CANDLE, 1, true,  true },
         {BAR_INFOR_TYPE_RAILS,                "Rails",                BAR_INFORMATION_PRICE_ACTION_CANDLE, 2, true,  true },
         {BAR_INFOR_TYPE_OUTSIDE_BAR,          "Outside Bar",          BAR_INFORMATION_PRICE_ACTION_CANDLE, 2, true,  true },
-        {BAR_INFOR_TYPE_INSIDE_BAR,           "Inside Bar",           BAR_INFORMATION_PRICE_ACTION_CANDLE, 2, false, false},
+        {BAR_INFOR_TYPE_INSIDE_BAR,           "Inside Bar",           BAR_INFORMATION_PRICE_ACTION_CANDLE, 2, true,  true },
         {BAR_INFOR_TYPE_PIVOT_POINT_REVERSAL, "Pivot Point Reversal", BAR_INFORMATION_PRICE_ACTION_CANDLE, 3, true,  true },
       // --- Smart Money
         {BAR_INFOR_TYPE_MOMENTUM_CANDLE,      "Momentum Candle",      BAR_INFORMATION_SMART_MONEY, 1, true,  true },
@@ -307,6 +306,8 @@
     }
    if(!this.MakeSetup())
       return false;
+   if(!this.SyncDataFromDB())
+      return false;
    ::Print("Complete ", __FUNCTION__, " > ", LIB_DATABASE_FILE, " opened");
    return true;
   }
@@ -316,7 +317,7 @@
  //+------------------------------------------------------------------+
  void CBarInformationManager::DropColumn(const string table, const string column)
   {
-   int request = ::DatabasePrepare(m_db, "SELECT COUNT(*) FROM pragma_table_info('" + table + "') WHERE name = '" + column + "'");
+   int request = LibDatabase_Prepare(m_db, "SELECT COUNT(*) FROM pragma_table_info('" + table + "') WHERE name = '" + column + "'");
    if(request == INVALID_HANDLE)
       return;
    long found = 0;
@@ -396,83 +397,22 @@
    return true;
   }
  //+------------------------------------------------------------------+
- //| The parameters of a type, in the order they were given            |
+ //| The two tables to m_list: a type for each row of                 |
+ //| Setting_BarInformation, its parameters from Setting_BarSetup.    |
+ //| Once: the tables are not asked again                              |
  //+------------------------------------------------------------------+
- int CBarInformationManager::Params(const ENUM_BAR_INFOR_TYPE type, string &params[], string &displays[], double &values[]) const
+ bool CBarInformationManager::SyncDataFromDB(void)
   {
-   ::ArrayResize(params, 0);
-   ::ArrayResize(displays, 0);
-   ::ArrayResize(values, 0);
-   if(m_db == INVALID_HANDLE)
-      return 0;
-   int request = ::DatabasePrepare(m_db, "SELECT param, display, value FROM Setting_BarSetup WHERE type_infor = " + (string)(int)type + " ORDER BY rowid");
-   if(request == INVALID_HANDLE)
-      return 0;
-   int total = 0;
-   while(::DatabaseRead(request))
-    {
-     ::ArrayResize(params, total + 1);
-     ::ArrayResize(displays, total + 1);
-     ::ArrayResize(values, total + 1);
-     ::DatabaseColumnText(request, 0, params[total]);
-     ::DatabaseColumnText(request, 1, displays[total]);
-     ::DatabaseColumnDouble(request, 2, values[total]);
-     total++;
-    }
-   ::DatabaseFinalize(request);
-   return total;
-  }
- bool CBarInformationManager::ParamValue(const ENUM_BAR_INFOR_TYPE type, const string param, double &value) const
-  {
+   this.m_list.Clear();
    if(m_db == INVALID_HANDLE)
       return false;
-   int request = ::DatabasePrepare(m_db, "SELECT value FROM Setting_BarSetup WHERE type_infor = " + (string)(int)type + " AND param = '" + LibDatabase_Quoted(param) + "'");
-   if(request == INVALID_HANDLE)
-      return false;
-   bool found = ::DatabaseRead(request);
-   if(found)
-      ::DatabaseColumnDouble(request, 0, value);
-   ::DatabaseFinalize(request);
-   return found;
-  }
- bool CBarInformationManager::Param(const ENUM_BAR_INFOR_TYPE type, const string param, const double value)
-  {
-   double old = 0;
-   if(!this.ParamValue(type, param, old))
-      return false;
-   if(old == value)
-      return true;
-   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarSetup SET value = " + ::DoubleToString(value, 8) + " WHERE type_infor = " + (string)(int)type + " AND param = '" + LibDatabase_Quoted(param) + "'"))
-      return false;
-   ::EventChartCustom(::ChartID(), (ushort)BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED, (long)type, 0.0, "");
-   return true;
-  }
- //+------------------------------------------------------------------+
- //| The types, in the order of type_infor                             |
- //+------------------------------------------------------------------+
- int CBarInformationManager::Informations(ENUM_BAR_INFOR_TYPE &types[], string &names[], ENUM_BAR_INFORMATION_GROUP &groups[], int &candles[], bool &have_buy[], bool &have_sell[],
-                                          bool &sound[], bool &message[], bool &show_buy[], bool &show_sell[]) const
-  {
-   ::ArrayResize(types, 0);
-   ::ArrayResize(names, 0);
-   ::ArrayResize(groups, 0);
-   ::ArrayResize(candles, 0);
-   ::ArrayResize(have_buy, 0);
-   ::ArrayResize(have_sell, 0);
-   ::ArrayResize(sound, 0);
-   ::ArrayResize(message, 0);
-   ::ArrayResize(show_buy, 0);
-   ::ArrayResize(show_sell, 0);
-   if(m_db == INVALID_HANDLE)
-      return 0;
-   int request = ::DatabasePrepare(m_db, "SELECT type_infor, name, group_infor, candles, have_buy_signal, have_sell_signal, sound_alert, message_alert, "
-                                         "show_buy_signal, show_sell_signal FROM Setting_BarInformation ORDER BY type_infor");
+   int request = LibDatabase_Prepare(m_db, "SELECT type_infor, name, group_infor, candles, have_buy_signal, have_sell_signal, sound_alert, message_alert, "
+                                           "show_buy_signal, show_sell_signal FROM Setting_BarInformation ORDER BY type_infor");
    if(request == INVALID_HANDLE)
     {
      ::Print(__FUNCTION__, " > the query is not accepted, error ", ::GetLastError());
-     return 0;
+     return false;
     }
-   int total = 0;
    while(::DatabaseRead(request))
     {
      long type, group, count, hb, hs, so, m, sb, ss;
@@ -487,93 +427,188 @@
      ::DatabaseColumnLong(request, 7, m);
      ::DatabaseColumnLong(request, 8, sb);
      ::DatabaseColumnLong(request, 9, ss);
-     ::ArrayResize(types, total + 1);
-     ::ArrayResize(names, total + 1);
-     ::ArrayResize(groups, total + 1);
-     ::ArrayResize(candles, total + 1);
-     ::ArrayResize(have_buy, total + 1);
-     ::ArrayResize(have_sell, total + 1);
-     ::ArrayResize(sound, total + 1);
-     ::ArrayResize(message, total + 1);
-     ::ArrayResize(show_buy, total + 1);
-     ::ArrayResize(show_sell, total + 1);
-     types[total]     = (ENUM_BAR_INFOR_TYPE)(int)type;
-     names[total]     = name;
-     groups[total]    = (ENUM_BAR_INFORMATION_GROUP)(int)group;
-     candles[total]   = (int)count;
-     have_buy[total]  = (hb != 0);
-     have_sell[total] = (hs != 0);
-     sound[total]     = (so != 0);
-     message[total]   = (m != 0);
-     show_buy[total]  = (sb != 0);
-     show_sell[total] = (ss != 0);
-     total++;
+     CBarInformationSetting *row = new CBarInformationSetting((ENUM_BAR_INFOR_TYPE)(int)type, name, (ENUM_BAR_INFORMATION_GROUP)(int)group, (int)count, hb != 0, hs != 0);
+     if(row == NULL)
+        continue;
+     row.SoundAlert(so != 0);
+     row.MessageAlert(m != 0);
+     row.ShowBuy(sb != 0, false);
+     row.ShowSell(ss != 0, false);
+     if(!this.m_list.Add(row))
+        delete row;
     }
    ::DatabaseFinalize(request);
+   int params = 0;
+   request = LibDatabase_Prepare(m_db, "SELECT type_infor, param, display, value FROM Setting_BarSetup ORDER BY rowid");
+   if(request != INVALID_HANDLE)
+    {
+     while(::DatabaseRead(request))
+      {
+       long type;
+       string param, display;
+       double value;
+       ::DatabaseColumnLong(request, 0, type);
+       ::DatabaseColumnText(request, 1, param);
+       ::DatabaseColumnText(request, 2, display);
+       ::DatabaseColumnDouble(request, 3, value);
+       CBarInformationSetting *row = this.GetSetting((ENUM_BAR_INFOR_TYPE)(int)type);
+       if(row == NULL)
+          continue;
+       row.AddParam(param, display, value);
+       params++;
+      }
+     ::DatabaseFinalize(request);
+    }
+   ::Print("Complete ", __FUNCTION__, " > ", this.m_list.Total(), " types of Setting_BarInformation and ", params, " parameters of Setting_BarSetup read to RAM");
+   return true;
+  }
+ int CBarInformationManager::IndexSetting(const ENUM_BAR_INFOR_TYPE type) const
+  {
+   for(int i = 0; i < this.m_list.Total(); i++)
+    {
+     CBarInformationSetting *row = this.m_list.At(i);
+     if(row != NULL && row.TypeInfor() == type)
+        return i;
+    }
+   return WRONG_VALUE;
+  }
+ CBarInformationSetting *CBarInformationManager::GetSetting(const ENUM_BAR_INFOR_TYPE type) const
+  {
+   int index = this.IndexSetting(type);
+   return (index > WRONG_VALUE ? this.m_list.At(index) : NULL);
+  }
+ //+------------------------------------------------------------------+
+ //| The parameters of a type, in the order they were given            |
+ //+------------------------------------------------------------------+
+ int CBarInformationManager::Params(const ENUM_BAR_INFOR_TYPE type, string &params[], string &displays[], double &values[]) const
+  {
+   CBarInformationSetting *row = this.GetSetting(type);
+   if(row == NULL)
+    {
+     ::ArrayResize(params, 0);
+     ::ArrayResize(displays, 0);
+     ::ArrayResize(values, 0);
+     return 0;
+    }
+   return row.Params(params, displays, values);
+  }
+ bool CBarInformationManager::ParamValue(const ENUM_BAR_INFOR_TYPE type, const string param, double &value) const
+  {
+   CBarInformationSetting *row = this.GetSetting(type);
+   return (row != NULL && row.ParamValue(param, value));
+  }
+ //--- A parameter: its row at once, then the type in m_list, whose setter tells the listeners (BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED)
+ bool CBarInformationManager::Param(const ENUM_BAR_INFOR_TYPE type, const string param, const double value)
+  {
+   CBarInformationSetting *row = this.GetSetting(type);
+   double old = 0;
+   if(m_db == INVALID_HANDLE || row == NULL || !row.ParamValue(param, old))
+      return false;
+   if(old == value)
+      return true;
+   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarSetup SET value = " + ::DoubleToString(value, 8) + " WHERE type_infor = " + (string)(int)type + " AND param = '" + LibDatabase_Quoted(param) + "'"))
+      return false;
+   return row.ParamValue(param, value);
+  }
+ //+------------------------------------------------------------------+
+ //| The types, in the order of type_infor                             |
+ //+------------------------------------------------------------------+
+ int CBarInformationManager::Informations(ENUM_BAR_INFOR_TYPE &types[], string &names[], ENUM_BAR_INFORMATION_GROUP &groups[], int &candles[], bool &have_buy[], bool &have_sell[],
+                                          bool &sound[], bool &message[], bool &show_buy[], bool &show_sell[]) const
+  {
+   int total = this.m_list.Total();
+   ::ArrayResize(types, total);
+   ::ArrayResize(names, total);
+   ::ArrayResize(groups, total);
+   ::ArrayResize(candles, total);
+   ::ArrayResize(have_buy, total);
+   ::ArrayResize(have_sell, total);
+   ::ArrayResize(sound, total);
+   ::ArrayResize(message, total);
+   ::ArrayResize(show_buy, total);
+   ::ArrayResize(show_sell, total);
+   for(int i = 0; i < total; i++)
+    {
+     CBarInformationSetting *row = this.m_list.At(i);
+     types[i]     = row.TypeInfor();
+     names[i]     = row.Name();
+     groups[i]    = row.Group();
+     candles[i]   = row.Candles();
+     have_buy[i]  = row.HasBuy();
+     have_sell[i] = row.HasSell();
+     sound[i]     = row.SoundAlert();
+     message[i]   = row.MessageAlert();
+     show_buy[i]  = row.ShowBuy();
+     show_sell[i] = row.ShowSell();
+    }
    return total;
   }
  //+------------------------------------------------------------------+
  //| A flag of a type, only when the type has what the flag is about   |
- //| (needs). False when the type is not there or has not it. The Show |
- //| flags tell the listeners with the type_infor                      |
+ //| (a side for the alerts, the side for its Show). False when the    |
+ //| type is not there or has not it. The column at once, then the     |
+ //| type in m_list: the Show setters tell the listeners               |
  //+------------------------------------------------------------------+
- bool CBarInformationManager::ChangeFlag(const ENUM_BAR_INFOR_TYPE type, const string column, const string needs, const bool on)
+ bool CBarInformationManager::ChangeFlag(const ENUM_BAR_INFOR_TYPE type, const string column, const bool on)
   {
-   if(m_db == INVALID_HANDLE)
+   CBarInformationSetting *row = this.GetSetting(type);
+   if(m_db == INVALID_HANDLE || row == NULL)
       return false;
-   string where = "type_infor = " + (string)(int)type + " AND " + needs;
-   int request = ::DatabasePrepare(m_db, "SELECT " + column + " FROM Setting_BarInformation WHERE " + where);
-   if(request == INVALID_HANDLE)
+   bool has = (column == "show_buy_signal" ? row.HasBuy() : column == "show_sell_signal" ? row.HasSell() : (row.HasBuy() || row.HasSell()));
+   if(!has)
       return false;
-   long value = 0;
-   bool found = ::DatabaseRead(request);
-   if(found)
-      ::DatabaseColumnLong(request, 0, value);
-   ::DatabaseFinalize(request);
-   if(!found)
-      return false;
-   if((value != 0) == on)
+   bool value = (column == "show_buy_signal" ? row.ShowBuy() : column == "show_sell_signal" ? row.ShowSell() : column == "sound_alert" ? row.SoundAlert() : row.MessageAlert());
+   if(value == on)
       return true;
-   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET " + column + " = " + (on ? "1" : "0") + " WHERE " + where))
+   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET " + column + " = " + (on ? "1" : "0") + " WHERE type_infor = " + (string)(int)type))
       return false;
-   if(column == "show_buy_signal" || column == "show_sell_signal")
-      ::EventChartCustom(::ChartID(), (ushort)BAR_INFORMATION_MANAGER_EVENT_SHOW_CHANGED, (long)type, 0.0, "");
+   if(column == "show_buy_signal")
+      row.ShowBuy(on);
+   else if(column == "show_sell_signal")
+      row.ShowSell(on);
+   else if(column == "sound_alert")
+      row.SoundAlert(on);
+   else
+      row.MessageAlert(on);
    return true;
   }
  bool CBarInformationManager::AnyShow(const ENUM_BAR_INFORMATION_GROUP group) const
   {
-   if(m_db == INVALID_HANDLE)
-      return false;
-   int request = ::DatabasePrepare(m_db, "SELECT COUNT(*) FROM Setting_BarInformation WHERE group_infor = " + (string)(int)group +
-                                         " AND ((have_buy_signal = 1 AND show_buy_signal = 1) OR (have_sell_signal = 1 AND show_sell_signal = 1))");
-   if(request == INVALID_HANDLE)
-      return false;
-   long value = 0;
-   if(::DatabaseRead(request))
-      ::DatabaseColumnLong(request, 0, value);
-   ::DatabaseFinalize(request);
-   return (value != 0);
+   for(int i = 0; i < this.m_list.Total(); i++)
+    {
+     CBarInformationSetting *row = this.m_list.At(i);
+     if(row != NULL && row.Group() == group && (row.ShowBuy() || row.ShowSell()))
+        return true;
+    }
+   return false;
   }
  bool CBarInformationManager::AnyAlert(const ENUM_BAR_INFORMATION_GROUP group) const
   {
-   if(m_db == INVALID_HANDLE)
-      return false;
-   int request = ::DatabasePrepare(m_db, "SELECT COUNT(*) FROM Setting_BarInformation WHERE group_infor = " + (string)(int)group +
-                                         " AND (have_buy_signal = 1 OR have_sell_signal = 1) AND (sound_alert = 1 OR message_alert = 1)");
-   if(request == INVALID_HANDLE)
-      return false;
-   long value = 0;
-   if(::DatabaseRead(request))
-      ::DatabaseColumnLong(request, 0, value);
-   ::DatabaseFinalize(request);
-   return (value != 0);
+   for(int i = 0; i < this.m_list.Total(); i++)
+    {
+     CBarInformationSetting *row = this.m_list.At(i);
+     if(row != NULL && row.Group() == group && (row.SoundAlert() || row.MessageAlert()))
+        return true;
+    }
+   return false;
   }
  bool CBarInformationManager::AlertGroup(const ENUM_BAR_INFORMATION_GROUP group, const bool on)
   {
    if(m_db == INVALID_HANDLE)
       return false;
-   return ::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET sound_alert = " + (on ? "1" : "0") + ", message_alert = " + (on ? "1" : "0") +
-                                  " WHERE group_infor = " + (string)(int)group + " AND (have_buy_signal = 1 OR have_sell_signal = 1)");
+   //--- The switch of the group: every type of it, also one without a side the tab does not list (Inside Bar)
+   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET sound_alert = " + (on ? "1" : "0") + ", message_alert = " + (on ? "1" : "0") +
+                               " WHERE group_infor = " + (string)(int)group))
+      return false;
+   for(int i = 0; i < this.m_list.Total(); i++)
+    {
+     CBarInformationSetting *row = this.m_list.At(i);
+     if(row == NULL || row.Group() != group)
+        continue;
+     row.SoundAlert(on);
+     row.MessageAlert(on);
+    }
+   return true;
   }
  //+------------------------------------------------------------------+
  //| The markers of every type of a group at once, for the sides each  |
@@ -585,29 +620,40 @@
    if(m_db == INVALID_HANDLE)
       return false;
    string flag = (on ? "1" : "0");
-   string other = (on ? "0" : "1");
    string in_group = "group_infor = " + (string)(int)group;
-   int request = ::DatabasePrepare(m_db, "SELECT COUNT(*) FROM Setting_BarInformation WHERE " + in_group +
-                                         " AND ((have_buy_signal = 1 AND show_buy_signal = " + other + ") OR (have_sell_signal = 1 AND show_sell_signal = " + other + "))");
-   if(request == INVALID_HANDLE)
+   //--- The switch of the group: every type of it, also one without a side the tab does not list (Inside Bar)
+   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET show_buy_signal = " + flag + ", show_sell_signal = " + flag + " WHERE " + in_group))
       return false;
-   long changed = 0;
-   if(::DatabaseRead(request))
-      ::DatabaseColumnLong(request, 0, changed);
-   ::DatabaseFinalize(request);
-   if(!::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET show_buy_signal = " + flag + " WHERE " + in_group + " AND have_buy_signal = 1") ||
-      !::DatabaseExecute(m_db, "UPDATE Setting_BarInformation SET show_sell_signal = " + flag + " WHERE " + in_group + " AND have_sell_signal = 1"))
-      return false;
-   if(changed > 0)
+   //--- m_list follows, one event for the group (not one for each type)
+   bool changed = false;
+   for(int i = 0; i < this.m_list.Total(); i++)
+    {
+     CBarInformationSetting *row = this.m_list.At(i);
+     if(row == NULL || row.Group() != group)
+        continue;
+     if(row.ShowBuy() != on)
+       {
+        row.ShowBuy(on, false);
+        changed = true;
+       }
+     if(row.ShowSell() != on)
+       {
+        row.ShowSell(on, false);
+        changed = true;
+       }
+    }
+   if(changed)
       ::EventChartCustom(::ChartID(), (ushort)BAR_INFORMATION_MANAGER_EVENT_SHOW_CHANGED, (long)WRONG_VALUE, (double)(int)group, "");
    return true;
-  } //+------------------------------------------------------------------+
+  }
+ //+------------------------------------------------------------------+
  //| Lifecycle - same convention as the other managers. EA.mq5 calls   |
- //| this from its own OnInit().                                       |
+ //| this from its own OnInit(). The tables are read once: a           |
+ //| CHARTCHANGE reinit keeps the database open and m_list as it is    |
  //+------------------------------------------------------------------+
  bool CBarInformationManager::OnInitEvent(void)
   {
-   return (m_db != INVALID_HANDLE) || this.Open();   // a CHARTCHANGE reinit keeps the database open
+   return (m_db != INVALID_HANDLE) || this.Open();
   }
  //+------------------------------------------------------------------+
  //| The types whose markers are shown on the chart, for each side     |

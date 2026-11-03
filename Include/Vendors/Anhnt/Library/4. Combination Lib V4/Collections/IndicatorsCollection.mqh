@@ -2,11 +2,8 @@
 //|                                         IndicatorsCollection.mqh |
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //| Lib link            https://www.mql5.com/en/articles/14710       |
+//! CRUD Table: indicators                                           |
 //+------------------------------------------------------------------+
-//--- Change from V1 Collections\IndicatorsCollection.mqh (a Create<Name> method for every indicator, asked by the program): the indicators follow the
-//--- settings by themselves, one CIndicatorDE for each template of Setting_IndicatorTemplate on each pair of Setting_SymbolTF (the pairs the library judges,
-//--- the rest is Python's). It hears the managers and SERIES_EVENTS_NEW_BAR (the values in RAM follow), it tells nothing: the signals and the chart ask it
-//--- for the indicator of a template on a pair
 #ifndef __INDICATORSCOLLECTION_MQH__
 #define __INDICATORSCOLLECTION_MQH__
  #include <Arrays\ArrayObj.mqh>
@@ -50,8 +47,10 @@
  #include "..\Entities\Indicators\Standard\IndVolumes.mqh"
  #include "..\Entities\Indicators\Standard\IndWPR.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
+ #include "..\Services\DELib\DatabaseDELib.mqh"
  #include "Settings\SymbolTFManager.mqh"
  #include "Settings\IndicatorTemplateManager.mqh"
+ #include "..\Services\DELib\DatabaseService.mqh"
 #ifndef CINDICATORSCOLLECTION_MQH_DECLARATION
 #define CINDICATORSCOLLECTION_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -62,11 +61,15 @@
    private:
     CArrayObj         m_list;                                    // The indicators (CIndicatorDE, owned)
     CSymbolTFManager *m_SymbolTFManager;                         // The EA holds it: the pairs
-    CIndicatorTemplateManager *m_IndicatorTemplateManager;       // The EA holds it: the templates, their params as MqlParam
+    CIndicatorTemplateManager *m_IndicatorTemplateManager;       // The EA holds it: the templates, their params as MqlParam   
+    //Plan to replaced by CDatabaseService
+     int               m_db;                                      // Common DB: the table indicators is this class's, the others only read it
+    
+    CDatabaseService   *m_CDatabaseService;                       // The EA holds it
    //--- The object of the type (V1: CreateMA, CreateRSI...), NULL for a type that is not a standard indicator
     CIndicatorDE     *CreateIndicator(const ENUM_INDICATOR type,MqlParam &params[],const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- The indicator of a template on a pair is made (once)
-    bool              AddIndicator(const long id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
+    bool              AddIndicatorToList(const long id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- (1) every template on a pair, (2) a template on every pair
     void              AddPair(const string symbol,const ENUM_TIMEFRAMES timeframe);
     void              AddTemplate(const ENUM_INDICATOR type,const string params_text);
@@ -76,23 +79,60 @@
    public:
     void              SetSymbolTFManager(CSymbolTFManager *manager)                   { this.m_SymbolTFManager=manager;          }
     void              SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
+    void              SetDatabaseService    (CDatabaseService   *databaseService)    {this.m_CDatabaseService=databaseService;}
     CArrayObj        *GetList(void)                                                   { return &this.m_list;                     }
-   //--- Every template on every pair
+   //--- Lifecycle: opens Common DB, makes the table indicators, writes the catalog to it (SyncDataToDB), then every template on every pair
     bool              OnInitEvent(void);
+   //--- The catalog of IndicatorDELib.mqh to the table indicators (written again at each OnInit: the table follows the code)
+    bool              SyncDataToDB(void);
    //--- A pair or a template added (made) or deleted (gone): SYMBOLTF_MANAGER_EVENT_ADDED / _DELETE, INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED / _DELETE; a new bar: SERIES_EVENTS_NEW_BAR
     bool              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
    //--- The indicator of a template on a pair: its type and its params (the text of the template as MqlParam), never the handle (NULL: none)
     CIndicatorDE     *GetIndicator(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
-                      CIndicatorsCollection(void) : m_SymbolTFManager(NULL),m_IndicatorTemplateManager(NULL) { this.m_type=COLLECTION_INDICATORS_ID; }
+                      CIndicatorsCollection(void) : m_SymbolTFManager(NULL),m_IndicatorTemplateManager(NULL),m_CDatabaseService(NULL),m_db(INVALID_HANDLE) { this.m_object_type=COLLECTION_INDICATORS_ID; }
+                     ~CIndicatorsCollection(void) { if(this.m_db!=INVALID_HANDLE) ::DatabaseClose(this.m_db); }
   };
 #endif // CINDICATORSCOLLECTION_MQH_DECLARATION
 #ifndef CINDICATORSCOLLECTION_MQH_IMPLEMENTATION
 #define CINDICATORSCOLLECTION_MQH_IMPLEMENTATION
  //+------------------------------------------------------------------+
- //| Every template on every pair of Setting_SymbolTF                 |
+ //| The table indicators is this class's: made when it is not there,  |
+ //| the catalog written to it; then every template on every pair of   |
+ //| Setting_SymbolTF                                                  |
  //+------------------------------------------------------------------+
  bool CIndicatorsCollection::OnInitEvent(void)
   {
+   //Old Plan to remove
+    if(this.m_db==INVALID_HANDLE)
+     {
+      this.m_db=LibDatabase_Open(DATABASE_OPEN_READWRITE);
+      if(this.m_db==INVALID_HANDLE)
+        {
+         ::Print(__FUNCTION__," > the database ",LIB_DATABASE_FILE," is not opened, error ",::GetLastError());
+         return false;
+        }
+      ::DatabaseExecute(this.m_db,"PRAGMA busy_timeout=5000");
+     }   
+    string sql = "CREATE TABLE IF NOT EXISTS indicators (type_enum INTEGER NOT NULL PRIMARY KEY, type_name TEXT NOT NULL UNIQUE, name TEXT NOT NULL UNIQUE, "
+                  "group_enum INTEGER NOT NULL, buffers INTEGER NOT NULL, params_total INTEGER NOT NULL)";
+   // Old Plan to remove after implemenation CDatabaseService
+    if(!::DatabaseExecute(this.m_db, sql))
+     {
+      ::Print(__FUNCTION__, " > legacy indicators table is not created, error ", ::GetLastError());
+      return false;
+     }
+   // New In V4 after implemenation CDatabaseService
+    if(this.m_CDatabaseService == NULL)
+     {
+      ::Print(__FUNCTION__, " > DatabaseService is not set");
+      return false;
+     }
+    if(!this.m_CDatabaseService.ExecuteCommon(sql))
+      return false;
+       
+   //-----------------------
+   if(!this.SyncDataToDB())
+      return false;
    if(this.m_SymbolTFManager==NULL || this.m_IndicatorTemplateManager==NULL)
       return false;
    this.m_list.Clear();
@@ -111,7 +151,44 @@
    ::Print("Complete ",__FUNCTION__," > ",this.m_list.Total()," indicators on ",pairs," pairs of Setting_SymbolTF, the values of ",filled," of them in RAM (the others at the first new bar of their pair)");
    return true;
   }
- bool CIndicatorsCollection::AddIndicator(const long id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
+ //+------------------------------------------------------------------+
+ //| The table indicators: the catalog of IndicatorDELib.mqh (the      |
+ //| standard indicators of MT5), written again at each OnInit so the  |
+ //| table follows the code. Python only reads it: type_name is the    |
+ //| ENUM_INDICATOR without IND_ (its key of a calculation)            |
+ //+------------------------------------------------------------------+
+ bool CIndicatorsCollection::SyncDataToDB(void)
+  {
+   //Old Plan to remove 
+    if(this.m_db==INVALID_HANDLE)
+      return false;
+   //New Plan to Replace
+    SIndicatorCatalogItem catalog[];
+    GetIndicatorCatalog(catalog);
+    for(int i=0;i<::ArraySize(catalog);i++)
+     {
+      SIndicatorParam schema[];
+      int params_total=GetIndicatorParamSchema(catalog[i].ind_type,schema);
+      // Old
+       if(!::DatabaseExecute(this.m_db,"INSERT OR REPLACE INTO indicators (type_enum, type_name, name, group_enum, buffers, params_total) VALUES ("+(string)(int)catalog[i].ind_type+", '"+
+                               ::StringSubstr(::EnumToString(catalog[i].ind_type),4)+"', '"+LibDatabase_Quoted(catalog[i].name)+"', "+(string)(int)catalog[i].group+", "+
+                               (string)catalog[i].buffers+", "+(string)params_total+")"))
+        {
+         ::Print(__FUNCTION__," > ",catalog[i].name," not written, error ",::GetLastError());
+         return false;
+        }
+      //New Create Standard Indicator list
+       if(!this.m_CDatabaseService.ExecuteCommon("INSERT OR REPLACE INTO indicators (type_enum, type_name, name, group_enum, buffers, params_total) VALUES ("+(string)(int)catalog[i].ind_type+", '"+
+                               ::StringSubstr(::EnumToString(catalog[i].ind_type),4)+"', '"+LibDatabase_Quoted(catalog[i].name)+"', "+(string)(int)catalog[i].group+", "+
+                               (string)catalog[i].buffers+", "+(string)params_total+")"))       
+        {
+         ::Print(__FUNCTION__," > ",catalog[i].name," not written, error ",::GetLastError());
+         return false;
+        }
+     }
+   return true;
+  }
+ bool CIndicatorsCollection::AddIndicatorToList(const long id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    if(this.GetIndicator(type,params_text,symbol,timeframe)!=NULL)
       return true;
@@ -189,7 +266,7 @@
    bool buy[],sell[];
    int templates=this.m_IndicatorTemplateManager.TemplateIds(ids,types,texts,buy,sell);
    for(int t=0;t<templates;t++)
-      this.AddIndicator(ids[t],types[t],texts[t],symbol,timeframe);
+      this.AddIndicatorToList(ids[t],types[t],texts[t],symbol,timeframe);
   }
  void CIndicatorsCollection::AddTemplate(const ENUM_INDICATOR type,const string params_text)
   {
@@ -206,7 +283,7 @@
    ENUM_TIMEFRAMES timeframes[];
    int pairs=this.m_SymbolTFManager.Pairs(symbols,timeframes);
    for(int i=0;i<pairs;i++)
-      this.AddIndicator(id,type,params_text,symbols[i],timeframes[i]);
+      this.AddIndicatorToList(id,type,params_text,symbols[i],timeframes[i]);
   }
  void CIndicatorsCollection::DeletePair(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {

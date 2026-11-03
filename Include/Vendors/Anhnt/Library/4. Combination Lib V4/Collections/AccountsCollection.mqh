@@ -13,7 +13,7 @@
 #ifndef __ACCOUNTSCOLLECTION_MQH__
 #define __ACCOUNTSCOLLECTION_MQH__
  #include "ListObj.mqh"
- #include "..\Services\LibDatabase.mqh"
+ #include "..\Services\DELib\DatabaseDELib.mqh"
  #include "..\Entities\Bases\BaseObjExt.mqh"
  #include "..\Entities\Trading\Account.mqh"
 #ifndef CACCOUNTSCOLLECTION_MQH_DECLARATION
@@ -228,7 +228,7 @@
   {
    if(this.m_db==INVALID_HANDLE)
       return false;
-   int request=::DatabasePrepare(this.m_db,"SELECT login, server, name, company, currency, currency_digits, trade_mode, margin_mode, margin_so_mode, margin_so_call, "+
+   int request=LibDatabase_Prepare(this.m_db,"SELECT login, server, name, company, currency, currency_digits, trade_mode, margin_mode, margin_so_mode, margin_so_call, "+
                                            "margin_so_so, leverage, limit_orders, fifo_close, hedge_allowed, server_type FROM accounts");
    if(request==INVALID_HANDLE)
      {

@@ -45,7 +45,7 @@
       //-----------------------------------------------------------
    public:
     //--- Default constructor
-      COrder(void){ this.m_type=OBJECT_DE_TYPE_ORDER_DEAL_POSITION; }    
+      COrder(void){ this.m_object_type=OBJECT_DE_TYPE_ORDER_DEAL_POSITION; }    
     //--- Protected parametric constructor
       COrder(ENUM_ORDER_STATUS order_status,const ulong ticket);
     //--- Get and return integer properties of a selected order from its parameters
@@ -207,7 +207,7 @@
  COrder::COrder(ENUM_ORDER_STATUS order_status,const ulong ticket)
   {
    //--- Set the object type
-    this.m_type=OBJECT_DE_TYPE_ORDER_DEAL_POSITION; 
+    this.m_object_type=OBJECT_DE_TYPE_ORDER_DEAL_POSITION; 
    //--- Save integer properties
     this.m_ticket=ticket;
     this.m_long_prop[ORDER_PROP_STATUS]                               = order_status;

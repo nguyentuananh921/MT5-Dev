@@ -1,5 +1,5 @@
 """main.py: Python calculates what is on the bars and writes it to the database; the EA only shows it. The pairs are every symbol of the Market Watch that is
-one of ours (symbol_account) on every TF of the table timeframes (Setting_SymbolTF only says what the EA shows), what is calculated for each pair is a type of information of Setting_BarInformation (Momentum Candle, its parameters in Setting_BarSetup) and every indicator template
+one of ours (symbols) on every TF of the table timeframes (Setting_SymbolTF only says what the EA shows), what is calculated for each pair is a type of information of Setting_BarInformation (Momentum Candle, its parameters in Setting_BarSetup) and every indicator template
 of Setting_IndicatorTemplate: a template the user adds gets its signals at once, with no change here. The bars go to BarSeriesDE, what was found to
 BarTimeSeriesCollection / SignalsCollection, how far to Setting_Sync. It takes as many bars as the terminal has: the newest ones first, then, whenever
 it has nothing else to do, a chunk of older bars at a time, back to the first bar of the history (the data is there for the machine learning later).
@@ -241,7 +241,7 @@ def build_jobs(db):
     types, all_params = db.types(), db.all_params()
 
     def source(type_infor):
-        return libdb.Source(libdb.TABLE_RESULT, libdb.COLLECTION_SERIES_ID, ("type_infor",), (type_infor,))
+        return libdb.Source(libdb.TABLE_RESULT, libdb.setting_int("collection_series"), ("type_infor",), (type_infor,))
     if momentum.NAME in types:
         params = all_params.get(types[momentum.NAME], {})
         jobs.append(Job(momentum.NAME, source(types[momentum.NAME]), momentum.context(params),
@@ -262,15 +262,15 @@ def build_jobs(db):
             if name in types:
                 jobs.append(Job(name, source(types[name]), structure.context(high_params, low_params),
                                 lambda bars, since, until, bos=bos, hp=high_params, lp=low_params: structure.calculate(bos, bars, hp, lp, since, until)))
-    for template_id, display, params_text in db.templates():
-        template = indicators.from_template(display, params_text)
+    for template_id, display, params_text, type_name, params_total in db.templates():
+        template = indicators.from_template(type_name, params_total, params_text)   # the type from the table indicators (the EA makes it), not from the display text
         if template is None:
             if display not in _not_calculated:
                 _not_calculated.add(display)
-                print(f"{display}: Python does not calculate this indicator (yet)")
+                print(f"{display}: not calculated, its params do not fit the table indicators (or Python has no function for it)")
             continue
         name, params = template
-        jobs.append(Job(display, libdb.Source(libdb.TABLE_IND_RESULT, libdb.COLLECTION_SIGNALS_ID, ("template_id",), (template_id,)), indicators.context(params),
+        jobs.append(Job(display, libdb.Source(libdb.TABLE_IND_RESULT, libdb.setting_int("collection_signals"), ("template_id",), (template_id,)), indicators.context(params),
                         lambda bars, since, until, name=name, params=params: signals.found(name, bars, params, since, until)))
     return jobs
 
@@ -508,6 +508,7 @@ def run_parent(terminal):
     global _beat_db
     _beat_db = db
     libdb.history_done_clear()
+    libdb.jobs_changed()   # a file of the EA from before this Python: the Current worker starts with the jobs of now anyway
     workers = {}   # symbol_id -> the process of the history of the symbol, "current" -> the one of the first chunks, "live" -> the one of the new bars
     model = None   # what the Current worker was started for (the symbols, how many jobs): when it changes, the Current worker runs again
     all_asleep = False
@@ -515,6 +516,14 @@ def run_parent(terminal):
     try:
         while True:
             mark_progress()
+            if libdb.jobs_changed():   # the EA told it (a template or a pair came or went): the Current worker runs again now for the new jobs, not at the next check
+                current = workers.get("current")
+                if current is not None and current.poll() is None:
+                    current.terminate()
+                    current.wait(timeout=10)
+                model = None
+                last_check = -WORKER_CHECK_SECONDS
+                print("the jobs changed (the EA told it): the Current worker runs again")
             now = time.monotonic()
             if now - last_check >= WORKER_CHECK_SECONDS:
                 last_check = now
@@ -532,7 +541,7 @@ def run_parent(terminal):
                 if asleep != all_asleep:
                     all_asleep = asleep
                     if asleep:
-                        libdb.milestone_set(libdb.MILESTONES[1])
+                        libdb.milestone_set("file_history_done")
                     log_timing(f"history complete: the Current worker and all the {len(symbols_now)} workers of the history are asleep, {time.monotonic() - _started:.0f} s after the start" if asleep else
                                "history: a worker of the history is awake again")
                 try:
@@ -652,8 +661,8 @@ def run_current(parent_pid):
     sys.stdout = LinePrefix(sys.stdout, "[current] ")
     start_log("Python_current.txt")
     log_timing(f"current: worker of the parent {parent_pid} starts")
-    libdb.milestone_clear(libdb.MILESTONES[0])   # the Setting_SymbolTF milestone of a run before: the library waits for the one of this run
-    libdb.milestone_set(libdb.MILESTONES[2])
+    libdb.milestone_clear("file_current_symboltf")   # the Setting_SymbolTF milestone of a run before: the library waits for the one of this run
+    libdb.milestone_set("file_current_start")
     libdb.urgent = True
     libdb.history_done_set(CURRENT_ID, False)
     arm_watchdog()
@@ -703,11 +712,11 @@ def run_current(parent_pid):
                     count_locked(pair, "write", error)
             if chart == (pair[1], pair[2]) and not chart_told:
                 chart_told = True
-                libdb.milestone_set(libdb.MILESTONES[4])
+                libdb.milestone_set("file_current_chart")
                 log_timing(f"current: the chart pair {pair[1]} {pair[3]} is in the database, {time.monotonic() - _started:.0f} s after the start")
             if not first and not oninit_told:
                 oninit_told = True
-                libdb.milestone_set(libdb.MILESTONES[0])
+                libdb.milestone_set("file_current_symboltf")
                 log_timing(f"OnInit complete: the newest bars of the chart pair and of the pairs of Setting_SymbolTF are in the database, {time.monotonic() - _started:.0f} s after the start. "
                            f"Now the others, then the history (a worker for each symbol) and the new bars (the live worker)")
         try:
@@ -719,12 +728,12 @@ def run_current(parent_pid):
         busy = failed or libdb.SPENT["marks"] != written   # something was marked: the next pass looks for what is left
         if not busy:
             if not chart_told:
-                libdb.milestone_set(libdb.MILESTONES[4])   # the chart pair is not one of ours: nothing to wait for
+                libdb.milestone_set("file_current_chart")   # the chart pair is not one of ours: nothing to wait for
             if not oninit_told:
-                libdb.milestone_set(libdb.MILESTONES[0])   # no pair outside Setting_SymbolTF to wait for
+                libdb.milestone_set("file_current_symboltf")   # no pair outside Setting_SymbolTF to wait for
             libdb.history_done_set(CURRENT_ID, True)
             log_timing(f"current: the newest bars of every pair are there, {time.monotonic() - _started:.0f} s after the start, it ends")
-            libdb.milestone_set(libdb.MILESTONES[3])
+            libdb.milestone_set("file_current_done")
             return
         libdb.history_done_set(CURRENT_ID, False)
         time.sleep(SLEEP_SECONDS if failed else BUSY_SECONDS)
@@ -824,7 +833,7 @@ def run_live(parent_pid):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--terminal", default=None, help="path to terminal64.exe when several terminals are installed")
-    parser.add_argument("--symbol-id", type=int, default=None, help="a History worker: the symbol (id of the table symbols) it goes back in; none, no --live and no --current = the parent that starts the workers")
+    parser.add_argument("--symbol-id", type=int, default=None, help="a History worker: the symbol (id of the table symbol_base) it goes back in; none, no --live and no --current = the parent that starts the workers")
     parser.add_argument("--current", action="store_true", help="the Current worker: the first chunk of every pair, the pair of the chart first")
     parser.add_argument("--live", action="store_true", help="the worker of the new bars of the pairs that are not in Setting_SymbolTF")
     parser.add_argument("--parent-pid", type=int, default=0, help="a worker: the process of the parent Python (the worker stops when it is gone)")

@@ -210,6 +210,18 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   //--- The objects of the chart changed (CChartObj: the terminal drew the arrows of a trade, on top of the windows): the shown windows go back on top (V2)
+   if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_OBJECTS_CHANGE)
+     {
+      for(int i=0;i<this.ChildrenTotal();i++)
+        {
+         CGElement *window=dynamic_cast<CGElement *>(this.Child(i));
+         if(window!=NULL && window.IsVisible())
+            window.BringToTop();
+        }
+      ::ChartRedraw(this.m_chart_id);
+      return;
+     }
    //--- The popup of a candle opens on the chart, away from the windows: it hears the event before the filter below
    this.OnEvent_Window_CandleInfo(id,lparam,dparam,sparam);
    //--- The mouse over the chart, away from the windows and with no control focused or pressed, is not for any control: nobody is asked

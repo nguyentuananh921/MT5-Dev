@@ -181,7 +181,7 @@
       else
          params[i].integer_value=(long)::StringToInteger(m_param_edits[i].GetValue());
      }
-   if(!m_IndicatorTemplateManager.Add_IndicatorTemplateSetting(m_current_param_type,params))
+   if(!m_IndicatorTemplateManager.AddToDB(m_current_param_type,params))
       ::Print(__FUNCTION__," > rejected: this template already exists");
   }
  //+------------------------------------------------------------------+

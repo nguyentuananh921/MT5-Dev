@@ -17,7 +17,7 @@
    public:
                       CIndADXW(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_ADXW,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ADXW),GetIndicatorNameForType(IND_ADXW),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_ADXW; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ADXW; }
   };
 #endif // CINDADXW_MQH_DECLARATION
 #endif // __INDADXW_MQH__

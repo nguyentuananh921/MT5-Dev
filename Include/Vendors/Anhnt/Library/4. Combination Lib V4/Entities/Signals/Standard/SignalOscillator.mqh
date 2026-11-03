@@ -16,7 +16,7 @@
     double            m_oversold;
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalOscillator(const double overbought,const double oversold) : m_overbought(overbought),m_oversold(oversold) { this.m_type=OBJECT_DE_TYPE_SIGNAL_OSCILLATOR; }
+                      CSignalOscillator(const double overbought,const double oversold) : m_overbought(overbought),m_oversold(oversold) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_OSCILLATOR; }
   };
  void CSignalOscillator::Directions(CArrayObj *list)
   {

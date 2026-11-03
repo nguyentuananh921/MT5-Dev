@@ -15,38 +15,28 @@ from pathlib import Path
 
 import MetaTrader5 as mt5
 
-PROGRAM_NAME = "EA V4 SQLLite"              # the EA: its folder in MQL5\Files (EA Configuration.mqh names the same file; LIBDB_FILE, the full path the EA sends, wins)
-FOLDER_NAME = "SQLite"                      # inside MQL5\Files\<program name>
-FILE_NAME = PROGRAM_NAME + "_Common.sqlite3"
-SIGNAL_DIRECTION = {"BUY": 0, "SELL": 1, "NONE": 2}     # ENUM_SIGNAL_DIRECTION of CommonDefines.mqh: the column signal_direction of BarTimeSeriesCollection and SignalsCollection
-TABLE_BARS = "BarSeriesDE"                  # the bars of the terminal (CBarSeriesDE): what the calculations and the machine learning read
-TABLE_RESULT = "BarTimeSeriesCollection"     # what Python found on the bars (the table of CBarTimeSeriesCollection)
-TABLE_IND_RESULT = "SignalsCollection"   # the signals of the indicator templates (the flips), the template is its id (the table of CSignalsCollection)
-TABLE_SYNC = "Setting_Sync"              # what was synced and up to where (the table of CSyncManager, in the file the accounts share)
-# The numbers of ENUM_OBJECT_DE_TYPE and of the COLLECTION_*_ID of CommonDefines.mqh that Setting_Sync keeps: sync_object is the m_type of the collection that finds,
-# sync_by the m_type of whoever moved last_update last. Change them here when CommonDefines.mqh changes
-OBJECT_DE_TYPE_PYTHON = 0            # Python itself (the first of ENUM_OBJECT_DE_TYPE)
-COLLECTION_SERIES_ID = 0x777F        # CBarTimeSeriesCollection
-COLLECTION_SIGNALS_ID = 0x778A       # CSignalsCollection
-# The table Setting_PythonBridge has two columns, name and value. The lines 'pid' (the parent Python that holds the place, 0 = nobody) and 'alive_at' (the time of its mark,
-# UTC milliseconds) are the place of Python: the EA clears them when it is closed, Python claims them at start. The other lines are what the EA decides (its Configuration):
-# the EA writes them in OnInit, Python reads them (setting): nothing of it is copied here or sent on the command line
-TABLE_PYTHON_BRIDGE = "Setting_PythonBridge"
-PLACE_NAMES = ("pid", "alive_at")
-SETTING_NAMES = ("write_rows", "store_bars", "alive_ms", "hung_ms", "write_queue", "write_flag")   # the lines the EA writes (CPythonBridge::CreateTable_PythonBridge)
-BUSY_MS = 60000                      # a write waits this long for the other writers of the file (one writer at a time, the workers of Python and the EA write to the same files)
-WRITE_QUEUE_MS = 120000                                  # a worker waits this long for its turn; after it, it writes anyway (the busy timeout of SQLite is still there)
-EA_FLAG_STALE_SECONDS = 10.0                             # a file older than this is not looked at (the EA that made it is gone), and no worker waits longer than this for it
-WRITE_AGE_SECONDS = 60.0                                 # what is gathered is written after this long even when it is less than that: how far Setting_Sync can be behind the work
-WRITE_SLOW_SECONDS = 1.0                                 # a turn that takes longer is told (the write of a turn is about 10 ms alone)
-SPENT = {"bars": 0.0, "rows": 0.0, "marks": 0.0}         # the seconds this process wrote in the database, without the wait for its turn (main.py tells it in the report)
-HISTORY_FLAG_NAME = "history_done_{}.flag"              # the file a worker of the history makes (symbol id) when the history of its symbol is all there: it goes to sleep, the live worker and the parent look at them
-QUEUE_SECONDS = [0.0]                                    # the seconds this process waited for its turn (main.py tells it in the report)
-CACHE_KIB = 32768                    # the cache of a worker for the file of the account (KB)
-PARENT_GONE_SECONDS = 60.0                       # a worker stops when the mark of life of its parent is older than this (the parent writes it each second; a late one, under load, stopped a worker once at 10 s)
+PROGRAM_NAME = "EA V4 SQLLite"              # MQL_PROGRAM_NAME: needed to find the database
+LIB_DATABASE_FOLDER = "SQLite"              # DatabaseDELib.mqh: needed to find the database
+LIB_DATABASE_FILE = PROGRAM_NAME + "_Common.sqlite3"
+LIB_ACCOUNTS_FOLDER = "Accounts"            # <account key>.sqlite3
+TABLE_BARS = "BarSeriesDE"
+TABLE_RESULT = "BarTimeSeriesCollection"
+TABLE_IND_RESULT = "SignalsCollection"
+TABLE_SYNC = "Setting_Sync"
+TABLE_PYTHON_BRIDGE = "Setting_PythonBridge"   # the EA writes its constants here in OnInit, Python reads them (setting)
+PLACE_NAMES = ("pid", "alive_at")              # the place of Python, not a setting
+BUSY_MS = 60000                      # busy timeout of a write
+WRITE_QUEUE_MS = 120000              # max wait for the write turn
+EA_FLAG_STALE_SECONDS = 10.0         # an older EA flag file is ignored
+WRITE_AGE_SECONDS = 60.0             # gathered rows are written after this long
+WRITE_SLOW_SECONDS = 1.0             # a slower turn is printed
+SPENT = {"bars": 0.0, "rows": 0.0, "marks": 0.0}   # seconds spent writing (report)
+HISTORY_FLAG_NAME = "history_done_{}.flag"         # a History worker of the symbol id is asleep
+QUEUE_SECONDS = [0.0]                # seconds waited for the turn (report)
+CACHE_KIB = 32768                    # cache of a worker for the account file
+PARENT_GONE_SECONDS = 60.0           # a worker stops when the parent mark is older
 
-# The tables accounts, symbols, symbol_account, Setting_SymbolTF and timeframes are the EA's: the class of each one makes it in OnInit (CAccountsCollection, CSymbolsCollection,
-# CSymbolTFManager, CIndicatorTemplateManager). Python only reads and adds lines; symbols and symbol_account it only reads (the library registers the Market Watch in OnInit).
+# accounts, symbol_base, symbols, Setting_SymbolTF and timeframes are made by the EA in OnInit; Python only reads them.
 
 
 
@@ -58,12 +48,12 @@ _database_path = None   # the data folder of the terminal does not change while 
 
 
 def database_path():
-    """The file the EA named: LIBDB_FILE (the full path the EA sends) when it is given, otherwise MQL5\\Files\\<program name>\\SQLite\\<program name>_Common.sqlite3."""
+    """The file the accounts share: MQL5\\Files\\<program name>\\LIB_DATABASE_FOLDER\\LIB_DATABASE_FILE (DatabaseDELib.mqh); LIBDB_FILE (a full path set by hand to run Python alone) wins."""
     global _database_path
     if os.environ.get("LIBDB_FILE"):
         return Path(os.environ["LIBDB_FILE"])
     if _database_path is None:
-        _database_path = Path(mt5.terminal_info().data_path) / "MQL5" / "Files" / PROGRAM_NAME / FOLDER_NAME / FILE_NAME
+        _database_path = Path(mt5.terminal_info().data_path) / "MQL5" / "Files" / PROGRAM_NAME / LIB_DATABASE_FOLDER / LIB_DATABASE_FILE
     return _database_path
 
 
@@ -107,10 +97,30 @@ def chart_pair():
     return setting("chart_symbol"), setting_int("chart_tf")
 
 
+_timeframes = {}
+
+
+def timeframes():
+    """The table timeframes of the EA (CIndicatorTemplateManager makes it): {name: tf_enum}, read once. tf_enum is the value of ENUM_TIMEFRAMES, the same as the
+    TIMEFRAME_* of the MetaTrader5 package (no copy of them here)."""
+    if not _timeframes:
+        link = sqlite3.connect(database_path().as_uri() + "?mode=ro", uri=True, timeout=BUSY_MS / 1000.0)
+        try:
+            _timeframes.update(link.execute("SELECT name, tf_enum FROM timeframes"))
+        finally:
+            link.close()
+    return _timeframes
+
+
 def settings_ready():
-    """The EA wrote every line of SETTING_NAMES."""
+    """The EA wrote its lines (one INSERT in OnInit: all or none)."""
     load_settings()
-    return all(name in _settings for name in SETTING_NAMES)
+    return bool(_settings)
+
+
+def signal_direction(side):
+    """ENUM_SIGNAL_DIRECTION of "BUY" / "SELL" / "NONE", from the EA."""
+    return setting_int("signal_" + side.lower())
 
 
 def store_bars():
@@ -227,22 +237,30 @@ def pair_turn(symbol_id, tf_enum):
             kernel32.ReleaseMutex(handle)
 
 
-MILESTONES = ("Python_CurrentSymbolTF.flag", "Python_HistoryDone.flag", "Python_CurrentStart.flag", "Python_CurrentDone.flag", "Python_CurrentChart.flag")   # the files the EA reads (PYTHON_CURRENT_START_SYMBOL_TF_FILE, PYTHON_HISTORY_FILE,
-                                                                                                                                                  # PYTHON_CURRENT_START_FILE, PYTHON_CURRENT_DONE_FILE, PYTHON_CURRENT_START_CURRENT_CHART_FILE of PythonBridge.mqh) and takes away
+MILESTONE_PREFIX = "file_current_", "file_history_"   # the setting lines of the milestone files Python makes
 
 
 def milestone_set(name):
-    """The parent tells the EA that a milestone was reached: a file next to the database, the EA tells it in the journal and takes it away."""
+    """A milestone file (setting line `name`) next to the database: the EA prints it and takes it away."""
     try:
-        (database_path().parent / name).write_text("1")
+        (database_path().parent / setting(name)).write_text("1")
     except OSError:
         pass
 
 
-def milestone_clear(name):
-    """A milestone of a run before is not true any more (the EA leaves the file of Setting_SymbolTF while Python runs: it tells the library to start)."""
+def jobs_changed():
+    """The EA made the jobs file (a template or a pair came or went): it is taken away, True."""
     try:
-        (database_path().parent / name).unlink()
+        (database_path().parent / setting("file_jobs")).unlink()
+        return True
+    except OSError:
+        return False   # no file: nothing changed
+
+
+def milestone_clear(name):
+    """A milestone file (setting line `name`) of a run before goes."""
+    try:
+        (database_path().parent / setting(name)).unlink()
     except OSError:
         pass
 
@@ -272,7 +290,8 @@ def history_done_ids():
 def history_done_clear():
     """The parent starts: what an earlier run left is not true any more."""
     folder = database_path().parent
-    for path in list(folder.glob(HISTORY_FLAG_NAME.format("*"))) + [folder / name for name in MILESTONES]:
+    milestones = [folder / value for name, value in _settings.items() if name.startswith(MILESTONE_PREFIX)]
+    for path in list(folder.glob(HISTORY_FLAG_NAME.format("*"))) + milestones:
         try:
             path.unlink()
         except OSError:
@@ -318,7 +337,7 @@ class LibDatabase:
         print(f"library database: {path}")
 
     def ensure(self):
-        """The file and its tables are there (symbol_account is asked by the trade sync before the first poll of the account)."""
+        """The file and its tables are there (symbols is asked by the trade sync before the first poll of the account)."""
         if self.db is None:
             self.open()
 
@@ -351,7 +370,7 @@ class LibDatabase:
         if self.acc is not None:
             self.acc.close()
             self.acc = None
-        path = database_path().parent / "Accounts" / (key + ".sqlite3")
+        path = database_path().parent / LIB_ACCOUNTS_FOLDER / (key + ".sqlite3")
         if not path.exists():
             return False
         self.acc = sqlite3.connect(str(path), timeout=BUSY_MS / 1000.0, isolation_level=None)
@@ -366,7 +385,7 @@ class LibDatabase:
         """The EA makes the tables of the results in OnInit: Python only adds rows to them."""
         self.ensure()
         names = {row[0] for row in self.db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-        if not {TABLE_PYTHON_BRIDGE, TABLE_SYNC, "accounts", "Setting_IndicatorTemplate", "Setting_BarSetup", "Setting_SymbolTF", "symbol_account", "timeframes"} <= names:
+        if not {TABLE_PYTHON_BRIDGE, TABLE_SYNC, "accounts", "Setting_IndicatorTemplate", "Setting_BarSetup", "Setting_SymbolTF", "symbols", "symbol_base", "timeframes", "indicators"} <= names:
             return False
         if not settings_ready():
             return False   # the EA has not written what it decides (Setting_PythonBridge): it does in OnInit, before it starts Python
@@ -440,11 +459,11 @@ class LibDatabase:
         self.take_place_python_bridge(os.getpid(), 0, 0)
 
     def pairs(self, symbol_id=None):
-        """What is calculated: every symbol of this account that is one of ours (symbol_account) on every TF of the table timeframes, by tf_enum (one symbol when
+        """What is calculated: every symbol of this account that is one of ours (symbols) on every TF of the table timeframes, by tf_enum (one symbol when
         symbol_id is given, the pairs of a worker): (symbol_id, symbol of the account, tf_enum, TF name). Setting_SymbolTF only says what the EA shows."""
         if not self.open_account():
             return []
-        rows = self.db.execute("SELECT a.symbol_id, a.account_symbol, t.tf_enum, t.name FROM symbol_account a CROSS JOIN timeframes t "
+        rows = self.db.execute("SELECT a.symbol_id, a.name, t.tf_enum, t.name FROM symbols a CROSS JOIN timeframes t "
                                "WHERE a.account_key = ? AND a.symbol_id IS NOT NULL AND (? IS NULL OR a.symbol_id = ?) ORDER BY t.tf_enum, a.rowid",
                                (self.login_key, symbol_id, symbol_id)).fetchall()
         return rows
@@ -454,7 +473,7 @@ class LibDatabase:
         key = self.current_account()
         if key is None:
             return []
-        return self.db.execute("SELECT symbol_id, account_symbol FROM symbol_account WHERE account_key = ? AND symbol_id IS NOT NULL ORDER BY rowid", (key,)).fetchall()
+        return self.db.execute("SELECT symbol_id, name FROM symbols WHERE account_key = ? AND symbol_id IS NOT NULL ORDER BY rowid", (key,)).fetchall()
 
     def library_pairs(self):
         """The pairs the Library (CBarTimeSeriesCollection) keeps up to date after the first load, the ones of Setting_SymbolTF for this account: {(symbol_id, tf_enum)}."""
@@ -468,7 +487,7 @@ class LibDatabase:
         key = self.current_account()
         if key is None:
             return None
-        row = self.db.execute("SELECT a.account_symbol FROM symbol_account a JOIN symbols s ON s.id = a.symbol_id WHERE a.account_key = ? AND s.name = ?",
+        row = self.db.execute("SELECT a.name FROM symbols a JOIN symbol_base s ON s.id = a.symbol_id WHERE a.account_key = ? AND s.name = ?",
                               (key, name)).fetchone()
         return None if row is None else row[0]
 
@@ -530,7 +549,7 @@ class LibDatabase:
                               (self.acc_key, symbol_id, tf_enum, source.sync_object, source.key_id)).fetchone()
         key = (symbol_id, tf_enum, source.sync_object, source.key_id)
         found = row is not None
-        last_update, lost_from, lost_to, sync_by = row if found else (0, 0, 0, OBJECT_DE_TYPE_PYTHON)
+        last_update, lost_from, lost_to, sync_by = row if found else (0, 0, 0, setting_int("object_python"))
         for pending_key, values in self.pending_marks:
             if pending_key == key:
                 found = True
@@ -547,11 +566,11 @@ class LibDatabase:
         marker = ", ".join("?" for _ in source.key_names)
         if found:
             self.pending_rows.append(("INSERT OR IGNORE INTO " + source.result_table + " (symbol_id, tf_enum, " + keys + ", bar_time, signal_direction) VALUES (?, ?, " + marker + ", ?, ?)",
-                                      [(symbol_id, tf_enum, *source.key_values, bar_time, SIGNAL_DIRECTION[side]) for bar_time, side in found]))
+                                      [(symbol_id, tf_enum, *source.key_values, bar_time, signal_direction(side)) for bar_time, side in found]))
         marks = {}
         if last_update is not None:
             marks["last_update"] = int(last_update)
-            marks["sync_by"] = OBJECT_DE_TYPE_PYTHON
+            marks["sync_by"] = setting_int("object_python")
         if lost is not None:
             marks["lost_from_time"], marks["lost_to_time"] = int(lost[0]), int(lost[1])
         if not (marks or found):
@@ -615,8 +634,10 @@ class LibDatabase:
         return spent_rows, spent_marks
 
     def templates(self):
-        """The indicator templates the user has: (id, display, params): the id is the key of their signals."""
-        return self.db.execute("SELECT id, display, params FROM Setting_IndicatorTemplate ORDER BY id").fetchall()
+        """The indicator templates the user has: (id, display, params, type_name, params_total): the id is the key of their signals; type_name (MT5 ENUM_INDICATOR
+        without IND_) and params_total come from the table indicators the EA makes (CIndicatorsCollection::OnInitEvent / SyncDataToDB), joined by type_enum."""
+        return self.db.execute("SELECT t.id, t.display, t.params, i.type_name, i.params_total FROM Setting_IndicatorTemplate t "
+                               "LEFT JOIN indicators i ON i.type_enum = t.type_enum ORDER BY t.id").fetchall()
 
     def close(self):
         for connection in (self.db, self.acc):

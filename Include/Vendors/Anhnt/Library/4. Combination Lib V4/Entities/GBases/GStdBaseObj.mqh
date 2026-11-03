@@ -83,7 +83,7 @@
    this.m_pivots=pivots;
    this.Prop.SetSizeRange(GRAPH_OBJ_PROP_TIME,this.m_pivots);
    this.Prop.SetSizeRange(GRAPH_OBJ_PROP_PRICE,this.m_pivots);
-   this.m_type=obj_type;
+   this.m_object_type=obj_type;
    this.SetName(name);
    CGBaseObj::SetChartID(cid);
    CGBaseObj::SetTypeGraphObject(type);

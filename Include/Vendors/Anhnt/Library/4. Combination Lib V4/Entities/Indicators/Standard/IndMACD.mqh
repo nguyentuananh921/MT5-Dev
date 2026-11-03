@@ -17,7 +17,7 @@
    public:
                       CIndMACD(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_MACD,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_MACD),GetIndicatorNameForType(IND_MACD),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_MACD; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_MACD; }
   };
 #endif // CINDMACD_MQH_DECLARATION
 #endif // __INDMACD_MQH__

@@ -31,7 +31,7 @@
    //--- Buy when the close breaks a HH, Sell when it breaks a LL (Buy first when it breaks both), SIGNAL_DIRECTION_NO_PATTERN when it does not
     ENUM_SIGNAL_DIRECTION FindBOS(const int index) const;
    //--- The judge, and a row: the break bar with the type, its group and the side found on it
-                      CBarBOS(void) : m_swing_high(NULL),m_swing_low(NULL) { this.m_type=OBJECT_DE_TYPE_SERIES_BOS; }
+                      CBarBOS(void) : m_swing_high(NULL),m_swing_low(NULL) { this.m_object_type=OBJECT_DE_TYPE_SERIES_BOS; }
                       CBarBOS(CBar *bar,const long type,const long group,const long direction);
   };
 #endif // CBARBOS_MQH_DECLARATION
@@ -43,7 +43,7 @@
  CBarBOS::CBarBOS(CBar *bar,const long type,const long group,const long direction) : m_swing_high(NULL),m_swing_low(NULL)
   {
    this.SetBar(bar);
-   this.m_type=OBJECT_DE_TYPE_SERIES_BOS;
+   this.m_object_type=OBJECT_DE_TYPE_SERIES_BOS;
    this.SetProperty(BAR_PROP_INFOR_GROUP,group);
    this.SetProperty(BAR_PROP_INFOR_TYPE,type);
    this.SetProperty(BAR_PROP_SIGNAL_DIRECTION,direction);

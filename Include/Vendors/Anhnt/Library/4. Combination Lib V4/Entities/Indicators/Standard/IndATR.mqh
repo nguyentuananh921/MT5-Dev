@@ -17,7 +17,7 @@
    public:
                       CIndATR(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_ATR,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ATR),GetIndicatorNameForType(IND_ATR),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_ATR; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ATR; }
   };
 #endif // CINDATR_MQH_DECLARATION
 #endif // __INDATR_MQH__

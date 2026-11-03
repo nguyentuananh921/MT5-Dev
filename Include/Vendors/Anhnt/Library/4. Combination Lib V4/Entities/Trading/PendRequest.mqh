@@ -89,7 +89,7 @@
 
    public:
      //--- Default constructor
-                     CPendRequest(){ this.m_type=OBJECT_DE_TYPE_PENDING_REQUEST; }
+                     CPendRequest(){ this.m_object_type=OBJECT_DE_TYPE_PENDING_REQUEST; }
      //--- Set request (1) integer, (2) real and (3) string properties
       void              SetProperty(ENUM_PEND_REQ_PROP_INTEGER property,long value) { this.m_long_prop[property]=value;                                     }
       void              SetProperty(ENUM_PEND_REQ_PROP_DOUBLE property,double value){ this.m_double_prop[this.IndexProp(property)]=value;                   }
@@ -309,7 +309,7 @@
                               const MqlTradeRequest &request,
                               const int retcode)
    {
-    this.m_type=OBJECT_DE_TYPE_PENDING_REQUEST; 
+    this.m_object_type=OBJECT_DE_TYPE_PENDING_REQUEST; 
     ::ZeroMemory(this.m_request);
     this.CopyRequest(request);
     this.m_is_hedge=#ifdef __MQL4__ true #else bool(::AccountInfoInteger(ACCOUNT_MARGIN_MODE)==ACCOUNT_MARGIN_MODE_RETAIL_HEDGING) #endif;

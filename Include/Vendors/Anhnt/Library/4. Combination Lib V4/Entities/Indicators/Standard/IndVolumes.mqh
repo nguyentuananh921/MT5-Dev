@@ -29,7 +29,7 @@
     CIndicatorDE(IND_VOLUMES,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_VOLUMES),GetIndicatorNameForType(IND_VOLUMES),
                  "",mql_param),m_handle_average(INVALID_HANDLE)
   {
-   this.m_type=OBJECT_DE_TYPE_IND_VOLUMES;
+   this.m_object_type=OBJECT_DE_TYPE_IND_VOLUMES;
    if(this.Handle()!=INVALID_HANDLE && ::ArraySize(mql_param)>2)
       this.m_handle_average=::iMA(this.Symbol(),timeframe,(int)mql_param[1].integer_value,0,(ENUM_MA_METHOD)mql_param[2].integer_value,this.Handle());
    this.m_series_data.SetIndicator(this.Symbol(),timeframe,IND_VOLUMES,this.Handle(),this.m_handle_average,this.BuffersTotal());

@@ -1,15 +1,27 @@
-- Các nguyên tắc chung được note trong CommonRule.md
+- Các nguyên tắc chung được note detail trong CommonRule.md
+- Communication Rule: Trao đổi bằng tiếng việt nhưng tránh Confuse mất công làm gì làm lại.
 - Nguyên tắc xuyên suốt là:
   - CleanArchitecture
   - MVC (Model-View-Controller)     
   - No Duplicate Everywhere.
   - Sync Everywhere: 
   - Event Rule: Từ V4 trở đi, Chúng ta làm việc theo Event ->Automatic Trade
+    + Việc tổ chức trong Event sẽ cần tối ưu để có thể gửi đủ các tham số tránh phải hỏi lại see CBaseObjExt::CheckEvents.
   - Live on RAM, Save on DB for no more calculation. 
-  Current Vertion: Database dùng SQLite 
-   - Đóng vai trò M trong mô hình MVC dc sử dụng làm SingleSource of Truth.
-   - Lưu lại dữ liệu để khỏi phải tính lại.
-   - Prepare để train cho các mô hình Pridict như XGBoot, Kronos.
+  - Database rule: 
+    + Database đóng vai trò M trong mô hình MVC.
+    + Chúng ta có 2 Database: Common và Accounts note detail in DatabaseDELib.mqh
+      - Common Database chứa các dữ liệu chung cho tất cả các tài khoản
+      - Accounts Database chứa dữ liệu riêng cho từng tài khoản.
+      - Cả EA và Libary cũng như Python sẽ phải tự Join các bảng khi cần thiết.
+    + Database được dùng làm Single SingleSource of Truth ->Phân công nhiệm vụ tính toán giữa EA và Python theo Calculation Rule
+    + Prepare để train cho các mô hình Pridict như XGBoot, Kronos.
+    + Prepare để Back Test Strategy.
+  - Calculation Rule.
+    + Một số công việc mang tính nhỏ nhẹ thì EA và Library làm một mình.
+    + Các công việc tính toán lớn Python làm.
+    + Cả EA và Python cùng biết cách tính và cùng lưu vào Database.
+    + Cùng một việc ma 2 bên thay phiên nhau làm theo sự phân công như tính toán dựa trên các Setting_xxxManager thì cả 2 bên cùng phải biết cách tính và thông báo cho nhau khi EA + Libary chuyển việc tính này sang Python.
   - Parent Child Structure: Mỗi cha có nhiều con, sẽ chủ động quản lý các con này, các con có thể tự nghe Event và tự giải quyết việc của mình, sau đó nếu cần sẽ send Custom Event, các anh chị em cùng cha có thể cùng nghe Event để xử lý không phải nhắc.
     + Ví dụ: EA -> m_GUIPannel (CGUIPannel) -> m_window_main (CWindow) -> m_status_bar (CStatusBar), m_menu_bar (CMenuBar).
       EA chỉ chuyển ChartEvent xuống m_GUIPannel, CGUIPannel::OnChartEvent chuyển tiếp cho từng con (this.Child(i).OnChartEvent), mỗi con tự xử lý phần của mình.
@@ -43,7 +55,15 @@
      3. History Python worker.
   * Vì cách phân chia nhiệm vụ giữa phía EA + Library và Python thì cả 2 phía đều phải biết cách tính mọi thứ như nhau, mặc định Python tính phần số liệu lớn EA + Library tính phần số liệu nhỏ.
     - Quy tắc ngữ cảnh (chi tiết trong Python.md): mỗi Job khai context (số nến cần phía trước) và right (số nến cần phía sau). Ai tính đoạn [từ .. tới] thì đọc [từ - context .. tới + right] nhưng chỉ ghi kết quả trong đoạn của mình. Không ai tính lại cả 20000 nến khi chỉ có vài nến mới.    
- * Common DB: Lưu dữ liệu chung cho tất cả các tài khoản.Setting_*, accounts, symbols, symbol_account, timeframes, 
+ * Common DB: Lưu dữ liệu chung cho tất cả các tài khoản.Setting_*, accounts, symbol_base, symbols, timeframes, indicators
+  - Table in DB: indicators: catalog các indicator chuẩn MT5 (type_enum, type_name = ENUM_INDICATOR bỏ IND_, name, group_enum, buffers, params_total).
+      - Class in Library: CIndicatorsCollection (OnInitEvent tạo bảng, SyncDataToDB ghi) ghi lại từ catalog của IndicatorDELib.mqh mỗi lần OnInit, các class khác cần thì đọc thẳng bảng này. Python chỉ đọc, nối với Setting_IndicatorTemplate qua type_enum.
+  - Table in DB: Setting_IndicatorTemplate
+      - Class in Library: CIndicatorTemplateManager đọc cả bảng mỗi dòng là một setting cho indicator tương ứng. 
+  - Table in DB: timeframes: Liệt kê tất cả các TF có trong dữ liệu MT5, nó không tương ứng với Class nào trong Library.
+      - Class in Library: CIndicatorTemplateManager phụ trách rà soát update bảng này trong OnInit.
+
+
     - Table in DB: Setting_PythonBridge đổi nghĩa: 
        + pid là tiến trình cha giữ chỗ, 0 là không ai. 
        + EA xoá khi đóng, Python chiếm lúc khởi động bằng cập nhật có điều kiện.
@@ -58,15 +78,16 @@
         - Setting_BarSetup: một dòng cho mỗi tham số của một loại (type_infor, param).
         - Define in BarDefines.mqh
         Trong Oninit nếu chưa thấy thì sẽ tạo bảng với giá trị mặc định (cờ mặc định true) và parameter mặc định.
-    - Table in DB: timeframes: Liệt kê tất cả các TF có trong dữ liệu MT5, nó không tương ứng với Class nào trong Library.
-      - Class in Library: CIndicatorTemplateManager phụ trách rà soát update bảng này trong OnInit.   
-    - Table in DB: symbol_account: cùng là XAUUSD tuy nhiên các Account khác nhau lại có symbol là XAUUSD,XAUUSDm,XAUUSDc nên có một bảng
-     symbol_account trong db. Ngoài ra chúng ta có các bảng symbols để map 1 symbol khi các account thay đổi.
-      - Class in Library: CSymbol (một dòng) / CSymbolsCollection (cả bảng)  
+       
+    
+    - Table in DB: symbols / symbol_base: cùng là XAUUSD tuy nhiên các Account khác nhau lại có symbol là XAUUSD,XAUUSDm,XAUUSDc.
+      - symbols: symbol của chính từng Account (account_key, name = XAUUSDm, symbol_id), cũng là bảng map sang symbol_base (không còn symbol_account).
+      - symbol_base: các Symbol duy nhất (id, name = XAUUSD); symbol_id ở mọi bảng khác (Setting_SymbolTF, Setting_Sync, Account DB) là id của bảng này.
+      - Class in Library: CSymbol (một dòng) / CSymbolsCollection (cả bảng symbols, và thêm tên bỏ hậu tố vào symbol_base khi chưa có).
+        Chỉ map tay khi broker đặt tên khác hẳn (GOLD cho XAUUSD); dòng đã có trong symbols không bao giờ bị ghi đè.
     - Table in DB: Setting_SymbolTF
       - Class in Library: CSymbolTFManager (cả bảng, ghi thẳng DB, không có class một dòng)   
-    - Table in DB: Setting_IndicatorTemplate
-      - Class in Library: CIndicatorTemplateManager đọc cả bảng mỗi dòng là một setting cho indicator tương ứng.       
+          
  * Account DB: Lưu dữ liệu riêng cho từng tài khoản.
     - Table in DB: BarSeriesDE (đang tạm bỏ), BarTimeSeriesCollection,SignalsCollection
       Class tương ứng trong DB: CBarSeriesDE, CBarTimeSeriesCollection, CSignalsCollection     
@@ -79,7 +100,9 @@
  * RAM và DB (Sync Everywhere): 
   - RAM dùng để tính hiện tại. Cái gì chỉ ở RAM thì ghi rõ ở đây. 
     + Position, pending order đang mở: CMarketCollection (m_list_all_orders), không ghi xuống Orders.
-    + CSymbol, CTradeObj: thuộc tính lấy từ terminal (CSymbolsCollection giữ list theo symbol_account).
+    + CSymbol, CTradeObj: thuộc tính lấy từ terminal (CSymbolsCollection giữ list theo symbols).
+    + Manager cũng là collection: m_list các object setting (CSymbolTFSetting, CIndicatorSetting, CBarInformationSetting) đọc DB một lần trong OnInit (SyncDataFromDB), sau đó chỉ đọc RAM;
+      thay đổi (AddToDB / RemoveFromDB / cờ) thì sửa m_list, ghi DB ngay (Python đọc) rồi gửi event.
     + Pending request (CPendRequest*) của CTradingControl: hàng đợi gửi lại lệnh, không ghi DB.
     + Account: các giá trị đổi theo tick (balance, equity, margin...) chỉ ở RAM; bảng accounts chỉ giữ thuộc tính tĩnh.
     + Tick: không có tick series (DOM, treo EA), chỉ CNewTickObj báo PAUSE / RESUME.
@@ -92,12 +115,8 @@
  [] Francis Nyoike Thumbi: Born -> Live -> Dead 
   - Stanley Kimathi Kibaara: 23049: Market Structure Framework 
  [] Working Task
-   -Riskmanagement
-    + Rà soát lại Library và tổ chức lại ghi ra SQLLite DB thay vì cache từ Python.
-    + CBarCTimeSeriesCollection;
-    + Reference Series
-      
-  [] Declare 
+   -       
+ [] Riskmanagement 
     + RiskManagementDefine.mqh
         ENUM_RISK_MODE
     + RiskManagementSetting.mqh đang là bản cũ

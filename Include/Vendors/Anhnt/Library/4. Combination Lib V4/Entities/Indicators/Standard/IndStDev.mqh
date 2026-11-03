@@ -17,7 +17,7 @@
    public:
                       CIndStDev(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_STDDEV,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_STDDEV),GetIndicatorNameForType(IND_STDDEV),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_STDEV; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_STDEV; }
   };
 #endif // CINDSTDEV_MQH_DECLARATION
 #endif // __INDSTDEV_MQH__

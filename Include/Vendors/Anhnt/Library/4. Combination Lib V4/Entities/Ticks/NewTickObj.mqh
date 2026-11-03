@@ -40,7 +40,7 @@
        //--- Update price data in the tick structure and set the "New tick" event flag if necessary
          void              Refresh(void)                    { this.m_new_tick=this.IsNewTick(); }
        //--- Constructors
-                           CNewTickObj(void) : m_new_tick(false),m_paused(false) { this.m_type=OBJECT_DE_TYPE_NEW_TICK; ::ZeroMemory(this.m_tick_prev); }
+                           CNewTickObj(void) : m_new_tick(false),m_paused(false) { this.m_object_type=OBJECT_DE_TYPE_NEW_TICK; ::ZeroMemory(this.m_tick_prev); }
                            CNewTickObj(const string symbol);
    };
  #endif // CNEWTICKOBJ_MQH_DECLARATION
@@ -51,7 +51,7 @@
    //+------------------------------------------------------------------+
    CNewTickObj::CNewTickObj(const string symbol) : m_symbol(symbol),m_new_tick(false),m_paused(false)
     {
-      this.m_type=OBJECT_DE_TYPE_NEW_TICK;
+      this.m_object_type=OBJECT_DE_TYPE_NEW_TICK;
      //--- Reset the structures of the new and previous ticks
       ::ZeroMemory(this.m_tick);
       ::ZeroMemory(this.m_tick_prev);

@@ -17,7 +17,7 @@
    public:
                       CIndForce(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_FORCE,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_FORCE),GetIndicatorNameForType(IND_FORCE),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_FORCE; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_FORCE; }
   };
 #endif // CINDFORCE_MQH_DECLARATION
 #endif // __INDFORCE_MQH__

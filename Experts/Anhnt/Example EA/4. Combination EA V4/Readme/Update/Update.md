@@ -9,5 +9,7 @@ V4 2026 1023 Update
  - Reason Change Single Source of Truth của Setting, Reading JSON -> Database Sql Lite. 
  - Fix Library 
     - Theo nguyên tắc Parent Child Structure việc bắn Event là của con, việc xử lý Event là của cha và các anh em.
-    - Giảm thời gian xử lý những Event không liên quan.    
+    - Giảm thời gian xử lý những Event không liên quan. 
+V4 2026 1102 Create CDatabaseService plan to replace DatabaseDELib.mqh
+ [] Có một điều kiện cần giữ đồng bộ: Python cũng phải đọc cùng folder setting. Hiện libdb.py đang har -code "SQLite", nên nếu chỉ đổi constructor phía EA mà không cập nhật cách Python nhận folder, Python sẽ tìm DB ở chỗ cũ.  
  [] Prepare implementation RiskManagement

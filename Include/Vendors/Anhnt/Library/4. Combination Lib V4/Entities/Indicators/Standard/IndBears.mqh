@@ -17,7 +17,7 @@
    public:
                       CIndBears(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_BEARS,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_BEARS),GetIndicatorNameForType(IND_BEARS),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_BEARS; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_BEARS; }
   };
 #endif // CINDBEARS_MQH_DECLARATION
 #endif // __INDBEARS_MQH__

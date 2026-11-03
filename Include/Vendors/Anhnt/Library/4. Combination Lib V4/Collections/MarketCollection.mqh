@@ -40,7 +40,7 @@
         int             total_positions;        // Number of positions on the account
         double          total_volumes;          // Total volume of orders and positions on the account
        };
-      CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbol_account)
+      CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbols)
       CListObj          m_list_all_orders;      // List of pending orders and positions on the account (V3)
       MqlDataMarket     m_struct_curr_market;   // Current data on market orders and positions on the account
       MqlDataMarket     m_struct_prev_market;   // Previous data on market orders and positions on the account
@@ -122,7 +122,7 @@
   //+------------------------------------------------------------------+
   CMarketCollection::CMarketCollection(void) : m_SymbolsCollection(NULL),m_is_trade_event(false),m_is_change_volume(false),m_change_volume_value(0)
    {
-     this.m_type=COLLECTION_MARKET_ID;
+     this.m_object_type=COLLECTION_MARKET_ID;
      this.m_list_all_orders.Sort(SORT_BY_ORDER_TIME_OPEN);
      this.m_list_all_orders.Clear();
      this.m_list_all_orders.Type(COLLECTION_MARKET_ID);

@@ -65,11 +65,11 @@
 #define CSIGNAL_MQH_IMPLEMENTATION
  CSignal::CSignal(void) : m_time(0),m_signal_direction(SIGNAL_DIRECTION_NONE)
   {
-   this.m_type=OBJECT_DE_TYPE_SIGNAL;
+   this.m_object_type=OBJECT_DE_TYPE_SIGNAL;
   }
  CSignal::CSignal(const datetime time,const ENUM_SIGNAL_DIRECTION direction) : m_time(time),m_signal_direction(direction)
   {
-   this.m_type=OBJECT_DE_TYPE_SIGNAL;
+   this.m_object_type=OBJECT_DE_TYPE_SIGNAL;
   }
  int CSignal::Compare(const CObject *node,const int mode=0) const
   {

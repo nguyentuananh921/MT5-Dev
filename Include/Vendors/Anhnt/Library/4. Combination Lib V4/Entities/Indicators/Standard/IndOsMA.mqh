@@ -17,7 +17,7 @@
    public:
                       CIndOsMA(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_OSMA,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_OSMA),GetIndicatorNameForType(IND_OSMA),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_OSMA; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_OSMA; }
   };
 #endif // CINDOSMA_MQH_DECLARATION
 #endif // __INDOSMA_MQH__

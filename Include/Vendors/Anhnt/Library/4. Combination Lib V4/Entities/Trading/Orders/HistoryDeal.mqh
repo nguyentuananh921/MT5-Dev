@@ -21,7 +21,7 @@
    {
     public:
      //--- Constructor
-                     CHistoryDeal(const ulong ticket) : COrder(ORDER_STATUS_DEAL,ticket) { this.m_type=OBJECT_DE_TYPE_HISTORY_DEAL; }
+                     CHistoryDeal(const ulong ticket) : COrder(ORDER_STATUS_DEAL,ticket) { this.m_object_type=OBJECT_DE_TYPE_HISTORY_DEAL; }
      //--- Supported deal properties (1) real, (2) integer
       virtual bool      SupportProperty(ENUM_ORDER_PROP_INTEGER property);
       virtual bool      SupportProperty(ENUM_ORDER_PROP_DOUBLE property);

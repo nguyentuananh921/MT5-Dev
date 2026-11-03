@@ -17,7 +17,7 @@
    public:
                       CIndRSI(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_RSI,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_RSI),GetIndicatorNameForType(IND_RSI),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_RSI; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_RSI; }
   };
 #endif // CINDRSI_MQH_DECLARATION
 #endif // __INDRSI_MQH__

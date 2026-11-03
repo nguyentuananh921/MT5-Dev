@@ -31,7 +31,7 @@
    //--- Buy when the close breaks a LH, Sell when it breaks a HL (Buy first when it breaks both), SIGNAL_DIRECTION_NO_PATTERN when it does not
     ENUM_SIGNAL_DIRECTION FindCHoCH(const int index) const;
    //--- The judge, and a row: the break bar with the type, its group and the side found on it
-                      CBarCHoCH(void) : m_swing_high(NULL),m_swing_low(NULL) { this.m_type=OBJECT_DE_TYPE_SERIES_CHOCH; }
+                      CBarCHoCH(void) : m_swing_high(NULL),m_swing_low(NULL) { this.m_object_type=OBJECT_DE_TYPE_SERIES_CHOCH; }
                       CBarCHoCH(CBar *bar,const long type,const long group,const long direction);
   };
 #endif // CBARCHOCH_MQH_DECLARATION
@@ -43,7 +43,7 @@
  CBarCHoCH::CBarCHoCH(CBar *bar,const long type,const long group,const long direction) : m_swing_high(NULL),m_swing_low(NULL)
   {
    this.SetBar(bar);
-   this.m_type=OBJECT_DE_TYPE_SERIES_CHOCH;
+   this.m_object_type=OBJECT_DE_TYPE_SERIES_CHOCH;
    this.SetProperty(BAR_PROP_INFOR_GROUP,group);
    this.SetProperty(BAR_PROP_INFOR_TYPE,type);
    this.SetProperty(BAR_PROP_SIGNAL_DIRECTION,direction);

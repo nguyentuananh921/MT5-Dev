@@ -218,8 +218,9 @@
          this.CreateBody_BarInformation(section);
         }
      }
-   //--- The tab was opened, the scroll moved, a window changed its size, a header was clicked: the sections are arranged again
-   if(m_sections_candle.OnChartEvent(id,lparam,dparam,sparam))
+   //--- The tab was opened, the scroll moved, a window changed its size, a header was clicked: the sections are arranged again (the section hears it itself)
+   m_sections_candle.OnChartEvent(id,lparam,dparam,sparam);
+   if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && m_sections_candle.SectionOfHeader(lparam)!=WRONG_VALUE)
       return;
    //--- A toggle of a group, or a switch of a type: written to the database at once (the chart follows the event of the manager); dparam = the new state
    if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON)
@@ -240,8 +241,8 @@
       long type;
       int slot;
       string param;
-      if(!m_sections_candle.BodyOf(lparam,type,slot,param))
-         return;
+      if(!m_sections_candle.BodyOf(lparam,type,slot,param) || slot==CANDLE_SLOT_HEADER)
+         return;   // the header of a type opens and closes its parameters (the sections arranged them)
       if(slot==CANDLE_SLOT_PARAM_SWITCH)
         {
          //--- A choice of two: the value is written (price basis: ON = Body)

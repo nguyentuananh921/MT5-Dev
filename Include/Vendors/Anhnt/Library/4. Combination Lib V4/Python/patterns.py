@@ -1,12 +1,12 @@
 """patterns.py: the candle patterns and the price action formations of Setting_BarInformation (the V2 library CBarPatternControl*), shape only, no trend.
 
 Every rule takes the candles and the parameters of its type (Setting_BarSetup, the names of BarDefines.mqh) and returns one value per bar: BULLISH (1),
-BEARISH (-1), BOTH (2, Inside Bar: no side) or NONE (0). A pattern sits on its newest bar: prev(x, 1) is the bar before it, prev(x, 2) the one before that.
+BEARISH (-1) or NONE (0). A pattern sits on its newest bar: prev(x, 1) is the bar before it, prev(x, 2) the one before that.
 Ratios are in percent of the candle size (High - Low); a candle without range counts as 100 % for the body and both shadows.
 """
 import numpy as np
 
-BULLISH, BEARISH, NONE, BOTH = 1, -1, 0, 2
+BULLISH, BEARISH, NONE = 1, -1, 0
 
 
 class Candles:
@@ -160,7 +160,8 @@ def outside_bar(c, p):
 
 
 def inside_bar(c, p):
-    return np.where((c.high < prev(c.high, 1)) & (c.low > prev(c.low, 1)), BOTH, NONE).astype(np.int8)
+    shape = (c.high < prev(c.high, 1)) & (c.low > prev(c.low, 1))
+    return _direction(shape & (c.lower >= c.upper), shape & (c.lower < c.upper))   # neutral as Doji: the longer shadow breaks the tie
 
 
 def _star(c, p, bullish):

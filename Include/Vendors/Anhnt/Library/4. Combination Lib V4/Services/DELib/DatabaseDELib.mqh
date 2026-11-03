@@ -1,19 +1,27 @@
 //+------------------------------------------------------------------+
-//|                                                   LibDatabase.mqh |
-//| The database of the library: one SQLite file for what the EA and |
-//| Python share. The tables follow the classes of the library        |
-//| (accounts = CAccountsCollection, ...). What the terminal already  |
-//| has is not saved: the EA asks the terminal by the key of the      |
-//| account. Every class writes its own table when it starts          |
-//| (OnInitEvent), after the tables it depends on                     |
-//+------------------------------------------------------------------+
-#ifndef __LIBDATABASE_MQH__
-#define __LIBDATABASE_MQH__
- #include "..\Entities\Defines\CommonDefines.mqh"
- //--- The EA names the database (LIB_DATABASE_FILE, in its Configuration\EA Configuration.mqh, included before the library);
- //--- the folders are made before the file is opened (LibDatabase_Open)
+//|                                                 DatabaseDELib.mqh |
+//| The database of the library: one SQLite file for what the EA and  |
+//| Python share. What the terminal already has is not saved          |
+//| The tables follow the classes of the library                      |
+//| Every class writes its own table when it starts  OnInitEvent      |
+//| after the tables it depends on                                    |                  |
+//+-------------------------------------------------------------------+
+//--- Moved from Services\LibDatabase.mqh (2026 1101): 
+// the functions every class shares are in Services\DELib (CommonRule)
+//| Prepare to remove after complete DatabaseService.mqh
+#ifndef __DATABASE_DELIB_MQH__
+#define __DATABASE_DELIB_MQH__
+ #include "..\..\Entities\Defines\CommonDefines.mqh"
+ //--- Where the databases are: MQL5\Files\<program>\SQLite (the common file, Accounts\<account key>.sqlite3). An EA that wants another place defines them before it
+ //--- includes the library; a header compiled alone has them too. The folders are made before a file is opened (LibDatabase_Open)
+ #ifndef LIB_DATABASE_FOLDER
+  #define LIB_DATABASE_FOLDER    (::MQLInfoString(MQL_PROGRAM_NAME)+"\\SQLite")
+ #endif
  #ifndef LIB_DATABASE_FILE
-  #error "LIB_DATABASE_FILE is defined by the EA: include its Configuration\EA Configuration.mqh before the library"
+  #define LIB_DATABASE_FILE      (LIB_DATABASE_FOLDER+"\\"+::MQLInfoString(MQL_PROGRAM_NAME)+"_Common.sqlite3")
+ #endif
+ #ifndef LIB_ACCOUNTS_FOLDER
+  #define LIB_ACCOUNTS_FOLDER    (LIB_DATABASE_FOLDER+"\\Accounts")   // what depends on the broker: one file for each account
  #endif
  #define LIB_DATABASE_BUSY_MS         250   // how long a statement waits for the database when Python is writing: it is tried again at the next beat, the thread of the EA is not held
  //--- The EA writes first: the workers of Python stand in a line to write (a mutex of Windows), the EA stands in the same line and the workers let it pass (the flag
@@ -25,15 +33,13 @@
   uint WaitForSingleObject(long handle,uint milliseconds);
   int  ReleaseMutex(long handle);
  #import
-#ifndef LIB_ACCOUNTS_FOLDER
-  #error "LIB_ACCOUNTS_FOLDER is defined by the EA: include its Configuration\EA Configuration.mqh before the library"
- #endif
-//+------------------------------------------------------------------+
-//| Makes the folders of a path (MQL5\Files\<path>), one level after |
-//| the other, so that a file can be written there; nothing happens  |
-//| to the ones that exist                                           |
-//+------------------------------------------------------------------+
-void LibDatabase_MakeFolders(const string path)
+//Have Make similar in CDatabaseService
+ //+------------------------------------------------------------------+
+ //| Makes the folders of a path (MQL5\Files\<path>), one level after |
+ //| the other, so that a file can be written there; nothing happens  |
+ //| to the ones that exist                                           |
+ //+------------------------------------------------------------------+
+ void LibDatabase_MakeFolders(const string path)
   {
    for(int i = 0; i < StringLen(path); i++)
      {
@@ -42,12 +48,12 @@ void LibDatabase_MakeFolders(const string path)
          FolderCreate(StringSubstr(path, 0, i));
      }
   }
-//+------------------------------------------------------------------+
-//| Makes the database file when it is not there (the EA calls this  |
-//| first in OnInit, before any class opens it). False when it cannot|
-//| be made                                                          |
-//+------------------------------------------------------------------+
-bool LibDatabase_Create(void)
+ //+------------------------------------------------------------------+
+ //| Makes the database file when it is not there (the EA calls this  |
+ //| first in OnInit, before any class opens it). False when it cannot|
+ //| be made                                                          |
+ //+------------------------------------------------------------------+
+ bool LibDatabase_Create(void)
   {
    if(FileIsExist(LIB_DATABASE_FILE))
       return true;
@@ -62,24 +68,64 @@ bool LibDatabase_Create(void)
    Print("Complete ", __FUNCTION__, " > ", LIB_DATABASE_FILE, " made");
    return true;
   }
-//+------------------------------------------------------------------+
-//| Opens the database of the library, its folders are made first.   |
-//| INVALID_HANDLE when it cannot be opened                          |
-//+------------------------------------------------------------------+
-int LibDatabase_Open(const uint flags)
+ //+------------------------------------------------------------------+
+ //| Opens the database of the library, its folders are made first.   |
+ //| INVALID_HANDLE when it cannot be opened                          |
+ //+------------------------------------------------------------------+
+ int LibDatabase_Open(const uint flags)
   {
    LibDatabase_MakeFolders(LIB_DATABASE_FILE);
    return ::DatabaseOpen(LIB_DATABASE_FILE, flags);
   }
-//+------------------------------------------------------------------+
-//| A text as it goes into a SQL string: the quote is doubled        |
-//+------------------------------------------------------------------+
-string LibDatabase_Quoted(const string text)
+ //+------------------------------------------------------------------+
+ //| The key of the account: <server>_<login>, the server cleaned.    |
+ //| It is the account_key column of every table that depends on the  |
+ //| account                                                          |
+ //+------------------------------------------------------------------+
+ string LibDatabase_AccountKey(void)
+  {
+   return LibDatabase_Safe(AccountInfoString(ACCOUNT_SERVER)) + "_" + (string)AccountInfoInteger(ACCOUNT_LOGIN);
+  }
+ //+------------------------------------------------------------------+
+ //| The file of the account the terminal is logged in to: what the   |
+ //| broker gives (the bars, what Python found on them) is kept here, |
+ //| apart from the file the accounts share                           |
+ //+------------------------------------------------------------------+
+ string LibDatabase_AccountFile(void)
+  {
+   return LIB_ACCOUNTS_FOLDER + "\\" + LibDatabase_AccountKey() + ".sqlite3";
+  }
+ //+------------------------------------------------------------------+
+ //| A text as it goes into a SQL string: the quote is doubled        |
+ //+------------------------------------------------------------------+
+ string LibDatabase_Quoted(const string text)
   {
    string result = text;
    ::StringReplace(result, "'", "''");
    return result;
   }
+//+------------------------------------------------------------------+
+//| DatabasePrepare that survives a new schema: a table made by       |
+//| another connection (another class, Python) makes the first        |
+//| statement of this one fail once at DatabaseRead (5601). The first |
+//| row is read to try it: an error prepares it again, else it is     |
+//| reset, the caller reads from the first row as with DatabasePrepare|
+//+------------------------------------------------------------------+
+int LibDatabase_Prepare(const int db, const string sql)
+  {
+   int request = ::DatabasePrepare(db, sql);
+   if(request == INVALID_HANDLE)
+      return INVALID_HANDLE;
+   ::ResetLastError();
+   if(::DatabaseRead(request) || ::GetLastError() == ERR_DATABASE_NO_MORE_DATA)
+     {
+      ::DatabaseReset(request);
+      return request;
+     }
+   ::DatabaseFinalize(request);
+   return ::DatabasePrepare(db, sql);
+  }
+
 //+------------------------------------------------------------------+
 //| A text cleaned of what a file name does not take: letters,       |
 //| digits and _ . - are kept, the other runs become one _           |
@@ -109,22 +155,14 @@ string LibDatabase_Safe(const string text)
       safe = StringSubstr(safe, 0, StringLen(safe) - 1);
    return (safe == "" ? "account" : safe);
   }
-//+------------------------------------------------------------------+
-//| The key of the account: <server>_<login>, the server cleaned.    |
-//| It is the account_key column of every table that depends on the  |
-//| account                                                          |
-//+------------------------------------------------------------------+
-string LibDatabase_AccountKey(void)
-  {
-   return LibDatabase_Safe(AccountInfoString(ACCOUNT_SERVER)) + "_" + (string)AccountInfoInteger(ACCOUNT_LOGIN);
-  }
+
 //+------------------------------------------------------------------+
 //| The name this account gives to the symbol of ours with this id   |
-//| (symbol_account); empty when the account has none                |
+//| (symbols); empty when the account has none                       |
 //+------------------------------------------------------------------+
 string LibDatabase_AccountSymbol(const int db, const long symbol_id)
   {
-   int request = DatabasePrepare(db, "SELECT account_symbol FROM symbol_account WHERE account_key = '" + LibDatabase_AccountKey() + "' AND symbol_id = " + (string)symbol_id);
+   int request = LibDatabase_Prepare(db, "SELECT name FROM symbols WHERE account_key = '" + LibDatabase_AccountKey() + "' AND symbol_id = " + (string)symbol_id);
    if(request == INVALID_HANDLE)
       return "";
    string name = "";
@@ -134,29 +172,27 @@ string LibDatabase_AccountSymbol(const int db, const long symbol_id)
    return name;
   }
 //+------------------------------------------------------------------+
-//| The id of the symbol of ours (symbols) that a symbol of this     |
-//| account is (symbol_account); 0 when it is none of ours            |
+//| The id of the symbol of ours (symbol_base) that a symbol of this |
+//| account is (symbols); 0 when it is none of ours                  |
 //+------------------------------------------------------------------+
 long LibDatabase_SymbolID(const int db, const string account_symbol)
   {
-   int request = DatabasePrepare(db, "SELECT symbol_id FROM symbol_account WHERE account_key = '" + LibDatabase_AccountKey() + "' AND account_symbol = '" + LibDatabase_Quoted(account_symbol) + "'");
+   int request = LibDatabase_Prepare(db, "SELECT symbol_id FROM symbols WHERE account_key = '" + LibDatabase_AccountKey() + "' AND name = '" + LibDatabase_Quoted(account_symbol) + "'");
    if(request == INVALID_HANDLE)
+     {
+      Print(__FUNCTION__, " > ", account_symbol, ": the query is not accepted, error ", GetLastError());
       return 0;
+     }
    long id = 0;
+   ResetLastError();
    if(DatabaseRead(request))
       DatabaseColumnLong(request, 0, id);
+   else if(GetLastError() != ERR_DATABASE_NO_MORE_DATA)   // no row is an answer (a balance deal has no symbol), anything else is an error
+      Print(__FUNCTION__, " > ", account_symbol, ": the row is not read, error ", GetLastError());
    DatabaseFinalize(request);
    return id;
   }
-//+------------------------------------------------------------------+
-//| The file of the account the terminal is logged in to: what the   |
-//| broker gives (the bars, what Python found on them) is kept here, |
-//| apart from the file the accounts share                           |
-//+------------------------------------------------------------------+
-string LibDatabase_AccountFile(void)
-  {
-   return LIB_ACCOUNTS_FOLDER + "\\" + LibDatabase_AccountKey() + ".sqlite3";
-  }
+
 //+------------------------------------------------------------------+
 //| Opens the file of the account (made when it is not there with    |
 //| DATABASE_OPEN_CREATE in the flags). INVALID_HANDLE when it cannot|
@@ -171,7 +207,7 @@ int LibDatabase_OpenAccount(const uint flags)
 //+------------------------------------------------------------------+
 bool LibDatabase_TableExists(const int db, const string name)
   {
-   int request = DatabasePrepare(db, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '" + name + "'");
+   int request = LibDatabase_Prepare(db, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '" + name + "'");
    if(request == INVALID_HANDLE)
       return false;
    long found = 0;
@@ -185,7 +221,7 @@ bool LibDatabase_TableExists(const int db, const string name)
 //+------------------------------------------------------------------+
 bool LibDatabase_ColumnExists(const int db, const string table, const string column)
   {
-   int request = DatabasePrepare(db, "SELECT COUNT(*) FROM pragma_table_info('" + table + "') WHERE name = '" + column + "'");
+   int request = LibDatabase_Prepare(db, "SELECT COUNT(*) FROM pragma_table_info('" + table + "') WHERE name = '" + column + "'");
    if(request == INVALID_HANDLE)
       return false;
    long found = 0;
@@ -392,4 +428,4 @@ string LibDatabase_CanonicalSymbol(const string name)
      }
    return (end > 0 ? StringSubstr(name, 0, end) : name);
   }
-#endif // __LIBDATABASE_MQH__
+#endif // __DATABASE_DELIB_MQH__

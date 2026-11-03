@@ -13,7 +13,7 @@
   {
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalBollinger(void) { this.m_type=OBJECT_DE_TYPE_SIGNAL_BOLLINGER; }
+                      CSignalBollinger(void) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_BOLLINGER; }
   };
  void CSignalBollinger::Directions(CArrayObj *list)
   {
@@ -32,7 +32,7 @@
   {
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalEnvelopes(void) { this.m_type=OBJECT_DE_TYPE_SIGNAL_ENVELOPES; }
+                      CSignalEnvelopes(void) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_ENVELOPES; }
   };
  void CSignalEnvelopes::Directions(CArrayObj *list)
   {

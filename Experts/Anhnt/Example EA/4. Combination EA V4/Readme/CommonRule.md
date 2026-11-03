@@ -1,4 +1,4 @@
-- Trao đổi bằng tiếng Việt tuy nhiên cần dùng thẳng các thuật ngữ tránh confuse
+ - Communication Rule: Trao đổi bằng tiếng Việt tuy nhiên cần dùng thẳng các thuật ngữ tránh confuse
   - Ví dụ: Thay vì dịch cái hộp thì là dịch cái CZone, CGCGStdRectangleObj thậm chí có cả tên cụ thể m_Rectangle_TakeProfit.  
 - Coding rule
   - Folding rule: code cần được căn lề chuẩn để fold dễ dàng.
@@ -15,6 +15,7 @@
   - Cấu trúc file: 
     + MỖI CLASS MỘT FILE (.mqh) có include guard đầy đủ cả declaration và implementation.
     + Tránh viết inline method.
+    + Ở các class khác nhau sẽ cùng dùng tên một method làm cùng một việc ví dụ SyncDataToDB,SyncDataFromDB,AddToList
 - No Duplicate Everywhere detail
   - Enum và Define: 
     - Hạn chế dùng number thay vì đó dùng Enum ví dụ thay vì 1 hay 2 nữa mà thay vì thế trong code mình sẽ phải là PRICE_CLOSE và PRICE_OPEN.
@@ -26,31 +27,25 @@
       + CTimeSeriesEngine CBarTimeSeriesCollection  -> m_BarTimeSeriesCollection;
       + CGUIPannel        CWindow                   -> m_window_main;
       + Nếu Properties là pointer thì comment rõ ngay cạnh là class nào hold nó.
-    - Properties trong table cũng cần lấy cho đồng bộ với properties trong class hoặc gợi nhớ tới nhau.
+    - field trong table ở Database cũng cần lấy cho đồng bộ với properties trong class hoặc gợi nhớ tới nhau.
       + List là bản sao trên RAM của một table thì mang tên table đó (Sync Everywhere: nhìn tên biết maintain table nào):
         m_list_Table_<Table> (bản sao), m_list_Pending_<Table> (CHỈ RAM, phần chưa ghi). Ví dụ CBarSeriesDE: m_list_Table_BarSeriesDE; CBarControl: m_list_Table_BarTimeSeriesCollection,
         m_list_Pending_BarTimeSeriesCollection.
       + List chỉ chứa đối tượng con (không phải bản sao table) thì mang tên theo con: m_list_timeseries (CBarTimeSeriesDE), m_list_series (CBarSeriesDE).
     - Các Properties trong declaration sẽ được declared theo nguyên tắc cha con tuân thủ folding rule trong Coding Rule.
-  - Python (Lib V4\Python) tuân thủ CÙNG các rule này (No Duplicate, Sync Everywhere, đặt tên theo table / class, Update & Implementation Rule): đổi ở phía MQL thì rà
-    phía Python cùng lúc và ngược lại. Chi tiết và danh sách tên cần rà: Python.md, mục "Quy tắc chung".
-  - Method: Các method modify dữ liệu (Model) cần thống nhất giữa Controler ở đây là EA và Python.
-    - Tận dụng triệt đê method trong library tránh thêm các method không cần thiết.
-     + Các method dùng chung được khai trong Services\DebLib theo các tên khác nhau tùy phạm vi sử dụng.
-     + Các method riêng cho từng class thì khai trong class đó.   
-    - Các method và được đặt tên theo nguyên tắc <Action><Which>_<Which>
-     + Create: Create<Which>_<Which> 
-       - CreateTable_IndicatorTemplateSetting()       
-       - CreateTable_SymbolTFSetting()    
-     + Update lần đầu InitializeTabble>_<Which>,
-       - PopulateTable_IndicatorTemplateSetting()  
-       - UpdateWindowCaption_MainWindow(), UpdateStatusBar_SymbolSpread()  
-     + Modify số lượng nhỏ   AddRow_<Which>,DeleteRow_<Which>,HighLightRow_<Which>, UpdateRow_<Which>
-     + Hành vi sửa hàng loạt:   SyncTable_<Which>,
-    - Đặt tên method trong Library (chốt 2026 1030; <Which>_<Which> ở trên là cho EA module):
-     + R1. Method có sẵn ở DoEasy / V1 / V2 giữ tên gốc: RefreshSeries, SyncDataFromDB, SetProperty, Time().
-     + R2. Method của class: <Action><Which>, KHÔNG có hậu tố tên class (biến gọi đã cho biết class: CBar *bar=...; bar.TopBody()).
-       _<Which> chỉ dùng khi một class có nhiều phần cùng làm một Action, như CGUIPannel: OnEvent_Tab_Candle.
+  - Python (Lib V4\Python) tuân thủ CÙNG các rule này (No Duplicate, Sync   
+    Everywhere, đặt tên theo table / class, Update & Implementation Rule): đổi ở phía MQL thì rà phía Python cùng lúc và ngược lại. Chi tiết và danh sách tên cần rà: Python.md, mục "Quy tắc chung".
+  - Method Rule: Các method cần tên thống nhất để có thể biết nó làm gì với Object nào cả phía EA, Library và Python đảm bảo nguyên tắc Sync Every where, no Duplicate everywhere, uu tiên method trong có sẵn thay vì viết mới.
+     Ví dụ: Phía EA
+      - CreateTable_IndicatorTemplateSetting,CreateTable_SymbolTFSetting
+      - PopulateTable_IndicatorTemplateSetting()
+      - Hành vi sửa số lượng nhỏ: AddRow_<Which>,DeleteRow_<Which>, 
+      - Modify số lượng nhỏ   HighLightRow_<Which>, UpdateRow_<Which>
+      - Hành vi sửa hàng loạt:   SyncTable_<Which>,
+    + Các method dùng chung được khai trong Services\DebLib theo các tên khác nhau tùy phạm vi sử dụng.
+    + Trong Library 
+     + R1. Method có sẵn ở DoEasy /V1/ V2 giữ tên gốc: RefreshSeries, SyncDataFromDB, SetProperty, Time().
+     + R2. Method của class: <Action><Which>, KHÔNG có hậu tố tên class (biến gọi đã cho biết class: CBar *bar=...; bar.TopBody()).       
      + R3. Họ method theo type (một method cho mỗi BAR_INFOR_TYPE_*): Find<Type> (FindHammer, FindSwingHigh), bộ chọn theo type: Find(type,index).
      + R4. Hàm global (ngoài class) giữ tiền tố vì không có biến nào cho biết nó thuộc đâu: LibDatabase_InList, các hàm trong Services\DELib.
      + R5. Cùng tên ở cha và con (kế thừa hay chứa nhau) là cùng một việc, cha làm phần mình rồi chuyển xuống con:

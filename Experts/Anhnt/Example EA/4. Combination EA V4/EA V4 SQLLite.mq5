@@ -16,6 +16,7 @@
 #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\TradeEventsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V4\Trading\TradingControl.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\GraphElementsCollection.mqh>
+#include <Vendors\Anhnt\Library\4. Combination Lib V4\Services\DELib\DatabaseService.mqh> 
 #include "Services\BarMarkerSync.mqh"
 #include "Services\PythonBridge.mqh"
 //--- The EA is the parent: it owns its children and the models, and passes the events down to them
@@ -37,7 +38,7 @@ CPythonBridge      m_PythonBridge;        // starts Python when it is not runnin
 CBarMarkerSync     m_BarMarkerSync;       // the View of the table BarTimeSeriesCollection: the markers of what Python found
 CChartObj         *m_ChartObj=NULL;       // the chart the EA runs on
 CGUIPannel         m_GUIPannel;
-ulong              g_chart_refresh_ms=0;   // when the chart was read last (EA_CHART_REFRESH_MS)
+CDatabaseService *m_DatabaseService = NULL; //Prepare to replace DatabaseDELib
 ulong              g_series_refresh_ms=0;  // when the bars of the chart were read last (EA_SERIES_REFRESH_MS)
 ulong              g_trade_refresh_ms=0;   // when the history, the orders and the events were looked at last (EA_TRADE_REFRESH_MS)
 ulong              g_history_until_ms=0;   // a trade happened: the history of the terminal is looked at until then (EA_HISTORY_WATCH_MS)
@@ -50,13 +51,29 @@ int OnInit()
    Breadcrumb("OnInit: LibDatabase_Create");
    if(!LibDatabase_Create())   // no database file yet (first run, or the folder was deleted): make it before any class opens it
       return(INIT_FAILED);
+   Breadcrumb("OnInit: DatabaseService_Create");
+   // Build account key & open Account DB   
+   string account_key =::AccountInfoString(ACCOUNT_COMPANY) + ::AccountInfoString(ACCOUNT_SERVER) + "_" + (string)::AccountInfoInteger(ACCOUNT_LOGIN);
+   m_DatabaseService = new CDatabaseService("NewSQLite", "Accounts", account_key + ".sqlite3", account_key);
+   if(m_DatabaseService == NULL || !m_DatabaseService.OnInitEvent())
+     {
+      if(m_DatabaseService != NULL)
+        {
+         delete m_DatabaseService;
+         m_DatabaseService = NULL;
+        }
+      return INIT_FAILED;
+     }
    //--- Every model writes its own table, after the tables it depends on: timeframes, accounts, then symbol_account, then Setting_SymbolTF
    if(m_ChartObj!=NULL)
       delete m_ChartObj;
    m_ChartObj=new CChartObj(::ChartID());   // the indicators the chart holds are read when it is made
-   // m_IndicatorTemplateManager 
+   // makes Setting_IndicatorTemplate and the table timeframes (all the TFs of MT5, which Setting_SymbolTF refers to), the indicators of the chart are templates
     Breadcrumb("OnInit: m_IndicatorTemplateManager.OnInitEvent");
-    m_IndicatorTemplateManager.OnInitEvent(m_ChartObj);   // makes Setting_IndicatorTemplate and the table timeframes (all the TFs of MT5, which Setting_SymbolTF refers to), the indicators of the chart are templates
+    m_IndicatorTemplateManager.SetDatabaseService(m_DatabaseService);
+    if(!m_IndicatorTemplateManager.OnInitEvent(m_ChartObj))
+      return INIT_FAILED;   
+    
    // m_AccountsCollection  
     Breadcrumb("OnInit: m_AccountsCollection.OnInitEvent");
     m_AccountsCollection.OnInitEvent();
@@ -90,6 +107,7 @@ int OnInit()
     Breadcrumb("OnInit: m_IndicatorsCollection.OnInitEvent");
     m_IndicatorsCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the pairs
     m_IndicatorsCollection.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);   // the templates
+    m_IndicatorsCollection.SetDatabaseService(m_DatabaseService);
     m_IndicatorsCollection.OnInitEvent();   // every template on every pair: its handle
    // m_BarTimeSeriesCollection
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSymbolsCollection");
@@ -183,6 +201,11 @@ void OnDeinit(const int reason)
       delete m_ChartObj;
       m_ChartObj=NULL;
      }
+   if(m_DatabaseService != NULL)
+    {
+     delete m_DatabaseService;
+     m_DatabaseService = NULL;
+    }
   }
 //+------------------------------------------------------------------+
 void OnTick()
@@ -233,13 +256,6 @@ void OnTimer()
       Breadcrumb("OnTimer: m_TradingControl.OnTimer");
       m_TradingControl.OnTimer();   // the list of pending requests (DoEasy CEngine::OnTimer)
     }
-   //--- MT5 tells nothing when an indicator of the main window is added, removed or changed by hand (only a subwindow changes the chart): the chart is read again, it tells what is new
-   if(m_ChartObj!=NULL && ::GetTickCount64()-g_chart_refresh_ms>=EA_CHART_REFRESH_MS)
-     {
-      g_chart_refresh_ms=::GetTickCount64();
-      Breadcrumb("OnTimer: m_ChartObj.IndicatorsRefresh");
-      m_ChartObj.IndicatorsRefresh();
-     }
    //--- The bars of every series: a new bar sends SERIES_EVENT_NEW_BAR; the library judges the new bars of the pairs of Setting_SymbolTF and writes what it finds
    if(::GetTickCount64()-g_series_refresh_ms>=EA_SERIES_REFRESH_MS)
      {
@@ -307,9 +323,12 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,const MqlTradeRequest &
 //+------------------------------------------------------------------+
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   if(m_ChartObj!=NULL)
+      m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
    if(id>=CHARTEVENT_CUSTOM)
       Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);   // MY DEBUG: the events of the controls and of the managers, not the mouse
    m_SyncManager.OnChartEvent(id,lparam,dparam,sparam);   // Python wrote more marks: RAM first, the collections read it next
+   m_PythonBridge.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair came or went: Python calculates its history at once
    m_GUIPannel.OnChartEvent(id,lparam,dparam,sparam);
    m_GraphElementsCollection.OnChartEvent(id,lparam,dparam,sparam);   // the layer follows the chart, the markers hear the mouse
    m_IndicatorsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a pair or a template added or deleted: its indicators are made or go

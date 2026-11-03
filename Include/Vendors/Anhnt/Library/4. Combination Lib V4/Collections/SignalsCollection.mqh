@@ -12,7 +12,7 @@
 //--- and at OnDeinit; the view reads the table UNION what waits. Every hand starts after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
 #ifndef __SIGNALSCOLLECTION_MQH__
 #define __SIGNALSCOLLECTION_MQH__
- #include "..\Services\LibDatabase.mqh"
+ #include "..\Services\DELib\DatabaseDELib.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "BarTimeSeriesCollection.mqh"
  #include "IndicatorsCollection.mqh"
@@ -86,7 +86,7 @@
     int               ReadCandle_SignalsCollection(const long symbol_id,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],
                                                    long &tfs[],long &templates[],long &times[],long &sides[]);
                       CSignalsCollection(void) : m_db(INVALID_HANDLE),m_BarTimeSeriesCollection(NULL),m_SymbolTFManager(NULL),m_SyncManager(NULL),m_IndicatorTemplateManager(NULL),
-                                                 m_IndicatorsCollection(NULL) { this.m_type=COLLECTION_SIGNALS_ID; }
+                                                 m_IndicatorsCollection(NULL) { this.m_object_type=COLLECTION_SIGNALS_ID; }
                      ~CSignalsCollection(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
   };
 #endif // CSIGNALSCOLLECTION_MQH_DECLARATION
@@ -124,9 +124,9 @@
     }
    //--- The table was not there (deleted, or the file is new): what was marked as synced for it is not true any more, Python makes the first chunk again
    if(!table_was_there && this.m_SyncManager!=NULL)
-      this.m_SyncManager.ResetObject_SyncManager(this.m_type);
+      this.m_SyncManager.ResetObject_SyncManager(this.m_object_type);
    if(this.m_SyncManager!=NULL)
-      this.m_SyncManager.Import_SyncManager(m_db,"Sync_SignalsCollection","template_id",this.m_type);
+      this.m_SyncManager.Import_SyncManager(m_db,"Sync_SignalsCollection","template_id",this.m_object_type);
    ::Print("Complete ", __FUNCTION__, " > ", LibDatabase_AccountFile(), " opened");
    return true;   // the series and their rows go to RAM after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE: SyncDataFromDB)
   }
@@ -137,7 +137,7 @@
  //+------------------------------------------------------------------+
  void CSignalsCollection::Rename_SignalsCollection(const string old_name,const string new_name)
   {
-   int request=::DatabasePrepare(m_db,"SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '"+old_name+"'), "
+   int request=LibDatabase_Prepare(m_db,"SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '"+old_name+"'), "
                                       "(SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '"+new_name+"')");
    if(request==INVALID_HANDLE)
       return;
@@ -179,7 +179,7 @@
       delete series;   // not a standard indicator: no judge
       return NULL;
      }
-   series.SetDatabase(m_db,symbol_id,this.m_type,this.m_SyncManager);   // it judges and writes its own rows
+   series.SetDatabase(m_db,symbol_id,this.m_object_type,this.m_SyncManager);   // it judges and writes its own rows
    return series;
   }
  void CSignalsCollection::DeleteSeries(const long template_id)
@@ -444,7 +444,7 @@
       if(!series.SyncDataToDB())
          return false;   // the database is busy: what waits stays, the marks too (they go after their rows)
      }
-   return this.m_SyncManager.SyncDataToDB(this.m_type,symbol_id,timeframe);
+   return this.m_SyncManager.SyncDataToDB(this.m_object_type,symbol_id,timeframe);
   }
  bool CSignalsCollection::SyncDataToDB(void)
   {
@@ -492,7 +492,7 @@
   {
    while(::ArraySize(this.m_reset_ids)>0)
      {
-      if(!this.m_SyncManager.ResetStep_SyncManager(m_db,"SignalsCollection","template_id",this.m_type,this.m_reset_ids[0],started,BAR_UPDATE_BUDGET_MS))
+      if(!this.m_SyncManager.ResetStep_SyncManager(m_db,"SignalsCollection","template_id",this.m_object_type,this.m_reset_ids[0],started,BAR_UPDATE_BUDGET_MS))
          return;
       ::Print("Complete ",__FUNCTION__," > the signals and the marks of the template ",this.m_reset_ids[0]," are gone");
       ::ArrayRemove(this.m_reset_ids,0,1);
@@ -544,7 +544,7 @@
    ::ArrayResize(sides,0);
    if(m_db==INVALID_HANDLE)
       return 0;
-   int request=::DatabasePrepare(m_db,"SELECT bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)symbol_id+" AND tf_enum = "+(string)(int)timeframe+
+   int request=LibDatabase_Prepare(m_db,"SELECT bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)symbol_id+" AND tf_enum = "+(string)(int)timeframe+
                                       " AND bar_time >= "+(string)(long)from_time+" AND bar_time <= "+(string)(long)to_time+" AND ((signal_direction = "+(string)(int)SIGNAL_DIRECTION_BUY+" AND template_id IN ("+LibDatabase_InList(buy_templates)+")) OR "
                                       "(signal_direction = "+(string)(int)SIGNAL_DIRECTION_SELL+" AND template_id IN ("+LibDatabase_InList(sell_templates)+")))");
    if(request==INVALID_HANDLE)
@@ -599,7 +599,7 @@
    ::ArrayResize(sides,0);
    if(m_db==INVALID_HANDLE)
       return 0;
-   int request=::DatabasePrepare(m_db,"SELECT tf_enum, template_id, bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)symbol_id+" AND tf_enum IN ("+LibDatabase_InList(asked_tfs)+
+   int request=LibDatabase_Prepare(m_db,"SELECT tf_enum, template_id, bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)symbol_id+" AND tf_enum IN ("+LibDatabase_InList(asked_tfs)+
                                       ") AND template_id IN ("+LibDatabase_InList(asked_templates)+") AND bar_time >= "+(string)(long)from_time+" AND bar_time < "+(string)(long)to_time+
                                       " ORDER BY tf_enum DESC, bar_time LIMIT "+(string)BAR_CANDLE_ROWS_MAX);
    if(request==INVALID_HANDLE)

@@ -403,46 +403,47 @@ def fractals(df, p):
             lower[i] = l[i]
     return [upper, lower], {}
 
-# The name of a template (the start of the column display of Setting_IndicatorTemplate) -> the calculation and the names of its positional MT5 parameters (the order of the EA form)
-TEMPLATE_TYPES = {
-    "PSAR": ("SAR", ("step", "maximum")),
-    "MA": ("MA", ("period", "shift", "method", "applied")),
-    "BBands": ("BANDS", ("period", "shift", "deviation", "applied")),
-    "Alligator": ("ALLIGATOR", ("jaw_period", "jaw_shift", "teeth_period", "teeth_shift", "lips_period", "lips_shift", "method", "applied")),
-    "Ichimoku": ("ICHIMOKU", ("tenkan", "kijun", "senkou_b")),
-    "Envelopes": ("ENVELOPES", ("period", "shift", "method", "applied", "deviation")),
-    "FRAMA": ("FRAMA", ("period", "shift", "applied")),
-    "AMA": ("AMA", ("ama_period", "fast", "slow", "shift", "applied")),
-    "DEMA": ("DEMA", ("period", "shift", "applied")),
-    "TEMA": ("TEMA", ("period", "shift", "applied")),
-    "VIDYA": ("VIDYA", ("cmo_period", "ema_period", "shift", "applied")),
-    "ADX": ("ADX", ("period",)),
-    "ADX Wilder": ("ADXW", ("period",)),
-    "StdDev": ("STDDEV", ("period", "shift", "method", "applied")),
-    "RSI": ("RSI", ("period", "applied")),
-    "MACD": ("MACD", ("fast", "slow", "signal", "applied")),
-    "Stochastic Oscillator": ("STOCHASTIC", ("k", "d", "slowing", "method", "field")),
-    "CCI": ("CCI", ("period", "applied")),
-    "Momentum": ("MOMENTUM", ("period", "applied")),
-    "DeMarker": ("DEMARKER", ("period",)),
-    "Relative Vigor Index": ("RVI", ("period",)),
-    "Williams' Percent Range": ("WPR", ("period",)),
-    "OsMA": ("OSMA", ("fast", "slow", "signal", "applied")),
-    "Triple Exponential Average": ("TRIX", ("period",)),
-    "ATR": ("ATR", ("period",)),
-    "Force Index": ("FORCE", ("period", "method", "volume")),
-    "Awesome Oscillator": ("AO", ()),
-    "Accelerator Oscillator": ("AC", ()),
-    "Gator Oscillator": ("GATOR", ("jaw_period", "jaw_shift", "teeth_period", "teeth_shift", "lips_period", "lips_shift", "method", "applied")),
-    "Bears Power": ("BEARS", ("period",)),
-    "Bulls Power": ("BULLS", ("period",)),
-    "Chaikin Oscillator": ("CHAIKIN", ("fast", "slow", "method", "volume")),
-    "On Balance Volume": ("OBV", ("volume",)),
-    "Accumulation/Distribution": ("AD", ("volume",)),
-    "Money Flow Index": ("MFI", ("period",)),
-    "Volumes": ("VOLUMES", ("volume", "ma_period", "method")),
-    "Market Facilitation Index": ("BWMFI", ()),
-    "Fractals": ("FRACTALS", ()),
+# The type of a template (type_name of the table indicators the EA makes: ENUM_INDICATOR without IND_) -> the names this calculation gives its positional MT5 parameters
+# (the order of the EA form; their number is params_total of the table indicators)
+PARAM_KEYS = {
+    "SAR": ("step", "maximum"),
+    "MA": ("period", "shift", "method", "applied"),
+    "BANDS": ("period", "shift", "deviation", "applied"),
+    "ALLIGATOR": ("jaw_period", "jaw_shift", "teeth_period", "teeth_shift", "lips_period", "lips_shift", "method", "applied"),
+    "ICHIMOKU": ("tenkan", "kijun", "senkou_b"),
+    "ENVELOPES": ("period", "shift", "method", "applied", "deviation"),
+    "FRAMA": ("period", "shift", "applied"),
+    "AMA": ("ama_period", "fast", "slow", "shift", "applied"),
+    "DEMA": ("period", "shift", "applied"),
+    "TEMA": ("period", "shift", "applied"),
+    "VIDYA": ("cmo_period", "ema_period", "shift", "applied"),
+    "ADX": ("period",),
+    "ADXW": ("period",),
+    "STDDEV": ("period", "shift", "method", "applied"),
+    "RSI": ("period", "applied"),
+    "MACD": ("fast", "slow", "signal", "applied"),
+    "STOCHASTIC": ("k", "d", "slowing", "method", "field"),
+    "CCI": ("period", "applied"),
+    "MOMENTUM": ("period", "applied"),
+    "DEMARKER": ("period",),
+    "RVI": ("period",),
+    "WPR": ("period",),
+    "OSMA": ("fast", "slow", "signal", "applied"),
+    "TRIX": ("period",),
+    "ATR": ("period",),
+    "FORCE": ("period", "method", "volume"),
+    "AO": (),
+    "AC": (),
+    "GATOR": ("jaw_period", "jaw_shift", "teeth_period", "teeth_shift", "lips_period", "lips_shift", "method", "applied"),
+    "BEARS": ("period",),
+    "BULLS": ("period",),
+    "CHAIKIN": ("fast", "slow", "method", "volume"),
+    "OBV": ("volume",),
+    "AD": ("volume",),
+    "MFI": ("period",),
+    "VOLUMES": ("volume", "ma_period", "method"),
+    "BWMFI": (),
+    "FRACTALS": (),
 }
 
 WARMUP_BARS = 1000     # the bars before the first bar judged an indicator needs at least (the averages start from the first bar they are given)
@@ -453,16 +454,16 @@ def context(params):
     periods = [int(value) for key, value in params.items() if "shift" not in key and value.lstrip("-").isdigit()]
     return max([WARMUP_BARS] + [WARMUP_PERIODS * period for period in periods])
 
-def from_template(display, params_text):
-    """(name, params) of one row of Setting_IndicatorTemplate (its display text and its saved params), None when Python does not calculate it (yet)."""
-    kind = display.split("  (")[0].strip()
-    if kind not in TEMPLATE_TYPES:
+def from_template(type_name, params_total, params_text):
+    """(type_name, params) of one row of Setting_IndicatorTemplate (its type from the table indicators, its saved params), None when Python does not calculate it (yet)
+    or when the number of its parameters is not the one of the EA (params_total of the table indicators)."""
+    keys = PARAM_KEYS.get(type_name)
+    if keys is None or len(keys) != params_total:
         return None
-    name, keys = TEMPLATE_TYPES[kind]
     values = next(csv.reader([params_text], skipinitialspace=True), []) if params_text.strip() else []   # 14, 0, "EMA", "CLOSE"
     if len(values) != len(keys):
         return None
-    return name, {key: str(value).strip() for key, value in zip(keys, values)}
+    return type_name, {key: str(value).strip() for key, value in zip(keys, values)}
 
 COMPUTE = {"SAR": sar, "MA": ma, "BANDS": bands, "ALLIGATOR": alligator, "ICHIMOKU": ichimoku, "ENVELOPES": envelopes,
            "FRAMA": frama, "AMA": ama, "DEMA": dema, "TEMA": tema, "VIDYA": vidya, "ADX": adx, "ADXW": adx_wilder,

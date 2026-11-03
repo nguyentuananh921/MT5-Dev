@@ -12,7 +12,7 @@
   {
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalSAR(void) { this.m_type=OBJECT_DE_TYPE_SIGNAL_SAR; }
+                      CSignalSAR(void) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_SAR; }
   };
  void CSignalSAR::Directions(CArrayObj *list)
   {

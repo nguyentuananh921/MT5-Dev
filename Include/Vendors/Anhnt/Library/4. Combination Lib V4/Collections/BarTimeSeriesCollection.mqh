@@ -13,7 +13,7 @@
 #ifndef __BARTIMESERIESCOLLECTION_MQH__
 #define __BARTIMESERIESCOLLECTION_MQH__
  #include <Arrays\ArrayObj.mqh>
- #include "..\Services\LibDatabase.mqh"
+ #include "..\Services\DELib\DatabaseDELib.mqh"
  #include "ListObj.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "..\Entities\Bases\BaseObjExt.mqh"
@@ -36,7 +36,7 @@
     int                 m_db;                      // the file of the account: its tables are asked here, nothing is copied
     //CArrayObj           m_list_timeseries;       // List of the symbol timeseries (CBarTimeSeriesDE), one for each symbol
     CListObj            m_list_timeseries;         // List of the symbol timeseries (CBarTimeSeriesDE), one for each symbol: each CBarSeriesDE keeps its rows (a CBar each) and judges its bars
-    CSymbolsCollection  *m_SymbolsCollection;      // the EA holds it: the id of a symbol (symbol_account)
+    CSymbolsCollection  *m_SymbolsCollection;      // the EA holds it: the id of a symbol (symbols)
     CSymbolTFManager    *m_SymbolTFManager;        // the EA holds it: the pairs the library keeps up to date (Setting_SymbolTF)
     CSyncManager        *m_SyncManager;            // the EA holds it: what was synced and up to where (Setting_Sync)
     CBarInformationManager *m_BarInformationManager;   // the EA holds it: the alerts of the types (sound_alert, message_alert); given to every series
@@ -139,7 +139,7 @@
     m_SymbolTFManager(NULL),
     m_SyncManager(NULL)
   {
-   this.m_type=COLLECTION_SERIES_ID;
+   this.m_object_type=COLLECTION_SERIES_ID;
    this.m_list_timeseries.Clear();
    this.m_list_timeseries.Type(COLLECTION_SERIES_ID);
   }
@@ -199,35 +199,15 @@
     }
    //--- One of the two tables was not there (deleted, or the file is new): what was marked as synced is not true any more, Python makes the first chunk again
    if((!table_was_there || !bars_were_there) && this.m_SyncManager!=NULL)
-      this.m_SyncManager.ResetObject_SyncManager(this.m_type);   //--- The progress of an EA before Setting_Sync: moved there (the file of the accounts), the old table goes
+      this.m_SyncManager.ResetObject_SyncManager(this.m_object_type);   //--- The progress of an EA before Setting_Sync: moved there (the file of the accounts), the old table goes
    if(this.m_SyncManager!=NULL)
-      this.m_SyncManager.Import_SyncManager(m_db,"Sync_BarTimeSeriesCollection","type_infor",this.m_type);
+      this.m_SyncManager.Import_SyncManager(m_db,"Sync_BarTimeSeriesCollection","type_infor",this.m_object_type);
    ::Print("Complete ", __FUNCTION__, " > ", LibDatabase_AccountFile(), " opened");
    return true;
   }
  //+------------------------------------------------------------------+
- //| Create the symbol timeseries collection list                     |
- //+------------------------------------------------------------------+
-   //  bool CBarTimeSeriesCollection::CreateCollection(const CArrayObj *list_symbols)
-   //   {
-   //    if(list_symbols==NULL)
-   //       return false;
-   //    this.m_list_timeseries.Clear();
-   //    for(int i=0; i<list_symbols.Total(); i++)
-   //      {
-   //       CSymbol *symbol_obj=list_symbols.At(i);
-   //       if(symbol_obj==NULL || this.GetTimeseries(symbol_obj.Name())!=NULL)
-   //          continue;   // none, or this symbol is there already
-   //       CBarTimeSeriesDE *timeseries=new CBarTimeSeriesDE(symbol_obj.Name());
-   //       if(timeseries==NULL)
-   //          continue;
-   //       if(!this.m_list_timeseries.Add(timeseries))
-   //          delete timeseries;
-   //      }
-   //    return this.m_list_timeseries.Total()>0;
-   //   }
-
- // Cretion CreateCollection SymbolTFManagerfrom  
+ //| Cretion CreateCollection SymbolTFManagerfrom                     |
+ //+------------------------------------------------------------------+  
  bool CBarTimeSeriesCollection::CreateCollection(CSymbolTFManager *manager)
   {
    if(manager==NULL)
@@ -326,7 +306,7 @@
       return false;
    CBarSeriesDE *series=timeseries.GetSeries(timeframe);
    if(series!=NULL)
-      series.SetDatabase(m_db,this.SymbolID(symbol),this.m_type,this.m_SyncManager,this.m_BarInformationManager);   // it judges and writes its own rows
+      series.SetDatabase(m_db,this.SymbolID(symbol),this.m_object_type,this.m_SyncManager,this.m_BarInformationManager);   // it judges and writes its own rows
    return timeseries.CreateSeries(timeframe,required);
   }
  // Set SetAvailable
@@ -982,7 +962,7 @@
   {
    while(::ArraySize(this.m_reset_types)>0)
      {
-      if(!this.m_SyncManager.ResetStep_SyncManager(m_db,"BarTimeSeriesCollection","type_infor",this.m_type,this.m_reset_types[0],started,BAR_UPDATE_BUDGET_MS))
+      if(!this.m_SyncManager.ResetStep_SyncManager(m_db,"BarTimeSeriesCollection","type_infor",this.m_object_type,this.m_reset_types[0],started,BAR_UPDATE_BUDGET_MS))
          return;
       ::Print("Complete ",__FUNCTION__," > the rows and the marks of the type ",this.m_reset_types[0]," are gone: Python judges it again");
       ::ArrayRemove(this.m_reset_types,0,1);

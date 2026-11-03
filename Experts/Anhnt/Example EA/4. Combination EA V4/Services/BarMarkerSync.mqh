@@ -262,6 +262,8 @@
   }
  void CBarMarkerSync::DeleteMarkers_BarTimeSeriesCollection(void)
   {
+   if(this.m_GraphElementsCollection==NULL)
+      return;   // OnInit stopped before OnInitEvent: no marker was made
    CBarMarker::ReleaseBox();
    for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
      {

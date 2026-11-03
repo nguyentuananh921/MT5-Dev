@@ -13,7 +13,7 @@
   {
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalFractals(void) { this.m_type=OBJECT_DE_TYPE_SIGNAL_FRACTALS; }
+                      CSignalFractals(void) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_FRACTALS; }
   };
  void CSignalFractals::Directions(CArrayObj *list)
   {

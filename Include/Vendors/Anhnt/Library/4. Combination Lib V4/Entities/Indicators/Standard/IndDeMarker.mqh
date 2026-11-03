@@ -17,7 +17,7 @@
    public:
                       CIndDeMarker(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_DEMARKER,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_DEMARKER),GetIndicatorNameForType(IND_DEMARKER),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_DEMARKER; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_DEMARKER; }
   };
 #endif // CINDDEMARKER_MQH_DECLARATION
 #endif // __INDDEMARKER_MQH__

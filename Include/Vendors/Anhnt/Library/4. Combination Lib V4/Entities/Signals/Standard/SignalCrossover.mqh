@@ -22,7 +22,7 @@
    public:
     virtual void      Directions(CArrayObj *list);
                       CSignalTwoLineCross(const int main,const int signal,const double overbought=0.0,const double oversold=0.0) :
-                         m_main(main),m_signal(signal),m_overbought(overbought),m_oversold(oversold) { this.m_type=OBJECT_DE_TYPE_SIGNAL_TWOLINECROSS; }
+                         m_main(main),m_signal(signal),m_overbought(overbought),m_oversold(oversold) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_TWOLINECROSS; }
   };
  void CSignalTwoLineCross::Directions(CArrayObj *list)
   {

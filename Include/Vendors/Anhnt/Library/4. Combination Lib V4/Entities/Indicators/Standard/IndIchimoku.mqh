@@ -17,7 +17,7 @@
    public:
                       CIndIchimoku(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_ICHIMOKU,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ICHIMOKU),GetIndicatorNameForType(IND_ICHIMOKU),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_ICHIMOKU; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ICHIMOKU; }
   };
 #endif // CINDICHIMOKU_MQH_DECLARATION
 #endif // __INDICHIMOKU_MQH__

@@ -17,7 +17,7 @@
    public:
                       CIndVIDYA(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_VIDYA,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_VIDYA),GetIndicatorNameForType(IND_VIDYA),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_VIDYA; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_VIDYA; }
   };
 #endif // CINDVIDYA_MQH_DECLARATION
 #endif // __INDVIDYA_MQH__

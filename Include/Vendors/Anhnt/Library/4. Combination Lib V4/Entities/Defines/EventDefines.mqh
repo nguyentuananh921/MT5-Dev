@@ -8,7 +8,8 @@
  #define EVENTS_START_CODE   (100) // The first code of the chain
  //+------------------------------------------------------------------+
  //| Events of the chart: its indicators (lparam = the index in the   |
- //| window, dparam = the window, sparam = the short name)            |
+ //| window, dparam = the window, sparam = the short name), its       |
+ //| objects (lparam = ObjectsTotal of the chart)                     |
  //+------------------------------------------------------------------+
  enum ENUM_CHART_OBJ_EVENT
   {
@@ -16,8 +17,9 @@
    CHART_OBJ_EVENT_CHART_WND_IND_ADD,                       // "Adding a new indicator to the chart window" event
    CHART_OBJ_EVENT_CHART_WND_IND_DEL,                       // "Removing an indicator from the chart window" event
    CHART_OBJ_EVENT_CHART_WND_IND_CHANGE,                    // "Changing indicator parameters in the chart window" event
+   CHART_OBJ_EVENT_OBJECTS_CHANGE,                          // "The objects of the chart changed" event (the terminal or a program made or deleted one: the arrows of a trade)
   };
- #define CHART_OBJ_EVENTS_NEXT_CODE  (CHART_OBJ_EVENT_CHART_WND_IND_CHANGE+1)  // The code of the next event after the last chart event code
+ #define CHART_OBJ_EVENTS_NEXT_CODE  (CHART_OBJ_EVENT_OBJECTS_CHANGE+1)  // The code of the next event after the last chart event code
  enum ENUM_MOUSE_EVENT
   {
    MOUSE_EVENT_NO_EVENT = CHART_OBJ_EVENTS_NEXT_CODE, // No event

@@ -7,8 +7,9 @@
 #ifndef __PYTHONBRIDGE_MQH__
 #define __PYTHONBRIDGE_MQH__
  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Bases\BaseObj.mqh>
- #include <Vendors\Anhnt\Library\4. Combination Lib V4\Services\LibDatabase.mqh>
+ #include <Vendors\Anhnt\Library\4. Combination Lib V4\Services\DELib\DatabaseDELib.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Defines\EventDefines.mqh>
+ #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Defines\BarDefines.mqh>
  #import "kernel32.dll"
   uint WinExec(uchar &command[],int show);
   long OpenProcess(uint access,int inherit,uint pid);
@@ -30,6 +31,8 @@
  #define PYTHON_CURRENT_START_SYMBOL_TF_FILE      "Python_CurrentSymbolTF.flag"  // and the first chunk of every pair of Setting_SymbolTF (stays: see OnTimerEvent)
  #define PYTHON_CURRENT_DONE_FILE                 "Python_CurrentDone.flag"      // the newest bars of every pair are there, it ends
  #define PYTHON_HISTORY_FILE                      "Python_HistoryDone.flag"      // every worker of the history is asleep
+ //--- The other way: the EA makes it, Python takes it away (libdb.JOBS_FLAG)
+ #define PYTHON_JOBS_FILE                         "Python_Jobs.flag"             // a template or a pair came or went: the Current worker runs again at once for the new jobs
 #ifndef CPYTHONBRIDGE_MQH_DECLARATION
 #define CPYTHONBRIDGE_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -62,6 +65,8 @@
     bool              IsAlive(void) const;
    //--- The rhythm of the EA: Python that stopped is started again
     void              OnTimerEvent(void);
+   //--- A template or a pair came or went (the events of the managers): Python is told (PYTHON_JOBS_FILE), the calculation of the history is its job
+    void              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
   };
 #endif // CPYTHONBRIDGE_MQH_DECLARATION
 #ifndef CPYTHONBRIDGE_MQH_IMPLEMENTATION
@@ -90,7 +95,21 @@
                          "('write_queue', '"+LibDatabase_Quoted(LIB_DATABASE_WRITE_QUEUE)+"', 'Name of the Windows mutex the workers of Python and the EA stand in to write (LIB_DATABASE_WRITE_QUEUE)'), "
                          "('write_flag', '"+LibDatabase_Quoted(LIB_DATABASE_WRITE_FLAG)+"', 'File next to the database that tells the workers of Python that the EA is next (LIB_DATABASE_WRITE_FLAG)'), "
                          "('chart_symbol', '"+LibDatabase_Quoted(::Symbol())+"', 'Symbol of the chart the EA is on (the Current Python worker calculates its pair first)'), "
-                         "('chart_tf', '"+(string)(int)::Period()+"', 'TF (tf_enum) of the chart the EA is on')";
+                         "('chart_tf', '"+(string)(int)::Period()+"', 'TF (tf_enum) of the chart the EA is on'), "
+                         "('signal_buy', '"+(string)(int)SIGNAL_DIRECTION_BUY+"', 'signal_direction of a BUY row (SIGNAL_DIRECTION_BUY)'), "
+                         "('signal_sell', '"+(string)(int)SIGNAL_DIRECTION_SELL+"', 'signal_direction of a SELL row (SIGNAL_DIRECTION_SELL)'), "
+                         "('signal_none', '"+(string)(int)SIGNAL_DIRECTION_NONE+"', 'signal_direction of no side (SIGNAL_DIRECTION_NONE)'), "
+                         "('object_python', '"+(string)(int)OBJECT_DE_TYPE_PYTHON+"', 'Setting_Sync.sync_by of Python (OBJECT_DE_TYPE_PYTHON)'), "
+                         "('collection_series', '"+(string)(int)COLLECTION_SERIES_ID+"', 'Setting_Sync.sync_object of BarTimeSeriesCollection (COLLECTION_SERIES_ID)'), "
+                         "('collection_signals', '"+(string)(int)COLLECTION_SIGNALS_ID+"', 'Setting_Sync.sync_object of SignalsCollection (COLLECTION_SIGNALS_ID)'), "
+                         "('swing_price_basis_wick', '"+(string)(int)SWING_PRICE_BASIS_WICK+"', 'price_basis of High / Low (SWING_PRICE_BASIS_WICK)'), "
+                         "('structure_lookback', '"+(string)STRUCTURE_LOOKBACK+"', 'BOS / CHoCH: bars back the swing before the broken one may be (STRUCTURE_LOOKBACK)'), "
+                         "('file_current_start', '"+PYTHON_CURRENT_START_FILE+"', 'Python made it: Current started (PYTHON_CURRENT_START_FILE)'), "
+                         "('file_current_chart', '"+PYTHON_CURRENT_START_CURRENT_CHART_FILE+"', 'Python made it: the chart pair is in the database (PYTHON_CURRENT_START_CURRENT_CHART_FILE)'), "
+                         "('file_current_symboltf', '"+PYTHON_CURRENT_START_SYMBOL_TF_FILE+"', 'Python made it: every pair of Setting_SymbolTF has its first chunk (PYTHON_CURRENT_START_SYMBOL_TF_FILE)'), "
+                         "('file_current_done', '"+PYTHON_CURRENT_DONE_FILE+"', 'Python made it: Current ended (PYTHON_CURRENT_DONE_FILE)'), "
+                         "('file_history_done', '"+PYTHON_HISTORY_FILE+"', 'Python made it: every History worker is asleep (PYTHON_HISTORY_FILE)'), "
+                         "('file_jobs', '"+PYTHON_JOBS_FILE+"', 'The EA made it: a template or a pair came or went (PYTHON_JOBS_FILE)')";
    const bool done=(!old_shape || ::DatabaseExecute(m_db,"DROP TABLE Setting_PythonBridge")) &&
                    ::DatabaseExecute(m_db,"CREATE TABLE IF NOT EXISTS Setting_PythonBridge (name TEXT NOT NULL PRIMARY KEY, value NOT NULL, comment TEXT NOT NULL DEFAULT '') WITHOUT ROWID") &&
                    (LibDatabase_ColumnExists(m_db,"Setting_PythonBridge","comment") || ::DatabaseExecute(m_db,"ALTER TABLE Setting_PythonBridge ADD COLUMN comment TEXT NOT NULL DEFAULT ''")) &&
@@ -156,7 +175,7 @@
    alive_at=0;
    if(m_db==INVALID_HANDLE)
       return false;
-   int request=::DatabasePrepare(m_db,"SELECT name, value FROM Setting_PythonBridge WHERE name IN ('pid', 'alive_at')");
+   int request=LibDatabase_Prepare(m_db,"SELECT name, value FROM Setting_PythonBridge WHERE name IN ('pid', 'alive_at')");
    if(request==INVALID_HANDLE)
       return false;
    bool found=false;
@@ -243,6 +262,20 @@
      }
    this.TellMilestone(PYTHON_CURRENT_DONE_FILE,"Current Python complete: every Symbol + TF is in the database");
    this.TellMilestone(PYTHON_HISTORY_FILE,"history complete: every symbol and timeframe has its history, only the new bars go on");
+  }
+ void CPythonBridge::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+  {
+   if(id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE &&
+      id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
+      return;
+   int handle=::FileOpen(LibDatabase_FileNextToDatabase(PYTHON_JOBS_FILE),FILE_WRITE|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE);
+   if(handle==INVALID_HANDLE)
+     {
+      ::Print(__FUNCTION__," > ",PYTHON_JOBS_FILE," is not made, error ",::GetLastError());
+      return;
+     }
+   ::FileWriteString(handle,(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);
+   ::FileClose(handle);
   }
  bool CPythonBridge::TellMilestone(const string file,const string text)
   {

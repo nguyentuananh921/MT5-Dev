@@ -5,7 +5,7 @@
 //| Update link          https://www.mql5.com/en/articles/8787       |
 //+------------------------------------------------------------------+
 //--- Change from V1 Timeseries\Indicators\DataInd.mqh: renamed CDataInd -> CIndicatorData (the name of the layer as CBar). IND_DATA_PROP_IND_HANDLE is not a
-//--- property (the handle is CIndicatorDE's own). The timeframe description is the table timeframes' (given by CIndicatorSeriesDE). RAM only
+//--- property (the handle is CIndicatorDE's own). The name of the timeframe is not kept here (the table timeframes: CIndicatorDE has it once). RAM only
 #ifndef __INDICATORDATA_MQH__
 #define __INDICATORDATA_MQH__
  #include "..\Bases\BaseObj.mqh"
@@ -19,7 +19,6 @@
   {
    private:
     int               m_digits;                                    // Digits value of indicator data
-    string            m_period_description;                        // Timeframe string description
     long              m_long_prop[IND_DATA_PROP_INTEGER_TOTAL];    // Integer properties
     double            m_double_prop[IND_DATA_PROP_DOUBLE_TOTAL];   // Real properties
     string            m_string_prop[IND_DATA_PROP_STRING_TOTAL];   // String properties
@@ -50,13 +49,12 @@
     void              SetBufferValue(const double value)                       { this.SetProperty(IND_DATA_PROP_BUFFER_VALUE,value);                }
     void              SetIndicatorName(const string name)                      { this.SetProperty(IND_DATA_PROP_IND_NAME,name);                     }
     void              SetIndicatorShortname(const string shortname)            { this.SetProperty(IND_DATA_PROP_IND_SHORTNAME,shortname);           }
-    void              SetPeriodDescription(const string text)                  { this.m_period_description=text;                                    }
    //--- Compare CIndicatorData objects with each other by all possible properties (for sorting the lists by a specified property of data object)
     virtual int       Compare(const CObject *node,const int mode=0) const;
    //--- Compare CIndicatorData objects with each other by all properties (to search equal objects)
     bool              IsEqual(CIndicatorData* compared_data) const;
    //--- Constructors
-                      CIndicatorData(void) : m_digits(0) { this.m_type=OBJECT_DE_TYPE_IND_DATA; }
+                      CIndicatorData(void) : m_digits(0) { this.m_object_type=OBJECT_DE_TYPE_IND_DATA; }
                       CIndicatorData(const ENUM_INDICATOR ind_type,
                                      const long ind_id,
                                      const int buffer_num,
@@ -112,7 +110,7 @@
                                 const datetime time,
                                 const double value)
   {
-   this.m_type=OBJECT_DE_TYPE_IND_DATA;
+   this.m_object_type=OBJECT_DE_TYPE_IND_DATA;
    this.m_digits=(int)::SymbolInfoInteger(symbol,SYMBOL_DIGITS)+1;
    this.SetSymbolPeriod(symbol,timeframe,time);
    this.SetIndicatorType(ind_type);
@@ -240,7 +238,7 @@
          )  :
       property==IND_DATA_PROP_PERIOD         ?  CMessage::Text(MSG_LIB_TEXT_IND_TEXT_TIMEFRAME)+
          (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :
-          ": "+this.m_period_description
+          ": "+(string)this.GetProperty(property)   // the tf_enum, the key of the table timeframes (its name: CIndicatorDE)
          )  :
       property==IND_DATA_PROP_INDICATOR_TYPE ?  CMessage::Text(MSG_LIB_TEXT_IND_TEXT_TYPE)+
          (!this.SupportProperty(property)    ?  ": "+CMessage::Text(MSG_LIB_PROP_NOT_SUPPORTED) :

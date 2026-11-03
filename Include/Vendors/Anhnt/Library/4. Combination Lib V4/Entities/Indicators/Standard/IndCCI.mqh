@@ -17,7 +17,7 @@
    public:
                       CIndCCI(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_CCI,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_CCI),GetIndicatorNameForType(IND_CCI),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_CCI; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_CCI; }
   };
 #endif // CINDCCI_MQH_DECLARATION
 #endif // __INDCCI_MQH__

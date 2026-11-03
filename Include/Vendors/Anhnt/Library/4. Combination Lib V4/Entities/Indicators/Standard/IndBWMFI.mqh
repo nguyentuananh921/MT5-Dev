@@ -17,7 +17,7 @@
    public:
                       CIndBWMFI(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_BWMFI,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_BWMFI),GetIndicatorNameForType(IND_BWMFI),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_BWMFI; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_BWMFI; }
   };
 #endif // CINDBWMFI_MQH_DECLARATION
 #endif // __INDBWMFI_MQH__

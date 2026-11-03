@@ -278,7 +278,7 @@
    if(item.NodeLevel()==0)
      {
       if(item.ChildrenTotal()==0 && !m_SymbolTFManager.Exists(item.LabelText(),(ENUM_TIMEFRAMES)::Period()))
-         m_SymbolTFManager.Add_SymbolTFSetting(item.LabelText(),(ENUM_TIMEFRAMES)::Period());
+         m_SymbolTFManager.AddToDB(item.LabelText(),(ENUM_TIMEFRAMES)::Period());
       return;
      }
    CTreeItem *parent=item.ParentItem();
@@ -304,7 +304,7 @@
       if(sym==::Symbol() && tf==(ENUM_TIMEFRAMES)::Period())
          return;
       if(m_SymbolTFManager!=NULL)
-         m_SymbolTFManager.Delete_SymbolTFSetting(sym,tf);
+         m_SymbolTFManager.RemoveFromDB(sym,tf);
       return;
      }
    //--- m_table_SymbolTFSeting: cols 2..5 = checkboxes, dparam = the new state

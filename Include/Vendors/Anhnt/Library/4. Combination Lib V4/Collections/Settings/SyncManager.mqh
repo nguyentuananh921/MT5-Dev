@@ -4,7 +4,7 @@
 //+------------------------------------------------------------------+
 #ifndef CSYNCMANAGER_MQH
 #define CSYNCMANAGER_MQH
- #include "..\..\Services\LibDatabase.mqh"
+ #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Entities\Defines\CommonDefines.mqh"
  #include "..\..\Entities\Defines\EventDefines.mqh"
  #include "..\..\Entities\Bases\BaseObj.mqh"
@@ -87,7 +87,7 @@
    //--- both 0: nothing is missing)
    string who = "Make Setting_Sync";
    LibDatabase_AskToWrite();   // the workers of Python let this write go first
-   const string columns = "(account_key TEXT NOT NULL REFERENCES accounts (account_key), symbol_id INTEGER NOT NULL REFERENCES symbols (id), "
+   const string columns = "(account_key TEXT NOT NULL REFERENCES accounts (account_key), symbol_id INTEGER NOT NULL REFERENCES symbol_base (id), "
                           "tf_enum INTEGER NOT NULL REFERENCES timeframes (tf_enum), sync_object INTEGER NOT NULL, key_id INTEGER NOT NULL, "
                           "lost_from_time INTEGER NOT NULL DEFAULT 0, lost_to_time INTEGER NOT NULL DEFAULT 0, sync_by INTEGER NOT NULL DEFAULT "+(string)(int)OBJECT_DE_TYPE_PYTHON+", "
                           "last_update INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (account_key, symbol_id, tf_enum, sync_object, key_id))";
@@ -136,7 +136,7 @@
   {
    if(m_db == INVALID_HANDLE)
       return false;
-   int request = ::DatabasePrepare(m_db, "SELECT sync_object, key_id, symbol_id, tf_enum, last_update, sync_by FROM Setting_Sync WHERE account_key = '" + this.Key() + "'");
+   int request = LibDatabase_Prepare(m_db, "SELECT sync_object, key_id, symbol_id, tf_enum, last_update, sync_by FROM Setting_Sync WHERE account_key = '" + this.Key() + "'");
    if(request == INVALID_HANDLE)
     {
      ::Print("MY DEBUG    CSyncManager::SyncDataFromDB the query is not accepted, error ", ::GetLastError());
@@ -188,7 +188,7 @@
   {
    if(m_db == INVALID_HANDLE)
       return false;
-   int request = ::DatabasePrepare(m_db, "SELECT symbol_id, tf_enum FROM Setting_Sync WHERE account_key = '" + this.Key() + "' AND sync_object = " + (string)sync_object +
+   int request = LibDatabase_Prepare(m_db, "SELECT symbol_id, tf_enum FROM Setting_Sync WHERE account_key = '" + this.Key() + "' AND sync_object = " + (string)sync_object +
                                          " AND key_id = " + (string)key + " LIMIT 1");
    if(request == INVALID_HANDLE)
       return false;
@@ -244,7 +244,7 @@
          LibDatabase_WriteRefused(who);
          return false;   // the database is busy: the next beat tries again
         }
-      int request=::DatabasePrepare(account_db,"SELECT 1 FROM "+table+" WHERE "+wanted+" LIMIT 1");
+      int request=LibDatabase_Prepare(account_db,"SELECT 1 FROM "+table+" WHERE "+wanted+" LIMIT 1");
       bool left=(request!=INVALID_HANDLE && ::DatabaseRead(request));
       if(request!=INVALID_HANDLE)
          ::DatabaseFinalize(request);
@@ -355,7 +355,7 @@
   {
    if(m_db == INVALID_HANDLE || account_db == INVALID_HANDLE)
       return false;
-   int exists = ::DatabasePrepare(account_db, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '" + old_table + "'");
+   int exists = LibDatabase_Prepare(account_db, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '" + old_table + "'");
    if(exists == INVALID_HANDLE)
       return false;
    long found = 0;
@@ -364,7 +364,7 @@
    ::DatabaseFinalize(exists);
    if(found == 0)
       return false;   // the table is not there (moved already): nothing to move
-   int request = ::DatabasePrepare(account_db, "SELECT symbol_id, tf_enum, " + key_column + ", first_bar_time, last_bar_time FROM " + old_table);
+   int request = LibDatabase_Prepare(account_db, "SELECT symbol_id, tf_enum, " + key_column + ", first_bar_time, last_bar_time FROM " + old_table);
    if(request == INVALID_HANDLE)
       return false;
    long rows[][5];

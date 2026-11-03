@@ -17,7 +17,7 @@
    public:
                       CIndBulls(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_BULLS,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_BULLS),GetIndicatorNameForType(IND_BULLS),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_BULLS; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_BULLS; }
   };
 #endif // CINDBULLS_MQH_DECLARATION
 #endif // __INDBULLS_MQH__

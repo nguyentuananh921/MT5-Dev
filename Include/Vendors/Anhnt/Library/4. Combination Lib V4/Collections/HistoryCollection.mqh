@@ -21,7 +21,7 @@
 #include "ListObj.mqh"
 #include "SymbolsCollection.mqh"
 #include "Settings\SyncManager.mqh"
-#include "..\Services\LibDatabase.mqh"
+#include "..\Services\DELib\DatabaseDELib.mqh"
 #include "..\Entities\Bases\BaseObjExt.mqh"
 #include "..\Entities\Defines\CommonDefines.mqh"
 #include "..\Entities\Defines\EventDefines.mqh"
@@ -46,7 +46,7 @@ class CHistoryCollection : public CBaseObjExt
   {
    private:
     int               m_db;                   // The file of the account: the table Orders
-    CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbol_account)
+    CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbols)
     CSyncManager     *m_SyncManager;          // The EA holds it: the marks of the history in Setting_Sync
     CListObj          m_list_all_orders;      // List of all historical orders and deals (V3), owned
     CArrayObj         m_list_pending;         // RAM only: the orders and deals of the list that are not lines of the table yet (SyncDataToDB writes them)
@@ -102,7 +102,7 @@ class CHistoryCollection : public CBaseObjExt
 CHistoryCollection::CHistoryCollection(void) : m_db(INVALID_HANDLE),m_SymbolsCollection(NULL),m_SyncManager(NULL),m_index_deal(0),m_delta_deal(0),m_index_order(0),
                                                m_delta_order(0),m_is_trade_event(false)
   {
-   this.m_type=COLLECTION_HISTORY_ID;
+   this.m_object_type=COLLECTION_HISTORY_ID;
    this.m_list_all_orders.Sort(SORT_BY_ORDER_TIME_OPEN);
    this.m_list_all_orders.Clear();
    this.m_list_all_orders.Type(COLLECTION_HISTORY_ID);
@@ -190,7 +190,7 @@ bool CHistoryCollection::SyncDataFromDB(void)
    ::ArrayResize(this.m_saved_ask,0);
    if(this.m_db==INVALID_HANDLE)
       return false;
-   int request=::DatabasePrepare(this.m_db,"SELECT status, ticket, COALESCE(bid, 0), COALESCE(ask, 0) FROM Orders ORDER BY status, ticket");
+   int request=LibDatabase_Prepare(this.m_db,"SELECT status, ticket, COALESCE(bid, 0), COALESCE(ask, 0) FROM Orders ORDER BY status, ticket");
    if(request==INVALID_HANDLE)
      {
       ::Print(__FUNCTION__," > the table Orders is not read, error ",::GetLastError());
@@ -294,7 +294,7 @@ bool CHistoryCollection::Read(const string sql,string &names[],string &cells[],i
    rows=0;
    if(this.m_db==INVALID_HANDLE)
       return false;
-   int request=::DatabasePrepare(this.m_db,sql);
+   int request=LibDatabase_Prepare(this.m_db,sql);
    if(request==INVALID_HANDLE)
       return false;
    int columns=::DatabaseColumnsCount(request);

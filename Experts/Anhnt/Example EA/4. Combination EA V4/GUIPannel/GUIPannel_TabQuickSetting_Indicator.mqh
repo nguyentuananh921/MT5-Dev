@@ -50,6 +50,7 @@
    m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_INDICATOR,remove);
    if(!remove.Create(this.m_chart_id,M_SUBWINDOW_MAIN,key+"_Delete",0,0,M_CONTROL_HEIGHT,M_CONTROL_HEIGHT))
       return false;
+   remove.Hide();   // made at 0,0: Arrange shows it at its place (it would flash over the headers)
    m_sections_indicator.StyleSwitch(remove);
    if(!m_sections_indicator.AddControl(section,remove,INDICATOR_COLUMN_DELETE,row,id,INDICATOR_SLOT_DELETE))
       return false;
@@ -58,6 +59,7 @@
    m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_INDICATOR,name);
    if(!name.Create(this.m_chart_id,M_SUBWINDOW_MAIN,key+"_Name",0,0,M_INDICATOR_LABEL_WIDTH,M_CONTROL_HEIGHT))
       return false;
+   name.Hide();
    if(!m_sections_indicator.AddControl(section,name,INDICATOR_COLUMN_LABEL,row,id,INDICATOR_SLOT_LABEL))
       return false;
    const bool states[5]={show,buy,sell,sound,message};
@@ -75,13 +77,14 @@
       m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_INDICATOR,toggle);
       if(!toggle.Create(this.m_chart_id,M_SUBWINDOW_MAIN,key+names[flag],0,0,M_FLAG_SWITCH_WIDTH,M_CONTROL_HEIGHT))
          return false;
+      toggle.Hide();
       m_sections_indicator.StyleSwitch(toggle);
       if(!m_sections_indicator.AddControl(section,toggle,columns[flag],row,id,slots[flag]))
          return false;
      }
    return true;
   }
- //--- The rows are made again from the templates: one came or went. The sections keep their toggles
+ //--- The rows of every template (at the start). The sections keep their toggles
  void CGUIPannel::PopulateSections_IndicatorTemplateSetting(void)
   {
    if(m_IndicatorTemplateManager==NULL)
@@ -170,10 +173,31 @@
       m_btn_add_indicator.Move(m_tabs_quickSetting.X()+m_tabs_quickSetting.Width()-M_BUTTON_ADD_WIDTH-M_CONTROL_BORDER_GAP,m_btn_add_indicator.Y());
       return;
      }
-   //--- A template came or went: the rows are made again
-   if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED || id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
+   //--- A template came (lparam = its type, sparam = its params): its row at the end of its section, the other rows stay
+   if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && m_IndicatorTemplateManager!=NULL)
      {
-      this.PopulateSections_IndicatorTemplateSetting();
+      CIndicatorSetting *row=m_IndicatorTemplateManager.GetSetting((ENUM_INDICATOR)lparam,sparam);
+      for(int g=0;g<INDICATOR_SECTIONS_TOTAL && row!=NULL;g++)
+         if(INDICATOR_SECTION_GROUPS[g]==GetIndicatorGroupForType(row.TypeEnum()))
+           {
+            m_sections_indicator.RemoveRows(row.ID());   // made already: the tab was built after the template came (OnInit, from the chart)
+            this.AddRow_IndicatorTemplateSetting(g,m_sections_indicator.RowsTotal(g),row.ID(),row.Display(),row.ShowOnChart(),row.BuySignal(),row.SellSignal(),row.SoundAlert(),row.MessageAlert());
+            break;
+           }
+      this.SyncSections_IndicatorTemplateSetting();
+      m_sections_indicator.Arrange();
+      this.SyncTreeView_IndicatorTemplateSetting();   // the blue arrow of a type that has a template
+      if(m_window_addIndicator.IsVisible())
+         m_window_addIndicator.BringToTop();   // the new row was shown after it: the Add form stays above the tab
+      ::ChartRedraw(this.m_chart_id);
+      return;
+     }
+   //--- A template went (dparam = its id): its row goes, the rows under it move up
+   if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
+     {
+      m_sections_indicator.RemoveRows((long)dparam);
+      this.SyncSections_IndicatorTemplateSetting();   // the toggles of its section
+      m_sections_indicator.Arrange();
       this.SyncTreeView_IndicatorTemplateSetting();   // the blue arrow of a type that has a template
       ::ChartRedraw(this.m_chart_id);
       return;
@@ -211,7 +235,7 @@
    if(!m_sections_indicator.BodyOf(lparam,template_id,slot,param) || !this.TemplateOfId_IndicatorTemplateSetting(template_id,type,params_text))
       return;
    if(slot==INDICATOR_SLOT_DELETE)
-      m_IndicatorTemplateManager.Delete_IndicatorTemplateSetting(type,params_text);
+      m_IndicatorTemplateManager.RemoveFromDB(type,params_text);
    else if(slot==INDICATOR_SLOT_SHOW_ON_CHART)
       m_IndicatorTemplateManager.ShowOnChart(type,params_text,dparam!=0);
    else if(slot==INDICATOR_SLOT_BUY_SIGNAL)

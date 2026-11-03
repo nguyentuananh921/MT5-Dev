@@ -47,7 +47,7 @@
                                    MqlParam &mql_params[]);
    public:
    //--- Default constructor
-                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE) { this.m_type=OBJECT_DE_TYPE_INDICATOR; }
+                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
    //--- Destructor
                      ~CIndicatorDE(void);
    //--- Set indicator's (1) integer, (2) real and (3) string property
@@ -79,7 +79,7 @@
     void              SetShortName(const string shortname)            { this.SetProperty(INDICATOR_PROP_SHORTNAME,shortname);                 }
     void              SetID(const long id)                            { this.SetProperty(INDICATOR_PROP_ID,id); this.m_series_data.SetIndID(id); }
     void              SetBuffersTotal(const int buffers_total)        { this.m_buffers_total=buffers_total;                                   }
-    void              SetTimeframeDescription(const string text)      { this.m_timeframe_description=text; this.m_series_data.SetPeriodDescription(text); }
+    void              SetTimeframeDescription(const string text)      { this.m_timeframe_description=text; }   // the one copy of the name (the table timeframes)
    //--- Return indicator's (1) status, (2) group, (3) timeframe, (4) type, (5) handle, (6) ID,
    //--- (7) empty value of buffers, (8) name, (9) short name, (10) symbol, (11) number of buffers
     ENUM_INDICATOR_STATUS Status(void)                          const { return (ENUM_INDICATOR_STATUS)this.GetProperty(INDICATOR_PROP_STATUS);}
@@ -136,7 +136,7 @@
                             MqlParam &mql_params[])
   {
    //--- Set the object type
-    this.m_type=OBJECT_DE_TYPE_INDICATOR;
+    this.m_object_type=OBJECT_DE_TYPE_INDICATOR;
    //--- Fill in the array of object parameters with data from the array passed to constructor
     int count=::ArrayResize(this.m_mql_param,::ArraySize(mql_params));
     for(int i=0;i<count;i++)

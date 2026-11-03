@@ -28,6 +28,7 @@
     long              m_chart_id;                                  // Chart ID
     CArrayObj         m_list_ind;                                  // The indicators of all chart windows: name, type and parameters
     CArrayObj         m_list_ind_param;                            // The indicator whose parameters were changed last (the old type and parameters)
+    bool              m_object_created;                            // CHART_OBJ_EVENT_OBJECTS_CHANGE is on its way: the other "autotrade" objects of the same trade are not told again
    //--- Create and send the chart event of an indicator to the control program chart
     void              SendEvent(const ENUM_CHART_OBJ_EVENT event,CWndInd *ind);
    public:
@@ -39,7 +40,10 @@
     CWndInd          *GetLastChangedIndicator(void)                   { return this.m_list_ind_param.At(this.m_list_ind_param.Total()-1); }
     CWndInd          *GetIndicator(const int win_num,const int ind_index);
    //--- Compare the indicators of every chart window with the list: add, remove or change them, and send the event of each (not at the start, the first read is no news)
-    void              IndicatorsRefresh(const bool send_events=true);
+    void              Refresh(const bool send_events=true);
+   //--- Event Rule: (1) the chart changed (CHARTEVENT_CHART_CHANGE: an indicator added, removed or changed): Refresh, (2) an object of a trade made by the
+   //--- terminal (CHARTEVENT_OBJECT_CREATE of "autotrade ...", DoEasy CChartObjectsControl): CHART_OBJ_EVENT_OBJECTS_CHANGE once for the objects of the trade
+    void              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
    //--- Whether an indicator of the chart is a row of its own: the MA drawn over Volumes is a part of it, its Applied Price is not a price
     bool              ChartIdentity(const ENUM_INDICATOR type,MqlParam &params[]) const;
    //--- The parameters of the indicator the chart holds: Volumes keeps only its Applied Volume (its MA period is for the average drawn with it)
@@ -60,10 +64,12 @@
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CChartObj::CChartObj(const long chart_id) : m_chart_id(chart_id==0 ? ::ChartID() : chart_id)
+ CChartObj::CChartObj(const long chart_id) : m_chart_id(chart_id==0 ? ::ChartID() : chart_id),m_object_created(false)
   {
    this.m_object_type=OBJECT_DE_TYPE_CHART;
-   this.IndicatorsRefresh(false);   // the indicators already on the chart
+   ::ChartSetInteger(this.m_chart_id,CHART_EVENT_OBJECT_CREATE,true);   // the terminal tells the objects it makes (V2 CChartObjectsControl)
+   this.Refresh(false);   // the indicators already on the chart
+   this.m_object_created=::EventChartCustom(this.m_chart_id,(ushort)CHART_OBJ_EVENT_OBJECTS_CHANGE,::ObjectsTotal(this.m_chart_id),0.0,"");   // a TF change redraws "autotrade" without a create event
   }
  //+------------------------------------------------------------------+
  //| Compare the indicators of every chart window with the list: an   |
@@ -72,7 +78,7 @@
  //| window and index of a missing one is a change of parameters; the |
  //| rest is added or removed. Every case sends its event             |
  //+------------------------------------------------------------------+
- void CChartObj::IndicatorsRefresh(const bool send_events)
+ void CChartObj::Refresh(const bool send_events)
   {
    CArrayObj current;   // what the chart holds now; the new ones are taken by the list, the others are freed below
    current.FreeMode(false);
@@ -161,6 +167,28 @@
          delete current.At(j);
   }
  //+------------------------------------------------------------------+
+ //| The chart changed: its indicators are compared. An object of a   |
+ //| trade made by the terminal ("autotrade ..."), not any object:     |
+ //| BringToTop shows the windows again and the terminal tells each of |
+ //| them as made, which would raise the windows again and again. The  |
+ //| first one sends the event, the others wait until it comes back    |
+ //+------------------------------------------------------------------+
+ void CChartObj::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+  {
+   if(id==CHARTEVENT_CHART_CHANGE)
+     {
+      this.Refresh();
+      return;
+     }
+   if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_OBJECTS_CHANGE)
+     {
+      this.m_object_created=false;
+      return;
+     }
+   if(id==CHARTEVENT_OBJECT_CREATE && !this.m_object_created && ::StringFind(sparam,"autotrade")==0)
+      this.m_object_created=::EventChartCustom(this.m_chart_id,(ushort)CHART_OBJ_EVENT_OBJECTS_CHANGE,::ObjectsTotal(this.m_chart_id),0.0,"");
+  }
+ //+------------------------------------------------------------------+
  //| Return the indicator by its index in the specified chart window  |
  //+------------------------------------------------------------------+
  CWndInd *CChartObj::GetIndicator(const int win_num,const int ind_index)
@@ -207,11 +235,22 @@
   {
    if(type==IND_MA && ::ArraySize(params)>3 && (params[3].integer_value<PRICE_CLOSE || params[3].integer_value>PRICE_WEIGHTED))
       return false;
+   //--- FRAMA of the chart has no Shift (period, applied price): the schema has it, 0
+   if(type==IND_FRAMA && ::ArraySize(params)==2)
+     {
+      ::ArrayResize(params,3);
+      params[2]=params[1];
+      params[1].type=TYPE_INT;
+      params[1].integer_value=0;
+      params[1].double_value=0;
+      params[1].string_value="";
+     }
    return true;
   }
  //+------------------------------------------------------------------+
  //| The parameters the chart indicator is made with: Volumes keeps   |
- //| only its Applied Volume (the MA period is for the average)       |
+ //| only its Applied Volume (the MA period is for the average),      |
+ //| FRAMA drops its Shift (the chart holds period, applied price)    |
  //+------------------------------------------------------------------+
  void CChartObj::ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[]) const
   {
@@ -219,6 +258,11 @@
    ::ArrayResize(out,count);
    for(int i=0;i<count;i++)
       out[i]=params[i];
+   if(type==IND_FRAMA && count==3)
+     {
+      out[1]=out[2];
+      ::ArrayResize(out,2);
+     }
   }
  //+------------------------------------------------------------------+
  //| The identity is read from the chart itself (CWndInd), not from   |
@@ -251,11 +295,21 @@
   {
    MqlParam chart_params[];
    this.ChartParams(type,params,chart_params);
+   if(type==IND_FRAMA)   // IndicatorCreate wants the Shift (4002 without it), the chart holds FRAMA without it
+     {
+      ::ArrayResize(chart_params,::ArraySize(params));
+      for(int i=0;i<::ArraySize(params);i++)
+         chart_params[i]=params[i];
+     }
    int handle=::IndicatorCreate(this.Symbol(),this.Timeframe(),type,::ArraySize(chart_params),chart_params);
    if(handle==INVALID_HANDLE)
+     {
+      ::Print(DFUN,GetIndicatorNameForType(type)," with ",::ArraySize(chart_params)," params: IndicatorCreate failed, error ",::GetLastError());
       return;
+     }
    int sub_window=(GetIndicatorGroupForType(type)==INDICATOR_GROUP_TREND ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
-   ::ChartIndicatorAdd(this.m_chart_id,sub_window,handle);
+   if(!::ChartIndicatorAdd(this.m_chart_id,sub_window,handle))
+      ::Print(DFUN,GetIndicatorNameForType(type),": ChartIndicatorAdd failed, error ",::GetLastError());
    //--- Volumes comes with its moving average: it takes the data of the volumes and goes to the same window
    if(type==IND_VOLUMES && ::ArraySize(params)>2)
      {

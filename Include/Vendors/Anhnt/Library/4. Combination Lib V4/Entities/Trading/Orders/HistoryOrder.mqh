@@ -21,7 +21,7 @@
    {
     public:
      //--- Constructor
-        CHistoryOrder(const ulong ticket) : COrder(ORDER_STATUS_HISTORY_ORDER,ticket) { this.m_type=OBJECT_DE_TYPE_HISTORY_ORDER_MARKET; }
+        CHistoryOrder(const ulong ticket) : COrder(ORDER_STATUS_HISTORY_ORDER,ticket) { this.m_object_type=OBJECT_DE_TYPE_HISTORY_ORDER_MARKET; }
      //--- Supported integer properties of an order
       virtual bool      SupportProperty(ENUM_ORDER_PROP_INTEGER property);
      //--- Supported real properties of an order

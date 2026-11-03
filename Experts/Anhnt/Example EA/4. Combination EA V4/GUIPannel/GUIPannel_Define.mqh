@@ -45,6 +45,8 @@
     #define M_CAPTION_LABEL_SLACK       8           // and this more: the text never meets the "..." of CLabel
     #define M_CAPTION_LABEL_GAP         2           // between two of them
     #define M_CAPTION_LABEL_Y           2           // from the top of the caption (the bottom the same)
+    #define M_CAPTION_LABEL_ICON        16          // the icon before the number (ORDER_BUY / ORDER_SELL / PROFIT_GREEN / PROFIT_RED of ImageDataDefine.mqh)
+    #define M_CAPTION_LABEL_ICON_GAP    2           // between the icon and the number
     #define M_COLOR_CAPTION_LABEL_BACK  clrWhite    // their background: the text (M_COLOR_PROFIT, M_COLOR_LOSS) stands out on the blue caption
     #define M_MENU_BAR_Y                M_CONTROL_HEIGHT   //The menu bar is right below the caption
     #define M_TF_SWITCH_Y               (M_MENU_BAR_Y+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP)   // the TF buttons are right below the menu bar

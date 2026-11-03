@@ -17,7 +17,7 @@
    public:
                       CIndMA(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
                          CIndicatorDE(IND_MA,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_MA),GetIndicatorNameForType(IND_MA),
-                                      "",mql_param) { this.m_type=OBJECT_DE_TYPE_IND_MA; }
+                                      "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_MA; }
   };
 #endif // CINDMA_MQH_DECLARATION
 #endif // __INDMA_MQH__

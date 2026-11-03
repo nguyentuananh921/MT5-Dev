@@ -22,7 +22,7 @@
     string            m_symbol;                // Timeseries symbol
     CArrayObj         m_list_series;           // List of timeseries by timeframes
     int               m_db;                    // CBarTimeSeriesCollection holds it: the file of the account (the TFs of the symbol that have no series are read there)
-    long              m_symbol_id;             // The id of the symbol (symbol_account)
+    long              m_symbol_id;             // The id of the symbol (symbols)
     CNewTickObj       m_new_tick;              // "New tick" object (DoEasy CTimeSeriesDE): no tick for TICK_PAUSE_SECONDS, the symbol rests
     //--- Return (1) the timeframe index in the list and (2) the timeframe by the list index
      int IndexTimeframe(const ENUM_TIMEFRAMES timeframe);
@@ -76,7 +76,7 @@
  //+------------------------------------------------------------------+
  CBarTimeSeriesDE::CBarTimeSeriesDE(const string symbol) : m_symbol(symbol==NULL || symbol=="" ? ::Symbol() : symbol),m_db(INVALID_HANDLE),m_symbol_id(0)
   {
-   this.m_type=OBJECT_DE_TYPE_SERIES_SYMBOL;
+   this.m_object_type=OBJECT_DE_TYPE_SERIES_SYMBOL;
    this.m_list_series.Clear();
    this.m_new_tick.SetSymbol(this.m_symbol);
    this.m_new_tick.Refresh();
@@ -93,7 +93,7 @@
    ::ArrayResize(sides,0);
    if(this.m_db==INVALID_HANDLE)
       return 0;
-   int request=::DatabasePrepare(this.m_db,"SELECT tf_enum, type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum IN ("+
+   int request=LibDatabase_Prepare(this.m_db,"SELECT tf_enum, type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum IN ("+
                                            LibDatabase_InList(asked_tfs)+") AND type_infor IN ("+LibDatabase_InList(asked_types)+") AND bar_time >= "+(string)(long)from_time+
                                            " AND bar_time < "+(string)(long)to_time+" ORDER BY tf_enum DESC, bar_time LIMIT "+(string)BAR_CANDLE_ROWS_MAX);
    if(request==INVALID_HANDLE)

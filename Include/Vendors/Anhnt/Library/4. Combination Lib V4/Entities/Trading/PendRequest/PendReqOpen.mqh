@@ -27,7 +27,7 @@
                                   const ulong time,
                                   const MqlTradeRequest &request,
                                   const int retcode) : CPendRequest(PEND_REQ_STATUS_OPEN,id,price,time,request,retcode)
-                                    { this.m_type=OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_OPEN; }
+                                    { this.m_object_type=OBJECT_DE_TYPE_PENDING_REQUEST_POSITION_OPEN; }
                                   
         //--- Supported deal properties (1) real, (2) integer
           virtual bool      SupportProperty(ENUM_PEND_REQ_PROP_INTEGER property);

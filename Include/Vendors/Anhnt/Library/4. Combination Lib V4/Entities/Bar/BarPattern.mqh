@@ -453,7 +453,7 @@
    return (bar.TypeBody()==BAR_BODY_TYPE_BULLISH ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL);
   }
  //+------------------------------------------------------------------+
- //| Inside Bar: the high and the low are inside the candle before; it has no side
+ //| Inside Bar: the high and the low are inside the candle before; neutral as Doji, the longer shadow breaks the tie (the lower one: Buy)
  //+------------------------------------------------------------------+
  ENUM_SIGNAL_DIRECTION CBarPattern::FindInsideBar(const int index) const
   {
@@ -464,7 +464,7 @@
    if(bar==NULL || prev==NULL)
       return SIGNAL_DIRECTION_NO_PATTERN;
    if(bar.High()<prev.High() && bar.Low()>prev.Low())
-      return SIGNAL_DIRECTION_NONE;
+      return (bar.RatioLowerShadowToCandleSize()>=bar.RatioUpperShadowToCandleSize() ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL);
    return SIGNAL_DIRECTION_NO_PATTERN;
   }
  //+------------------------------------------------------------------+

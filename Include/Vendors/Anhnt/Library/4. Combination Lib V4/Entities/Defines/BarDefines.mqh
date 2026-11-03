@@ -38,7 +38,7 @@
   #define MOMENTUM_DEF_BARS                        3.0    // Momentum Candle: how many candles before it are compared
   #define SWING_DEF_STRENGTH                       5.0    // Swing: how many candles each side must be lower (high) / higher (low) than it
   #define SWING_DEF_PRICE_BASIS                    (double)SWING_PRICE_BASIS_WICK   // Swing: the price it is found on
-  #define STRUCTURE_LOOKBACK                       300    // BOS / CHoCH: the swing before the broken one is confirmed at most this many bars back (structure.py LOOKBACK)
+  #define STRUCTURE_LOOKBACK                       300    // BOS / CHoCH: the swing before the broken one is confirmed at most this many bars back (Python reads it: structure_lookback)
  //+------------------------------------------------------------------+
  //| The names of the parameters of a type (column param of           |
  //| Setting_BarSetup): the values are percent of the range of the    |

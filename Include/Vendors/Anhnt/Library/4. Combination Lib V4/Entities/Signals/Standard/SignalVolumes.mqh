@@ -13,7 +13,7 @@
   {
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalVolumes(void) { this.m_type=OBJECT_DE_TYPE_SIGNAL_VOLUMES; }
+                      CSignalVolumes(void) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_VOLUMES; }
   };
  void CSignalVolumes::Directions(CArrayObj *list)
   {

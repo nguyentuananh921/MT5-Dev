@@ -14,7 +14,7 @@
     double            m_level;
    public:
     virtual void      Directions(CArrayObj *list);
-                      CSignalZeroCross(const double level=0.0) : m_level(level) { this.m_type=OBJECT_DE_TYPE_SIGNAL_ZEROCROSS; }
+                      CSignalZeroCross(const double level=0.0) : m_level(level) { this.m_object_type=OBJECT_DE_TYPE_SIGNAL_ZEROCROSS; }
   };
  void CSignalZeroCross::Directions(CArrayObj *list)
   {
