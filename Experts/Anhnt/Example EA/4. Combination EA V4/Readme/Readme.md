@@ -7,7 +7,7 @@
   - Sync Everywhere: 
   - Event Rule: Từ V4 trở đi, Chúng ta làm việc theo Event ->Automatic Trade
     + Việc tổ chức trong Event sẽ cần tối ưu để có thể gửi đủ các tham số tránh phải hỏi lại see CBaseObjExt::CheckEvents.
-  - Live on RAM, Save on DB for no more calculation. 
+  - Live working in RAM, Save on DB for no more calculation. 
   - Database rule: 
     + Database đóng vai trò M trong mô hình MVC.
     + Chúng ta có 2 Database: Common và Accounts note detail in DatabaseDELib.mqh
@@ -15,6 +15,7 @@
       - Accounts Database chứa dữ liệu riêng cho từng tài khoản.
       - Cả EA và Libary cũng như Python sẽ phải tự Join các bảng khi cần thiết.
     + Database được dùng làm Single SingleSource of Truth ->Phân công nhiệm vụ tính toán giữa EA và Python theo Calculation Rule
+    + Phía EA + LIbrary có được ưu tiên hơn khi ghi vào Database so với python.
     + Prepare để train cho các mô hình Pridict như XGBoot, Kronos.
     + Prepare để Back Test Strategy.
   - Calculation Rule.

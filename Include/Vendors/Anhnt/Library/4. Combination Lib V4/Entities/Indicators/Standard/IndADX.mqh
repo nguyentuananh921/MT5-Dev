@@ -3,7 +3,7 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
 //+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\Standard\IndADX.mqh: the group and the name are the catalog's (IndicatorDELib.mqh), PrintParameters is CIndicatorDE's (by the schema)
+//--- Change from V1 Timeseries\Indicators\Standard\IndADX.mqh: the group and name come from the manager catalog; PrintParameters is CIndicatorDE's (by the schema)
 #ifndef __INDADX_MQH__
 #define __INDADX_MQH__
  #include "..\IndicatorDE.mqh"
@@ -15,8 +15,8 @@
  class CIndADX : public CIndicatorDE
   {
    public:
-                      CIndADX(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
-                         CIndicatorDE(IND_ADX,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ADX),GetIndicatorNameForType(IND_ADX),
+                      CIndADX(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
+                         CIndicatorDE(IND_ADX,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_ADX),manager.StandardIndicatorName(IND_ADX),
                                       "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ADX; }
   };
 #endif // CINDADX_MQH_DECLARATION

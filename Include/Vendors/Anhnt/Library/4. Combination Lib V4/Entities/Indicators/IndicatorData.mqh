@@ -3,9 +3,9 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //| Lib link            https://www.mql5.com/en/articles/14710       |
 //| Update link          https://www.mql5.com/en/articles/8787       |
+//| CDataInd -> CIndicatorData                                       |
 //+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\DataInd.mqh: renamed CDataInd -> CIndicatorData (the name of the layer as CBar). IND_DATA_PROP_IND_HANDLE is not a
-//--- property (the handle is CIndicatorDE's own). The name of the timeframe is not kept here (the table timeframes: CIndicatorDE has it once). RAM only
+
 #ifndef __INDICATORDATA_MQH__
 #define __INDICATORDATA_MQH__
  #include "..\Bases\BaseObj.mqh"

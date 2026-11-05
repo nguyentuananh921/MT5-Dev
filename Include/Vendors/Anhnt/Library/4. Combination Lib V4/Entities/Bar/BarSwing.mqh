@@ -1,9 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                     BarSwing.mqh |
+//|Change from V2 BarSwingSeries.mqh (CBarSwingSeries : CBaseObj     |
 //+------------------------------------------------------------------+
-//--- Change from V2 BarSwingSeries.mqh (CBarSwingSeries : CBaseObj, its own properties and a pointer to its pivot bar): a CBar with a swing now, the pivot bar is itself
-//--- and InformationType (Swing High / Swing Low) and InformationSide say what was found on it. The rules of V2 CBarSwingControl are its methods (Python
-//--- swing.py says the same). CBarControl holds one as the judge and keeps a CBarSwing for each swing found. CBarBOS and CBarCHoCH use its FindBroken methods
 #ifndef __BARSWING_MQH__
 #define __BARSWING_MQH__
  #include <Arrays\ArrayObj.mqh>

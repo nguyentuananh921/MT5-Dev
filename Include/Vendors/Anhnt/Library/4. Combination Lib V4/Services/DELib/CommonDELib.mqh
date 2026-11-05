@@ -30,6 +30,34 @@
       default            : return " != ";
      }
   }
+ bool IsEqualMqlParamArrays(const MqlParam &array1[], const MqlParam &array2[])
+  {
+    int total = ArraySize(array1);
+    int size  = ArraySize(array2);
+    if(total != size)
+        return false;
+    for(int i = 0; i < total; i++)
+      {
+        if(!IsEqualMqlParams(array1[i], array2[i]))
+            return false;
+      }
+    return true;
+  }
+ bool IsEqualMqlParams(const MqlParam &struct1, const MqlParam &struct2)
+    {
+      if(struct1.type != struct2.type)
+          return false;
+      switch(struct1.type)
+        {
+          case TYPE_BOOL    : case TYPE_CHAR : case TYPE_UCHAR : case TYPE_SHORT    : case TYPE_USHORT  :
+          case TYPE_COLOR   : case TYPE_INT  : case TYPE_UINT  : case TYPE_DATETIME : case TYPE_LONG    :
+          case TYPE_ULONG   : return(struct1.integer_value == struct2.integer_value);
+          case TYPE_FLOAT   :
+          case TYPE_DOUBLE  : return(NormalizeDouble(struct1.double_value - struct2.double_value, DBL_DIG) == 0);
+          case TYPE_STRING  : return(struct1.string_value == struct2.string_value);
+          default           : return false;
+        }
+    }
  //+------------------------------------------------------------------+
  //| Return week day names (V3)                                       |
  //+------------------------------------------------------------------+

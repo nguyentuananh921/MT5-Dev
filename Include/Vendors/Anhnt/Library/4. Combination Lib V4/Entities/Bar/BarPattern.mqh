@@ -1,10 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                   BarPattern.mqh |
+//|Change from V2 BarPattern.mqh (CBarPattern : CBaseObj,            |
 //+------------------------------------------------------------------+
-//--- Change from V2 BarPattern.mqh (CBarPattern : CBaseObj, its own properties and a pointer to its bar): a CBar now, the bar is itself and InformationType,
-//--- InformationGroup and InformationSide say what was found on it. The rules of V2 CBarPatternControl<Name>::FindPattern are its methods: the candle patterns
-//--- and the Momentum Candle (Python patterns.py and momentum.py say the same). CBarControl holds one as the judge (V2: m_pattern_instance) and keeps a
-//--- CBarPattern for each row found
 #ifndef __BARPATTERN_MQH__
 #define __BARPATTERN_MQH__
  #include <Arrays\ArrayObj.mqh>

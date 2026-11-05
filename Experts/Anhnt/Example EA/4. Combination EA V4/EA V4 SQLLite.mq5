@@ -67,12 +67,15 @@ int OnInit()
    //--- Every model writes its own table, after the tables it depends on: timeframes, accounts, then symbol_account, then Setting_SymbolTF
    if(m_ChartObj!=NULL)
       delete m_ChartObj;
-   m_ChartObj=new CChartObj(::ChartID());   // the indicators the chart holds are read when it is made
-   // makes Setting_IndicatorTemplate and the table timeframes (all the TFs of MT5, which Setting_SymbolTF refers to), the indicators of the chart are templates
+   m_ChartObj=new CChartObj(::ChartID());
+   // makes Setting_IndicatorTemplate and the table timeframes (all the TFs of MT5, which Setting_SymbolTF refers to)
     Breadcrumb("OnInit: m_IndicatorTemplateManager.OnInitEvent");
     m_IndicatorTemplateManager.SetDatabaseService(m_DatabaseService);
-    if(!m_IndicatorTemplateManager.OnInitEvent(m_ChartObj))
+    if(!m_IndicatorTemplateManager.OnInitEvent())
       return INIT_FAILED;   
+    m_ChartObj.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
+    if(!m_ChartObj.OnInitEvent())
+      return INIT_FAILED;
     
    // m_AccountsCollection  
     Breadcrumb("OnInit: m_AccountsCollection.OnInitEvent");
@@ -106,9 +109,12 @@ int OnInit()
    // m_IndicatorsCollection
     Breadcrumb("OnInit: m_IndicatorsCollection.OnInitEvent");
     m_IndicatorsCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the pairs
-    m_IndicatorsCollection.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);   // the templates
-    m_IndicatorsCollection.SetDatabaseService(m_DatabaseService);
-    m_IndicatorsCollection.OnInitEvent();   // every template on every pair: its handle
+    m_IndicatorsCollection.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);   // the templates    
+    if(!m_IndicatorsCollection.OnInitEvent())   
+      {
+       ::Print(__FUNCTION__," > failed to OnInitEvent IndicatorsCollection");
+       return INIT_FAILED;
+      }
    // m_BarTimeSeriesCollection
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSymbolsCollection");
     m_BarTimeSeriesCollection.SetSymbolsCollection(&m_SymbolsCollection);   // the owner of symbol_account: the id of a symbol 
@@ -336,6 +342,4 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
    m_SignalsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a template was deleted: its signals go
    m_BarMarkerSync.OnChartEvent(id,lparam,dparam,sparam);   //--- A pair picked in the panel: the manager moves the chart itself
    m_SymbolTFManager.OnChartEvent(id,lparam,dparam,sparam,m_ChartObj);
-   //--- A template added, shown, hidden or deleted: the chart follows
-   m_IndicatorTemplateManager.OnChartEvent(id,lparam,dparam,sparam,m_ChartObj);
   }

@@ -4,7 +4,6 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
-//--- All the timeseries (one for each timeframe) of one symbol
 #ifndef __BARTIMESERIESDE_MQH__
 #define __BARTIMESERIESDE_MQH__
  #include "BarSeriesDE.mqh"

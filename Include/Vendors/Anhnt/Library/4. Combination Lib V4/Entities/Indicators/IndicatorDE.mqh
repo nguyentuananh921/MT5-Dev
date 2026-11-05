@@ -3,17 +3,13 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //| Lib link            https://www.mql5.com/en/articles/14710       |
 //| Update link          https://www.mql5.com/en/articles/8646       |
+//|Update in V4 after implemenation CDatabaseService
 //+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\IndicatorDE.mqh: the indicator of a template (Setting_IndicatorTemplate, INDICATOR_PROP_ID) on a pair (Setting_SymbolTF).
-//--- INDICATOR_PROP_HANDLE is not a property: the handle is this object's own (m_handle, CopyBuffer and IndicatorRelease only), an indicator is told by its type
-//--- + params (IsEqual, IsOf). The group and the name are the catalog's (IndicatorDELib.mqh), given by the classes Standard\Ind<Name>.mqh as in V1.
-//--- The name of the timeframe is the table timeframes' (CIndicatorsCollection gives it, and the short name made of it: SetTimeframeDescription, SetShortName).
-//--- PrintParameters / GetMqlParamDescription: once here by the schema of the type (IndicatorDELib.mqh, the names the Add form shows), not one for each class Ind<Name>.
-//--- MqlParam compared by IsEqualMqlParamArrays of IndicatorDELib.mqh. No buffers to draw (MT5 draws: CChartObj). Its values in RAM: m_series_data
+
 #ifndef __INDICATORDE_MQH__
 #define __INDICATORDE_MQH__
  #include "..\Bases\BaseObj.mqh"
- #include "..\..\Services\DELib\IndicatorDELib.mqh"
+ #include "..\..\Collections\Settings\IndicatorTemplateManager.mqh"
  #include "IndicatorSeriesDE.mqh"
 #ifndef CINDICATORDE_MQH_DECLARATION
 #define CINDICATORDE_MQH_DECLARATION
@@ -32,9 +28,12 @@
     int               m_buffers_total;                                            // The buffers the signal of the type reads
     int               m_handle;                                                   // The handle: only this object releases it (one release is the end of it for every user)
     string            m_timeframe_description;                                    // The name of the timeframe (the table timeframes)
+    CIndicatorTemplateManager *m_IndicatorTemplateManager;
    //--- Return the index of the array the indicator's (1) double and (2) string properties are actually located at
     int               IndexProp(ENUM_INDICATOR_PROP_DOUBLE property)        const { return(int)property-INDICATOR_PROP_INTEGER_TOTAL;                            }
     int               IndexProp(ENUM_INDICATOR_PROP_STRING property)        const { return(int)property-INDICATOR_PROP_INTEGER_TOTAL-INDICATOR_PROP_DOUBLE_TOTAL;}
+    bool              ParamsEqual(const MqlParam &first[],const MqlParam &second[]) const;
+    bool              ParamsEqual(const MqlParam &first,const MqlParam &second) const;
    protected:
    //--- Protected parametric constructor
                       CIndicatorDE(ENUM_INDICATOR ind_type,
@@ -47,7 +46,7 @@
                                    MqlParam &mql_params[]);
    public:
    //--- Default constructor
-                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
+                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE),m_IndicatorTemplateManager(NULL) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
    //--- Destructor
                      ~CIndicatorDE(void);
    //--- Set indicator's (1) integer, (2) real and (3) string property
@@ -73,12 +72,13 @@
    //--- Is it the indicator of the type with the parameters on the pair (V4: an indicator is not made to be looked for, its handle would be a new one)
     bool              IsOf(const ENUM_INDICATOR type,const MqlParam &mql_params[],const string symbol,const ENUM_TIMEFRAMES timeframe) const;
    //--- Set indicator's (1) group, (2) empty value of buffers, (3) name, (4) short name, (5) ID
+    void              SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
     void              SetGroup(const ENUM_INDICATOR_GROUP group)      { this.SetProperty(INDICATOR_PROP_GROUP,group);                         }
     void              SetEmptyValue(const double value)               { this.SetProperty(INDICATOR_PROP_EMPTY_VALUE,value);                   }
     void              SetName(const string name)                      { this.SetProperty(INDICATOR_PROP_NAME,name);                           }
     void              SetShortName(const string shortname)            { this.SetProperty(INDICATOR_PROP_SHORTNAME,shortname);                 }
     void              SetID(const long id)                            { this.SetProperty(INDICATOR_PROP_ID,id); this.m_series_data.SetIndID(id); }
-    void              SetBuffersTotal(const int buffers_total)        { this.m_buffers_total=buffers_total;                                   }
+    void              SetBuffersTotal(const int buffers_total)        { this.m_buffers_total=buffers_total; this.m_series_data.SetBuffersTotal(buffers_total); }
     void              SetTimeframeDescription(const string text)      { this.m_timeframe_description=text; }   // the one copy of the name (the table timeframes)
    //--- Return indicator's (1) status, (2) group, (3) timeframe, (4) type, (5) handle, (6) ID,
    //--- (7) empty value of buffers, (8) name, (9) short name, (10) symbol, (11) number of buffers
@@ -121,6 +121,43 @@
    if(this.m_handle!=INVALID_HANDLE)
       ::IndicatorRelease(this.m_handle);
   }
+ bool CIndicatorDE::ParamsEqual(const MqlParam &first,const MqlParam &second) const
+  {
+   if(first.type!=second.type)
+      return false;
+   switch(first.type)
+     {
+      case TYPE_BOOL:
+      case TYPE_CHAR:
+      case TYPE_UCHAR:
+      case TYPE_SHORT:
+      case TYPE_USHORT:
+      case TYPE_COLOR:
+      case TYPE_INT:
+      case TYPE_UINT:
+      case TYPE_DATETIME:
+      case TYPE_LONG:
+      case TYPE_ULONG:
+         return first.integer_value==second.integer_value;
+      case TYPE_FLOAT:
+      case TYPE_DOUBLE:
+         return ::NormalizeDouble(first.double_value-second.double_value,DBL_DIG)==0;
+      case TYPE_STRING:
+         return first.string_value==second.string_value;
+      default:
+         return false;
+     }
+  }
+ bool CIndicatorDE::ParamsEqual(const MqlParam &first[],const MqlParam &second[]) const
+  {
+   int total=::ArraySize(first);
+   if(total!=::ArraySize(second))
+      return false;
+   for(int i=0;i<total;i++)
+      if(!this.ParamsEqual(first[i],second[i]))
+         return false;
+   return true;
+  }
  //+------------------------------------------------------------------+
  //| Closed parametric constructor. Volumes: the handle takes the kind |
  //| of volume only (its period and method are the ones of its moving |
@@ -137,6 +174,7 @@
   {
    //--- Set the object type
     this.m_object_type=OBJECT_DE_TYPE_INDICATOR;
+    this.m_IndicatorTemplateManager=NULL;
    //--- Fill in the array of object parameters with data from the array passed to constructor
     int count=::ArrayResize(this.m_mql_param,::ArraySize(mql_params));
     for(int i=0;i<count;i++)
@@ -158,7 +196,7 @@
     this.m_string_prop[this.IndexProp(INDICATOR_PROP_NAME)]     = name;
     this.m_string_prop[this.IndexProp(INDICATOR_PROP_SHORTNAME)]= shortname;
    //--- V4: the buffers the signal reads and the values in RAM
-    this.m_buffers_total=GetIndicatorBuffersForType(ind_type);
+    this.m_buffers_total=0;
     this.m_series_data.SetIndicator(this.Symbol(),timeframe,ind_type,this.m_handle,INVALID_HANDLE,this.m_buffers_total);
   }
  //+------------------------------------------------------------------+
@@ -196,7 +234,7 @@
  //+------------------------------------------------------------------+
  bool CIndicatorDE::IsEqual(CIndicatorDE *compared_obj) const
   {
-   if(!IsEqualMqlParamArrays(this.m_mql_param,compared_obj.m_mql_param))
+   if(!this.ParamsEqual(this.m_mql_param,compared_obj.m_mql_param))
       return false;
    int begin=0, end=INDICATOR_PROP_INTEGER_TOTAL;
    for(int i=begin; i<end; i++)
@@ -225,7 +263,7 @@
  //+------------------------------------------------------------------+
  bool CIndicatorDE::IsOf(const ENUM_INDICATOR type,const MqlParam &mql_params[],const string symbol,const ENUM_TIMEFRAMES timeframe) const
   {
-   return (this.TypeIndicator()==type && this.Symbol()==symbol && this.Timeframe()==timeframe && IsEqualMqlParamArrays(this.m_mql_param,mql_params));
+   return (this.TypeIndicator()==type && this.Symbol()==symbol && this.Timeframe()==timeframe && this.ParamsEqual(this.m_mql_param,mql_params));
   }
  //+------------------------------------------------------------------+
  //| Return description of indicator's integer property               |
@@ -332,11 +370,17 @@
  //+------------------------------------------------------------------+
  string CIndicatorDE::GetMqlParamDescription(const int index) const
   {
-   SIndicatorParam schema[];
-   GetIndicatorParamSchema(this.TypeIndicator(),schema);
-   string name=(index<::ArraySize(schema) && schema[index].name!="" ? schema[index].name : "["+(string)index+"]");
-   string choices=(index<::ArraySize(schema) ? schema[index].choices : "");
-   return name+": "+MqlParameterDescription(this.m_mql_param[index],choices,2);
+   if(index<0 || index>=::ArraySize(this.m_mql_param))
+     {
+      ::Print(__FUNCTION__," > invalid parameter index ",index);
+      return "";
+     }
+   if(this.m_IndicatorTemplateManager==NULL)
+     {
+      ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
+      return "";
+     }
+   return this.m_IndicatorTemplateManager.StandardIndicatorParamDescription(this.TypeIndicator(),index,this.m_mql_param[index]);
   }
  //+------------------------------------------------------------------+
  //| Display parameter description of indicator object in the journal |

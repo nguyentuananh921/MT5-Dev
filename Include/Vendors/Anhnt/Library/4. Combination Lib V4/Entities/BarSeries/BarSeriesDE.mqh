@@ -4,8 +4,6 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
-//--- The bars of one symbol and one timeframe, as MT5 gives them. What is found on them is its CBarControl's (V2: m_patterns_control of this class): Python
-//--- calculates the history, the control judges the new bars, keeps the rows in RAM and writes them to the table BarTimeSeriesCollection (SyncDataToDB, like SyncData of DoEasy)
 #ifndef __BARSERIESDE_MQH__
 #define __BARSERIESDE_MQH__
  #include <Arrays\ArrayObj.mqh>

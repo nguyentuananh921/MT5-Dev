@@ -3,10 +3,8 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //| Lib link            https://www.mql5.com/en/articles/14710       |
 //| Update link          https://www.mql5.com/en/articles/8787       |
-//+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\SeriesDataInd.mqh: renamed CSeriesDataInd -> CIndicatorSeriesDE (the name of the layer as CBarSeriesDE).
-//--- RAM only (MT5 gives it again at any time): no CNewBarObj (CIndicatorsCollection refreshes it on SERIES_EVENTS_NEW_BAR of its pair), Refresh() puts
-//--- the bar that just closed again (its last value, not the one of the last tick). Volumes: buffer 1 is its moving average (the second handle)
+//|Change from V1 renamed CSeriesDataInd -> CIndicatorSeriesDE       |
+//+------------------------------------------------------------------+ 
 #ifndef __INDICATORSERIESDE_MQH__
 #define __INDICATORSERIESDE_MQH__
  #include <Arrays\ArrayObj.mqh>
@@ -44,6 +42,7 @@
     int               IndBuffersTotal(void)         const { return this.m_buffers_total;     }
     long              IndID(void)                   const { return this.m_ind_id;            }
     void              SetIndID(const long id)             { this.m_ind_id=id;                }
+    void              SetBuffersTotal(const int buffers_total) { this.m_buffers_total=buffers_total; }
     void              SetIndicator(const string symbol,const ENUM_TIMEFRAMES timeframe,const ENUM_INDICATOR ind_type,const int handle,const int handle_average,const int buffers_total);
    //--- (1) Create the list (0: the indicator is not calculated yet), (2) update it: the forming bar and the bar that just closed
     int               Create(const uint required=0);

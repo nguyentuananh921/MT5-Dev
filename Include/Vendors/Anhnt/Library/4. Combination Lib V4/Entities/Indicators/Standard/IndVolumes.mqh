@@ -3,7 +3,7 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
 //+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\Standard\IndVolumes.mqh: the group and the name are the catalog's (IndicatorDELib.mqh), PrintParameters is CIndicatorDE's
+//--- Change from V1 Timeseries\Indicators\Standard\IndVolumes.mqh: the group and name come from the manager catalog; PrintParameters is CIndicatorDE's (by the schema)
 //--- (by the schema). V4: the moving average of the volumes (params 1, 2 of the template) is a second handle of this object, buffer 1 of its values
 #ifndef __INDVOLUMES_MQH__
 #define __INDVOLUMES_MQH__
@@ -19,14 +19,14 @@
     int               m_handle_average;               // The moving average on the volumes: only this object releases it
    public:
     int               HandleAverage(void)       const { return this.m_handle_average; }
-                      CIndVolumes(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]);
+                      CIndVolumes(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager);
                      ~CIndVolumes(void);
   };
 #endif // CINDVOLUMES_MQH_DECLARATION
 #ifndef CINDVOLUMES_MQH_IMPLEMENTATION
 #define CINDVOLUMES_MQH_IMPLEMENTATION
- CIndVolumes::CIndVolumes(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
-    CIndicatorDE(IND_VOLUMES,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_VOLUMES),GetIndicatorNameForType(IND_VOLUMES),
+ CIndVolumes::CIndVolumes(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
+    CIndicatorDE(IND_VOLUMES,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_VOLUMES),manager.StandardIndicatorName(IND_VOLUMES),
                  "",mql_param),m_handle_average(INVALID_HANDLE)
   {
    this.m_object_type=OBJECT_DE_TYPE_IND_VOLUMES;

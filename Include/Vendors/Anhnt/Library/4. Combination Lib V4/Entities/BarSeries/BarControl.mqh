@@ -1,12 +1,7 @@
 //+------------------------------------------------------------------+
-//|                                                    BarControl.mqh |
+//|                                                   BarControl.mqh |
+//| Change from V2 BarPatternsControl.mqh                            |
 //+------------------------------------------------------------------+
-//--- Change from V2 BarPatternsControl.mqh: ONE class runs what the user wants to know about the bars of a series (the candle patterns, the Momentum Candle,
-//--- the swings, BOS / CHoCH). The rules of a bar are the methods of what is found on it (V2 names): CBarPattern (the candle patterns, the Momentum Candle),
-//--- CBarSwing (the swings), CBarBOS and CBarCHoCH (they use the swing judges); this class holds one of each as the judge (V2: m_pattern_instance).
-//--- The signals of the indicator templates are not here any more: CSignal* (Entities\Signals), CSignalsCollection. Python (patterns.py, momentum.py, swing.py,
-//--- structure.py) writes the same table, so both must say the same. One CBarControl for each CBarSeriesDE (V2: m_patterns_control); the parameters of a type
-//--- are the ones of Setting_BarSetup (CBarInformationManager), not MqlParam
 #ifndef __BARCONTROL_MQH__
 #define __BARCONTROL_MQH__
  #include <Arrays\ArrayObj.mqh>

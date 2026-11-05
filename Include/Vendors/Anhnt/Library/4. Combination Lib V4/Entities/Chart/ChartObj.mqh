@@ -8,15 +8,15 @@
 //|Topic link:  https://www.mql5.com/en/articles/9360                |
 //|Topic link:  https://www.mql5.com/en/articles/9385                |
 //|Lib          https://www.mql5.com/en/articles/14710               |
+//| Update in V4 after implemenation CDatabaseService                |
 //+------------------------------------------------------------------+
-//--- The chart the EA runs on. Methods come from V3 one by one when a class asks for them
 #ifndef __CHARTOBJ_MQH__
 #define __CHARTOBJ_MQH__
  #include <Arrays\ArrayObj.mqh>
  #include "..\Bases\BaseObj.mqh"
  #include "..\Defines\EventDefines.mqh"
- #include "WndInd.mqh"
- #include "..\..\Services\DELib\IndicatorDELib.mqh"
+ #include "WndInd.mqh"#include "..\..\Collections\Settings\IndicatorTemplateManager.mqh"
+ class CIndicatorTemplateManager;
 #ifndef CCHARTOBJ_MQH_DECLARATION
 #define CCHARTOBJ_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -28,18 +28,22 @@
     long              m_chart_id;                                  // Chart ID
     CArrayObj         m_list_ind;                                  // The indicators of all chart windows: name, type and parameters
     CArrayObj         m_list_ind_param;                            // The indicator whose parameters were changed last (the old type and parameters)
+    CIndicatorTemplateManager *m_IndicatorTemplateManager;
     bool              m_object_created;                            // CHART_OBJ_EVENT_OBJECTS_CHANGE is on its way: the other "autotrade" objects of the same trade are not told again
    //--- Create and send the chart event of an indicator to the control program chart
     void              SendEvent(const ENUM_CHART_OBJ_EVENT event,CWndInd *ind);
+    bool              ParamsEqual(const MqlParam &first[],const MqlParam &second[]) const;
    public:
                       CChartObj(const long chart_id);
+    void              SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
+    bool              OnInitEvent(void);
    //--- Return the list of the indicators of all chart windows
     CArrayObj        *GetList(void)                                   { return &this.m_list_ind;                                          }
    //--- Return (1) the last one added and (2) the changed indicator (its old type and parameters), (3) the indicator by its index in the specified chart window
     CWndInd          *GetLastAddedIndicator(void)                     { return this.m_list_ind.At(this.m_list_ind.Total()-1);             }
     CWndInd          *GetLastChangedIndicator(void)                   { return this.m_list_ind_param.At(this.m_list_ind_param.Total()-1); }
     CWndInd          *GetIndicator(const int win_num,const int ind_index);
-   //--- Compare the indicators of every chart window with the list: add, remove or change them, and send the event of each (not at the start, the first read is no news)
+   //--- Scan the chart on init and compare every chart window after changes
     void              Refresh(const bool send_events=true);
    //--- Event Rule: (1) the chart changed (CHARTEVENT_CHART_CHANGE: an indicator added, removed or changed): Refresh, (2) an object of a trade made by the
    //--- terminal (CHARTEVENT_OBJECT_CREATE of "autotrade ...", DoEasy CChartObjectsControl): CHART_OBJ_EVENT_OBJECTS_CHANGE once for the objects of the trade
@@ -64,12 +68,49 @@
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CChartObj::CChartObj(const long chart_id) : m_chart_id(chart_id==0 ? ::ChartID() : chart_id),m_object_created(false)
+ CChartObj::CChartObj(const long chart_id) : m_chart_id(chart_id==0 ? ::ChartID() : chart_id),m_IndicatorTemplateManager(NULL),m_object_created(false)
   {
    this.m_object_type=OBJECT_DE_TYPE_CHART;
    ::ChartSetInteger(this.m_chart_id,CHART_EVENT_OBJECT_CREATE,true);   // the terminal tells the objects it makes (V2 CChartObjectsControl)
-   this.Refresh(false);   // the indicators already on the chart
    this.m_object_created=::EventChartCustom(this.m_chart_id,(ushort)CHART_OBJ_EVENT_OBJECTS_CHANGE,::ObjectsTotal(this.m_chart_id),0.0,"");   // a TF change redraws "autotrade" without a create event
+  }
+ bool CChartObj::OnInitEvent(void)
+  {
+   if(this.m_IndicatorTemplateManager==NULL)
+     {
+      ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
+      return false;
+     }
+   this.Refresh();
+   long ids[];
+   ENUM_INDICATOR types[];
+   string texts[],display[];
+   bool buy[],sell[],sound[],message[],show[];
+   int total=this.m_IndicatorTemplateManager.Templates(ids,types,texts,display,buy,sell,sound,message,show);
+   for(int row=0;row<total;row++)
+     {
+      MqlParam params[];
+      if(!show[row] || !this.m_IndicatorTemplateManager.ParamsFromText(types[row],texts[row],params))
+         continue;
+      if(!this.IsIndicatorShownOnChart(types[row],params))
+         this.ShowIndicatorOnChart(types[row],params);
+     }
+   return true;
+  }
+ bool CChartObj::ParamsEqual(const MqlParam &first[],const MqlParam &second[]) const
+  {
+   int total=::ArraySize(first);
+   if(total!=::ArraySize(second))
+      return false;
+   for(int i=0;i<total;i++)
+     {
+      if(first[i].type!=second[i].type ||
+         first[i].integer_value!=second[i].integer_value ||
+         first[i].double_value!=second[i].double_value ||
+         first[i].string_value!=second[i].string_value)
+         return false;
+     }
+   return true;
   }
  //+------------------------------------------------------------------+
  //| Compare the indicators of every chart window with the list: an   |
@@ -175,6 +216,83 @@
  //+------------------------------------------------------------------+
  void CChartObj::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   if(this.m_IndicatorTemplateManager!=NULL)
+     {
+      //--- A template changed: attach or detach its indicator on this chart
+      bool added=(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED);
+      bool changed=(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
+      bool deleted=(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE);
+      if(added || changed || deleted)
+        {
+         ENUM_INDICATOR type=(ENUM_INDICATOR)(int)lparam;
+         MqlParam params[];
+         if(this.m_IndicatorTemplateManager.ParamsFromText(type,sparam,params))
+           {
+            bool shown=this.IsIndicatorShownOnChart(type,params);
+            CIndicatorSetting *setting=this.m_IndicatorTemplateManager.GetSetting(type,sparam);
+            bool wanted=(!deleted && setting!=NULL && setting.ShowOnChart());
+            if(wanted && !shown)
+               this.ShowIndicatorOnChart(type,params);
+            else if(!wanted && shown)
+               this.RemoveIndicatorFromChart(type,params);
+            ::ChartRedraw(this.m_chart_id);
+           }
+         return;
+        }
+      //--- The user changed an indicator's parameters on the chart
+      if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_CHART_WND_IND_CHANGE)
+        {
+         CWndInd *old_ind=this.GetLastChangedIndicator();
+         CWndInd *new_ind=this.GetIndicator((int)dparam,(int)lparam);
+         ENUM_INDICATOR old_type,new_type;
+         MqlParam old_params[],new_params[];
+         if(old_ind==NULL || new_ind==NULL || !old_ind.GetIdentity(old_type,old_params) || !new_ind.GetIdentity(new_type,new_params))
+            return;
+         if(this.m_IndicatorTemplateManager.Exists(new_type,this.m_IndicatorTemplateManager.ParamsText(new_type,new_params)))
+            return;
+         string old_text=this.m_IndicatorTemplateManager.ParamsText(old_type,old_params);
+         if(this.m_IndicatorTemplateManager.Exists(old_type,old_text))
+            this.m_IndicatorTemplateManager.UpdateTemplate(old_type,old_text);
+         if(this.m_IndicatorTemplateManager.StandardIndicatorName(new_type)!="")
+            this.m_IndicatorTemplateManager.UpdateTemplate(new_type,new_params);
+         return;
+        }
+      //--- An indicator left the chart: synchronize the templates' show flags
+      if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_CHART_WND_IND_DEL)
+        {
+         long ids[];
+         ENUM_INDICATOR types[];
+         string texts[],display[];
+         bool buy[],sell[],sound[],message[],show[];
+         int total=this.m_IndicatorTemplateManager.Templates(ids,types,texts,display,buy,sell,sound,message,show);
+         for(int row=0;row<total;row++)
+           {
+            MqlParam row_params[];
+            if(!this.m_IndicatorTemplateManager.ParamsFromText(types[row],texts[row],row_params))
+               continue;
+            bool on_chart=this.IsIndicatorShownOnChart(types[row],row_params);
+            if(on_chart!=show[row])
+               this.m_IndicatorTemplateManager.UpdateTemplate(types[row],texts[row],"show_on_chart",on_chart,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
+           }
+         return;
+        }
+      //--- A supported standard indicator was added or restored directly on the chart
+      if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_CHART_WND_IND_ADD)
+        {
+         CWndInd *ind=this.GetIndicator((int)dparam,(int)lparam);
+         if(ind==NULL || ind.Name()!=sparam)
+            ind=this.GetLastAddedIndicator();
+         ENUM_INDICATOR type;
+         MqlParam params[];
+         if(ind==NULL || !ind.GetIdentity(type,params) || this.m_IndicatorTemplateManager.StandardIndicatorName(type)=="" || !this.ChartIdentity(type,params))
+            return;
+         if(type==IND_VOLUMES && ::ArraySize(params)==1 && !this.m_IndicatorTemplateManager.CompleteVolumesParams(params))
+            return;
+         string text=this.m_IndicatorTemplateManager.ParamsText(type,params);
+         if(!this.m_IndicatorTemplateManager.Exists(type,text))
+            this.m_IndicatorTemplateManager.UpdateTemplate(type,params);
+        }
+     }
    if(id==CHARTEVENT_CHART_CHANGE)
      {
       this.Refresh();
@@ -281,7 +399,7 @@
          CWndInd ind(this.m_chart_id,win,k);
          ENUM_INDICATOR line_type;
          MqlParam line_params[];
-         if(ind.GetIdentity(line_type,line_params) && line_type==type && IsEqualMqlParamArrays(line_params,wanted))
+         if(ind.GetIdentity(line_type,line_params) && line_type==type && this.ParamsEqual(line_params,wanted))
             return true;
         }
      }
@@ -293,6 +411,17 @@
  //+------------------------------------------------------------------+
  void CChartObj::ShowIndicatorOnChart(const ENUM_INDICATOR type,MqlParam &params[])
   {
+   if(this.m_IndicatorTemplateManager==NULL)
+     {
+      ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
+      return;
+     }
+   string indicator_name=this.m_IndicatorTemplateManager.StandardIndicatorName(type);
+   if(indicator_name=="")
+     {
+      ::Print(__FUNCTION__," > indicator is not in the standard catalog: ",EnumToString(type));
+      return;
+     }
    MqlParam chart_params[];
    this.ChartParams(type,params,chart_params);
    if(type==IND_FRAMA)   // IndicatorCreate wants the Shift (4002 without it), the chart holds FRAMA without it
@@ -304,12 +433,13 @@
    int handle=::IndicatorCreate(this.Symbol(),this.Timeframe(),type,::ArraySize(chart_params),chart_params);
    if(handle==INVALID_HANDLE)
      {
-      ::Print(DFUN,GetIndicatorNameForType(type)," with ",::ArraySize(chart_params)," params: IndicatorCreate failed, error ",::GetLastError());
+      ::Print(DFUN,indicator_name," with ",::ArraySize(chart_params)," params: IndicatorCreate failed, error ",::GetLastError());
       return;
      }
-   int sub_window=(GetIndicatorGroupForType(type)==INDICATOR_GROUP_TREND ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
+   bool overlay=(this.m_IndicatorTemplateManager.StandardIndicatorGroup(type)==INDICATOR_GROUP_TREND || type==IND_FRACTALS);
+   int sub_window=(overlay ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
    if(!::ChartIndicatorAdd(this.m_chart_id,sub_window,handle))
-      ::Print(DFUN,GetIndicatorNameForType(type),": ChartIndicatorAdd failed, error ",::GetLastError());
+      ::Print(DFUN,indicator_name,": ChartIndicatorAdd failed, error ",::GetLastError());
    //--- Volumes comes with its moving average: it takes the data of the volumes and goes to the same window
    if(type==IND_VOLUMES && ::ArraySize(params)>2)
      {
@@ -334,7 +464,7 @@
          CWndInd ind(this.m_chart_id,win,k);
          ENUM_INDICATOR line_type;
          MqlParam line_params[];
-         if(ind.GetIdentity(line_type,line_params) && line_type==type && IsEqualMqlParamArrays(line_params,wanted))
+         if(ind.GetIdentity(line_type,line_params) && line_type==type && this.ParamsEqual(line_params,wanted))
            {
             //--- the moving average of the volumes goes first: it lives in the same window, after the volumes
             if(type==IND_VOLUMES)

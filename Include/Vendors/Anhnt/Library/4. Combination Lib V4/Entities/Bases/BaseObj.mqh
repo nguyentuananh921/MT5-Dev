@@ -32,22 +32,22 @@
       //int                     m_type;           // enum ENUM_OBJECT_DE_TYPE in CommonDefines.mqh
       int                     m_object_type;           // enum ENUM_OBJECT_DE_TYPE in CommonDefines.mqh
     public:
-      void              SetLogLevel(const ENUM_LOG_LEVELS level)  { m_log_level=level;            }
+      void               SetLogLevel(const ENUM_LOG_LEVELS level)  { m_log_level=level;            }
       ENUM_LOG_LEVELS    GetLogLevel(void)              const     { return m_log_level;           }
-      void              SetSubFolderName(const string name)      { m_folder_name=::MQLInfoString(MQL_PROGRAM_NAME)+"\\"+name; }
-      string            GetFolderName(void)            const     { return m_folder_name;         }
-      void              SetSoundName(const string name)          { m_sound_name=name;            }
-      string            GetSoundName(void)             const     { return m_sound_name;          }
-      void              SetUseSound(const bool flag)             { m_use_sound=flag;             }
-      bool              IsUseSound(void)               const     { return m_use_sound;           }
-      void              SetAvailable(const bool flag)            { m_available=flag;             }
-      bool              IsAvailable(void)              const     { return m_available;           }
-      int               GetError(void)                 const     { return m_global_error;        }
-      string            GetName(void)                  const     { return m_name;                }
-      virtual int       Type(void)                     const     { return m_object_type;                }
+      void               SetSubFolderName(const string name)      { m_folder_name=::MQLInfoString(MQL_PROGRAM_NAME)+"\\"+name; }
+      string             GetFolderName(void)            const     { return m_folder_name;         }
+      void               SetSoundName(const string name)          { m_sound_name=name;            }
+      string             GetSoundName(void)             const     { return m_sound_name;          }
+      void               SetUseSound(const bool flag)             { m_use_sound=flag;             }
+      bool               IsUseSound(void)               const     { return m_use_sound;           }
+      void               SetAvailable(const bool flag)            { m_available=flag;             }
+      bool               IsAvailable(void)              const     { return m_available;           }
+      int                GetError(void)                 const     { return m_global_error;        }
+      string             GetName(void)                  const     { return m_name;                }
+      virtual int        Type(void)                     const     { return m_object_type;                }
      //New added in https://www.mql5.com/en/articles/9751
-      virtual void      Print(const bool full_prop=false,const bool dash=false)      { return; }
-      virtual void      PrintShort(const bool dash=false,const bool symbol=false)    { return; }
+      virtual void       Print(const bool full_prop=false,const bool dash=false)      { return; }
+      virtual void       PrintShort(const bool dash=false,const bool symbol=false)    { return; }
      CBaseObj() : m_program((ENUM_PROGRAM_TYPE)::MQLInfoInteger(MQL_PROGRAM_TYPE)),
                   m_name_program(::MQLInfoString(MQL_PROGRAM_NAME)),
                                   m_global_error(ERR_SUCCESS),

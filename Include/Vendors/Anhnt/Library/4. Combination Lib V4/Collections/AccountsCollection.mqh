@@ -1,15 +1,10 @@
 //+------------------------------------------------------------------+
-//|                                             AccountsCollection.mqh |
+//|                                           AccountsCollection.mqh |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //| Link https://www.mql5.com/en/articles/6952                       |
 //| Lib https://www.mql5.com/en/articles/14710                       |
+//| V3 SaveObjects -> SyncDataToDB, LoadObjects -> SyncDataFromDB    |
 //+------------------------------------------------------------------+
-//--- Change from V3 Collections\AccountsCollection.mqh (Lib V1 the same): SaveObjects -> SyncDataToDB, LoadObjects -> SyncDataFromDB, the files Accounts\*.bin -> the
-//--- table accounts. Only the EA + Library make and write this table: Python reads account_key once (by login + server) to know which account it works for, it
-//--- never writes it. Readme "Live on RAM, Save on DB for no more calculation": a row keeps what does not change (who the account is and its terms); what
-//--- changes all the time (balance, equity, profit, margin, the permissions) lives in the CAccount of m_list_accounts in RAM only (RefreshAccount, OnTick).
-//--- Parent Child: the CAccount makes its events, this class sends them to the chart, the siblings (the status bar, the Automatic Trade) hear them
-//--- Methods come from V3 one by one when a class asks for them
 #ifndef __ACCOUNTSCOLLECTION_MQH__
 #define __ACCOUNTSCOLLECTION_MQH__
  #include "ListObj.mqh"

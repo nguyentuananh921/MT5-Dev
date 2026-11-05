@@ -21,8 +21,8 @@
     string m_folder_accounts;
     string m_file_accounts; 
     int    m_db_account;  
-    string m_account_key; 
-
+    string m_account_key;    
+    
     long   m_write_queue;
     bool   m_write_held;
 
@@ -51,9 +51,11 @@
      //CRUD Operation
       bool Create(const string target, const string sql);
       bool Create(const string target, const string sql, long &insert_id);
-      bool Read(const string target, const string sql, CDatabaseReader &reader);
       bool Update(const string target, const string sql);
       bool Delete(const string target, const string sql);
+      template<typename T> bool Read(const string target, const string sql, T &resultOut);
+      template<typename T> bool Read(const string target, const string sql, T &resultsOut[]);
+      
   };
  #endif // CDATABASESERVICE_MQH_DECLARATION
  #ifndef CDATABASESERVICE_MQH_IMPLEMENTATION
@@ -183,5 +185,90 @@
      }
    return true;
   }
+//+------------------------------------------------------------------+
+ //| Insert a row and return its last_insert_rowid                    |
+ //+------------------------------------------------------------------+
+ bool CDatabaseService::Create(const string target, const string sql, long &insert_id)
+  {
+    insert_id = 0;
+    if(!this.Create(target, sql))
+      return false;
+    int db = this.GetDatabaseHandle(target);
+    int request = ::DatabasePrepare(db, "SELECT last_insert_rowid();");
+    if(request != INVALID_HANDLE)
+    {
+      if(::DatabaseRead(request))
+        ::DatabaseColumnLong(request, 0, insert_id);
+      ::DatabaseFinalize(request);
+    }
+    return true;
+  }
+ //+------------------------------------------------------------------+
+ //| Execute UPDATE query                                             |
+ //+------------------------------------------------------------------+
+ bool CDatabaseService::Update(const string target, const string sql)
+  {
+    return this.Create(target, sql);
+  }
+ //+------------------------------------------------------------------+
+ //| Execute DELETE query                                             |
+ //+------------------------------------------------------------------+
+ bool CDatabaseService::Delete(const string target, const string sql)
+  {
+    return this.Create(target, sql);
+  }
+ //+------------------------------------------------------------------+
+ //| Read a single row into bound struct/class T                      |
+ //+------------------------------------------------------------------+
+template<typename T> bool CDatabaseService::Read(const string target, const string sql, T &resultOut)
+ {
+  int db = this.GetDatabaseHandle(target);
+  if(db == INVALID_HANDLE)
+    {
+     ::Print(__FUNCTION__, " > database is not open");
+     return false;
+    }
+  int request = ::DatabasePrepare(db, sql);
+  if(request == INVALID_HANDLE)
+    {
+     ::Print(__FUNCTION__, " > prepare failed: ", sql, ", error ", ::GetLastError());
+     return false;
+    }
+  bool success = false;
+  ::ResetLastError();
+  if(::DatabaseReadBind(request, resultOut))
+     success = true;
+  ::DatabaseFinalize(request);
+  return success;
+ }
+ //+------------------------------------------------------------------+
+ //| Read multiple rows into array of bound struct/class T            |
+ //+------------------------------------------------------------------+
+ template<typename T> bool CDatabaseService::Read(const string target, const string sql, T &resultsOut[])
+  {
+    int db = this.GetDatabaseHandle(target);
+    if(db == INVALID_HANDLE)
+      {
+      ::Print(__FUNCTION__, " > database is not open");
+      return false;
+      }
+    int request = ::DatabasePrepare(db, sql);
+    if(request == INVALID_HANDLE)
+      {
+      ::Print(__FUNCTION__, " > prepare failed: ", sql, ", error ", ::GetLastError());
+      return false;
+      }
+    ::ArrayResize(resultsOut, 0, 100);
+    T row;
+    while(::DatabaseReadBind(request, row))
+    {
+      int total = ::ArraySize(resultsOut);
+      ::ArrayResize(resultsOut, total + 1, 100);
+      resultsOut[total] = row;
+    }
+    ::DatabaseFinalize(request);
+    return true;
+  }
+
  #endif // CDATABASESERVICE_MQH_IMPLEMENTATION
 #endif // CDATABASESERVICE_MQH

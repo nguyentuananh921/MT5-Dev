@@ -34,7 +34,7 @@
    const uint icons[3]={IMAGE_RESOURCE_BMP16_VISIBLE_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG,IMAGE_RESOURCE_BMP16_BELL_PNG};
    const bool states[3]={false,false,false};
    for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
-      if(m_sections_indicator.AddSection(GetIndicatorGroupName(INDICATOR_SECTION_GROUPS[g]),icons,states,true)==WRONG_VALUE)
+      if(m_sections_indicator.AddSection(m_IndicatorTemplateManager.StandardIndicatorGroupName(INDICATOR_SECTION_GROUPS[g]),icons,states,true)==WRONG_VALUE)
          return false;
    return true;
   }
@@ -99,7 +99,7 @@
       m_sections_indicator.ClearBody(g);
       int row=0;
       for(int i=0;i<total;i++)
-         if(GetIndicatorGroupForType(types[i])==INDICATOR_SECTION_GROUPS[g])
+         if(m_IndicatorTemplateManager.StandardIndicatorGroup(types[i])==INDICATOR_SECTION_GROUPS[g])
             this.AddRow_IndicatorTemplateSetting(g,row++,ids[i],display[i],show[i],buy[i],sell[i],sound[i],message[i]);
      }
    this.SyncSections_IndicatorTemplateSetting();
@@ -127,7 +127,7 @@
       m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_SOUND_ALERT,sound[i]);
       m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_MESSAGE_ALERT,message[i]);
       for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
-         if(GetIndicatorGroupForType(types[i])==INDICATOR_SECTION_GROUPS[g])
+         if(m_IndicatorTemplateManager.StandardIndicatorGroup(types[i])==INDICATOR_SECTION_GROUPS[g])
            {
             any_show[g]=(any_show[g] || show[i]);
             any_signal[g]=(any_signal[g] || buy[i] || sell[i]);
@@ -178,7 +178,7 @@
      {
       CIndicatorSetting *row=m_IndicatorTemplateManager.GetSetting((ENUM_INDICATOR)lparam,sparam);
       for(int g=0;g<INDICATOR_SECTIONS_TOTAL && row!=NULL;g++)
-         if(INDICATOR_SECTION_GROUPS[g]==GetIndicatorGroupForType(row.TypeEnum()))
+         if(INDICATOR_SECTION_GROUPS[g]==m_IndicatorTemplateManager.StandardIndicatorGroup(row.TypeEnum()))
            {
             m_sections_indicator.RemoveRows(row.ID());   // made already: the tab was built after the template came (OnInit, from the chart)
             this.AddRow_IndicatorTemplateSetting(g,m_sections_indicator.RowsTotal(g),row.ID(),row.Display(),row.ShowOnChart(),row.BuySignal(),row.SellSignal(),row.SoundAlert(),row.MessageAlert());
@@ -220,9 +220,9 @@
       if(which==INDICATOR_TOGGLE_SHOW)
          m_IndicatorTemplateManager.ShowGroup(group,dparam!=0);
       else if(which==INDICATOR_TOGGLE_SIGNAL)
-         m_IndicatorTemplateManager.SignalGroup(group,dparam!=0);
+         m_IndicatorTemplateManager.UpdateTemplate(group,"buy_signal","sell_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
       else
-         m_IndicatorTemplateManager.AlertGroup(group,dparam!=0);
+         m_IndicatorTemplateManager.UpdateTemplate(group,"sound_alert","message_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
       this.SyncSections_IndicatorTemplateSetting();
       return;
      }
@@ -233,19 +233,19 @@
    ENUM_INDICATOR type;
    string params_text;
    if(!m_sections_indicator.BodyOf(lparam,template_id,slot,param) || !this.TemplateOfId_IndicatorTemplateSetting(template_id,type,params_text))
-      return;
+     return;
    if(slot==INDICATOR_SLOT_DELETE)
-      m_IndicatorTemplateManager.RemoveFromDB(type,params_text);
+     m_IndicatorTemplateManager.UpdateTemplate(type,params_text);
    else if(slot==INDICATOR_SLOT_SHOW_ON_CHART)
-      m_IndicatorTemplateManager.ShowOnChart(type,params_text,dparam!=0);
+     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"show_on_chart",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
    else if(slot==INDICATOR_SLOT_BUY_SIGNAL)
-      m_IndicatorTemplateManager.BuySignal(type,params_text,dparam!=0);
+     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"buy_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
    else if(slot==INDICATOR_SLOT_SELL_SIGNAL)
-      m_IndicatorTemplateManager.SellSignal(type,params_text,dparam!=0);
+     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"sell_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
    else if(slot==INDICATOR_SLOT_SOUND_ALERT)
-      m_IndicatorTemplateManager.SoundAlert(type,params_text,dparam!=0);
+     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"sound_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
    else if(slot==INDICATOR_SLOT_MESSAGE_ALERT)
-      m_IndicatorTemplateManager.MessageAlert(type,params_text,dparam!=0);
+     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"message_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
    this.SyncSections_IndicatorTemplateSetting();
   }
 #endif // CGUIPANNEL_TABQUICKSETTING_INDICATOR_MQH

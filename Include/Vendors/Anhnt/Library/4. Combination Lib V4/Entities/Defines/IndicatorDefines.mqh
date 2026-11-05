@@ -129,6 +129,15 @@
     SORT_BY_IND_DATA_IND_NAME,                               // Sort by indicator name
     SORT_BY_IND_DATA_IND_SHORTNAME,                          // Sort by indicator short name
    };
+  // New In V4 after implemenation CDatabaseService
+  enum ENUM_INDICATOR_PARAM_DOMAIN
+   {
+    INDICATOR_PARAM_DOMAIN_NONE,
+    INDICATOR_PARAM_DOMAIN_MA_METHOD,
+    INDICATOR_PARAM_DOMAIN_APPLIED_PRICE,
+    INDICATOR_PARAM_DOMAIN_STOCH_PRICE,
+    INDICATOR_PARAM_DOMAIN_APPLIED_VOLUME
+   };
   #define INDICATOR_PARAM_SLOTS_MAX 8
   //To Display on Combobox
    #define CALCULATION_METHOD_CHOICES "SMA|EMA|SMMA|LWMA"

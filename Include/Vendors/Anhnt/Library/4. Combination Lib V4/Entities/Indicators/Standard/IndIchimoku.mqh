@@ -3,7 +3,7 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
 //+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\Standard\IndIchimoku.mqh: the group and the name are the catalog's (IndicatorDELib.mqh), PrintParameters is CIndicatorDE's (by the schema)
+//--- Change from V1 Timeseries\Indicators\Standard\IndIchimoku.mqh: the group and name come from the manager catalog; PrintParameters is CIndicatorDE's (by the schema)
 #ifndef __INDICHIMOKU_MQH__
 #define __INDICHIMOKU_MQH__
  #include "..\IndicatorDE.mqh"
@@ -15,8 +15,8 @@
  class CIndIchimoku : public CIndicatorDE
   {
    public:
-                      CIndIchimoku(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
-                         CIndicatorDE(IND_ICHIMOKU,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_ICHIMOKU),GetIndicatorNameForType(IND_ICHIMOKU),
+                      CIndIchimoku(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
+                         CIndicatorDE(IND_ICHIMOKU,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_ICHIMOKU),manager.StandardIndicatorName(IND_ICHIMOKU),
                                       "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_ICHIMOKU; }
   };
 #endif // CINDICHIMOKU_MQH_DECLARATION

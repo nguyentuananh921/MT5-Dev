@@ -3,7 +3,7 @@
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
 //+------------------------------------------------------------------+
-//--- Change from V1 Timeseries\Indicators\Standard\IndOBV.mqh: the group and the name are the catalog's (IndicatorDELib.mqh), PrintParameters is CIndicatorDE's (by the schema)
+//--- Change from V1 Timeseries\Indicators\Standard\IndOBV.mqh: the group and name come from the manager catalog; PrintParameters is CIndicatorDE's (by the schema)
 #ifndef __INDOBV_MQH__
 #define __INDOBV_MQH__
  #include "..\IndicatorDE.mqh"
@@ -15,8 +15,8 @@
  class CIndOBV : public CIndicatorDE
   {
    public:
-                      CIndOBV(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[]) :
-                         CIndicatorDE(IND_OBV,symbol,timeframe,INDICATOR_STATUS_STANDARD,GetIndicatorGroupForType(IND_OBV),GetIndicatorNameForType(IND_OBV),
+                      CIndOBV(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
+                         CIndicatorDE(IND_OBV,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_OBV),manager.StandardIndicatorName(IND_OBV),
                                       "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_OBV; }
   };
 #endif // CINDOBV_MQH_DECLARATION

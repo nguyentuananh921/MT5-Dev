@@ -4,7 +4,6 @@
 //|Introduction link https://www.mql5.com/en/articles/7594           |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
-//--- A bar of a timeseries: what the terminal says about it. No pattern flags: Python finds the patterns and the database holds them
 #ifndef __BAR_MQH__
 #define __BAR_MQH__
  #include "..\Bases\BaseObj.mqh"
