@@ -48,7 +48,7 @@
       return;
    string pair_symbols[];
    ENUM_TIMEFRAMES pair_tfs[];
-   int total=m_SymbolTFManager.Pairs(pair_symbols,pair_tfs);
+   int total=m_SymbolTFManager.Read_RAM(pair_symbols,pair_tfs);
    bool in_sync=((int)m_table_SymbolTFSeting.Model().RowsTotal()==total);
    for(int i=0;i<total && in_sync;i++)
      {
@@ -73,7 +73,7 @@
    string pair_symbols[];
    ENUM_TIMEFRAMES pair_tfs[];
    bool pair_buy[],pair_sell[],pair_sound[],pair_message[];
-   int total=::MathMin(m_SymbolTFManager.Pairs(pair_symbols,pair_tfs,pair_buy,pair_sell,pair_sound,pair_message),(int)m_table_SymbolTFSeting.Model().RowsTotal());
+   int total=::MathMin(m_SymbolTFManager.Read_RAM(pair_symbols,pair_tfs,pair_buy,pair_sell,pair_sound,pair_message),(int)m_table_SymbolTFSeting.Model().RowsTotal());
    for(int row=0;row<total;row++)
      {
       m_table_SymbolTFSeting.Model().Row(row).Value((long)pair_tfs[row]);   // the row stands for its tf_enum, the cell is only its look
@@ -82,7 +82,7 @@
       if(is_current) m_table_SymbolTFSeting.CellView(0,row).SetImages(start_icon);
       else           m_table_SymbolTFSeting.CellView(0,row).SetImages(delete_icon);
       m_table_SymbolTFSeting.SetValue(0,row,pair_symbols[row]);
-      m_table_SymbolTFSeting.SetValue(1,row,m_SymbolTFManager.TimeframeName(pair_tfs[row]));
+      m_table_SymbolTFSeting.SetValue(1,row,m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)pair_tfs[row]));
       bool flags[4];
       flags[0]=pair_buy[row];
       flags[1]=pair_sell[row];
@@ -112,22 +112,16 @@
   {
    if(m_SymbolTFManager==NULL)
       return;
-   if(!m_SymbolTFManager.Exists(sym,tf))
+   if(m_SymbolTFManager.Read_RAM(sym,tf)==NULL)
       return;
    if(col==2)
-     {
-      m_SymbolTFManager.BuySignal(sym,tf,on);
-      ::EventChartCustom(::ChartID(),(ushort)SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED,0,0.0,"");
-     }
+      m_SymbolTFManager.Update_SymbolTF_Setting(sym,tf,"buy_signal",on);
    else if(col==3)
-     {
-      m_SymbolTFManager.SellSignal(sym,tf,on);
-      ::EventChartCustom(::ChartID(),(ushort)SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED,0,0.0,"");
-     }
+      m_SymbolTFManager.Update_SymbolTF_Setting(sym,tf,"sell_signal",on);
    else if(col==4)
-      m_SymbolTFManager.SoundAlert(sym,tf,on);
+      m_SymbolTFManager.Update_SymbolTF_Setting(sym,tf,"sound_alert",on);
    else if(col==5)
-      m_SymbolTFManager.MessageAlert(sym,tf,on);
+      m_SymbolTFManager.Update_SymbolTF_Setting(sym,tf,"message_alert",on);
   }
  bool CGUIPannel::CreateTreeView_SymbolTFSetting(const int x_gap,const int y_gap)
   {
@@ -143,7 +137,7 @@
       return;
    string pair_symbols[];
    ENUM_TIMEFRAMES pair_tfs[];
-   int total=m_SymbolTFManager.Pairs(pair_symbols,pair_tfs);
+   int total=m_SymbolTFManager.Read_RAM(pair_symbols,pair_tfs);
    string names[];
    CArrayObj *symbols=(m_SymbolsCollection!=NULL) ? m_SymbolsCollection.GetList() : NULL;
    int symbols_total=(symbols!=NULL) ? symbols.Total() : 0;
@@ -234,7 +228,7 @@
             m_treeview_SymbolTF.DeleteTreeItem(child.ObjectID());
         }
       for(int k=0;k<::ArraySize(tfs);k++)
-         m_treeview_SymbolTF.AddTreeItem(sym_id,m_SymbolTFManager.TimeframeName(tfs[k]),IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,false,(long)tfs[k]);
+         m_treeview_SymbolTF.AddTreeItem(sym_id,m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)tfs[k]),IMAGE_RESOURCE_BMP16_BAR_CHART_COLORLESS_BMP,false,(long)tfs[k]);
       if(::ArraySize(tfs)>0)
          m_treeview_SymbolTF.ItemState(sym_id,true);
      }
@@ -277,14 +271,14 @@
       return;
    if(item.NodeLevel()==0)
      {
-      if(item.ChildrenTotal()==0 && !m_SymbolTFManager.Exists(item.LabelText(),(ENUM_TIMEFRAMES)::Period()))
-         m_SymbolTFManager.AddToDB(item.LabelText(),(ENUM_TIMEFRAMES)::Period());
+      if(item.ChildrenTotal()==0 && m_SymbolTFManager.Read_RAM(item.LabelText(),(ENUM_TIMEFRAMES)::Period())==NULL)
+         m_SymbolTFManager.Update_SymbolTF_Setting(item.LabelText(),(ENUM_TIMEFRAMES)::Period(),SYMBOLTF_MANAGER_EVENT_ADDED);
       return;
      }
    CTreeItem *parent=item.ParentItem();
    if(parent==NULL)
       return;
-   m_SymbolTFManager.NotifySettingChanged(parent.LabelText(),(ENUM_TIMEFRAMES)item.Value());
+   m_SymbolTFManager.Update_SymbolTF_Setting(parent.LabelText(),(ENUM_TIMEFRAMES)item.Value(),SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED);
   }
  //+------------------------------------------------------------------+
  //| What the user (or the manager) did that this tab shows           |
@@ -304,7 +298,7 @@
       if(sym==::Symbol() && tf==(ENUM_TIMEFRAMES)::Period())
          return;
       if(m_SymbolTFManager!=NULL)
-         m_SymbolTFManager.RemoveFromDB(sym,tf);
+         m_SymbolTFManager.Update_SymbolTF_Setting(sym,tf,SYMBOLTF_MANAGER_EVENT_DELETE);
       return;
      }
    //--- m_table_SymbolTFSeting: cols 2..5 = checkboxes, dparam = the new state

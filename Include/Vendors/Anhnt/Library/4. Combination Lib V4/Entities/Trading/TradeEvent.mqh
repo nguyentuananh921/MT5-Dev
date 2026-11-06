@@ -241,7 +241,7 @@ class CTradeEvent : public CObject
     //--- Set event symbol's Digits()
       this.m_digits=(int)::SymbolInfoInteger(this.Symbol(),SYMBOL_DIGITS);
     //--- Pending order is set (check if the event code is matched since there can be only one flag here)
-      if(this.m_event_code==TRADE_EVENT_FLAG_ORDER_PLASED)
+      if(this.m_event_code==TRADE_EVENT_FLAG_ORDER_PLACED)
         {
           this.m_trade_event=TRADE_EVENT_PENDING_ORDER_PLASED;
           this.SetProperty(EVENT_PROP_TYPE_EVENT,this.m_trade_event);

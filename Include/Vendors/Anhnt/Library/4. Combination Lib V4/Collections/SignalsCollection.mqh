@@ -8,11 +8,11 @@
 //--- the collection relays the events to the chart and tells the alert. MT5 calculates the indicator, the series reads its buffers in RAM (CIndicatorSeriesDE);
 //--- Python signals.py says the same. What shows it (CBarMarkerSync) asks here. A template that is added is calculated from the start (Python the history, the library
 //--- the new bars), the rows of a template that is deleted stay (its id is never given again; only the templates the user has are shown).
-//--- Live on RAM, saved on the DB: only the rows that were told wait in RAM, SyncDataToDB writes them when the pair is handed over (SYMBOLTF_MANAGER_EVENT_DELETE)
+//--- Live on RAM, saved on the DB: only the rows that were told wait in RAM, UpdateDataToDB writes them when the pair is handed over (SYMBOLTF_MANAGER_EVENT_DELETE)
 //--- and at OnDeinit; the view reads the table UNION what waits. Every hand starts after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
 #ifndef __SIGNALSCOLLECTION_MQH__
 #define __SIGNALSCOLLECTION_MQH__
- #include "..\Services\DELib\DatabaseDELib.mqh"
+ #include "..\Services\DELib\DatabaseService.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "BarTimeSeriesCollection.mqh"
  #include "IndicatorsCollection.mqh"
@@ -27,7 +27,7 @@
  class CSignalsCollection : public CBaseObj
   {
    private:
-    int               m_db;                      // the file of the account: its tables are asked here, nothing is copied
+   CDatabaseService *m_CDatabaseService;        // The EA holds it
     CBarTimeSeriesCollection *m_BarTimeSeriesCollection;   // the EA holds it: the bars the signals are found on, the id of a symbol
     CSymbolTFManager  *m_SymbolTFManager;        // the EA holds it: the pairs the library keeps up to date (Setting_SymbolTF)
     CSyncManager      *m_SyncManager;            // the EA holds it: what was synced and up to where (Setting_Sync)
@@ -35,25 +35,27 @@
     CIndicatorsCollection *m_IndicatorsCollection;   // the EA holds it: the indicator of a template on a pair (type + params, never the handle): its buffers in RAM
     CArrayObj         m_list_series;             // the series (CSignalSeriesDE, owned): one for each template on each pair of Setting_SymbolTF
    //--- The series of a template on a pair: (1) the one in the list, (2) made and added (its judge, the file of the account)
-    CSignalSeriesDE  *GetSeries(const long template_id,const string symbol,const ENUM_TIMEFRAMES timeframe);
-    CSignalSeriesDE  *CreateSeries(const long template_id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe,const long symbol_id);
+    CSignalSeriesDE  *Read_RAM(const long template_id,const string symbol,const ENUM_TIMEFRAMES timeframe);
+    CSignalSeriesDE  *Create_RAM(const long template_id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
+   //--- (1) every template on a pair, (2) a template on every pair (as CIndicatorsCollection)
+    void              Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              Create_RAM(const ENUM_INDICATOR type,const string params_text);
    //--- The series of (1) a template, (2) a pair go
-    void              DeleteSeries(const long template_id);
-    void              DeleteSeries(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              Delete_RAM(const long template_id);
+    void              Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- The events of a series go to the chart once (its list is emptied)
-    void              SendEvents_SignalsCollection(CSignalSeriesDE *series);
+    void              SendEvents(CSignalSeriesDE *series);
    //--- The new bars of every pair of a symbol: each series of the pair judges itself, its events go out, what is new on the newest closed bar is told
    //--- (as CBarTimeSeriesCollection::RefreshTimeseries_). False when the call had its share of time
-    bool              RefreshTimeseries_SignalsCollection(CBarTimeSeriesDE *timeseries,const ulong started);
-   //--- A table of the old name becomes the one of the new name, its rows stay
-    void              Rename_SignalsCollection(const string old_name,const string new_name);
+    bool              RefreshTimeseries(CBarTimeSeriesDE *timeseries,const ulong started);
    //--- A template that was deleted: its signals and its marks go (the ids wait here, a step at each beat: CSyncManager does the step)
     long              m_reset_ids[];
-    void              Reset_SignalsCollection(const ulong started);
+    void              Reset(const ulong started);
    //--- What is new on a pair at its newest closed bar is told once, for the templates whose alert is on (and when the pair has the alert on too)
-    void              Alert_SignalsCollection(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &templates[],const int &sides[]);
+    void              AlertOnPair(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &templates[],const int &sides[]);
    public:
-    void              SetBarTimeSeriesCollection(CBarTimeSeriesCollection *collection) { this.m_BarTimeSeriesCollection=collection; }
+    void              SetDatabaseService(CDatabaseService *databaseService)           { this.m_CDatabaseService=databaseService; }
+   void              SetBarTimeSeriesCollection(CBarTimeSeriesCollection *collection) { this.m_BarTimeSeriesCollection=collection; }
     void              SetSymbolTFManager(CSymbolTFManager *manager)                   { this.m_SymbolTFManager=manager; }
     void              SetSyncManager(CSyncManager *manager)                           { this.m_SyncManager=manager; }
     void              SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
@@ -70,91 +72,50 @@
     void              RefreshSeries(void);
     void              RefreshSeries(const string symbol);
     void              RefreshSeriesAllExceptCurrent(void);
-   //--- The series of every template on (1) every pair, (2) one pair are made and the rows of the table of the bars go to RAM (the rows waiting stay): after Python
+   //--- The rows of the table of the bars of (1) every pair, (2) one pair go to RAM, one query for a pair (the rows waiting stay): after Python
    //--- (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE), a template or a pair added. Event: SERIES_EVENTS_SIGNAL ALL of the pair
-    bool              SyncDataFromDB(void);
-    bool              SyncDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    bool              ReadDataFromDB(void);
+    bool              ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- What waits in RAM goes to the table, then its marks (rows first): (1) every pair, (2) one pair. True when nothing waits
-    bool              SyncDataToDB(void);
-    bool              SyncDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    bool              UpdateDataToDB(void);
+    bool              UpdateDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- What the markers of a pair show: the signals (bar time, side) of the templates whose Buy / Sell ids are given, from from_time to to_time (the table UNION RAM)
-    int               Read_SignalsCollection(const long symbol_id,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const long &buy_templates[],
+    int               ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const long &buy_templates[],
                                              const long &sell_templates[],long &times[],long &sides[]);
    //--- What was found in a candle of the chart: the signals of the templates asked (the TF of the row, template id, open time of its bar, side) of the TFs asked
    //--- (the caller gives its pairs of Setting_SymbolTF), in the bars from from_time to before to_time, the longest TF first. Both sides: what the user shows on the chart
    //--- is not asked here. The table UNION RAM
-    int               ReadCandle_SignalsCollection(const long symbol_id,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],
+    int               ReadDataFromDB(const string symbol,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],
                                                    long &tfs[],long &templates[],long &times[],long &sides[]);
-                      CSignalsCollection(void) : m_db(INVALID_HANDLE),m_BarTimeSeriesCollection(NULL),m_SymbolTFManager(NULL),m_SyncManager(NULL),m_IndicatorTemplateManager(NULL),
+                      CSignalsCollection(void) : m_CDatabaseService(NULL),m_BarTimeSeriesCollection(NULL),m_SymbolTFManager(NULL),m_SyncManager(NULL),m_IndicatorTemplateManager(NULL),
                                                  m_IndicatorsCollection(NULL) { this.m_object_type=COLLECTION_SIGNALS_ID; }
-                     ~CSignalsCollection(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
+                     ~CSignalsCollection(void) {}
   };
 #endif // CSIGNALSCOLLECTION_MQH_DECLARATION
 #ifndef CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
 #define CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
  //+------------------------------------------------------------------+
- //| The tables of the signals (the file of LibDatabase_AccountFile).  |
+ //| The tables of the signals (the file Account of CDatabaseService).|
  //| The tables of an EA before the rename (IndicatorSignalSeries) are |
  //| renamed, their rows stay                                         |
  //+------------------------------------------------------------------+
  bool CSignalsCollection::OnInitEvent(void)
   {
-   if(m_db != INVALID_HANDLE)
-      return true;   // a CHARTCHANGE reinit keeps the database open
-   m_db = LibDatabase_OpenAccount(DATABASE_OPEN_READWRITE | DATABASE_OPEN_CREATE);
-   if(m_db == INVALID_HANDLE)
-    {
-     ::Print(__FUNCTION__, " > the database ", LibDatabase_AccountFile(), " is not opened, error ", ::GetLastError());
-     return false;
-    }
-   ::DatabaseExecute(m_db, "PRAGMA busy_timeout="+(string)LIB_DATABASE_BUSY_MS);
-   ::DatabaseExecute(m_db, "PRAGMA journal_mode=WAL");
-   this.Rename_SignalsCollection("IndicatorSignalSeries","SignalsCollection");
-   this.Rename_SignalsCollection("Sync_IndicatorSignalSeries","Sync_SignalsCollection");
-   const bool table_was_there=LibDatabase_TableExists(m_db,"SignalsCollection");
-   //--- The older column side is renamed: the rows stay
-   if(LibDatabase_ColumnExists(m_db,"SignalsCollection","side"))
-      ::DatabaseExecute(m_db, "ALTER TABLE SignalsCollection RENAME COLUMN side TO signal_direction");
-   if(!::DatabaseExecute(m_db, "CREATE TABLE IF NOT EXISTS SignalsCollection (symbol_id INTEGER NOT NULL, tf_enum INTEGER NOT NULL, "
-                               "template_id INTEGER NOT NULL, bar_time INTEGER NOT NULL, signal_direction INTEGER NOT NULL, "
-                               "PRIMARY KEY (symbol_id, tf_enum, template_id, bar_time, signal_direction)) WITHOUT ROWID"))
-    {
-     ::Print(__FUNCTION__, " > the table SignalsCollection is not made, error ", ::GetLastError());
-     return false;
-    }
-   //--- The table was not there (deleted, or the file is new): what was marked as synced for it is not true any more, Python makes the first chunk again
-   if(!table_was_there && this.m_SyncManager!=NULL)
-      this.m_SyncManager.ResetObject_SyncManager(this.m_object_type);
-   if(this.m_SyncManager!=NULL)
-      this.m_SyncManager.Import_SyncManager(m_db,"Sync_SignalsCollection","template_id",this.m_object_type);
-   ::Print("Complete ", __FUNCTION__, " > ", LibDatabase_AccountFile(), " opened");
-   return true;   // the series and their rows go to RAM after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE: SyncDataFromDB)
-  }
- //+------------------------------------------------------------------+
- //| A table of the old name becomes the table of the new one: the    |
- //| rows stay (nothing is copied or deleted), only when the new one  |
- //| is not there yet                                                 |
- //+------------------------------------------------------------------+
- void CSignalsCollection::Rename_SignalsCollection(const string old_name,const string new_name)
-  {
-   int request=LibDatabase_Prepare(m_db,"SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '"+old_name+"'), "
-                                      "(SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '"+new_name+"')");
-   if(request==INVALID_HANDLE)
-      return;
-   long has_old=0,has_new=0;
-   if(::DatabaseRead(request))
-     {
-      ::DatabaseColumnLong(request,0,has_old);
-      ::DatabaseColumnLong(request,1,has_new);
-     }
-   ::DatabaseFinalize(request);
-   if(has_old==1 && has_new==0 && !::DatabaseExecute(m_db,"ALTER TABLE "+old_name+" RENAME TO "+new_name))
-      ::Print("MY DEBUG    CSignalsCollection::Rename_SignalsCollection the table ",old_name," is not renamed, error ",::GetLastError());
+   // New In V4 after implemenation CDatabaseService
+   //--- As CIndicatorsCollection: a series for every template on every pair. Its table is CIndicatorTemplateManager's, the rows go to RAM after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE: ReadDataFromDB)
+   if(this.m_SymbolTFManager==NULL || this.m_IndicatorTemplateManager==NULL)
+      return false;
+   string symbols[];
+   ENUM_TIMEFRAMES timeframes[];
+   int pairs=this.m_SymbolTFManager.Read_RAM(symbols,timeframes);
+   for(int i=0;i<pairs;i++)
+      this.Create_RAM(symbols[i],timeframes[i]);
+   return true;
   }
  //+------------------------------------------------------------------+
  //| The series of a template on a pair                                |
  //+------------------------------------------------------------------+
- CSignalSeriesDE *CSignalsCollection::GetSeries(const long template_id,const string symbol,const ENUM_TIMEFRAMES timeframe)
+ CSignalSeriesDE *CSignalsCollection::Read_RAM(const long template_id,const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    for(int i=0;i<this.m_list_series.Total();i++)
      {
@@ -164,10 +125,9 @@
      }
    return NULL;
   }
- CSignalSeriesDE *CSignalsCollection::CreateSeries(const long template_id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe,
-                                                   const long symbol_id)
+ CSignalSeriesDE *CSignalsCollection::Create_RAM(const long template_id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
-   CSignalSeriesDE *series=this.GetSeries(template_id,symbol,timeframe);
+   CSignalSeriesDE *series=this.Read_RAM(template_id,symbol,timeframe);
    if(series!=NULL)
       return series;
    series=new CSignalSeriesDE();
@@ -179,10 +139,37 @@
       delete series;   // not a standard indicator: no judge
       return NULL;
      }
-   series.SetDatabase(m_db,symbol_id,this.m_object_type,this.m_SyncManager);   // it judges and writes its own rows
+   series.SetDatabase(this.m_IndicatorTemplateManager,this.m_object_type,this.m_SyncManager);   // it judges and writes its own rows
    return series;
   }
- void CSignalsCollection::DeleteSeries(const long template_id)
+ void CSignalsCollection::Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+  {
+   long ids[];
+   ENUM_INDICATOR types[];
+   string texts[];
+   bool buy[],sell[];
+   int templates=this.m_IndicatorTemplateManager.Read_RAM(ids,types,texts,buy,sell);
+   for(int t=0;t<templates;t++)
+      this.Create_RAM(ids[t],types[t],texts[t],symbol,timeframe);
+  }
+ void CSignalsCollection::Create_RAM(const ENUM_INDICATOR type,const string params_text)
+  {
+   long ids[];
+   ENUM_INDICATOR types[];
+   string texts[];
+   bool buy[],sell[];
+   int templates=this.m_IndicatorTemplateManager.Read_RAM(ids,types,texts,buy,sell);
+   long id=0;
+   for(int t=0;t<templates;t++)
+      if(types[t]==type && texts[t]==params_text)
+         id=ids[t];
+   string symbols[];
+   ENUM_TIMEFRAMES timeframes[];
+   int pairs=this.m_SymbolTFManager.Read_RAM(symbols,timeframes);
+   for(int i=0;i<pairs;i++)
+      this.Create_RAM(id,type,params_text,symbols[i],timeframes[i]);
+  }
+ void CSignalsCollection::Delete_RAM(const long template_id)
   {
    for(int i=this.m_list_series.Total()-1;i>=0;i--)
      {
@@ -191,7 +178,7 @@
          this.m_list_series.Delete(i);
      }
   }
- void CSignalsCollection::DeleteSeries(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ void CSignalsCollection::Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    for(int i=this.m_list_series.Total()-1;i>=0;i--)
      {
@@ -201,10 +188,9 @@
      }
   }
  //+------------------------------------------------------------------+
- //| The series of every template on the pairs and their rows go to    |
- //| RAM (the templates are asked here, never on a tick)               |
+ //| The rows of the bars of the pairs go to RAM                       |
  //+------------------------------------------------------------------+
- bool CSignalsCollection::SyncDataFromDB(void)
+ bool CSignalsCollection::ReadDataFromDB(void)
   {
    if(this.m_BarTimeSeriesCollection==NULL)
       return false;
@@ -218,38 +204,52 @@
         {
          CBarSeriesDE *series=list_series.At(j);
          if(series!=NULL)
-            done=this.SyncDataFromDB(series.Symbol(),series.Timeframe()) && done;
+            done=this.ReadDataFromDB(series.Symbol(),series.Timeframe()) && done;
         }
      }
    return done;
   }
- bool CSignalsCollection::SyncDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CSignalsCollection::ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
-   if(m_db==INVALID_HANDLE || this.m_BarTimeSeriesCollection==NULL || this.m_IndicatorTemplateManager==NULL || this.m_SyncManager==NULL)
+   if(this.m_BarTimeSeriesCollection==NULL || this.m_IndicatorTemplateManager==NULL || this.m_SyncManager==NULL)
       return false;
    if(!this.m_SyncManager.IsPythonDone())
       return false;   // Python has not done its part of the pairs yet: PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE reads it
    CBarSeriesDE *bars=this.m_BarTimeSeriesCollection.GetSeries(symbol,timeframe);
-   long symbol_id=(bars!=NULL ? bars.SymbolID() : 0);
-   if(bars==NULL || symbol_id==0)
+   CArrayObj *list_bars=(bars!=NULL ? bars.GetList() : NULL);
+   if(list_bars==NULL || list_bars.Total()==0)
       return false;
-   long ids[];
-   ENUM_INDICATOR kinds[];
-   string texts[];
-   bool buy[],sell[];
-   int templates=this.m_IndicatorTemplateManager.TemplateIds(ids,kinds,texts,buy,sell);
+   CBar *oldest=list_bars.At(0);
+   CBar *newest=list_bars.At(list_bars.Total()-1);
+   if(oldest==NULL || newest==NULL)
+      return false;
+   long templates[],times[],sides[];
+   int total=this.m_IndicatorTemplateManager.ReadDataFromDB(symbol,timeframe,oldest.Time(),newest.Time(),templates,times,sides);
+   if(total==WRONG_VALUE)
+      return false;
    int made=0,loaded=0;
-   for(int t=0;t<templates;t++)
+   for(int i=0;i<this.m_list_series.Total();i++)
      {
-      CSignalSeriesDE *series=this.CreateSeries(ids[t],kinds[t],texts[t],symbol,timeframe,symbol_id);
-      if(series==NULL)
+      CSignalSeriesDE *series=this.m_list_series.At(i);
+      if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=timeframe)
          continue;
+      long series_times[],series_sides[];
+      int n=0;
+      for(int r=0;r<total;r++)
+         if(templates[r]==series.TemplateID())
+           {
+            ::ArrayResize(series_times,n+1,256);
+            ::ArrayResize(series_sides,n+1,256);
+            series_times[n]=times[r];
+            series_sides[n]=sides[r];
+            n++;
+           }
       made++;
-      int rows=series.SyncDataFromDB(bars.GetList());
+      int rows=series.ReadDataFromDB(list_bars,series_times,series_sides);
       loaded+=(rows>0 ? rows : 0);
      }
-   ::Print("Complete ",__FUNCTION__," > ",symbol," ",this.m_SymbolTFManager.TimeframeName(timeframe),": ",loaded," rows of SignalsCollection read for the ",made," templates of the pair, on the ",
-           bars.GetList().Total()," bars of the series");
+   ::Print("Complete ",__FUNCTION__," > ",symbol," ",this.m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)timeframe),": ",loaded," rows of SignalsCollection read for the ",made," templates of the pair, on the ",
+           list_bars.Total()," bars of the series");
    ::EventChartCustom(::ChartID(),(ushort)SERIES_EVENTS_SIGNAL,SERIES_EVENTS_PATTERN_ALL,(double)timeframe,symbol);   // what the chart shows of the pair is made again
    return true;
   }
@@ -265,13 +265,13 @@
    ulong started=::GetTickCount64();
    CArrayObj *list=this.m_BarTimeSeriesCollection.GetList();
    for(int i=0;i<list.Total();i++)
-      if(!this.RefreshTimeseries_SignalsCollection(list.At(i),started))
+      if(!this.RefreshTimeseries(list.At(i),started))
          return;   // this call has had its share: the rest is done at the next ones
   }
  void CSignalsCollection::RefreshSeries(const string symbol)
   {
    if(this.m_BarTimeSeriesCollection!=NULL)
-      this.RefreshTimeseries_SignalsCollection(this.m_BarTimeSeriesCollection.GetTimeseries(symbol),::GetTickCount64());
+      this.RefreshTimeseries(this.m_BarTimeSeriesCollection.GetTimeseries(symbol),::GetTickCount64());
   }
  void CSignalsCollection::RefreshSeriesAllExceptCurrent(void)
   {
@@ -286,7 +286,7 @@
          continue;   // the chart's symbol follows its ticks (OnTick)
       if(timeseries.IsPaused())
          continue;   // the symbol rests (TICK_EVENT_PAUSE): no new bar to judge
-      if(!this.RefreshTimeseries_SignalsCollection(timeseries,started))
+      if(!this.RefreshTimeseries(timeseries,started))
          return;
      }
   }
@@ -295,15 +295,15 @@
  //+------------------------------------------------------------------+
  void CSignalsCollection::OnTimerEvent(void)
   {
-   if(m_db==INVALID_HANDLE || this.m_SyncManager==NULL)
+   if(this.m_SyncManager==NULL)
       return;
-   this.Reset_SignalsCollection(::GetTickCount64());   // a template that was deleted: a step of its signals in the table, every pair
+   this.Reset(::GetTickCount64());   // a template that was deleted: a step of its signals in the table, every pair
   }
  //+------------------------------------------------------------------+
  //| The new bars of every pair of a symbol: each series of the pair   |
  //| judges itself (RAM only), its events go out                       |
  //+------------------------------------------------------------------+
- bool CSignalsCollection::RefreshTimeseries_SignalsCollection(CBarTimeSeriesDE *timeseries,const ulong started)
+ bool CSignalsCollection::RefreshTimeseries(CBarTimeSeriesDE *timeseries,const ulong started)
   {
    if(timeseries==NULL || this.m_SyncManager==NULL || this.m_IndicatorsCollection==NULL)
       return true;
@@ -340,7 +340,7 @@
             budget=true;
             break;
            }
-         CIndicatorDE *indicator=this.m_IndicatorsCollection.GetIndicator(series.TypeIndicator(),series.ParamsText(),symbol,timeframe);
+         CIndicatorDE *indicator=this.m_IndicatorsCollection.Read_RAM(series.TypeIndicator(),series.ParamsText(),symbol,timeframe);
          int found=series.Calculate(indicator,bars.GetList());
          if(found<0)
            {
@@ -351,7 +351,7 @@
          rows+=found;
          if(!series.IsEvent())
             continue;
-         this.SendEvents_SignalsCollection(series);   // RAM changed: the rows are told (SERIES_EVENTS_SIGNAL), the view reads the table UNION RAM
+         this.SendEvents(series);   // RAM changed: the rows are told (SERIES_EVENTS_SIGNAL), the view reads the table UNION RAM
          int bits=series.RowsOfBar(last_closed);   // what is new on the newest bar can be told
          if(bits!=0)
            {
@@ -363,7 +363,7 @@
            }
         }
       if(::ArraySize(alert_ids)>0)
-         this.Alert_SignalsCollection(symbol,timeframe,last_closed,alert_ids,alert_sides);
+         this.AlertOnPair(symbol,timeframe,last_closed,alert_ids,alert_sides);
       if(total==0)
          continue;
       //--- MY DEBUG once per pair, closed bar and outcome (the call repeats on each tick / beat while a series is not ready)
@@ -399,24 +399,30 @@
   {
    //--- Python wrote the first chunk of every pair (CSyncManager has read its marks already): the series and the rows go to RAM again
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
-      return this.SyncDataFromDB();
+      return this.ReadDataFromDB();
    //--- A pair: lparam = its TF, sparam = its symbol (CBarTimeSeriesCollection made its series already)
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
-      return this.SyncDataFromDB(sparam,(ENUM_TIMEFRAMES)lparam);
+     {
+      this.Create_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
+      return this.ReadDataFromDB(sparam,(ENUM_TIMEFRAMES)lparam);
+     }
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
      {
-      if(!this.SyncDataToDB(sparam,(ENUM_TIMEFRAMES)lparam))   // handed over to Python Live: what waits is written first
-         ::Print(__FUNCTION__," > ",sparam," ",this.m_SymbolTFManager.TimeframeName((ENUM_TIMEFRAMES)lparam),": what waited was not written (the database is busy): Python judges these bars again");
-      this.DeleteSeries(sparam,(ENUM_TIMEFRAMES)lparam);
+      if(!this.UpdateDataToDB(sparam,(ENUM_TIMEFRAMES)lparam))   // handed over to Python Live: what waits is written first
+         ::Print(__FUNCTION__," > ",sparam," ",this.m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)lparam),": what waited was not written (the database is busy): Python judges these bars again");
+      this.Delete_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
       return true;
      }
    //--- A template was added: its series are made on every pair (they wait for the progress of Python)
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
-      return this.SyncDataFromDB();
+     {
+      this.Create_RAM((ENUM_INDICATOR)lparam,sparam);
+      return this.ReadDataFromDB();
+     }
    if(id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE || dparam<=0)
       return false;
    long template_id=(long)dparam;
-   this.DeleteSeries(template_id);
+   this.Delete_RAM(template_id);
    for(int k=0;k<::ArraySize(this.m_reset_ids);k++)
       if(this.m_reset_ids[k]==template_id)
          return true;
@@ -429,24 +435,21 @@
  //| What waits in RAM goes to the DB: the rows of every series of the |
  //| pair, then the marks of the pair                                  |
  //+------------------------------------------------------------------+
- bool CSignalsCollection::SyncDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CSignalsCollection::UpdateDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
-   if(m_db==INVALID_HANDLE || this.m_SyncManager==NULL || this.m_BarTimeSeriesCollection==NULL)
-      return false;
-   long symbol_id=this.m_BarTimeSeriesCollection.SymbolID(symbol);
-   if(symbol_id==0)
+   if(this.m_SyncManager==NULL || this.m_BarTimeSeriesCollection==NULL)
       return false;
    for(int i=0;i<this.m_list_series.Total();i++)
      {
       CSignalSeriesDE *series=this.m_list_series.At(i);
       if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=timeframe)
          continue;
-      if(!series.SyncDataToDB())
+      if(!series.UpdateDataToDB())
          return false;   // the database is busy: what waits stays, the marks too (they go after their rows)
      }
-   return this.m_SyncManager.SyncDataToDB(this.m_object_type,symbol_id,timeframe);
+   return this.m_SyncManager.UpdateDataToDB(this.m_object_type,symbol,timeframe);
   }
- bool CSignalsCollection::SyncDataToDB(void)
+ bool CSignalsCollection::UpdateDataToDB(void)
   {
    bool done=true;
    string done_keys[];   // the pairs written already
@@ -463,14 +466,14 @@
          continue;
       ::ArrayResize(done_keys,::ArraySize(done_keys)+1);
       done_keys[::ArraySize(done_keys)-1]=key;
-      done=this.SyncDataToDB(series.Symbol(),series.Timeframe()) && done;
+      done=this.UpdateDataToDB(series.Symbol(),series.Timeframe()) && done;
      }
    return done;
   }
  //+------------------------------------------------------------------+
  //| The events of a series go to the chart once                       |
  //+------------------------------------------------------------------+
- void CSignalsCollection::SendEvents_SignalsCollection(CSignalSeriesDE *series)
+ void CSignalsCollection::SendEvents(CSignalSeriesDE *series)
   {
    CArrayObj *events=(series!=NULL && series.IsEvent() ? series.GetListEvents() : NULL);
    for(int i=0;events!=NULL && i<events.Total();i++)
@@ -488,11 +491,11 @@
  //+------------------------------------------------------------------+
  //| A step of the delete of the signals of the first template waiting |
  //+------------------------------------------------------------------+
- void CSignalsCollection::Reset_SignalsCollection(const ulong started)
+ void CSignalsCollection::Reset(const ulong started)
   {
    while(::ArraySize(this.m_reset_ids)>0)
      {
-      if(!this.m_SyncManager.ResetStep_SyncManager(m_db,"SignalsCollection","template_id",this.m_object_type,this.m_reset_ids[0],started,BAR_UPDATE_BUDGET_MS))
+      if(!this.m_SyncManager.ResetStep("SignalsCollection","template_id",this.m_object_type,this.m_reset_ids[0],started,BAR_UPDATE_BUDGET_MS))
          return;
       ::Print("Complete ",__FUNCTION__," > the signals and the marks of the template ",this.m_reset_ids[0]," are gone");
       ::ArrayRemove(this.m_reset_ids,0,1);
@@ -502,18 +505,18 @@
  //| The alert of the signals found on a pair: a template tells when   |
  //| its alert is on and the pair has the same alert on; one line      |
  //+------------------------------------------------------------------+
- void CSignalsCollection::Alert_SignalsCollection(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &templates[],const int &sides[])
+ void CSignalsCollection::AlertOnPair(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &templates[],const int &sides[])
   {
    if(this.m_IndicatorTemplateManager==NULL || this.m_SymbolTFManager==NULL)
       return;
-   const bool pair_sound=this.m_SymbolTFManager.SoundAlert(symbol,timeframe);
-   const bool pair_message=this.m_SymbolTFManager.MessageAlert(symbol,timeframe);
+   const bool pair_sound=this.m_SymbolTFManager.Read_RAM(symbol,timeframe,"sound_alert");
+   const bool pair_message=this.m_SymbolTFManager.Read_RAM(symbol,timeframe,"message_alert");
    if(!pair_sound && !pair_message)
       return;
    long alert_ids[];
    string alert_names[];
    bool template_sound[],template_message[];
-   int total=this.m_IndicatorTemplateManager.AlertTemplates(alert_ids,alert_names,template_sound,template_message);
+   int total=this.m_IndicatorTemplateManager.Read_RAM(alert_ids,alert_names,template_sound,template_message);
    string names[];
    int told[];
    bool sound=false,message=false;
@@ -532,38 +535,25 @@
             names[n]=alert_names[k];
             told[n]=sides[i];
            }
-   AlertNewOnPair(symbol,this.m_SymbolTFManager.TimeframeName(timeframe),bar,names,told,sound,message);
+   AlertNewOnPair(symbol,this.m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)timeframe),bar,names,told,sound,message);
   }
  //+------------------------------------------------------------------+
  //| The signals of the indicator templates the markers show          |
  //+------------------------------------------------------------------+
- int CSignalsCollection::Read_SignalsCollection(const long symbol_id,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const long &buy_templates[],
+ int CSignalsCollection::ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const long &buy_templates[],
                                                 const long &sell_templates[],long &times[],long &sides[])
   {
    ::ArrayResize(times,0);
    ::ArrayResize(sides,0);
-   if(m_db==INVALID_HANDLE)
+   // New In V4 after implemenation CDatabaseService
+   if(this.m_IndicatorTemplateManager==NULL)
       return 0;
-   int request=LibDatabase_Prepare(m_db,"SELECT bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)symbol_id+" AND tf_enum = "+(string)(int)timeframe+
-                                      " AND bar_time >= "+(string)(long)from_time+" AND bar_time <= "+(string)(long)to_time+" AND ((signal_direction = "+(string)(int)SIGNAL_DIRECTION_BUY+" AND template_id IN ("+LibDatabase_InList(buy_templates)+")) OR "
-                                      "(signal_direction = "+(string)(int)SIGNAL_DIRECTION_SELL+" AND template_id IN ("+LibDatabase_InList(sell_templates)+")))");
-   if(request==INVALID_HANDLE)
-      return 0;
-   int total=0;
-   while(::DatabaseRead(request))
-     {
-      ::ArrayResize(times,total+1);
-      ::ArrayResize(sides,total+1);
-      ::DatabaseColumnLong(request,0,times[total]);
-      ::DatabaseColumnLong(request,1,sides[total]);
-      total++;
-     }
-   ::DatabaseFinalize(request);
+   int total=this.m_IndicatorTemplateManager.ReadDataFromDB(symbol,timeframe,from_time,to_time,buy_templates,sell_templates,times,sides);
    //--- UNION what was found and is not written yet (the series of the pair, the templates asked for the side)
    for(int i=0;i<this.m_list_series.Total();i++)
      {
       CSignalSeriesDE *series=this.m_list_series.At(i);
-      if(series==NULL || series.Timeframe()!=timeframe || this.m_BarTimeSeriesCollection==NULL || this.m_BarTimeSeriesCollection.SymbolID(series.Symbol())!=symbol_id)
+      if(series==NULL || series.Timeframe()!=timeframe || series.Symbol()!=symbol)
          continue;
       long p_times[],p_sides[];
       int pending=series.PendingRows(from_time,to_time,p_times,p_sides);
@@ -590,47 +580,22 @@
  //+------------------------------------------------------------------+
  //| The signals found in a candle, the TFs asked                      |
  //+------------------------------------------------------------------+
- int CSignalsCollection::ReadCandle_SignalsCollection(const long symbol_id,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],
+ int CSignalsCollection::ReadDataFromDB(const string symbol,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],
                                                       long &tfs[],long &templates[],long &times[],long &sides[])
   {
    ::ArrayResize(tfs,0);
    ::ArrayResize(templates,0);
    ::ArrayResize(times,0);
    ::ArrayResize(sides,0);
-   if(m_db==INVALID_HANDLE)
+   // New In V4 after implemenation CDatabaseService
+   if(this.m_IndicatorTemplateManager==NULL)
       return 0;
-   int request=LibDatabase_Prepare(m_db,"SELECT tf_enum, template_id, bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)symbol_id+" AND tf_enum IN ("+LibDatabase_InList(asked_tfs)+
-                                      ") AND template_id IN ("+LibDatabase_InList(asked_templates)+") AND bar_time >= "+(string)(long)from_time+" AND bar_time < "+(string)(long)to_time+
-                                      " ORDER BY tf_enum DESC, bar_time LIMIT "+(string)BAR_CANDLE_ROWS_MAX);
-   if(request==INVALID_HANDLE)
-     {
-      ::Print("MY DEBUG    CSignalsCollection::ReadCandle_SignalsCollection the query is not accepted, error ",::GetLastError());
-      return 0;
-     }
-   int total=0;
-   while(::DatabaseRead(request))
-     {
-      long tf=0,template_id=0,time=0,side=0;
-      ::DatabaseColumnLong(request,0,tf);
-      ::DatabaseColumnLong(request,1,template_id);
-      ::DatabaseColumnLong(request,2,time);
-      ::DatabaseColumnLong(request,3,side);
-      ::ArrayResize(tfs,total+1);
-      ::ArrayResize(templates,total+1);
-      ::ArrayResize(times,total+1);
-      ::ArrayResize(sides,total+1);
-      tfs[total]=tf;
-      templates[total]=template_id;
-      times[total]=time;
-      sides[total]=side;
-      total++;
-     }
-   ::DatabaseFinalize(request);
+   int total=this.m_IndicatorTemplateManager.ReadDataFromDB(symbol,asked_tfs,from_time,to_time,asked_templates,BAR_CANDLE_ROWS_MAX,tfs,templates,times,sides);
    //--- UNION what was found and is not written yet, each row in its place (the longest TF first, then the time)
    for(int i=0;i<this.m_list_series.Total();i++)
      {
       CSignalSeriesDE *series=this.m_list_series.At(i);
-      if(series==NULL || this.m_BarTimeSeriesCollection==NULL || this.m_BarTimeSeriesCollection.SymbolID(series.Symbol())!=symbol_id)
+      if(series==NULL || series.Symbol()!=symbol)
          continue;
       bool tf_asked=false,template_asked=false;
       for(int k=0;k<::ArraySize(asked_tfs) && !tf_asked;k++)

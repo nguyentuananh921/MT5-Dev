@@ -5,15 +5,15 @@
 //--- New in V4 (V2 kept the rows in m_hist_time / m_hist_dir of CSignalBase): CSignalSeriesDE, the signals of one template on one pair. As CBarSeriesDE with its
 //--- CBarControl: the series holds the judge of its type (V2 GetOrCreateSignal: a child of CSignal) and judges the new bars itself (Calculate), keeps its rows
 //--- (m_list_Table_SignalsCollection) and tells them (SERIES_EVENTS_SIGNAL). Live on RAM, saved on the DB: a row that was told waits in
-//--- m_list_Pending_SignalsCollection until SyncDataToDB writes it. The bars are the ones of CBarSeriesDE of the pair, the values the buffers of the indicator
+//--- m_list_Pending_SignalsCollection until UpdateDataToDB writes it. The bars are the ones of CBarSeriesDE of the pair, the values the buffers of the indicator
 //--- of the template in RAM (MT5 calculates it): CSignalsCollection gives both
 #ifndef __SIGNALSERIESDE_MQH__
 #define __SIGNALSERIESDE_MQH__
  #include <Arrays\ArrayObj.mqh>
  #include "..\Bases\BaseObjExt.mqh"
  #include "..\Defines\EventDefines.mqh"
- #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Collections\Settings\SyncManager.mqh"
+ #include "..\..\Collections\Settings\IndicatorTemplateManager.mqh"
  #include "Signal.mqh"
  #include "Standard\SignalSAR.mqh"
  #include "Standard\SignalMA.mqh"
@@ -40,8 +40,7 @@
     CArrayObj         m_list_Table_SignalsCollection;     // The rows of the table SignalsCollection of the bars of the series (CSignal), the oldest first
     CArrayObj         m_list_Pending_SignalsCollection;   // RAM only: the rows not in the table yet (FreeMode false: m_list_Table_SignalsCollection owns them)
     datetime          m_judged_to;                    // RAM only: the newest closed bar the template is judged to (0: not judged yet)
-    int               m_db;                           // CSignalsCollection holds it: the file of the account
-    long              m_symbol_id;                    // The id of the symbol (symbols)
+    CIndicatorTemplateManager *m_IndicatorTemplateManager;   // The EA holds it: the table SignalsCollection
     long              m_sync_object;                  // The collection the rows are of (its m_type): sync_object of Setting_Sync
     CSyncManager     *m_SyncManager;                  // The EA holds it: the progress of the template (Setting_Sync, RAM)
    //--- The judge of the type (V2 GetOrCreateSignal: the class of its type), NULL for a type that is not a standard indicator
@@ -54,7 +53,7 @@
    //--- The template on the pair: its judge is made
     void              SetSeries(const long template_id,const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- What the series needs to judge and to write: the file of the account, the id of the symbol, the collection, the manager (CSignalsCollection::CreateSeries)
-    void              SetDatabase(const int db,const long symbol_id,const long sync_object,CSyncManager *sync);
+    void              SetDatabase(CIndicatorTemplateManager *manager,const long sync_object,CSyncManager *sync);
     long              TemplateID(void)              const { return this.m_template_id;     }
     ENUM_INDICATOR    TypeIndicator(void)           const { return this.m_ind_type;        }
     string            ParamsText(void)              const { return this.m_params_text;     }
@@ -67,12 +66,12 @@
     int               PendingTotal(void)            const { return this.m_list_Pending_SignalsCollection.Total(); }
     datetime          JudgedTo(void)                const { return this.m_judged_to;       }
     void              SetJudgedTo(const datetime time)    { this.m_judged_to=time;         }
-   //--- The rows of the table of the bars of the list go to RAM, the rows waiting to be written stay (once after Python, then when Python tells it wrote more).
+   //--- The rows of the table CSignalsCollection read for this template (times, sides) go to RAM, the rows waiting to be written stay (once after Python, then when Python tells it wrote more).
    //--- Returns the rows read, -1 when the table is not asked
-    int               SyncDataFromDB(CArrayObj *list);
-   //--- The rows waiting go to the table (the marks are the ones of the pair: CSignalsCollection::SyncDataToDB writes them after the rows of every template).
+    int               ReadDataFromDB(CArrayObj *list,const long &times[],const long &sides[]);
+   //--- The rows waiting go to the table (the marks are the ones of the pair: CSignalsCollection::UpdateDataToDB writes them after the rows of every template).
    //--- True when nothing waits. No event: the view sees the same (the table UNION RAM)
-    bool              SyncDataToDB(void);
+    bool              UpdateDataToDB(void);
    //--- The new bars of the list (the bars of the pair) are judged from the progress of the template (Setting_Sync in RAM): only the bars after it. The rows go to
    //--- RAM and wait to be written. Event: SERIES_EVENTS_SIGNAL for each bar with a new row. Returns the rows found, -1 when the template is not judged to the newest
    //--- closed bar (no progress row of Python, more is missing than the series holds, the indicator has not the values in RAM yet: the next call tries again)
@@ -90,7 +89,7 @@
 #ifndef CSIGNALSERIESDE_MQH_IMPLEMENTATION
 #define CSIGNALSERIESDE_MQH_IMPLEMENTATION
  CSignalSeriesDE::CSignalSeriesDE(void) : m_template_id(0),m_ind_type(IND_AC),m_timeframe(PERIOD_CURRENT),m_judge(NULL),m_judged_to(0),
-                                          m_db(INVALID_HANDLE),m_symbol_id(0),m_sync_object(0),m_SyncManager(NULL)
+                                          m_IndicatorTemplateManager(NULL),m_sync_object(0),m_SyncManager(NULL)
   {
    this.m_object_type=OBJECT_DE_TYPE_SIGNAL_SERIES;
    this.m_list_Table_SignalsCollection.Sort();
@@ -110,10 +109,9 @@
       delete this.m_judge;
    this.m_judge=this.CreateSignal(type);
   }
- void CSignalSeriesDE::SetDatabase(const int db,const long symbol_id,const long sync_object,CSyncManager *sync)
+ void CSignalSeriesDE::SetDatabase(CIndicatorTemplateManager *manager,const long sync_object,CSyncManager *sync)
   {
-   this.m_db=db;
-   this.m_symbol_id=symbol_id;
+   this.m_IndicatorTemplateManager=manager;
    this.m_sync_object=sync_object;
    this.m_SyncManager=sync;
   }
@@ -202,21 +200,11 @@
  //+------------------------------------------------------------------+
  //| The rows of the bars of the list go to RAM                        |
  //+------------------------------------------------------------------+
- int CSignalSeriesDE::SyncDataFromDB(CArrayObj *list)
+ int CSignalSeriesDE::ReadDataFromDB(CArrayObj *list,const long &times[],const long &sides[])
   {
-   if(this.m_db==INVALID_HANDLE || this.m_symbol_id==0 || list==NULL || list.Total()==0)
+   if(list==NULL || list.Total()==0)
       return -1;
-   CBar *oldest=list.At(0);
-   CBar *newest=list.At(list.Total()-1);
-   if(oldest==NULL || newest==NULL)
-      return -1;
-   int request=LibDatabase_Prepare(this.m_db,"SELECT bar_time, signal_direction FROM SignalsCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
-                                           " AND template_id = "+(string)this.m_template_id+" AND bar_time >= "+(string)(long)oldest.Time()+" AND bar_time <= "+(string)(long)newest.Time());
-   if(request==INVALID_HANDLE)
-     {
-      ::Print("MY DEBUG    CSignalSeriesDE::SyncDataFromDB the query is not accepted, error ",::GetLastError());
-      return -1;
-     }
+   // New In V4 after implemenation CDatabaseService
    //--- The rows waiting to be written stay (they are not in the table yet), the others are read again
    for(int i=this.m_list_Table_SignalsCollection.Total()-1;i>=0;i--)
      {
@@ -227,15 +215,9 @@
          this.m_list_Table_SignalsCollection.Delete(i);
      }
    int loaded=0;
-   while(::DatabaseRead(request))
-     {
-      long time=0,side=0;
-      ::DatabaseColumnLong(request,0,time);
-      ::DatabaseColumnLong(request,1,side);
-      if(this.AddRow(new CSignal((datetime)time,(ENUM_SIGNAL_DIRECTION)side),false))   // a row waiting on the same bar is kept (AddRow refuses the second)
+   for(int r=0;r<::ArraySize(times);r++)
+      if(this.AddRow(new CSignal((datetime)times[r],(ENUM_SIGNAL_DIRECTION)sides[r]),false))   // a row waiting on the same bar is kept (AddRow refuses the second)
          loaded++;
-     }
-   ::DatabaseFinalize(request);
    datetime last_update=0;
    this.m_judged_to=(this.Progress(last_update) ? last_update : 0);   // judged to where the progress is: the next call judges the bars after it
    return loaded;
@@ -249,7 +231,7 @@
    if(this.m_SyncManager==NULL)
       return false;
    long keys[],last_bars[];
-   this.m_SyncManager.Ranges_SyncManager(this.m_sync_object,this.m_symbol_id,this.m_timeframe,keys,last_bars);   // RAM
+   this.m_SyncManager.Read_RAM(this.m_sync_object,this.m_symbol,this.m_timeframe,keys,last_bars);   // RAM
    for(int k=0;k<::ArraySize(keys);k++)
       if(keys[k]==this.m_template_id)
         {
@@ -263,7 +245,7 @@
  //+------------------------------------------------------------------+
  int CSignalSeriesDE::Calculate(CIndicatorDE *indicator,CArrayObj *list)
   {
-   if(this.m_judge==NULL || this.m_SyncManager==NULL || this.m_symbol_id==0 || list==NULL || list.Total()==0)
+   if(this.m_judge==NULL || this.m_SyncManager==NULL || list==NULL || list.Total()==0)
       return -1;
    if(!this.m_SyncManager.IsPythonDone())
       return -1;   // Python Current writes the pairs of Setting_SymbolTF now: one writer for a pair at a time
@@ -298,7 +280,7 @@
          ::ArrayResize(found_times,n+1);
          found_times[n]=row_times[i];
         }
-   this.m_SyncManager.Advance_SyncManager(this.m_sync_object,this.m_template_id,this.m_symbol_id,this.m_timeframe,last_closed,this.m_sync_object,true);   // the mark waits in RAM with the rows
+   this.m_SyncManager.Update_Sync_Setting(this.m_sync_object,this.m_template_id,this.m_symbol,this.m_timeframe,last_closed,this.m_sync_object,true);   // the mark waits in RAM with the rows
    this.m_judged_to=last_closed;
    //--- RAM changed: told (Event Rule), the view reads the table UNION what waits in RAM
    if(::ArraySize(found_times)>SERIES_EVENTS_PATTERN_MAX)
@@ -314,11 +296,11 @@
  //+------------------------------------------------------------------+
  //| The rows waiting go to the DB                                    |
  //+------------------------------------------------------------------+
- bool CSignalSeriesDE::SyncDataToDB(void)
+ bool CSignalSeriesDE::UpdateDataToDB(void)
   {
    if(this.m_list_Pending_SignalsCollection.Total()==0)
       return true;
-   if(this.m_db==INVALID_HANDLE || this.m_symbol_id==0)
+   if(this.m_IndicatorTemplateManager==NULL)
       return false;
    long times[],sides[];
    ::ArrayResize(times,this.m_list_Pending_SignalsCollection.Total());
@@ -329,7 +311,7 @@
       times[i]=(row!=NULL ? (long)row.Time() : 0);
       sides[i]=(row!=NULL ? (long)row.SignalDirection() : (long)SIGNAL_DIRECTION_NONE);
      }
-   if(!LibDatabase_AddRows(this.m_db,"SignalsCollection","template_id",this.m_template_id,this.m_symbol_id,this.m_timeframe,times,sides))
+   if(!this.m_IndicatorTemplateManager.UpdateDataToDB(this.m_symbol,this.m_timeframe,this.m_template_id,times,sides))
       return false;   // the database is busy: what waits stays
    this.m_list_Pending_SignalsCollection.Clear();   // FreeMode false: the rows stay in m_list_Table_SignalsCollection
    return true;

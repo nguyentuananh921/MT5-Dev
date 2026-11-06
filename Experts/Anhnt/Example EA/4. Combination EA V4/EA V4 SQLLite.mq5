@@ -38,23 +38,18 @@ CPythonBridge      m_PythonBridge;        // starts Python when it is not runnin
 CBarMarkerSync     m_BarMarkerSync;       // the View of the table BarTimeSeriesCollection: the markers of what Python found
 CChartObj         *m_ChartObj=NULL;       // the chart the EA runs on
 CGUIPannel         m_GUIPannel;
-CDatabaseService *m_DatabaseService = NULL; //Prepare to replace DatabaseDELib
+CDatabaseService *m_DatabaseService = NULL;
 ulong              g_series_refresh_ms=0;  // when the bars of the chart were read last (EA_SERIES_REFRESH_MS)
 ulong              g_trade_refresh_ms=0;   // when the history, the orders and the events were looked at last (EA_TRADE_REFRESH_MS)
-ulong              g_history_until_ms=0;   // a trade happened: the history of the terminal is looked at until then (EA_HISTORY_WATCH_MS)
-bool               g_trade_started=false;  // the first launch flag of TradeEventsControl (V1 m_is_first_start): the history, the orders and positions were looked at once, then only after a trade
 ulong              g_debug_ms=0;            // MY DEBUG
 bool               g_debug_first_timer=false; // MY DEBUG
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   Breadcrumb("OnInit: LibDatabase_Create");
-   if(!LibDatabase_Create())   // no database file yet (first run, or the folder was deleted): make it before any class opens it
-      return(INIT_FAILED);
    Breadcrumb("OnInit: DatabaseService_Create");
    // Build account key & open Account DB   
    string account_key =::AccountInfoString(ACCOUNT_COMPANY) + ::AccountInfoString(ACCOUNT_SERVER) + "_" + (string)::AccountInfoInteger(ACCOUNT_LOGIN);
-   m_DatabaseService = new CDatabaseService("NewSQLite", "Accounts", account_key + ".sqlite3", account_key);
+   m_DatabaseService = new CDatabaseService("Database", "Accounts", account_key + ".sqlite3", account_key);
    if(m_DatabaseService == NULL || !m_DatabaseService.OnInitEvent())
      {
       if(m_DatabaseService != NULL)
@@ -75,34 +70,43 @@ int OnInit()
       return INIT_FAILED;   
     m_ChartObj.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
     if(!m_ChartObj.OnInitEvent())
-      return INIT_FAILED;
-    
+      return INIT_FAILED;    
    // m_AccountsCollection  
     Breadcrumb("OnInit: m_AccountsCollection.OnInitEvent");
+    m_AccountsCollection.SetDatabaseService(m_DatabaseService);
     m_AccountsCollection.OnInitEvent();
+   // m_SymbolTFManager: the center, before m_SymbolsCollection (which reads the symbols from its RAM)
+    Breadcrumb("OnInit: m_SymbolTFManager.OnInitEvent");
+    m_SymbolTFManager.SetDatabaseService(m_DatabaseService);
+    m_SymbolTFManager.OnInitEvent();
    // m_SymbolsCollection
     Breadcrumb("OnInit: m_SymbolsCollection.OnInitEvent");
+    m_SymbolsCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the center: every work with the database goes through it
     m_SymbolsCollection.OnInitEvent();
-   // m_SymbolTFManager
-    Breadcrumb("OnInit: m_SymbolTFManager.OnInitEvent");
-    m_SymbolTFManager.OnInitEvent();
    // m_BarInformationManager
     Breadcrumb("OnInit: m_BarInformationManager.OnInitEvent");
+    m_BarInformationManager.SetDatabaseService(m_DatabaseService);
     m_BarInformationManager.OnInitEvent();   // makes Setting_BarInformation and Setting_BarSetup, fills what every type of information is     
    // m_SyncManager
     Breadcrumb("OnInit: m_SyncManager.OnInitEvent");
+    m_SyncManager.SetDatabaseService(m_DatabaseService);
     m_SyncManager.OnInitEvent();   // makes Setting_Sync: the collections move their old table of progress there when they open the file of the account
    // m_HistoryCollection + m_MarketCollection
     Breadcrumb("OnInit: m_HistoryCollection.OnInitEvent");
     m_HistoryCollection.SetSymbolsCollection(&m_SymbolsCollection);   // the owner of symbol_account: the id of a symbol
-    m_HistoryCollection.SetSyncManager(&m_SyncManager);
+    m_HistoryCollection.SetSymbolTFManager(&m_SymbolTFManager);       // the id of a symbol
     m_HistoryCollection.OnInitEvent();   // the table Orders is its own (the history only): made when not there, its lines read (which orders are written, the Bid / Ask of the deals)
     m_MarketCollection.SetSymbolsCollection(&m_SymbolsCollection);   // the pending orders and positions on the account: RAM only
+    m_MarketCollection.SetSymbolTFManager(&m_SymbolTFManager);       // the id of a symbol
     Breadcrumb("OnInit: m_TradeEventsCollection.OnInitEvent");
    // m_TradeEventsCollection
     m_TradeEventsCollection.SetSymbolsCollection(&m_SymbolsCollection);
-    m_TradeEventsCollection.SetSyncManager(&m_SyncManager);
+    m_TradeEventsCollection.SetSymbolTFManager(&m_SymbolTFManager);       // the id of a symbol
     m_TradeEventsCollection.OnInitEvent();   // opens the file of the account and makes the table TradeEvent (the events themselves are in RAM, V3)
+    Breadcrumb("OnInit: m_MarketCollection.RefreshMarket");
+    m_MarketCollection.RefreshMarket();     // the first call loads the list: no event
+    Breadcrumb("OnInit: m_HistoryCollection.RefreshHistory");
+    m_HistoryCollection.RefreshHistory();   // the first call loads the past: no event
    // m_TradingControl (DoEasy CEngine::CollectionOnInit)
     Breadcrumb("OnInit: m_TradingControl.OnInit");
     m_TradingControl.OnInit(m_AccountsCollection.GetCurrentAccount(),&m_SymbolsCollection,&m_MarketCollection,&m_HistoryCollection,&m_TradeEventsCollection);
@@ -124,6 +128,7 @@ int OnInit()
     m_BarTimeSeriesCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the pairs the library keeps up to date after OnInit
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetBarInformationManager");
     m_BarTimeSeriesCollection.SetBarInformationManager(&m_BarInformationManager);   // the parameters of the types it finds
+    m_BarTimeSeriesCollection.SetDatabaseService(m_DatabaseService);
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.OnInitEvent");
     if(!m_BarTimeSeriesCollection.OnInitEvent())// opens the file of the account and makes its tables (the bars, what was found on them)
       {
@@ -131,9 +136,6 @@ int OnInit()
         return INIT_FAILED;
        }
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.CreateCollection"); 
-     //m_BarTimeSeriesCollection.CreateCollection(m_SymbolsCollection.GetList());   // one timeseries object for each symbol
-     //Breadcrumb("OnInit: m_BarTimeSeriesCollection.CreateSeries");
-     //m_BarTimeSeriesCollection.CreateSeries(::Symbol(),(ENUM_TIMEFRAMES)::Period());   // the bars of the chart: the others are added when a class asks for them
     if(!m_BarTimeSeriesCollection.CreateCollection(&m_SymbolTFManager))
       {
        ::Print(__FUNCTION__," > failed to create the BarTimeSeriesCollection");
@@ -153,9 +155,11 @@ int OnInit()
     m_SignalsCollection.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);   // the templates whose signals it finds
     m_SignalsCollection.SetIndicatorsCollection(&m_IndicatorsCollection);   // the indicator of a template on a pair: its values in RAM
     Breadcrumb("OnInit: m_SignalsCollection.OnInitEvent");
+    m_SignalsCollection.SetDatabaseService(m_DatabaseService);
     m_SignalsCollection.OnInitEvent();   // makes the tables of the signals in the file of the account
    // m_PythonBridge
     Breadcrumb("OnInit: m_PythonBridge.OnInitEvent");
+    m_PythonBridge.SetDatabaseService(m_DatabaseService);
     m_PythonBridge.OnInitEvent();   // after every table is made: Python starts when it finds none running
     g_debug_ms=::GetTickCount64();   // MY DEBUG
    // m_BarMarkerSync
@@ -194,19 +198,17 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    ::EventKillTimer();
-   m_BarTimeSeriesCollection.SyncDataToDB();   // what the library found and has not written yet goes to the table, then its progress (not written: judged again next time)
-   m_SignalsCollection.SyncDataToDB();         // the same for the signals of the indicator templates
-   m_HistoryCollection.SyncDataToDB();         // the orders and deals of the history that have no line yet
-   m_TradeEventsCollection.SyncDataToDB();     // the trading events that have no line yet
+   m_BarTimeSeriesCollection.UpdateDataToDB();   // what the library found and has not written yet goes to the table, then its progress (not written: judged again next time)
+   m_SignalsCollection.UpdateDataToDB();         // the same for the signals of the indicator templates
    m_PythonBridge.OnDeinitEvent(reason);   // the EA is closed: the row of Python is cleared, Python stops with its workers
-   LibDatabase_GiveTurn();
    m_GUIPannel.OnDeinit(reason);
-   m_BarMarkerSync.DeleteMarkers_BarTimeSeriesCollection();   // the markers and the box on the candle
+   m_BarMarkerSync.DeleteMarkers();   // the markers and the box on the candle
    if(m_ChartObj!=NULL)
      {
       delete m_ChartObj;
       m_ChartObj=NULL;
      }
+   m_AccountsCollection.UpdateDataToDB();   // while m_DatabaseService is still alive
    if(m_DatabaseService != NULL)
     {
      delete m_DatabaseService;
@@ -216,6 +218,8 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
+   if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
+      return;
    m_AccountsCollection.RefreshAccount();   // the account follows the terminal (RAM); its events (balance, credit, permissions, terms) go to the chart
    //--- The series follow the ticks (DoEasy CEngine::OnTick): the chart's symbol; in the tester every symbol (no OnTimer there, as the DoEasy EAs)
    //--- The signals follow the series they are judged on (the newest closed bar is there now)
@@ -234,6 +238,8 @@ void OnTick()
 //+------------------------------------------------------------------+
 void OnTimer()
   {
+   if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
+      return;
    if(g_debug_first_timer)   // MY DEBUG
      {
       g_debug_first_timer=false;
@@ -253,12 +259,6 @@ void OnTimer()
    if(::GetTickCount64()-g_trade_refresh_ms>=EA_TRADE_REFRESH_MS)
     {
       g_trade_refresh_ms=::GetTickCount64();
-      //--- The EA as CEngine (V1 CTradingEngine::TradeEventsControl): each trading event goes to the chart itself (CTradeEvent::SendEvent), the GUI hears it
-      if(!g_trade_started || ::GetTickCount64()<g_history_until_ms)
-        {
-         Breadcrumb("OnTimer: TradeEventsControl");
-         TradeEventsControl();
-        }
       Breadcrumb("OnTimer: m_TradingControl.OnTimer");
       m_TradingControl.OnTimer();   // the list of pending requests (DoEasy CEngine::OnTimer)
     }
@@ -278,47 +278,25 @@ void OnTimer()
           m_SignalsCollection.RefreshSeriesAllExceptCurrent();
        Breadcrumb("OnTimer: m_SignalsCollection.OnTimerEvent");
        m_SignalsCollection.OnTimerEvent();   // a step of the delete of the signals of a deleted template (the table, every pair)
-      // Trade Event Collection
-       m_TradeEventsCollection.SyncDataToDB();   // the events the database refused are written again
        Breadcrumb("OnTimer: m_PythonBridge.OnTimerEvent");
       m_PythonBridge.OnTimerEvent();    // Python that stopped is started again
       Breadcrumb("OnTimer: done");
      }
-   LibDatabase_GiveTurn();   // a beat never ends holding the turn of the writes: the workers of Python write in the meantime
    if(::GetTickCount64()-debug_timer_ms>=1000)   // MY DEBUG: a beat that holds the thread of the EA for a second or more
       ::Print("MY DEBUG    OnTimer: this call took ",::GetTickCount64()-debug_timer_ms," ms");
   }
 //+------------------------------------------------------------------+
-//| Check trading events (V1 CTradingEngine::TradeEventsControl)      |
-//+------------------------------------------------------------------+
-void TradeEventsControl(void)
-  {
-   //--- Initialize trading events' flags
-    m_TradeEventsCollection.SetEventFlag(false);
-   //--- Update the lists
-    m_MarketCollection.RefreshMarket();
-    m_HistoryCollection.RefreshHistory();
-   //--- First launch actions
-    if(!g_trade_started)
-      {
-       g_trade_started=true;
-       return;
-      }
-   //--- Check the changes in the market status and account history
-    bool is_market_trade_event=m_MarketCollection.IsTradeEvent();
-    bool is_history_trade_event=m_HistoryCollection.IsTradeEvent();
-   //--- If there is any event, send the lists, the flags and the number of new orders and deals to the event collection, and update it
-    CArrayObj *list_changes=m_MarketCollection.GetListChanges();
-    int change_total=(list_changes!=NULL ? list_changes.Total() : 0);
-    if(is_history_trade_event || is_market_trade_event || change_total>0)
-       m_TradeEventsCollection.Refresh(m_HistoryCollection.GetList(),m_MarketCollection.GetList(),list_changes,m_MarketCollection.GetListControl(),is_history_trade_event,
-                                       is_market_trade_event,m_HistoryCollection.NewOrders(),m_MarketCollection.NewPendingOrders(),m_MarketCollection.NewPositions(),
-                                       m_HistoryCollection.NewDeals(),m_MarketCollection.ChangedVolumeValue());
-  }
-//+------------------------------------------------------------------+
 void OnTrade()
   {
-   g_history_until_ms=::GetTickCount64()+EA_HISTORY_WATCH_MS;
+   if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
+      return;
+   m_MarketCollection.RefreshMarket();
+   m_HistoryCollection.RefreshHistory();
+   CArrayObj *list_changes=m_MarketCollection.GetListChanges();
+   if(m_HistoryCollection.IsEvent() || m_MarketCollection.IsEvent() || (list_changes!=NULL && list_changes.Total()>0))
+      m_TradeEventsCollection.Refresh(m_HistoryCollection.GetList(),m_MarketCollection.GetList(),list_changes,m_MarketCollection.GetListControl(),m_HistoryCollection.IsEvent(),
+                                      m_MarketCollection.IsEvent(),m_HistoryCollection.NewOrders(),m_MarketCollection.NewPendingOrders(),m_MarketCollection.NewPositions(),
+                                      m_HistoryCollection.NewDeals(),m_MarketCollection.ChangedVolumeValue());
    m_GUIPannel.OnTradeEvent();
   }
 //+------------------------------------------------------------------+
@@ -329,6 +307,8 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,const MqlTradeRequest &
 //+------------------------------------------------------------------+
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
+      return;
    if(m_ChartObj!=NULL)
       m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
    if(id>=CHARTEVENT_CUSTOM)

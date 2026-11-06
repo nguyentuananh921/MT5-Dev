@@ -20,7 +20,7 @@
   {
    public:
                       CIndFRAMA(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
-                         CIndicatorDE(IND_FRAMA,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_FRAMA),manager.StandardIndicatorName(IND_FRAMA),
+                         CIndicatorDE(IND_FRAMA,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager,
                                       "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_FRAMA; }
   };
 #endif // CINDFRAMA_MQH_DECLARATION

@@ -275,7 +275,7 @@
      {
       CSymbol *symbol=m_SymbolsCollection.GetList().At((int)dparam);
       if(symbol!=NULL && symbol.Name()!=::Symbol())
-         m_SymbolTFManager.NotifySettingChanged(symbol.Name(),(ENUM_TIMEFRAMES)::Period());
+         m_SymbolTFManager.Update_SymbolTF_Setting(symbol.Name(),(ENUM_TIMEFRAMES)::Period(),SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED);
       return;
      }
    //--- A TF picked in the TF switch: the same, the Symbol stays
@@ -283,7 +283,7 @@
      {
       ENUM_TIMEFRAMES tf=GetTFSwitchSelection();   // "All" = PERIOD_CURRENT: the chart stays
       if(tf!=PERIOD_CURRENT && tf!=(ENUM_TIMEFRAMES)::Period())
-         m_SymbolTFManager.NotifySettingChanged(::Symbol(),tf);
+         m_SymbolTFManager.Update_SymbolTF_Setting(::Symbol(),tf,SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED);
       return;
      }
    this.OnEvent_Window_AddIndicator(id,lparam,dparam,sparam);

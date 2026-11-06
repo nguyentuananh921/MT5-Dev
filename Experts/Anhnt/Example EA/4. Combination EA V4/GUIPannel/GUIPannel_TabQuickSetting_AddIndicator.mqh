@@ -49,10 +49,10 @@
    ENUM_INDICATOR types[];
    ENUM_INDICATOR_GROUP groups[];
    string names[];
-   int total=m_IndicatorTemplateManager.StandardIndicatorCatalog(types,groups,names);
+   int total=m_IndicatorTemplateManager.Read_RAM(types,groups,names);
    for(int g=0;g<4;g++)
      {
-      long group_id=m_treeview_indicator.AddTreeItem(WRONG_VALUE,m_IndicatorTemplateManager.StandardIndicatorGroupName(group_values[g]));
+      long group_id=m_treeview_indicator.AddTreeItem(WRONG_VALUE,m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR_GROUP)group_values[g]));
       if(group_id==WRONG_VALUE)
          continue;
       for(int i=0;i<total;i++)
@@ -68,7 +68,7 @@
   {
    if(m_IndicatorTemplateManager==NULL)
       return;
-   CTreeItem *top=m_treeview_indicator.FindItem(WRONG_VALUE,m_IndicatorTemplateManager.StandardIndicatorGroupName(INDICATOR_GROUP_TREND));
+   CTreeItem *top=m_treeview_indicator.FindItem(WRONG_VALUE,m_IndicatorTemplateManager.Read_RAM(INDICATOR_GROUP_TREND));
    CTreeItem *root=(top!=NULL) ? top.ParentItem() : NULL;
    int groups=(root!=NULL) ? root.ChildrenTotal() : 0;
    for(int g=0;g<groups;g++)
@@ -82,7 +82,7 @@
          CTreeItem *type_item=group_item.ChildItem(k);
          if(type_item==NULL)
             continue;
-         bool active=m_IndicatorTemplateManager.Exists((ENUM_INDICATOR)type_item.Value());
+         bool active=m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR)type_item.Value());
          type_item.IconFile(active ? IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP : IMAGE_RESOURCE_BMP16_ARROWRIGHT_BMP);
          group_active|=active;
         }
@@ -126,7 +126,7 @@
      }
    m_current_param_type=type;
    SIndicatorParam schema[];
-   int total=m_IndicatorTemplateManager.GetStandardIndicatorParamSchema(type,schema);
+   int total=m_IndicatorTemplateManager.Read_RAM(type,schema);
    m_frame_indicator_parameter.Show();   // cascades to every slot and the Add button: unused slots are hidden again below
    for(int i=0;i<INDICATOR_PARAM_SLOTS_MAX;i++)
      {
@@ -173,7 +173,7 @@
       return;
      }
    SIndicatorParam schema[];
-   int total=m_IndicatorTemplateManager.GetStandardIndicatorParamSchema(m_current_param_type,schema);
+   int total=m_IndicatorTemplateManager.Read_RAM(m_current_param_type,schema);
    MqlParam params[];
    ::ArrayResize(params,total);
    for(int i=0;i<total;i++)
@@ -183,22 +183,20 @@
         {
          string sel_text=m_param_combo[i].GetValue();
          if(schema[i].choices==PRICE_CHOICES)
-            params[i].integer_value=m_IndicatorTemplateManager.StandardIndicatorParamValue(sel_text,schema[i].choices);
+            params[i].integer_value=m_IndicatorTemplateManager.ParamValueByDescription(sel_text,schema[i].choices);
          else if(schema[i].choices==CALCULATION_METHOD_CHOICES)
-            params[i].integer_value=m_IndicatorTemplateManager.StandardIndicatorParamValue(sel_text,schema[i].choices);
+            params[i].integer_value=m_IndicatorTemplateManager.ParamValueByDescription(sel_text,schema[i].choices);
          else if(schema[i].choices==VOLUME_CHOICES)
-            params[i].integer_value=m_IndicatorTemplateManager.StandardIndicatorParamValue(sel_text,schema[i].choices);
+            params[i].integer_value=m_IndicatorTemplateManager.ParamValueByDescription(sel_text,schema[i].choices);
          else if(schema[i].choices==STOCH_PRICE_CHOICES)
-            params[i].integer_value=m_IndicatorTemplateManager.StandardIndicatorParamValue(sel_text,schema[i].choices);
+            params[i].integer_value=m_IndicatorTemplateManager.ParamValueByDescription(sel_text,schema[i].choices);
         }
       else if(schema[i].data_type==TYPE_DOUBLE)
          params[i].double_value=::StringToDouble(m_param_edits[i].GetValue());
       else
          params[i].integer_value=(long)::StringToInteger(m_param_edits[i].GetValue());
      }
-   // if(!m_IndicatorTemplateManager.AddToDB(m_current_param_type,params))
-   //    ::Print(__FUNCTION__," > rejected: this template already exists");
-   if(!m_IndicatorTemplateManager.UpdateTemplate(m_current_param_type, params))
+   if(!m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(m_current_param_type, params))
    ::Print(__FUNCTION__," > rejected: this template already exists");
   }
  //+------------------------------------------------------------------+

@@ -184,7 +184,7 @@
    const string symbol=::Symbol();
    const ENUM_TIMEFRAMES chart_tf=(ENUM_TIMEFRAMES)::Period();
    ENUM_TIMEFRAMES tfs[];
-   int tf_count=m_SymbolTFManager.TimeframesOf(symbol,tfs);
+   int tf_count=m_SymbolTFManager.Read_RAM(symbol,tfs);
    bool chart_listed=false;
    for(int i=0;i<tf_count;i++)
       chart_listed|=(tfs[i]==chart_tf);
@@ -220,7 +220,7 @@
          m_btngroup_tf_switch.AddButton(0,0,"All",M_TF_WITHOUT_ICON_WIDTH);
       for(int i=0;i<tf_count;i++)
         {
-         m_btngroup_tf_switch.AddButton((i+first_tf_button)*(M_TF_WITHOUT_ICON_WIDTH+M_CONTROL_BORDER_GAP),0,m_SymbolTFManager.TimeframeName(tfs[i]),M_TF_WITHOUT_ICON_WIDTH);
+         m_btngroup_tf_switch.AddButton((i+first_tf_button)*(M_TF_WITHOUT_ICON_WIDTH+M_CONTROL_BORDER_GAP),0,m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)tfs[i]),M_TF_WITHOUT_ICON_WIDTH);
          m_btngroup_tf_switch.ButtonValue(i+first_tf_button,(long)tfs[i]);   // the button stands for its tf_enum, "All" stands for PERIOD_CURRENT (0)
         }
       if(!created)

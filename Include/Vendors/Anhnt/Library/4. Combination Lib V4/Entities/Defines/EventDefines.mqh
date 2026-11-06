@@ -142,8 +142,9 @@
    BAR_INFORMATION_MANAGER_EVENT_NO_EVENT = INDICATOR_TEMPLATE_MANAGER_EVENTS_NEXT_CODE,  // No event
    BAR_INFORMATION_MANAGER_EVENT_SHOW_CHANGED,              // The Show Buy / Show Sell flag of a type changed (WRONG_VALUE: of every type of a group, dparam = the group)
    BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED,             // A parameter of a type changed (lparam = the type)
+   BAR_INFORMATION_MANAGER_EVENT_RESET_DONE,                // The rows and marks of every type whose parameter changed are deleted (CBarTimeSeriesCollection): the Current worker of Python runs again
   };
- #define BAR_INFORMATION_MANAGER_EVENTS_NEXT_CODE  (BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED+1)  // The code of the next event after the last bar information event code
+ #define BAR_INFORMATION_MANAGER_EVENTS_NEXT_CODE  (BAR_INFORMATION_MANAGER_EVENT_RESET_DONE+1)  // The code of the next event after the last bar information event code
  //+------------------------------------------------------------------+
  //| Timeseries events (CBarTimeSeriesCollection). lparam = the open  |
  //| time of the new bar, dparam = its timeframe, sparam = its symbol |
@@ -202,7 +203,7 @@
  enum ENUM_TRADE_EVENT_FLAGS
   {
    TRADE_EVENT_FLAG_NO_EVENT        =  0x0,                 // No event
-   TRADE_EVENT_FLAG_ORDER_PLASED    =  0x1,                 // Pending order placed
+   TRADE_EVENT_FLAG_ORDER_PLACED    =  0x1,                 // Pending order placed
    TRADE_EVENT_FLAG_ORDER_REMOVED   =  0x2,                 // Pending order removed
    TRADE_EVENT_FLAG_ORDER_ACTIVATED =  0x4,                 // Pending order activated by price
    TRADE_EVENT_FLAG_POSITION_OPENED =  0x8,                 // Position opened

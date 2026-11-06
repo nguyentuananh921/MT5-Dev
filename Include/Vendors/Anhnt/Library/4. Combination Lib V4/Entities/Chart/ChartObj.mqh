@@ -86,7 +86,7 @@
    ENUM_INDICATOR types[];
    string texts[],display[];
    bool buy[],sell[],sound[],message[],show[];
-   int total=this.m_IndicatorTemplateManager.Templates(ids,types,texts,display,buy,sell,sound,message,show);
+   int total=this.m_IndicatorTemplateManager.Read_RAM(ids,types,texts,display,buy,sell,sound,message,show);
    for(int row=0;row<total;row++)
      {
       MqlParam params[];
@@ -216,6 +216,7 @@
  //+------------------------------------------------------------------+
  void CChartObj::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   SIndicatorsRow catalog;
    if(this.m_IndicatorTemplateManager!=NULL)
      {
       //--- A template changed: attach or detach its indicator on this chart
@@ -229,7 +230,7 @@
          if(this.m_IndicatorTemplateManager.ParamsFromText(type,sparam,params))
            {
             bool shown=this.IsIndicatorShownOnChart(type,params);
-            CIndicatorSetting *setting=this.m_IndicatorTemplateManager.GetSetting(type,sparam);
+            CIndicatorSetting *setting=this.m_IndicatorTemplateManager.Read_RAM(type,sparam);
             bool wanted=(!deleted && setting!=NULL && setting.ShowOnChart());
             if(wanted && !shown)
                this.ShowIndicatorOnChart(type,params);
@@ -248,13 +249,13 @@
          MqlParam old_params[],new_params[];
          if(old_ind==NULL || new_ind==NULL || !old_ind.GetIdentity(old_type,old_params) || !new_ind.GetIdentity(new_type,new_params))
             return;
-         if(this.m_IndicatorTemplateManager.Exists(new_type,this.m_IndicatorTemplateManager.ParamsText(new_type,new_params)))
+         if(this.m_IndicatorTemplateManager.Read_RAM(new_type,this.m_IndicatorTemplateManager.ParamsText(new_type,new_params))!=NULL)
             return;
          string old_text=this.m_IndicatorTemplateManager.ParamsText(old_type,old_params);
-         if(this.m_IndicatorTemplateManager.Exists(old_type,old_text))
-            this.m_IndicatorTemplateManager.UpdateTemplate(old_type,old_text);
-         if(this.m_IndicatorTemplateManager.StandardIndicatorName(new_type)!="")
-            this.m_IndicatorTemplateManager.UpdateTemplate(new_type,new_params);
+         if(this.m_IndicatorTemplateManager.Read_RAM(old_type,old_text)!=NULL)
+            this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(old_type,old_text);
+         if(this.m_IndicatorTemplateManager.Read_RAM(new_type,catalog))
+            this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(new_type,new_params);
          return;
         }
       //--- An indicator left the chart: synchronize the templates' show flags
@@ -264,7 +265,7 @@
          ENUM_INDICATOR types[];
          string texts[],display[];
          bool buy[],sell[],sound[],message[],show[];
-         int total=this.m_IndicatorTemplateManager.Templates(ids,types,texts,display,buy,sell,sound,message,show);
+         int total=this.m_IndicatorTemplateManager.Read_RAM(ids,types,texts,display,buy,sell,sound,message,show);
          for(int row=0;row<total;row++)
            {
             MqlParam row_params[];
@@ -272,7 +273,7 @@
                continue;
             bool on_chart=this.IsIndicatorShownOnChart(types[row],row_params);
             if(on_chart!=show[row])
-               this.m_IndicatorTemplateManager.UpdateTemplate(types[row],texts[row],"show_on_chart",on_chart,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
+               this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(types[row],texts[row],"show_on_chart",on_chart,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
            }
          return;
         }
@@ -284,13 +285,13 @@
             ind=this.GetLastAddedIndicator();
          ENUM_INDICATOR type;
          MqlParam params[];
-         if(ind==NULL || !ind.GetIdentity(type,params) || this.m_IndicatorTemplateManager.StandardIndicatorName(type)=="" || !this.ChartIdentity(type,params))
+         if(ind==NULL || !ind.GetIdentity(type,params) || !this.m_IndicatorTemplateManager.Read_RAM(type,catalog) || !this.ChartIdentity(type,params))
             return;
          if(type==IND_VOLUMES && ::ArraySize(params)==1 && !this.m_IndicatorTemplateManager.CompleteVolumesParams(params))
             return;
          string text=this.m_IndicatorTemplateManager.ParamsText(type,params);
-         if(!this.m_IndicatorTemplateManager.Exists(type,text))
-            this.m_IndicatorTemplateManager.UpdateTemplate(type,params);
+         if(this.m_IndicatorTemplateManager.Read_RAM(type,text)==NULL)
+            this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params);
         }
      }
    if(id==CHARTEVENT_CHART_CHANGE)
@@ -343,6 +344,7 @@
       CMessage::ToLog(DFUN,::GetLastError(),true);
       return false;
      }
+   this.SetAvailable(false);   // the chart is changing: the EA stops until OnDeinit
    return true;
   }
  //+------------------------------------------------------------------+
@@ -411,12 +413,14 @@
  //+------------------------------------------------------------------+
  void CChartObj::ShowIndicatorOnChart(const ENUM_INDICATOR type,MqlParam &params[])
   {
+   SIndicatorsRow catalog;
    if(this.m_IndicatorTemplateManager==NULL)
      {
       ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
       return;
      }
-   string indicator_name=this.m_IndicatorTemplateManager.StandardIndicatorName(type);
+   this.m_IndicatorTemplateManager.Read_RAM(type,catalog);
+   string indicator_name=catalog.name;
    if(indicator_name=="")
      {
       ::Print(__FUNCTION__," > indicator is not in the standard catalog: ",EnumToString(type));
@@ -436,7 +440,7 @@
       ::Print(DFUN,indicator_name," with ",::ArraySize(chart_params)," params: IndicatorCreate failed, error ",::GetLastError());
       return;
      }
-   bool overlay=(this.m_IndicatorTemplateManager.StandardIndicatorGroup(type)==INDICATOR_GROUP_TREND || type==IND_FRACTALS);
+   bool overlay=((this.m_IndicatorTemplateManager.Read_RAM(type,catalog) && catalog.group==INDICATOR_GROUP_TREND) || type==IND_FRACTALS);
    int sub_window=(overlay ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
    if(!::ChartIndicatorAdd(this.m_chart_id,sub_window,handle))
       ::Print(DFUN,indicator_name,": ChartIndicatorAdd failed, error ",::GetLastError());

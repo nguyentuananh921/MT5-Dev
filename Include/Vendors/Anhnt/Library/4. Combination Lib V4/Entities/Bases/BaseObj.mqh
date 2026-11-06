@@ -29,7 +29,6 @@
       string                  m_name;
       string                  m_folder_name;
       string                  m_sound_name;
-      //int                     m_type;           // enum ENUM_OBJECT_DE_TYPE in CommonDefines.mqh
       int                     m_object_type;           // enum ENUM_OBJECT_DE_TYPE in CommonDefines.mqh
     public:
       void               SetLogLevel(const ENUM_LOG_LEVELS level)  { m_log_level=level;            }

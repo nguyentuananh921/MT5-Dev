@@ -47,11 +47,11 @@
      void                       ShowBuy(const bool v,const bool notify=true);
      bool                       ShowSell(void)        const { return m_show_sell;     }
      void                       ShowSell(const bool v,const bool notify=true);
-   //--- The parameters: (1) one more (SyncDataFromDB), (2) all of them, (3) the value of one; setting it fires BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED
+   //--- The parameters: (1) one more (ReadDataFromDB), (2) all of them, (3) the value of one; setting it fires BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED
      void                       AddParam(const string param,const string display,const double value);
      int                        Params(string &params[],string &displays[],double &values[]) const;
      bool                       ParamValue(const string param,double &value) const;
-     bool                       ParamValue(const string param,const double value);
+     bool                       SetParamValue(const string param,const double value);
   };
 #endif // CBARINFORMATIONSETTING_MQH_DECLARATION
 #ifndef CBARINFORMATIONSETTING_MQH_IMPLEMENTATION
@@ -114,7 +114,7 @@
         }
    return false;
   }
- bool CBarInformationSetting::ParamValue(const string param,const double value)
+ bool CBarInformationSetting::SetParamValue(const string param,const double value)
   {
    for(int i = 0; i < ::ArraySize(m_params); i++)
       if(m_params[i] == param)

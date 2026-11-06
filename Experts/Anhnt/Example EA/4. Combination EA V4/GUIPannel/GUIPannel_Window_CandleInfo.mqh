@@ -115,14 +115,11 @@
    m_table_candle_information_atBar.DeleteAllRows(false);
    if(m_BarTimeSeriesCollection==NULL || m_SignalsCollection==NULL || m_BarInformationManager==NULL || m_IndicatorTemplateManager==NULL || m_SymbolTFManager==NULL)
       return 0;
-   long symbol_id=m_BarTimeSeriesCollection.SymbolID(::Symbol());
-   if(symbol_id==0)
-      return 0;
    ENUM_TIMEFRAMES timeframe=(ENUM_TIMEFRAMES)::Period();
    datetime until=bar_time+::PeriodSeconds(timeframe);
    //--- The TFs of the symbol in Setting_SymbolTF as short as the chart's: only those are listed
    ENUM_TIMEFRAMES setting_tfs[];
-   int setting_total=m_SymbolTFManager.TimeframesOf(::Symbol(),setting_tfs);
+   int setting_total=m_SymbolTFManager.Read_RAM(::Symbol(),setting_tfs);
    long asked_tfs[];
    for(int i=0;i<setting_total;i++)
       if(::PeriodSeconds(setting_tfs[i])<=::PeriodSeconds(timeframe))
@@ -137,12 +134,12 @@
    ENUM_BAR_INFORMATION_GROUP groups[];
    int candles[];
    bool have_buy[],have_sell[],sound[],message[],show_buy[],show_sell[];
-   int types_total=m_BarInformationManager.Informations(type_list,type_names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
+   int types_total=m_BarInformationManager.Read_RAM(type_list,type_names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
    long template_ids[];
    ENUM_INDICATOR kinds[];
    string texts[];
    bool template_buy[],template_sell[];
-   int templates_total=m_IndicatorTemplateManager.TemplateIds(template_ids,kinds,texts,template_buy,template_sell);
+   int templates_total=m_IndicatorTemplateManager.Read_RAM(template_ids,kinds,texts,template_buy,template_sell);
    long asked_types[];
    ::ArrayResize(asked_types,types_total);
    for(int i=0;i<types_total;i++)
@@ -153,7 +150,7 @@
    datetime row_time[];
    long tfs[],keys[],times[],sides[];
    int count=0;
-   int rows=m_SignalsCollection.ReadCandle_SignalsCollection(symbol_id,asked_tfs,bar_time,until,template_ids,tfs,keys,times,sides);
+   int rows=m_SignalsCollection.ReadDataFromDB(::Symbol(),asked_tfs,bar_time,until,template_ids,tfs,keys,times,sides);
    for(int i=0;i<rows;i++)
      {
       int t=WRONG_VALUE;
@@ -166,7 +163,7 @@
                              row_label,row_tf,row_source,row_side,row_time);
      }
    CBarTimeSeriesDE *timeseries=m_BarTimeSeriesCollection.GetTimeseries(::Symbol());   // the symbol reads the TFs asked: the table UNION RAM
-   rows=(timeseries!=NULL ? timeseries.ReadCandle_BarTimeSeriesDE(asked_tfs,bar_time,until,asked_types,tfs,keys,times,sides) : 0);
+   rows=(timeseries!=NULL ? timeseries.ReadCandle(asked_tfs,bar_time,until,asked_types,tfs,keys,times,sides) : 0);
    for(int i=0;i<rows;i++)
      {
       int t=WRONG_VALUE;
@@ -229,7 +226,7 @@
   {
    if(source==BAR_INFORMATION_SIGNAL)
       return "Signal";
-   return (m_BarInformationManager!=NULL ? m_BarInformationManager.GroupDescription((ENUM_BAR_INFORMATION_GROUP)source) : "");
+   return (m_BarInformationManager!=NULL ? m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)source) : "");
   }
  //+------------------------------------------------------------------+
  //| The popup opens for a candle: it has nothing to show, it stays   |

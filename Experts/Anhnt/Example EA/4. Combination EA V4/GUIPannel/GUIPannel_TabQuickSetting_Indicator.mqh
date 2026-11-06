@@ -34,7 +34,7 @@
    const uint icons[3]={IMAGE_RESOURCE_BMP16_VISIBLE_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG,IMAGE_RESOURCE_BMP16_BELL_PNG};
    const bool states[3]={false,false,false};
    for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
-      if(m_sections_indicator.AddSection(m_IndicatorTemplateManager.StandardIndicatorGroupName(INDICATOR_SECTION_GROUPS[g]),icons,states,true)==WRONG_VALUE)
+      if(m_sections_indicator.AddSection(m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR_GROUP)INDICATOR_SECTION_GROUPS[g]),icons,states,true)==WRONG_VALUE)
          return false;
    return true;
   }
@@ -87,19 +87,20 @@
  //--- The rows of every template (at the start). The sections keep their toggles
  void CGUIPannel::PopulateSections_IndicatorTemplateSetting(void)
   {
+   SIndicatorsRow catalog;
    if(m_IndicatorTemplateManager==NULL)
       return;
    long ids[];
    ENUM_INDICATOR types[];
    string params[],display[];
    bool buy[],sell[],sound[],message[],show[];
-   int total=m_IndicatorTemplateManager.Templates(ids,types,params,display,buy,sell,sound,message,show);
+   int total=m_IndicatorTemplateManager.Read_RAM(ids,types,params,display,buy,sell,sound,message,show);
    for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
      {
       m_sections_indicator.ClearBody(g);
       int row=0;
       for(int i=0;i<total;i++)
-         if(m_IndicatorTemplateManager.StandardIndicatorGroup(types[i])==INDICATOR_SECTION_GROUPS[g])
+         if(m_IndicatorTemplateManager.Read_RAM(types[i],catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
             this.AddRow_IndicatorTemplateSetting(g,row++,ids[i],display[i],show[i],buy[i],sell[i],sound[i],message[i]);
      }
    this.SyncSections_IndicatorTemplateSetting();
@@ -108,13 +109,14 @@
  //--- The switches take their state from the database, the toggle of a section is ON while any switch of its two columns is
  void CGUIPannel::SyncSections_IndicatorTemplateSetting(void)
   {
+   SIndicatorsRow catalog;
    if(m_IndicatorTemplateManager==NULL)
       return;
    long ids[];
    ENUM_INDICATOR types[];
    string params[],display[];
    bool buy[],sell[],sound[],message[],show[];
-   int total=m_IndicatorTemplateManager.Templates(ids,types,params,display,buy,sell,sound,message,show);
+   int total=m_IndicatorTemplateManager.Read_RAM(ids,types,params,display,buy,sell,sound,message,show);
    bool any_show[INDICATOR_SECTIONS_TOTAL],any_signal[INDICATOR_SECTIONS_TOTAL],any_alert[INDICATOR_SECTIONS_TOTAL];
    ::ArrayInitialize(any_show,false);
    ::ArrayInitialize(any_signal,false);
@@ -127,7 +129,7 @@
       m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_SOUND_ALERT,sound[i]);
       m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_MESSAGE_ALERT,message[i]);
       for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
-         if(m_IndicatorTemplateManager.StandardIndicatorGroup(types[i])==INDICATOR_SECTION_GROUPS[g])
+         if(m_IndicatorTemplateManager.Read_RAM(types[i],catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
            {
             any_show[g]=(any_show[g] || show[i]);
             any_signal[g]=(any_signal[g] || buy[i] || sell[i]);
@@ -150,7 +152,7 @@
    ENUM_INDICATOR types[];
    string params[];
    bool buy[],sell[];
-   int total=m_IndicatorTemplateManager.TemplateIds(ids,types,params,buy,sell);
+   int total=m_IndicatorTemplateManager.Read_RAM(ids,types,params,buy,sell);
    for(int i=0;i<total;i++)
       if(ids[i]==id)
         {
@@ -165,6 +167,7 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent_Tab_Indicator(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   SIndicatorsRow catalog;
    //--- The tab was opened, the scroll moved, a window changed its size, a header was clicked: the sections are arranged again
    m_sections_indicator.OnChartEvent(id,lparam,dparam,sparam);
    //--- The window changed its width: the Add button stays at the right of the tab
@@ -176,9 +179,9 @@
    //--- A template came (lparam = its type, sparam = its params): its row at the end of its section, the other rows stay
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && m_IndicatorTemplateManager!=NULL)
      {
-      CIndicatorSetting *row=m_IndicatorTemplateManager.GetSetting((ENUM_INDICATOR)lparam,sparam);
+      CIndicatorSetting *row=m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR)lparam,sparam);
       for(int g=0;g<INDICATOR_SECTIONS_TOTAL && row!=NULL;g++)
-         if(INDICATOR_SECTION_GROUPS[g]==m_IndicatorTemplateManager.StandardIndicatorGroup(row.TypeEnum()))
+         if(m_IndicatorTemplateManager.Read_RAM(row.TypeEnum(),catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
            {
             m_sections_indicator.RemoveRows(row.ID());   // made already: the tab was built after the template came (OnInit, from the chart)
             this.AddRow_IndicatorTemplateSetting(g,m_sections_indicator.RowsTotal(g),row.ID(),row.Display(),row.ShowOnChart(),row.BuySignal(),row.SellSignal(),row.SoundAlert(),row.MessageAlert());
@@ -218,11 +221,11 @@
      {
       const ENUM_INDICATOR_GROUP group=INDICATOR_SECTION_GROUPS[section];
       if(which==INDICATOR_TOGGLE_SHOW)
-         m_IndicatorTemplateManager.ShowGroup(group,dparam!=0);
+         m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(group,dparam!=0);
       else if(which==INDICATOR_TOGGLE_SIGNAL)
-         m_IndicatorTemplateManager.UpdateTemplate(group,"buy_signal","sell_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
+         m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(group,"buy_signal","sell_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
       else
-         m_IndicatorTemplateManager.UpdateTemplate(group,"sound_alert","message_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
+         m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(group,"sound_alert","message_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
       this.SyncSections_IndicatorTemplateSetting();
       return;
      }
@@ -235,17 +238,17 @@
    if(!m_sections_indicator.BodyOf(lparam,template_id,slot,param) || !this.TemplateOfId_IndicatorTemplateSetting(template_id,type,params_text))
      return;
    if(slot==INDICATOR_SLOT_DELETE)
-     m_IndicatorTemplateManager.UpdateTemplate(type,params_text);
+     m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text);
    else if(slot==INDICATOR_SLOT_SHOW_ON_CHART)
-     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"show_on_chart",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
+     m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text,"show_on_chart",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
    else if(slot==INDICATOR_SLOT_BUY_SIGNAL)
-     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"buy_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
+     m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text,"buy_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
    else if(slot==INDICATOR_SLOT_SELL_SIGNAL)
-     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"sell_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
+     m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text,"sell_signal",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
    else if(slot==INDICATOR_SLOT_SOUND_ALERT)
-     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"sound_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
+     m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text,"sound_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
    else if(slot==INDICATOR_SLOT_MESSAGE_ALERT)
-     m_IndicatorTemplateManager.UpdateTemplate(type,params_text,"message_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
+     m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text,"message_alert",dparam!=0,INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
    this.SyncSections_IndicatorTemplateSetting();
   }
 #endif // CGUIPANNEL_TABQUICKSETTING_INDICATOR_MQH

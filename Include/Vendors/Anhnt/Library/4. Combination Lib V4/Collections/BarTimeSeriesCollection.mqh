@@ -13,7 +13,7 @@
 #ifndef __BARTIMESERIESCOLLECTION_MQH__
 #define __BARTIMESERIESCOLLECTION_MQH__
  #include <Arrays\ArrayObj.mqh>
- #include "..\Services\DELib\DatabaseDELib.mqh"
+ #include "..\Services\DELib\DatabaseService.mqh"
  #include "ListObj.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "..\Entities\Bases\BaseObjExt.mqh"
@@ -33,8 +33,7 @@
  class CBarTimeSeriesCollection : public CBaseObjExt
   {
    private:
-    int                 m_db;                      // the file of the account: its tables are asked here, nothing is copied
-    //CArrayObj           m_list_timeseries;       // List of the symbol timeseries (CBarTimeSeriesDE), one for each symbol
+   CDatabaseService   *m_CDatabaseService;        // The EA holds it
     CListObj            m_list_timeseries;         // List of the symbol timeseries (CBarTimeSeriesDE), one for each symbol: each CBarSeriesDE keeps its rows (a CBar each) and judges its bars
     CSymbolsCollection  *m_SymbolsCollection;      // the EA holds it: the id of a symbol (symbols)
     CSymbolTFManager    *m_SymbolTFManager;        // the EA holds it: the pairs the library keeps up to date (Setting_SymbolTF)
@@ -48,27 +47,27 @@
     CBarTimeSeriesCollection  *GetObject(void)            { return &this;                     }
    //New method in V4 Need check 
     //--- A step of the delete of the rows of the first type that waits (CSyncManager does it: one pair at a time, the mark of a pair goes when it has no row left)
-     void              Reset_BarTimeSeriesCollection(const ulong started);
+     void              Reset(const ulong started);
     //--- What is new on a pair at its newest closed bar is told once, for the types whose alert is on (and when the pair has the alert on too)
-     void              Alert_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &types[],const int &sides[]);
+     void              AlertOnPair(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &types[],const int &sides[]);
     //--- The events of the series of a symbol go to the chart once (the parent and the siblings hear them). SERIES_EVENTS_PATTERN of the newest closed bar: its alert goes
-     void              SendEvents_BarTimeSeriesCollection(CBarTimeSeriesDE *timeseries);
+     void              SendEvents(CBarTimeSeriesDE *timeseries);
     //--- Every series of a symbol follows MT5, then its events go to the chart
-     void              RefreshTimeseries_BarTimeSeriesCollection(CBarTimeSeriesDE *timeseries);
+     void              RefreshTimeseries(CBarTimeSeriesDE *timeseries);
     //--- A pair of Setting_SymbolTF is (1) made (OnInit, SYMBOLTF_MANAGER_EVENT_ADDED): the library judges it, (2) taken away (SYMBOLTF_MANAGER_EVENT_DELETE): the library
     //--- stops, Python Live judges it from its progress (Setting_SymbolTF is what tells Python)
-     bool              AddSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe);
-     bool              DeleteSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe);
+     bool              Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
+     bool              Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
    public:
     //--- Return the timeseries list (public as in DoEasy CTimeSeriesCollection: CSignalsCollection walks the pairs in RAM)
      CArrayObj        *GetList(void)              { return &this.m_list_timeseries; }
     //Setting Pointer
+     void              SetDatabaseService(CDatabaseService *databaseService)      { this.m_CDatabaseService=databaseService; }
      void              SetSymbolsCollection(CSymbolsCollection *collection)       { this.m_SymbolsCollection=collection; }
      void              SetSymbolTFManager(CSymbolTFManager *manager)              { this.m_SymbolTFManager=manager;      }
      void              SetSyncManager(CSyncManager *manager)                      { this.m_SyncManager=manager;          }
      void              SetBarInformationManager(CBarInformationManager *manager)  { this.m_BarInformationManager=manager; }
     //--- Create the list: one timeseries object for each symbol of the list (no timeframe is added yet)
-     //bool              CreateCollection(const CArrayObj *list_symbols);
      bool              CreateCollection(CSymbolTFManager *manager);   
     //--- Return the timeseries object of (1) a symbol, (2) a symbol and a timeframe
      CBarTimeSeriesDE *GetTimeseries(const string symbol);     CBarSeriesDE     *GetSeries(const string symbol,const ENUM_TIMEFRAMES timeframe);
@@ -105,13 +104,12 @@
       bool                    SyncData(const ENUM_TIMEFRAMES timeframe,const uint required=0,const int rates_total=0);
       bool                    SyncData(const string symbol,const uint required=0,const int rates_total=0);
       bool                    SyncData(const uint required=0,const int rates_total=0);
-    //--- The rows of the table between RAM and the database, as SyncData: (1) every pair, (2) one pair. Each CBarSeriesDE does its own (CBarSeriesDE::SyncDataFromDB, SyncDataToDB)
-      bool                    SyncDataFromDB(void);
-      bool                    SyncDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
-      bool                    SyncDataToDB(void);
+    //--- The rows of the table between RAM and the database, as SyncData: (1) every pair, (2) one pair. Each CBarSeriesDE does its own (CBarSeriesDE::ReadDataFromDB, UpdateDataToDB)
+      bool                    ReadDataFromDB(void);
+      bool                    ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
+      bool                    UpdateDataToDB(void);
     //Need check
    //--- The id of the symbol of ours a symbol of this account is (CSymbolsCollection)
-    long              SymbolID(const string symbol) const { return(this.m_SymbolsCollection!=NULL ? this.m_SymbolsCollection.SymbolID(symbol) : 0); }
    //--- Return the bar of a symbol and a timeframe (1) by index as in the timeseries (0 = newest), (2) by time
     CBar             *GetBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const int index);
     CBar             *GetBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar_time);
@@ -125,18 +123,17 @@
     void              RefreshSeriesAllExceptCurrent(void);
    //--- The rhythm of the EA: a step of the delete of the rows (the table, every pair) of a type whose parameter changed
     void              OnTimerEvent(void);
-                      //CBarTimeSeriesCollection(void) : m_db(INVALID_HANDLE),m_BarInformationManager(NULL),m_SymbolsCollection(NULL),m_SymbolTFManager(NULL),m_SyncManager(NULL) { this.m_type=COLLECTION_SERIES_ID; this.m_list_timeseries.Clear(); }
                       CBarTimeSeriesCollection(void);
-                     ~CBarTimeSeriesCollection(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
+                     ~CBarTimeSeriesCollection(void) {}
   };
 #endif // CBARTIMESERIESCOLLECTION_MQH_DECLARATION
 #ifndef CBARTIMESERIESCOLLECTION_MQH_IMPLEMENTATION
 #define CBARTIMESERIESCOLLECTION_MQH_IMPLEMENTATION
  CBarTimeSeriesCollection::CBarTimeSeriesCollection(void)
-  : m_db(INVALID_HANDLE),
-    m_BarInformationManager(NULL),
+  : m_BarInformationManager(NULL),
     m_SymbolsCollection(NULL),
     m_SymbolTFManager(NULL),
+    m_CDatabaseService(NULL),
     m_SyncManager(NULL)
   {
    this.m_object_type=COLLECTION_SERIES_ID;
@@ -158,52 +155,15 @@
    return WRONG_VALUE;
   }
  //+------------------------------------------------------------------+
- //| The tables of the account (the file of LibDatabase_AccountFile):  |
+ //| The tables of the account (the file Account of CDatabaseService):|
  //| what the broker gives is not the same for every account, so the   |
  //| bars and what Python found on them are not in the file the        |
  //| accounts share. No foreign keys: they cannot cross two files      |
  //+------------------------------------------------------------------+
  bool CBarTimeSeriesCollection::OnInitEvent(void)
   {
-   if(m_db != INVALID_HANDLE)
-      return true;   // a CHARTCHANGE reinit keeps the database open
-   m_db = LibDatabase_OpenAccount(DATABASE_OPEN_READWRITE | DATABASE_OPEN_CREATE);
-   if(m_db == INVALID_HANDLE)
-    {
-     ::Print(__FUNCTION__, " > the database ", LibDatabase_AccountFile(), " is not opened, error ", ::GetLastError());
-     return false;
-    }
-   ::DatabaseExecute(m_db, "PRAGMA busy_timeout="+(string)LIB_DATABASE_BUSY_MS);
-   ::DatabaseExecute(m_db, "PRAGMA journal_mode=WAL");
-   //--- BarTimeSeriesCollection: what Python found on the bars. Python writes it, the EA reads it to draw. One row for what happens at one bar (a pattern,
-   //--- a momentum candle, a swing, a break...): the pair, the type, the open time of the bar and its side (the Buy or the Sell side of the type)
-   const bool table_was_there=LibDatabase_TableExists(m_db,"BarTimeSeriesCollection");
-   //--- The older column side is renamed: the rows stay
-   if(LibDatabase_ColumnExists(m_db,"BarTimeSeriesCollection","side"))
-      ::DatabaseExecute(m_db, "ALTER TABLE BarTimeSeriesCollection RENAME COLUMN side TO signal_direction");
-   if(!::DatabaseExecute(m_db, "CREATE TABLE IF NOT EXISTS BarTimeSeriesCollection (symbol_id INTEGER NOT NULL, tf_enum INTEGER NOT NULL, "
-                               "type_infor INTEGER NOT NULL, bar_time INTEGER NOT NULL, signal_direction INTEGER NOT NULL, "
-                               "PRIMARY KEY (symbol_id, tf_enum, type_infor, bar_time, signal_direction)) WITHOUT ROWID"))
-    {
-     ::Print(__FUNCTION__, " > the table BarTimeSeriesCollection is not made, error ", ::GetLastError());
-     return false;
-    }
-   //--- BarSeriesDE: Python writes it (the library only adds the bars after the newest one it holds). One row for a closed bar of a pair (the properties of CBar)
-   const bool bars_were_there=LibDatabase_TableExists(m_db,"BarSeriesDE");
-   if(!::DatabaseExecute(m_db, "CREATE TABLE IF NOT EXISTS BarSeriesDE (symbol_id INTEGER NOT NULL, tf_enum INTEGER NOT NULL, "
-                               "bar_time INTEGER NOT NULL, open REAL NOT NULL, high REAL NOT NULL, low REAL NOT NULL, close REAL NOT NULL, tick_volume INTEGER NOT NULL, "
-                               "spread INTEGER NOT NULL, real_volume INTEGER NOT NULL, PRIMARY KEY (symbol_id, tf_enum, bar_time)) WITHOUT ROWID"))
-    {
-     ::Print(__FUNCTION__, " > the table BarSeriesDE is not made, error ", ::GetLastError());
-     return false;
-    }
-   //--- One of the two tables was not there (deleted, or the file is new): what was marked as synced is not true any more, Python makes the first chunk again
-   if((!table_was_there || !bars_were_there) && this.m_SyncManager!=NULL)
-      this.m_SyncManager.ResetObject_SyncManager(this.m_object_type);   //--- The progress of an EA before Setting_Sync: moved there (the file of the accounts), the old table goes
-   if(this.m_SyncManager!=NULL)
-      this.m_SyncManager.Import_SyncManager(m_db,"Sync_BarTimeSeriesCollection","type_infor",this.m_object_type);
-   ::Print("Complete ", __FUNCTION__, " > ", LibDatabase_AccountFile(), " opened");
-   return true;
+   // New In V4 after implemenation CDatabaseService
+   return true;   // its tables are CBarInformationManager's
   }
  //+------------------------------------------------------------------+
  //| Cretion CreateCollection SymbolTFManagerfrom                     |
@@ -215,7 +175,7 @@
 
    string symbols[];
    ENUM_TIMEFRAMES timeframes[];
-   int total=manager.Pairs(symbols,timeframes);
+   int total=manager.Read_RAM(symbols,timeframes);
    if(total==0)
       return false;
 
@@ -223,7 +183,7 @@
    //--- A pair that left Setting_SymbolTF while the EA was away goes
    bool complete=true;
    for(int i=0;i<total;i++)
-      complete=this.AddSeries_BarTimeSeriesCollection(symbols[i],timeframes[i]) && complete;
+      complete=this.Create_RAM(symbols[i],timeframes[i]) && complete;
    for(int i=this.m_list_timeseries.Total()-1;i>=0;i--)
      {
       CBarTimeSeriesDE *timeseries=this.m_list_timeseries.At(i);
@@ -235,7 +195,7 @@
          for(int k=0;series!=NULL && k<total && !kept;k++)
             kept=(symbols[k]==series.Symbol() && timeframes[k]==series.Timeframe());
          if(series!=NULL && !kept)
-            this.DeleteSeries_BarTimeSeriesCollection(series.Symbol(),series.Timeframe());
+            this.Delete_RAM(series.Symbol(),series.Timeframe());
         }
      }
    return complete;
@@ -243,7 +203,7 @@
  //+------------------------------------------------------------------+
  //| A pair of Setting_SymbolTF is made: the library judges it         |
  //+------------------------------------------------------------------+
- bool CBarTimeSeriesCollection::AddSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CBarTimeSeriesCollection::Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    if(this.GetSeries(symbol,timeframe)!=NULL)
       return true;
@@ -256,20 +216,20 @@
          delete timeseries;
          return false;
         }
-      timeseries.SetDatabase(m_db,this.SymbolID(symbol));   // it reads the table for the TFs of the symbol that have no series (ReadCandle_)
+      timeseries.SetDatabase(this.m_BarInformationManager);   // it reads the table for the TFs of the symbol that have no series (ReadCandle_)
      }
    return this.CreateSeries(symbol,timeframe);
   }
  //+------------------------------------------------------------------+
  //| A pair left Setting_SymbolTF: the library stops judging it        |
  //+------------------------------------------------------------------+
- bool CBarTimeSeriesCollection::DeleteSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CBarTimeSeriesCollection::Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    int index=this.IndexTimeSeries(symbol);
    CBarTimeSeriesDE *timeseries=this.m_list_timeseries.At(index);
    if(timeseries==NULL || !timeseries.DeleteSeries(timeframe))
       return false;
-   this.SendEvents_BarTimeSeriesCollection(timeseries);
+   this.SendEvents(timeseries);
    if(timeseries.SeriesTotal()==0)
       this.m_list_timeseries.Delete(index);   // the symbol has no pair of Setting_SymbolTF any more
    ::Print("Complete ",__FUNCTION__," > ",symbol," ",::EnumToString(timeframe)," left Setting_SymbolTF: the library stops, Python Live judges it from its progress");
@@ -306,7 +266,7 @@
       return false;
    CBarSeriesDE *series=timeseries.GetSeries(timeframe);
    if(series!=NULL)
-      series.SetDatabase(m_db,this.SymbolID(symbol),this.m_object_type,this.m_SyncManager,this.m_BarInformationManager);   // it judges and writes its own rows
+      series.SetDatabase(this.m_object_type,this.m_SyncManager,this.m_BarInformationManager);   // it judges and writes its own rows
    return timeseries.CreateSeries(timeframe,required);
   }
  // Set SetAvailable
@@ -546,7 +506,7 @@
      }
 
    string name=(symbol==NULL || symbol=="" ? ::Symbol() : symbol);
-   return this.m_SymbolTFManager.Exists(name,timeframe);
+   return (this.m_SymbolTFManager.Read_RAM(name,timeframe)!=NULL);
   }  
   //+------------------------------------------------------------------+
   //| Return the flag of using the specified timeseries of all symbols |
@@ -630,18 +590,6 @@
    CBarSeriesDE *series=this.GetSeries(symbol,timeframe);
    return(series!=NULL ? series.IsNewBar() : false);
   }
-   //  void CBarTimeSeriesCollection::Refresh(const string symbol,const ENUM_TIMEFRAMES timeframe)
-   //   {
-   //    CBarTimeSeriesDE *timeseries=this.GetTimeseries(symbol);
-   //    //if(timeseries==NULL || !timeseries.Refresh(timeframe))
-   //    if(timeseries==NULL || !timeseries.RefreshSeries(timeframe))
-   //       return;
-   //    CBarSeriesDE *series=timeseries.GetSeries(timeframe);
-   //    if(series==NULL)
-   //       return;
-   //    ::EventChartCustom(::ChartID(),(ushort)SERIES_EVENT_NEW_BAR,(long)series.LastBarDate(),(double)series.Timeframe(),series.Symbol());
-   //    this.m_is_event=this.EventAdd((ushort)SERIES_EVENT_NEW_BAR,(long)series.LastBarDate(),(double)series.Timeframe(),series.Symbol());   // the same event stays in the list of the object (GetListEvents) until the next beat
-   //   }
  //+------------------------------------------------------------------+
  //| The bars of every series follow MT5 (RAM): a new bar of a series |
  //| goes up the chain (CBarSeriesDE > CBarTimeSeriesDE > collection) |
@@ -655,20 +603,20 @@
    this.m_is_event=false;
    CBarTimeSeriesDE *timeseries=this.GetTimeseries(symbol);
    if(timeseries!=NULL && timeseries.RefreshSeries(timeframe))
-      this.SendEvents_BarTimeSeriesCollection(timeseries);
+      this.SendEvents(timeseries);
   }
  void CBarTimeSeriesCollection::RefreshSeries(void)
   {
    this.m_list_events.Clear();   // the events of the call before are gone
    this.m_is_event=false;
    for(int i=0;i<this.m_list_timeseries.Total();i++)
-      this.RefreshTimeseries_BarTimeSeriesCollection(this.m_list_timeseries.At(i));
+      this.RefreshTimeseries(this.m_list_timeseries.At(i));
   }
  void CBarTimeSeriesCollection::RefreshSeries(const string symbol)
   {
    this.m_list_events.Clear();
    this.m_is_event=false;
-   this.RefreshTimeseries_BarTimeSeriesCollection(this.GetTimeseries(symbol));
+   this.RefreshTimeseries(this.GetTimeseries(symbol));
   }
  void CBarTimeSeriesCollection::RefreshSeriesAllExceptCurrent(void)
   {
@@ -681,28 +629,28 @@
       if(timeseries==NULL || timeseries.Symbol()==::Symbol())
          continue;
       const bool new_tick=timeseries.IsNewTick();
-      this.SendEvents_BarTimeSeriesCollection(timeseries);   // TICK_EVENT_PAUSE / RESUME: the other hands of the symbol rest or go on
+      this.SendEvents(timeseries);   // TICK_EVENT_PAUSE / RESUME: the other hands of the symbol rest or go on
       if(new_tick)
-         this.RefreshTimeseries_BarTimeSeriesCollection(timeseries);
+         this.RefreshTimeseries(timeseries);
      }
   }
  //+------------------------------------------------------------------+
  //| Every series of a symbol follows MT5, then its events go out      |
  //+------------------------------------------------------------------+
- void CBarTimeSeriesCollection::RefreshTimeseries_BarTimeSeriesCollection(CBarTimeSeriesDE *timeseries)
+ void CBarTimeSeriesCollection::RefreshTimeseries(CBarTimeSeriesDE *timeseries)
   {
    CArrayObj *list=(timeseries!=NULL ? timeseries.GetListSeries() : NULL);
    for(int j=0;list!=NULL && j<list.Total();j++)
      {
       CBarSeriesDE *series=list.At(j);
       if(series!=NULL && timeseries.RefreshSeries(series.Timeframe()))   // the series judges its new bars itself
-         this.SendEvents_BarTimeSeriesCollection(timeseries);
+         this.SendEvents(timeseries);
      }
   }
  //+------------------------------------------------------------------+
  //| The events of the series of a symbol go to the chart once         |
  //+------------------------------------------------------------------+
- void CBarTimeSeriesCollection::SendEvents_BarTimeSeriesCollection(CBarTimeSeriesDE *timeseries)
+ void CBarTimeSeriesCollection::SendEvents(CBarTimeSeriesDE *timeseries)
   {
    CArrayObj *events=(timeseries!=NULL && timeseries.IsEvent() ? timeseries.GetListEvents() : NULL);
    for(int e=0;events!=NULL && e<events.Total();e++)
@@ -723,14 +671,14 @@
       long types[];
       int  sides[];
       if(series.GetBarControl().RowsOfBar(bar,id,types,sides)>0)
-         this.Alert_BarTimeSeriesCollection(series.Symbol(),series.Timeframe(),bar,types,sides);
+         this.AlertOnPair(series.Symbol(),series.Timeframe(),bar,types,sides);
      }
   }
  //+------------------------------------------------------------------+
  //| The rows of the table to RAM: every pair, one pair (each series   |
  //| does its own, as SyncData)                                        |
  //+------------------------------------------------------------------+
- bool CBarTimeSeriesCollection::SyncDataFromDB(void)
+ bool CBarTimeSeriesCollection::ReadDataFromDB(void)
   {
    bool done=true;
    for(int i=0;i<this.m_list_timeseries.Total();i++)
@@ -738,24 +686,24 @@
       CBarTimeSeriesDE *timeseries=this.m_list_timeseries.At(i);
       if(timeseries==NULL)
          continue;
-      done=timeseries.SyncDataFromDB() && done;
-      this.SendEvents_BarTimeSeriesCollection(timeseries);
+      done=timeseries.ReadDataFromDB() && done;
+      this.SendEvents(timeseries);
      }
    return done;
   }
- bool CBarTimeSeriesCollection::SyncDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CBarTimeSeriesCollection::ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    CBarTimeSeriesDE *timeseries=this.GetTimeseries(symbol);
    if(timeseries==NULL)
       return false;
-   const bool done=timeseries.SyncDataFromDB(timeframe);
-   this.SendEvents_BarTimeSeriesCollection(timeseries);
+   const bool done=timeseries.ReadDataFromDB(timeframe);
+   this.SendEvents(timeseries);
    return done;
   }
  //+------------------------------------------------------------------+
  //| What waits in RAM goes to the database (each series does its own) |
  //+------------------------------------------------------------------+
- bool CBarTimeSeriesCollection::SyncDataToDB(void)
+ bool CBarTimeSeriesCollection::UpdateDataToDB(void)
   {
    bool done=true;
    for(int i=0;i<this.m_list_timeseries.Total();i++)
@@ -763,157 +711,19 @@
       CBarTimeSeriesDE *timeseries=this.m_list_timeseries.At(i);
       if(timeseries==NULL)
          continue;
-      done=timeseries.SyncDataToDB() && done;
-      this.SendEvents_BarTimeSeriesCollection(timeseries);
+      done=timeseries.UpdateDataToDB() && done;
+      this.SendEvents(timeseries);
      }
    return done;
   }
- //+------------------------------------------------------------------+
- //| The library judges the new bars of the pairs of Setting_SymbolTF |
- //| (the first chunk of a pair that has no progress yet too). A beat |
- //| of the timer does BAR_UPDATE_BUDGET_MS of it at most              |
- //+------------------------------------------------------------------+
-      //  void CBarTimeSeriesCollection::UpdateTable_BarTimeSeriesCollection(void)
-      //   {
-      //    if(m_db==INVALID_HANDLE || this.m_SymbolsCollection==NULL || this.m_SymbolTFManager==NULL || this.m_SyncManager==NULL)
-      //       return;
-      //    ulong started=::GetTickCount64();
-      //    this.Reset_BarTimeSeriesCollection(started);
-      //    string symbols[];
-      //    ENUM_TIMEFRAMES timeframes[];
-      //    int total=this.m_SymbolTFManager.Pairs(symbols,timeframes);
-      //    ENUM_BAR_INFOR_TYPE found_types[];
-      //    int found_total=this.m_BarControl.Types(found_types);
-      //    for(int i=0;i<total;i++)
-      //      {
-      //       datetime last_closed=::iTime(symbols[i],timeframes[i],1);
-      //       if(last_closed==0)
-      //          continue;
-      //       //--- The same newest closed bar as the last time: nothing to judge, nothing is asked to the table
-      //       string key=symbols[i]+" "+(string)(int)timeframes[i];
-      //       int slot=-1;
-      //       for(int k=0;k<::ArraySize(this.m_pair_key) && slot<0;k++)
-      //          if(this.m_pair_key[k]==key)
-      //             slot=k;
-      //       if(slot>=0 && this.m_pair_done[slot]==last_closed)
-      //          continue;
-      //       long symbol_id=this.SymbolID(symbols[i]);
-      //       if(symbol_id==0)
-      //          continue;
-      //       if(this.GetSeries(symbols[i],timeframes[i])==NULL && !this.CreateSeries(symbols[i],timeframes[i]))
-      //          continue;
-      //       CBarSeriesDE *series=this.GetSeries(symbols[i],timeframes[i]);
-      //       CBar *newest=(series!=NULL ? series.GetBar((uint)1) : NULL);
-      //       if(newest==NULL || newest.Time()!=last_closed)
-      //          continue;   // the series has not the newest closed bar yet (Refresh adds it)
-      //       if(slot<0)
-      //         {
-      //          slot=::ArraySize(this.m_pair_key);
-      //          ::ArrayResize(this.m_pair_key,slot+1);
-      //          ::ArrayResize(this.m_pair_done,slot+1);
-      //          ::ArrayResize(this.m_pair_bars,slot+1);
-      //          this.m_pair_key[slot]=key;
-      //          this.m_pair_done[slot]=0;
-      //          this.m_pair_bars[slot]=0;
-      //         }
-      //       bool finished=true;   // every type of the pair is judged to the newest closed bar
-      //       bool any_progress=false;   // a type of the pair has the row of progress of Python: the first chunk is there
-      //       long found_times[];   // the candles that got something new for the pair in this beat: each one is told (SERIES_EVENT_PATTERN)
-      //       long alert_types[];   // the types that found something on the newest closed bar, and the sides (1 Buy, 2 Sell)
-      //       int  alert_sides[];
-      //       //--- The bars first (what is judged is on them), then the types of information. The bars of the start are Python's: the library writes only the new ones,
-      //       //--- the bars after the newest one the table holds (no bar in the table: Python has not made the first chunk of the pair yet, the library waits for it).
-      //       //--- EA_STORE_BARS false: no bar is kept, the progress of Setting_Sync below tells that Python made the first chunk
-      //       if(EA_STORE_BARS && this.m_pair_bars[slot]!=last_closed)
-      //         {
-      //          datetime in_table=this.ReadNewestBar_BarTimeSeriesCollection(symbol_id,timeframes[i]);
-      //          if(in_table==0)
-      //             finished=false;
-      //          else if(in_table>=last_closed)
-      //             this.m_pair_bars[slot]=last_closed;   // the table has the newest closed bar already
-      //          else if(this.AddBars_BarTimeSeriesCollection(symbol_id,timeframes[i],series.GetList(),in_table))
-      //             this.m_pair_bars[slot]=last_closed;
-      //          else
-      //             finished=false;   // the database is busy (Python writes): the next beat tries again
-      //         }
-      //       long types[],last_bars[];
-      //       this.m_SyncManager.Ranges_SyncManager(this.m_type,symbol_id,timeframes[i],types,last_bars);
-      //       for(int t=0;t<found_total && finished;t++)
-      //         {
-      //          if(::GetTickCount64()-started>BAR_UPDATE_BUDGET_MS)
-      //            {
-      //             finished=false;
-      //             break;
-      //            }
-      //          datetime since=0;
-      //          bool has_progress=false;
-      //          for(int k=0;k<::ArraySize(types);k++)
-      //             if(types[k]==(long)found_types[t])
-      //               {
-      //                since=(datetime)last_bars[k];
-      //                has_progress=true;
-      //               }
-      //          any_progress=any_progress || has_progress;
-      //          if(!has_progress || since>=last_closed)
-      //             continue;   // no row of progress: the history of the start is Python's, the library goes on from where it stopped
-      //          CBar *oldest=series.GetList().At(0);
-      //          if(oldest==NULL || oldest.Time()>since)
-      //            {
-      //             finished=false;   // what is missing is more than the series holds: Python fills it (it is behind), the next beat looks again
-      //             continue;
-      //            }
-      //          this.m_BarControl.Find(found_types[t],series.GetList(),since);
-      //          long row_times[],row_sides[];
-      //          this.m_BarControl.RowsTo(row_times,row_sides);
-      //          if(!this.AddRows_BarTimeSeriesCollection((long)found_types[t],symbols[i],symbol_id,timeframes[i],last_closed))
-      //             finished=false;
-      //          else
-      //            {
-      //             AddFoundTimes(found_times,row_times);
-      //             int bits=NewSidesOfBar(row_times,row_sides,last_closed,(long)SIGNAL_DIRECTION_BUY);   // written: what is new on the newest bar can be told
-      //             if(bits!=0)
-      //               {
-      //                int n=::ArraySize(alert_types);
-      //                ::ArrayResize(alert_types,n+1);
-      //                ::ArrayResize(alert_sides,n+1);
-      //                alert_types[n]=(long)found_types[t];
-      //                alert_sides[n]=bits;
-      //               }
-      //            }
-      //         }
-      //       if(found_total>0 && !any_progress)
-      //          finished=false;   // Python has not made the first chunk of any type of the pair: the library looks again at the next beat, it does not wait for the next bar
-      //       if(finished && any_progress && this.m_pair_done[slot]==0)
-      //         {
-      //          ::ArrayResize(found_times,1);
-      //          found_times[0]=SERIES_EVENTS_PATTERN_ALL;   // the library takes the pair over from Python (the Current worker): the markers of the chart are made once
-      //         }
-      //       if(::ArraySize(found_times)>SERIES_EVENTS_PATTERN_MAX)
-      //         {
-      //          ::ArrayResize(found_times,1);
-      //          found_times[0]=SERIES_EVENTS_PATTERN_ALL;   // too many to tell one by one: the markers of the chart are made again
-      //         }
-      //       for(int k=0;k<::ArraySize(found_times);k++)
-      //         {
-      //          ::EventChartCustom(::ChartID(),(ushort)SERIES_EVENTS_PATTERN,found_times[k],(double)timeframes[i],symbols[i]);
-      //          this.m_is_event=this.EventAdd((ushort)SERIES_EVENTS_PATTERN,found_times[k],(double)timeframes[i],symbols[i]) || this.m_is_event;
-      //         }
-      //       if(::ArraySize(alert_types)>0)
-      //          this.Alert_BarTimeSeriesCollection(symbols[i],timeframes[i],last_closed,alert_types,alert_sides);
-      //       if(finished)
-      //          this.m_pair_done[slot]=last_closed;
-      //       if(::GetTickCount64()-started>BAR_UPDATE_BUDGET_MS)
-      //          return;   // this beat has had its share: the rest is done at the next ones
-      //      }
-      //   }
  //+------------------------------------------------------------------+
  //| The rhythm of the EA: what waits from the beats before            |
  //+------------------------------------------------------------------+
  void CBarTimeSeriesCollection::OnTimerEvent(void)
   {
-   if(m_db==INVALID_HANDLE || this.m_SyncManager==NULL)
+   if(this.m_SyncManager==NULL)
       return;
-   this.Reset_BarTimeSeriesCollection(::GetTickCount64());   // a type whose parameter changed (SETUP_CHANGED): a step of its rows in the table, every pair
+   this.Reset(::GetTickCount64());   // a type whose parameter changed (SETUP_CHANGED): a step of its rows in the table, every pair
   }
  //+------------------------------------------------------------------+
  //| A parameter of a type changed: the series drop its rows in RAM    |
@@ -923,12 +733,12 @@
   {
    //--- Setting_SymbolTF changed (CSymbolTFManager told it, lparam the TF, sparam the symbol): who judges the pair changes with it
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
-      return this.AddSeries_BarTimeSeriesCollection(sparam,(ENUM_TIMEFRAMES)lparam);
+      return this.Create_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
-      return this.DeleteSeries_BarTimeSeriesCollection(sparam,(ENUM_TIMEFRAMES)lparam);
+      return this.Delete_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
    //--- Python wrote the first chunk of every pair of Setting_SymbolTF (CPythonBridge told it): what is in the table goes to RAM
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
-      return this.SyncDataFromDB();
+      return this.ReadDataFromDB();
    if(id!=CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED)
       return false;
    for(int i=0;i<this.m_list_timeseries.Total();i++)
@@ -944,7 +754,7 @@
          series.RelayEvents();
         }
       if(timeseries!=NULL && timeseries.RelayEvents())
-         this.SendEvents_BarTimeSeriesCollection(timeseries);
+         this.SendEvents(timeseries);
      }
    for(int k=0;k<::ArraySize(this.m_reset_types);k++)
       if(this.m_reset_types[k]==lparam)
@@ -958,14 +768,16 @@
  //| A step of the delete of the rows of the type that waits: the pair |
  //| is the first one that has the mark of the type (CSyncManager)     |
  //+------------------------------------------------------------------+
- void CBarTimeSeriesCollection::Reset_BarTimeSeriesCollection(const ulong started)
+ void CBarTimeSeriesCollection::Reset(const ulong started)
   {
    while(::ArraySize(this.m_reset_types)>0)
      {
-      if(!this.m_SyncManager.ResetStep_SyncManager(m_db,"BarTimeSeriesCollection","type_infor",this.m_object_type,this.m_reset_types[0],started,BAR_UPDATE_BUDGET_MS))
+      if(!this.m_SyncManager.ResetStep("BarTimeSeriesCollection","type_infor",this.m_object_type,this.m_reset_types[0],started,BAR_UPDATE_BUDGET_MS))
          return;
       ::Print("Complete ",__FUNCTION__," > the rows and the marks of the type ",this.m_reset_types[0]," are gone: Python judges it again");
       ::ArrayRemove(this.m_reset_types,0,1);
+      if(::ArraySize(this.m_reset_types)==0)
+         ::EventChartCustom(::ChartID(),(ushort)BAR_INFORMATION_MANAGER_EVENT_RESET_DONE,0,0.0,"");   // nothing left to delete: CPythonBridge tells the Current worker
      }
   }
  //+------------------------------------------------------------------+
@@ -973,18 +785,18 @@
  //| is on and the pair has the same alert on (Setting_SymbolTF); one  |
  //| line for all of them                                              |
  //+------------------------------------------------------------------+
- void CBarTimeSeriesCollection::Alert_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &types[],const int &sides[])
+ void CBarTimeSeriesCollection::AlertOnPair(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar,const long &types[],const int &sides[])
   {
    if(this.m_BarInformationManager==NULL || this.m_SymbolTFManager==NULL)
       return;
-   const bool pair_sound=this.m_SymbolTFManager.SoundAlert(symbol,timeframe);
-   const bool pair_message=this.m_SymbolTFManager.MessageAlert(symbol,timeframe);
+   const bool pair_sound=this.m_SymbolTFManager.Read_RAM(symbol,timeframe,"sound_alert");
+   const bool pair_message=this.m_SymbolTFManager.Read_RAM(symbol,timeframe,"message_alert");
    if(!pair_sound && !pair_message)
       return;
    long alert_types[];
    string alert_names[];
    bool type_sound[],type_message[];
-   int total=this.m_BarInformationManager.AlertTypes(alert_types,alert_names,type_sound,type_message);
+   int total=this.m_BarInformationManager.Read_RAM(alert_types,alert_names,type_sound,type_message);
    string names[];
    int told[];
    bool sound=false,message=false;
@@ -1003,7 +815,7 @@
             names[n]=alert_names[k];
             told[n]=sides[i];
            }
-   AlertNewOnPair(symbol,this.m_SymbolTFManager.TimeframeName(timeframe),bar,names,told,sound,message);
+   AlertNewOnPair(symbol,this.m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)timeframe),bar,names,told,sound,message);
   }
 #endif // CBARTIMESERIESCOLLECTION_MQH_IMPLEMENTATION
 #endif // __BARTIMESERIESCOLLECTION_MQH__

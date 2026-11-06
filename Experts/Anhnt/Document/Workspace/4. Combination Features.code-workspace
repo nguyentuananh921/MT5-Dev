@@ -42,8 +42,8 @@
 	],
 	"settings": {
 		"clangd.fallbackFlags": [
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib V4",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib V4/Include",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Stanley Kimathi Kibaara/Market Structure Framework",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Stanley Kimathi Kibaara/Market Structure Framework/Include",
 			"-xc++",
 			"-std=c++17",
 			"-D__MQL__",
@@ -60,8 +60,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Stanley Kimathi Kibaara/Market Structure Framework",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Stanley Kimathi Kibaara/Market Structure Framework/Include"
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib V4",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Vendors/Anhnt/Library/4. Combination Lib V4/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

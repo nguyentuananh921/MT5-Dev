@@ -40,8 +40,7 @@
                                    string symbol,
                                    ENUM_TIMEFRAMES timeframe,
                                    ENUM_INDICATOR_STATUS status,
-                                   ENUM_INDICATOR_GROUP group,
-                                   string name,
+                                   CIndicatorTemplateManager *manager,
                                    string shortname,
                                    MqlParam &mql_params[]);
    public:
@@ -167,14 +166,17 @@
                             string symbol,
                             ENUM_TIMEFRAMES timeframe,
                             ENUM_INDICATOR_STATUS status,
-                            ENUM_INDICATOR_GROUP group,
-                            string name,
+                            CIndicatorTemplateManager *manager,
                             string shortname,
                             MqlParam &mql_params[])
   {
    //--- Set the object type
     this.m_object_type=OBJECT_DE_TYPE_INDICATOR;
-    this.m_IndicatorTemplateManager=NULL;
+    this.m_IndicatorTemplateManager=manager;
+   //--- The group and the name of the type
+    SIndicatorsRow catalog;
+    manager.Read_RAM(ind_type,catalog);
+    string name=catalog.name;
    //--- Fill in the array of object parameters with data from the array passed to constructor
     int count=::ArrayResize(this.m_mql_param,::ArraySize(mql_params));
     for(int i=0;i<count;i++)
@@ -186,7 +188,7 @@
    //--- Save integer properties
     this.m_long_prop[INDICATOR_PROP_STATUS]                     = status;
     this.m_long_prop[INDICATOR_PROP_TYPE]                       = ind_type;
-    this.m_long_prop[INDICATOR_PROP_GROUP]                      = group;
+    this.m_long_prop[INDICATOR_PROP_GROUP]                      = catalog.group;
     this.m_long_prop[INDICATOR_PROP_TIMEFRAME]                  = timeframe;
     this.m_long_prop[INDICATOR_PROP_ID]                         = WRONG_VALUE;
    //--- Save real properties
@@ -380,7 +382,7 @@
       ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
       return "";
      }
-   return this.m_IndicatorTemplateManager.StandardIndicatorParamDescription(this.TypeIndicator(),index,this.m_mql_param[index]);
+   return this.m_IndicatorTemplateManager.Read_RAM(this.TypeIndicator(),index,this.m_mql_param[index]);
   }
  //+------------------------------------------------------------------+
  //| Display parameter description of indicator object in the journal |

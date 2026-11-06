@@ -14,7 +14,6 @@
  #include "..\Bar\Bar.mqh"
  #include "BarControl.mqh"
  #include "..\Bases\BaseObjExt.mqh"
- #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Services\DELib\CommonDELib.mqh"
  #include "..\..\Collections\Settings\SyncManager.mqh"
  #ifndef EA_STORE_BARS
@@ -43,27 +42,25 @@
     datetime          m_bars_in_table;                                   // RAM only: the newest closed bar whose bars are in the table BarSeriesDE
     CBarControl       m_BarControl;                                      // What is found on the bars of this series: it judges, keeps the rows and writes them (V2: m_patterns_control)
    //Add db in V4
-    int               m_db;                                              // CBarTimeSeriesCollection holds it: the file of the account
-    long              m_symbol_id;                                       // The id of the symbol (symbols)
+    CBarInformationManager *m_BarInformationManager;                     // The EA holds it: its tables of the account
    //--- Set the very first date by a period symbol at the moment and the new time of opening the last bar by a period symbol
     void              SetServerDate(void);
    //--- The newest bar of the pair in BarSeriesDE (0: Python has not taken its first chunk yet), and the closed bars after from_time written there
-    datetime          ReadNewestBar_BarSeriesDE(void);
-    bool              AddBars_BarSeriesDE(const datetime from_time);
+    datetime          ReadNewestBar(void);
+    bool              AddBars(const datetime from_time);
    public:
     CArrayObj        *GetList(void)                                      { return &m_list_Table_BarSeriesDE;         }
     CNewBarObj       *GetNewBarObj(void)                                 { return &this.m_new_bar_obj;    }
    //--- What is found on the bars (the rows, what waits, what the view reads): CBarControl (V2: GetPatternsCtrlObj)
     CBarControl      *GetBarControl(void)                                { return &this.m_BarControl;     }
-    long              SymbolID(void)                               const { return this.m_symbol_id;           }
    //--- What the series and its control need: the file of the account, the id of the symbol, the collection, the managers (CBarTimeSeriesCollection::CreateSeries)
-    void              SetDatabase(const int db,const long symbol_id,const long sync_object,CSyncManager *sync,CBarInformationManager *information);
-   //--- The rows of the table of the bars the series holds go to RAM (CBarControl::SyncDataFromDB: as Create for the bars of MT5, once at the creation,
+    void              SetDatabase(const long sync_object,CSyncManager *sync,CBarInformationManager *information);
+   //--- The rows of the table of the bars the series holds go to RAM (CBarControl::ReadDataFromDB: as Create for the bars of MT5, once at the creation,
    //--- then when Python tells it wrote more: PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE). Event: SERIES_EVENTS_PATTERN_ALL
-    bool              SyncDataFromDB(void);
-   //--- The new closed bars go to BarSeriesDE, then the rows waiting and their progress (CBarControl::SyncDataToDB). True when nothing waits.
+    bool              ReadDataFromDB(void);
+   //--- The new closed bars go to BarSeriesDE, then the rows waiting and their progress (CBarControl::UpdateDataToDB). True when nothing waits.
    //--- When the pair is handed over to Python Live (it leaves Setting_SymbolTF) and at OnDeinit. No event: the view sees the same (the table UNION RAM)
-    bool              SyncDataToDB(void);
+    bool              UpdateDataToDB(void);
    //--- The events of the control go to the list of this object (the parent reads it): true when it has any
     bool              RelayEvents(void);
    //--- Set the (1) symbol, (2) timeframe, (3) symbol and timeframe
@@ -104,7 +101,7 @@
  //| Constructor (the specified symbol and timeframe)                 |
  //+------------------------------------------------------------------+
  CBarSeriesDE::CBarSeriesDE(const string symbol,const ENUM_TIMEFRAMES timeframe,const uint required=0) : m_timeframe(PERIOD_CURRENT),m_firstdate(0),m_lastbar_date(0),m_bars(0),m_amount(0),m_required(0),m_sync(false),m_bars_in_table(0),
-                                                                                                    m_db(INVALID_HANDLE),m_symbol_id(0)
+                                                                                                    m_BarInformationManager(NULL)
   {
    this.m_object_type=OBJECT_DE_TYPE_SERIES_PERIOD;
    this.m_list_Table_BarSeriesDE.Clear();
@@ -115,19 +112,18 @@
  //+------------------------------------------------------------------+
  //| What the series needs to judge its bars and to write the rows     |
  //+------------------------------------------------------------------+
- void CBarSeriesDE::SetDatabase(const int db,const long symbol_id,const long sync_object,CSyncManager *sync,CBarInformationManager *information)
+ void CBarSeriesDE::SetDatabase(const long sync_object,CSyncManager *sync,CBarInformationManager *information)
   {
-   this.m_db=db;
-   this.m_symbol_id=symbol_id;
-   this.m_BarControl.SetDatabase(&this.m_list_Table_BarSeriesDE,this.m_symbol,this.m_timeframe,db,symbol_id,sync_object,sync,information);
+   this.m_BarInformationManager=information;
+   this.m_BarControl.SetDatabase(&this.m_list_Table_BarSeriesDE,this.m_symbol,this.m_timeframe,sync_object,sync,information);
   }
  //+------------------------------------------------------------------+
  //| The rows of the bars the series holds go to RAM: its control does |
  //| it (as SyncData of DoEasy goes down the chain), the series tells   |
  //+------------------------------------------------------------------+
- bool CBarSeriesDE::SyncDataFromDB(void)
+ bool CBarSeriesDE::ReadDataFromDB(void)
   {
-   const bool done=this.m_BarControl.SyncDataFromDB();
+   const bool done=this.m_BarControl.ReadDataFromDB();
    this.RelayEvents();
    return done;
   }
@@ -151,82 +147,65 @@
  //+------------------------------------------------------------------+
  //| The newest bar of the pair that BarSeriesDE holds                 |
  //+------------------------------------------------------------------+
- datetime CBarSeriesDE::ReadNewestBar_BarSeriesDE(void)
+ datetime CBarSeriesDE::ReadNewestBar(void)
   {
-   int request=LibDatabase_Prepare(this.m_db,"SELECT COALESCE(MAX(bar_time), 0) FROM BarSeriesDE WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe);
-   if(request==INVALID_HANDLE)
-      return 0;
-   long newest=0;
-   if(::DatabaseRead(request))
-      ::DatabaseColumnLong(request,0,newest);
-   ::DatabaseFinalize(request);
-   return (datetime)newest;
+   // New In V4 after implemenation CDatabaseService
+   return (this.m_BarInformationManager!=NULL ? this.m_BarInformationManager.ReadDataFromDB(this.m_symbol,this.m_timeframe) : 0);
   }
  //+------------------------------------------------------------------+
  //| The closed bars after from_time go to BarSeriesDE                 |
  //+------------------------------------------------------------------+
- bool CBarSeriesDE::AddBars_BarSeriesDE(const datetime from_time)
+ bool CBarSeriesDE::AddBars(const datetime from_time)
   {
    if(this.m_list_Table_BarSeriesDE.Total()==0)
       return false;
    datetime forming=0;
    if(!::SeriesInfoInteger(this.m_symbol,this.m_timeframe,SERIES_LASTBAR_DATE,forming))
       return false;
-   string who="AddBars BarSeriesDE (symbol_id "+(string)this.m_symbol_id+", tf_enum "+(string)(int)this.m_timeframe+")";
-   LibDatabase_AskToWrite();   // the first place before the first try: the workers of Python let this write go first
-   if(!::DatabaseTransactionBegin(this.m_db))
-     {
-      LibDatabase_WriteRefused(who);
-      return false;
-     }
-   bool done=true;
-   for(int i=0;i<this.m_list_Table_BarSeriesDE.Total() && done;i++)
+   // New In V4 after implemenation CDatabaseService
+   MqlRates rates[];
+   int digits=0;
+   for(int i=0;i<this.m_list_Table_BarSeriesDE.Total();i++)
      {
       CBar *bar=this.m_list_Table_BarSeriesDE.At(i);
       if(bar==NULL || bar.Time()<=from_time || bar.Time()>=forming)
          continue;   // before what is there, or the forming bar
-      int digits=bar.Digits();
-      done=::DatabaseExecute(this.m_db,"INSERT OR IGNORE INTO BarSeriesDE (symbol_id, tf_enum, bar_time, open, high, low, close, tick_volume, spread, real_volume) VALUES ("+(string)this.m_symbol_id+", "+
-                                       (string)(int)this.m_timeframe+", "+(string)(long)bar.Time()+", "+::DoubleToString(bar.Open(),digits)+", "+::DoubleToString(bar.High(),digits)+", "+
-                                       ::DoubleToString(bar.Low(),digits)+", "+::DoubleToString(bar.Close(),digits)+", "+(string)bar.VolumeTick()+", "+(string)bar.Spread()+", "+(string)bar.VolumeReal()+")");
+      int n=::ArraySize(rates);
+      ::ArrayResize(rates,n+1,100);
+      rates[n].time=bar.Time();
+      rates[n].open=bar.Open();
+      rates[n].high=bar.High();
+      rates[n].low=bar.Low();
+      rates[n].close=bar.Close();
+      rates[n].tick_volume=bar.VolumeTick();
+      rates[n].spread=bar.Spread();
+      rates[n].real_volume=bar.VolumeReal();
+      digits=bar.Digits();
      }
-   if(!done)
-     {
-      ::DatabaseTransactionRollback(this.m_db);
-      LibDatabase_WriteRefused(who);
-      ::Print("MY DEBUG    CBarSeriesDE::AddBars_BarSeriesDE the bars are not written, error ",::GetLastError());
-      return false;
-     }
-   if(!::DatabaseTransactionCommit(this.m_db))
-     {
-      LibDatabase_WriteRefused(who);
-      return false;
-     }
-   LibDatabase_WriteDone(who);
-   return true;
+   return (this.m_BarInformationManager!=NULL && this.m_BarInformationManager.UpdateDataToDB(this.m_symbol,this.m_timeframe,rates,digits));
   }
  //+------------------------------------------------------------------+
  //| The new bars, the rows waiting, then their progress go to the DB  |
  //+------------------------------------------------------------------+
- bool CBarSeriesDE::SyncDataToDB(void)
+ bool CBarSeriesDE::UpdateDataToDB(void)
   {
-   if(this.m_db==INVALID_HANDLE || this.m_symbol_id==0)
+   if(this.m_BarInformationManager==NULL)
       return false;
    //--- The new closed bars first. The bars of the start are Python's: only the bars after the newest one the table holds (none: Python has not made the first chunk)
    datetime last_closed=::iTime(this.m_symbol,this.m_timeframe,1);
    if(EA_STORE_BARS && last_closed!=0 && this.m_bars_in_table!=last_closed)
      {
-      datetime in_table=this.ReadNewestBar_BarSeriesDE();
+      datetime in_table=this.ReadNewestBar();
       if(in_table!=0)
         {
-         if(in_table>=last_closed || this.AddBars_BarSeriesDE(in_table))
+         if(in_table>=last_closed || this.AddBars(in_table))
             this.m_bars_in_table=last_closed;
          else
             return false;   // the database is busy: the next call tries again
         }
      }
    //--- The rows waiting and their progress: the control's
-   return this.m_BarControl.SyncDataToDB();
+   return this.m_BarControl.UpdateDataToDB();
   }
  int CBarSeriesDE::Compare(const CObject *node,const int mode=0) const
   {
@@ -368,69 +347,6 @@
    this.m_list_Table_BarSeriesDE.Sort(SORT_BY_BAR_TIME);   // rates[] came the newest first and Add() drops the sort: the oldest first again
    return this.m_list_Table_BarSeriesDE.Total();
   }
- //+------------------------------------------------------------------+
- //| Update the timeseries list: the bars that opened since the last  |
- //| time are added, the newest bar gets its prices. True when a new  |
- //| bar was added                                                    |
- //+------------------------------------------------------------------+
-//  void CBarSeriesDE::Refresh(void)
-//   {
-//    this.RefreshSeries();
-//   }
-//  bool CBarSeriesDE::RefreshSeries(void)
-//   {
-//    bool new_bar=false;
-//    if(!this.m_available)
-//       return false;
-//   //--- The history is not synchronized with the server yet: skip this cycle, the next one retries
-//    if(!::SeriesInfoInteger(this.m_symbol,this.m_timeframe,SERIES_SYNCHRONIZED))
-//       return false;
-//    this.m_list_Table_BarSeriesDE.Sort(SORT_BY_BAR_TIME);
-//    datetime own_bar0=::iTime(this.m_symbol,this.m_timeframe,0);
-//    if(own_bar0>0 && this.m_new_bar_obj.IsNewBarManual())
-//      {
-//       int      period_sec=::PeriodSeconds(this.m_timeframe);
-//       CBar    *last_bar=this.m_list_Table_BarSeriesDE.At(this.m_list_Table_BarSeriesDE.Total()-1);   // the list is sorted by time: the last one is the newest
-//      //--- Read the bar that just closed again: its last snapshot came from the forming bar
-//       if(last_bar!=NULL)
-//         {
-//          MqlRates fresh_check[1];
-//          if(::CopyRates(this.m_symbol,this.m_timeframe,1,1,fresh_check)==1 && fresh_check[0].time==last_bar.Time())
-//             last_bar.SetProperties(fresh_check[0]);
-//         }
-//      //--- Every bar between the newest one held and bar 0 is added: the list has no gaps
-//       datetime t=(last_bar!=NULL ? last_bar.Time() : own_bar0-period_sec);
-//       for(t=t+period_sec; t<=own_bar0; t+=period_sec)
-//         {
-//          if(::iBarShift(this.m_symbol,this.m_timeframe,t,true)<0)
-//             continue;   // no bar opened at this time (market closed)
-//          MqlRates bar_rates[1];
-//          if(::CopyRates(this.m_symbol,this.m_timeframe,t,1,bar_rates)!=1 || bar_rates[0].time!=t)
-//             continue;
-//          CBar *new_bar=new CBar(this.m_symbol,this.m_timeframe,bar_rates[0],(int)::SymbolInfoInteger(this.m_symbol,SYMBOL_DIGITS));
-//          if(new_bar==NULL)
-//             continue;
-//          if(!this.m_list_Table_BarSeriesDE.InsertSort(new_bar))
-//            {
-//             delete new_bar;
-//             continue;
-//            }
-//          if(this.m_list_Table_BarSeriesDE.Total()>(int)this.m_required)
-//             this.m_list_Table_BarSeriesDE.Delete(0);
-//         }
-//       this.SetServerDate();
-//       this.m_new_bar_obj.SaveNewBarTime();
-//       new_bar=true;
-//      }
-//   //--- The newest bar: its prices as they are now
-//    CBar *bar=this.m_list_Table_BarSeriesDE.At(this.m_list_Table_BarSeriesDE.Total()-1);
-//    if(bar==NULL)
-//       return new_bar;
-//    MqlRates rates[1];
-//    if(::CopyRates(this.m_symbol,this.m_timeframe,0,1,rates)==1)
-//       bar.SetProperties(rates[0]);
-//    return new_bar;
-//   }
 
  bool CBarSeriesDE::RefreshSeries(void)
   {
@@ -532,7 +448,7 @@
      }
    //--- The new bars (or the ones not judged yet: Python had not its first chunk) are judged: the rows stay in RAM (the view reads the table UNION RAM).
    //--- They are written when the pair is handed over (it leaves Setting_SymbolTF: Python Live goes on) and at OnDeinit
-   if(this.m_db!=INVALID_HANDLE && (new_bar || this.m_BarControl.JudgedTo()!=::iTime(this.m_symbol,this.m_timeframe,1)))
+   if(this.m_BarInformationManager!=NULL && (new_bar || this.m_BarControl.JudgedTo()!=::iTime(this.m_symbol,this.m_timeframe,1)))
      {
       this.m_BarControl.Calculate();
       this.RelayEvents();

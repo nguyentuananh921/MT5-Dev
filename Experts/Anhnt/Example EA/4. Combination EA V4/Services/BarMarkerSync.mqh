@@ -45,8 +45,8 @@
    //--- The oldest and the newest bar the chart shows now (false while the chart has not its bars yet)
     bool                       VisibleRange(datetime &from_time,datetime &to_time) const;
    //--- The rows of the table go to the list: the types of information, then the signals of the indicator templates
-    int                        CollectTypes(const long symbol_id,const datetime from_time,const datetime to_time);
-    int                        CollectIndicators(const long symbol_id,const datetime from_time,const datetime to_time);
+    int                        CollectTypes(const string symbol,const datetime from_time,const datetime to_time);
+    int                        CollectIndicators(const string symbol,const datetime from_time,const datetime to_time);
    public:
                                CBarMarkerSync(void) : m_GraphElementsCollection(NULL),m_BarTimeSeriesCollection(NULL),m_SignalsCollection(NULL),m_BarInformationManager(NULL),
                                                       m_IndicatorTemplateManager(NULL),m_arrange_pending(false),m_from_time(0),m_to_time(0) { }
@@ -55,11 +55,11 @@
    //--- The user changed what is shown: the markers are drawn again
     void                       OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
 
-    void                       DeleteMarkers_BarTimeSeriesCollection(void);   
+    void                       DeleteMarkers(void);   
    //--- Every beat of the timer: the markers follow the chart when it moved or zoomed (one Arrange for all the chart events since the last beat)
     void                       ArrangeIfPending(void);
    //--- The markers of the chart: only the types, templates and sides the user wants to see
-    void                       SyncMarkers_BarTimeSeriesCollection(const datetime time=0);   // time: only the markers of that candle (an event told it), 0: the whole chart
+    void                       SyncMarkers(const datetime time=0);   // time: only the markers of that candle (an event told it), 0: the whole chart
    
   };
 #endif // CBARMARKERSYNC_MQH_DECLARATION
@@ -122,10 +122,10 @@
  //+------------------------------------------------------------------+
  //| The types of information: the sides the user wants to see         |
  //+------------------------------------------------------------------+
- int CBarMarkerSync::CollectTypes(const long symbol_id,const datetime from_time,const datetime to_time)
+ int CBarMarkerSync::CollectTypes(const string symbol,const datetime from_time,const datetime to_time)
   {
    long buy_types[],sell_types[];
-   this.m_BarInformationManager.ShownTypes(buy_types,sell_types);
+   this.m_BarInformationManager.Read_RAM(buy_types,sell_types);
    long types[],times[],sides[];
    CBarSeriesDE *series=this.m_BarTimeSeriesCollection.GetSeries(::Symbol(),(ENUM_TIMEFRAMES)::Period());   // the chart pair is always a pair of Setting_SymbolTF: its control reads the table UNION RAM
    int rows=(series!=NULL ? series.GetBarControl().ReadTypes(from_time,to_time,buy_types,sell_types,types,times,sides) : 0);
@@ -137,12 +137,12 @@
  //| The signals of the indicator templates: the Buy and the Sell flag |
  //| of a template say which of its signals are shown                  |
  //+------------------------------------------------------------------+
- int CBarMarkerSync::CollectIndicators(const long symbol_id,const datetime from_time,const datetime to_time)
+ int CBarMarkerSync::CollectIndicators(const string symbol,const datetime from_time,const datetime to_time)
   {
    long buy_templates[],sell_templates[];
-   this.m_IndicatorTemplateManager.ShownTemplates(buy_templates,sell_templates);
+   this.m_IndicatorTemplateManager.Read_RAM(buy_templates,sell_templates);
    long times[],sides[];
-   int rows=this.m_SignalsCollection.Read_SignalsCollection(symbol_id,(ENUM_TIMEFRAMES)::Period(),from_time,to_time,buy_templates,sell_templates,times,sides);
+   int rows=this.m_SignalsCollection.ReadDataFromDB(symbol,(ENUM_TIMEFRAMES)::Period(),from_time,to_time,buy_templates,sell_templates,times,sides);
    for(int i=0;i<rows;i++)
       this.Collect((datetime)times[i],sides[i]==SIGNAL_DIRECTION_BUY,COLLECTION_SIGNALS_ID);
    return rows;
@@ -165,16 +165,10 @@
  //| ones that came into view are made, the ones that left go. An event |
  //| tells one candle: only its markers are read and compared           |
  //+------------------------------------------------------------------+
- void CBarMarkerSync::SyncMarkers_BarTimeSeriesCollection(const datetime time=0)
+ void CBarMarkerSync::SyncMarkers(const datetime time=0)
   {
    if(this.m_BarTimeSeriesCollection==NULL || this.m_GraphElementsCollection==NULL)
       return;
-   long symbol_id=this.m_BarTimeSeriesCollection.SymbolID(::Symbol());
-   if(symbol_id==0)
-     {
-      this.DeleteMarkers_BarTimeSeriesCollection();
-      return;
-     }
    datetime from_time=time,to_time=time;
    if(time==0)
      {
@@ -186,8 +180,8 @@
    ::ArrayResize(m_keys,0);
    ::ArrayResize(m_from_signals,0);
    ::ArrayResize(m_from_series,0);
-   this.CollectTypes(symbol_id,from_time,to_time);
-   this.CollectIndicators(symbol_id,from_time,to_time);
+   this.CollectTypes(::Symbol(),from_time,to_time);
+   this.CollectIndicators(::Symbol(),from_time,to_time);
    int total=::ArraySize(m_keys);
    //--- Only the difference is drawn: a marker that is the same as the table says stays, one that is not wanted any more (or whose collections changed) goes
    bool kept[];
@@ -260,7 +254,7 @@
       ::ChartRedraw();
      }
   }
- void CBarMarkerSync::DeleteMarkers_BarTimeSeriesCollection(void)
+ void CBarMarkerSync::DeleteMarkers(void)
   {
    if(this.m_GraphElementsCollection==NULL)
       return;   // OnInit stopped before OnInitEvent: no marker was made
@@ -281,7 +275,7 @@
    m_arrange_pending=false;
    datetime from_time=0,to_time=0;
    if(this.VisibleRange(from_time,to_time) && (from_time!=m_from_time || to_time!=m_to_time))
-      this.SyncMarkers_BarTimeSeriesCollection();   // scrolled or zoomed: what came into view is asked to the table, what left goes
+      this.SyncMarkers();   // scrolled or zoomed: what came into view is asked to the table, what left goes
    CBarMarker::Arrange(this.m_GraphElementsCollection);
   }
  void CBarMarkerSync::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
@@ -290,12 +284,12 @@
       m_arrange_pending=true;
    if((id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SWING || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_BOS ||
        id==CHARTEVENT_CUSTOM+SERIES_EVENTS_CHOCH || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SIGNAL) && sparam==::Symbol() && (long)dparam==(long)::Period())
-      this.SyncMarkers_BarTimeSeriesCollection((datetime)lparam);   // the library found something on a candle of the chart pair (SERIES_EVENT_PATTERN_ALL: on many)
+      this.SyncMarkers((datetime)lparam);   // the library found something on a candle of the chart pair (SERIES_EVENT_PATTERN_ALL: on many)
    if(id==CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SHOW_CHANGED ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
-      this.SyncMarkers_BarTimeSeriesCollection();
+      this.SyncMarkers();
   }
 #endif // CBARMARKERSYNC_MQH_IMPLEMENTATION
 #endif // __BARMARKERSYNC_MQH__

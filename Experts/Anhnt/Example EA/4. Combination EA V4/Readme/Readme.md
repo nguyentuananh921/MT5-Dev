@@ -7,13 +7,14 @@
   - Sync Everywhere: 
   - Event Rule: Từ V4 trở đi, Chúng ta làm việc theo Event ->Automatic Trade
     + Việc tổ chức trong Event sẽ cần tối ưu để có thể gửi đủ các tham số tránh phải hỏi lại see CBaseObjExt::CheckEvents.
-  - Live working in RAM, Save on DB for no more calculation. 
+  - Live working in RAM, Save on DB for no more calculation
   - Database rule: 
     + Database đóng vai trò M trong mô hình MVC.
-    + Chúng ta có 2 Database: Common và Accounts note detail in DatabaseDELib.mqh
+    + Chúng ta có 2 Database: Common và Accounts note detail
       - Common Database chứa các dữ liệu chung cho tất cả các tài khoản
       - Accounts Database chứa dữ liệu riêng cho từng tài khoản.
       - Cả EA và Libary cũng như Python sẽ phải tự Join các bảng khi cần thiết.
+      - Việc join dựa trên m_account_key trong CDatabaseService
     + Database được dùng làm Single SingleSource of Truth ->Phân công nhiệm vụ tính toán giữa EA và Python theo Calculation Rule
     + Phía EA + LIbrary có được ưu tiên hơn khi ghi vào Database so với python.
     + Prepare để train cho các mô hình Pridict như XGBoot, Kronos.
@@ -30,7 +31,7 @@
 - Document Rule: Việc Refactor là không tránh khỏi tuy nhiên cần có document để nhắc nhau tránh lặp lại lỗi cũ đi lạc.    
 - Update được note trong Update/Update.md
 - Update & Implementation Rule: Mỗi lần Update và Implementation, chúng ta sẽ rà soát lại để đảm bảo các rule ở trên. 
-  Điều này sẽ khiến quá trình Update và Implementation chậm hơn nhưng về lâu dài sẽ hiệu quả.
+  Điều này sẽ khiến quá trình Update và Implementation chậm hơn nhưng về lâu dài sẽ hiệu quả.  
   Cách làm là tạo dần các file trống rồi copy sang file mới. Tránh copy cả mớ gây duplicate code,enum, properties.
   Ngoài ra thì cần nhìn tổng thể trước khi update & implementation và chủ động modify các thứ khác: class, module, database cho phù hợp với nguyên tắc chung.- 
    Chúng ta sẽ có 2 DB
@@ -106,8 +107,7 @@
       thay đổi (AddToDB / RemoveFromDB / cờ) thì sửa m_list, ghi DB ngay (Python đọc) rồi gửi event.
     + Pending request (CPendRequest*) của CTradingControl: hàng đợi gửi lại lệnh, không ghi DB.
     + Account: các giá trị đổi theo tick (balance, equity, margin...) chỉ ở RAM; bảng accounts chỉ giữ thuộc tính tĩnh.
-    + Tick: không có tick series (DOM, treo EA), chỉ CNewTickObj báo PAUSE / RESUME.
-    + List của History / TradeEvent dựng lại từ terminal mỗi lần chạy; DB chỉ giữ dòng đã có (Orders, TradeEvent) để khỏi ghi lại và giữ Bid / Ask của deal.
+    + Tick: không có tick series (DOM, treo EA), chỉ CNewTickObj báo PAUSE / RESUME.    
 - Reference Rule: Các Reference link được note trong Reference/yyyymmđ Reference.md
 - Planing task
  [] Integrating AI

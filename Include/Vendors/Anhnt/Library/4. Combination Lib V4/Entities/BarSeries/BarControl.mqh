@@ -12,7 +12,6 @@
  #include "..\Bar\BarCHoCH.mqh"
  #include "..\Bases\BaseObjExt.mqh"
  #include "..\Defines\EventDefines.mqh"
- #include "..\..\Services\DELib\DatabaseDELib.mqh"
  #include "..\..\Services\DELib\CommonDELib.mqh"
  #include "..\..\Collections\Settings\SyncManager.mqh"
  #include "..\Defines\BarDefines.mqh"
@@ -41,8 +40,6 @@
     CArrayObj         m_list_Pending_BarTimeSeriesCollection; // RAM only: the rows not in the table yet (FreeMode false: m_list_Table_BarTimeSeriesCollection owns them)
     datetime          m_judged_to;                     // RAM only: the newest closed bar every type of the pair is judged to (0: not judged yet)
     CSyncManager     *m_SyncManager;                   // The EA holds it: the progress of each type (Setting_Sync)
-    int               m_db;                            // CBarTimeSeriesCollection holds it: the file of the account
-    long              m_symbol_id;                     // The id of the symbol (symbols)
     long              m_sync_object;                   // The collection the rows are of (its m_type): sync_object of Setting_Sync
    //--- The bar of the series by its time
     CBar             *GetBar(const datetime time);
@@ -52,17 +49,17 @@
     CBar             *NewRow(CBar *bar,const long type,const long group,const long direction);
    public:
    //--- What the control needs to judge and to write: the bars of the series, the file of the account, the id of the symbol, the collection, the managers (CBarSeriesDE::SetDatabase)
-    void              SetDatabase(CArrayObj *list_series,const string symbol,const ENUM_TIMEFRAMES timeframe,const int db,const long symbol_id,const long sync_object,
+    void              SetDatabase(CArrayObj *list_series,const string symbol,const ENUM_TIMEFRAMES timeframe,const long sync_object,
                                   CSyncManager *sync,CBarInformationManager *information);
     int               PendingTotal(void)                           const { return this.m_list_Pending_BarTimeSeriesCollection.Total(); }
     datetime          JudgedTo(void)                               const { return this.m_judged_to;   }
     void              SetJudgedTo(const datetime time)                   { this.m_judged_to=time;   }
    //--- The rows of the table of the bars the series holds go to RAM, the rows waiting to be written stay (once at the creation of the series, then when Python
    //--- tells it wrote more: PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE). Event: SERIES_EVENTS_PATTERN_ALL
-    bool              SyncDataFromDB(void);
+    bool              ReadDataFromDB(void);
    //--- The rows waiting go to the table, then their progress (rows first). True when nothing waits. No event: the view sees the same (the table UNION RAM)
-    bool              SyncDataToDB(void);
-   //--- The new bars are judged for every type from its progress (Setting_Sync): only the bars after it. The rows go to RAM and wait to be written (SyncDataToDB).
+    bool              UpdateDataToDB(void);
+   //--- The new bars are judged for every type from its progress (Setting_Sync): only the bars after it. The rows go to RAM and wait to be written (UpdateDataToDB).
    //--- CBarSeriesDE::RefreshSeries calls it (V2: Refresh called UpdateAll of m_patterns_control). Event: the event of the type (EventOf) for each bar with a new row. True when RAM changed
     bool              Calculate(void);
    //--- The rows (1) older than the oldest bar of the series (a row waiting to be written stays), (2) of a type (its parameter changed: Event SERIES_EVENTS_PATTERN_ALL)
@@ -97,7 +94,7 @@
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
  CBarControl::CBarControl(void) : m_BarInformationManager(NULL),m_list_series(NULL),m_symbol(NULL),m_timeframe(PERIOD_CURRENT),m_judged_to(0),
-                                 m_SyncManager(NULL),m_db(INVALID_HANDLE),m_symbol_id(0),m_sync_object(0)
+                                 m_SyncManager(NULL),m_sync_object(0)
   {
    this.m_object_type=OBJECT_DE_TYPE_SERIES_BAR_CONTROL;
    this.m_list_Pending_BarTimeSeriesCollection.FreeMode(false);
@@ -105,14 +102,12 @@
  //+------------------------------------------------------------------+
  //| What the control needs to judge the bars and to write the rows    |
  //+------------------------------------------------------------------+
- void CBarControl::SetDatabase(CArrayObj *list_series,const string symbol,const ENUM_TIMEFRAMES timeframe,const int db,const long symbol_id,const long sync_object,
+ void CBarControl::SetDatabase(CArrayObj *list_series,const string symbol,const ENUM_TIMEFRAMES timeframe,const long sync_object,
                               CSyncManager *sync,CBarInformationManager *information)
   {
    this.m_list_series=list_series;
    this.m_symbol=symbol;
    this.m_timeframe=timeframe;
-   this.m_db=db;
-   this.m_symbol_id=symbol_id;
    this.m_sync_object=sync_object;
    this.m_SyncManager=sync;
    this.m_BarInformationManager=information;
@@ -203,8 +198,8 @@
       //--- BOS / CHoCH have no parameters: the swings they break are the ones of Swing High and Swing Low (their parameters)
       string low_names[];
       double low_values[];
-      this.m_BarInformationManager.Params(BAR_INFOR_TYPE_SWING_HIGH,names,displays,values);
-      this.m_BarInformationManager.Params(BAR_INFOR_TYPE_SWING_LOW,low_names,displays,low_values);
+      this.m_BarInformationManager.Read_RAM(BAR_INFOR_TYPE_SWING_HIGH,names,displays,values);
+      this.m_BarInformationManager.Read_RAM(BAR_INFOR_TYPE_SWING_LOW,low_names,displays,low_values);
       this.m_swing_instance.SetJudge(list,names,values);
       this.m_swing_low_instance.SetJudge(list,low_names,low_values);
       this.m_bos_instance.SetJudge(&this.m_swing_instance,&this.m_swing_low_instance);
@@ -212,7 +207,7 @@
      }
    else
      {
-      this.m_BarInformationManager.Params(type,names,displays,values);
+      this.m_BarInformationManager.Read_RAM(type,names,displays,values);
       if(CBarSwing::IsFound(type))
          this.m_swing_instance.SetJudge(list,names,values);
       else
@@ -244,9 +239,9 @@
  //+------------------------------------------------------------------+
  //| The rows of the bars the series holds go to RAM                   |
  //+------------------------------------------------------------------+
- bool CBarControl::SyncDataFromDB(void)
+ bool CBarControl::ReadDataFromDB(void)
   {
-   if(this.m_db==INVALID_HANDLE || this.m_symbol_id==0 || this.m_list_series==NULL || this.m_list_series.Total()==0)
+   if(this.m_BarInformationManager==NULL || this.m_list_series==NULL || this.m_list_series.Total()==0)
       return false;
    if(this.m_SyncManager==NULL || !this.m_SyncManager.IsPythonDone())
       return false;   // Python has not done its part of the pairs yet: PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE reads it
@@ -254,13 +249,11 @@
    CBar *newest=this.m_list_series.At(this.m_list_series.Total()-1);
    if(oldest==NULL || newest==NULL)
       return false;
-   int request=LibDatabase_Prepare(this.m_db,"SELECT type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
-                                           " AND bar_time >= "+(string)(long)oldest.Time()+" AND bar_time <= "+(string)(long)newest.Time());
-   if(request==INVALID_HANDLE)
-     {
-      ::Print("MY DEBUG    CBarControl::SyncDataFromDB the query is not accepted, error ",::GetLastError());
+   // New In V4 after implemenation CDatabaseService
+   long read_types[],read_times[],read_sides[];
+   int read_total=this.m_BarInformationManager.ReadDataFromDB(this.m_symbol,this.m_timeframe,oldest.Time(),newest.Time(),read_types,read_times,read_sides);
+   if(read_total==WRONG_VALUE)
       return false;
-     }
    //--- The rows waiting to be written stay (they are not in the table yet), the others are read again
    for(int i=this.m_list_Table_BarTimeSeriesCollection.Total()-1;i>=0;i--)
      {
@@ -273,16 +266,14 @@
      }
    int loaded=0;
    long asked_type=-1,asked_group=0;   // the group of the type asked last (the rows come in the order of type_infor)
-   while(::DatabaseRead(request))
+   for(int r=0;r<read_total;r++)
      {
-      long type=0,time=0,direction=0;
-      ::DatabaseColumnLong(request,0,type);
-      ::DatabaseColumnLong(request,1,time);
-      ::DatabaseColumnLong(request,2,direction);
+      long type=read_types[r],time=read_times[r],direction=read_sides[r];
       if(type!=asked_type)
         {
          asked_type=type;
-         asked_group=(this.m_BarInformationManager!=NULL ? (long)this.m_BarInformationManager.Group((ENUM_BAR_INFOR_TYPE)type) : 0);
+         CBarInformationSetting *setting=(this.m_BarInformationManager!=NULL ? this.m_BarInformationManager.Read_RAM((ENUM_BAR_INFOR_TYPE)type) : NULL);
+         asked_group=(setting!=NULL ? (long)setting.Group() : 0);
         }
       bool waiting=false;   // the same row waits to be written already (kept above)
       for(int k=0;k<this.m_list_Pending_BarTimeSeriesCollection.Total() && !waiting;k++)
@@ -300,7 +291,6 @@
       else
          loaded++;
      }
-   ::DatabaseFinalize(request);
    this.m_list_Table_BarTimeSeriesCollection.Sort(BAR_PROP_TIME);
    //--- What was loaded, said so that it is not read as a number of bars: a bar can have several rows (several types), or none
    int bars_with_rows=0;
@@ -325,7 +315,7 @@
  //+------------------------------------------------------------------+
  bool CBarControl::Calculate(void)
   {
-   if(this.m_db==INVALID_HANDLE || this.m_SyncManager==NULL || this.m_symbol_id==0)
+   if(this.m_BarInformationManager==NULL || this.m_SyncManager==NULL)
       return false;
    if(!this.m_SyncManager.IsPythonDone())
       return false;   // Python Current writes the pairs of Setting_SymbolTF now: one writer for a pair at a time
@@ -334,7 +324,7 @@
    if(newest==NULL || newest.Time()!=last_closed)
       return false;   // the series has not the newest closed bar yet (RefreshSeries adds it)
    long types[],last_bars[];
-   this.m_SyncManager.Ranges_SyncManager(this.m_sync_object,this.m_symbol_id,this.m_timeframe,types,last_bars);
+   this.m_SyncManager.Read_RAM(this.m_sync_object,this.m_symbol,this.m_timeframe,types,last_bars);
    ENUM_BAR_INFOR_TYPE found_types[];
    int found_total=this.Types(found_types);
    bool finished=true;        // every type of the pair is judged to the newest closed bar
@@ -370,7 +360,8 @@
       this.Find(found_types[t],this.m_list_series,since);
       long row_times[],row_sides[];
       this.RowsTo(row_times,row_sides);
-      long group=(this.m_BarInformationManager!=NULL ? (long)this.m_BarInformationManager.Group(found_types[t]) : 0);
+      CBarInformationSetting *setting=(this.m_BarInformationManager!=NULL ? this.m_BarInformationManager.Read_RAM((ENUM_BAR_INFOR_TYPE)found_types[t]) : NULL);
+      long group=(setting!=NULL ? (long)setting.Group() : 0);
       for(int i=0;i<::ArraySize(row_times);i++)
         {
          CBar *row=this.NewRow(this.GetBar((datetime)row_times[i]),(long)found_types[t],group,row_sides[i]);
@@ -384,7 +375,7 @@
          this.m_list_Pending_BarTimeSeriesCollection.Add(row);
          debug_rows++;   // MY DEBUG
         }
-      this.m_SyncManager.Advance_SyncManager(this.m_sync_object,(long)found_types[t],this.m_symbol_id,this.m_timeframe,last_closed,this.m_sync_object,true);
+      this.m_SyncManager.Update_Sync_Setting(this.m_sync_object,(long)found_types[t],this.m_symbol,this.m_timeframe,last_closed,this.m_sync_object,true);
       const ushort event_id=this.EventOf(found_types[t]);
       for(int r=0;r<::ArraySize(row_times);r++)
         {
@@ -483,28 +474,10 @@
    ::ArrayResize(types,0);
    ::ArrayResize(times,0);
    ::ArrayResize(sides,0);
-   if(this.m_db==INVALID_HANDLE)
+   // New In V4 after implemenation CDatabaseService
+   if(this.m_BarInformationManager==NULL)
       return 0;
-   int request=LibDatabase_Prepare(this.m_db,"SELECT type_infor, bar_time, signal_direction FROM BarTimeSeriesCollection WHERE symbol_id = "+(string)this.m_symbol_id+" AND tf_enum = "+(string)(int)this.m_timeframe+
-                                           " AND bar_time >= "+(string)(long)from_time+" AND bar_time <= "+(string)(long)to_time+" AND ((signal_direction = "+(string)(int)SIGNAL_DIRECTION_BUY+
-                                           " AND type_infor IN ("+LibDatabase_InList(buy_types)+")) OR (signal_direction = "+(string)(int)SIGNAL_DIRECTION_SELL+" AND type_infor IN ("+LibDatabase_InList(sell_types)+")))");
-   if(request==INVALID_HANDLE)
-     {
-      ::Print("MY DEBUG    CBarControl::ReadTypes the query is not accepted, error ",::GetLastError());
-      return 0;
-     }
-   int total=0;
-   while(::DatabaseRead(request))
-     {
-      ::ArrayResize(types,total+1);
-      ::ArrayResize(times,total+1);
-      ::ArrayResize(sides,total+1);
-      ::DatabaseColumnLong(request,0,types[total]);
-      ::DatabaseColumnLong(request,1,times[total]);
-      ::DatabaseColumnLong(request,2,sides[total]);
-      total++;
-     }
-   ::DatabaseFinalize(request);
+   int total=this.m_BarInformationManager.ReadDataFromDB(this.m_symbol,this.m_timeframe,from_time,to_time,buy_types,sell_types,types,times,sides);
    //--- UNION what was found and is not written yet (written when the pair is handed over, and at OnDeinit)
    long p_types[],p_times[],p_sides[];
    int pending=this.PendingRows(from_time,to_time,p_types,p_times,p_sides);
@@ -590,9 +563,9 @@
  //+------------------------------------------------------------------+
  //| The rows waiting, then their progress go to the DB                |
  //+------------------------------------------------------------------+
- bool CBarControl::SyncDataToDB(void)
+ bool CBarControl::UpdateDataToDB(void)
   {
-   if(this.m_db==INVALID_HANDLE || this.m_SyncManager==NULL || this.m_symbol_id==0)
+   if(this.m_BarInformationManager==NULL || this.m_SyncManager==NULL)
       return false;
    //--- The rows of one type are written together (one turn of the writes for each)
    while(this.m_list_Pending_BarTimeSeriesCollection.Total()>0)
@@ -619,13 +592,13 @@
          sides[n]=row.GetProperty(BAR_PROP_SIGNAL_DIRECTION);
          indexes[n]=i;
         }
-      if(!LibDatabase_AddRows(this.m_db,"BarTimeSeriesCollection","type_infor",type,this.m_symbol_id,this.m_timeframe,times,sides))
+      if(!this.m_BarInformationManager.UpdateDataToDB(this.m_symbol,this.m_timeframe,type,times,sides))
          return false;   // the database is busy: what waits stays, the marks too (they go after their rows)
       for(int k=::ArraySize(indexes)-1;k>=0;k--)
          this.m_list_Pending_BarTimeSeriesCollection.Delete(indexes[k]);   // FreeMode false: the bar stays in m_list_Table_BarTimeSeriesCollection
      }
    //--- Nothing is told: what the view sees (the table UNION RAM) does not change by the write
-   return this.m_SyncManager.SyncDataToDB(this.m_sync_object,this.m_symbol_id,this.m_timeframe);
+   return this.m_SyncManager.UpdateDataToDB(this.m_sync_object,this.m_symbol,this.m_timeframe);
   }
 
 #endif // CBARCONTROL_MQH_IMPLEMENTATION

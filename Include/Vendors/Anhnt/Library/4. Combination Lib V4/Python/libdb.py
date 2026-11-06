@@ -15,10 +15,6 @@ from pathlib import Path
 
 import MetaTrader5 as mt5
 
-PROGRAM_NAME = "EA V4 SQLLite"              # MQL_PROGRAM_NAME: needed to find the database
-LIB_DATABASE_FOLDER = "SQLite"              # DatabaseDELib.mqh: needed to find the database
-LIB_DATABASE_FILE = PROGRAM_NAME + "_Common.sqlite3"
-LIB_ACCOUNTS_FOLDER = "Accounts"            # <account key>.sqlite3
 TABLE_BARS = "BarSeriesDE"
 TABLE_RESULT = "BarTimeSeriesCollection"
 TABLE_IND_RESULT = "SignalsCollection"
@@ -31,7 +27,7 @@ EA_FLAG_STALE_SECONDS = 10.0         # an older EA flag file is ignored
 WRITE_AGE_SECONDS = 60.0             # gathered rows are written after this long
 WRITE_SLOW_SECONDS = 1.0             # a slower turn is printed
 SPENT = {"bars": 0.0, "rows": 0.0, "marks": 0.0}   # seconds spent writing (report)
-HISTORY_FLAG_NAME = "history_done_{}.flag"         # a History worker of the symbol id is asleep
+HISTORY_FLAG_NAME = "history_done_{}.flag"         # a History worker of the symbol is asleep
 QUEUE_SECONDS = [0.0]                # seconds waited for the turn (report)
 CACHE_KIB = 32768                    # cache of a worker for the account file
 PARENT_GONE_SECONDS = 60.0           # a worker stops when the parent mark is older
@@ -44,16 +40,22 @@ def safe(text):
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(text)).strip("_") or "account"
 
 
-_database_path = None   # the data folder of the terminal does not change while this process lives: the terminal is asked once
+_database_path = None   # the EA tells it: the data folder of the terminal does not change while this process lives
+
+
+def files_path(path):
+    """A path the EA gave: under MQL5\\Files (CDatabaseService::GetDatabaseFile), or a full path set by hand to run Python alone."""
+    path = Path(path)
+    return path if path.is_absolute() else Path(mt5.terminal_info().data_path) / "MQL5" / "Files" / path
 
 
 def database_path():
-    """The file the accounts share: MQL5\\Files\\<program name>\\LIB_DATABASE_FOLDER\\LIB_DATABASE_FILE (DatabaseDELib.mqh); LIBDB_FILE (a full path set by hand to run Python alone) wins."""
+    """The file the accounts share: the EA gives it when it starts Python (--database, kept in LIBDB_FILE: the workers inherit it). Everything else is in Setting_PythonBridge."""
     global _database_path
-    if os.environ.get("LIBDB_FILE"):
-        return Path(os.environ["LIBDB_FILE"])
     if _database_path is None:
-        _database_path = Path(mt5.terminal_info().data_path) / "MQL5" / "Files" / PROGRAM_NAME / LIB_DATABASE_FOLDER / LIB_DATABASE_FILE
+        if not os.environ.get("LIBDB_FILE"):
+            raise RuntimeError("no database: the EA starts Python with --database")
+        _database_path = files_path(os.environ["LIBDB_FILE"])
     return _database_path
 
 
@@ -211,7 +213,7 @@ _pair_turns = {}
 
 
 @contextlib.contextmanager
-def pair_turn(symbol_id, tf_enum):
+def pair_turn(symbol, tf_enum):
     """The turn of a worker on one pair, for one step of its history: a mutex of Windows with the name of the pair, tried and never waited for. It yields True when the
     worker has the pair (another worker goes on to another pair), False when another worker has it. A worker that dies lets it go by itself."""
     held = False
@@ -220,12 +222,12 @@ def pair_turn(symbol_id, tf_enum):
         yield True
         return
     kernel32 = ctypes.windll.kernel32
-    key = (symbol_id, tf_enum)
+    key = (symbol, tf_enum)
     handle = _pair_turns.get(key)
     if handle is None:
         kernel32.CreateMutexW.restype = ctypes.c_void_p
         kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_wchar_p]
-        handle = kernel32.CreateMutexW(None, 0, f"Local\\EA_V4_SQLLite_Pair_{symbol_id}_{tf_enum}")
+        handle = kernel32.CreateMutexW(None, 0, f"Local\\EA_V4_SQLLite_Pair_{symbol}_{tf_enum}")
         _pair_turns[key] = handle
     kernel32.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
     kernel32.ReleaseMutex.argtypes = [ctypes.c_void_p]
@@ -265,9 +267,9 @@ def milestone_clear(name):
         pass
 
 
-def history_done_set(symbol_id, done):
+def history_done_set(symbol, done):
     """The worker of a symbol tells that its history is all there (it sleeps) or that it works again."""
-    path = database_path().parent / HISTORY_FLAG_NAME.format(symbol_id)
+    path = database_path().parent / HISTORY_FLAG_NAME.format(symbol)
     try:
         if done:
             path.write_text("1")
@@ -281,9 +283,9 @@ def history_done_ids():
     """The symbols whose worker of the history is asleep."""
     ids = set()
     for path in database_path().parent.glob(HISTORY_FLAG_NAME.format("*")):
-        found = re.match(r"history_done_(\d+)\.flag", path.name)
+        found = re.match(r"history_done_(.+)\.flag", path.name)
         if found:
-            ids.add(int(found.group(1)))
+            ids.add(found.group(1))
     return ids
 
 
@@ -342,21 +344,16 @@ class LibDatabase:
             self.open()
 
     def current_account(self):
-        """The account_key of the account the terminal is logged in to, asked of the table accounts by its login and its server (the row the EA writes in OnInit): None while
-        there is no row, and then there is nothing to sync. The key is not made here: the text of the EA is the only one. Only this account is synced, never the other rows.
-        The terminal is asked ONCE and the key is kept: when the terminal logs in to another account the EA starts again (OnInit) and clears the place of Python
-        (REASON_ACCOUNT), so this Python stops and the EA starts the one of the new account."""
+        """The account_key the EA decided (Setting_PythonBridge), the only text of it: None while the EA has not written it. Kept: when the terminal logs in to another account
+        the EA starts again (OnInit) and clears the place of Python (REASON_ACCOUNT), so this Python stops and the EA starts the one of the new account."""
         if self.login_key is not None:
             return self.login_key
-        info = mt5.account_info()
-        if info is None:
-            return None
         if self.db is None:
             self.open()
-        row = self.db.execute("SELECT account_key FROM accounts WHERE login = ? AND server = ?", (int(info.login), info.server)).fetchone()
-        if row is None:
+        try:
+            self.login_key = setting("account_key")
+        except KeyError:
             return None
-        self.login_key = row[0]
         return self.login_key
 
     def open_account(self):
@@ -370,7 +367,7 @@ class LibDatabase:
         if self.acc is not None:
             self.acc.close()
             self.acc = None
-        path = database_path().parent / LIB_ACCOUNTS_FOLDER / (key + ".sqlite3")
+        path = files_path(setting("file_account"))
         if not path.exists():
             return False
         self.acc = sqlite3.connect(str(path), timeout=BUSY_MS / 1000.0, isolation_level=None)
@@ -458,36 +455,35 @@ class LibDatabase:
         """This Python leaves: the place is cleared when it is still its own."""
         self.take_place_python_bridge(os.getpid(), 0, 0)
 
-    def pairs(self, symbol_id=None):
-        """What is calculated: every symbol of this account that is one of ours (symbols) on every TF of the table timeframes, by tf_enum (one symbol when
-        symbol_id is given, the pairs of a worker): (symbol_id, symbol of the account, tf_enum, TF name). Setting_SymbolTF only says what the EA shows."""
+    def pairs(self, symbol=None):
+        """What is calculated: every symbol of this account (symbols) on every TF of the table timeframes, by tf_enum (one symbol when `symbol` is given, the pairs of a
+        worker): (symbol, tf_enum, TF name). Setting_SymbolTF only says what the EA shows."""
         if not self.open_account():
             return []
-        rows = self.db.execute("SELECT a.symbol_id, a.name, t.tf_enum, t.name FROM symbols a CROSS JOIN timeframes t "
-                               "WHERE a.account_key = ? AND a.symbol_id IS NOT NULL AND (? IS NULL OR a.symbol_id = ?) ORDER BY t.tf_enum, a.rowid",
-                               (self.login_key, symbol_id, symbol_id)).fetchall()
-        return rows
+        return self.db.execute("SELECT a.name, t.tf_enum, t.name FROM symbols a CROSS JOIN timeframes t "
+                               "WHERE a.account_key = ? AND (? IS NULL OR a.name = ?) ORDER BY t.tf_enum, a.rowid",
+                               (self.login_key, symbol, symbol)).fetchall()
 
     def symbols(self):
-        """The symbols of ours of this account, a worker for each: [(symbol_id, symbol of the account)]."""
+        """The symbols of this account, a worker for each."""
         key = self.current_account()
         if key is None:
             return []
-        return self.db.execute("SELECT symbol_id, name FROM symbols WHERE account_key = ? AND symbol_id IS NOT NULL ORDER BY rowid", (key,)).fetchall()
+        return [row[0] for row in self.db.execute("SELECT name FROM symbols WHERE account_key = ? ORDER BY rowid", (key,))]
 
     def library_pairs(self):
-        """The pairs the Library (CBarTimeSeriesCollection) keeps up to date after the first load, the ones of Setting_SymbolTF for this account: {(symbol_id, tf_enum)}."""
+        """The pairs the Library (CBarTimeSeriesCollection) keeps up to date after the first load, the ones of Setting_SymbolTF for this account: {(symbol, tf_enum)}."""
         key = self.current_account()
         if key is None:
             return set()
-        return {(row[0], row[1]) for row in self.db.execute("SELECT symbol_id, tf_enum FROM Setting_SymbolTF WHERE account_key = ?", (key,))}
+        return {(row[0], row[1]) for row in self.db.execute("SELECT name, tf_enum FROM Setting_SymbolTF WHERE account_key = ?", (key,))}
 
     def account_symbol(self, name):
-        """The name on this account of a symbol of ours (XAUUSD -> XAUUSDc), None when the account has none."""
+        """The name on this account of a symbol of symbol_base (XAUUSD -> XAUUSDc), None when the account has none."""
         key = self.current_account()
         if key is None:
             return None
-        row = self.db.execute("SELECT a.name FROM symbols a JOIN symbol_base s ON s.id = a.symbol_id WHERE a.account_key = ? AND s.name = ?",
+        row = self.db.execute("SELECT a.name FROM symbols a JOIN symbol_base s ON s.id = a.symbol_base_id WHERE a.account_key = ? AND s.name = ?",
                               (key, name)).fetchone()
         return None if row is None else row[0]
 
@@ -502,24 +498,24 @@ class LibDatabase:
             out.setdefault(type_infor, {})[param] = value
         return out
 
-    def bars_after(self, symbol_id, tf_enum, from_time, count):
+    def bars_after(self, symbol, tf_enum, from_time, count):
         """The `count` bars of the pair from the bar `from_time` on, the oldest first, from the table of the bars (a DataFrame of the columns of the terminal)."""
         import pandas as pd
         rows = self.acc.execute("SELECT bar_time, open, high, low, close, tick_volume, spread, real_volume FROM " + TABLE_BARS +
-                               " WHERE symbol_id = ? AND tf_enum = ? AND bar_time >= ? ORDER BY bar_time LIMIT ?", (symbol_id, tf_enum, from_time, count)).fetchall()
+                               " WHERE name = ? AND tf_enum = ? AND bar_time >= ? ORDER BY bar_time LIMIT ?", (symbol, tf_enum, from_time, count)).fetchall()
         return pd.DataFrame(rows, columns=["time", "open", "high", "low", "close", "tick_volume", "spread", "real_volume"])
 
-    def write_bars(self, symbol_id, tf_enum, bars):
+    def write_bars(self, symbol, tf_enum, bars):
         """The closed bars (a DataFrame of the terminal) of a pair, one transaction. The table is asked how many of them it holds between the first and the
         last one: all of them, nothing is written; otherwise the chunk is written and the ones that are there stay as they are. Returns the seconds the write took
         (the wait for the turn of the line is not in them: QUEUE_SECONDS). Nothing is written while the EA keeps no bar (store_bars)."""
         if len(bars) == 0 or not store_bars():
             return 0.0
         first, last = int(bars["time"].iloc[0]), int(bars["time"].iloc[-1])
-        held = self.acc.execute("SELECT COUNT(*) FROM " + TABLE_BARS + " WHERE symbol_id = ? AND tf_enum = ? AND bar_time BETWEEN ? AND ?", (symbol_id, tf_enum, first, last)).fetchone()[0]
+        held = self.acc.execute("SELECT COUNT(*) FROM " + TABLE_BARS + " WHERE name = ? AND tf_enum = ? AND bar_time BETWEEN ? AND ?", (symbol, tf_enum, first, last)).fetchone()[0]
         if held >= len(bars):
             return 0.0
-        rows = list(zip([symbol_id] * len(bars), [tf_enum] * len(bars), bars["time"].astype("int64").tolist(), bars["open"].astype(float).tolist(),
+        rows = list(zip([symbol] * len(bars), [tf_enum] * len(bars), bars["time"].astype("int64").tolist(), bars["open"].astype(float).tolist(),
                         bars["high"].astype(float).tolist(), bars["low"].astype(float).tolist(), bars["close"].astype(float).tolist(),
                         bars["tick_volume"].astype("int64").tolist(), bars["spread"].astype("int64").tolist(), bars["real_volume"].astype("int64").tolist()))
         spent = 0.0
@@ -528,7 +524,7 @@ class LibDatabase:
                 clock = time.perf_counter()
                 self.acc.execute("BEGIN IMMEDIATE")
                 try:
-                    self.acc.executemany("INSERT OR IGNORE INTO " + TABLE_BARS + " (symbol_id, tf_enum, bar_time, open, high, low, close, tick_volume, spread, real_volume) "
+                    self.acc.executemany("INSERT OR IGNORE INTO " + TABLE_BARS + " (name, tf_enum, bar_time, open, high, low, close, tick_volume, spread, real_volume) "
                                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows[start:start + self.batch_rows])
                     self.acc.commit()
                 except Exception:
@@ -541,13 +537,13 @@ class LibDatabase:
         SPENT["bars"] += spent
         return spent
 
-    def state(self, source, symbol_id, tf_enum):
+    def state(self, source, symbol, tf_enum):
         """(newest bar synced, lost_from_time, lost_to_time, who moved the newest bar last) of the pair and the source, None when nothing was synced yet. What is missing
         for the History workers is lost_from_time .. lost_to_time (lost_to_time > lost_from_time; lost_from_time 0: back to the first bar). What waits to be written counts
         as written: the worker does not judge again what it judged a moment ago."""
-        row = self.db.execute("SELECT last_update, lost_from_time, lost_to_time, sync_by FROM " + TABLE_SYNC + " WHERE account_key = ? AND symbol_id = ? AND tf_enum = ? AND sync_object = ? AND key_id = ?",
-                              (self.acc_key, symbol_id, tf_enum, source.sync_object, source.key_id)).fetchone()
-        key = (symbol_id, tf_enum, source.sync_object, source.key_id)
+        row = self.db.execute("SELECT last_update, lost_from_time, lost_to_time, sync_by FROM " + TABLE_SYNC + " WHERE account_key = ? AND name = ? AND tf_enum = ? AND sync_object = ? AND key_id = ?",
+                              (self.acc_key, symbol, tf_enum, source.sync_object, source.key_id)).fetchone()
+        key = (symbol, tf_enum, source.sync_object, source.key_id)
         found = row is not None
         last_update, lost_from, lost_to, sync_by = row if found else (0, 0, 0, setting_int("object_python"))
         for pending_key, values in self.pending_marks:
@@ -557,7 +553,7 @@ class LibDatabase:
                                                             values.get("lost_to_time", lost_to), values.get("sync_by", sync_by))
         return (last_update, lost_from, lost_to, sync_by) if found else None
 
-    def write_result(self, source, symbol_id, tf_enum, found, last_update=None, lost=None, defer=False):
+    def write_result(self, source, symbol, tf_enum, found, last_update=None, lost=None, defer=False):
         """What was found (a list of (bar time, "BUY" or "SELL")) goes to the table of the account, then how far it was synced to Setting_Sync (rows first: when
         this stops in between, the bars are judged again and the rows that are there stay). `last_update`: the newest bar synced (sync_by is Python then); `lost`: (lost_from_time,
         lost_to_time), what is still missing, (0, 0) when nothing is. A mark that is None stays as it was.
@@ -565,8 +561,8 @@ class LibDatabase:
         keys = ", ".join(source.key_names)
         marker = ", ".join("?" for _ in source.key_names)
         if found:
-            self.pending_rows.append(("INSERT OR IGNORE INTO " + source.result_table + " (symbol_id, tf_enum, " + keys + ", bar_time, signal_direction) VALUES (?, ?, " + marker + ", ?, ?)",
-                                      [(symbol_id, tf_enum, *source.key_values, bar_time, signal_direction(side)) for bar_time, side in found]))
+            self.pending_rows.append(("INSERT OR IGNORE INTO " + source.result_table + " (name, tf_enum, " + keys + ", bar_time, signal_direction) VALUES (?, ?, " + marker + ", ?, ?)",
+                                      [(symbol, tf_enum, *source.key_values, bar_time, signal_direction(side)) for bar_time, side in found]))
         marks = {}
         if last_update is not None:
             marks["last_update"] = int(last_update)
@@ -578,7 +574,7 @@ class LibDatabase:
         if self.pending_count == 0 and not self.pending_marks:
             self.pending_since = time.monotonic()
         self.pending_count += len(found)
-        self.pending_marks.append(((symbol_id, tf_enum, source.sync_object, source.key_id), marks))
+        self.pending_marks.append(((symbol, tf_enum, source.sync_object, source.key_id), marks))
         if not defer or self.pending_count >= self.batch_rows:
             self.flush_results()
 
@@ -617,12 +613,12 @@ class LibDatabase:
                     clock = time.perf_counter()
                     self.db.execute("BEGIN IMMEDIATE")
                     try:
-                        for (symbol_id, tf_enum, sync_object, key_id), values in written:
+                        for (symbol, tf_enum, sync_object, key_id), values in written:
                             names = list(values)
-                            self.db.execute("INSERT INTO " + TABLE_SYNC + " (account_key, symbol_id, tf_enum, sync_object, key_id" + "".join(", " + n for n in names) + ") VALUES (?, ?, ?, ?, ?" + ", ?" * len(names) + ") "
-                                            "ON CONFLICT(account_key, symbol_id, tf_enum, sync_object, key_id) DO UPDATE SET " +
+                            self.db.execute("INSERT INTO " + TABLE_SYNC + " (account_key, name, tf_enum, sync_object, key_id" + "".join(", " + n for n in names) + ") VALUES (?, ?, ?, ?, ?" + ", ?" * len(names) + ") "
+                                            "ON CONFLICT(account_key, name, tf_enum, sync_object, key_id) DO UPDATE SET " +
                                             ", ".join("last_update = MAX(last_update, excluded.last_update)" if n == "last_update" else f"{n} = excluded.{n}" for n in names),   # the newest bar never goes back (the Library moves it too)
-                                            (self.acc_key, symbol_id, tf_enum, sync_object, key_id, *[values[n] for n in names]))
+                                            (self.acc_key, symbol, tf_enum, sync_object, key_id, *[values[n] for n in names]))
                         self.db.commit()
                     except Exception:
                         self.db.rollback()
@@ -635,7 +631,7 @@ class LibDatabase:
 
     def templates(self):
         """The indicator templates the user has: (id, display, params, type_name, params_total): the id is the key of their signals; type_name (MT5 ENUM_INDICATOR
-        without IND_) and params_total come from the table indicators the EA makes (CIndicatorsCollection::OnInitEvent / SyncDataToDB), joined by type_enum."""
+        without IND_) and params_total come from the table indicators the EA makes (CIndicatorTemplateManager::OnInitEvent), joined by type_enum."""
         return self.db.execute("SELECT t.id, t.display, t.params, i.type_name, i.params_total FROM Setting_IndicatorTemplate t "
                                "LEFT JOIN indicators i ON i.type_enum = t.type_enum ORDER BY t.id").fetchall()
 

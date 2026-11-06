@@ -206,11 +206,36 @@
   #define DEF_FONT_SIZE                  (10)                       // Default font size
   #define DEF_CONTROL_CORNER_AREA        (4)                        // Number of pixels defining the corner area to resize
   #define DEF_LINE_WIDTH                 (3)                        // Default width of a native line object (solid: a dash style needs width 1)
- //Old Plan to remove after implemenation CDatabaseService
- //--- The timeframes of the library, shortest first (the table timeframes of the database has the same ones)
-  #define LIB_TIMEFRAMES_TOTAL           (21)
-  const ENUM_TIMEFRAMES LIB_TIMEFRAMES[LIB_TIMEFRAMES_TOTAL] = {PERIOD_M1, PERIOD_M2, PERIOD_M3, PERIOD_M4, PERIOD_M5, PERIOD_M6, PERIOD_M10, PERIOD_M12, PERIOD_M15, PERIOD_M20, PERIOD_M30,
-                                                                PERIOD_H1, PERIOD_H2, PERIOD_H3, PERIOD_H4, PERIOD_H6, PERIOD_H8, PERIOD_H12, PERIOD_D1, PERIOD_W1, PERIOD_MN1};
+ //--- The timeframes of the library, shortest first: the one list, CIndicatorTemplateManager fills the table timeframes from it
+ struct STimeframeItem
+  {
+   ENUM_TIMEFRAMES tf_enum;
+   string          name;
+  };
+ STimeframeItem timeframe_list[] =
+  {
+   {PERIOD_M1,  "M1"},
+   {PERIOD_M2,  "M2"},
+   {PERIOD_M3,  "M3"},
+   {PERIOD_M4,  "M4"},
+   {PERIOD_M5,  "M5"},
+   {PERIOD_M6,  "M6"},
+   {PERIOD_M10, "M10"},
+   {PERIOD_M12, "M12"},
+   {PERIOD_M15, "M15"},
+   {PERIOD_M20, "M20"},
+   {PERIOD_M30, "M30"},
+   {PERIOD_H1,  "H1"},
+   {PERIOD_H2,  "H2"},
+   {PERIOD_H3,  "H3"},
+   {PERIOD_H4,  "H4"},
+   {PERIOD_H6,  "H6"},
+   {PERIOD_H8,  "H8"},
+   {PERIOD_H12, "H12"},
+   {PERIOD_D1,  "D1"},
+   {PERIOD_W1,  "W1"},
+   {PERIOD_MN1, "MN1"}
+  };
 
 #endif // __COMMONDEFINES_MQH__
 

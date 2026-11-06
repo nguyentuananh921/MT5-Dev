@@ -1,5 +1,4 @@
 # Python (Model của Lib V4)
-
 Các module còn lại rỗng chủ ý (Refactor Rule): code lấy từ Lib V3 Python từng mảnh khi có gì đòi.
 
 ## Chạy
@@ -11,10 +10,10 @@ python main.py
 python main.py --terminal "C:\Program Files\MetaTrader 5\terminal64.exe"
 ```
 
-Cần: `pip install MetaTrader5 pandas numpy`. Không có cache, không có JSON.
+Cần: `pip install MetaTrader5 pandas numpy`. 
 
 ## Tiến trình
-- **Cấu hình đi qua DB, không qua dòng lệnh.** Bảng `Setting_PythonBridge` có hai cột `name` và `value`. Các dòng còn lại do EA ghi trong OnInit (`CPythonBridge::CreateTable_PythonBridge`), Python chỉ đọc (`libdb.setting`), không có bản sao nào trong Python. Gồm cấu hình (`write_rows`, `store_bars`, `alive_ms`, `hung_ms`, `write_queue`, `write_flag`, `chart_symbol`, `chart_tf`), enum và define của Library (`signal_buy/sell/none`, `object_python`, `collection_series/signals`, `swing_price_basis_wick`, `structure_lookback`) và tên các file cờ (`file_current_*`, `file_history_done`, `file_jobs`). Python không chạy tiếp khi EA chưa ghi (`settings_ready`).
+- **Cấu hình đi qua DB, không qua dòng lệnh.** Bảng `Setting_PythonBridge` có hai cột `name` và `value`. Các dòng còn lại do EA ghi trong OnInit (`CPythonBridge::CreateTable`), Python chỉ đọc (`libdb.setting`), không có bản sao nào trong Python. Gồm cấu hình (`write_rows`, `store_bars`, `alive_ms`, `hung_ms`, `write_queue`, `write_flag`, `chart_symbol`, `chart_tf`), enum và define của Library (`signal_buy/sell/none`, `object_python`, `collection_series/signals`, `swing_price_basis_wick`, `structure_lookback`) và tên các file cờ (`file_current_*`, `file_history_done`, `file_jobs`). Python không chạy tiếp khi EA chưa ghi (`settings_ready`).
 - EA chỉ mở MỘT Python (cha). Cha chiếm chỗ trong `Setting_PythonBridge` (hai dòng `pid` của cha, 0 là không ai, và `alive_at`) bằng cập nhật có điều kiện (`claim_python_bridge`: hai cha khởi động cùng lúc thì chỉ một cái được), rồi đọc Market Watch và mở các worker. Mỗi giây cha ghi nhịp tim, chỉ khi chỗ còn là của nó (`heartbeat_python_bridge`); mất chỗ thì cha tự thoát và ngắt các worker. Worker dừng khi chỗ không còn là của cha nó hoặc nhịp tim cũ quá 60 s; worker chết thì cha mở lại.
 - **EA đóng** (`REASON_REMOVE`, `REASON_CLOSE`): EA xoá dòng (`pid = 0`), cha thấy mất chỗ trong một giây và thoát cùng worker. Đổi chart, biên dịch lại, đổi tham số thì không xoá: Python chạy tiếp, history chỉ nạp một lần. Cha thoát bình thường thì tự trả chỗ (`release_python_bridge`).
 - **Cha cũ im lặng** (nhịp tim cũ quá 10 s): nếu tiến trình còn chạy và im dưới 120 s thì nó đang bận nạp history, cha mới tự dừng, EA cũng không mở thêm (`IsBusy`). Từ 120 s (lớn hơn watchdog 90 s) là treo: bị giết cùng worker bằng `taskkill /T /F`. Giết một cha đang bận chỉ làm vòng nạp history bắt đầu lại, đó là nguyên nhân Python "chạy loạn" ngày 2026-10-26.
@@ -59,8 +58,9 @@ Cần: `pip install MetaTrader5 pandas numpy`. Không có cache, không có JSON
 - Library phải theo cùng quy tắc (Readme: cả hai phía tính như nhau): luật của pattern và Momentum nằm ở `CBarPattern` (= `patterns.py`, `momentum.py`), luật của swing ở `CBarSwing` (= `swing.py`), BOS / CHoCH ở `CBarBOS`, `CBarCHoCH` dùng `CBarSwing::FindBrokenHigh / FindBrokenLow` (= `structure.py`, `lookback()` đọc `STRUCTURE_LOOKBACK` từ DB), CBarControl điều phối, giữ dòng và ghi DB.
 
 ## Đổi tham số thì tính lại (LÀM DỞ, cần thống nhất)
-- `CBarInformationManager` gửi `BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED` khi đổi tham số của một loại. CBarTimeSeriesCollection nghe: CBarControl của mỗi CBarSeriesDE bỏ dòng của type trên RAM ngay (báo PATTERN_ALL, series chuyển event lên), dòng trong table của MỌI cặp và mốc `Setting_Sync` được xoá dần theo timer (Reset_, `CSyncManager::ResetStep_SyncManager`). Template indicator mới thì có id mới nên tự được tính (chunk đầu rồi lịch sử).
-- [] Chưa có: ai bảo Python tính lại (Current không mở lại khi chỉ đổi tham số), cờ "đang tính lại" lưu trong `Setting_BarInformation` (hàng đợi `m_reset_types` hiện chỉ ở RAM), RAM của series nạp lại khi Python tính xong.
+- `CBarInformationManager` gửi `BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED` khi đổi tham số của một loại. CBarTimeSeriesCollection nghe: CBarControl của mỗi CBarSeriesDE bỏ dòng của type trên RAM ngay (báo PATTERN_ALL, series chuyển event lên), dòng trong table của MỌI cặp và mốc `Setting_Sync` được xoá dần theo timer (Reset_, `CSyncManager::ResetStep`). Template indicator mới thì có id mới nên tự được tính (chunk đầu rồi lịch sử).
+- Xoá xong mọi type đang chờ thì CBarTimeSeriesCollection gửi `BAR_INFORMATION_MANAGER_EVENT_RESET_DONE`; `CPythonBridge::OnChartEvent` tạo `Python_Jobs.flag`, process cha chạy lại Current. Báo sau khi xoá xong, không báo lúc đổi tham số: Current chạy sớm thì mark vừa ghi sẽ bị bước xoá tiếp theo xoá mất.
+- [] Chưa có: cờ "đang tính lại" lưu trong `Setting_BarInformation` (hàng đợi `m_reset_types` hiện chỉ ở RAM).
 - Ý định: đổi tham số của một nguồn (một `type_infor` hoặc một `template_id`) thì xoá dòng kết quả và dòng `Setting_Sync` của đúng nguồn đó (mọi cặp), rồi cờ "đã ngủ" của các worker lịch sử bị xoá để chúng dậy tính lại chỉ nguồn đó. Chỉ tính lại một nguồn trong 41, nên khoảng 2–3% công việc của lần đầu, không phải tính lại toàn bộ.
 - Việc xoá nên do một nơi làm (CSyncManager) khi nghe sự kiện, không để Python tự đoán.
 
@@ -71,7 +71,7 @@ Cần: `pip install MetaTrader5 pandas numpy`. Không có cache, không có JSON
 - Loại indicator của template: bảng `indicators` (EA + Library tạo, `CIndicatorsCollection::OnInitEvent / SyncDataToDB`), Python chỉ đọc: `libdb.templates()` nối `Setting_IndicatorTemplate` với `indicators` qua `type_enum`, lấy `type_name` (ENUM_INDICATOR bỏ IND_: "MA", "BANDS"...) và `params_total`. `indicators.PARAM_KEYS` (khoá theo `type_name`) chỉ giữ tên Python đặt cho từng tham số theo thứ tự form EA (khoá nội bộ của hàm tính); số tham số khác `params_total` thì không tính. Không còn cắt chữ cột `display`.
 - Chỗ chép tay bắt buộc: đường dẫn DB (Python phải mở file trước khi đọc được gì từ DB). `libdb.py` dùng đúng tên macro của `Services\DELib\DatabaseDELib.mqh`: `LIB_DATABASE_FOLDER` ("SQLite"), `LIB_DATABASE_FILE` ("<program>_Common.sqlite3"), `LIB_ACCOUNTS_FOLDER` ("Accounts"); `PROGRAM_NAME` = MQL_PROGRAM_NAME. Đổi bên MQL thì đổi ở đây. `LIBDB_FILE` chỉ là đường dẫn đặt tay khi chạy Python riêng (EA không gửi).
 - Còn là khoá (không phải giá trị): tên table (`TABLE_*`), tên tham số (`PARAM_*` = `BAR_PARAM_*`), tên type (`NAME*` = `Setting_BarInformation.name`).
-- [] Rà soát tên các hàm `write_result`, `flush_results`, `state` so với `SyncDataToDB`, `SyncDataFromDB`, `Ranges_SyncManager`.
+- [] Rà soát tên các hàm `write_result`, `flush_results`, `state` so với `SyncDataToDB`, `SyncDataFromDB`, `Ranges`.
 
 ## Đã thử và không làm: một worker cho mỗi (symbol, TF) = 294 worker
 - Máy 15,7 GB RAM, mỗi tiến trình Python khoảng 103 MB: 294 tiến trình cần khoảng 30 GB.

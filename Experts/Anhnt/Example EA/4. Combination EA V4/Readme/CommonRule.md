@@ -1,5 +1,6 @@
  - Communication Rule: Trao đổi bằng tiếng Việt tuy nhiên cần dùng thẳng các thuật ngữ tránh confuse
-  - Ví dụ: Thay vì dịch cái hộp thì là dịch cái CZone, CGCGStdRectangleObj thậm chí có cả tên cụ thể m_Rectangle_TakeProfit.  
+  - Ví dụ: Thay vì dịch cái hộp thì là dịch cái CZone, CGCGStdRectangleObj thậm chí có cả tên cụ thể m_Rectangle_TakeProfit. 
+  - Trao đổi rõ ràng tránh nhầm đường lạc lối mất công mất việc. 
 - Coding rule
   - Folding rule: code cần được căn lề chuẩn để fold dễ dàng.
   - Comment trong code bằng tiếng Anh. Hãy comment ngắn gọn, súc tích đúng trọng tâm.
@@ -15,7 +16,9 @@
   - Cấu trúc file: 
     + MỖI CLASS MỘT FILE (.mqh) có include guard đầy đủ cả declaration và implementation.
     + Tránh viết inline method.
-    + Ở các class khác nhau sẽ cùng dùng tên một method làm cùng một việc ví dụ SyncDataToDB,SyncDataFromDB,AddToList
+    + Ở các class khác nhau sẽ cùng dùng tên một method làm cùng một việc ví dụ 
+      -Modify DB UpdateDataToDB + Overload, ReadDataFromDB + OverLoad
+      -Update RAM UpdateTemplate + Overload, RefreshSeries,SendEvents,RefreshTimeseries....
 - No Duplicate Everywhere detail
   - Enum và Define: 
     - Hạn chế dùng number thay vì đó dùng Enum ví dụ thay vì 1 hay 2 nữa mà thay vì thế trong code mình sẽ phải là PRICE_CLOSE và PRICE_OPEN.

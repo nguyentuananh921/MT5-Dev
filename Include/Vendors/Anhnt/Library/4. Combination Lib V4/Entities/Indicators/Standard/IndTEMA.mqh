@@ -16,7 +16,7 @@
   {
    public:
                       CIndTEMA(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
-                         CIndicatorDE(IND_TEMA,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_TEMA),manager.StandardIndicatorName(IND_TEMA),
+                         CIndicatorDE(IND_TEMA,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager,
                                       "",mql_param) { this.m_object_type=OBJECT_DE_TYPE_IND_TEMA; }
   };
 #endif // CINDTEMA_MQH_DECLARATION

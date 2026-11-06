@@ -26,7 +26,7 @@
 #ifndef CINDVOLUMES_MQH_IMPLEMENTATION
 #define CINDVOLUMES_MQH_IMPLEMENTATION
  CIndVolumes::CIndVolumes(const string symbol,const ENUM_TIMEFRAMES timeframe,MqlParam &mql_param[],CIndicatorTemplateManager *manager) :
-    CIndicatorDE(IND_VOLUMES,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager.StandardIndicatorGroup(IND_VOLUMES),manager.StandardIndicatorName(IND_VOLUMES),
+    CIndicatorDE(IND_VOLUMES,symbol,timeframe,INDICATOR_STATUS_STANDARD,manager,
                  "",mql_param),m_handle_average(INVALID_HANDLE)
   {
    this.m_object_type=OBJECT_DE_TYPE_IND_VOLUMES;

@@ -26,11 +26,11 @@
    for(int g=0;g<BAR_INFORMATION_GROUP_TOTAL;g++)
      {
       ENUM_BAR_INFORMATION_GROUP group=(ENUM_BAR_INFORMATION_GROUP)g;
-      bool on=(m_BarInformationManager!=NULL && m_BarInformationManager.AnyShow(group));
-      bool alert=(m_BarInformationManager!=NULL && m_BarInformationManager.AnyAlert(group));
+      bool on=(m_BarInformationManager!=NULL && m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)group,"show"));
+      bool alert=(m_BarInformationManager!=NULL && m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)group,"alert"));
       const uint icons[2]={IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG,IMAGE_RESOURCE_BMP16_BELL_PNG};
       const bool states[2]={on,alert};
-      if(m_sections_candle.AddSection((m_BarInformationManager!=NULL ? m_BarInformationManager.GroupDescription(group) : ""),icons,states,false)==WRONG_VALUE)
+      if(m_sections_candle.AddSection((m_BarInformationManager!=NULL ? m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)group) : ""),icons,states,false)==WRONG_VALUE)
          return false;
      }
    return true;
@@ -45,7 +45,7 @@
    ENUM_BAR_INFORMATION_GROUP groups[];
    int candles[];
    bool have_buy[],have_sell[],sound[],message[],show_buy[],show_sell[];
-   int total=m_BarInformationManager.Informations(types,names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
+   int total=m_BarInformationManager.Read_RAM(types,names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
    int row=0;
    for(int i=0;i<total;i++)
      {
@@ -53,7 +53,7 @@
          continue;
       string params[],displays[];
       double values[];
-      if(!have_buy[i] && !have_sell[i] && m_BarInformationManager.Params(types[i],params,displays,values)==0)
+      if(!have_buy[i] && !have_sell[i] && m_BarInformationManager.Read_RAM(types[i],params,displays,values)==0)
          continue;
       if(!this.CreateBlock_BarInformation(section,row,types[i],names[i],candles[i],have_buy[i],have_sell[i],show_buy[i],show_sell[i],sound[i],message[i]))
          return false;
@@ -120,7 +120,7 @@
    row++;
    string params[],displays[];
    double values[];
-   int total=m_BarInformationManager.Params(type,params,displays,values);
+   int total=m_BarInformationManager.Read_RAM(type,params,displays,values);
    for(int k=0;k<total;k++)
      {
       //--- A choice of two (the price basis): the name at the left and, where the box of the other parameters is, a switch (OFF = Wick, ON = Body)
@@ -181,15 +181,15 @@
       return;
    for(int g=0;g<BAR_INFORMATION_GROUP_TOTAL;g++)
      {
-      m_sections_candle.SetToggle(g,CANDLE_TOGGLE_SHOW,m_BarInformationManager.AnyShow((ENUM_BAR_INFORMATION_GROUP)g));
-      m_sections_candle.SetToggle(g,CANDLE_TOGGLE_ALERT,m_BarInformationManager.AnyAlert((ENUM_BAR_INFORMATION_GROUP)g));
+      m_sections_candle.SetToggle(g,CANDLE_TOGGLE_SHOW,m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)g,"show"));
+      m_sections_candle.SetToggle(g,CANDLE_TOGGLE_ALERT,m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)g,"alert"));
      }
    ENUM_BAR_INFOR_TYPE types[];
    string names[];
    ENUM_BAR_INFORMATION_GROUP groups[];
    int candles[];
    bool have_buy[],have_sell[],sound[],message[],show_buy[],show_sell[];
-   int total=m_BarInformationManager.Informations(types,names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
+   int total=m_BarInformationManager.Read_RAM(types,names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
    for(int i=0;i<total;i++)
      {
       if(have_buy[i])
@@ -232,9 +232,9 @@
       if(section!=WRONG_VALUE)
         {
          if(which==CANDLE_TOGGLE_SHOW)
-            m_BarInformationManager.ShowGroup((ENUM_BAR_INFORMATION_GROUP)section,dparam!=0);
+            m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFORMATION_GROUP)section,"show_buy_signal","show_sell_signal",dparam!=0);
          else
-            m_BarInformationManager.AlertGroup((ENUM_BAR_INFORMATION_GROUP)section,dparam!=0);
+            m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFORMATION_GROUP)section,"sound_alert","message_alert",dparam!=0);
          this.SyncSections_BarInformation();   // the switches of the two columns follow the toggle, a group with none of them on stays OFF
          return;
         }
@@ -246,17 +246,17 @@
       if(slot==CANDLE_SLOT_PARAM_SWITCH)
         {
          //--- A choice of two: the value is written (price basis: ON = Body)
-         m_BarInformationManager.Param((ENUM_BAR_INFOR_TYPE)type,param,param==BAR_PARAM_PRICE_BASIS ? (dparam!=0 ? (double)SWING_PRICE_BASIS_BODY : (double)SWING_PRICE_BASIS_WICK) : (dparam!=0 ? 1.0 : 0.0));
+         m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFOR_TYPE)type,param,param==BAR_PARAM_PRICE_BASIS ? (dparam!=0 ? (double)SWING_PRICE_BASIS_BODY : (double)SWING_PRICE_BASIS_WICK) : (dparam!=0 ? 1.0 : 0.0));
          return;
         }
       if(slot==CANDLE_SLOT_SHOW_BUY)
-         m_BarInformationManager.ShowBuySignal((ENUM_BAR_INFOR_TYPE)type,dparam!=0);
+         m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFOR_TYPE)type,"show_buy_signal",dparam!=0);
       else if(slot==CANDLE_SLOT_SHOW_SELL)
-         m_BarInformationManager.ShowSellSignal((ENUM_BAR_INFOR_TYPE)type,dparam!=0);
+         m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFOR_TYPE)type,"show_sell_signal",dparam!=0);
       else if(slot==CANDLE_SLOT_SOUND_ALERT)
-         m_BarInformationManager.SoundAlert((ENUM_BAR_INFOR_TYPE)type,dparam!=0);
+         m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFOR_TYPE)type,"sound_alert",dparam!=0);
       else if(slot==CANDLE_SLOT_MESSAGE_ALERT)
-         m_BarInformationManager.MessageAlert((ENUM_BAR_INFOR_TYPE)type,dparam!=0);
+         m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFOR_TYPE)type,"message_alert",dparam!=0);
       this.SyncSections_BarInformation();
       return;
      }
@@ -268,7 +268,7 @@
       string param;
       if(m_BarInformationManager==NULL || !m_sections_candle.BodyOf(lparam,type,slot,param) || slot!=CANDLE_SLOT_PARAM)
          return;
-      m_BarInformationManager.Param((ENUM_BAR_INFOR_TYPE)type,param,dparam);
+      m_BarInformationManager.Update_BarInformation_Setting((ENUM_BAR_INFOR_TYPE)type,param,dparam);
       return;
      }
    //--- The manager changed for real: the toggles and the boxes follow it

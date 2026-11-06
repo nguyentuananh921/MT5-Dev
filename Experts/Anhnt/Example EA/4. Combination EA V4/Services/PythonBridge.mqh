@@ -7,7 +7,7 @@
 #ifndef __PYTHONBRIDGE_MQH__
 #define __PYTHONBRIDGE_MQH__
  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Bases\BaseObj.mqh>
- #include <Vendors\Anhnt\Library\4. Combination Lib V4\Services\DELib\DatabaseDELib.mqh>
+ #include <Vendors\Anhnt\Library\4. Combination Lib V4\Services\DELib\DatabaseService.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Defines\EventDefines.mqh>
  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Defines\BarDefines.mqh>
  #import "kernel32.dll"
@@ -32,30 +32,39 @@
  #define PYTHON_CURRENT_DONE_FILE                 "Python_CurrentDone.flag"      // the newest bars of every pair are there, it ends
  #define PYTHON_HISTORY_FILE                      "Python_HistoryDone.flag"      // every worker of the history is asleep
  //--- The other way: the EA makes it, Python takes it away (libdb.JOBS_FLAG)
- #define PYTHON_JOBS_FILE                         "Python_Jobs.flag"             // a template or a pair came or went: the Current worker runs again at once for the new jobs
+ #define PYTHON_JOBS_FILE                         "Python_Jobs.flag"             // a template or a pair came or went, or the rows of a changed parameter are deleted: the Current worker runs again at once
 #ifndef CPYTHONBRIDGE_MQH_DECLARATION
 #define CPYTHONBRIDGE_MQH_DECLARATION
  //+------------------------------------------------------------------+
  //| Starts Python when it is not running                             |
  //+------------------------------------------------------------------+
+ //--- A line of Setting_PythonBridge, as CDatabaseService::Read binds it (the order of the SELECT)
+ struct SPythonBridgeRow
+  {
+   string name;
+   long   value;
+  };
  class CPythonBridge : public CBaseObj
   {
    private:
-    int               m_db;                  // the open database: the table Setting_PythonBridge is asked here
+    CDatabaseService *m_CDatabaseService;    // The EA holds it
     ulong             m_launch_ms;           // when Python was launched last (0 = never)
     ulong             m_check_ms;            // when the table was read last
     bool              m_symboltf_told;       // PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE was sent for the run of Current (its file stays while Python runs: an EA loaded again finds it)
-    bool              CreateTable_PythonBridge(void);
+    bool              CreateTable(void);
     void              Launch(void);
+    string            FileNextToDatabase(const string name) const { return this.m_CDatabaseService.GetFolderName()+"\\"+name; }
+    void              DoneFile(const string name) const;
    //--- The place of Python in the table (the lines pid and alive_at): the process id of the Python (the parent) and the time of its mark
-    bool              Row_PythonBridge(long &pid,long &alive_at) const;
+    bool              Row(long &pid,long &alive_at) const;
    //--- Python wrote a while ago, but the process of the table still runs: it is busy (the history is loading), not gone, and a new one is not started
     bool              IsBusy(void) const;
    //--- A file Python made when it reached a milestone: it is told in the journal and the file is taken away (the file is the memory: nothing is kept here)
     bool              TellMilestone(const string file,const string text);   // true when the milestone was there (told now)
    public:
-                      CPythonBridge(void) : m_db(INVALID_HANDLE),m_launch_ms(0),m_check_ms(0),m_symboltf_told(false) { }
-                     ~CPythonBridge(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
+                      CPythonBridge(void) : m_CDatabaseService(NULL),m_launch_ms(0),m_check_ms(0),m_symboltf_told(false) { }
+   void              SetDatabaseService(CDatabaseService *databaseService) { this.m_CDatabaseService=databaseService; }
+                     ~CPythonBridge(void) {}
    //--- Lifecycle: opens the database, makes the table Setting_PythonBridge when it is not there, starts Python when it is not running
     bool              OnInitEvent(void);
    //--- The EA is closed (it removes itself, the user removes it, the chart or the terminal closes, another account is activated): the place is cleared, the Python of the
@@ -80,21 +89,19 @@
  //| writes them here, in OnInit, and Python reads them; no copy of     |
  //| them is kept in Python and no one is sent on its command line      |
  //+------------------------------------------------------------------+
- bool CPythonBridge::CreateTable_PythonBridge(void)
+ bool CPythonBridge::CreateTable(void)
   {
-   string who="Make Setting_PythonBridge";
-   LibDatabase_AskToWrite();   // the workers of Python let this write go first
-   //--- A table of the older shape (one row: id, pid, alive_at) goes: it held only the place of Python
-   const bool old_shape=LibDatabase_TableExists(m_db,"Setting_PythonBridge") && !LibDatabase_ColumnExists(m_db,"Setting_PythonBridge","name");
    const string place="('pid', 0, 'Process id of the parent Python that holds the place (0 = nobody). Python writes it, the EA clears it when it is closed'), "
                       "('alive_at', 0, 'Time of the last mark of life of that Python, UTC milliseconds. Python writes it once a second, the EA clears it when it is closed')";
    const string settings="('write_rows', '"+(string)EA_PYTHON_WRITE_ROWS+"', 'Results a worker gathers before it stands in the line to write, and the rows of one turn (EA_PYTHON_WRITE_ROWS)'), "
                          "('store_bars', '"+(string)(int)EA_STORE_BARS+"', '1: the bars of the terminal are copied into BarSeriesDE. 0: none is kept, they are taken from the terminal when they are judged (EA_STORE_BARS)'), "
                          "('alive_ms', '"+(string)PYTHON_ALIVE_MS+"', 'Python is running when its mark of life is not older than this, milliseconds (PYTHON_ALIVE_MS)'), "
                          "('hung_ms', '"+(string)PYTHON_HUNG_MS+"', 'A Python whose process runs but wrote nothing for this long, milliseconds, is hung and is ended; before it is only busy (PYTHON_HUNG_MS)'), "
-                         "('write_queue', '"+LibDatabase_Quoted(LIB_DATABASE_WRITE_QUEUE)+"', 'Name of the Windows mutex the workers of Python and the EA stand in to write (LIB_DATABASE_WRITE_QUEUE)'), "
-                         "('write_flag', '"+LibDatabase_Quoted(LIB_DATABASE_WRITE_FLAG)+"', 'File next to the database that tells the workers of Python that the EA is next (LIB_DATABASE_WRITE_FLAG)'), "
-                         "('chart_symbol', '"+LibDatabase_Quoted(::Symbol())+"', 'Symbol of the chart the EA is on (the Current Python worker calculates its pair first)'), "
+                         "('write_queue', '"+this.m_CDatabaseService.QuoteSQLText(DATABASE_SERVICE_WRITE_QUEUE)+"', 'Name of the Windows mutex the workers of Python stand in to write (DATABASE_SERVICE_WRITE_QUEUE)'), "
+                         "('write_flag', '"+this.m_CDatabaseService.QuoteSQLText(DATABASE_SERVICE_WRITE_FLAG)+"', 'File next to the database that tells the workers of Python that the EA is next (DATABASE_SERVICE_WRITE_FLAG)'), "
+                         "('account_key', '"+this.m_CDatabaseService.QuoteSQLText(this.m_CDatabaseService.GetAccountKey())+"', 'The account of the EA (CDatabaseService::GetAccountKey)'), "
+                         "('file_account', '"+this.m_CDatabaseService.QuoteSQLText(this.m_CDatabaseService.GetDatabaseFile("Account"))+"', 'The file of the account, under MQL5\\Files (CDatabaseService::GetDatabaseFile)'), "
+                         "('chart_symbol', '"+this.m_CDatabaseService.QuoteSQLText(::Symbol())+"', 'Symbol of the chart the EA is on (the Current Python worker calculates its pair first)'), "
                          "('chart_tf', '"+(string)(int)::Period()+"', 'TF (tf_enum) of the chart the EA is on'), "
                          "('signal_buy', '"+(string)(int)SIGNAL_DIRECTION_BUY+"', 'signal_direction of a BUY row (SIGNAL_DIRECTION_BUY)'), "
                          "('signal_sell', '"+(string)(int)SIGNAL_DIRECTION_SELL+"', 'signal_direction of a SELL row (SIGNAL_DIRECTION_SELL)'), "
@@ -110,42 +117,38 @@
                          "('file_current_done', '"+PYTHON_CURRENT_DONE_FILE+"', 'Python made it: Current ended (PYTHON_CURRENT_DONE_FILE)'), "
                          "('file_history_done', '"+PYTHON_HISTORY_FILE+"', 'Python made it: every History worker is asleep (PYTHON_HISTORY_FILE)'), "
                          "('file_jobs', '"+PYTHON_JOBS_FILE+"', 'The EA made it: a template or a pair came or went (PYTHON_JOBS_FILE)')";
-   const bool done=(!old_shape || ::DatabaseExecute(m_db,"DROP TABLE Setting_PythonBridge")) &&
-                   ::DatabaseExecute(m_db,"CREATE TABLE IF NOT EXISTS Setting_PythonBridge (name TEXT NOT NULL PRIMARY KEY, value NOT NULL, comment TEXT NOT NULL DEFAULT '') WITHOUT ROWID") &&
-                   (LibDatabase_ColumnExists(m_db,"Setting_PythonBridge","comment") || ::DatabaseExecute(m_db,"ALTER TABLE Setting_PythonBridge ADD COLUMN comment TEXT NOT NULL DEFAULT ''")) &&
-                   ::DatabaseExecute(m_db,"INSERT INTO Setting_PythonBridge (name, value, comment) VALUES "+place+" ON CONFLICT(name) DO UPDATE SET comment = excluded.comment") &&   // the place of Python is never reset here
-                   ::DatabaseExecute(m_db,"INSERT INTO Setting_PythonBridge (name, value, comment) VALUES "+settings+" ON CONFLICT(name) DO UPDATE SET value = excluded.value, comment = excluded.comment");
-   if(!done)
+   // New In V4 after implemenation CDatabaseService
+   if(!this.m_CDatabaseService.Create("Common","CREATE TABLE IF NOT EXISTS Setting_PythonBridge (name TEXT NOT NULL PRIMARY KEY, value NOT NULL, comment TEXT NOT NULL DEFAULT '') WITHOUT ROWID") ||
+      !this.m_CDatabaseService.Create("Common","INSERT INTO Setting_PythonBridge (name, value, comment) VALUES "+place+" ON CONFLICT(name) DO UPDATE SET comment = excluded.comment") ||   // the place of Python is never reset here
+      !this.m_CDatabaseService.Create("Common","INSERT INTO Setting_PythonBridge (name, value, comment) VALUES "+settings+" ON CONFLICT(name) DO UPDATE SET value = excluded.value, comment = excluded.comment"))
      {
-      LibDatabase_WriteRefused(who);
-      ::Print(__FUNCTION__," > the table Setting_PythonBridge is not made, error ",::GetLastError());
+      ::Print(__FUNCTION__," > the table Setting_PythonBridge is not made");
       return false;
      }
-   LibDatabase_WriteDone(who);
    return true;
   }
  bool CPythonBridge::OnInitEvent(void)
   {
-   if(m_db==INVALID_HANDLE)
+   // New In V4 after implemenation CDatabaseService
+   if(this.m_CDatabaseService==NULL)
      {
-      m_db=LibDatabase_Open(DATABASE_OPEN_READWRITE);
-      if(m_db==INVALID_HANDLE)
-        {
-         ::Print(__FUNCTION__," > the database ",LIB_DATABASE_FILE," is not opened, error ",::GetLastError());
+      ::Print(__FUNCTION__," > DatabaseService is not set");
+      return false;
+     }
+   if(this.m_first_start)   // a chart change writes nothing
+     {
+      if(!this.CreateTable())
          return false;
-        }
-      ::DatabaseExecute(m_db,"PRAGMA busy_timeout=5000");
-      if(!this.CreateTable_PythonBridge())
-         return false;
+      this.m_first_start=false;
      }
    if(!this.IsAlive() && !this.IsBusy())
      {
       //--- No Python runs: what an earlier one reported is not true any more
-      LibDatabase_DoneFile(PYTHON_CURRENT_START_FILE);
-      LibDatabase_DoneFile(PYTHON_CURRENT_START_CURRENT_CHART_FILE);
-      LibDatabase_DoneFile(PYTHON_CURRENT_START_SYMBOL_TF_FILE);
-      LibDatabase_DoneFile(PYTHON_CURRENT_DONE_FILE);
-      LibDatabase_DoneFile(PYTHON_HISTORY_FILE);
+      this.DoneFile(PYTHON_CURRENT_START_FILE);
+      this.DoneFile(PYTHON_CURRENT_START_CURRENT_CHART_FILE);
+      this.DoneFile(PYTHON_CURRENT_START_SYMBOL_TF_FILE);
+      this.DoneFile(PYTHON_CURRENT_DONE_FILE);
+      this.DoneFile(PYTHON_HISTORY_FILE);
       this.Launch();
      }
    return true;
@@ -154,52 +157,43 @@
   {
    //--- The EA starts again at once on the same chart: Python keeps running. Every other reason ends it: the EA removes itself (ExpertRemove of the close button of the
    //--- panel: REASON_PROGRAM), the user removes it, the chart or the terminal closes, or another account is activated (the EA starts again and starts the one of the new account)
-   if(reason==REASON_RECOMPILE || reason==REASON_CHARTCHANGE || reason==REASON_PARAMETERS || reason==REASON_TEMPLATE || m_db==INVALID_HANDLE)
+   if(reason==REASON_RECOMPILE || reason==REASON_CHARTCHANGE || reason==REASON_PARAMETERS || reason==REASON_TEMPLATE || this.m_CDatabaseService==NULL)
       return;
-   string who="Clear Setting_PythonBridge";
+   // New In V4 after implemenation CDatabaseService
    for(int attempt=0;attempt<3;attempt++)
      {
-      LibDatabase_AskToWrite();   // the workers of Python let this write go first
-      if(::DatabaseExecute(m_db,"UPDATE Setting_PythonBridge SET value = 0 WHERE name IN ('pid', 'alive_at')"))
-        {
-         LibDatabase_WriteDone(who);
+      if(this.m_CDatabaseService.Update("Common","UPDATE Setting_PythonBridge SET value = 0 WHERE name IN ('pid', 'alive_at')"))
          return;
-        }
-      LibDatabase_WriteRefused(who);
       ::Sleep(200);
      }
   }
- bool CPythonBridge::Row_PythonBridge(long &pid,long &alive_at) const
+ bool CPythonBridge::Row(long &pid,long &alive_at) const
   {
    pid=0;
    alive_at=0;
-   if(m_db==INVALID_HANDLE)
+   // New In V4 after implemenation CDatabaseService
+   if(this.m_CDatabaseService==NULL)
       return false;
-   int request=LibDatabase_Prepare(m_db,"SELECT name, value FROM Setting_PythonBridge WHERE name IN ('pid', 'alive_at')");
-   if(request==INVALID_HANDLE)
+   SPythonBridgeRow rows[];
+   if(!this.m_CDatabaseService.Read("Common","SELECT name, value FROM Setting_PythonBridge WHERE name IN ('pid', 'alive_at')",rows))
       return false;
    bool found=false;
-   while(::DatabaseRead(request))
+   for(int i=0;i<::ArraySize(rows);i++)
      {
-      string name;
-      long value=0;
-      ::DatabaseColumnText(request,0,name);
-      ::DatabaseColumnLong(request,1,value);
-      if(name=="pid")
+      if(rows[i].name=="pid")
         {
-         pid=value;
+         pid=rows[i].value;
          found=true;
         }
       else
-         alive_at=value;
+         alive_at=rows[i].value;
      }
-   ::DatabaseFinalize(request);
    return found;
   }
  bool CPythonBridge::IsAlive(void) const
   {
    long pid,alive_at;
-   if(!this.Row_PythonBridge(pid,alive_at))
+   if(!this.Row(pid,alive_at))
       return false;
    return(alive_at>0 && (long)::TimeGMT()*1000-alive_at<PYTHON_ALIVE_MS);
   }
@@ -210,7 +204,7 @@
  bool CPythonBridge::IsBusy(void) const
   {
    long pid,alive_at;
-   if(!this.Row_PythonBridge(pid,alive_at) || pid<=0 || alive_at<=0)
+   if(!this.Row(pid,alive_at) || pid<=0 || alive_at<=0)
       return false;
    if((long)::TimeGMT()*1000-alive_at>=PYTHON_HUNG_MS)
       return false;
@@ -229,7 +223,7 @@
   {
    if(m_launch_ms!=0 && ::GetTickCount64()-m_launch_ms<PYTHON_RELAUNCH_BLOCK_MS)
       return;
-   string command=PYTHON_EXE+" \""+::TerminalInfoString(TERMINAL_DATA_PATH)+PYTHON_SCRIPT+"\"";   // nothing else: what the EA decides is in Setting_PythonBridge
+   string command=PYTHON_EXE+" \""+::TerminalInfoString(TERMINAL_DATA_PATH)+PYTHON_SCRIPT+"\" --database \""+this.m_CDatabaseService.GetDatabaseFile("Common")+"\"";   // where the table is: what the EA decides is in Setting_PythonBridge
    uchar bytes[];
    ::StringToCharArray(command,bytes,0,WHOLE_ARRAY,CP_ACP);
    uint result=WinExec(bytes,PYTHON_WINDOW_SHOW);
@@ -254,7 +248,7 @@
    this.TellMilestone(PYTHON_CURRENT_START_CURRENT_CHART_FILE,"Current Python: the chart pair is in the database");
    //--- The file of this milestone stays while Python runs (Current takes it away when it starts again): an EA loaded again while Python runs (a new compile, the
    //--- parameters) finds it and the library starts at once. It is told once by this EA
-   if(!m_symboltf_told && LibDatabase_FileExists(PYTHON_CURRENT_START_SYMBOL_TF_FILE))
+   if(!m_symboltf_told && ::FileIsExist(this.FileNextToDatabase(PYTHON_CURRENT_START_SYMBOL_TF_FILE)))
      {
       m_symboltf_told=true;
       ::Print("Python Current Python: every pair of Setting_SymbolTF is in the database");
@@ -266,9 +260,10 @@
  void CPythonBridge::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
    if(id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE &&
-      id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
+      id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE &&
+      id!=CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_RESET_DONE)
       return;
-   int handle=::FileOpen(LibDatabase_FileNextToDatabase(PYTHON_JOBS_FILE),FILE_WRITE|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE);
+   int handle=::FileOpen(this.FileNextToDatabase(PYTHON_JOBS_FILE),FILE_WRITE|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE);
    if(handle==INVALID_HANDLE)
      {
       ::Print(__FUNCTION__," > ",PYTHON_JOBS_FILE," is not made, error ",::GetLastError());
@@ -279,11 +274,16 @@
   }
  bool CPythonBridge::TellMilestone(const string file,const string text)
   {
-   if(!LibDatabase_FileExists(file))
+   if(!::FileIsExist(this.FileNextToDatabase(file)))
       return false;
    ::Print("Python ",text);
-   LibDatabase_DoneFile(file);
+   this.DoneFile(file);
    return true;
+  }
+ void CPythonBridge::DoneFile(const string name) const
+  {
+   if(::FileIsExist(this.FileNextToDatabase(name)))
+      ::FileDelete(this.FileNextToDatabase(name));
   }
 #endif // CPYTHONBRIDGE_MQH_IMPLEMENTATION
 #endif // __PYTHONBRIDGE_MQH__

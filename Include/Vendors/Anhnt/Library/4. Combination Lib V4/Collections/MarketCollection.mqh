@@ -41,13 +41,13 @@
         double          total_volumes;          // Total volume of orders and positions on the account
        };
       CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbols)
+      CSymbolTFManager   *m_SymbolTFManager;    // The EA holds it: the id of OUR symbol of an order (symbols)
       CListObj          m_list_all_orders;      // List of pending orders and positions on the account (V3)
       MqlDataMarket     m_struct_curr_market;   // Current data on market orders and positions on the account
       MqlDataMarket     m_struct_prev_market;   // Previous data on market orders and positions on the account
       CArrayObj         m_list_control;         // List of control orders
       CArrayObj         m_list_changed;         // List of changed orders
       ENUM_CHANGE_TYPE  m_change_type;          // Order change type
-      bool              m_is_trade_event;       // Trading event flag
       bool              m_is_change_volume;     // Total volume change flag
       double            m_change_volume_value;  // Total volume change value
       ulong             m_k_pow;                // Ratio for converting the price into a hash sum
@@ -76,6 +76,7 @@
        CMarketCollection *GetObject(void)          { return &this; }
      //--- The collection the EA gives it: the id of a symbol of the account
        void              SetSymbolsCollection(CSymbolsCollection *collection)  { this.m_SymbolsCollection=collection; }
+       void              SetSymbolTFManager(CSymbolTFManager *manager)         { this.m_SymbolTFManager=manager;      }
      //--- Return the list of (1) pending orders and positions on the account, (2) changed orders, (3) control orders and positions
        CArrayObj*        GetList(void)             { return &this.m_list_all_orders;}
        CArrayObj*        GetListChanges(void)      { return &this.m_list_changed;}
@@ -85,7 +86,6 @@
        int               NewMarketOrders(void)    const { return this.m_new_market_orders;  }
        int               NewPendingOrders(void)   const { return this.m_new_pendings;       }
        int               NewPositions(void)       const { return this.m_new_positions;      }
-       bool              IsTradeEvent(void)       const { return this.m_is_trade_event;     }
        double            ChangedVolumeValue(void) const { return this.m_change_volume_value;  }
      //--- Constructor
                      CMarketCollection(void);
@@ -120,7 +120,7 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
-  CMarketCollection::CMarketCollection(void) : m_SymbolsCollection(NULL),m_is_trade_event(false),m_is_change_volume(false),m_change_volume_value(0)
+  CMarketCollection::CMarketCollection(void) : m_SymbolsCollection(NULL),m_SymbolTFManager(NULL),m_is_change_volume(false),m_change_volume_value(0)
    {
      this.m_object_type=COLLECTION_MARKET_ID;
      this.m_list_all_orders.Sort(SORT_BY_ORDER_TIME_OPEN);
@@ -141,7 +141,7 @@
   void CMarketCollection::RefreshMarket(void)
    {
      ::ZeroMemory(this.m_struct_curr_market);
-     this.m_is_trade_event=false;
+     this.m_is_event=false;
      this.m_is_change_volume=false;
      this.m_new_pendings=0;
      this.m_new_positions=0;
@@ -196,7 +196,7 @@
        this.m_new_positions=this.m_struct_curr_market.total_positions-this.m_struct_prev_market.total_positions;
        this.m_change_volume_value=::NormalizeDouble(this.m_struct_curr_market.total_volumes-this.m_struct_prev_market.total_volumes,4);
        this.m_is_change_volume=(this.m_change_volume_value!=0 ? true : false);
-       this.m_is_trade_event=true;
+       this.m_is_event=true;
        this.SavePrevValues();
       }
    }
@@ -206,8 +206,6 @@
   //+------------------------------------------------------------------+
   void CMarketCollection::OnOrder(COrder* order)
    {
-     if(this.m_SymbolsCollection!=NULL)
-        order.SetSymbolId(this.m_SymbolsCollection.SymbolID(order.Symbol()));
      //--- Get the control order index by a position ticket and ID
      int index=this.IndexControlOrder(order.Ticket(),order.PositionID());
      //--- If there is no order in the list of control orders, add it

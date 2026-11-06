@@ -76,7 +76,7 @@
    this.m_SymbolTFManager=manager;
    string symbols[];
    ENUM_TIMEFRAMES timeframes[];
-   int total=manager.Pairs(symbols,timeframes);
+   int total=manager.Read_RAM(symbols,timeframes);
    //--- The series that are there stay (a chart change runs OnInit again): only a new symbol gets one, a symbol with no pair left goes
    bool complete=true;
    for(int i=0;i<total;i++)
@@ -161,7 +161,7 @@
    if(id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE || this.m_SymbolTFManager==NULL)
       return false;
    ENUM_TIMEFRAMES tfs[];
-   if(this.m_SymbolTFManager.TimeframesOf(sparam,tfs)>0)
+   if(this.m_SymbolTFManager.Read_RAM(sparam,tfs)>0)
       return false;   // the symbol has other pairs: its ticks stay
    return this.DeleteSeries_TickSeriesCollection(sparam);
   }

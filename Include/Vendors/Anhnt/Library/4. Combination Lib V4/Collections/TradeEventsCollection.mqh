@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 //--- The trading events of the account (V3: made from the lists of the history and of the market, kept in RAM: m_list_trade_events).
 //--- V1 / V3: the EA (as CEngine::TradeEventsControl) gives it the lists when the history or the market changed; each event goes to the chart itself (CTradeEvent::SendEvent).
-//--- V4: the new events are written to the table TradeEvent (Save on DB for no more calculation: SyncDataToDB)
+//--- V4: the new events are written to the table TradeEvent (Save on DB for no more calculation: UpdateDataToDB)
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
@@ -17,7 +17,6 @@
  #include "ListObj.mqh"
  #include "SymbolsCollection.mqh"
  #include "Settings\SyncManager.mqh"
- #include "..\Services\DELib\DatabaseDELib.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "..\Entities\Trading\Order.mqh"
  #include "..\Entities\Trading\OrderControl.mqh"
@@ -47,10 +46,10 @@
    {
      private:
       CListObj          m_list_trade_events;             // List of events
-      CArrayObj         m_list_pending;                  // RAM only: the events of m_list_trade_events that are not lines of the table yet (SyncDataToDB writes them)
+      
       CSymbolsCollection *m_SymbolsCollection;          // The EA holds it: the id of OUR symbol of an event
-      CSyncManager      *m_SyncManager;                  // The EA holds it: the marks of TradeEvent in Setting_Sync
-      int               m_db;                            // The file of the account: the table TradeEvent
+      CSymbolTFManager   *m_SymbolTFManager;            // The EA holds it: the id of OUR symbol of an event
+      
       bool              m_is_hedge;                      // Hedge account flag
       int               m_trade_event_code;              // Trading event code
       ENUM_TRADE_EVENT  m_trade_event;                   // Account trading event
@@ -88,19 +87,13 @@
        bool              IsPresentEventInList(CTradeEvent* compared_event);
       //--- The handler of an existing order/position change event
        void              OnChangeEvent(CArrayObj* list_changes,const int index);
-      //--- The columns of the table TradeEvent, the value of a property as SQL, the line of an event
-       int               Columns(SEventColumn &out[]);
-       string            SqlValue(CTradeEvent* event,const int prop);
-       bool              SaveEvent(CTradeEvent* event);
 
      public:
       //--- The collection and the manager the EA gives it: the id of a symbol, the marks of Setting_Sync
        void              SetSymbolsCollection(CSymbolsCollection *collection)                                { this.m_SymbolsCollection=collection;  }
-       void              SetSyncManager(CSyncManager *manager)                                               { this.m_SyncManager=manager;           }
+       void              SetSymbolTFManager(CSymbolTFManager *manager)                                       { this.m_SymbolTFManager=manager;       }
       //--- Lifecycle: opens the file of the account and makes the table TradeEvent when it is not there (the marks of the table go with it)
        bool              OnInitEvent(void);
-      //--- The events that are not lines of the table yet are written (the database refused them: the next call)
-       bool              SyncDataToDB(void);
       //--- Return itself
        CTradeEventsCollection*GetObject(void)                                                                     { return &this;                                                         }
       //--- Return the full event collection list "as is"
@@ -125,7 +118,7 @@
        void              ResetLastTradeEvent(void)                    { this.m_trade_event=TRADE_EVENT_NO_EVENT;   }
       //--- Constructor
                      CTradeEventsCollection(void);
-                    ~CTradeEventsCollection(void) { if(m_db!=INVALID_HANDLE) ::DatabaseClose(m_db); }
+                    ~CTradeEventsCollection(void) {}
    };
  #endif // CTRADEEVENTSCOLLECTION_MQH_DECLARATION
  #ifndef CTRADEEVENTSCOLLECTION_MQH_IMPLEMENTATION
@@ -133,9 +126,8 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
-  CTradeEventsCollection::CTradeEventsCollection(void) : m_trade_event(TRADE_EVENT_NO_EVENT),m_trade_event_code(TRADE_EVENT_FLAG_NO_EVENT),m_SymbolsCollection(NULL),m_SyncManager(NULL),m_db(INVALID_HANDLE)
+  CTradeEventsCollection::CTradeEventsCollection(void) : m_trade_event(TRADE_EVENT_NO_EVENT),m_trade_event_code(TRADE_EVENT_FLAG_NO_EVENT),m_SymbolsCollection(NULL),m_SymbolTFManager(NULL)
    {
-     this.m_list_pending.FreeMode(false);   // m_list_trade_events owns them
      this.m_object_type=COLLECTION_TRADE_EVENTS_ID;
      this.m_list_trade_events.Clear();
      this.m_list_trade_events.Sort(SORT_BY_EVENT_TIME_EVENT);
@@ -290,14 +282,17 @@
             CArrayObj list;
             if(this.GetListDeals(list_history,list))
               {
-               //--- Sort the new list by deal time
-               list.Sort(SORT_BY_ORDER_TIME_OPEN);
+               //--- Sort the new list by deal ticket: deals of the same millisecond keep their order, the last N are the new ones
+               list.Sort(SORT_BY_ORDER_TICKET);
                //--- Take the number of deals equal to the number of new ones from the end of the list in a loop (the last N events)
                int total=list.Total(), n=new_deals;
+               ::Print("MY DEBUG    CTradeEventsCollection::Refresh new_deals=",new_deals,", deals in the list=",total);
                for(int i=total-1; i>WRONG_VALUE && n>0; i--,n--)
                  {
                   //--- Receive a deal from the list and set a trading event
                   COrder* order=list.At(i);
+                  if(order!=NULL)
+                     ::Print("MY DEBUG    CTradeEventsCollection::Refresh picked index=",i,", deal=",order.Ticket(),", position=",order.PositionID(),", time=",order.TimeOpen());
                   if(order!=NULL)
                      this.CreateNewEvent(order,list_history,list_market,list_control);
                  }
@@ -305,8 +300,6 @@
            }
        #endif
       }
-    //--- Each event went to the chart itself (CTradeEvent::SendEvent, V1 / V3): the new ones are written
-     this.SyncDataToDB();
    }
   //+------------------------------------------------------------------+
   //| The handler of an existing order/position change event           |
@@ -336,7 +329,7 @@
      if(order.GetChangeType()==CHANGE_TYPE_ORDER_TYPE)
       {
        reason=EVENT_REASON_STOPLIMIT_TRIGGERED;
-       this.m_trade_event_code=TRADE_EVENT_FLAG_ORDER_PLASED;
+       this.m_trade_event_code=TRADE_EVENT_FLAG_ORDER_PLACED;
        event=new CTradeEventOrderPlaced(this.m_trade_event_code,order.Ticket());
       }
     //--- Modification
@@ -423,7 +416,6 @@
         if(!this.IsPresentEventInList(event))
          {
            this.m_list_trade_events.InsertSort(event);
-           this.m_list_pending.Add(event);   // written by SyncDataToDB
            //--- Send a message about the event and set the value of the last trading event
             this.m_trade_event=event.TradeEvent();
             this.m_is_event=true;
@@ -453,7 +445,7 @@
      //--- Pending order placed
       if(status==ORDER_STATUS_MARKET_PENDING)
        {
-        this.m_trade_event_code=TRADE_EVENT_FLAG_ORDER_PLASED;
+        this.m_trade_event_code=TRADE_EVENT_FLAG_ORDER_PLACED;
         CTradeEvent* event=new CTradeEventOrderPlaced(this.m_trade_event_code,order.Ticket());
         if(event!=NULL)
          {
@@ -498,7 +490,6 @@
            if(!this.IsPresentEventInList(event))
             {
              this.m_list_trade_events.InsertSort(event);
-             this.m_list_pending.Add(event);   // written by SyncDataToDB
              //--- Send a message about the event and set the value of the last trading event
               this.m_trade_event=event.TradeEvent();
               this.m_is_event=true;
@@ -567,7 +558,6 @@
            if(!this.IsPresentEventInList(event))
             {
              this.m_list_trade_events.InsertSort(event);
-             this.m_list_pending.Add(event);   // written by SyncDataToDB
              //--- Send a message about the event and set the value of the last trading event
               this.m_trade_event=event.TradeEvent();
               this.m_is_event=true;
@@ -643,7 +633,6 @@
             if(!this.IsPresentEventInList(event))
               {
                 this.m_list_trade_events.InsertSort(event);
-                this.m_list_pending.Add(event);   // written by SyncDataToDB
                 //--- Send a message about the event and set the value of the last trading event
                 this.m_trade_event=event.TradeEvent();
                 this.m_is_event=true;
@@ -776,7 +765,6 @@
             if(!this.IsPresentEventInList(event))
               {
                 this.m_list_trade_events.InsertSort(event);
-                this.m_list_pending.Add(event);   // written by SyncDataToDB
                 //--- Send a message about the event and set the value of the last trading event
                 this.m_trade_event=event.TradeEvent();
                 this.m_is_event=true;
@@ -850,7 +838,6 @@
                  {
                   //--- Send a message about the event and set the value of the last trading event
                    this.m_list_trade_events.InsertSort(event);
-                   this.m_list_pending.Add(event);   // written by SyncDataToDB
                    this.m_trade_event=event.TradeEvent();
                    this.m_is_event=true;
                    event.SendEvent();
@@ -896,6 +883,8 @@
          //--- Get an open position by ticket
           COrder* position=this.GetPositionByID(list_market,deal.PositionID());
           double vol_position=(position!=NULL ? position.Volume() : 0);
+          ::Print("MY DEBUG    CTradeEventsCollection::NewDealEventHedge deal=",deal.Ticket(),", position=",deal.PositionID(),", position in list_market=",(position!=NULL),", vol_position=",vol_position,
+                  ", volume_in=",volume_in,", list_market total=",list_market.Total(),", PositionsTotal now=",::PositionsTotal(),", PositionSelectByTicket now=",::PositionSelectByTicket(deal.PositionID()));
          //--- If there is no last order, the first and last position orders coincide
           if(order_last==NULL)
             order_last=order_first;
@@ -963,7 +952,6 @@
                if(!this.IsPresentEventInList(event))
                 {
                  this.m_list_trade_events.InsertSort(event);
-                 this.m_list_pending.Add(event);   // written by SyncDataToDB
                  //--- Send a message about the event and set the value of the last trading event
                  this.m_trade_event=event.TradeEvent();
                  this.m_is_event=true;
@@ -1069,7 +1057,6 @@
                   if(!this.IsPresentEventInList(event))
                     {
                     this.m_list_trade_events.InsertSort(event);
-                    this.m_list_pending.Add(event);   // written by SyncDataToDB
                     //--- Send a message about the event and set the value of the last trading event
                     this.m_trade_event=event.TradeEvent();
                     this.m_is_event=true;
@@ -1176,7 +1163,6 @@
                   if(!this.IsPresentEventInList(event))
                     {
                     this.m_list_trade_events.InsertSort(event);
-                    this.m_list_pending.Add(event);   // written by SyncDataToDB
                     //--- Send a message about the event and set the value of the last trading event
                     this.m_trade_event=event.TradeEvent();
                     this.m_is_event=true;
@@ -1336,7 +1322,6 @@
             if(!this.IsPresentEventInList(event))
               {
                 this.m_list_trade_events.InsertSort(event);
-                this.m_list_pending.Add(event);   // written by SyncDataToDB
                 //--- Send a message about the event and set the value of the last trading event
                 this.m_trade_event=event.TradeEvent();
                 this.m_is_event=true;
@@ -1422,7 +1407,6 @@
             if(!this.IsPresentEventInList(event))
               {
                 this.m_list_trade_events.InsertSort(event);
-                this.m_list_pending.Add(event);   // written by SyncDataToDB
                 //--- Send a message about the event and set the value of the last trading event
                 this.m_trade_event=event.TradeEvent();
                 this.m_is_event=true;
@@ -1516,7 +1500,6 @@
             if(!this.IsPresentEventInList(event))
               {
                 this.m_list_trade_events.InsertSort(event);
-                this.m_list_pending.Add(event);   // written by SyncDataToDB
                 //--- Send a message about the event and set the value of the last trading event
                 this.m_trade_event=event.TradeEvent();
                 this.m_is_event=true;
@@ -1805,129 +1788,21 @@
         if(event==NULL)
           continue;
         if(event.IsEqual(compared_event))
-          return true;
+          {
+           ::Print("MY DEBUG    CTradeEventsCollection::IsPresentEventInList true: deal=",compared_event.TicketDeal(),", position=",compared_event.GetProperty(EVENT_PROP_POSITION_ID));
+           return true;
+          }
+        //--- The same deal and type, a property differs: which prices
+        if(event.TicketDeal()==compared_event.TicketDeal() && event.TypeEvent()==compared_event.TypeEvent())
+           ::Print("MY DEBUG    CTradeEventsCollection::IsPresentEventInList same deal=",compared_event.TicketDeal()," not equal: ask ",event.GetProperty(EVENT_PROP_PRICE_EVENT_ASK),"/",compared_event.GetProperty(EVENT_PROP_PRICE_EVENT_ASK),
+                   ", bid ",event.GetProperty(EVENT_PROP_PRICE_EVENT_BID),"/",compared_event.GetProperty(EVENT_PROP_PRICE_EVENT_BID),
+                   ", volume after ",event.GetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED),"/",compared_event.GetProperty(EVENT_PROP_VOLUME_POSITION_EXECUTED));
       }
+    ::Print("MY DEBUG    CTradeEventsCollection::IsPresentEventInList false: deal=",compared_event.TicketDeal(),", position=",compared_event.GetProperty(EVENT_PROP_POSITION_ID));
     return false;
    }
-  //+------------------------------------------------------------------+
-  //| The columns of the table TradeEvent: the properties of CTradeEvent|
-  //| in the order of ENUM_EVENT_PROP_*, named as the property in lower |
-  //| case without EVENT_PROP_; symbol_id is OUR symbol (the table      |
-  //| symbols of the file the accounts share), no symbol name is kept   |
-  //+------------------------------------------------------------------+
-  int CTradeEventsCollection::Columns(SEventColumn &out[])
-   {
-    SEventColumn columns[]=
-     {
-      {"type_event","INTEGER NOT NULL",EVENT_PROP_TYPE_EVENT},{"time_event","INTEGER NOT NULL",EVENT_PROP_TIME_EVENT},{"status_event","INTEGER",EVENT_PROP_STATUS_EVENT},
-      {"reason_event","INTEGER",EVENT_PROP_REASON_EVENT},{"type_deal_event","INTEGER",EVENT_PROP_TYPE_DEAL_EVENT},{"ticket_deal_event","INTEGER NOT NULL DEFAULT 0",EVENT_PROP_TICKET_DEAL_EVENT},
-      {"type_order_event","INTEGER",EVENT_PROP_TYPE_ORDER_EVENT},{"ticket_order_event","INTEGER NOT NULL DEFAULT 0",EVENT_PROP_TICKET_ORDER_EVENT},
-      {"time_order_position","INTEGER",EVENT_PROP_TIME_ORDER_POSITION},{"type_order_position","INTEGER",EVENT_PROP_TYPE_ORDER_POSITION},
-      {"ticket_order_position","INTEGER",EVENT_PROP_TICKET_ORDER_POSITION},{"position_id","INTEGER",EVENT_PROP_POSITION_ID},{"position_by_id","INTEGER",EVENT_PROP_POSITION_BY_ID},
-      {"magic_order","INTEGER",EVENT_PROP_MAGIC_ORDER},{"magic_by_id","INTEGER",EVENT_PROP_MAGIC_BY_ID},{"type_ord_pos_before","INTEGER",EVENT_PROP_TYPE_ORD_POS_BEFORE},
-      {"ticket_ord_pos_before","INTEGER",EVENT_PROP_TICKET_ORD_POS_BEFORE},{"type_ord_pos_current","INTEGER",EVENT_PROP_TYPE_ORD_POS_CURRENT},
-      {"ticket_ord_pos_current","INTEGER",EVENT_PROP_TICKET_ORD_POS_CURRENT},{"price_event","REAL",EVENT_PROP_PRICE_EVENT},{"price_open","REAL",EVENT_PROP_PRICE_OPEN},
-      {"price_close","REAL",EVENT_PROP_PRICE_CLOSE},{"price_sl","REAL",EVENT_PROP_PRICE_SL},{"price_tp","REAL",EVENT_PROP_PRICE_TP},{"volume_order_initial","REAL",EVENT_PROP_VOLUME_ORDER_INITIAL},
-      {"volume_order_executed","REAL",EVENT_PROP_VOLUME_ORDER_EXECUTED},{"volume_order_current","REAL",EVENT_PROP_VOLUME_ORDER_CURRENT},
-      {"volume_position_executed","REAL",EVENT_PROP_VOLUME_POSITION_EXECUTED},{"profit","REAL",EVENT_PROP_PROFIT},{"price_open_before","REAL",EVENT_PROP_PRICE_OPEN_BEFORE},
-      {"price_sl_before","REAL",EVENT_PROP_PRICE_SL_BEFORE},{"price_tp_before","REAL",EVENT_PROP_PRICE_TP_BEFORE},{"price_event_ask","REAL",EVENT_PROP_PRICE_EVENT_ASK},
-      {"price_event_bid","REAL",EVENT_PROP_PRICE_EVENT_BID},{"symbol_id","INTEGER",EVENT_PROP_SYMBOL}
-     };
-    int total=::ArraySize(columns);
-    ::ArrayResize(out,total);
-    for(int i=0;i<total;i++)
-       out[i]=columns[i];
-    return total;
-   }
-  //+------------------------------------------------------------------+
-  //| The value of a property as a SQL value: NULL when the event does |
-  //| not have it; the symbol of an event is its symbol_id             |
-  //+------------------------------------------------------------------+
-  string CTradeEventsCollection::SqlValue(CTradeEvent* event,const int prop)
-   {
-    if(prop<EVENT_PROP_INTEGER_TOTAL)
-      return event.SupportProperty((ENUM_EVENT_PROP_INTEGER)prop) ? (string)event.GetProperty((ENUM_EVENT_PROP_INTEGER)prop) : "NULL";
-    if(prop<EVENT_PROP_INTEGER_TOTAL+EVENT_PROP_DOUBLE_TOTAL)
-      return event.SupportProperty((ENUM_EVENT_PROP_DOUBLE)prop) ? ::DoubleToString(event.GetProperty((ENUM_EVENT_PROP_DOUBLE)prop),8) : "NULL";
-    return (string)this.m_SymbolsCollection.SymbolID(event.GetProperty((ENUM_EVENT_PROP_STRING)prop));
-   }
-  //+------------------------------------------------------------------+
-  //| The table TradeEvent (Model of CTradeEvent) in the file of the   |
-  //| account: one line for each event, the key is the time, the type, |
-  //| the order and the deal of the event. Same convention as the      |
-  //| managers: a table that is not there is made, and what was marked |
-  //| as synced for it is not true any more                            |
-  //+------------------------------------------------------------------+
   bool CTradeEventsCollection::OnInitEvent(void)
    {
-    if(m_db!=INVALID_HANDLE)
-       return true;   // a CHARTCHANGE reinit keeps the database open
-    m_db=LibDatabase_OpenAccount(DATABASE_OPEN_READWRITE | DATABASE_OPEN_CREATE);
-    if(m_db==INVALID_HANDLE)
-     {
-      ::Print(__FUNCTION__," > the database ",LibDatabase_AccountFile()," is not opened, error ",::GetLastError());
-      return false;
-     }
-    ::DatabaseExecute(m_db,"PRAGMA busy_timeout="+(string)LIB_DATABASE_BUSY_MS);
-    ::DatabaseExecute(m_db,"PRAGMA journal_mode=WAL");
-    const bool table_was_there=LibDatabase_TableExists(m_db,"TradeEvent");
-    SEventColumn columns[];
-    int total=this.Columns(columns);
-    string fields="";
-    for(int i=0;i<total;i++)
-       fields+=(i>0 ? ", " : "")+columns[i].name+" "+columns[i].type;
-    if(!::DatabaseExecute(m_db,"CREATE TABLE IF NOT EXISTS TradeEvent (\n-- Library V4: class CTradeEvent (Entities/Trading/TradeEvent.mqh), properties ENUM_EVENT_PROP_* (Entities/Defines/TradingDefines.mqh); NULL = not known\n"+
-                               fields+", PRIMARY KEY (time_event, type_event, ticket_order_event, ticket_deal_event)) WITHOUT ROWID"))
-     {
-      ::Print(__FUNCTION__," > the table TradeEvent is not made, error ",::GetLastError());
-      return false;
-     }
-    if(!table_was_there && this.m_SyncManager!=NULL)
-       this.m_SyncManager.ResetObject_SyncManager(this.m_object_type);
-    ::Print("Complete ",__FUNCTION__," > ",LibDatabase_AccountFile()," opened");
-    return true;
-   }
-  //+------------------------------------------------------------------+
-  //| The line of an event. An event of a symbol that is not one of    |
-  //| ours yet (symbol_id 0) is not written                            |
-  //+------------------------------------------------------------------+
-  bool CTradeEventsCollection::SaveEvent(CTradeEvent* event)
-   {
-    if(m_db==INVALID_HANDLE || event==NULL || this.m_SymbolsCollection==NULL)
-       return false;
-    if(this.m_SymbolsCollection.SymbolID(event.GetProperty(EVENT_PROP_SYMBOL))==0)
-       return true;   // not one of our symbols yet: there is nothing to write
-    SEventColumn columns[];
-    int total=this.Columns(columns);
-    string names="",values="";
-    for(int i=0;i<total;i++)
-     {
-      names+=(i>0 ? ", " : "")+columns[i].name;
-      values+=(i>0 ? ", " : "")+this.SqlValue(event,columns[i].prop);
-     }
-    string who="Save TradeEvent (time "+(string)event.GetProperty(EVENT_PROP_TIME_EVENT)+")";
-    LibDatabase_AskToWrite();
-    if(!::DatabaseExecute(m_db,"INSERT OR IGNORE INTO TradeEvent ("+names+") VALUES ("+values+")"))
-     {
-      LibDatabase_WriteRefused(who);
-      return false;
-     }
-    LibDatabase_WriteDone(who);
-    return true;
-   }
-  //+------------------------------------------------------------------+
-  //| The events that are not lines of the table yet are written,      |
-  //| oldest first: a refused one waits for the next call              |
-  //+------------------------------------------------------------------+
-  bool CTradeEventsCollection::SyncDataToDB(void)
-   {
-    while(this.m_list_pending.Total()>0)
-     {
-      CTradeEvent *event=this.m_list_pending.At(0);
-      if(event!=NULL && !this.SaveEvent(event))
-         return false;   // still refused (Python writes): the next call
-      this.m_list_pending.Delete(0);
-     }
     return true;
    }
  #endif // CTRADEEVENTSCOLLECTION_MQH_IMPLEMENTATION

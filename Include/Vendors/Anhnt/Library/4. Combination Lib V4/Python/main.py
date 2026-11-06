@@ -6,7 +6,7 @@ it has nothing else to do, a chunk of older bars at a time, back to the first ba
 The EA starts ONE Python (the parent: the mark of life, the Market Watch) and the parent starts three kinds of worker:
 Current (--current, one): the first chunk (the newest bars) of every pair, in this order: the pair of the chart, the other pairs of Setting_SymbolTF, every other pair.
 Live (--live, one): the new bars of the pairs that are not in Setting_SymbolTF (the Library does the new bars of the others), from where Current finished.
-History (--symbol-id N --parent-pid P, one for every symbol of ours): the steps back in the history of the pairs, back to the first bar, from where Current started; a worker
+History (--symbol S --parent-pid P, one for every symbol of ours): the steps back in the history of the pairs, back to the first bar, from where Current started; a worker
 that has nothing left helps the pairs of the others.
 The order to write to the database: the EA and the Library, then Current and Live, then History (libdb.urgent).
 A worker gathers what it finds and stands in the line to write when write_rows results have gathered (Setting_PythonBridge: EA_PYTHON_WRITE_ROWS of the EA). Every worker tells where
@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 import traceback
+import zlib
 from pathlib import Path
 
 import pandas as pd
@@ -50,7 +51,7 @@ WORKER_CHECK_SECONDS = 5.0   # how often the parent looks for a symbol that has 
 REPORT_SECONDS = 30.0     # how often a worker tells where its time went
 FINISHED_FORGET_SECONDS = 60.0   # a pair a worker found with no history left is looked at again after this long
 SLEEP_SECONDS = 5.0       # a worker whose history is all there looks again at this pace (a new template, a new symbol wake it)
-CURRENT_ID = 0            # the id of the Current worker in the files history_done_N.flag (no symbol has it): it sleeps when every pair has its first chunk
+CURRENT_ID = "0"            # the id of the Current worker in the files history_done_N.flag (no symbol has it): it sleeps when every pair has its first chunk
 
 _progress = time.monotonic()   # the last time the loop went round
 _beat = -BEAT_SECONDS          # the last time the mark of life was written (monotonic)
@@ -282,20 +283,20 @@ class Round:
         self.library = db.library_pairs()   # the pairs of Setting_SymbolTF: their new bars are the Library's, Python never calculates them
 
     def bars(self, pair, count):
-        key = (pair[0], pair[2], count)
+        key = (pair[0], pair[1], count)
         if key not in self.cache:
             with timed("terminal"):
-                bars = data.fetch_closed_bars(pair[1], pair[3], count)
-            self.db.write_bars(pair[0], pair[2], bars)   # the bars first: what is calculated is on them
+                bars = data.fetch_closed_bars(pair[0], pair[2], count)
+            self.db.write_bars(pair[0], pair[1], bars)   # the bars first: what is calculated is on them
             self.cache[key] = bars
         return self.cache[key]
 
     def last_closed(self, pair):
         """The open time of the newest closed bar of the pair, asked to the terminal once in a pass."""
-        key = (pair[0], pair[2])
+        key = (pair[0], pair[1])
         if key not in self.closed:
             with timed("terminal"):
-                self.closed[key] = data.fetch_last_closed_time(pair[1], pair[3])
+                self.closed[key] = data.fetch_last_closed_time(pair[0], pair[2])
         return self.closed[key]
 
 
@@ -336,13 +337,13 @@ def bars_needed(rnd, pair, jobs, limit):
     and after it (right: a swing confirmed now sits `right` bars back and needs `context` bars before it). `limit` caps the new bars only, the context is always added:
     more new bars than `limit` is a gap. A job with nothing synced yet: `limit` (the first chunk). The bars of a TF are counted by its length, a weekend counts too:
     it is never fewer than the terminal has."""
-    states = [rnd.db.state(job.source, pair[0], pair[2]) for job in jobs]
+    states = [rnd.db.state(job.source, pair[0], pair[1]) for job in jobs]
     if not jobs or any(state is None for state in states):
         return limit
     last_closed = rnd.last_closed(pair)
     if last_closed is None:
         return limit
-    new = max(0, int((last_closed - min(state[0] for state in states)) // data.tf_seconds(pair[3]))) + 1
+    new = max(0, int((last_closed - min(state[0] for state in states)) // data.tf_seconds(pair[2]))) + 1
     return min(limit, new) + max(job.context + job.right for job in jobs)
 
 
@@ -353,8 +354,8 @@ def calculate_new(rnd, pair, job, live, count):
     and that Current has made. Returns how many were found, -1 when the pair is not ready for the Live worker (Current has not made its chunk or its gap yet).
     `count`: the bars asked for the pair (bars_needed), the same for every job of the pair. What is found waits in the line of the database until the rows have gathered (write_result)."""
     db = rnd.db
-    symbol_id, symbol, tf_enum, tf_text = pair
-    state = db.state(job.source, symbol_id, tf_enum)
+    symbol, tf_enum, tf_text = pair
+    state = db.state(job.source, symbol, tf_enum)
     if state is None:   # nothing synced yet
         if live:
             return -1
@@ -363,9 +364,9 @@ def calculate_new(rnd, pair, job, live, count):
             found = job.calculate(bars, 0, None)
         judged = min(job.context, len(bars) - 1)   # the oldest bars have not the bars before them: they are judged in the next step back
         lost = (0, 0) if len(bars) < CHUNK_BARS else (0, int(bars["time"].iloc[judged]))
-        db.write_result(job.source, symbol_id, tf_enum, found, last_update=int(bars["time"].iloc[-1]), lost=lost, defer=True)
+        db.write_result(job.source, symbol, tf_enum, found, last_update=int(bars["time"].iloc[-1]), lost=lost, defer=True)
         return len(found)
-    if live and (symbol_id, tf_enum) in rnd.library:
+    if live and (symbol, tf_enum) in rnd.library:
         return 0   # the new bars of a pair of Setting_SymbolTF are the Library's (it marks them in Setting_Sync)
     last_closed = rnd.last_closed(pair)
     if last_closed is None or last_closed <= state[0]:
@@ -376,20 +377,20 @@ def calculate_new(rnd, pair, job, live, count):
             return -1   # the window does not reach the newest bar synced: it is a gap, the Current worker fills the chunk and the History workers the rest
         with timed("calculation"):
             found = job.calculate(bars, state[0], None)
-        db.write_result(job.source, symbol_id, tf_enum, found, last_update=int(bars["time"].iloc[-1]), defer=True)
+        db.write_result(job.source, symbol, tf_enum, found, last_update=int(bars["time"].iloc[-1]), defer=True)
         return len(found)
     bars = rnd.bars(pair, count)
     if int(bars["time"].iloc[0]) <= state[0] or len(bars) < count:   # the bars reach the newest bar synced (or the terminal has no more): no gap
         with timed("calculation"):
             found = job.calculate(bars, state[0], None)
-        db.write_result(job.source, symbol_id, tf_enum, found, last_update=int(bars["time"].iloc[-1]), defer=True)
+        db.write_result(job.source, symbol, tf_enum, found, last_update=int(bars["time"].iloc[-1]), defer=True)
         return len(found)
     with timed("calculation"):
         found = job.calculate(bars, 0, None)
     first_time = int(bars["time"].iloc[min(job.context, len(bars) - 1)])
     missing = state[2] > state[1]   # a history that was not finished is missing too: the gap and what was before it become one piece, back to the first bar
     lost = (0, first_time) if missing else (state[0], first_time)
-    db.write_result(job.source, symbol_id, tf_enum, found, last_update=int(bars["time"].iloc[-1]), lost=lost, defer=True)
+    db.write_result(job.source, symbol, tf_enum, found, last_update=int(bars["time"].iloc[-1]), lost=lost, defer=True)
     return len(found)
 
 
@@ -398,11 +399,11 @@ def calculate_older(rnd, pair, jobs):
     every job judges them. True when a step was made, False when there is nothing to do (nothing is missing), None when the terminal did not answer. What the step found is written
     before it returns: another worker may take the next step of this pair."""
     db = rnd.db
-    symbol_id, symbol, tf_enum, tf_text = pair
+    symbol, tf_enum, tf_text = pair
     written_before = libdb.SPENT["rows"] + libdb.SPENT["marks"]
     states = {}
     for job in jobs:
-        state = db.state(job.source, symbol_id, tf_enum)
+        state = db.state(job.source, symbol, tf_enum)
         if state is not None and state[2] > state[1]:   # the first chunk is done, something is missing before it
             states[job] = state
     if not states:
@@ -419,11 +420,11 @@ def calculate_older(rnd, pair, jobs):
     _spent["terminal"] += spent_fetch
     if len(bars) == 0:
         for job in states:
-            db.write_result(job.source, symbol_id, tf_enum, [], lost=(0, 0), defer=True)
+            db.write_result(job.source, symbol, tf_enum, [], lost=(0, 0), defer=True)
         db.flush_results()
         print(f"{symbol} {tf_text}: the history is all there, back to {time.strftime('%Y-%m-%d %H:%M', time.gmtime(end))} ({len(states)} jobs)")
         return True
-    spent_bars = db.write_bars(symbol_id, tf_enum, bars)
+    spent_bars = db.write_bars(symbol, tf_enum, bars)
     start = int(bars["time"].iloc[0])
     done = len(bars) < ask   # fewer than asked: the first bar of the history is in it
     total = 0
@@ -432,7 +433,7 @@ def calculate_older(rnd, pair, jobs):
         mark_progress()
         if state[2] <= start:   # this job went back further than the chunk starts: nothing in it is new for it
             if done:
-                db.write_result(job.source, symbol_id, tf_enum, [], lost=(0, 0), defer=True)
+                db.write_result(job.source, symbol, tf_enum, [], lost=(0, 0), defer=True)
             continue
         judged = min(job.context, len(bars) - 1)
         first_time = min(int(bars["time"].iloc[judged]), state[2])
@@ -441,7 +442,7 @@ def calculate_older(rnd, pair, jobs):
             point = bars.attrs.get("point")
             after_time = int(bars["time"].iloc[-1]) + 1
             if libdb.store_bars():
-                after = db.bars_after(symbol_id, tf_enum, after_time, job.right)
+                after = db.bars_after(symbol, tf_enum, after_time, job.right)
             else:
                 after = data.fetch_bars_after(symbol, tf_text, after_time, job.right)
                 if after is None:
@@ -452,7 +453,7 @@ def calculate_older(rnd, pair, jobs):
         found = job.calculate(part, 0, state[2])
         spent_calculate += time.perf_counter() - clock
         finished = done or first_time <= state[1]   # the first bar, or the end of the gap, is reached: nothing is missing any more
-        db.write_result(job.source, symbol_id, tf_enum, found, lost=(0, 0) if finished else (state[1], first_time), defer=True)
+        db.write_result(job.source, symbol, tf_enum, found, lost=(0, 0) if finished else (state[1], first_time), defer=True)
         total += len(found)
     _spent["calculation"] += spent_calculate
     db.flush_results()
@@ -466,13 +467,13 @@ def count_locked(pair, label, error):
     """A write waited for the other writers longer than BUSY_MS and was refused: nothing was marked as done, the next pass makes it again. One line, not a traceback."""
     global _locked
     _locked += 1
-    print(f"{pair[1]} {pair[3]} {label}: {error} (the next pass tries again)")
+    print(f"{pair[0]} {pair[2]} {label}: {error} (the next pass tries again)")
 
 
-def worker_command(terminal, role, symbol_id=None):
+def worker_command(terminal, role, symbol=None):
     """The command of a worker: the Current one, the Live one (role "current", "live") or the History one of a symbol (role "history")."""
     command = [sys.executable, str(Path(__file__).resolve()), "--parent-pid", str(os.getpid())]
-    command += ["--symbol-id", str(symbol_id)] if role == "history" else ["--" + role]
+    command += ["--symbol", symbol] if role == "history" else ["--" + role]
     if terminal:
         command += ["--terminal", terminal]
     return command
@@ -509,7 +510,7 @@ def run_parent(terminal):
     _beat_db = db
     libdb.history_done_clear()
     libdb.jobs_changed()   # a file of the EA from before this Python: the Current worker starts with the jobs of now anyway
-    workers = {}   # symbol_id -> the process of the history of the symbol, "current" -> the one of the first chunks, "live" -> the one of the new bars
+    workers = {}   # symbol -> the process of the history of the symbol, "current" -> the one of the first chunks, "live" -> the one of the new bars
     model = None   # what the Current worker was started for (the symbols, how many jobs): when it changes, the Current worker runs again
     all_asleep = False
     last_check = -WORKER_CHECK_SECONDS
@@ -528,15 +529,15 @@ def run_parent(terminal):
             if now - last_check >= WORKER_CHECK_SECONDS:
                 last_check = now
                 # Paused: only the Current worker runs for now
-                # for symbol_id, name in db.symbols():
-                #     worker = workers.get(symbol_id)
+                # for symbol, name in db.symbols():
+                #     worker = workers.get(symbol)
                 #     if worker is not None and worker.poll() is None:
                 #         continue
                 #     if worker is not None:
                 #         print(f"{name}: its worker ended (code {worker.returncode}), a new one is started")
-                #     workers[symbol_id] = subprocess.Popen(worker_command(terminal, "history", symbol_id))
-                #     print(f"{name}: history worker started (process {workers[symbol_id].pid}), {len(workers)} workers")
-                symbols_now = {symbol_id for symbol_id, _ in db.symbols()}
+                #     workers[symbol] = subprocess.Popen(worker_command(terminal, "history", symbol))
+                #     print(f"{name}: history worker started (process {workers[symbol].pid}), {len(workers)} workers")
+                symbols_now = set(db.symbols())
                 asleep = bool(symbols_now) and symbols_now | {CURRENT_ID} <= libdb.history_done_ids()   # Current has made every first chunk too
                 if asleep != all_asleep:
                     all_asleep = asleep
@@ -545,7 +546,7 @@ def run_parent(terminal):
                     log_timing(f"history complete: the Current worker and all the {len(symbols_now)} workers of the history are asleep, {time.monotonic() - _started:.0f} s after the start" if asleep else
                                "history: a worker of the history is awake again")
                 try:
-                    now_model = (frozenset(symbol_id for symbol_id, _ in db.symbols()), len(build_jobs(db)))
+                    now_model = (frozenset(db.symbols()), len(build_jobs(db)))
                 except Exception:
                     now_model = model
                 for role in ("current", "live"):   # History is paused (Update Note)
@@ -570,19 +571,18 @@ def run_parent(terminal):
             print(f"the place is not given back: {traceback.format_exc()}")
 
 
-def run_worker(symbol_id, parent_pid):
+def run_worker(symbol, parent_pid):
     """The History worker of one symbol: one step back in the history of the next pair that has any left (the first chunk is the Current worker's), back to the first bar."""
     db = open_database()
     while not db.tables_ready():
         time.sleep(TABLES_WAIT_SECONDS)
-    symbols = db.symbols()
-    name = dict(symbols).get(symbol_id, str(symbol_id))
+    name = symbol
     global _timing_file
     _timing_file = libdb.debug_path("Python_Timing.txt")
     sys.stdout = LinePrefix(sys.stdout, f"[{name}] ")   # the console is shared with the other workers
     start_log(f"Python_{libdb.safe(name)}.txt")
     log_timing(f"{name}: worker of the parent {parent_pid} starts")
-    libdb.history_done_set(symbol_id, False)
+    libdb.history_done_set(symbol, False)
     arm_watchdog()
     last_check = time.monotonic()
     turn = 0   # the pair whose history goes back next
@@ -601,27 +601,27 @@ def run_worker(symbol_id, parent_pid):
         busy = False
         rnd = Round(db)
         jobs = build_jobs(db)
-        pairs = db.pairs(symbol_id)
+        pairs = db.pairs(symbol)
         #--- One step back in the history of a pair that has any left: the pairs of this symbol first, then the pairs of the other symbols (a worker that has
         #--- none left helps). A pair is taken for one step (pair_turn): two workers are never on the same pair
         if len(jobs) != jobs_seen or time.monotonic() - finished_at >= FINISHED_FORGET_SECONDS:
             finished.clear()
             finished_at = time.monotonic()
             jobs_seen = len(jobs)
-        others = sorted((pair for pair in db.pairs() if pair[0] != symbol_id), key=lambda pair: (data.tf_seconds(pair[3]), (pair[0] - symbol_id) % 1000003))   # the deepest TFs first
+        others = sorted((pair for pair in db.pairs() if pair[0] != symbol), key=lambda pair: (data.tf_seconds(pair[2]), zlib.crc32((pair[0] + symbol).encode())))   # the deepest TFs first
         candidates = [pairs[(turn + k) % len(pairs)] for k in range(len(pairs))] + others if pairs else others
         for pair in candidates:
-            key = (pair[0], pair[2])
+            key = (pair[0], pair[1])
             if key in finished:
                 continue
             mark_progress()
             try:
-                with libdb.pair_turn(pair[0], pair[2]) as held:
+                with libdb.pair_turn(pair[0], pair[1]) as held:
                     if not held:
                         continue
                     stepped = calculate_older(rnd, pair, jobs)
                     if stepped:
-                        if pair[0] == symbol_id:
+                        if pair[0] == symbol:
                             turn = (pairs.index(pair) + 1) % len(pairs)
                         busy = True
                         break
@@ -630,21 +630,21 @@ def run_worker(symbol_id, parent_pid):
             except sqlite3.OperationalError as error:
                 count_locked(pair, "history", error)
             except Exception:
-                print(f"{pair[1]} {pair[3]}: {traceback.format_exc()}")
+                print(f"{pair[0]} {pair[2]}: {traceback.format_exc()}")
         try:
             db.flush_due()   # what waits and is old is written
         except sqlite3.OperationalError as error:
-            count_locked(("", "", 0, ""), "write", error)
+            count_locked(("", 0, ""), "write", error)
         report(name)
         if busy:
             if not was_busy:
-                libdb.history_done_set(symbol_id, False)
+                libdb.history_done_set(symbol, False)
                 log_timing(f"{name}: awake, the history of a pair is not all there")
             was_busy = True
         elif was_busy:
             was_busy = False
             flush_pending()   # the history is all there: the rest of what waited is written
-            libdb.history_done_set(symbol_id, True)
+            libdb.history_done_set(symbol, True)
             log_timing(f"{name}: history done, {time.monotonic() - _started:.0f} s after the start, going to sleep: " + ", ".join(f"{key} {seconds:.1f} s" for key, seconds in _spent.items()))
         time.sleep(BUSY_SECONDS if busy else (POLL_SECONDS if was_busy else SLEEP_SECONDS))
 
@@ -686,9 +686,9 @@ def run_current(parent_pid):
         except (KeyError, sqlite3.OperationalError):
             chart = None   # the EA has not written the pair of the chart yet
         pairs = db.pairs()
-        pairs.sort(key=lambda pair: 0 if chart == (pair[1], pair[2]) else 1 if (pair[0], pair[2]) in rnd.library else 2)
+        pairs.sort(key=lambda pair: 0 if chart == (pair[0], pair[1]) else 1 if (pair[0], pair[1]) in rnd.library else 2)
         for pair in pairs:
-            first = chart == (pair[1], pair[2]) or (pair[0], pair[2]) in rnd.library
+            first = chart == (pair[0], pair[1]) or (pair[0], pair[1]) in rnd.library
             try:
                 asked = bars_needed(rnd, pair, jobs, CHUNK_BARS)
             except Exception:
@@ -698,22 +698,22 @@ def run_current(parent_pid):
                 try:
                     count = calculate_new(rnd, pair, job, False, asked)
                     if count > 0:
-                        print(f"{pair[1]} {pair[3]} {job.label}: {count} found")
+                        print(f"{pair[0]} {pair[2]} {job.label}: {count} found")
                 except sqlite3.OperationalError as error:
                     failed = True
                     count_locked(pair, job.label, error)
                 except Exception:
-                    print(f"{pair[1]} {pair[3]} {job.label}: {traceback.format_exc()}")
+                    print(f"{pair[0]} {pair[2]} {job.label}: {traceback.format_exc()}")
             if first:
                 try:
                     db.flush_results()   # the pair of the chart and the ones of the manager are in the database now, not when enough results have gathered
                 except sqlite3.OperationalError as error:
                     failed = True
                     count_locked(pair, "write", error)
-            if chart == (pair[1], pair[2]) and not chart_told:
+            if chart == (pair[0], pair[1]) and not chart_told:
                 chart_told = True
                 libdb.milestone_set("file_current_chart")
-                log_timing(f"current: the chart pair {pair[1]} {pair[3]} is in the database, {time.monotonic() - _started:.0f} s after the start")
+                log_timing(f"current: the chart pair {pair[0]} {pair[2]} is in the database, {time.monotonic() - _started:.0f} s after the start")
             if not first and not oninit_told:
                 oninit_told = True
                 libdb.milestone_set("file_current_symboltf")
@@ -723,7 +723,7 @@ def run_current(parent_pid):
             db.flush_results()
         except sqlite3.OperationalError as error:
             failed = True
-            count_locked(("", "", 0, ""), "write", error)
+            count_locked(("", 0, ""), "write", error)
         report("current")
         busy = failed or libdb.SPENT["marks"] != written   # something was marked: the next pass looks for what is left
         if not busy:
@@ -754,10 +754,10 @@ def run_live(parent_pid):
     arm_watchdog()
     last_check = time.monotonic()
     alone = False   # every worker of the history is asleep: nobody else writes, it writes what it finds at once
-    seen = {}   # (symbol_id, tf_enum) -> the newest closed bar that was judged: nothing is asked to the database while it is the same
+    seen = {}   # (symbol, tf_enum) -> the newest closed bar that was judged: nothing is asked to the database while it is the same
     pairs = db.pairs()   # asked again with the parent (WORKER_CHECK_SECONDS), not at each pass
     ticks = {}   # symbol -> NewTick (CNewTickObj of the Library): made at the start, as the series of the EA at OnInit
-    for symbol in {pair[1] for pair in pairs}:
+    for symbol in {pair[0] for pair in pairs}:
         ticks[symbol] = NewTick(symbol)
         ticks[symbol].is_new_tick()   # the first launch: the tick of now is kept
     while True:
@@ -769,7 +769,7 @@ def run_live(parent_pid):
                 flush_pending()
                 return
             pairs = db.pairs()
-            symbols_now = {symbol_id for symbol_id, _ in db.symbols()}
+            symbols_now = set(db.symbols())
             now_alone = bool(symbols_now) and symbols_now | {CURRENT_ID} <= libdb.history_done_ids()
             if now_alone != alone:
                 alone = now_alone
@@ -779,7 +779,7 @@ def run_live(parent_pid):
             time.sleep(POLL_SECONDS)   # Current runs: Live goes on from where it finished (one writer for a pair at a time)
             continue
         ticked = set()   # the symbols with a new tick: only they can have a new bar (CBarTimeSeriesCollection::RefreshSeriesAllExceptCurrent)
-        for symbol in {pair[1] for pair in pairs}:
+        for symbol in {pair[0] for pair in pairs}:
             if symbol not in ticks:
                 ticks[symbol] = NewTick(symbol)
             if ticks[symbol].is_new_tick():
@@ -787,16 +787,16 @@ def run_live(parent_pid):
         rnd = Round(db) if ticked else None   # no tick anywhere: nothing is asked to the database
         jobs = build_jobs(db) if ticked else []
         for pair in (pairs if ticked else []):
-            if pair[1] not in ticked:
+            if pair[0] not in ticked:
                 continue   # no new tick: no new bar on any TF of the symbol (a closed market rests)
-            if (pair[0], pair[2]) in rnd.library:
+            if (pair[0], pair[1]) in rnd.library:
                 continue   # a pair of Setting_SymbolTF: its new bars are the Library's, nothing is asked to the terminal or the database for it
             try:
                 closed = rnd.last_closed(pair)
             except Exception:
-                print(f"{pair[1]} {pair[3]}: {traceback.format_exc()}")
+                print(f"{pair[0]} {pair[2]}: {traceback.format_exc()}")
                 continue
-            key = (pair[0], pair[2])
+            key = (pair[0], pair[1])
             if closed is None or seen.get(key) == closed:
                 continue
             ready = True   # every job found the first chunk of the pair
@@ -811,12 +811,12 @@ def run_live(parent_pid):
                     if count < 0:
                         ready = False   # the worker of the symbol has not made the first chunk yet: the pair is looked at again
                     elif count:
-                        print(f"{pair[1]} {pair[3]} {job.label}: {count} found")
+                        print(f"{pair[0]} {pair[2]} {job.label}: {count} found")
                 except sqlite3.OperationalError as error:
                     count_locked(pair, job.label, error)
                     ready = False
                 except Exception:
-                    print(f"{pair[1]} {pair[3]} {job.label}: {traceback.format_exc()}")
+                    print(f"{pair[0]} {pair[2]} {job.label}: {traceback.format_exc()}")
             if ready:
                 seen[key] = closed
         try:
@@ -825,7 +825,7 @@ def run_live(parent_pid):
             else:
                 db.flush_due()
         except sqlite3.OperationalError as error:
-            count_locked(("", "", 0, ""), "write", error)
+            count_locked(("", 0, ""), "write", error)
         report("live")
         time.sleep(POLL_SECONDS)
 
@@ -833,11 +833,15 @@ def run_live(parent_pid):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--terminal", default=None, help="path to terminal64.exe when several terminals are installed")
-    parser.add_argument("--symbol-id", type=int, default=None, help="a History worker: the symbol (id of the table symbol_base) it goes back in; none, no --live and no --current = the parent that starts the workers")
+    parser.add_argument("--database", default=None, help="the file the accounts share, under MQL5\\Files (the EA gives it); what the EA decides is in its table Setting_PythonBridge")
+    parser.add_argument("--symbol", default=None, help="a History worker: the symbol it goes back in; none, no --live and no --current = the parent that starts the workers")
     parser.add_argument("--current", action="store_true", help="the Current worker: the first chunk of every pair, the pair of the chart first")
     parser.add_argument("--live", action="store_true", help="the worker of the new bars of the pairs that are not in Setting_SymbolTF")
     parser.add_argument("--parent-pid", type=int, default=0, help="a worker: the process of the parent Python (the worker stops when it is gone)")
-    args = parser.parse_args()   # what the EA decides (the rows of a turn, whether the bars are kept...) is in the table Setting_PythonBridge, not here
+    args = parser.parse_args()
+    if args.database:
+        os.environ["LIBDB_FILE"] = args.database   # the workers inherit it
+    #--- what the EA decides (the rows of a turn, whether the bars are kept...) is in the table Setting_PythonBridge, not here
     libdb.progress = mark_progress   # the wait for the turn to write sets the watchdog again: it is not a hang
     disable_quick_edit()
     data.connect(args.terminal)
@@ -847,8 +851,8 @@ if __name__ == "__main__":
             run_current(args.parent_pid)
         elif args.live:
             run_live(args.parent_pid)
-        elif args.symbol_id is not None:
-            run_worker(args.symbol_id, args.parent_pid)
+        elif args.symbol is not None:
+            run_worker(args.symbol, args.parent_pid)
         else:
             run_parent(args.terminal)
     except KeyboardInterrupt:

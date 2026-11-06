@@ -10,19 +10,30 @@
 //+------------------------------------------------------------------+
 #ifndef CINDICATORTEMPLATEMANAGER_MQH
 #define CINDICATORTEMPLATEMANAGER_MQH
- //#include "..\..\Services\DELib\DatabaseDELib.mqh"
- //#include "..\..\Services\DELib\IndicatorDELib.mqh"
  #include "..\..\Entities\Defines\EventDefines.mqh"
  #include "..\..\Entities\Defines\IndicatorDefines.mqh"
  #include "..\..\Entities\Bases\BaseObj.mqh"
  #include "..\..\Entities\Settings\IndicatorSetting.mqh"
  #include "..\ListObj.mqh"
  #include "..\..\Services\DELib\DatabaseService.mqh"
- //#include "..\..\Entities\Chart\ChartObj.mqh"
- struct STimeframeItem
+ //--- Rows of the table SignalsCollection of the account, as CDatabaseService::Read binds them (the order of the SELECT)
+ struct SSignalResultRow
   {
-   ENUM_TIMEFRAMES tf_enum;
-   string          name;
+   long   bar_time;
+   long   signal_direction;
+  };
+ struct SSignalPairRow
+  {
+   long   template_id;
+   long   bar_time;
+   long   signal_direction;
+  };
+ struct SSignalCandleRow
+  {
+   long   tf_enum;
+   long   template_id;
+   long   bar_time;
+   long   signal_direction;
   };
  struct SIndicatorTemplateRow
    {
@@ -36,30 +47,6 @@
       long   message_alert;
       long   show_on_chart;
    };
- STimeframeItem timeframe_list[] =
-  {
-   {PERIOD_M1,  "M1"},
-   {PERIOD_M2,  "M2"},
-   {PERIOD_M3,  "M3"},
-   {PERIOD_M4,  "M4"},
-   {PERIOD_M5,  "M5"},
-   {PERIOD_M6,  "M6"},
-   {PERIOD_M10, "M10"},
-   {PERIOD_M12, "M12"},
-   {PERIOD_M15, "M15"},
-   {PERIOD_M20, "M20"},
-   {PERIOD_M30, "M30"},
-   {PERIOD_H1,  "H1"},
-   {PERIOD_H2,  "H2"},
-   {PERIOD_H3,  "H3"},
-   {PERIOD_H4,  "H4"},
-   {PERIOD_H6,  "H6"},
-   {PERIOD_H8,  "H8"},
-   {PERIOD_H12, "H12"},
-   {PERIOD_D1,  "D1"},
-   {PERIOD_W1,  "W1"},
-   {PERIOD_MN1, "MN1"}
-  }; 
  struct SIndicatorParamRow
   {
    string                               name;
@@ -290,82 +277,61 @@
      CListObj           m_list_indicator;          // the templates (CIndicatorSetting), in the order of the table     
      CDatabaseService   *m_CDatabaseService;       // The EA holds it
      //Private Method
-     //bool               Open(void);
-     
-     //bool               MakeTimeframes(void);
-     //bool               MakeTemplates(void);
-     string             Where(const ENUM_INDICATOR type, const string params_text) const;
-     bool               GetFlag(const ENUM_INDICATOR type, const string params_text, const string column) const;
-     //Update Database
-      //bool               SyncDataToDB(void);
+     int                IndexSetting(const ENUM_INDICATOR type, const string params_text) const;
+     //Working with Database      
       bool               UpdateDataToDB(void);
       bool               UpdateDataToDB(const ENUM_INDICATOR type, MqlParam &params[], long &insert_id);
-      bool               UpdateDataToDB(const ENUM_INDICATOR type, const string params_text);
+      bool               UpdateDataToDB(const long template_id);   // the row of a template goes
       bool               UpdateDataToDB(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on);
-      bool               UpdateDataToDB(const ENUM_INDICATOR type,const string params_text,const string column,const bool on);      
-     //bool                 ChangeGroup(const ENUM_INDICATOR_GROUP group, const string first, const string second, const bool on, const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);       
-     //bool               SyncDataFromDB(void);
+      bool               UpdateDataToDB(const ENUM_INDICATOR type,const string params_text,const string column,const bool on);
       bool               ReadDataFromDB(void);      
-     //bool               ChangeFlag(const ENUM_INDICATOR type, const string params_text, const string column, const bool on, const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);
      void               ParamTexts(const ENUM_INDICATOR type, MqlParam &params[], const int decimals, string &out[]) const;
       string             ParamDescription(const MqlParam &param,const string choices,const int decimals) const;
-      long               ParamValueByDescription(const string description,const string choices) const;
     public:
-                        //CIndicatorTemplateManager(void) : m_db(INVALID_HANDLE),m_CDatabaseService(NULL) { this.m_list.Type(OBJECT_DE_TYPE_INDICATOR_SETTING); }
                         CIndicatorTemplateManager(void) : m_CDatabaseService(NULL) { this.m_list_indicator.Type(OBJECT_DE_TYPE_INDICATOR_SETTING); }
-                        //~CIndicatorTemplateManager(void) { if(m_db != INVALID_HANDLE) ::DatabaseClose(m_db); }
                         ~CIndicatorTemplateManager(void) {}
      //--- Lifecycle: create the catalog and template table, then load templates into RAM
         bool                 OnInitEvent(void);
      void                SetDatabaseService    (CDatabaseService   *databaseService)    {this.m_CDatabaseService=databaseService;}
      bool                CompleteVolumesParams(MqlParam &params[]) const;
-     bool                UpdateTemplate(const ENUM_INDICATOR type, MqlParam &params[]);
-     bool                UpdateTemplate(const ENUM_INDICATOR type, const string params_text);
-     bool                UpdateTemplate(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);
-     bool                UpdateTemplate(const ENUM_INDICATOR type,const string params_text,const string column,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);     
+     bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type, MqlParam &params[]);
+     bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type, const string params_text);
+     bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);
+     bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type,const string params_text,const string column,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);
+     //--- The table SignalsCollection of the account: (1) the rows of every template on a pair (WRONG_VALUE: not read), (2) the rows of the sides asked, (3) the rows of the TFs asked in a candle
+     int                 ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,long &templates[],long &times[],long &sides[]);
+     int                 ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const long &buy_templates[],const long &sell_templates[],long &times[],long &sides[]);
+     int                 ReadDataFromDB(const string symbol,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],const int limit,long &tfs[],long &templates[],long &times[],long &sides[]);
+     //--- The rows of a template on a pair go to SignalsCollection
+     bool                UpdateDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const long template_id,const long &times[],const long &sides[]);     
      //Working with DB
-     //--Add, Remove a template: written to the database at once, then the event (false if the template exists / does not exist)
-      //bool               AddToDB(const ENUM_INDICATOR type, MqlParam &params[]);
-      //bool               RemoveFromDB(const ENUM_INDICATOR type, const string params_text);
      //Woring in RAM
       //--- The index of a template in m_list_indicator (WRONG_VALUE: none), the template itself (NULL: none)
-       int                IndexSetting(const ENUM_INDICATOR type, const string params_text) const;
-       CIndicatorSetting *GetSetting(const ENUM_INDICATOR type, const string params_text) const;
+       CIndicatorSetting *Read_RAM(const ENUM_INDICATOR type, const string params_text) const;
+       bool               Read_RAM(const ENUM_INDICATOR type, const string params_text, const string column) const;   // a flag of a template, by its column
       
    //--- The params of a template as the one text of the table, and back (false when the text does not fit the schema of the type)
      string             ParamsText(const ENUM_INDICATOR type, MqlParam &params[]) const;
-     string             StandardIndicatorName(const ENUM_INDICATOR type) const;
-     ENUM_INDICATOR_GROUP StandardIndicatorGroup(const ENUM_INDICATOR type) const;
-     string             StandardIndicatorGroupName(const ENUM_INDICATOR_GROUP group) const;
-     int                StandardIndicatorCatalog(ENUM_INDICATOR &types[],ENUM_INDICATOR_GROUP &groups[],string &names[]) const;
-     int                StandardIndicatorBuffers(const ENUM_INDICATOR type) const;
-     long               StandardIndicatorParamValue(const string description,const string choices) const;
-     string             StandardIndicatorParamDescription(const ENUM_INDICATOR type,const int index,const MqlParam &param) const;
-   // Plan to replace GetIndicatorParamSchema() after implemenation CDatabaseService     
-     int                GetStandardIndicatorParamSchema(const ENUM_INDICATOR type, SIndicatorParam &out[]) const;     
+     bool               Read_RAM(const ENUM_INDICATOR type, SIndicatorsRow &row) const;   // the catalog row of a type: name, group, buffers (false: not in the catalog)
+     string             Read_RAM(const ENUM_INDICATOR_GROUP group) const;   // the name of a group
+     int                Read_RAM(ENUM_INDICATOR &types[],ENUM_INDICATOR_GROUP &groups[],string &names[]) const;
+     long               ParamValueByDescription(const string description,const string choices) const;
+     string             Read_RAM(const ENUM_INDICATOR type,const int index,const MqlParam &param) const;
+     int                Read_RAM(const ENUM_INDICATOR type, SIndicatorParam &out[]) const;     
      bool               ParamsFromText(const ENUM_INDICATOR type, const string text, MqlParam &out_params[]) const;
-     bool               ParamsFromTextByStandardSchema(const ENUM_INDICATOR type, const string text, MqlParam &out_params[]) const;
    //--- The short text of the column display of a template: the catalog name and the params, "MA  (14, 0, SMA, Close)"
      string             DisplayLabel(const ENUM_INDICATOR type, const string params_text) const;
    //--- The templates (m_list), in the order of the table (the View sorts them as it likes). params = the saved text, display = the short text the user reads
-     int                Templates(long &ids[], ENUM_INDICATOR &types[], string &params[], string &display[], bool &buy[], bool &sell[], bool &sound[], bool &message[], bool &show[]) const;
-     int                TemplateIds(long &ids[], ENUM_INDICATOR &types[], string &params[], bool &buy[], bool &sell[]) const;   // the id of every template (the key of its signals), its type and saved params, its Buy / Sell flag
-     int                AlertTemplates(long &ids[], string &display[], bool &sound[], bool &message[]) const;   // the templates that have a sound or a message alert on: id, label and the two flags of each. Returns how many
-     int                ShownTemplates(long &buy_templates[], long &sell_templates[]) const;   // the templates whose Buy (Sell) signal the user wants: their ids. Returns how many templates there are
+     int                Read_RAM(long &ids[], ENUM_INDICATOR &types[], string &params[], string &display[], bool &buy[], bool &sell[], bool &sound[], bool &message[], bool &show[]) const;
+     int                Read_RAM(long &ids[], ENUM_INDICATOR &types[], string &params[], bool &buy[], bool &sell[]) const;   // the id of every template (the key of its signals), its type and saved params, its Buy / Sell flag
+     int                Read_RAM(long &ids[], string &display[], bool &sound[], bool &message[]) const;   // the templates that have a sound or a message alert on: id, label and the two flags of each. Returns how many
+     int                Read_RAM(long &buy_templates[], long &sell_templates[]) const;   // the templates whose Buy (Sell) signal the user wants: their ids. Returns how many templates there are
    //--- A template is told by its type and the saved text of its params (the column params): the same text Templates() gives
-     bool               Exists(const ENUM_INDICATOR type, const string params_text) const;
-     bool               Exists(const ENUM_INDICATOR type) const;   // the type has at least one template
+     bool               Read_RAM(const ENUM_INDICATOR type) const;   // the type has at least one template
    //--- The switch of the tab (the markers of the signals): ON when the Buy or the Sell flag of any template is on. Setting it writes both flags of every template at once
    // Not in here, in View
-     bool               ShowGroup(const ENUM_INDICATOR_GROUP group, const bool on);     // show_on_chart of every template of the group (the chart follows each one)
-     //bool               SignalGroup(const ENUM_INDICATOR_GROUP group, const bool on);   // buy_signal and sell_signal of every template of the group (one event)
-     //bool               AlertGroup(const ENUM_INDICATOR_GROUP group, const bool on);    // sound_alert and message_alert of every template of the group
+     bool               Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group, const bool on);     // show_on_chart of every template of the group (the chart follows each one)
    //--- The five flags of a template (Buy / Sell signal, sound alert, message alert, shown on the chart): written at once, the event only when the flag changed
-     //bool               BuySignal(const ENUM_INDICATOR type, const string params_text, const bool on)    { return this.ChangeFlag(type, params_text, "buy_signal", on, INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED); }
-     //bool               SellSignal(const ENUM_INDICATOR type, const string params_text, const bool on)   { return this.ChangeFlag(type, params_text, "sell_signal", on, INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED); }
-     //bool               SoundAlert(const ENUM_INDICATOR type, const string params_text, const bool on)   { return this.ChangeFlag(type, params_text, "sound_alert", on, INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT); }
-     //bool               MessageAlert(const ENUM_INDICATOR type, const string params_text, const bool on) { return this.ChangeFlag(type, params_text, "message_alert", on, INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT); }
-     //bool               ShowOnChart(const ENUM_INDICATOR type, const string params_text, const bool on)  { return this.ChangeFlag(type, params_text, "show_on_chart", on, INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED); }
    
   };
 #endif // CINDICATORTEMPLATEMANAGER_MQH_DECLARATION
@@ -446,6 +412,15 @@
          ::Print(__FUNCTION__, " > DatabaseService can't create table Setting_IndicatorTemplate");
          return false;
        }
+      //--- The table of the account: the signals found (from CSignalsCollection::OnInitEvent, same schema)
+      string sql_create_table_SignalsCollection = "CREATE TABLE IF NOT EXISTS SignalsCollection (name TEXT NOT NULL, tf_enum INTEGER NOT NULL, "
+                                                  "template_id INTEGER NOT NULL, bar_time INTEGER NOT NULL, signal_direction INTEGER NOT NULL, "
+                                                  "PRIMARY KEY (name, tf_enum, template_id, bar_time, signal_direction)) WITHOUT ROWID";
+      if(!this.m_CDatabaseService.Create("Account", sql_create_table_SignalsCollection))
+       {
+         ::Print(__FUNCTION__, " > DatabaseService can't create table SignalsCollection");
+         return false;
+       }
       if(!this.ReadDataFromDB())
             return false;
      } 
@@ -486,97 +461,6 @@
    return result;
   }
  //+------------------------------------------------------------------+
- //| Open the database once: it stays open while the EA runs, the     |
- //| table is made when it is not there                                |
- //+------------------------------------------------------------------+
-   //  bool CIndicatorTemplateManager::Open(void)
-   //   {
-   //    m_db = LibDatabase_Open(DATABASE_OPEN_READWRITE);
-   //    if(m_db == INVALID_HANDLE)
-   //     {
-   //      ::Print(__FUNCTION__, " > the database ", LIB_DATABASE_FILE, " is not opened, error ", ::GetLastError());
-   //      return false;
-   //     }
-   //    ::DatabaseExecute(m_db, "PRAGMA busy_timeout=5000");
-   //    if(!this.MakeTimeframes())
-   //       return false;
-   //    if(!this.MakeTemplates())
-   //       return false;
-   //    if(!this.SyncDataFromDB())
-   //       return false;
-   //    ::Print("Complete ", __FUNCTION__, " > ", LIB_DATABASE_FILE, " opened");
-   //    return true;
-   //   }
- //+------------------------------------------------------------------+
- //| One row = one indicator template. The key is the type and the     |
- //| params, the text saved (a type with no params has an empty text);  |
- //| display is the short text the user reads. id is a short name of   |
- //| the template for the tables that point to it (the signals of the   |
- //| indicator): AUTOINCREMENT, so it is never given to another template|
- //| after this one is deleted. A table made before the id has it now   |
- //+------------------------------------------------------------------+
-   //  bool CIndicatorTemplateManager::MakeTemplates(void)
-   //   {
-   //    const string columns = "type_enum INTEGER NOT NULL, params TEXT NOT NULL, display TEXT NOT NULL, buy_signal INTEGER NOT NULL DEFAULT 1, "
-   //                           "sell_signal INTEGER NOT NULL DEFAULT 1, sound_alert INTEGER NOT NULL DEFAULT 1, message_alert INTEGER NOT NULL DEFAULT 1, "
-   //                           "show_on_chart INTEGER NOT NULL DEFAULT 1";
-   //    const string create = "CREATE TABLE Setting_IndicatorTemplate (id INTEGER PRIMARY KEY AUTOINCREMENT, " + columns + ", UNIQUE (type_enum, params))";
-   //    long exists = 0, has_id = 0;
-   //    int request = LibDatabase_Prepare(m_db, "SELECT COUNT(*), COALESCE(SUM(name = 'id'), 0) FROM pragma_table_info('Setting_IndicatorTemplate')");
-   //    if(request != INVALID_HANDLE)
-   //     {
-   //      if(::DatabaseRead(request))
-   //       {
-   //        ::DatabaseColumnLong(request, 0, exists);
-   //        ::DatabaseColumnLong(request, 1, has_id);
-   //       }
-   //      ::DatabaseFinalize(request);
-   //     }
-   //    if(exists == 0)
-   //     {
-   //      if(::DatabaseExecute(m_db, create))
-   //         return true;
-   //      ::Print(__FUNCTION__, " > the table Setting_IndicatorTemplate is not made, error ", ::GetLastError());
-   //      return false;
-   //     }
-   //    if(has_id != 0)
-   //       return true;
-   //    //--- The table of a program before the id: the rows go to the new table in the order they were, the old one is dropped
-   //    const string names = "type_enum, params, display, buy_signal, sell_signal, sound_alert, message_alert, show_on_chart";
-   //    if(!::DatabaseTransactionBegin(m_db))
-   //       return false;
-   //    if(!::DatabaseExecute(m_db, "ALTER TABLE Setting_IndicatorTemplate RENAME TO Setting_IndicatorTemplate_old") || !::DatabaseExecute(m_db, create) ||
-   //       !::DatabaseExecute(m_db, "INSERT INTO Setting_IndicatorTemplate (" + names + ") SELECT " + names + " FROM Setting_IndicatorTemplate_old ORDER BY rowid") ||
-   //       !::DatabaseExecute(m_db, "DROP TABLE Setting_IndicatorTemplate_old"))
-   //     {
-   //      ::Print(__FUNCTION__, " > the table Setting_IndicatorTemplate is not changed to have an id, error ", ::GetLastError());
-   //      ::DatabaseTransactionRollback(m_db);
-   //      return false;
-   //     }
-   //    ::DatabaseTransactionCommit(m_db);
-   //    return true;
-   //   }
- //+------------------------------------------------------------------+
- //| The table timeframes: the 21 timeframes of MT5, fixed, small. The |
- //| key tf_enum keeps them in increasing order of duration; a row     |
- //| already there is left as it is                                    |
- //+------------------------------------------------------------------+
-   //  bool CIndicatorTemplateManager::MakeTimeframes(void)
-   //   {
-   //    if(!::DatabaseExecute(m_db, "CREATE TABLE IF NOT EXISTS timeframes (tf_enum INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"))
-   //     {
-   //      ::Print(__FUNCTION__, " > the table timeframes is not made, error ", ::GetLastError());
-   //      return false;
-   //     }
-   //    for(int i = 0; i < LIB_TIMEFRAMES_TOTAL; i++)
-   //       if(!::DatabaseExecute(m_db, "INSERT OR IGNORE INTO timeframes (tf_enum, name) VALUES (" + (string)(int)LIB_TIMEFRAMES[i] + ", '" + ::StringSubstr(::EnumToString(LIB_TIMEFRAMES[i]), 7) + "')"))
-   //        {
-   //         ::Print(__FUNCTION__, " > ", ::EnumToString(LIB_TIMEFRAMES[i]), " not written, error ", ::GetLastError());
-   //         return false;
-   //        }
-   //    return true;
-   //   }
- //+------------------------------------------------------------------+
  //| The chart holds the Volumes alone: its MA period and method are   |
  //| of the row that has the same Applied Volume. False when no row    |
  //| has it (the Add form makes the Volumes with its MA)               |
@@ -587,7 +471,7 @@
    ENUM_INDICATOR types[];
    string texts[], display[];
    bool buy[], sell[], sound[], message[], show[];
-   int total = this.Templates(ids, types, texts, display, buy, sell, sound, message, show);
+   int total = this.Read_RAM(ids, types, texts, display, buy, sell, sound, message, show);
    for(int i = 0; i < total; i++)
     {
      MqlParam row_params[];
@@ -603,19 +487,18 @@
     }
    return false;
   }
- //--- The WHERE of one template: its type and the text of its params
- string CIndicatorTemplateManager::Where(const ENUM_INDICATOR type, const string params_text) const
-  {
-   //return "type_enum = " + (string)(int)type + " AND params = '" + LibDatabase_Quoted(params_text) + "'";
-   string safe = (this.m_CDatabaseService != NULL) ? this.m_CDatabaseService.QuoteSQLText(params_text) : params_text;
-   return "type_enum = " + (string)(int)type + " AND params = '" + safe + "'";
-  }
- string CIndicatorTemplateManager::StandardIndicatorName(const ENUM_INDICATOR type) const
+ bool CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR type, SIndicatorsRow &row) const
   {
    for(int i = 0; i < ArraySize(standard_indicator_list); i++)
       if(standard_indicator_list[i].ind_type == type)
-         return standard_indicator_list[i].name;
-   return "";
+        {
+         row = standard_indicator_list[i];
+         return true;
+        }
+   row.name = "";
+   row.group = INDICATOR_GROUP_ANY;
+   row.buffers = 0;
+   return false;
   }
  string CIndicatorTemplateManager::ParamDescription(const MqlParam &param,const string choices,const int decimals) const
   {
@@ -652,14 +535,7 @@
       return ((value=="CLOSECLOSE" || value=="CLOSE/CLOSE") ? STO_CLOSECLOSE : STO_LOWHIGH);
    return (long)StringToInteger(value);
   }
- ENUM_INDICATOR_GROUP CIndicatorTemplateManager::StandardIndicatorGroup(const ENUM_INDICATOR type) const
-  {
-   for(int i = 0; i < ArraySize(standard_indicator_list); i++)
-      if(standard_indicator_list[i].ind_type == type)
-         return standard_indicator_list[i].group;
-   return INDICATOR_GROUP_ANY;
-  }
- string CIndicatorTemplateManager::StandardIndicatorGroupName(const ENUM_INDICATOR_GROUP group) const
+ string CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR_GROUP group) const
   {
    switch(group)
      {
@@ -670,11 +546,7 @@
       default:                         return "Other";
      }
   }
- long CIndicatorTemplateManager::StandardIndicatorParamValue(const string description,const string choices) const
-  {
-   return this.ParamValueByDescription(description,choices);
-  }
- int CIndicatorTemplateManager::StandardIndicatorCatalog(ENUM_INDICATOR &types[],ENUM_INDICATOR_GROUP &groups[],string &names[]) const
+ int CIndicatorTemplateManager::Read_RAM(ENUM_INDICATOR &types[],ENUM_INDICATOR_GROUP &groups[],string &names[]) const
   {
    int total=::ArraySize(standard_indicator_list);
    if(::ArrayResize(types,total)!=total || ::ArrayResize(groups,total)!=total || ::ArrayResize(names,total)!=total)
@@ -690,17 +562,10 @@
      }
    return total;
   }
- int CIndicatorTemplateManager::StandardIndicatorBuffers(const ENUM_INDICATOR type) const
-  {
-   for(int i = 0; i < ArraySize(standard_indicator_list); i++)
-      if(standard_indicator_list[i].ind_type == type)
-         return standard_indicator_list[i].buffers;
-   return 0;
-  }
- string CIndicatorTemplateManager::StandardIndicatorParamDescription(const ENUM_INDICATOR type,const int index,const MqlParam &param) const
+ string CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR type,const int index,const MqlParam &param) const
   {
    SIndicatorParam schema[];
-   int total=this.GetStandardIndicatorParamSchema(type,schema);
+   int total=this.Read_RAM(type,schema);
    if(index<0 || index>=total)
      {
       ::Print(__FUNCTION__," > invalid parameter index ",index," for indicator ",(int)type);
@@ -715,7 +580,7 @@
  void CIndicatorTemplateManager::ParamTexts(const ENUM_INDICATOR type, MqlParam &params[], const int decimals, string &out[]) const
   {
    SIndicatorParam schema[];
-   this.GetStandardIndicatorParamSchema(type, schema);
+   this.Read_RAM(type, schema);
    int total = ::ArraySize(params);
    ::ArrayResize(out, total);
    for(int p = 0; p < total; p++)
@@ -752,7 +617,7 @@
  bool CIndicatorTemplateManager::ParamsFromText(const ENUM_INDICATOR type, const string text, MqlParam &out_params[]) const
   {
    SIndicatorParam schema[];
-   int schema_total = this.GetStandardIndicatorParamSchema(type, schema);
+   int schema_total = this.Read_RAM(type, schema);
    string params_text[];
    int found = (text == "") ? 0 : ::StringSplit(text, ',', params_text);
    if(found < schema_total)   // a type without parameters (AO, AC, BW MFI, Fractals) has none to read
@@ -787,7 +652,9 @@
   }
  string CIndicatorTemplateManager::DisplayLabel(const ENUM_INDICATOR type, const string params_text) const
   {
-   string name = this.StandardIndicatorName(type);
+   SIndicatorsRow catalog;
+   this.Read_RAM(type, catalog);
+   string name = catalog.name;
    MqlParam params[];
    string values[];
    string joined = "";
@@ -830,6 +697,99 @@
    ::Print("Complete ", __FUNCTION__, " > ", this.m_list_indicator.Total(), " templates of Setting_IndicatorTemplate read to RAM");
    return true;
   }
+ //+------------------------------------------------------------------+
+ //| The rows of every template on a pair between two bars             |
+ //+------------------------------------------------------------------+
+ int CIndicatorTemplateManager::ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,long &templates[],long &times[],long &sides[])
+  {
+   ::ArrayResize(templates, 0);
+   ::ArrayResize(times, 0);
+   ::ArrayResize(sides, 0);
+   SSignalPairRow rows[];
+   if(this.m_CDatabaseService == NULL ||
+      !this.m_CDatabaseService.Read("Account", "SELECT template_id, bar_time, signal_direction FROM SignalsCollection WHERE name = '" + this.m_CDatabaseService.QuoteSQLText(symbol) + "' AND tf_enum = " + (string)(int)timeframe +
+                                               " AND bar_time >= " + (string)(long)from_time + " AND bar_time <= " + (string)(long)to_time, rows))
+      return WRONG_VALUE;
+   int total = ::ArraySize(rows);
+   ::ArrayResize(templates, total);
+   ::ArrayResize(times, total);
+   ::ArrayResize(sides, total);
+   for(int i = 0; i < total; i++)
+     {
+      templates[i] = rows[i].template_id;
+      times[i]     = rows[i].bar_time;
+      sides[i]     = rows[i].signal_direction;
+     }
+   return total;
+  }
+ //+------------------------------------------------------------------+
+ //| The rows of a pair the markers show: the sides asked              |
+ //+------------------------------------------------------------------+
+ int CIndicatorTemplateManager::ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const long &buy_templates[],const long &sell_templates[],long &times[],long &sides[])
+  {
+   ::ArrayResize(times, 0);
+   ::ArrayResize(sides, 0);
+   SSignalResultRow rows[];
+   if(this.m_CDatabaseService == NULL ||
+      !this.m_CDatabaseService.Read("Account", "SELECT bar_time, signal_direction FROM SignalsCollection WHERE name = '" + this.m_CDatabaseService.QuoteSQLText(symbol) + "' AND tf_enum = " + (string)(int)timeframe +
+                                               " AND bar_time >= " + (string)(long)from_time + " AND bar_time <= " + (string)(long)to_time + " AND ((signal_direction = " + (string)(int)SIGNAL_DIRECTION_BUY +
+                                               " AND template_id IN (" + this.m_CDatabaseService.InList(buy_templates) + ")) OR (signal_direction = " + (string)(int)SIGNAL_DIRECTION_SELL +
+                                               " AND template_id IN (" + this.m_CDatabaseService.InList(sell_templates) + ")))", rows))
+      return 0;
+   int total = ::ArraySize(rows);
+   ::ArrayResize(times, total);
+   ::ArrayResize(sides, total);
+   for(int i = 0; i < total; i++)
+     {
+      times[i] = rows[i].bar_time;
+      sides[i] = rows[i].signal_direction;
+     }
+   return total;
+  }
+ //+------------------------------------------------------------------+
+ //| The signals found in a candle, the TFs asked                      |
+ //+------------------------------------------------------------------+
+ int CIndicatorTemplateManager::ReadDataFromDB(const string symbol,const long &asked_tfs[],const datetime from_time,const datetime to_time,const long &asked_templates[],const int limit,long &tfs[],long &templates[],long &times[],long &sides[])
+  {
+   ::ArrayResize(tfs, 0);
+   ::ArrayResize(templates, 0);
+   ::ArrayResize(times, 0);
+   ::ArrayResize(sides, 0);
+   SSignalCandleRow rows[];
+   if(this.m_CDatabaseService == NULL ||
+      !this.m_CDatabaseService.Read("Account", "SELECT tf_enum, template_id, bar_time, signal_direction FROM SignalsCollection WHERE name = '" + this.m_CDatabaseService.QuoteSQLText(symbol) + "' AND tf_enum IN (" +
+                                               this.m_CDatabaseService.InList(asked_tfs) + ") AND template_id IN (" + this.m_CDatabaseService.InList(asked_templates) + ") AND bar_time >= " + (string)(long)from_time +
+                                               " AND bar_time < " + (string)(long)to_time + " ORDER BY tf_enum DESC, bar_time LIMIT " + (string)limit, rows))
+      return 0;
+   int total = ::ArraySize(rows);
+   ::ArrayResize(tfs, total);
+   ::ArrayResize(templates, total);
+   ::ArrayResize(times, total);
+   ::ArrayResize(sides, total);
+   for(int i = 0; i < total; i++)
+     {
+      tfs[i]       = rows[i].tf_enum;
+      templates[i] = rows[i].template_id;
+      times[i]     = rows[i].bar_time;
+      sides[i]     = rows[i].signal_direction;
+     }
+   return total;
+  }
+ //+------------------------------------------------------------------+
+ //| The rows of a template on a pair, one statement: all or none      |
+ //+------------------------------------------------------------------+
+ bool CIndicatorTemplateManager::UpdateDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const long template_id,const long &times[],const long &sides[])
+  {
+   int total = ::ArraySize(times);
+   if(total == 0)
+      return true;
+   if(this.m_CDatabaseService == NULL)
+      return false;
+   string sql = "INSERT OR IGNORE INTO SignalsCollection (name, tf_enum, template_id, bar_time, signal_direction) VALUES ";
+   for(int i = 0; i < total; i++)
+      sql += (i > 0 ? ", ('" : "('") + this.m_CDatabaseService.QuoteSQLText(symbol) + "', " + (string)(int)timeframe + ", " + (string)template_id + ", " + (string)times[i] + ", " + (string)sides[i] + ")";
+   return this.m_CDatabaseService.Create("Account", sql);
+  }
  int CIndicatorTemplateManager::IndexSetting(const ENUM_INDICATOR type, const string params_text) const
   {
    for(int i = 0; i < this.m_list_indicator.Total(); i++)
@@ -840,7 +800,7 @@
     }
    return WRONG_VALUE;
   }
- CIndicatorSetting *CIndicatorTemplateManager::GetSetting(const ENUM_INDICATOR type, const string params_text) const
+ CIndicatorSetting *CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR type, const string params_text) const
   {
    int index = this.IndexSetting(type, params_text);
    return (index > WRONG_VALUE ? this.m_list_indicator.At(index) : NULL);
@@ -849,7 +809,7 @@
  //| The templates in the order of the table: how to show them is the  |
  //| business of the View                                              |
  //+------------------------------------------------------------------+
- int CIndicatorTemplateManager::Templates(long &ids[], ENUM_INDICATOR &types[], string &params[], string &display[], bool &buy[], bool &sell[], bool &sound[], bool &message[], bool &show[]) const
+ int CIndicatorTemplateManager::Read_RAM(long &ids[], ENUM_INDICATOR &types[], string &params[], string &display[], bool &buy[], bool &sell[], bool &sound[], bool &message[], bool &show[]) const
   {
    int total = this.m_list_indicator.Total();
    ::ArrayResize(ids, total);
@@ -880,7 +840,7 @@
  //| The id of every template (the key of its signals in               |
  //| IndicatorSignalSeries) with its Buy and Sell flag                 |
  //+------------------------------------------------------------------+
- int CIndicatorTemplateManager::TemplateIds(long &ids[], ENUM_INDICATOR &types[], string &params[], bool &buy[], bool &sell[]) const
+ int CIndicatorTemplateManager::Read_RAM(long &ids[], ENUM_INDICATOR &types[], string &params[], bool &buy[], bool &sell[]) const
   {
    int total = this.m_list_indicator.Total();
    ::ArrayResize(ids, total);
@@ -899,11 +859,7 @@
     }
    return total;
   }
- bool CIndicatorTemplateManager::Exists(const ENUM_INDICATOR type, const string params_text) const
-  {
-   return (this.IndexSetting(type, params_text) > WRONG_VALUE);
-  }
- bool CIndicatorTemplateManager::Exists(const ENUM_INDICATOR type) const
+ bool CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR type) const
   {
    for(int i = 0; i < this.m_list_indicator.Total(); i++)
     {
@@ -918,9 +874,9 @@
  //| several templates changed (lparam = WRONG_VALUE, dparam = group)   |
  //+------------------------------------------------------------------+
  // New In V4 after implemenation CDatabaseService
- //bool CIndicatorTemplateManager::ChangeGroup(const ENUM_INDICATOR_GROUP group, const string first, const string second, const bool on, const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event)
  bool CIndicatorTemplateManager::UpdateDataToDB(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on)
   {    
+   SIndicatorsRow catalog;
    if(this.m_CDatabaseService == NULL)
      {
       ::Print(__FUNCTION__, " > DatabaseService is not set");
@@ -930,7 +886,7 @@
    for(int i = 0; i < this.m_list_indicator.Total(); i++)
      {
       CIndicatorSetting *row = this.m_list_indicator.At(i);
-      if(row != NULL && this.StandardIndicatorGroup(row.TypeEnum()) == group)
+      if(row != NULL && this.Read_RAM(row.TypeEnum(), catalog) && catalog.group == group)
          in_group += (in_group == "" ? "" : ",") + (string)row.ID();
      }
    if(in_group == "")
@@ -941,8 +897,9 @@
                 " WHERE id IN (" + in_group + ")";               
    return this.m_CDatabaseService.Update("Common", sql_update_group);    
   }
- bool CIndicatorTemplateManager::UpdateTemplate(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event)
+ bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event)
   {
+   SIndicatorsRow catalog;
    bool signal_pair = (first == "buy_signal" && second == "sell_signal");
    bool alert_pair  = (first == "sound_alert" && second == "message_alert");
    if(!signal_pair && !alert_pair)
@@ -956,7 +913,7 @@
    for(int i = 0; i < this.m_list_indicator.Total(); i++)
      {
       CIndicatorSetting *row = this.m_list_indicator.At(i);
-      if(row == NULL || this.StandardIndicatorGroup(row.TypeEnum()) != group)
+      if(row == NULL || !this.Read_RAM(row.TypeEnum(), catalog) || catalog.group != group)
          continue;
 
       has_rows = true;
@@ -979,6 +936,7 @@
   }
  bool CIndicatorTemplateManager::UpdateDataToDB(const ENUM_INDICATOR type,MqlParam &params[],long &insert_id)
   {
+   SIndicatorsRow catalog;
    insert_id = 0;
    if(this.m_CDatabaseService == NULL)
      {
@@ -986,7 +944,8 @@
       return false;
      }
 
-   string name = this.StandardIndicatorName(type);
+   this.Read_RAM(type, catalog);
+   string name = catalog.name;
    if(type == IND_CUSTOM || name == "")
      {
       ::Print(__FUNCTION__, " > rejected: indicator is not in the standard catalog");
@@ -994,7 +953,7 @@
      }
 
    SIndicatorParam schema[];
-   int schema_total = this.GetStandardIndicatorParamSchema(type, schema);
+   int schema_total = this.Read_RAM(type, schema);
    if(::ArraySize(params) != schema_total)
      {
       ::Print(__FUNCTION__, " > rejected: invalid parameter count for ", name);
@@ -1017,7 +976,7 @@
    return true;
   }
 
- bool CIndicatorTemplateManager::UpdateDataToDB(const ENUM_INDICATOR type,const string params_text)
+ bool CIndicatorTemplateManager::UpdateDataToDB(const long template_id)
   {
    if(this.m_CDatabaseService == NULL)
      {
@@ -1025,27 +984,26 @@
       return false;
      }
 
-   string sql = "DELETE FROM Setting_IndicatorTemplate WHERE " +
-                this.Where(type, params_text);
-   if(!this.m_CDatabaseService.Delete("Common", sql))
+   if(!this.m_CDatabaseService.Delete("Common", "DELETE FROM Setting_IndicatorTemplate WHERE id = " + (string)template_id))
      {
-      ::Print(__FUNCTION__, " > ", this.StandardIndicatorName(type),
-              " (", params_text, ") not removed");
+      ::Print(__FUNCTION__, " > the template ", template_id, " is not removed");
       return false;
      }
    return true;
   }
 
- bool CIndicatorTemplateManager::UpdateTemplate(const ENUM_INDICATOR type,MqlParam &params[])
+ bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type,MqlParam &params[])
   {
+   SIndicatorsRow catalog;
    string text = this.ParamsText(type, params);
-   if(this.Exists(type, text))
+   if(this.Read_RAM(type, text) != NULL)
      {
       ::Print(__FUNCTION__, " > rejected: template already exists");
       return false;
      }
 
-   string name = this.StandardIndicatorName(type);
+   this.Read_RAM(type, catalog);
+   string name = catalog.name;
    if(name == "" || type == IND_CUSTOM)
       return false;
 
@@ -1058,7 +1016,7 @@
    if(row == NULL || !this.m_list_indicator.Add(row))
      {
       delete row;
-      if(!this.UpdateDataToDB(type, text))
+      if(!this.UpdateDataToDB(id))
          ::Print(__FUNCTION__, " > failed to roll back DB insert for ", name, " (", text, ")");
       return false;
      }
@@ -1069,7 +1027,7 @@
    return true;
   }
 
- bool CIndicatorTemplateManager::UpdateTemplate(const ENUM_INDICATOR type,const string params_text)
+ bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type,const string params_text)
   {
    int index = this.IndexSetting(type, params_text);
    CIndicatorSetting *row =
@@ -1081,13 +1039,13 @@
      }
 
    long template_id = row.ID();
-   if(!this.UpdateDataToDB(type, params_text))
+   if(!this.UpdateDataToDB(template_id))
       return false;
 
    if(!this.m_list_indicator.Delete(index))
      {
       ::Print(__FUNCTION__, " > DB row removed but RAM row could not be deleted: ",
-              this.StandardIndicatorName(type), " (", params_text, ")");
+              row.Display());
       return false;
      }
 
@@ -1096,31 +1054,23 @@
                       (long)type, (double)template_id, params_text);
    return true;
   }
- bool CIndicatorTemplateManager::ShowGroup(const ENUM_INDICATOR_GROUP group, const bool on)
+ bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group, const bool on)
   {
+   SIndicatorsRow catalog;
    long ids[];
    ENUM_INDICATOR types[];
    string params[], display[];
    bool buy[], sell[], sound[], message[], show[];
-   int total = this.Templates(ids, types, params, display, buy, sell, sound, message, show);
+   int total = this.Read_RAM(ids, types, params, display, buy, sell, sound, message, show);
    bool done = true;
    for(int i = 0; i < total; i++)
-      if(this.StandardIndicatorGroup(types[i]) == group)
-         //done = (this.ShowOnChart(types[i], params[i], on) && done);   // a template at a time: the chart follows the event of each
-      done = (this.UpdateTemplate(types[i], params[i], "show_on_chart", on,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED) && done);
+      if(this.Read_RAM(types[i], catalog) && catalog.group == group)
+      done = (this.Update_IndicatorTemplate_Setting(types[i], params[i], "show_on_chart", on,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED) && done);
    return done;
   }
-//  bool CIndicatorTemplateManager::SignalGroup(const ENUM_INDICATOR_GROUP group, const bool on)
-//   {
-//    return this.UpdateDataToDB(group, "buy_signal", "sell_signal", on, INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED);
-//   }
-//  bool CIndicatorTemplateManager::AlertGroup(const ENUM_INDICATOR_GROUP group, const bool on)
-//   {
-//    return this.UpdateDataToDB(group, "sound_alert", "message_alert", on, INDICATOR_TEMPLATE_MANAGER_EVENT_NO_EVENT);
-//   }
- bool CIndicatorTemplateManager::GetFlag(const ENUM_INDICATOR type, const string params_text, const string column) const
+ bool CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR type, const string params_text, const string column) const
   {
-   CIndicatorSetting *row = this.GetSetting(type, params_text);
+   CIndicatorSetting *row = this.Read_RAM(type, params_text);
    if(row == NULL)
       return false;
    if(column == "buy_signal")
@@ -1151,13 +1101,13 @@
       ::Print(__FUNCTION__, " > DatabaseService is not set");
       return false;
      }
-   CIndicatorSetting *row = this.GetSetting(type, params_text);
+   CIndicatorSetting *row = this.Read_RAM(type, params_text);
    if(row == NULL)
      {
       ::Print(__FUNCTION__, " > rejected: no template for type ", EnumToString(type), " (", params_text, ")");
       return false;
      }
-   if(this.GetFlag(type, params_text, column) == on)
+   if(this.Read_RAM(type, params_text, column) == on)
       return true;
 
    string sql = "UPDATE Setting_IndicatorTemplate SET " + column + " = " +
@@ -1167,7 +1117,7 @@
  //+------------------------------------------------------------------+
  //| Change one flag of one template: persist, update RAM, then notify |
  //+------------------------------------------------------------------+
- bool CIndicatorTemplateManager::UpdateTemplate(const ENUM_INDICATOR type,const string params_text,const string column,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event)
+ bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type,const string params_text,const string column,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event)
   {
    bool signal_flag = (column == "buy_signal" || column == "sell_signal");
    bool alert_flag  = (column == "sound_alert" || column == "message_alert");
@@ -1185,7 +1135,7 @@
       ::Print(__FUNCTION__, " > rejected: event does not match column ", column);
       return false;
      }
-   CIndicatorSetting *row = this.GetSetting(type, params_text);
+   CIndicatorSetting *row = this.Read_RAM(type, params_text);
    if(row == NULL)
      {
       ::Print(__FUNCTION__, " > rejected: no template for type ", EnumToString(type), " (", params_text, ")");
@@ -1207,92 +1157,12 @@
       row.ShowOnChart(on, notify);
    return true;
   }
- //+------------------------------------------------------------------+
- //| Add a template: the table and m_list at once (the id the table    |
- //| gives it), then the event. False when it exists or the type is    |
- //| not in the catalog                                                 |
- //+------------------------------------------------------------------+
-   //  bool CIndicatorTemplateManager::AddToDB(const ENUM_INDICATOR type, MqlParam &params[])
-   //   {
-   //    string text = this.ParamsText(type, params);
-   //    string name = this.StandardIndicatorName(type);
-   //    //if(m_db == INVALID_HANDLE || type == IND_CUSTOM || name == "" || this.Exists(type, text))
-   //    if(this.m_CDatabaseService == NULL || type == IND_CUSTOM || name == "" || this.Exists(type, text))
-   //       return false;
-   //    SIndicatorParam schema[];
-   //    const int schema_total = this.GetStandardIndicatorParamSchema(type, schema);
-   //    if(::ArraySize(params) != schema_total)
-   //     {
-   //      ::Print(__FUNCTION__, " > ", name, " (", text, ") not written: ", ::ArraySize(params), " params, the schema has ", schema_total);
-   //      return false;
-   //     }
-   //    string display = this.DisplayLabel(type, text);
-      
-   //    // if(!::DatabaseExecute(m_db, "INSERT INTO Setting_IndicatorTemplate (type_enum, params, display) VALUES (" + (string)(int)type + ", '" + LibDatabase_Quoted(text) + "', '" +
-   //    //                             LibDatabase_Quoted(display) + "')"))
-   //    //  {
-   //    //   ::Print(__FUNCTION__, " > ", GetIndicatorNameForType(type), " (", text, ") not written, error ", ::GetLastError());
-   //    //   return false;
-   //    //  }
-   //    string sql = "INSERT INTO Setting_IndicatorTemplate (type_enum, params, display) VALUES (" + 
-   //                (string)(int)type + ", '" + 
-   //                this.m_CDatabaseService.QuoteSQLText(text) + "', '" +
-   //                this.m_CDatabaseService.QuoteSQLText(display) + "')";
-   //    long id = 0;
-   //    //int request = LibDatabase_Prepare(m_db, "SELECT id FROM Setting_IndicatorTemplate WHERE " + this.Where(type, text));
-   //    // if(request != INVALID_HANDLE)
-   //    //   {
-   //    //    if(::DatabaseRead(request))
-   //    //       ::DatabaseColumnLong(request, 0, id);
-   //    //    ::DatabaseFinalize(request);
-   //    //   }
-   //    if(!this.m_CDatabaseService.Create("Common", sql, id))
-   //     {
-   //      ::Print(__FUNCTION__, " > ", name, " (", text, ") not written");
-   //      return false;
-   //     }
-   //    CIndicatorSetting *row = new CIndicatorSetting(id, type, text, display);
-   //    if(row == NULL || !this.m_list_indicator.Add(row))
-   //      {
-   //       delete row;
-   //       return false;
-   //      }
-   //    // --- Identity (type via lparam, params via sparam), NOT a position - EventChartCustom is queued/async, a position captured now can go stale
-   //    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED, (long)type, 0.0, text);
-   //    return true;
-   //   }
-   //+------------------------------------------------------------------+
-   //| Remove a template: the table and m_list at once, then the event   |
-   //+------------------------------------------------------------------+
-   //  bool CIndicatorTemplateManager::RemoveFromDB(const ENUM_INDICATOR type, const string params_text)
-   //   {
-   //    int index = this.IndexSetting(type, params_text);
-   //    CIndicatorSetting *row = (index > WRONG_VALUE ? this.m_list_indicator.At(index) : NULL);
-   //    // if(m_db == INVALID_HANDLE || row == NULL)
-   //    if(this.m_CDatabaseService == NULL || row == NULL)
-   //     {
-   //      ::Print(__FUNCTION__, " > rejected: no row for this identity");
-   //      return false;
-   //     }      
-   //    //--- The id of the template (the key of its signals): the event carries it (dparam)
-   //    long template_id = row.ID();
-   //    //if(!::DatabaseExecute(m_db, "DELETE FROM Setting_IndicatorTemplate WHERE id = " + (string)template_id))
-   //    string sql = "DELETE FROM Setting_IndicatorTemplate WHERE id = " + (string)template_id;
-   //    if(!this.m_CDatabaseService.Delete("Common", sql))
-   //     {
-   //      ::Print(__FUNCTION__, " > ", this.StandardIndicatorName(type), " (", params_text, ") not removed, error ", ::GetLastError());
-   //      return false;
-   //     }
-   //    this.m_list_indicator.Delete(index);
-   //    ::EventChartCustom(::ChartID(), (ushort)INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE, (long)type, (double)template_id, params_text);
-   //    return true;
-   //   }
  
  //+------------------------------------------------------------------+
  //| The templates whose signal the user shows (the markers and the    |
  //| window of a candle show the same)                                 |
  //+------------------------------------------------------------------+
- int CIndicatorTemplateManager::ShownTemplates(long &buy_templates[], long &sell_templates[]) const
+ int CIndicatorTemplateManager::Read_RAM(long &buy_templates[], long &sell_templates[]) const
   {
    ::ArrayResize(buy_templates, 0);
    ::ArrayResize(sell_templates, 0);
@@ -1300,7 +1170,7 @@
    ENUM_INDICATOR types[];
    string params[];
    bool buy[], sell[];
-   int total = this.TemplateIds(ids, types, params, buy, sell);
+   int total = this.Read_RAM(ids, types, params, buy, sell);
    for(int i = 0; i < total; i++)
      {
       if(buy[i])
@@ -1320,7 +1190,7 @@
  //| The templates that have an alert on (the alert is the one of the  |
  //| signal of the template: the indicator itself has only values)     |
  //+------------------------------------------------------------------+
- int CIndicatorTemplateManager::AlertTemplates(long &ids[], string &display[], bool &sound[], bool &message[]) const
+ int CIndicatorTemplateManager::Read_RAM(long &ids[], string &display[], bool &sound[], bool &message[]) const
   {
    ::ArrayResize(ids, 0);
    ::ArrayResize(display, 0);
@@ -1330,7 +1200,7 @@
    ENUM_INDICATOR types[];
    string params[], all_display[];
    bool buy[], sell[], all_sound[], all_message[], show[];
-   int total = this.Templates(all_ids, types, params, all_display, buy, sell, all_sound, all_message, show);
+   int total = this.Read_RAM(all_ids, types, params, all_display, buy, sell, all_sound, all_message, show);
    for(int i = 0; i < total; i++)
      {
       if(!all_sound[i] && !all_message[i])
@@ -1347,194 +1217,7 @@
      }
    return ::ArraySize(ids);
   }
- // Plan to replace GetIndicatorParamSchema after implemenation CDatabaseService 
-   //  int CIndicatorTemplateManager::GetStandardIndicatorParamSchema(const ENUM_INDICATOR type, SIndicatorParam &out[])
-   //   {
-   //     ArrayResize(out, INDICATOR_PARAM_SLOTS_MAX);
-   //     for(int i = 0; i < INDICATOR_PARAM_SLOTS_MAX; i++)
-   //       {
-   //         out[i].name = "";
-   //         out[i].data_type = TYPE_DOUBLE;
-   //         out[i].default_value = "";
-   //         out[i].choices = "";
-   //       }
-   //     // --- I = plain numeric field (text edit box). E = enum field (combo box;
-   //     // --- dv is the DEFAULT SELECTED ROW in ch, purely a UI preselect concern -
-   //     // --- unrelated to what value actually gets stored, see the note above
-   //     // --- SIndicatorParam for how enum-choice values are resolved).
-   //       #define I(idx,nm,tp,dv)     out[idx].name=nm; out[idx].data_type=tp;      out[idx].default_value=dv;
-   //       #define E(idx,nm,dv,ch)     out[idx].name=nm; out[idx].data_type=TYPE_INT; out[idx].default_value=dv; out[idx].choices=ch;
-   //       switch(type)
-   //       {
-   //         // --- Trend ---------------------------------------------------------
-   //         case IND_SAR:
-   //           I(0,"Step",TYPE_DOUBLE,"0.02") I(1,"Maximum",TYPE_DOUBLE,"0.2")
-   //           return 2;
-   //         case IND_MA:
-   //           I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
-   //           E(2,"Method","1",CALCULATION_METHOD_CHOICES) E(3,"Applied Price","0",PRICE_CHOICES)
-   //           return 4;
-   //         case IND_BANDS:
-   //           I(0,"Period",TYPE_INT,"20") I(1,"Shift",TYPE_INT,"0")
-   //           I(2,"Deviation",TYPE_DOUBLE,"2.0")
-   //           E(3,"Applied Price","0",PRICE_CHOICES)
-   //           return 4;
-   //         case IND_ALLIGATOR:
-   //           I(0,"Jaw Period",TYPE_INT,"13")  I(1,"Jaw Shift",TYPE_INT,"8")
-   //           I(2,"Teeth Period",TYPE_INT,"8") I(3,"Teeth Shift",TYPE_INT,"5")
-   //           I(4,"Lips Period",TYPE_INT,"5")  I(5,"Lips Shift",TYPE_INT,"3")
-   //           E(6,"Method","2",CALCULATION_METHOD_CHOICES) E(7,"Applied Price","4",PRICE_CHOICES)
-   //           return 8;
-   //         case IND_ICHIMOKU:
-   //           I(0,"Tenkan-sen",TYPE_INT,"9") I(1,"Kijun-sen",TYPE_INT,"26")
-   //           I(2,"Senkou Span B",TYPE_INT,"52")
-   //           return 3;
-   //         case IND_ENVELOPES:
-   //           I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
-   //           E(2,"Method","0",CALCULATION_METHOD_CHOICES) E(3,"Applied Price","0",PRICE_CHOICES)
-   //           I(4,"Deviation %",TYPE_DOUBLE,"0.1")
-   //           return 5;
-   //         case IND_FRAMA:
-   //           I(0,"Period",TYPE_INT,"14") 
-   //           I(1,"Shift",TYPE_INT,"0")
-   //           E(2,"Applied Price","0",PRICE_CHOICES)
-   //           return 3;
-   //         case IND_AMA:
-   //           I(0,"AMA Period",TYPE_INT,"9") 
-   //           I(1,"Fast EMA Period",TYPE_INT,"2")
-   //           I(2,"Slow EMA Period",TYPE_INT,"30") 
-   //           I(3,"Shift",TYPE_INT,"0")
-   //           E(4,"Applied Price","0",PRICE_CHOICES)
-   //           return 5;
-   //         case IND_DEMA:
-   //           I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
-   //           E(2,"Applied Price","0",PRICE_CHOICES)
-   //           return 3;
-   //         case IND_TEMA:
-   //           I(0,"Period",TYPE_INT,"14") I(1,"Shift",TYPE_INT,"0")
-   //           E(2,"Applied Price","0",PRICE_CHOICES)
-   //           return 3;
-   //         case IND_VIDYA:
-   //           I(0,"CMO Period",TYPE_INT,"9") I(1,"EMA Period",TYPE_INT,"12")
-   //           I(2,"Shift",TYPE_INT,"0") E(3,"Applied Price","0",PRICE_CHOICES)
-   //           return 4;
-   //         case IND_ADX:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_ADXW:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_STDDEV:
-   //           I(0,"Period",TYPE_INT,"20") 
-   //           I(1,"Shift",TYPE_INT,"0")
-   //           E(2,"Method","0",CALCULATION_METHOD_CHOICES) 
-   //           E(3,"Applied Price","0",PRICE_CHOICES)
-   //           return 4;
-   //         // --- Oscillator ------------------------------------------------------
-   //         case IND_RSI:
-   //           I(0,"Period",TYPE_INT,"14") E(1,"Applied Price","0",PRICE_CHOICES)
-   //           return 2;
-   //         case IND_MACD:
-   //           I(0,"Fast EMA Period",TYPE_INT,"12") I(1,"Slow EMA Period",TYPE_INT,"26")
-   //           I(2,"Signal Period",TYPE_INT,"9") E(3,"Applied Price","0",PRICE_CHOICES)
-   //           return 4;
-   //         case IND_STOCHASTIC:
-   //           I(0,"%K Period",TYPE_INT,"5") 
-   //           I(1,"%D Period",TYPE_INT,"3")
-   //           I(2,"Slowing",TYPE_INT,"3") 
-   //           E(3,"Method","0",CALCULATION_METHOD_CHOICES)
-   //           E(4,"Price Field","0",STOCH_PRICE_CHOICES)
-   //           return 5;
-   //         case IND_CCI:
-   //           I(0,"Period",TYPE_INT,"14") 
-   //           E(1,"Applied Price","5",PRICE_CHOICES)
-   //           return 2;
-   //         case IND_MOMENTUM:
-   //           I(0,"Period",TYPE_INT,"14") 
-   //           E(1,"Applied Price","0",PRICE_CHOICES)
-   //           return 2;
-   //         case IND_DEMARKER:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_RVI:
-   //           I(0,"Period",TYPE_INT,"10")
-   //           return 1;
-   //         case IND_WPR:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_OSMA:
-   //           I(0,"Fast EMA Period",TYPE_INT,"12") 
-   //           I(1,"Slow EMA Period",TYPE_INT,"26")
-   //           I(2,"Signal Period",TYPE_INT,"9") 
-   //           E(3,"Applied Price","0",PRICE_CHOICES)
-   //           return 4;
-   //         case IND_TRIX:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_ATR:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_FORCE:
-   //           I(0,"Period",TYPE_INT,"13") 
-   //           E(1,"Method","1",CALCULATION_METHOD_CHOICES)
-   //           E(2,"Applied Volume","0",VOLUME_CHOICES)
-   //           return 3;
-   //         case IND_AO:
-   //           return 0;
-   //         case IND_AC:
-   //           return 0;
-   //         case IND_GATOR:
-   //           I(0,"Jaw Period",TYPE_INT,"13")  
-   //           I(1,"Jaw Shift",TYPE_INT,"8")
-   //           I(2,"Teeth Period",TYPE_INT,"8") 
-   //           I(3,"Teeth Shift",TYPE_INT,"5")
-   //           I(4,"Lips Period",TYPE_INT,"5")  
-   //           I(5,"Lips Shift",TYPE_INT,"3")
-   //           E(6,"Method","2",CALCULATION_METHOD_CHOICES) 
-   //           E(7,"Applied Price","4",PRICE_CHOICES)
-   //           return 8;
-   //         case IND_BEARS:
-   //           I(0,"Period",TYPE_INT,"13")
-   //           return 1;
-   //         case IND_BULLS:
-   //           I(0,"Period",TYPE_INT,"13")
-   //           return 1;
-   //         case IND_CHAIKIN:
-   //           I(0,"Fast MA Period",TYPE_INT,"3") 
-   //           I(1,"Slow MA Period",TYPE_INT,"10")
-   //           E(2,"Method","1",CALCULATION_METHOD_CHOICES) 
-   //           E(3,"Applied Volume","0",VOLUME_CHOICES)
-   //           return 4;
-
-   //         // --- Volumes ---------------------------------------------------------
-   //         case IND_OBV:
-   //           E(0,"Applied Volume","0",VOLUME_CHOICES)
-   //           return 1;
-   //         case IND_AD:
-   //           E(0,"Applied Volume","0",VOLUME_CHOICES)
-   //           return 1;
-   //         case IND_MFI:
-   //           I(0,"Period",TYPE_INT,"14")
-   //           return 1;
-   //         case IND_VOLUMES:
-   //           E(0,"Applied Volume","0",VOLUME_CHOICES)
-   //           I(1,"MA period",TYPE_INT,"20")   // the moving average drawn with it, and the signal is the volume against it
-   //           E(2,"MA method","0",CALCULATION_METHOD_CHOICES)
-   //           return 3;
-   //         case IND_BWMFI:
-   //           return 0;
-
-   //         // --- Arrows ----------------------------------------------------------
-   //         case IND_FRACTALS:
-   //           return 0;
-
-   //         default:
-   //           return 0;
-   //       }
-   //     #undef I
-   //     #undef E
-   //    }
- int CIndicatorTemplateManager::GetStandardIndicatorParamSchema(const ENUM_INDICATOR type,SIndicatorParam &out[]) const
+ int CIndicatorTemplateManager::Read_RAM(const ENUM_INDICATOR type,SIndicatorParam &out[]) const
   {
    ArrayResize(out, INDICATOR_PARAM_SLOTS_MAX);
    for(int p = 0; p < INDICATOR_PARAM_SLOTS_MAX; p++)
@@ -1591,68 +1274,6 @@
      }
 
    return 0;
-  }
- bool CIndicatorTemplateManager::ParamsFromTextByStandardSchema(const ENUM_INDICATOR type,const string text,MqlParam &out_params[]) const
-  {
-   int row = WRONG_VALUE;
-   for(int i = 0; i < ArraySize(standard_indicator_list); i++)
-     {
-      if(standard_indicator_list[i].ind_type == type)
-        {
-         row = i;
-         break;
-        }
-     }
-   if(row == WRONG_VALUE)
-      return false;
-
-   SIndicatorParam schema[];
-   const int schema_total = this.GetStandardIndicatorParamSchema(type, schema);
-   if(schema_total < 0 || schema_total > INDICATOR_PARAM_SLOTS_MAX)
-      return false;
-
-   // An unmigrated catalog row can appear to have no params because it
-   // still uses the old short initializer.
-   if(schema_total == 0 && standard_indicator_list[row].params != "")
-      return false;
-
-   string params_text[];
-   const int found = (text == "") ? 0 : StringSplit(text, ',', params_text);
-   if(found != schema_total)
-      return false;
-
-   for(int p = 0; p < schema_total; p++)
-     {
-      if(schema[p].name == "")
-         return false;
-     }
-
-   if(ArrayResize(out_params, schema_total) != schema_total)
-      return false;
-
-   for(int p = 0; p < schema_total; p++)
-     {
-      string raw = params_text[p];
-      StringTrimLeft(raw);
-      StringTrimRight(raw);
-      StringReplace(raw, "\"", "");
-
-      out_params[p].type = schema[p].data_type;
-      if(schema[p].choices == PRICE_CHOICES)
-         out_params[p].integer_value = this.ParamValueByDescription(raw,schema[p].choices);
-      else if(schema[p].choices == CALCULATION_METHOD_CHOICES)
-         out_params[p].integer_value = this.ParamValueByDescription(raw,schema[p].choices);
-      else if(schema[p].choices == VOLUME_CHOICES)
-         out_params[p].integer_value = this.ParamValueByDescription(raw,schema[p].choices);
-      else if(schema[p].choices == STOCH_PRICE_CHOICES)
-         out_params[p].integer_value = this.ParamValueByDescription(raw,schema[p].choices);
-      else if(schema[p].data_type == TYPE_DOUBLE)
-         out_params[p].double_value = StringToDouble(raw);
-      else
-         out_params[p].integer_value = (long)StringToInteger(raw);
-     }
-
-   return true;
   }
 #endif // CINDICATORTEMPLATEMANAGER_MQH_IMPLEMENTATION
 #endif // CINDICATORTEMPLATEMANAGER_MQH

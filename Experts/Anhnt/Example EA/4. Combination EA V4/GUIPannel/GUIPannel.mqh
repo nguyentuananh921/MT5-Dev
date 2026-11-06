@@ -3,9 +3,6 @@
 //|EA Code Base on https://www.mql5.com/en/articles/4727             |
 //|Library base on Link https://www.mql5.com/en/code/19703           |
 //+------------------------------------------------------------------+
-//--- The graphical interface only: it shows what the models hold and
-//--- reports what the user changed, it calculates nothing.
-//--- A child of the EA: it gets the chart events from it and handles them itself
 #ifndef __GUIPANNEL_MQH__
 #define __GUIPANNEL_MQH__
 #include "GUIPannel_Define.mqh"
@@ -96,7 +93,7 @@
       string                              LayoutFile_TradeManage(const int tab) const;
       void                                SaveLayout_Table(CTable &table,const string file);
       void                                LoadLayout_Table(CTable &table,const string file);
-      int                                 FillTable_Trade(CTable &table,const string sql,const int columns_expected,const int symbol_column,const int &spread_columns[],
+      int                                 FillTable_Trade(CTable &table,const string &cells[],const int rows,const int columns,const int symbol_column,const int &spread_columns[],
                                                           const int fee_column,const int volume_column,const int commission_column,const int swap_column);
       void                                FormatTradeRows(CTable &table,const int rows,const int symbol_column,const int direction_column,const int profit_column,const int detail_column);
       void                                OpenWindow_TradeManage(void);

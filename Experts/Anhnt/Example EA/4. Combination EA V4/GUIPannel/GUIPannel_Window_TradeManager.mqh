@@ -251,40 +251,22 @@
         }
      }
   }
-  //--- Rows of a query on the table Orders: the rows are made at once (AddRow one by one took 30 ms each); the Symbol of the query is the id of OUR symbol, the table shows the name
- //--- the account gives it; a spread comes as a difference of prices and is shown in points; the fee (fee_column<0: none) is the whole cost of the trade: the half spreads, which come as
+  //--- The rows, every cell as text, row after row: the rows are made at once (AddRow one by one took 30 ms each); a spread comes as a difference of prices and is shown in points; the fee (fee_column<0: none) is the whole cost of the trade: the half spreads, which come as
  //--- a difference of prices, in money by the volume of its row, plus its commission and its swap (they are costs already: negative); shown with two decimals, blank when the spread is not known.
- //--- Gives back the number of rows (WRONG_VALUE when the query failed); the table is not drawn: the caller puts the pictures of the cells, then draws
- int CGUIPannel::FillTable_Trade(CTable &table,const string sql,const int columns_expected,const int symbol_column,const int &spread_columns[],
+ //--- Gives back the number of rows; the table is not drawn: the caller puts the pictures of the cells, then draws
+ int CGUIPannel::FillTable_Trade(CTable &table,const string &cells[],const int rows,const int columns,const int symbol_column,const int &spread_columns[],
                                 const int fee_column,const int volume_column,const int commission_column,const int swap_column)
   {
-   if(m_HistoryCollection==NULL || m_SymbolsCollection==NULL)
-      return WRONG_VALUE;
-   string names[],cells[];
-   int rows=0;
-   if(!m_HistoryCollection.Read(sql,names,cells,rows))
-     {
-      ::Print(__FUNCTION__,": the query is not accepted, error ",::GetLastError());
-      return WRONG_VALUE;
-     }
-   int columns=::ArraySize(names);
-   if(columns!=columns_expected)
-     {
-      ::Print(__FUNCTION__,": the query has ",columns," column(s), the table expects ",columns_expected);
-      return WRONG_VALUE;
-     }
    table.TableSize(columns,rows);
    for(int row=0;row<rows;row++)
      {
-      string symbol=m_SymbolsCollection.AccountSymbol(::StringToInteger(cells[row*columns+symbol_column]));
+      string symbol=cells[row*columns+symbol_column];
       double point=::SymbolInfoDouble(symbol,SYMBOL_POINT);
       double tick_size=::SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_SIZE);
       double tick_value=::SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_VALUE);
       for(int c=0;c<columns;c++)
         {
          string value=cells[row*columns+c];
-         if(c==symbol_column)
-            value=symbol;
          if(c==fee_column && volume_column>=0)   // the price difference to money: ticks of it, the value of a tick, the volume; then the commission and the swap
             value=(value=="" || tick_size<=0 ? "" : ::DoubleToString(-::StringToDouble(value)/tick_size*tick_value*::StringToDouble(cells[row*columns+volume_column])
                                                                      +(commission_column>=0 ? ::StringToDouble(cells[row*columns+commission_column]) : 0)

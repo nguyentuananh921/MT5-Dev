@@ -8,8 +8,6 @@
  //Setting folder and file
   #define EA_LAYOUT_FOLDER       (::MQLInfoString(MQL_PROGRAM_NAME)+"\\Layout")   // the columns the user chose for each table of the panel (a file for each)
   #define EA_DEBUG_FOLDER        "EA V4 SQLLite\\Debug"   // MY DEBUG: where the EA writes the step it is in (Breadcrumb)
-  //--- The databases: the defaults of the library (Services\DELib\DatabaseDELib.mqh, MQL5\Files\<program>\SQLite); define LIB_DATABASE_FOLDER / _FILE /
-  //--- LIB_ACCOUNTS_FOLDER here only for another place
  //Seting for timer
   #define EA_TIMER_MS            (16)
   #define EA_SERIES_REFRESH_MS   (250)   // OnTimer: the series of the symbols other than the chart's are read again at this pace (the chart's follow its ticks)

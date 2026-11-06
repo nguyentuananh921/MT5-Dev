@@ -3,25 +3,48 @@
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //| Link https://www.mql5.com/en/articles/6952                       |
 //| Lib https://www.mql5.com/en/articles/14710                       |
-//| V3 SaveObjects -> SyncDataToDB, LoadObjects -> SyncDataFromDB    |
+//| V3 SaveObjects -> UpdateDataToDB, LoadObjects -> ReadDataFromDB    |
+//| Create table accounts in Common Database                         |
+//| Use m_account_key in CDatabaseService to Join 2 Database On RAM  |
+//| [] Update in V4: Use CDatabaseService                            |
+//+------------------------------------------------------------------+
+//| Account collection                                               |
 //+------------------------------------------------------------------+
 #ifndef __ACCOUNTSCOLLECTION_MQH__
 #define __ACCOUNTSCOLLECTION_MQH__
- #include "ListObj.mqh"
- #include "..\Services\DELib\DatabaseDELib.mqh"
+ #include "ListObj.mqh" 
  #include "..\Entities\Bases\BaseObjExt.mqh"
  #include "..\Entities\Trading\Account.mqh"
+ #include "..\Services\DELib\DatabaseService.mqh"
 #ifndef CACCOUNTSCOLLECTION_MQH_DECLARATION
-#define CACCOUNTSCOLLECTION_MQH_DECLARATION
- //+------------------------------------------------------------------+
- //| Account collection                                               |
- //+------------------------------------------------------------------+
+#define CACCOUNTSCOLLECTION_MQH_DECLARATION  
+ struct SAccountRow
+  {
+   long   login;
+   string server;
+   string name;
+   string company;
+   string currency;
+   long   currency_digits;
+   long   trade_mode;
+   long   margin_mode;
+   long   margin_so_mode;
+   double margin_so_call;
+   double margin_so_so;
+   long   leverage;
+   long   limit_orders;
+   long   fifo_close;
+   long   hedge_allowed;
+   long   server_type;
+   long   first_seen;
+   long   last_seen;
+  };
  class CAccountsCollection : public CBaseObjExt
   {
-   private:
-    int               m_db;                                        // the file the accounts share (LibDatabase_Open): the table accounts is asked here
+   private:    
     CListObj          m_list_accounts;                             // Account object list: the account the terminal is logged in to, the others of the table
     int               m_index_current;                             // Index of an account object featuring the current account data
+    CDatabaseService  *m_CDatabaseService;                         // The EA holds it
    //--- Check the account object presence in the collection list
     bool              IsPresent(CAccount *account);
    //--- Find and return the account object index with the current account data
@@ -37,14 +60,15 @@
    //--- Constructor, destructor
                       CAccountsCollection(void);
                      ~CAccountsCollection(void);
-   //--- Lifecycle: the table is made, the current account is in the list, the others come from the table (SyncDataFromDB), the list goes to it (SyncDataToDB)
+   //--- Lifecycle: the table is made, the current account is in the list, the others come from the table (ReadDataFromDB), the list goes to it (UpdateDataToDB)
     bool              OnInitEvent(void);
+    void              SetDatabaseService(CDatabaseService *databaseService)    {this.m_CDatabaseService=databaseService;}
    //--- Add the account object to the list
     bool              AddToList(CAccount *account);
    //--- (1) The account objects of the list to the table accounts (what does not change; last_seen of the current one)
    //--- (2) The rows of the table accounts to the list (the accounts that are not there yet)
-    bool              SyncDataToDB(void);
-    bool              SyncDataFromDB(void);
+    bool              UpdateDataToDB(void);    
+    bool              ReadDataFromDB(void);    
   };
 #endif // CACCOUNTSCOLLECTION_MQH_DECLARATION
 #ifndef CACCOUNTSCOLLECTION_MQH_IMPLEMENTATION
@@ -52,7 +76,8 @@
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CAccountsCollection::CAccountsCollection(void) : m_db(INVALID_HANDLE),m_index_current(WRONG_VALUE)
+ CAccountsCollection::CAccountsCollection(void) : m_CDatabaseService(NULL),
+                                                  m_index_current(WRONG_VALUE)
   {
    this.m_object_type=COLLECTION_ACCOUNT_ID;
    this.m_list_accounts.Clear();
@@ -64,10 +89,6 @@
  //+------------------------------------------------------------------+
  CAccountsCollection::~CAccountsCollection(void)
   {
-   //--- Save account objects from the list to the table
-   this.SyncDataToDB();
-   if(this.m_db!=INVALID_HANDLE)
-      ::DatabaseClose(this.m_db);
   }
  //+------------------------------------------------------------------+
  //| Add the account object to the list                               |
@@ -117,34 +138,23 @@
  //| others come from the table, then the list goes to the table      |
  //+------------------------------------------------------------------+
  bool CAccountsCollection::OnInitEvent(void)
-  {
-   if(this.m_db==INVALID_HANDLE)
+  {   
+   // Update in V4 after implemenation CDatabaseService
+    if(this.m_CDatabaseService == NULL)
+      {
+       ::Print(__FUNCTION__, " > DatabaseService is not set");
+       return false;
+      }
+    else
      {
-      this.m_db=LibDatabase_Open(DATABASE_OPEN_READWRITE);
-      if(this.m_db==INVALID_HANDLE)
+      string sql_create_table_accounts ="CREATE TABLE IF NOT EXISTS accounts (""account_key TEXT NOT NULL PRIMARY KEY, ""login INTEGER NOT NULL DEFAULT 0, ""server TEXT NOT NULL DEFAULT '', ""name TEXT NOT NULL DEFAULT '', ""company TEXT NOT NULL DEFAULT '', ""currency TEXT NOT NULL DEFAULT '', ""currency_digits INTEGER NOT NULL DEFAULT 0, ""trade_mode INTEGER NOT NULL DEFAULT 0, ""margin_mode INTEGER NOT NULL DEFAULT 0, ""margin_so_mode INTEGER NOT NULL DEFAULT 0, ""margin_so_call REAL NOT NULL DEFAULT 0, ""margin_so_so REAL NOT NULL DEFAULT 0, ""leverage INTEGER NOT NULL DEFAULT 0, ""limit_orders INTEGER NOT NULL DEFAULT 0, ""fifo_close INTEGER NOT NULL DEFAULT 0, ""hedge_allowed INTEGER NOT NULL DEFAULT 0, ""server_type INTEGER NOT NULL DEFAULT 0, ""first_seen INTEGER, ""last_seen INTEGER)";
+      if(!this.m_CDatabaseService.Create("Common", sql_create_table_accounts))
         {
-         ::Print(__FUNCTION__," > the database ",LIB_DATABASE_FILE," is not opened, error ",::GetLastError());
-         return false;
+           ::Print(__FUNCTION__, " > DatabaseService can't create table accounts");
+           return false;
         }
-      ::DatabaseExecute(this.m_db,"PRAGMA busy_timeout=5000");
-     }
-   //--- accounts: what does not change of an account (who it is and its terms)
-   if(!::DatabaseExecute(this.m_db,"CREATE TABLE IF NOT EXISTS accounts (\n-- Library V4: class CAccount (Entities/Trading/Account.mqh), only what does not change; the EA + Library write it, Python reads account_key\n"+
-                                   "account_key TEXT NOT NULL PRIMARY KEY, login INTEGER NOT NULL DEFAULT 0, server TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', "+
-                                   "company TEXT NOT NULL DEFAULT '', currency TEXT NOT NULL DEFAULT '', currency_digits INTEGER NOT NULL DEFAULT 0, trade_mode INTEGER NOT NULL DEFAULT 0, "+
-                                   "margin_mode INTEGER NOT NULL DEFAULT 0, margin_so_mode INTEGER NOT NULL DEFAULT 0, margin_so_call REAL NOT NULL DEFAULT 0, margin_so_so REAL NOT NULL DEFAULT 0, "+
-                                   "leverage INTEGER NOT NULL DEFAULT 0, limit_orders INTEGER NOT NULL DEFAULT 0, fifo_close INTEGER NOT NULL DEFAULT 0, hedge_allowed INTEGER NOT NULL DEFAULT 0, "+
-                                   "server_type INTEGER NOT NULL DEFAULT 0, first_seen INTEGER, last_seen INTEGER)"))
-     {
-      ::Print(__FUNCTION__," > the table accounts is not made, error ",::GetLastError());
-      return false;
-     }
-   //--- The columns of an older table that kept a property changing all the time (a picture of OnInit, wrong at the next tick): they go
-   string live[]={"balance","credit","profit","equity","margin","margin_free","margin_level","margin_initial","margin_maintenance","assets","liabilities",
-                  "commission_blocked","trade_allowed","trade_expert"};
-   for(int i=0;i<ArraySize(live);i++)
-      if(LibDatabase_ColumnExists(this.m_db,"accounts",live[i]) && !::DatabaseExecute(this.m_db,"ALTER TABLE accounts DROP COLUMN "+live[i]))
-         ::Print(__FUNCTION__," > the column ",live[i]," is not dropped, error ",::GetLastError(),": it stays with its default, nothing writes it");
+        
+     }    
    //--- Create the current account object and add it to the list (OnInit again: a chart change keeps it, another account logged in gets its own)
    this.m_index_current=this.Index();
    if(this.m_index_current==WRONG_VALUE)
@@ -171,109 +181,129 @@
      }
    else
       this.GetCurrentAccount().RefreshAccount();   // asks the terminal again
-   //--- Download account objects from the table to the collection, save the current account index
-   this.SyncDataFromDB();
-   this.m_index_current=this.Index();
+   //--- Download account objects from the table to the collection, save the current account index   
+    this.ReadDataFromDB();
+    this.m_index_current=this.Index();
    //--- The row of the current account is there now: Python finds its account_key
-   return this.SyncDataToDB();
+   return this.UpdateDataToDB();
   }
  //+------------------------------------------------------------------+
  //| The account objects of the list to the table: what does not       |
  //| change; first_seen the first time, last_seen of the current one   |
  //+------------------------------------------------------------------+
- bool CAccountsCollection::SyncDataToDB(void)
-  {
-   if(this.m_db==INVALID_HANDLE)
+ bool CAccountsCollection::UpdateDataToDB(void)
+  {   
+   // New In V4 after implemenation CDatabaseService
+    if(this.m_CDatabaseService == NULL)
+     {
+      ::Print(__FUNCTION__," > DatabaseService is not set");
       return false;
-   bool res=true;
+     }
+   bool res_CDatabaseService=true;  
    string now=(string)((long)::TimeGMT()*1000);
+
    for(int i=0;i<this.m_list_accounts.Total();i++)
      {
       CAccount *account=this.m_list_accounts.At(i);
       if(account==NULL)
-         continue;
-      string key=LibDatabase_Safe(account.Server())+"_"+(string)account.Login();   // LibDatabase_AccountKey of that account
-      string sql=
-         "INSERT INTO accounts (account_key, login, server, name, company, currency, currency_digits, trade_mode, margin_mode, margin_so_mode, margin_so_call, margin_so_so, "+
-         "leverage, limit_orders, fifo_close, hedge_allowed, server_type, first_seen, last_seen) VALUES ('"+LibDatabase_Quoted(key)+"', "+
-         (string)account.Login()+", '"+LibDatabase_Quoted(account.Server())+"', '"+LibDatabase_Quoted(account.Name())+"', '"+LibDatabase_Quoted(account.Company())+"', '"+
-         LibDatabase_Quoted(account.Currency())+"', "+(string)account.CurrencyDigits()+", "+(string)(int)account.TradeMode()+", "+(string)(int)account.MarginMode()+", "+
-         (string)(int)account.MarginSOMode()+", "+::DoubleToString(account.MarginSOCall(),8)+", "+::DoubleToString(account.MarginSOSO(),8)+", "+(string)account.Leverage()+", "+
-         (string)account.LimitOrders()+", "+(string)(int)account.FIFOClose()+", "+(string)(int)account.HedgeAllowed()+", "+(string)account.ServerType()+", "+now+", "+now+") ";
-      //--- Only the current account is asked of the terminal: the row of another one stays as it is
-      sql+=(i==this.m_index_current ?
+         continue;      
+      string account_key = this.m_CDatabaseService.GetAccountKey();
+      string sql_UpdateAccountInfor = "INSERT INTO accounts (account_key, login, server, name, company, currency, currency_digits, trade_mode, margin_mode, margin_so_mode, margin_so_call, margin_so_so, " +"leverage, limit_orders, fifo_close, hedge_allowed, server_type, first_seen, last_seen) VALUES ('" +
+         this.m_CDatabaseService.QuoteSQLText(account_key)+"', "+
+         (string)account.Login()+", '"+
+         this.m_CDatabaseService.QuoteSQLText(account.Server())+"', '"+
+         this.m_CDatabaseService.QuoteSQLText(account.Name())+"', '"+
+         this.m_CDatabaseService.QuoteSQLText(account.Company())+"', '"+
+         this.m_CDatabaseService.QuoteSQLText(account.Currency())+"', "+
+         (string)account.CurrencyDigits()+", "+(string)(int)account.TradeMode()+", "+(string)(int)account.MarginMode()+", "+
+         (string)(int)account.MarginSOMode()+", "+::DoubleToString(account.MarginSOCall(),8)+", "+::DoubleToString(account.MarginSOSO(),8)+", "+
+         (string)account.Leverage()+", "+(string)account.LimitOrders()+", "+(string)(int)account.FIFOClose()+", "+(string)(int)account.HedgeAllowed()+", "+
+         (string)account.ServerType()+", "+now+", "+now+") ";
+
+      sql_UpdateAccountInfor+=(i==this.m_index_current ?
             "ON CONFLICT(account_key) DO UPDATE SET login=excluded.login, server=excluded.server, name=excluded.name, company=excluded.company, currency=excluded.currency, "+
             "currency_digits=excluded.currency_digits, trade_mode=excluded.trade_mode, margin_mode=excluded.margin_mode, margin_so_mode=excluded.margin_so_mode, "+
             "margin_so_call=excluded.margin_so_call, margin_so_so=excluded.margin_so_so, leverage=excluded.leverage, limit_orders=excluded.limit_orders, "+
             "fifo_close=excluded.fifo_close, hedge_allowed=excluded.hedge_allowed, server_type=excluded.server_type, last_seen=excluded.last_seen" :
             "ON CONFLICT(account_key) DO NOTHING");
-      if(!::DatabaseExecute(this.m_db,sql))
+
+      if(!this.m_CDatabaseService.Update("Common", sql_UpdateAccountInfor))
         {
-         ::Print(__FUNCTION__," > the account ",key," is not written, error ",::GetLastError());
-         res=false;
+         ::Print(__FUNCTION__," > the account ",account_key," is not written, error ",::GetLastError());
+         res_CDatabaseService=false;
         }
      }
-   return res;
+    return res_CDatabaseService;
   }
  //+------------------------------------------------------------------+
  //| The rows of the table to the list: an account that is not in the |
  //| list yet. What changes all the time is not known of it (0)       |
  //+------------------------------------------------------------------+
- bool CAccountsCollection::SyncDataFromDB(void)
-  {
-   if(this.m_db==INVALID_HANDLE)
-      return false;
-   int request=LibDatabase_Prepare(this.m_db,"SELECT login, server, name, company, currency, currency_digits, trade_mode, margin_mode, margin_so_mode, margin_so_call, "+
-                                           "margin_so_so, leverage, limit_orders, fifo_close, hedge_allowed, server_type FROM accounts");
-   if(request==INVALID_HANDLE)
+ bool CAccountsCollection::ReadDataFromDB(void)
+  {   
+   // New In V4 after implemenation CDatabaseService
+    if(this.m_CDatabaseService==NULL)
      {
-      ::Print(__FUNCTION__," > the table accounts is not read, error ",::GetLastError());
+      ::Print(__FUNCTION__," > DatabaseService is not set");
       return false;
      }
-   bool res=true;
-   while(::DatabaseRead(request))
+   SAccountRow data_rows[];
+   string sql_readAccountInfor=
+      "SELECT login, server, name, company, currency, currency_digits, trade_mode, "
+      "margin_mode, margin_so_mode, margin_so_call, margin_so_so, leverage, "
+      "limit_orders, fifo_close, hedge_allowed, server_type, first_seen, last_seen "
+      "FROM accounts";
+
+   if(!this.m_CDatabaseService.Read("Common", sql_readAccountInfor, data_rows))
+     {
+      ::Print(__FUNCTION__," > the table accounts is not read by DatabaseService");
+      return false;
+     }
+   bool res_CDatabaseService=true;
+   for(int i=0;i<ArraySize(data_rows);i++)
      {
       CAccount *account=new CAccount();
       if(account==NULL)
         {
-         res=false;
+         res_CDatabaseService=false;
          continue;
         }
-      for(int i=0;i<ACCOUNT_PROP_INTEGER_TOTAL;i++)
-         account.SetProperty((ENUM_ACCOUNT_PROP_INTEGER)i,0);
-      for(int i=ACCOUNT_PROP_INTEGER_TOTAL;i<ACCOUNT_PROP_INTEGER_TOTAL+ACCOUNT_PROP_DOUBLE_TOTAL;i++)
-         account.SetProperty((ENUM_ACCOUNT_PROP_DOUBLE)i,0);
-      long   value=0;
-      double real=0;
-      string text="";
-      ::DatabaseColumnLong(request,0,value);    account.SetProperty(ACCOUNT_PROP_LOGIN,value);
-      ::DatabaseColumnText(request,1,text);     account.SetProperty(ACCOUNT_PROP_SERVER,text);
-      ::DatabaseColumnText(request,2,text);     account.SetProperty(ACCOUNT_PROP_NAME,text);
-      ::DatabaseColumnText(request,3,text);     account.SetProperty(ACCOUNT_PROP_COMPANY,text);
-      ::DatabaseColumnText(request,4,text);     account.SetProperty(ACCOUNT_PROP_CURRENCY,text);
-      ::DatabaseColumnLong(request,5,value);    account.SetProperty(ACCOUNT_PROP_CURRENCY_DIGITS,value);
-      ::DatabaseColumnLong(request,6,value);    account.SetProperty(ACCOUNT_PROP_TRADE_MODE,value);
-      ::DatabaseColumnLong(request,7,value);    account.SetProperty(ACCOUNT_PROP_MARGIN_MODE,value);
-      ::DatabaseColumnLong(request,8,value);    account.SetProperty(ACCOUNT_PROP_MARGIN_SO_MODE,value);
-      ::DatabaseColumnDouble(request,9,real);   account.SetProperty(ACCOUNT_PROP_MARGIN_SO_CALL,real);
-      ::DatabaseColumnDouble(request,10,real);  account.SetProperty(ACCOUNT_PROP_MARGIN_SO_SO,real);
-      ::DatabaseColumnLong(request,11,value);   account.SetProperty(ACCOUNT_PROP_LEVERAGE,value);
-      ::DatabaseColumnLong(request,12,value);   account.SetProperty(ACCOUNT_PROP_LIMIT_ORDERS,value);
-      ::DatabaseColumnLong(request,13,value);   account.SetProperty(ACCOUNT_PROP_FIFO_CLOSE,value);
-      ::DatabaseColumnLong(request,14,value);   account.SetProperty(ACCOUNT_PROP_HEDGE_ALLOWED,value);
-      ::DatabaseColumnLong(request,15,value);   account.SetProperty(ACCOUNT_PROP_SERVER_TYPE,value);
+
+      // reset live fields to safe defaults
+      for(int j=0;j<ACCOUNT_PROP_INTEGER_TOTAL;j++)
+         account.SetProperty((ENUM_ACCOUNT_PROP_INTEGER)j,0);
+      for(int j=ACCOUNT_PROP_INTEGER_TOTAL;j<ACCOUNT_PROP_INTEGER_TOTAL+ACCOUNT_PROP_DOUBLE_TOTAL;j++)
+         account.SetProperty((ENUM_ACCOUNT_PROP_DOUBLE)j,0);
+
+      account.SetProperty(ACCOUNT_PROP_LOGIN,data_rows[i].login);
+      account.SetProperty(ACCOUNT_PROP_SERVER,data_rows[i].server);
+      account.SetProperty(ACCOUNT_PROP_NAME,data_rows[i].name);
+      account.SetProperty(ACCOUNT_PROP_COMPANY,data_rows[i].company);
+      account.SetProperty(ACCOUNT_PROP_CURRENCY,data_rows[i].currency);
+      account.SetProperty(ACCOUNT_PROP_CURRENCY_DIGITS,data_rows[i].currency_digits);
+      account.SetProperty(ACCOUNT_PROP_TRADE_MODE,data_rows[i].trade_mode);
+      account.SetProperty(ACCOUNT_PROP_MARGIN_MODE,data_rows[i].margin_mode);
+      account.SetProperty(ACCOUNT_PROP_MARGIN_SO_MODE,data_rows[i].margin_so_mode);
+      account.SetProperty(ACCOUNT_PROP_MARGIN_SO_CALL,data_rows[i].margin_so_call);
+      account.SetProperty(ACCOUNT_PROP_MARGIN_SO_SO,data_rows[i].margin_so_so);
+      account.SetProperty(ACCOUNT_PROP_LEVERAGE,data_rows[i].leverage);
+      account.SetProperty(ACCOUNT_PROP_LIMIT_ORDERS,data_rows[i].limit_orders);
+      account.SetProperty(ACCOUNT_PROP_FIFO_CLOSE,data_rows[i].fifo_close);
+      account.SetProperty(ACCOUNT_PROP_HEDGE_ALLOWED,data_rows[i].hedge_allowed);
+      account.SetProperty(ACCOUNT_PROP_SERVER_TYPE,data_rows[i].server_type);
+
       if(!this.AddToList(account))
-         delete account;   // it is there already (the current one)
+         delete account;
      }
-   ::DatabaseFinalize(request);
-   return res;
+
+   return res_CDatabaseService;
+
   }
  //+------------------------------------------------------------------+
  //| The current account follows the terminal: its events go to the   |
  //| chart (id: the property, lparam: ms, reason, type; dparam: the   |
  //| change). A column of the table that changed is written again     |
- //+------------------------------------------------------------------+
- //--- Change from V3: Refresh + RefreshAndEventsControl (the same lines twice) -> RefreshAccount (as RefreshSeries)
+ //+------------------------------------------------------------------+ 
  void CAccountsCollection::RefreshAccount(void)
   {
    this.m_is_event=false;
@@ -308,7 +338,7 @@
          ::EventChartCustom(::ChartID(),(ushort)event.ID(),event.LParam(),event.DParam(),event.SParam());   // the parent and the siblings hear it
      }
    if(stored)
-      this.SyncDataToDB();
+      this.UpdateDataToDB();
   }
 #endif // CACCOUNTSCOLLECTION_MQH_IMPLEMENTATION
 #endif // __ACCOUNTSCOLLECTION_MQH__
