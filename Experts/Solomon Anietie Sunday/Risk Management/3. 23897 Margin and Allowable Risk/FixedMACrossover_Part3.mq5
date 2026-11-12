@@ -25,95 +25,95 @@
 #include <Trade/Trade.mqh>
 
 //--- Input Parameters
-input group "Trading Signal"
-input int    InpFastMA = 10;                         // Fast MA period
-input int    InpSlowMA = 20;                         // Slow MA period
+   input group "Trading Signal"
+   input int    InpFastMA = 10;                         // Fast MA period
+   input int    InpSlowMA = 20;                         // Slow MA period
 
-input group "Trade & Risk Settings"
-input double InpRiskPercent = 1.0;                   // Risk per trade [%]
-input bool   InpAllowHedging = false;                // Allow opposing position (hedging)
-input int    InpATRPeriod = 14;                      // ATR Period for Volatility Calculation
-input double InpATRMultiplier = 1.5;                 // ATR Multiplier for Stop-Loss Distance
-input double InpTPRatio = 2.0;                       // Take Profit Ratio
-input double InpMaxSpreadPips = 2.0;                 // Maximum allowed spread
+   input group "Trade & Risk Settings"
+   input double InpRiskPercent = 1.0;                   // Risk per trade [%]
+   input bool   InpAllowHedging = false;                // Allow opposing position (hedging)
+   input int    InpATRPeriod = 14;                      // ATR Period for Volatility Calculation
+   input double InpATRMultiplier = 1.5;                 // ATR Multiplier for Stop-Loss Distance
+   input double InpTPRatio = 2.0;                       // Take Profit Ratio
+   input double InpMaxSpreadPips = 2.0;                 // Maximum allowed spread
 
-input group "Adaptive Risk (Drawdown)"
-input bool   InpEnableAdaptiveRisk  = false;         // Reduce risk during drawdowns
-input double InpDDLevel             = 3.0;           // Drawdown % that triggers reduced risk
-input double InpRiskReductionFactor = 0.5;           // Adaptive risk multiplier when triggered [0.5 = half risk]
+   input group "Adaptive Risk (Drawdown)"
+   input bool   InpEnableAdaptiveRisk  = false;         // Reduce risk during drawdowns
+   input double InpDDLevel             = 3.0;           // Drawdown % that triggers reduced risk
+   input double InpRiskReductionFactor = 0.5;           // Adaptive risk multiplier when triggered [0.5 = half risk]
 
-input group "Broker & Margin Safety"
-input double InpMaxMarginUsagePercent   = 50.0;      // Max % of free margin one new trade may use
-input bool   InpEnableAdaptiveMarginCap = false;     // Scale the margin cap with account-wide margin level
-input double InpMarginLevelSafe         = 500.0;     // Margin safe level [%] full cap applies
-input double InpMarginLevelDanger       = 150.0;     // Margin caution level [%] new trades are blocked
+   input group "Broker & Margin Safety"
+   input double InpMaxMarginUsagePercent   = 50.0;      // Max % of free margin one new trade may use
+   input bool   InpEnableAdaptiveMarginCap = false;     // Scale the margin cap with account-wide margin level
+   input double InpMarginLevelSafe         = 500.0;     // Margin safe level [%] full cap applies
+   input double InpMarginLevelDanger       = 150.0;     // Margin caution level [%] new trades are blocked
 
-input group "General"
-input int    InpMagicNumber = 12345;                 // EA Magic Number
+   input group "General"
+   input int    InpMagicNumber = 12345;                 // EA Magic Number
 
 
 //--- Global Variables
-CTrade trade;
-int fastMaHandle, slowMaHandle;
-int atrIndicatorHandle;
-double g_peakEquity = 0.0;
+   CTrade trade;
+   int fastMaHandle, slowMaHandle;
+   int atrIndicatorHandle;
+   double g_peakEquity = 0.0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
   {
-//--- Set the Magic Number for all trades
-   trade.SetExpertInpMagicNumber(InpMagicNumber);
+   //--- Set the Magic Number for all trades
+      trade.SetExpertInpMagicNumber(InpMagicNumber);
 
-//--- Initialize Handles
-   fastMaHandle = iMA(_Symbol, _Period, InpFastMA, 0, MODE_SMA, PRICE_CLOSE);
-   slowMaHandle = iMA(_Symbol, _Period, InpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
-   atrIndicatorHandle = iATR(_Symbol, _Period, InpATRPeriod);
+   //--- Initialize Handles
+      fastMaHandle = iMA(_Symbol, _Period, InpFastMA, 0, MODE_SMA, PRICE_CLOSE);
+      slowMaHandle = iMA(_Symbol, _Period, InpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
+      atrIndicatorHandle = iATR(_Symbol, _Period, InpATRPeriod);
 
-   if(fastMaHandle == INVALID_HANDLE || slowMaHandle == INVALID_HANDLE || atrIndicatorHandle == INVALID_HANDLE)
-     {
-      return INIT_FAILED;
-     }
+      if(fastMaHandle == INVALID_HANDLE || slowMaHandle == INVALID_HANDLE || atrIndicatorHandle == INVALID_HANDLE)
+      {
+         return INIT_FAILED;
+      }
 
-//--- Validate user inputs
-   if(InpFastMA <= 0 || InpSlowMA <= 0)
-     {
-      Print("Moving Average periods must be greater than zero.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
+   //--- Validate user inputs
+      if(InpFastMA <= 0 || InpSlowMA <= 0)
+      {
+         Print("Moving Average periods must be greater than zero.");
+         return INIT_PARAMETERS_INCORRECT;
+      }
 
-   if(InpFastMA >= InpSlowMA)
-     {
-      Print("InpFastMA should be smaller than InpSlowMA.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
+      if(InpFastMA >= InpSlowMA)
+      {
+         Print("InpFastMA should be smaller than InpSlowMA.");
+         return INIT_PARAMETERS_INCORRECT;
+      }
 
-   if(InpRiskPercent <= 0)
-     {
-      Print("Risk per trade must be greater than zero.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
+      if(InpRiskPercent <= 0)
+      {
+         Print("Risk per trade must be greater than zero.");
+         return INIT_PARAMETERS_INCORRECT;
+      }
 
-   if(InpATRPeriod <= 0 || InpATRMultiplier <= 0)
-     {
-      Print("ATR parameters must be greater than zero.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
+      if(InpATRPeriod <= 0 || InpATRMultiplier <= 0)
+      {
+         Print("ATR parameters must be greater than zero.");
+         return INIT_PARAMETERS_INCORRECT;
+      }
 
-   if(InpMaxMarginUsagePercent <= 0 || InpMaxMarginUsagePercent > 100)
-     {
-      Print("InpMaxMarginUsagePercent must be between 0 and 100.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
+      if(InpMaxMarginUsagePercent <= 0 || InpMaxMarginUsagePercent > 100)
+      {
+         Print("InpMaxMarginUsagePercent must be between 0 and 100.");
+         return INIT_PARAMETERS_INCORRECT;
+      }
 
-   if(InpEnableAdaptiveMarginCap && InpMarginLevelSafe <= InpMarginLevelDanger)
-     {
-      Print("InpMarginLevelSafe must be greater than InpMarginLevelDanger.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
-//--- EA initialization successful
-   return(INIT_SUCCEEDED);
+      if(InpEnableAdaptiveMarginCap && InpMarginLevelSafe <= InpMarginLevelDanger)
+      {
+         Print("InpMarginLevelSafe must be greater than InpMarginLevelDanger.");
+         return INIT_PARAMETERS_INCORRECT;
+      }
+   //--- EA initialization successful
+      return(INIT_SUCCEEDED);
   }
 
 //+------------------------------------------------------------------+
@@ -121,104 +121,104 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
-//--- Deinitialize indicator
-   IndicatorRelease(fastMaHandle);
-   IndicatorRelease(slowMaHandle);
-   IndicatorRelease(atrIndicatorHandle);
+   //--- Deinitialize indicator
+      IndicatorRelease(fastMaHandle);
+      IndicatorRelease(slowMaHandle);
+      IndicatorRelease(atrIndicatorHandle);
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
   {
-//--- Get the opening time of the current bar
-   datetime currentBarTime = iTime(_Symbol, _Period, 0);
-   if(currentBarTime == 0)
-      return;
+   //--- Get the opening time of the current bar
+      datetime currentBarTime = iTime(_Symbol, _Period, 0);
+      if(currentBarTime == 0)
+         return;
 
-//--- Static variable to remember the last bar we processed
-   static datetime lastProcessedBarTime = 0;
+   //--- Static variable to remember the last bar we processed
+      static datetime lastProcessedBarTime = 0;
 
-//--- If this bar has already been processed, exit immediately
-   if(currentBarTime == lastProcessedBarTime)
-      return;
+   //--- If this bar has already been processed, exit immediately
+      if(currentBarTime == lastProcessedBarTime)
+         return;
 
-//--- Mark this bar as processed
-   lastProcessedBarTime = currentBarTime;
+   //--- Mark this bar as processed
+      lastProcessedBarTime = currentBarTime;
 
-//--- Ensure indicators are ready
-   if(BarsCalculated(fastMaHandle) < 3 ||
-      BarsCalculated(slowMaHandle) < 3 ||
-      BarsCalculated(atrIndicatorHandle) < 1)
-     {
-      Print("Indicators are not ready yet.");
-      return;
-     }
+   //--- Ensure indicators are ready
+      if(BarsCalculated(fastMaHandle) < 3 ||
+         BarsCalculated(slowMaHandle) < 3 ||
+         BarsCalculated(atrIndicatorHandle) < 1)
+      {
+         Print("Indicators are not ready yet.");
+         return;
+      }
 
-//--- Populate the MA buffer
-   double fast[], slow[];
-   ArraySetAsSeries(fast, true);
-   ArraySetAsSeries(slow, true);
-   int fastCopied = CopyBuffer(fastMaHandle, 0, 0, 3, fast);
-   int slowCopied = CopyBuffer(slowMaHandle, 0, 0, 3, slow);
+   //--- Populate the MA buffer
+      double fast[], slow[];
+      ArraySetAsSeries(fast, true);
+      ArraySetAsSeries(slow, true);
+      int fastCopied = CopyBuffer(fastMaHandle, 0, 0, 3, fast);
+      int slowCopied = CopyBuffer(slowMaHandle, 0, 0, 3, slow);
 
-//--- Validate that we have enough MA data
-   if(fastCopied < 3 || slowCopied < 3)
-     {
-      Print("Failed to get enough Moving Average Data");
-      return;
-     }
+   //--- Validate that we have enough MA data
+      if(fastCopied < 3 || slowCopied < 3)
+      {
+         Print("Failed to get enough Moving Average Data");
+         return;
+      }
 
-//--- Populate the ATR
-   double atrArray[];
-   ArraySetAsSeries(atrArray, true);
-   if(CopyBuffer(atrIndicatorHandle, 0, 0, 1, atrArray) < 1)
-     {
-      Print("Failed to get ATR data");
-      return;
-     }
-   double atrValue = atrArray[0];
+   //--- Populate the ATR
+      double atrArray[];
+      ArraySetAsSeries(atrArray, true);
+      if(CopyBuffer(atrIndicatorHandle, 0, 0, 1, atrArray) < 1)
+      {
+         Print("Failed to get ATR data");
+         return;
+      }
+      double atrValue = atrArray[0];
 
-//--- Validate that we have a valid ATR value
-   if(atrValue <= 0)
-     {
-      Print("Invalid ATR value: ", atrValue);
-      return;
-     }
+   //--- Validate that we have a valid ATR value
+      if(atrValue <= 0)
+      {
+         Print("Invalid ATR value: ", atrValue);
+         return;
+      }
 
-//--- Retrieve market prices
-   MqlTick tick;
-   if(!SymbolInfoTick(_Symbol, tick))
-     {
-      Print("Failed to obtain market prices.");
-      return;
-     }
-   double ask = tick.ask;
-   double bid = tick.bid;
+   //--- Retrieve market prices
+      MqlTick tick;
+      if(!SymbolInfoTick(_Symbol, tick))
+      {
+         Print("Failed to obtain market prices.");
+         return;
+      }
+      double ask = tick.ask;
+      double bid = tick.bid;
 
-//--- Check Spread before trading
-   if(!IsSpreadAcceptable())
-      return;
+   //--- Check Spread before trading
+      if(!IsSpreadAcceptable())
+         return;
 
-//--- Calculate the dynamic stop distance
-   double stopDistance = atrValue * InpATRMultiplier;
+   //--- Calculate the dynamic stop distance
+      double stopDistance = atrValue * InpATRMultiplier;
 
-//--- Validate minimum stop distance
-   double minStopDistance = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
-   if(stopDistance < minStopDistance)
-     {
-      Print("Stop distance too tight. Adjusting from ", stopDistance, " to ", minStopDistance);
-      stopDistance = minStopDistance;
-     }
+   //--- Validate minimum stop distance
+      double minStopDistance = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
+      if(stopDistance < minStopDistance)
+      {
+         Print("Stop distance too tight. Adjusting from ", stopDistance, " to ", minStopDistance);
+         stopDistance = minStopDistance;
+      }
 
-   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+      int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
-//--- Check crossover on the latest closed bar (index 1) and execute trade
-   if(fast[1] > slow[1] && fast[2] <= slow[2])
-      OpenPosition(1, ask, stopDistance, digits);
-   else
-      if(fast[1] < slow[1] && fast[2] >= slow[2])
-         OpenPosition(-1, bid, stopDistance, digits);
+   //--- Check crossover on the latest closed bar (index 1) and execute trade
+      if(fast[1] > slow[1] && fast[2] <= slow[2])
+         OpenPosition(1, ask, stopDistance, digits);
+      else
+         if(fast[1] < slow[1] && fast[2] >= slow[2])
+            OpenPosition(-1, bid, stopDistance, digits);
   }
 
 //+------------------------------------------------------------------+
@@ -332,11 +332,11 @@ double GetAdaptiveInpRiskPercent()
 
    double equity = AccountInfoDouble(ACCOUNT_EQUITY);
 
-//--- Initialize or update the peak
+   //--- Initialize or update the peak
    if(g_peakEquity == 0.0 || equity > g_peakEquity)
       g_peakEquity = equity;
 
-//--- Calculate current drawdown from peak
+   //--- Calculate current drawdown from peak
    double drawdownPercent = 0.0;
    if(g_peakEquity > 0.0)
       drawdownPercent = (g_peakEquity - equity) / g_peakEquity * 100.0;
@@ -359,14 +359,14 @@ double GetMarginUsageCap()
    if(!InpEnableAdaptiveMarginCap)
       return InpMaxMarginUsagePercent;
 
-//--- No margin currently used anywhere on the account (flat)
+   //--- No margin currently used anywhere on the account (flat)
    double marginUsed = AccountInfoDouble(ACCOUNT_MARGIN);
    if(marginUsed <= 0.0)
       return InpMaxMarginUsagePercent;
 
    double marginLevel = AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
    
-//--- Account-wide margin level already stressed - block new exposure
+   //--- Account-wide margin level already stressed - block new exposure
    if(marginLevel <= InpMarginLevelDanger)
      {
       PrintFormat("Adaptive Margin Cap | Margin Level: %.1f%% at/below danger threshold (%.1f%%).",
@@ -374,11 +374,11 @@ double GetMarginUsageCap()
       return 0.0;
      }
 
-//--- Margin level healthy - full cap applies
+   //--- Margin level healthy - full cap applies
    if(marginLevel >= InpMarginLevelSafe)
       return InpMaxMarginUsagePercent;
 
-//--- Scale linearly between the danger and safe thresholds
+   //--- Scale linearly between the danger and safe thresholds
    double ratio = (marginLevel - InpMarginLevelDanger) / (InpMarginLevelSafe - InpMarginLevelDanger);
    double cap = InpMaxMarginUsagePercent * ratio;
 
@@ -393,7 +393,7 @@ double GetMarginUsageCap()
 //+------------------------------------------------------------------+
 double ValidateMarginForLot(ENUM_ORDER_TYPE orderType, double lotSize, double price)
   {
-//--- Margin required for a single lot
+   //--- Margin required for a single lot
    double marginPerLot = 0.0;
    ResetLastError();
    if(!OrderCalcMargin(orderType, _Symbol, 1.0, price, marginPerLot) || marginPerLot <= 0.0)
@@ -447,7 +447,7 @@ bool PassesPreTradeValidation(int direction, double stopDistance, double price, 
   {
    validatedLotSize = 0.0;
 
-//--- Position awareness check, same rule as Part 1
+   //--- Position awareness check, same rule as Part 1
    bool canOpenTrade = false;
    if(InpAllowHedging)
       canOpenTrade = (CountOpenPositionsByDirection(direction) == 0);
@@ -457,7 +457,7 @@ bool PassesPreTradeValidation(int direction, double stopDistance, double price, 
    if(!canOpenTrade)
       return false;
 
-//--- Lot size from the validated stop distance
+   //--- Lot size from the validated stop distance
    double lotSize = CalculateLotSize(stopDistance);
    if(lotSize <= 0)
      {
@@ -465,7 +465,7 @@ bool PassesPreTradeValidation(int direction, double stopDistance, double price, 
       return false;
      }
 
-//--- Cap the lot to what free margin can safely support
+   //--- Cap the lot to what free margin can safely support
    ENUM_ORDER_TYPE orderType = (direction == 1) ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
    lotSize = ValidateMarginForLot(orderType, lotSize, price);
    if(lotSize <= 0)
@@ -488,7 +488,7 @@ void OpenPosition(int direction, double price, double stopDistance, int digits)
    if(!PassesPreTradeValidation(direction, stopDistance, price, lotSize))
       return;
 
-//--- SL/TP and execution, direction-specific
+   //--- SL/TP and execution, direction-specific
    double sl, tp;
    if(direction == 1)
      {

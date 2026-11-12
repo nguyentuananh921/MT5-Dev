@@ -137,8 +137,7 @@
                                 m_SymbolTFManager(NULL),
                                 m_IndicatorTemplateManager(NULL),
                                 m_BarInformationManager(NULL),
-                                m_BarTimeSeriesCollection(NULL),
-                                m_SignalsCollection(NULL),
+                                m_BarMarkerCollection(NULL),
                                 m_GraphElementsCollection(NULL),
                                 m_candle_info_shown_bar(0),
                                 m_candle_info_last_bar(0),
@@ -184,6 +183,14 @@
   {
    for(int i=0;i<this.ChildrenTotal();i++)
       this.Child(i).OnTimerEvent();
+   //--- The sound waits while the last one plays: a new one would cut it (the pairs close their bar at the same time)
+   static uint last_sound=0;
+   if(this.m_alert_sound!="" && (last_sound==0 || ::GetTickCount()-last_sound>=ALERT_SOUND_GAP_MS))
+     {
+      ::PlaySound(this.m_alert_sound);
+      this.m_alert_sound="";
+      last_sound=::GetTickCount();
+     }
   }
  //+------------------------------------------------------------------+
  //| Trade                                                            |
@@ -222,6 +229,7 @@
       ::ChartRedraw(this.m_chart_id);
       return;
      }
+   this.OnEvent_Alert(id,lparam,dparam,sparam);
    //--- The popup of a candle opens on the chart, away from the windows: it hears the event before the filter below
    this.OnEvent_Window_CandleInfo(id,lparam,dparam,sparam);
    //--- The mouse over the chart, away from the windows and with no control focused or pressed, is not for any control: nobody is asked

@@ -16,8 +16,7 @@
       CSymbolTFManager                   *m_SymbolTFManager;                  // the Symbol+TF pairs the TF switch lists
       CIndicatorTemplateManager          *m_IndicatorTemplateManager;         // the indicator templates of the Quick Setting tab
       CBarInformationManager             *m_BarInformationManager;            // the information of a bar (the candle patterns) of the Candle tab
-      CBarTimeSeriesCollection           *m_BarTimeSeriesCollection;          // the types of information found on a candle: the popup of a candle asks it
-      CSignalsCollection                 *m_SignalsCollection;                // the signals of the indicator templates found on a candle: the popup of a candle asks it
+      CBarMarkerCollection               *m_BarMarkerCollection;              // the rows of a candle joined on RAM (load on demand): the popup of a candle asks it
       CGraphElementsCollection           *m_GraphElementsCollection;          // the layer and the markers: the popup lights the box of its candle
       CHistoryCollection                 *m_HistoryCollection;                // the table Orders: the tables of the Trade Manage window are read through it
       CAccountsCollection                *m_AccountsCollection;               // the account in RAM: the equity of the status bar, the profit of the caption
@@ -116,6 +115,7 @@
       bool                                AddRow_IndicatorTemplateSetting(const int section,const int row,const long id,const string display,const bool show,const bool buy,const bool sell,const bool sound,const bool message);
       void                                PopulateSections_IndicatorTemplateSetting(void);
       void                                SyncSections_IndicatorTemplateSetting(void);
+   long              RowHandle_IndicatorTemplateSetting(const ENUM_INDICATOR type,const string params_text);
       bool                                TemplateOfId_IndicatorTemplateSetting(const long id,ENUM_INDICATOR &type,string &params_text);
       void                                OnEvent_Tab_Indicator(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the Add Indicator window implementation in GUIPannel_TabQuickSetting_AddIndicator.mqh
@@ -152,6 +152,9 @@
       void                                OpenWindow_CandleInfo(const int cursor_x,const int cursor_y,const datetime bar_time,const bool by_marker);
       void                                HideWindow_CandleInfo(void);
       void                                OnEvent_Window_CandleInfo(const int id,const long &lparam,const double &dparam,const string &sparam);
+     //Alert (GUIPannel_SoundAndMessageAlerts.mqh): a new row: its message at once, its sound at the next beat of the timer (the last one of the beats)
+      string                              m_alert_sound;
+      void                                OnEvent_Alert(const int id,const long &lparam,const double &dparam,const string &sparam);
      //For status Bar on the bottom of Main Window
       bool                                CreateStatusBar(const int x_gap,const int y_gap);
       void                                UpdateStatusBar_SymbolSpread(void);
@@ -174,8 +177,7 @@
       void                                SetSymbolTFManager(CSymbolTFManager *manager)               { m_SymbolTFManager=manager; }
       void                                SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_IndicatorTemplateManager=manager; }
       void                                SetBarInformationManager(CBarInformationManager *manager)       { m_BarInformationManager=manager; }
-      void                                SetBarTimeSeriesCollection(CBarTimeSeriesCollection *collection) { m_BarTimeSeriesCollection=collection; }
-      void                                SetSignalsCollection(CSignalsCollection *collection)            { m_SignalsCollection=collection; }
+      void                                SetBarMarkerCollection(CBarMarkerCollection *collection)        { m_BarMarkerCollection=collection; }
       void                                SetGraphElementsCollection(CGraphElementsCollection *collection) { m_GraphElementsCollection=collection; }
       void                                SetHistoryCollection(CHistoryCollection *collection)            { m_HistoryCollection=collection; }
       void                                SetAccountsCollection(CAccountsCollection *collection)          { m_AccountsCollection=collection; }
@@ -194,5 +196,6 @@
  #include "GUIPannel_Window_TradeManager.mqh"            //The Trade Manage window: the tabs and the helpers of its tables
   #include "GUIPannel_Window_TradeManagerTabHistory.mqh"   //The History tab of the Trade Manage window: the trades
  #include "GUIPannel_Window_OrderDetail.mqh"             //The Order detail window
+ #include "GUIPannel_SoundAndMessageAlerts.mqh"        //The message and the sound of a new row
  #include "GUIPannel_Window_CandleInfo.mqh"            //The popup of what was found in a candle
 #endif // __GUIPANNEL_MQH__

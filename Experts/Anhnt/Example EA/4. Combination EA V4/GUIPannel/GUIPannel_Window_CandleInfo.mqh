@@ -2,9 +2,8 @@
 //|                                 GUIPannel_Window_CandleInfo.mqh |
 //| Shift+hover on a candle or the cursor on a CBarMarker: the popup |
 //| that lists what was found in that candle, on its TF and on the   |
-//| shorter ones. The rows are asked to CBarTimeSeriesCollection and |
-//| CSignalsCollection (the account database): nothing is asked to   |
-//| Python and nothing is held here                                   |
+//| shorter ones. The rows are asked to CBarMarkerCollection: joined |
+//| on RAM, what RAM has not is loaded first. Nothing is held here   |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_WINDOW_CANDLEINFO_MQH
 #define CGUIPANNEL_WINDOW_CANDLEINFO_MQH
@@ -113,7 +112,7 @@
  int CGUIPannel::PopulateTable_CandleInfo(const datetime bar_time)
   {
    m_table_candle_information_atBar.DeleteAllRows(false);
-   if(m_BarTimeSeriesCollection==NULL || m_SignalsCollection==NULL || m_BarInformationManager==NULL || m_IndicatorTemplateManager==NULL || m_SymbolTFManager==NULL)
+   if(m_BarMarkerCollection==NULL || m_BarInformationManager==NULL || m_IndicatorTemplateManager==NULL || m_SymbolTFManager==NULL)
       return 0;
    ENUM_TIMEFRAMES timeframe=(ENUM_TIMEFRAMES)::Period();
    datetime until=bar_time+::PeriodSeconds(timeframe);
@@ -129,50 +128,28 @@
          asked_tfs[n]=(long)setting_tfs[i];
         }
    //--- Everything that was found is listed: the Show Buy / Show Sell switches are for the markers of the chart, not for this window
-   ENUM_BAR_INFOR_TYPE type_list[];
-   string type_names[];
-   ENUM_BAR_INFORMATION_GROUP groups[];
-   int candles[];
-   bool have_buy[],have_sell[],sound[],message[],show_buy[],show_sell[];
-   int types_total=m_BarInformationManager.Read_RAM(type_list,type_names,groups,candles,have_buy,have_sell,sound,message,show_buy,show_sell);
-   long template_ids[];
-   ENUM_INDICATOR kinds[];
-   string texts[];
-   bool template_buy[],template_sell[];
-   int templates_total=m_IndicatorTemplateManager.Read_RAM(template_ids,kinds,texts,template_buy,template_sell);
-   long asked_types[];
-   ::ArrayResize(asked_types,types_total);
-   for(int i=0;i<types_total;i++)
-      asked_types[i]=(long)type_list[i];
-   //--- One row for each: the label, the source (the group of the type, or the indicators), the TF, the side and the time
+   //--- One row for each: the label, the source (the group of the type, or the indicators), the TF, the side and the time. The signals first, then the types
    string row_label[],row_tf[];
    int row_source[],row_side[];
    datetime row_time[];
-   long tfs[],keys[],times[],sides[];
    int count=0;
-   int rows=m_SignalsCollection.ReadDataFromDB(::Symbol(),asked_tfs,bar_time,until,template_ids,tfs,keys,times,sides);
-   for(int i=0;i<rows;i++)
+   SBarMarkerRow rows[];
+   const int total=m_BarMarkerCollection.Read_RAM(::Symbol(),asked_tfs,bar_time,until-1,rows);   // until is the next candle: it is out
+   for(int i=0;i<total;i++)
      {
-      int t=WRONG_VALUE;
-      for(int k=0;k<templates_total && t==WRONG_VALUE;k++)
-         if(template_ids[k]==keys[i])
-            t=k;
-      if(t==WRONG_VALUE)
+      if(rows[i].collection!=COLLECTION_SIGNALS_ID)
          continue;
-      this.AddRow_CandleInfo(count,m_IndicatorTemplateManager.DisplayLabel(kinds[t],texts[t]),BAR_INFORMATION_SIGNAL,(ENUM_TIMEFRAMES)tfs[i],(ENUM_SIGNAL_DIRECTION)sides[i],(datetime)times[i],
-                             row_label,row_tf,row_source,row_side,row_time);
+      this.AddRow_CandleInfo(count,m_IndicatorTemplateManager.DisplayLabel((ENUM_INDICATOR)rows[i].type,rows[i].params),BAR_INFORMATION_SIGNAL,(ENUM_TIMEFRAMES)rows[i].tf,
+                             (ENUM_SIGNAL_DIRECTION)rows[i].side,(datetime)rows[i].time,row_label,row_tf,row_source,row_side,row_time);
      }
-   CBarTimeSeriesDE *timeseries=m_BarTimeSeriesCollection.GetTimeseries(::Symbol());   // the symbol reads the TFs asked: the table UNION RAM
-   rows=(timeseries!=NULL ? timeseries.ReadCandle(asked_tfs,bar_time,until,asked_types,tfs,keys,times,sides) : 0);
-   for(int i=0;i<rows;i++)
+   for(int i=0;i<total;i++)
      {
-      int t=WRONG_VALUE;
-      for(int k=0;k<types_total && t==WRONG_VALUE;k++)
-         if((long)type_list[k]==keys[i])
-            t=k;
-      if(t==WRONG_VALUE)
+      if(rows[i].collection!=COLLECTION_SERIES_ID)
          continue;
-      this.AddRow_CandleInfo(count,type_names[t],(int)groups[t],(ENUM_TIMEFRAMES)tfs[i],(ENUM_SIGNAL_DIRECTION)sides[i],(datetime)times[i],row_label,row_tf,row_source,row_side,row_time);
+      CBarInformationSetting *type=m_BarInformationManager.Read_RAM((ENUM_BAR_INFOR_TYPE)rows[i].type);   // the name and the group of the type: its manager says them
+      if(type==NULL)
+         continue;
+      this.AddRow_CandleInfo(count,type.Name(),(int)type.Group(),(ENUM_TIMEFRAMES)rows[i].tf,(ENUM_SIGNAL_DIRECTION)rows[i].side,(datetime)rows[i].time,row_label,row_tf,row_source,row_side,row_time);
      }
    if(count==0)
       return 0;

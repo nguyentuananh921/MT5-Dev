@@ -33,8 +33,8 @@
  //+------------------------------------------------------------------+
   #define EA_STORE_BARS          (false)
  // Color 
-  #define EA_MARKER_BUY_COLOR    (clrDodgerBlue)
-  #define EA_MARKER_SELL_COLOR   (clrRed)  
+  #define BAR_MARKER_BUY_COLOR   (clrDodgerBlue)   // CBarMarker: the badge of a Buy
+  #define BAR_MARKER_SELL_COLOR  (clrRed)          // and of a Sell
  //+------------------------------------------------------------------+
  //| MY DEBUG: the step the EA is in is written to a file, over the     |
  //| one before: after an abnormal termination it is the last one done  |

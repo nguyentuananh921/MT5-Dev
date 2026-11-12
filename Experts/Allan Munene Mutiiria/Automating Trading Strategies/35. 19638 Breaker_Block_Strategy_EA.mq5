@@ -14,115 +14,128 @@ CTrade obj_Trade;                                  //--- Instantiate trade objec
 //+------------------------------------------------------------------+
 //| Input Parameters                                                 |
 //+------------------------------------------------------------------+
-input double tradeLotSize = 0.01;                  // Trade size for each position in lots
-input bool   enableTrading = true;                 // Toggle to enable or disable automated trading
-input bool   enableTrailingStop = true;            // Toggle to enable or disable trailing stop
-input double trailingStopPoints = 30;              // Distance in points for trailing stop adjustment
-input double minProfitToTrail = 50;                // Minimum profit in points before trailing starts
-input int    uniqueMagicNumber = 12345;            // Unique identifier for EA trades
-input int    consolidationBars = 7;                // Number of bars to check for consolidation range
-input double maxConsolidationSpread = 50;          // Maximum allowed spread in points for consolidation
-input int    barsToWaitAfterBreakout = 3;          // Bars to wait after breakout before impulse check
-input double impulseMultiplier = 1.0;              // Multiplier for detecting impulsive price moves
-input double stopLossDistance = 1500;              // Stop loss distance in points from entry
-input double takeProfitDistance = 1500;            // Take profit distance in points from entry
-input double moveAwayDistance = 50;                // Distance in points for price to move away post-invalidation
-input color  bullishColor = clrGreen;              // Base color for bullish order/breaker blocks
-input color  bearishColor = clrRed;                // Base color for bearish order/breaker blocks
-input color  labelTextColor = clrBlack;            // Color for text labels on blocks
-input bool   enableSwingValidation = true;         // Enable validation of swing points for block invalidation
-input bool   showSwingPoints = true;               // Show swing point labels if validation enabled
-input color  swingLabelColor = clrWhite;           // Color for swing point labels
-input int    swingFontSize = 10;                   // Font size for swing point labels
+   input double tradeLotSize = 0.01;                  // Trade size for each position in lots
+   input bool   enableTrading = true;                 // Toggle to enable or disable automated trading
+   input bool   enableTrailingStop = true;            // Toggle to enable or disable trailing stop
+   input double trailingStopPoints = 30;              // Distance in points for trailing stop adjustment
+   input double minProfitToTrail = 50;                // Minimum profit in points before trailing starts
+   input int    uniqueMagicNumber = 12345;            // Unique identifier for EA trades
+   input int    consolidationBars = 7;                // Number of bars to check for consolidation range
+   input double maxConsolidationSpread = 50;          // Maximum allowed spread in points for consolidation
+   input int    barsToWaitAfterBreakout = 3;          // Bars to wait after breakout before impulse check
+   input double impulseMultiplier = 1.0;              // Multiplier for detecting impulsive price moves
+   input double stopLossDistance = 1500;              // Stop loss distance in points from entry
+   input double takeProfitDistance = 1500;            // Take profit distance in points from entry
+   input double moveAwayDistance = 50;                // Distance in points for price to move away post-invalidation
+   input color  bullishColor = clrGreen;              // Base color for bullish order/breaker blocks
+   input color  bearishColor = clrRed;                // Base color for bearish order/breaker blocks
+   input color  labelTextColor = clrBlack;            // Color for text labels on blocks
+   input bool   enableSwingValidation = true;         // Enable validation of swing points for block invalidation
+   input bool   showSwingPoints = true;               // Show swing point labels if validation enabled
+   input color  swingLabelColor = clrWhite;           // Color for swing point labels
+   input int    swingFontSize = 10;                   // Font size for swing point labels
 
 //+------------------------------------------------------------------+
 //| Structure for price and index                                    |
 //+------------------------------------------------------------------+
-struct PriceAndIndex {                             //--- Define structure for price and index data
+struct PriceAndIndex
+ {                             //--- Define structure for price and index data
    double price;                                   //--- Store price value (high or low)
    int    index;                                   //--- Store bar index of price
-};
+ };
 
 //+------------------------------------------------------------------+
 //| Global variables for market state tracking                       |
 //+------------------------------------------------------------------+
-PriceAndIndex rangeHighestHigh = {0, 0};           //--- Track highest high in consolidation range
-PriceAndIndex rangeLowestLow = {0, 0};             //--- Track lowest low in consolidation range
-bool   isBreakoutDetected = false;                 //--- Flag for breakout detection
-double lastImpulseLow = 0.0;                       //--- Store low price after breakout for impulse
-double lastImpulseHigh = 0.0;                      //--- Store high price after breakout for impulse
-int    breakoutBarNumber = -1;                     //--- Store bar index of breakout
-datetime breakoutTimestamp = 0;                    //--- Store timestamp of breakout
-string   blockNames[];                             //--- Store names of block objects
-datetime blockEndTimes[];                          //--- Store end times of blocks
-bool     invalidatedStatus[];                      //--- Track invalidation status of blocks
-string   blockTypes[];                             //--- Track block types (OB/BB, bullish/bearish)
-bool     movedAwayStatus[];                        //--- Track if price moved away after invalidation
-bool     retestedStatus[];                         //--- Track if block was retested
-string   blockLabels[];                            //--- Store label object names for blocks
-datetime creationTimes[];                          //--- Store creation times of blocks
-datetime invalidationTimes[];                      //--- Store invalidation times of blocks
-double   invalidationSwings[];                     //--- Store swing high/low at invalidation
-bool     isBullishImpulse = false;                 //--- Flag for bullish impulsive move
-bool     isBearishImpulse = false;                 //--- Flag for bearish impulsive move
-#define OB_Prefix "OB REC "                        //--- Define prefix for order block names
+   PriceAndIndex rangeHighestHigh = {0, 0};           //--- Track highest high in consolidation range
+   PriceAndIndex rangeLowestLow = {0, 0};             //--- Track lowest low in consolidation range
+   bool   isBreakoutDetected = false;                 //--- Flag for breakout detection
+   double lastImpulseLow = 0.0;                       //--- Store low price after breakout for impulse
+   double lastImpulseHigh = 0.0;                      //--- Store high price after breakout for impulse
+   int    breakoutBarNumber = -1;                     //--- Store bar index of breakout
+   datetime breakoutTimestamp = 0;                    //--- Store timestamp of breakout
+   string   blockNames[];                             //--- Store names of block objects
+   datetime blockEndTimes[];                          //--- Store end times of blocks
+   bool     invalidatedStatus[];                      //--- Track invalidation status of blocks
+   string   blockTypes[];                             //--- Track block types (OB/BB, bullish/bearish)
+   bool     movedAwayStatus[];                        //--- Track if price moved away after invalidation
+   bool     retestedStatus[];                         //--- Track if block was retested
+   string   blockLabels[];                            //--- Store label object names for blocks
+   datetime creationTimes[];                          //--- Store creation times of blocks
+   datetime invalidationTimes[];                      //--- Store invalidation times of blocks
+   double   invalidationSwings[];                     //--- Store swing high/low at invalidation
+   bool     isBullishImpulse = false;                 //--- Flag for bullish impulsive move
+   bool     isBearishImpulse = false;                 //--- Flag for bearish impulsive move
+   #define OB_Prefix "OB REC "                        //--- Define prefix for order block names
 
 //+------------------------------------------------------------------+
 //| Darken color by factor                                           |
 //+------------------------------------------------------------------+
-color DarkenColor(color colorValue, double factor = 0.8) {
+color DarkenColor(color colorValue, double factor = 0.8)
+ {
    int red = int((colorValue & 0xFF) * factor);   //--- Extract and darken red component
    int green = int(((colorValue >> 8) & 0xFF) * factor); //--- Extract and darken green component
    int blue = int(((colorValue >> 16) & 0xFF) * factor); //--- Extract and darken blue component
    return (color)(red | (green << 8) | (blue << 16)); //--- Combine components into color
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit() {
+int OnInit()
+ {
    obj_Trade.SetExpertMagicNumber(uniqueMagicNumber); //--- Set magic number for trade identification
    return(INIT_SUCCEEDED);                        //--- Return initialization success
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason) {
+void OnDeinit(const int reason)
+ {
    ObjectsDeleteAll(0, OB_Prefix);                //--- Remove all objects with OB prefix
    ChartRedraw(0);                                //--- Redraw chart to clear objects
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
-void OnTick() {
-   if (enableTrailingStop) {                      //--- Check if trailing stop enabled
+void OnTick()
+ {
+   if (enableTrailingStop)
+    {                      //--- Check if trailing stop enabled
       applyTrailingStop(trailingStopPoints, obj_Trade, uniqueMagicNumber); //--- Apply trailing stop
-   }
+    }
    static bool isNewBar = false;                  //--- Track new bar status
    int currentBarCount = iBars(_Symbol, _Period); //--- Get current bar count
    static int previousBarCount = currentBarCount; //--- Store previous bar count
-   if (previousBarCount == currentBarCount) {     //--- Check if no new bar
+   if (previousBarCount == currentBarCount)
+    {     //--- Check if no new bar
       isNewBar = false;                           //--- Set no new bar
-   } else {                                       //--- New bar detected
+    } 
+   else
+    {                                       //--- New bar detected
       isNewBar = true;                            //--- Set new bar flag
       previousBarCount = currentBarCount;         //--- Update previous bar count
-   }
+    }
    if (!isNewBar) return;                         //--- Exit if not new bar
    int startBarIndex = 1;                         //--- Set start index for analysis
    int chartScale = (int)ChartGetInteger(0, CHART_SCALE); //--- Get chart zoom scale
    int dynamicFontSize = 8 + (chartScale * 2);    //--- Calculate dynamic font size
-   if (!isBreakoutDetected) {                     //--- Check if no breakout detected
-      if (rangeHighestHigh.price == 0 && rangeLowestLow.price == 0) { //--- Check if range not set
+   if (!isBreakoutDetected)
+    {                     //--- Check if no breakout detected
+      if (rangeHighestHigh.price == 0 && rangeLowestLow.price == 0)
+       { //--- Check if range not set
          bool isConsolidated = true;              //--- Assume consolidation
-         for (int i = startBarIndex; i < startBarIndex + consolidationBars - 1; i++) { //--- Iterate consolidation bars
+         for (int i = startBarIndex; i < startBarIndex + consolidationBars - 1; i++)
+          { //--- Iterate consolidation bars
             if (MathAbs(high(i) - high(i + 1)) > maxConsolidationSpread * Point() || MathAbs(low(i) - low(i + 1)) > maxConsolidationSpread * Point()) { //--- Check spread
                isConsolidated = false;            //--- Mark as not consolidated
                break;                             //--- Exit loop
             }
-         }
-         if (isConsolidated) {                    //--- Confirm consolidation
+          }
+         if (isConsolidated)
+          {                    //--- Confirm consolidation
             rangeHighestHigh.price = high(startBarIndex); //--- Set initial high
             rangeHighestHigh.index = startBarIndex; //--- Set high index
             for (int i = startBarIndex + 1; i < startBarIndex + consolidationBars; i++) { //--- Find highest high
@@ -140,8 +153,10 @@ void OnTick() {
                }
             }
             Print("Consolidation range established: Highest High = ", rangeHighestHigh.price, " at index ", rangeHighestHigh.index, " and Lowest Low = ", rangeLowestLow.price, " at index ", rangeLowestLow.index); //--- Log range
-         }
-      } else {                                    //--- Range already set
+          }
+       }
+      else
+       {                                    //--- Range already set
          double currentHigh = high(1);            //--- Get current high
          double currentLow = low(1);              //--- Get current low
          if (currentHigh <= rangeHighestHigh.price && currentLow >= rangeLowestLow.price) { //--- Check within range
@@ -149,19 +164,24 @@ void OnTick() {
          } else {                                 //--- Outside range
             Print("No extension: Bar outside range."); //--- Log no extension
          }
-      }
-   }
-   if (rangeHighestHigh.price > 0 && rangeLowestLow.price > 0) { //--- Check if range defined
+       }
+    }
+   if (rangeHighestHigh.price > 0 && rangeLowestLow.price > 0)
+    { //--- Check if range defined
       double currentClosePrice = close(1);        //--- Get current close price
-      if (currentClosePrice > rangeHighestHigh.price) { //--- Check upward breakout
+      if (currentClosePrice > rangeHighestHigh.price)
+       { //--- Check upward breakout
          Print("Upward breakout at ", currentClosePrice, " > ", rangeHighestHigh.price); //--- Log breakout
          isBreakoutDetected = true;               //--- Set breakout flag
-      } else if (currentClosePrice < rangeLowestLow.price) { //--- Check downward breakout
+       } 
+      else if (currentClosePrice < rangeLowestLow.price)
+       { //--- Check downward breakout
          Print("Downward breakout at ", currentClosePrice, " < ", rangeLowestLow.price); //--- Log breakout
          isBreakoutDetected = true;               //--- Set breakout flag
-      }
-   }
-   if (isBreakoutDetected) {                      //--- Process breakout
+       }
+    }
+   if (isBreakoutDetected)
+    {                      //--- Process breakout
       Print("Breakout detected. Resetting for the next range."); //--- Log reset
       breakoutBarNumber = 1;                      //--- Set breakout bar index
       breakoutTimestamp = TimeCurrent();          //--- Set breakout timestamp
@@ -172,29 +192,36 @@ void OnTick() {
       rangeHighestHigh.index = 0;                 //--- Clear high index
       rangeLowestLow.price = 0;                   //--- Clear lowest low
       rangeLowestLow.index = 0;                   //--- Clear low index
-   }
-   if (breakoutBarNumber >= 0 && TimeCurrent() > breakoutTimestamp + barsToWaitAfterBreakout * PeriodSeconds()) { //--- Check impulse window
+    }
+   if (breakoutBarNumber >= 0 && TimeCurrent() > breakoutTimestamp + barsToWaitAfterBreakout * PeriodSeconds())
+    { //--- Check impulse window
       double impulseRange = lastImpulseHigh - lastImpulseLow; //--- Calculate impulse range
       double impulseThresholdPrice = impulseRange * impulseMultiplier; //--- Calculate impulse threshold
       isBullishImpulse = false;                   //--- Reset bullish impulse flag
       isBearishImpulse = false;                   //--- Reset bearish impulse flag
-      for (int i = 1; i <= barsToWaitAfterBreakout; i++) { //--- Check bars for impulse
+      for (int i = 1; i <= barsToWaitAfterBreakout; i++)
+       { //--- Check bars for impulse
          double closePrice = close(i);            //--- Get close price
-         if (closePrice >= lastImpulseHigh + impulseThresholdPrice) { //--- Check bullish impulse
+         if (closePrice >= lastImpulseHigh + impulseThresholdPrice)
+          { //--- Check bullish impulse
             isBullishImpulse = true;              //--- Set bullish impulse flag
             Print("Impulsive upward move: ", closePrice, " >= ", lastImpulseHigh + impulseThresholdPrice); //--- Log bullish impulse
             break;                                //--- Exit loop
-         } else if (closePrice <= lastImpulseLow - impulseThresholdPrice) { //--- Check bearish impulse
+          }
+         else if (closePrice <= lastImpulseLow - impulseThresholdPrice)
+          { //--- Check bearish impulse
             isBearishImpulse = true;              //--- Set bearish impulse flag
             Print("Impulsive downward move: ", closePrice, " <= ", lastImpulseLow - impulseThresholdPrice); //--- Log bearish impulse
             break;                                //--- Exit loop
-         }
-      }
-      if (!isBullishImpulse && !isBearishImpulse) { //--- Check no impulse
+          }
+       }
+      if (!isBullishImpulse && !isBearishImpulse)
+       { //--- Check no impulse
          Print("No impulsive movement detected."); //--- Log no impulse
-      }
+       }
       bool isOrderBlockValid = isBearishImpulse || isBullishImpulse; //--- Validate order block
-      if (isOrderBlockValid) {                    //--- Process valid order block
+      if (isOrderBlockValid)
+       {                    //--- Process valid order block
          datetime blockStartTime = iTime(_Symbol, _Period, consolidationBars + barsToWaitAfterBreakout + 1); //--- Set block start time
          double blockTopPrice = lastImpulseHigh;  //--- Set block top price
          int visibleBarsOnChart = (int)ChartGetInteger(0, CHART_VISIBLE_BARS); //--- Get visible bars
@@ -244,15 +271,16 @@ void OnTick() {
             invalidationSwings[ArraySize(invalidationSwings) - 1] = 0.0; //--- Set invalidation swing
             Print("Order Block created: ", blockName); //--- Log block creation
          }
-      }
+       }
       breakoutBarNumber = -1;                     //--- Reset breakout bar
       breakoutTimestamp = 0;                      //--- Reset breakout timestamp
       lastImpulseHigh = 0;                        //--- Reset impulse high
       lastImpulseLow = 0;                         //--- Reset impulse low
       isBullishImpulse = false;                   //--- Reset bullish impulse
       isBearishImpulse = false;                   //--- Reset bearish impulse
-   }
-   for (int j = ArraySize(blockNames) - 1; j >= 0; j--) { //--- Iterate through blocks
+    }
+   for (int j = ArraySize(blockNames) - 1; j >= 0; j--)
+    { //--- Iterate through blocks
       string currentBlockName = blockNames[j];    //--- Get current block name
       bool doesBlockExist = false;                //--- Initialize block existence flag
       double blockHigh = ObjectGetDouble(0, currentBlockName, OBJPROP_PRICE, 0); //--- Get block high
@@ -260,10 +288,12 @@ void OnTick() {
       datetime blockStartTime = (datetime)ObjectGetInteger(0, currentBlockName, OBJPROP_TIME, 0); //--- Get block start
       datetime blockEndTime = (datetime)ObjectGetInteger(0, currentBlockName, OBJPROP_TIME, 1); //--- Get block end
       color blockCurrentColor = (color)ObjectGetInteger(0, currentBlockName, OBJPROP_COLOR); //--- Get block color
-      if (time(1) < blockEndTime) {               //--- Check if block still valid
+      if (time(1) < blockEndTime)
+       {               //--- Check if block still valid
          doesBlockExist = true;                   //--- Set block exists
-      }
-      if (StringFind(blockTypes[j], "OB-") == 0 && !invalidatedStatus[j]) { //--- Check valid order block
+       }
+      if (StringFind(blockTypes[j], "OB-") == 0 && !invalidatedStatus[j])
+       { //--- Check valid order block
          bool invalidated = false;                 //--- Initialize invalidation flag
          string newBlockType = "";                //--- Initialize new block type
          color invalidatedColor = clrNONE;         //--- Initialize invalidated color
@@ -367,8 +397,9 @@ void OnTick() {
             invalidationSwings[j] = isForBullishBB ? high(1) : low(1); //--- Set invalidation swing
             Print("Order Block invalidated: ", currentBlockName); //--- Log invalidation
          }
-      }
-      if (!doesBlockExist) {                     //--- Check if block expired
+       }
+      if (!doesBlockExist)
+       {                     //--- Check if block expired
          ArrayRemove(blockNames, j, 1);          //--- Remove block name
          ArrayRemove(blockEndTimes, j, 1);       //--- Remove end time
          ArrayRemove(invalidatedStatus, j, 1);   //--- Remove invalidated status
@@ -380,9 +411,10 @@ void OnTick() {
          ArrayRemove(invalidationTimes, j, 1);   //--- Remove invalidation time
          ArrayRemove(invalidationSwings, j, 1);  //--- Remove invalidation swing
          Print("Removed expired block at index ", j); //--- Log block removal
-      }
-   }
-   for (int j = ArraySize(blockNames) - 1; j >= 0; j--) { //--- Iterate invalidated blocks
+       }
+    }
+   for (int j = ArraySize(blockNames) - 1; j >= 0; j--)
+    { //--- Iterate invalidated blocks
       if (StringFind(blockTypes[j], "Invalidated-") != 0) continue; //--- Skip non-invalidated
       string currentBlockName = blockNames[j];    //--- Get current block name
       double blockHigh = ObjectGetDouble(0, currentBlockName, OBJPROP_PRICE, 0); //--- Get block high
@@ -490,29 +522,34 @@ void OnTick() {
             Print("Converted to ", newLabel, ": ", currentBlockName); //--- Log conversion
          }
       }
-   }
+    }
 }
 
 //+------------------------------------------------------------------+
 //| Price data accessors                                            |
 //+------------------------------------------------------------------+
-double high(int index) {
+double high(int index)
+ {
    return iHigh(_Symbol, _Period, index);         //--- Return high price for specified index
-}
-double low(int index) {
+ }
+double low(int index)
+ {
    return iLow(_Symbol, _Period, index);          //--- Return low price for specified index
-}
-double close(int index) {
+ }
+double close(int index)
+ {
    return iClose(_Symbol, _Period, index);        //--- Return close price for specified index
-}
-datetime time(int index) {
+ }
+datetime time(int index)
+ {
    return iTime(_Symbol, _Period, index);         //--- Return time for specified index
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Apply trailing stop to open positions                            |
 //+------------------------------------------------------------------+
-void applyTrailingStop(double trailingPoints, CTrade &trade_object, int magicNo = 0) {
+void applyTrailingStop(double trailingPoints, CTrade &trade_object, int magicNo = 0)
+ {
    double buyStopLoss = NormalizeDouble(SymbolInfoDouble(_Symbol, SYMBOL_BID) - trailingPoints * _Point, _Digits); //--- Calculate buy stop loss
    double sellStopLoss = NormalizeDouble(SymbolInfoDouble(_Symbol, SYMBOL_ASK) + trailingPoints * _Point, _Digits); //--- Calculate sell stop loss
    for (int i = PositionsTotal() - 1; i >= 0; i--) { //--- Iterate through open positions

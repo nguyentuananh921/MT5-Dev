@@ -12,35 +12,35 @@
 //+------------------------------------------------------------------+
 //| Input Parameters                                                 |
 //+------------------------------------------------------------------+
-input group "RSI Settings"
-input int RSI_Period = 14;                          // RSI Period
-input ENUM_APPLIED_PRICE RSI_Applied = PRICE_CLOSE; // RSI Applied Price
+   input group "RSI Settings"
+   input int RSI_Period = 14;                          // RSI Period
+   input ENUM_APPLIED_PRICE RSI_Applied = PRICE_CLOSE; // RSI Applied Price
 
-input group "Swing Settings"
-input int Swing_Strength = 5;                       // Bars to confirm swing high/low
-input int Min_Bars_Between = 5;                     // Min bars between swings for divergence
-input int Max_Bars_Between = 50;                    // Max bars between swings for divergence
-input double Tolerance = 0.1;                       // Tolerance for clean divergence check
+   input group "Swing Settings"
+   input int Swing_Strength = 5;                       // Bars to confirm swing high/low
+   input int Min_Bars_Between = 5;                     // Min bars between swings for divergence
+   input int Max_Bars_Between = 50;                    // Max bars between swings for divergence
+   input double Tolerance = 0.1;                       // Tolerance for clean divergence check
 
-input group "Trade Settings"
-input double Lot_Size = 0.01;                       // Fixed Lot Size
-input int Magic_Number = 123456789;                 // Magic Number
-input double SL_Pips = 300.0;                       // Stop Loss in Pips (0 to disable)
-input double TP_Pips = 300.0;                       // Take Profit in Pips (0 to disable)
+   input group "Trade Settings"
+   input double Lot_Size = 0.01;                       // Fixed Lot Size
+   input int Magic_Number = 123456789;                 // Magic Number
+   input double SL_Pips = 300.0;                       // Stop Loss in Pips (0 to disable)
+   input double TP_Pips = 300.0;                       // Take Profit in Pips (0 to disable)
 
-input group "Trailing Stop Settings"
-input bool Enable_Trailing_Stop = true;             // Enable Trailing Stop
-input double Trailing_Stop_Pips = 30.0;             // Trailing Stop in Pips
-input double Min_Profit_To_Trail_Pips = 50.0;       // Minimum Profit to Start Trailing in Pips
+   input group "Trailing Stop Settings"
+   input bool Enable_Trailing_Stop = true;             // Enable Trailing Stop
+   input double Trailing_Stop_Pips = 30.0;             // Trailing Stop in Pips
+   input double Min_Profit_To_Trail_Pips = 50.0;       // Minimum Profit to Start Trailing in Pips
 
-input group "Visualization"
-input color Bull_Color = clrGreen;                  // Bullish Divergence Color
-input color Bear_Color = clrRed;                    // Bearish Divergence Color
-input color Swing_High_Color = clrRed;              // Color for Swing High Labels
-input color Swing_Low_Color = clrGreen;             // Color for Swing Low Labels
-input int Line_Width = 2;                           // Divergence Line Width
-input ENUM_LINE_STYLE Line_Style = STYLE_SOLID;     // Divergence Line Style
-input int Font_Size = 8;                            // Swing Point Font Size
+   input group "Visualization"
+   input color Bull_Color = clrGreen;                  // Bullish Divergence Color
+   input color Bear_Color = clrRed;                    // Bearish Divergence Color
+   input color Swing_High_Color = clrRed;              // Color for Swing High Labels
+   input color Swing_Low_Color = clrGreen;             // Color for Swing Low Labels
+   input int Line_Width = 2;                           // Divergence Line Width
+   input ENUM_LINE_STYLE Line_Style = STYLE_SOLID;     // Divergence Line Style
+   input int Font_Size = 8;                            // Swing Point Font Size
 
 //+------------------------------------------------------------------+
 //| Indicator Handles and Trade Object                               |

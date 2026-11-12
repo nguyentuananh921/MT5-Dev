@@ -27,10 +27,10 @@ input int    minProfitPoints = 50;                                     // Minimu
 
 //--- Forward Declaration of MarketZoneTrader
 class MarketZoneTrader;
-
 //--- Basket Manager Class to Handle Multiple Traders
-class BasketManager {
-private:
+class BasketManager
+ {
+  private:
    MarketZoneTrader* m_traders[];                                        //--- Array of trader instances
    int               m_handleRsi;                                        //--- RSI indicator handle
    int               m_handleEnvUpper;                                   //--- Upper Envelopes handle
@@ -43,7 +43,8 @@ private:
    int               m_maxInitialPositions;                             //--- Maximum baskets (signals)
 
    //--- Initialize Indicators
-   bool initializeIndicators() {
+   bool initializeIndicators()
+    {
       m_handleRsi = iRSI(m_symbol, PERIOD_CURRENT, 8, PRICE_CLOSE);
       if (m_handleRsi == INVALID_HANDLE) {
          Print("Failed to initialize RSI indicator");
@@ -63,29 +64,32 @@ private:
       ArraySetAsSeries(m_envUpperBandBuffer, true);
       ArraySetAsSeries(m_envLowerBandBuffer, true);
       return true;
-   }
+    }
 
    //--- Cleanup Indicators
-   void cleanupIndicators() {
+   void cleanupIndicators()
+    {
       if (m_handleRsi != INVALID_HANDLE) IndicatorRelease(m_handleRsi);
       if (m_handleEnvUpper != INVALID_HANDLE) IndicatorRelease(m_handleEnvUpper);
       if (m_handleEnvLower != INVALID_HANDLE) IndicatorRelease(m_handleEnvLower);
       ArrayFree(m_rsiBuffer);
       ArrayFree(m_envUpperBandBuffer);
       ArrayFree(m_envLowerBandBuffer);
-   }
+    }
 
    //--- Check for New Bar
-   bool isNewBar() {
+   bool isNewBar()
+    {
       static datetime previousTime = 0;
       datetime currentTime = iTime(m_symbol, Period(), 0);
       bool result = (currentTime != previousTime);
       previousTime = currentTime;
       return result;
-   }
+    }
 
    //--- Count Active Baskets
-   int countActiveBaskets() {
+   int countActiveBaskets()
+    {
       int count = 0;
       for (int i = 0; i < ArraySize(m_traders); i++) {
          if (m_traders[i] != NULL && m_traders[i].getCurrentState() != MarketZoneTrader::INACTIVE) {
@@ -93,10 +97,10 @@ private:
          }
       }
       return count;
-   }
-
+    }
    //--- Cleanup Terminated Baskets
-   void cleanupTerminatedBaskets() {
+   void cleanupTerminatedBaskets()
+    {
       int newSize = 0;
       for (int i = 0; i < ArraySize(m_traders); i++) {
          if (m_traders[i] != NULL && m_traders[i].getCurrentState() == MarketZoneTrader::INACTIVE) {
@@ -120,10 +124,11 @@ private:
          m_traders[i] = temp[i];
       }
       ArrayFree(temp);
-   }
+    }
 
-public:
-   BasketManager(string symbol, int baseMagic, int maxInitPos) {
+  public:
+   BasketManager(string symbol, int baseMagic, int maxInitPos)
+    {
       m_symbol = symbol;
       m_baseMagicNumber = baseMagic;
       m_maxInitialPositions = maxInitPos;
@@ -131,24 +136,28 @@ public:
       m_handleRsi = INVALID_HANDLE;
       m_handleEnvUpper = INVALID_HANDLE;
       m_handleEnvLower = INVALID_HANDLE;
-   }
-
-   ~BasketManager() {
+    }
+   ~BasketManager()
+    {
       for (int i = 0; i < ArraySize(m_traders); i++) {
          if (m_traders[i] != NULL) delete m_traders[i];
       }
       ArrayFree(m_traders);
       cleanupIndicators();
-   }
+    }
 
-   bool initialize() {
+   bool initialize()
+    {
       if (!initializeIndicators()) return false;
       //--- Load existing positions into baskets
       int totalPositions = PositionsTotal();
-      for (int i = 0; i < totalPositions; i++) {
+      for (int i = 0; i < totalPositions; i++)
+       {
          ulong ticket = PositionGetTicket(i);
-         if (PositionSelectByTicket(ticket)) {
-            if (PositionGetString(POSITION_SYMBOL) == m_symbol) {
+         if (PositionSelectByTicket(ticket))
+          {
+            if (PositionGetString(POSITION_SYMBOL) == m_symbol)
+             {
                long magic = PositionGetInteger(POSITION_MAGIC);
                if (magic >= m_baseMagicNumber && magic < m_baseMagicNumber + m_maxInitialPositions) {
                   //--- Check if basket already exists for this magic
@@ -164,36 +173,41 @@ public:
                   }
                }
             }
-         }
-      }
+          }
+       }
       Print("BasketManager initialized with ", ArraySize(m_traders), " existing baskets");
       return true;
-   }
+    }
 
-   void processTick() {
+   void processTick()
+    {
       //--- Process existing baskets
-      for (int i = 0; i < ArraySize(m_traders); i++) {
+      for (int i = 0; i < ArraySize(m_traders); i++)
+       {
          if (m_traders[i] != NULL) {
             m_traders[i].processTick(m_rsiBuffer, m_envUpperBandBuffer, m_envLowerBandBuffer);
          }
-      }
+       }
       cleanupTerminatedBaskets();
 
       //--- Check for new signals on new bar
       if (!isNewBar()) return;
 
-      if (!CopyBuffer(m_handleRsi, 0, 0, 3, m_rsiBuffer)) {
+      if (!CopyBuffer(m_handleRsi, 0, 0, 3, m_rsiBuffer))
+       {
          Print("Error loading RSI data. Reverting.");
          return;
-      }
-      if (!CopyBuffer(m_handleEnvUpper, 0, 0, 3, m_envUpperBandBuffer)) {
+       }
+      if (!CopyBuffer(m_handleEnvUpper, 0, 0, 3, m_envUpperBandBuffer))
+       {
          Print("Error loading upper envelopes data. Reverting.");
          return;
-      }
-      if (!CopyBuffer(m_handleEnvLower, 1, 0, 3, m_envLowerBandBuffer)) {
+       }
+      if (!CopyBuffer(m_handleEnvLower, 1, 0, 3, m_envLowerBandBuffer))
+       {
          Print("Error loading lower envelopes data. Reverting.");
          return;
-      }
+       }
 
       const int rsiOverbought = 70;
       const int rsiOversold = 30;
@@ -203,21 +217,25 @@ public:
       double askPrice = NormalizeDouble(SymbolInfoDouble(m_symbol, SYMBOL_ASK), Digits());
       double bidPrice = NormalizeDouble(SymbolInfoDouble(m_symbol, SYMBOL_BID), Digits());
 
-      if (m_rsiBuffer[1] < rsiOversold && m_rsiBuffer[2] > rsiOversold && m_rsiBuffer[0] < rsiOversold) {
+      if (m_rsiBuffer[1] < rsiOversold && m_rsiBuffer[2] > rsiOversold && m_rsiBuffer[0] < rsiOversold)
+       {
          if (askPrice > m_envUpperBandBuffer[0]) {
             if (countActiveBaskets() < m_maxInitialPositions) {
                signalType = ORDER_TYPE_BUY;
             }
          }
-      } else if (m_rsiBuffer[1] > rsiOverbought && m_rsiBuffer[2] < rsiOverbought && m_rsiBuffer[0] > rsiOverbought) {
+       } 
+      else if (m_rsiBuffer[1] > rsiOverbought && m_rsiBuffer[2] < rsiOverbought && m_rsiBuffer[0] > rsiOverbought)
+       {
          if (bidPrice < m_envLowerBandBuffer[0]) {
             if (countActiveBaskets() < m_maxInitialPositions) {
                signalType = ORDER_TYPE_SELL;
             }
          }
-      }
+       }
 
-      if (signalType != (ENUM_ORDER_TYPE)-1) {
+      if (signalType != (ENUM_ORDER_TYPE)-1)
+       {
          //--- Create new basket with unique magic number
          int newMagic = m_baseMagicNumber + ArraySize(m_traders);
          if (newMagic < m_baseMagicNumber + m_maxInitialPositions) {
@@ -235,43 +253,48 @@ public:
          } else {
             Print("Maximum initial positions (baskets) reached: ", m_maxInitialPositions);
          }
-      }
-   }
+       }
+    }
 
-private:
-   void createNewBasket(long magic, ulong ticket) {
+  private:
+   void createNewBasket(long magic, ulong ticket)
+    {
       MarketZoneTrader* newTrader = new MarketZoneTrader(lotOption, initialLotSize, riskPercentage, riskPoints, zoneTargetPoints, zoneSizePoints, magic);
-      if (newTrader.activateTrade(ticket)) {
+      if (newTrader.activateTrade(ticket))
+       {
          int size = ArraySize(m_traders);
          ArrayResize(m_traders, size + 1);
          m_traders[size] = newTrader;
          Print("Existing position loaded into basket: Magic=", magic, ", Ticket=", ticket);
-      } else {
+       } 
+      else
+       {
          delete newTrader;
          Print("Failed to load existing position into basket: Ticket=", ticket);
-      }
-   }
-};
+       }
+    }
+ };
 
 //--- Modified MarketZoneTrader Class
-class MarketZoneTrader {
-private:
+class MarketZoneTrader
+ {
+  private:
    enum TradeState { INACTIVE, RUNNING, TERMINATING };
-
-   struct TradeMetrics {
+   struct TradeMetrics
+    {
       bool   operationSuccess;
       double totalVolume;
       double netProfitLoss;
-   };
-
-   struct ZoneBoundaries {
+    };
+   struct ZoneBoundaries
+    {
       double zoneHigh;
       double zoneLow;
       double zoneTargetHigh;
       double zoneTargetLow;
-   };
-
-   struct TradeConfig {
+    };
+   struct TradeConfig
+    {
       string         marketSymbol;
       double         openPrice;
       double         initialVolume;
@@ -287,11 +310,12 @@ private:
       TradeState     currentState;
       bool           hasRecoveryTrades;  //--- Flag to track recovery trades
       double         trailingStopLevel;  //--- Virtual trailing stop level
-   };
+    };
 
-   struct LossTracker {
+   struct LossTracker
+    {
       double tradeLossTracker;
-   };
+    };
 
    TradeConfig           m_tradeConfig;
    ZoneBoundaries        m_zoneBounds;
@@ -306,25 +330,30 @@ private:
    double                m_zoneTargetPoints;
    double                m_zoneSizePoints;
 
-   void logError(string message, int code) {
+   void logError(string message, int code)
+    {
       m_lastError = message;
       m_errorStatus = code;
       Print("Error [Magic=", m_tradeConfig.tradeIdentifier, "]: ", message);
-   }
+    }
 
-   double getMarketVolumeStep() {
+   double getMarketVolumeStep()
+    {
       return SymbolInfoDouble(m_tradeConfig.marketSymbol, SYMBOL_VOLUME_STEP);
-   }
+    }
 
-   double getMarketAsk() {
+   double getMarketAsk()
+    {
       return SymbolInfoDouble(m_tradeConfig.marketSymbol, SYMBOL_ASK);
-   }
+    }
 
-   double getMarketBid() {
+   double getMarketBid()
+    {
       return SymbolInfoDouble(m_tradeConfig.marketSymbol, SYMBOL_BID);
-   }
+    }
 
-   bool configureTrade(ulong ticket) {
+   bool configureTrade(ulong ticket)
+    {
       if (!PositionSelectByTicket(ticket)) {
          logError("Failed to select ticket " + IntegerToString(ticket), INIT_FAILED);
          return false;
@@ -336,15 +365,17 @@ private:
       m_tradeConfig.initialVolume = PositionGetDouble(POSITION_VOLUME);
       m_tradeExecutor.SetExpertMagicNumber(m_tradeConfig.tradeIdentifier);
       return true;
-   }
+    }
 
-   void storeTradeTicket(ulong ticket) {
+   void storeTradeTicket(ulong ticket)
+    {
       int ticketCount = ArraySize(m_tradeConfig.activeTickets);
       ArrayResize(m_tradeConfig.activeTickets, ticketCount + 1);
       m_tradeConfig.activeTickets[ticketCount] = ticket;
-   }
+    }
 
-   ulong openMarketTrade(ENUM_ORDER_TYPE tradeDirection, double tradeVolume, double price, string comment) {
+   ulong openMarketTrade(ENUM_ORDER_TYPE tradeDirection, double tradeVolume, double price, string comment)
+    {
       //--- Open position with specified comment (INITIAL or RECOVERY)
       ulong ticket = 0;
       if (m_tradeExecutor.PositionOpen(m_tradeConfig.marketSymbol, tradeDirection, tradeVolume, price, 0, 0, comment)) {
@@ -353,10 +384,12 @@ private:
          Print("Failed to open trade [Magic=", m_tradeConfig.tradeIdentifier, "]: Direction=", EnumToString(tradeDirection), ", Volume=", tradeVolume, ", Comment=", comment);
       }
       return ticket;
-   }
+    }
 
-   void closeActiveTrades(TradeMetrics &metrics) {
-      for (int i = ArraySize(m_tradeConfig.activeTickets) - 1; i >= 0; i--) {
+   void closeActiveTrades(TradeMetrics &metrics)
+    {
+      for (int i = ArraySize(m_tradeConfig.activeTickets) - 1; i >= 0; i--)
+       {
          if (m_tradeConfig.activeTickets[i] > 0) {
             if (m_tradeExecutor.PositionClose(m_tradeConfig.activeTickets[i])) {
                m_tradeConfig.activeTickets[i] = 0;
@@ -371,27 +404,31 @@ private:
                Print("Failed to close ticket [Magic=", m_tradeConfig.tradeIdentifier, "]: ", m_tradeConfig.activeTickets[i]);
             }
          }
-      }
-   }
+       }
+    }
 
-   double calculateLotSize(double riskPercent, int riskPips) {
+   double calculateLotSize(double riskPercent, int riskPips)
+    {
       double riskMoney = AccountInfoDouble(ACCOUNT_BALANCE) * riskPercent / 100;
       double tickSize = SymbolInfoDouble(m_tradeConfig.marketSymbol, SYMBOL_TRADE_TICK_SIZE);
       double tickValue = SymbolInfoDouble(m_tradeConfig.marketSymbol, SYMBOL_TRADE_TICK_VALUE);
-      if (tickSize == 0 || tickValue == 0) {
+      if (tickSize == 0 || tickValue == 0)
+       {
          Print("Invalid tick size or value [Magic=", m_tradeConfig.tradeIdentifier, "]");
          return -1;
-      }
+       }
       double lotValue = (riskPips * _Point) / tickSize * tickValue;
-      if (lotValue == 0) {
+      if (lotValue == 0)
+       {
          Print("Invalid lot value [Magic=", m_tradeConfig.tradeIdentifier, "]");
          return -1;
-      }
+       }
       return NormalizeDouble(riskMoney / lotValue, 2);
-   }
+    }
 
-public:
-   MarketZoneTrader(TradingLotSizeOptions lotOpt, double initLot, double riskPct, int riskPts, double targetPts, double sizePts, long magic) {
+  public:
+   MarketZoneTrader(TradingLotSizeOptions lotOpt, double initLot, double riskPct, int riskPts, double targetPts, double sizePts, long magic)
+    {
       m_tradeConfig.currentState = INACTIVE;
       ArrayResize(m_tradeConfig.activeTickets, 0);
       m_tradeConfig.zoneProfitSpan = targetPts * _Point;
@@ -410,37 +447,44 @@ public:
       m_tradeConfig.hasRecoveryTrades = false; //--- Initialize recovery flag
       m_tradeConfig.trailingStopLevel = 0.0; //--- Initialize trailing stop
       m_tradeExecutor.SetExpertMagicNumber(magic);
-   }
-
-   ~MarketZoneTrader() {
+    }
+   ~MarketZoneTrader()
+    {
       ArrayFree(m_tradeConfig.activeTickets);
-   }
+    }
 
-   TradeState getCurrentState() {
+   TradeState getCurrentState()
+    {
       return m_tradeConfig.currentState;
-   }
+    }
 
-   long getMagicNumber() {
+   long getMagicNumber()
+    {
       return m_tradeConfig.tradeIdentifier;
-   }
+    }
 
-   double getZoneTargetHigh() {
+   double getZoneTargetHigh()
+    {
       return m_zoneBounds.zoneTargetHigh;
-   }
+    }
 
-   double getZoneTargetLow() {
+   double getZoneTargetLow()
+    {
       return m_zoneBounds.zoneTargetLow;
-   }
+    }
 
-   double getZoneHigh() {
+   double getZoneHigh()
+    {
       return m_zoneBounds.zoneHigh;
-   }
+    }
 
-   double getZoneLow() {
+   double getZoneLow()
+    {
       return m_zoneBounds.zoneLow;
-   }
+    }
 
-   bool activateTrade(ulong ticket) {
+   bool activateTrade(ulong ticket)
+    {
       m_tradeConfig.currentState = INACTIVE;
       ArrayResize(m_tradeConfig.activeTickets, 0);
       m_lossTracker.tradeLossTracker = 0.0;
@@ -465,51 +509,66 @@ public:
       m_zoneBounds.zoneTargetLow = m_zoneBounds.zoneLow - m_tradeConfig.zoneProfitSpan;
       m_tradeConfig.currentState = RUNNING;
       return true;
-   }
+    }
 
-   int openInitialOrder(ENUM_ORDER_TYPE orderType) {
+   int openInitialOrder(ENUM_ORDER_TYPE orderType)
+    {
       //--- Open INITIAL position based on signal
       int ticket;
       double openPrice;
-      if (orderType == ORDER_TYPE_BUY) {
+      if (orderType == ORDER_TYPE_BUY)
+       {
          openPrice = NormalizeDouble(getMarketAsk(), Digits());
-      } else if (orderType == ORDER_TYPE_SELL) {
+       } 
+      else if (orderType == ORDER_TYPE_SELL)
+       {
          openPrice = NormalizeDouble(getMarketBid(), Digits());
-      } else {
+       } 
+      else
+       {
          Print("Invalid order type [Magic=", m_tradeConfig.tradeIdentifier, "]");
          return -1;
-      }
+       }
       double lotSize = 0;
-      if (m_lotOption == FIXED_LOTSIZE) {
+      if (m_lotOption == FIXED_LOTSIZE)
+       {
          lotSize = m_initialLotSize;
-      } else if (m_lotOption == UNFIXED_LOTSIZE) {
+       } 
+      else if (m_lotOption == UNFIXED_LOTSIZE)
+       {
          lotSize = calculateLotSize(m_riskPercentage, m_riskPoints);
-      }
-      if (lotSize <= 0) {
+       }
+      if (lotSize <= 0)
+       {
          Print("Invalid lot size [Magic=", m_tradeConfig.tradeIdentifier, "]: ", lotSize);
          return -1;
-      }
-      if (m_tradeExecutor.PositionOpen(m_tradeConfig.marketSymbol, orderType, lotSize, openPrice, 0, 0, m_tradeConfig.initialTradeLabel)) {
+       }
+      if (m_tradeExecutor.PositionOpen(m_tradeConfig.marketSymbol, orderType, lotSize, openPrice, 0, 0, m_tradeConfig.initialTradeLabel))
+       {
          ticket = (int)m_tradeExecutor.ResultOrder();
          Print("INITIAL trade opened [Magic=", m_tradeConfig.tradeIdentifier, "]: Ticket=", ticket, ", Type=", EnumToString(orderType), ", Volume=", lotSize);
-      } else {
+       } 
+      else
+       {
          ticket = -1;
          Print("Failed to open INITIAL order [Magic=", m_tradeConfig.tradeIdentifier, "]: Type=", EnumToString(orderType), ", Volume=", lotSize);
-      }
+       }
       return ticket;
-   }
+    }
 
-   void processTick(double &rsiBuffer[], double &envUpperBuffer[], double &envLowerBuffer[]) {
+   void processTick(double &rsiBuffer[], double &envUpperBuffer[], double &envLowerBuffer[])
+    {
       if (m_tradeConfig.currentState == INACTIVE) return;
       evaluateMarketTick();
-   }
-
-   void evaluateMarketTick() {
+    }
+   void evaluateMarketTick()
+    {
       if (m_tradeConfig.currentState == INACTIVE) return;
-      if (m_tradeConfig.currentState == TERMINATING) {
+      if (m_tradeConfig.currentState == TERMINATING)
+       {
          finalizePosition();
          return;
-      }
+       }
       double currentPrice;
       double profitPoints = 0.0;
 
@@ -581,9 +640,10 @@ public:
             triggerRecoveryTrade(ORDER_TYPE_BUY, currentPrice);
          }
       }
-   }
+    }
 
-   void triggerRecoveryTrade(ENUM_ORDER_TYPE tradeDirection, double price) {
+   void triggerRecoveryTrade(ENUM_ORDER_TYPE tradeDirection, double price)
+    {
       //--- Handle RECOVERY trade
       m_tradeConfig.hasRecoveryTrades = true; //--- Mark basket as having recovery trades
       TradeMetrics metrics = {true, 0.0, 0.0};
@@ -609,9 +669,10 @@ public:
          else m_tradeConfig.accumulatedSellVolume += tradeSize;
          Print("RECOVERY trade opened [Magic=", m_tradeConfig.tradeIdentifier, "]: Ticket=", ticket, ", Direction=", EnumToString(tradeDirection), ", Volume=", tradeSize);
       }
-   }
+    }
 
-   bool finalizePosition() {
+   bool finalizePosition()
+    {
       m_tradeConfig.currentState = TERMINATING;
       TradeMetrics metrics = {true, 0.0, 0.0};
       closeActiveTrades(metrics);
@@ -623,19 +684,21 @@ public:
          Print("Failed to close position [Magic=", m_tradeConfig.tradeIdentifier, "]");
       }
       return metrics.operationSuccess;
-   }
+    }
 
-   double determineRecoverySize(ENUM_ORDER_TYPE tradeDirection) {
+   double determineRecoverySize(ENUM_ORDER_TYPE tradeDirection)
+    {
       double tradeSize = -m_lossTracker.tradeLossTracker / m_tradeConfig.zoneProfitSpan;
       tradeSize = MathCeil(tradeSize / getMarketVolumeStep()) * getMarketVolumeStep();
       return tradeSize;
-   }
-};
+    }
+ };
 
 //--- Global Instance
 BasketManager *manager = NULL;
-
-int OnInit() {
+//EA function
+int OnInit()
+ {
    manager = new BasketManager(_Symbol, baseMagicNumber, maxInitialPositions);
    if (!manager.initialize()) {
       delete manager;
@@ -643,17 +706,19 @@ int OnInit() {
       return INIT_FAILED;
    }
    return INIT_SUCCEEDED;
-}
+ }
 
-void OnDeinit(const int reason) {
+void OnDeinit(const int reason)
+ {
    if (manager != NULL) {
       delete manager;
       manager = NULL;
       Print("EA deinitialized");
    }
-}
+ }
 
-void OnTick() {
+void OnTick()
+ {
    if (manager != NULL) {
       manager.processTick();
    }

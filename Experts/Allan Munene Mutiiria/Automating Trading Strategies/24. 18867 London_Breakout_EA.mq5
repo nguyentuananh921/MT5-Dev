@@ -10,67 +10,67 @@
 
 #include <Trade\Trade.mqh> //--- Include Trade library for trading operations
 
-//--- Enumerations
-enum ENUM_TRADE_TYPE {     //--- Enumeration for trade types
+//--- Enumeration for trade types
+ enum ENUM_TRADE_TYPE
+  {     
    TRADE_ALL,              // All Trades (Buy and Sell)
    TRADE_BUY_ONLY,         // Buy Trades Only
    TRADE_SELL_ONLY         // Sell Trades Only
-};
-
+  };
 //--- Input parameters
-sinput group "General EA Settings"
-input double inpTradeLotsize = 0.01; // Lotsize
-input ENUM_TRADE_TYPE TradeType = TRADE_ALL; // Trade Type Selection
-sinput int MagicNumber = 1234567890;     // Magic Number
-input double RRRatio = 1.0;        // Risk to Reward Ratio
-input int StopLossPoints = 300;    // Stop loss in points
-input int OrderOffsetPoints = 1;   // Points offset for Orders
-input bool DeleteOppositeOrder = true; // Delete opposite order when one is activated?
-input bool UseTrailing = false;    // Use Trailing Stop?
-input int TrailingPoints = 50;     // Trailing Points (distance)
-input int MinProfitPoints = 100;   // Minimum Profit Points to start trailing
+   sinput group "General EA Settings"
+   input double inpTradeLotsize = 0.01; // Lotsize
+   input ENUM_TRADE_TYPE TradeType = TRADE_ALL; // Trade Type Selection
+   sinput int MagicNumber = 1234567890;     // Magic Number
+   input double RRRatio = 1.0;        // Risk to Reward Ratio
+   input int StopLossPoints = 300;    // Stop loss in points
+   input int OrderOffsetPoints = 1;   // Points offset for Orders
+   input bool DeleteOppositeOrder = true; // Delete opposite order when one is activated?
+   input bool UseTrailing = false;    // Use Trailing Stop?
+   input int TrailingPoints = 50;     // Trailing Points (distance)
+   input int MinProfitPoints = 100;   // Minimum Profit Points to start trailing
 
-sinput group "London Session Settings"
-input int LondonStartHour = 9;        // London Start Hour
-input int LondonStartMinute = 0;      // London Start Minute
-input int LondonEndHour = 8;          // London End Hour
-input int LondonEndMinute = 0;        // London End Minute
-input int MinRangePoints = 150;       // Min Pre-London Range in points
-input int MaxRangePoints = 500;       // Max Pre-London Range in points
+   sinput group "London Session Settings"
+   input int LondonStartHour = 9;        // London Start Hour
+   input int LondonStartMinute = 0;      // London Start Minute
+   input int LondonEndHour = 8;          // London End Hour
+   input int LondonEndMinute = 0;        // London End Minute
+   input int MinRangePoints = 150;       // Min Pre-London Range in points
+   input int MaxRangePoints = 500;       // Max Pre-London Range in points
 
-sinput group "Risk Management"
-input int MaxOpenTrades = 2;       // Maximum simultaneous open trades
-input double MaxDailyDrawdownPercent = 5.0; // Max daily drawdown % to stop trading
+   sinput group "Risk Management"
+   input int MaxOpenTrades = 2;       // Maximum simultaneous open trades
+   input double MaxDailyDrawdownPercent = 5.0; // Max daily drawdown % to stop trading
 
-//--- Structures
-struct PositionInfo {      //--- Structure for position information
+//--- Structure for position information
+ struct PositionInfo 
+  {      
    ulong ticket;           // Position ticket
    double openPrice;      // Entry price
    double londonRange;    // Pre-London range in points for this position
    datetime sessionID;    // Session identifier (day)
    bool trailingActive;   // Trailing active flag
-};
+  };
 
 //--- Global variables
-CTrade obj_Trade;                 //--- Trade object
-double PreLondonHigh = 0.0;       //--- Pre-London session high
-double PreLondonLow = 0.0;        //--- Pre-London session low
-datetime PreLondonHighTime = 0;   //--- Time of Pre-London high
-datetime PreLondonLowTime = 0;    //--- Time of Pre-London low
-ulong buyOrderTicket = 0;         //--- Buy stop order ticket
-ulong sellOrderTicket = 0;        //--- Sell stop order ticket
-bool panelVisible = true;         //--- Panel visibility flag
-double LondonRangePoints = 0.0;   //--- Current session's Pre-London range
-PositionInfo positionList[];      //--- Array to store position info
-datetime lastCheckedDay = 0;      //--- Last checked day
-bool noTradeToday = false;        //--- Flag to prevent trading today
-bool sessionChecksDone = false;   //--- Flag for session checks completion
-datetime analysisTime = 0;        //--- Time for London analysis
-double dailyDrawdown = 0.0;       //--- Current daily drawdown
-bool isTrailing = false;          //--- Global flag for any trailing active
-const int PreLondonStartHour = 3; //--- Fixed Pre-London Start Hour
-const int PreLondonStartMinute = 0; //--- Fixed Pre-London Start Minute
-
+   CTrade obj_Trade;                 //--- Trade object
+   double PreLondonHigh = 0.0;       //--- Pre-London session high
+   double PreLondonLow = 0.0;        //--- Pre-London session low
+   datetime PreLondonHighTime = 0;   //--- Time of Pre-London high
+   datetime PreLondonLowTime = 0;    //--- Time of Pre-London low
+   ulong buyOrderTicket = 0;         //--- Buy stop order ticket
+   ulong sellOrderTicket = 0;        //--- Sell stop order ticket
+   bool panelVisible = true;         //--- Panel visibility flag
+   double LondonRangePoints = 0.0;   //--- Current session's Pre-London range
+   PositionInfo positionList[];      //--- Array to store position info
+   datetime lastCheckedDay = 0;      //--- Last checked day
+   bool noTradeToday = false;        //--- Flag to prevent trading today
+   bool sessionChecksDone = false;   //--- Flag for session checks completion
+   datetime analysisTime = 0;        //--- Time for London analysis
+   double dailyDrawdown = 0.0;       //--- Current daily drawdown
+   bool isTrailing = false;          //--- Global flag for any trailing active
+   const int PreLondonStartHour = 3; //--- Fixed Pre-London Start Hour
+   const int PreLondonStartMinute = 0; //--- Fixed Pre-London Start Minute
 //--- Panel Functions ---
 
 //+------------------------------------------------------------------+
@@ -78,7 +78,8 @@ const int PreLondonStartMinute = 0; //--- Fixed Pre-London Start Minute
 //+------------------------------------------------------------------+
 bool createRecLabel(string objName, int xD, int yD, int xS, int yS,
                     color clrBg, int widthBorder, color clrBorder = clrNONE,
-                    ENUM_BORDER_TYPE borderType = BORDER_FLAT, ENUM_LINE_STYLE borderStyle = STYLE_SOLID) {
+                    ENUM_BORDER_TYPE borderType = BORDER_FLAT, ENUM_LINE_STYLE borderStyle = STYLE_SOLID)
+ {
     ResetLastError();              //--- Reset last error
     if (!ObjectCreate(0, objName, OBJ_RECTANGLE_LABEL, 0, 0, 0)) { //--- Create rectangle label
         Print(__FUNCTION__, ": failed to create rec label! Error code = ", _LastError); //--- Log creation failure
@@ -100,14 +101,15 @@ bool createRecLabel(string objName, int xD, int yD, int xS, int yS,
     ObjectSetInteger(0, objName, OBJPROP_SELECTED, false); //--- Disable selected
     ChartRedraw(0);                //--- Redraw chart
     return true;                   //--- Return success
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Create a text label for panel elements                           |
 //+------------------------------------------------------------------+
 bool createLabel(string objName, int xD, int yD,
                  string txt, color clrTxt = clrBlack, int fontSize = 10,
-                 string font = "Arial") {
+                 string font = "Arial")
+ {
     ResetLastError();              //--- Reset last error
     if (!ObjectCreate(0, objName, OBJ_LABEL, 0, 0, 0)) { //--- Create label
         Print(__FUNCTION__, ": failed to create the label! Error code = ", _LastError); //--- Log creation failure
@@ -126,14 +128,15 @@ bool createLabel(string objName, int xD, int yD,
     ObjectSetInteger(0, objName, OBJPROP_SELECTED, false); //--- Disable selected
     ChartRedraw(0);                //--- Redraw chart
     return true;                   //--- Return success
-}
+ }
 
 string panelPrefix = "LondonPanel_"; //--- Prefix for panel objects
 
 //+------------------------------------------------------------------+
 //| Create the information panel                                     |
 //+------------------------------------------------------------------+
-void CreatePanel() {
+void CreatePanel()
+ {
    createRecLabel(panelPrefix + "Background", 10, 10, 270, 200, clrMidnightBlue, 1, clrSilver); //--- Create background
    createLabel(panelPrefix + "Title", 20, 15, "London Breakout Control Center", clrGold, 12); //--- Create title
    createLabel(panelPrefix + "RangePoints", 20, 40, "Range (points): ", clrWhite, 10); //--- Create range label
@@ -148,12 +151,13 @@ void CreatePanel() {
    createLabel(panelPrefix + "HideText", 258, 12, CharToString(251), clrWhite, 13, "Wingdings"); //--- Create hide text
    ObjectSetInteger(0, panelPrefix + "Hide", OBJPROP_SELECTABLE, true); //--- Make hide selectable
    ObjectSetInteger(0, panelPrefix + "Hide", OBJPROP_STATE, true); //--- Set hide state
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Update panel with current data                                   |
 //+------------------------------------------------------------------+
-void UpdatePanel() {
+void UpdatePanel()
+ {
    string rangeText = "Range (points): " + (LondonRangePoints > 0 ? DoubleToString(LondonRangePoints, 0) : "Calculating..."); //--- Format range text
    ObjectSetString(0, panelPrefix + "RangePoints", OBJPROP_TEXT, rangeText); //--- Update range text
    
@@ -178,21 +182,22 @@ void UpdatePanel() {
    string ddText = "Drawdown (%): " + DoubleToString(dailyDrawdown, 2); //--- Format drawdown text
    ObjectSetString(0, panelPrefix + "CurrentDrawdown", OBJPROP_TEXT, ddText); //--- Update drawdown text
    ObjectSetInteger(0, panelPrefix + "CurrentDrawdown", OBJPROP_COLOR, dailyDrawdown > MaxDailyDrawdownPercent / 2 ? clrYellow : clrWhite); //--- Set drawdown color
-}
+ }
 
 //--- Trading Functions ---
-
 //+------------------------------------------------------------------+
 //| Fixed lot size                                                   |
 //+------------------------------------------------------------------+
-double CalculateLotSize(double entryPrice, double stopLossPrice) {
+double CalculateLotSize(double entryPrice, double stopLossPrice)
+ {
    return NormalizeDouble(inpTradeLotsize, 2); //--- Normalize lot size
-}
+ } 
 
 //+------------------------------------------------------------------+
 //| Calculate session range (high-low) in points                     |
 //+------------------------------------------------------------------+
-double GetRange(datetime startTime, datetime endTime, double &highVal, double &lowVal, datetime &highTime, datetime &lowTime) {
+double GetRange(datetime startTime, datetime endTime, double &highVal, double &lowVal, datetime &highTime, datetime &lowTime)
+ {
    int startBar = iBarShift(_Symbol, _Period, startTime, true); //--- Get start bar
    int endBar = iBarShift(_Symbol, _Period, endTime, true); //--- Get end bar
    if (startBar == -1 || endBar == -1 || startBar < endBar) return -1; //--- Invalid bars
@@ -204,12 +209,13 @@ double GetRange(datetime startTime, datetime endTime, double &highVal, double &l
    highTime = iTime(_Symbol, _Period, highestBar); //--- Set high time
    lowTime = iTime(_Symbol, _Period, lowestBar); //--- Set low time
    return (highVal - lowVal) / _Point; //--- Return range in points
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Add position to tracking list when opened                        |
 //+------------------------------------------------------------------+
-void AddPositionToList(ulong ticket, double openPrice, double londonRange, datetime sessionID) {
+void AddPositionToList(ulong ticket, double openPrice, double londonRange, datetime sessionID)
+ {
    if (londonRange <= 0) return;      //--- Exit if invalid range
    int index = ArraySize(positionList); //--- Get current size
    ArrayResize(positionList, index + 1); //--- Resize array
@@ -218,12 +224,13 @@ void AddPositionToList(ulong ticket, double openPrice, double londonRange, datet
    positionList[index].londonRange = londonRange; //--- Set range
    positionList[index].sessionID = sessionID; //--- Set session ID
    positionList[index].trailingActive = false; //--- Set trailing inactive
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Remove position from tracking list when closed                   |
 //+------------------------------------------------------------------+
-void RemovePositionFromList(ulong ticket) {
+void RemovePositionFromList(ulong ticket)
+ {
    for (int i = 0; i < ArraySize(positionList); i++) { //--- Iterate through list
       if (positionList[i].ticket == ticket) { //--- Match ticket
          for (int j = i; j < ArraySize(positionList) - 1; j++) { //--- Shift elements
@@ -233,12 +240,13 @@ void RemovePositionFromList(ulong ticket) {
          break;                   //--- Exit loop
       }
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Place pending buy/sell stop orders                               |
 //+------------------------------------------------------------------+
-void PlacePendingOrders(double preLondonHigh, double preLondonLow, datetime sessionID) {
+void PlacePendingOrders(double preLondonHigh, double preLondonLow, datetime sessionID)
+ {
    double buyPrice = preLondonHigh + OrderOffsetPoints * _Point; //--- Calculate buy price
    double sellPrice = preLondonLow - OrderOffsetPoints * _Point; //--- Calculate sell price
    double slPoints = StopLossPoints; //--- Set SL points
@@ -259,12 +267,13 @@ void PlacePendingOrders(double preLondonHigh, double preLondonLow, datetime sess
       obj_Trade.SellStop(lotSizeSell, sellPrice, _Symbol, sellSL, sellTP, 0, 0, "Sell Stop - London"); //--- Place sell stop
       sellOrderTicket = obj_Trade.ResultOrder(); //--- Get sell ticket
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Manage trailing stops                                            |
 //+------------------------------------------------------------------+
-void ManagePositions() {
+void ManagePositions()
+ {
    if (PositionsTotal() == 0 || !UseTrailing) return; //--- Exit if no positions or no trailing
    isTrailing = false;                //--- Reset trailing flag
 
@@ -302,12 +311,13 @@ void ManagePositions() {
          }
       }
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Delete opposite pending order when one is filled                 |
 //+------------------------------------------------------------------+
-void CheckAndDeleteOppositeOrder() {
+void CheckAndDeleteOppositeOrder()
+ {
    if (!DeleteOppositeOrder || TradeType != TRADE_ALL) return; //--- Exit if not applicable
 
    bool buyOrderExists = false;       //--- Buy exists flag
@@ -328,12 +338,13 @@ void CheckAndDeleteOppositeOrder() {
    } else if (!sellOrderExists && buyOrderExists && buyOrderTicket != 0) { //--- Check delete buy
       obj_Trade.OrderDelete(buyOrderTicket); //--- Delete buy order
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Draw session ranges on the chart                                 |
 //+------------------------------------------------------------------+
-void DrawSessionRanges(datetime preLondonStart, datetime londonEnd) {
+void DrawSessionRanges(datetime preLondonStart, datetime londonEnd)
+ {
    string sessionID = "Sess_" + IntegerToString(lastCheckedDay); //--- Session ID
 
    string preRectName = "PreRect_" + sessionID; //--- Rectangle name
@@ -355,12 +366,13 @@ void DrawSessionRanges(datetime preLondonStart, datetime londonEnd) {
    ObjectSetInteger(0, preBotLineName, OBJPROP_WIDTH, 1); //--- Set width
    ObjectSetInteger(0, preBotLineName, OBJPROP_RAY_RIGHT, false); //--- Disable ray
    ObjectSetInteger(0, preBotLineName, OBJPROP_BACK, true); //--- Set background
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Check trading conditions and place orders                        |
 //+------------------------------------------------------------------+
-void CheckTradingConditions(datetime currentTime) {
+void CheckTradingConditions(datetime currentTime)
+ {
    MqlDateTime timeStruct;            //--- Time structure
    TimeToStruct(currentTime, timeStruct); //--- Convert time
    datetime today = StringToTime(StringFormat("%04d.%02d.%02d", timeStruct.year, timeStruct.mon, timeStruct.day)); //--- Get today
@@ -385,12 +397,13 @@ void CheckTradingConditions(datetime currentTime) {
    noTradeToday = true;               //--- Set no trade
    sessionChecksDone = true;          //--- Set checks done
    DrawSessionRanges(preLondonStart, londonEnd); //--- Draw ranges
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Check if it's a new trading day                                  |
 //+------------------------------------------------------------------+
-bool IsNewDay(datetime currentBarTime) {
+bool IsNewDay(datetime currentBarTime) 
+ {
    MqlDateTime barTime;               //--- Bar time structure
    TimeToStruct(currentBarTime, barTime); //--- Convert time
    datetime currentDay = StringToTime(StringFormat("%04d.%02d.%02d", barTime.year, barTime.mon, barTime.day)); //--- Get current day
@@ -404,18 +417,19 @@ bool IsNewDay(datetime currentBarTime) {
       return true;                    //--- Return new day
    }
    return false;                      //--- Return not new day
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Update daily drawdown                                            |
 //+------------------------------------------------------------------+
-void UpdateDailyDrawdown() {
+void UpdateDailyDrawdown() 
+ {
    static double maxEquity = 0.0;     //--- Max equity tracker
    double equity = AccountInfoDouble(ACCOUNT_EQUITY); //--- Get equity
    if (equity > maxEquity) maxEquity = equity; //--- Update max equity
    dailyDrawdown = (maxEquity - equity) / maxEquity * 100; //--- Calculate drawdown
    if (dailyDrawdown >= MaxDailyDrawdownPercent) noTradeToday = true; //--- Set no trade if exceeded
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Initialize EA                                                    |

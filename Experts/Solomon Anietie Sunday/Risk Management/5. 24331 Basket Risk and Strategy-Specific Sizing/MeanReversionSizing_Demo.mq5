@@ -32,34 +32,34 @@ enum ENUM_SIZE_BASE
   };
 
 //--- Input Parameters
-input group "Mean Reversion Signal"
-input int              InpBandsPeriod = 20;                 // Bollinger period (defines the mean)
-input double           InpBandsDeviation = 2.0;             // Bollinger deviation
-input int              InpMinExpectedMovePoints = 50;       // Skip signals with less room to mean
+   input group "Mean Reversion Signal"
+   input int              InpBandsPeriod = 20;                 // Bollinger period (defines the mean)
+   input double           InpBandsDeviation = 2.0;             // Bollinger deviation
+   input int              InpMinExpectedMovePoints = 50;       // Skip signals with less room to mean
 
-input group "Target-Profit Sizing"
-input double           InpTargetProfitPercent = 0.05;       // Profit target per leg [% of account]
-input ENUM_SIZE_BASE   InpSizeBase = SIZE_BASE_BALANCE;     // Target measured against
-input double           InpMaxLotCap = 5.0;                  // Absolute ceiling on volume [0 = off]
+   input group "Target-Profit Sizing"
+   input double           InpTargetProfitPercent = 0.05;       // Profit target per leg [% of account]
+   input ENUM_SIZE_BASE   InpSizeBase = SIZE_BASE_BALANCE;     // Target measured against
+   input double           InpMaxLotCap = 5.0;                  // Absolute ceiling on volume [0 = off]
 
-input group "Structural Stop (not the sizing input)"
-input int              InpATRPeriod = 14;                   // ATR period
-input double           InpStopATRMultiplier = 10.0;         // Stop distance as ATR multiple
-input double           InpMaxImpliedRiskPercent = 2.0;      // Cap the risk one leg's stop implies [0 = off]
+   input group "Structural Stop (not the sizing input)"
+   input int              InpATRPeriod = 14;                   // ATR period
+   input double           InpStopATRMultiplier = 10.0;         // Stop distance as ATR multiple
+   input double           InpMaxImpliedRiskPercent = 2.0;      // Cap the risk one leg's stop implies [0 = off]
 
-input group "Basket: Averaging"
-input int              InpMaxOpenPositions = 3;             // Max legs in one basket
-input double           InpMinAddSpacingATR = 1.0;           // An add needs this many ATR beyond the last entry [0 = off]
-input double           InpMaxBasketImpliedRiskPercent = 4.0; // Cap the risk all legs imply together [0 = off]
+   input group "Basket: Averaging"
+   input int              InpMaxOpenPositions = 3;             // Max legs in one basket
+   input double           InpMinAddSpacingATR = 1.0;           // An add needs this many ATR beyond the last entry [0 = off]
+   input double           InpMaxBasketImpliedRiskPercent = 4.0; // Cap the risk all legs imply together [0 = off]
 
-input group "Basket: Exit and Protection"
-input bool             InpUseBasketExit = true;             // With 2+ legs, exit at the weighted average entry
-input double           InpBasketExitOffsetPips = 1.0;       // Pips beyond the weighted average entry, to cover costs
-input double           InpMaxBasketLossPercent = 10.0;      // Close all if the basket loses this % [0 = off]
-input double           InpMaxSpreadPips = 2.0;              // Maximum allowed spread
+   input group "Basket: Exit and Protection"
+   input bool             InpUseBasketExit = true;             // With 2+ legs, exit at the weighted average entry
+   input double           InpBasketExitOffsetPips = 1.0;       // Pips beyond the weighted average entry, to cover costs
+   input double           InpMaxBasketLossPercent = 10.0;      // Close all if the basket loses this % [0 = off]
+   input double           InpMaxSpreadPips = 2.0;              // Maximum allowed spread
 
-input group "General"
-input int              InpMagicNumber = 55221;              // EA Magic Number
+   input group "General"
+   input int              InpMagicNumber = 55221;              // EA Magic Number
 
 //+------------------------------------------------------------------+
 //| Everything this EA holds, viewed as one position.                |
@@ -76,9 +76,9 @@ struct SDemoBasket
   };
 
 //--- Global Variables
-CTrade trade;
-int bandsHandle = INVALID_HANDLE;
-int atrHandle   = INVALID_HANDLE;
+   CTrade trade;
+   int bandsHandle = INVALID_HANDLE;
+   int atrHandle   = INVALID_HANDLE;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -87,7 +87,7 @@ int OnInit()
   {
    trade.SetExpertInpMagicNumber(InpMagicNumber);
 
-//--- Buffer 0 is the middle line - that is the mean this EA trades toward
+   //--- Buffer 0 is the middle line - that is the mean this EA trades toward
    bandsHandle = iBands(_Symbol, _Period, InpBandsPeriod, 0, InpBandsDeviation, PRICE_CLOSE);
    atrHandle   = iATR(_Symbol, _Period, InpATRPeriod);
 
@@ -134,7 +134,7 @@ int OnInit()
       return INIT_PARAMETERS_INCORRECT;
      }
 
-//--- What a basket even is depends on the account type
+   //--- What a basket even is depends on the account type
    long marginMode = AccountInfoInteger(ACCOUNT_MARGIN_MODE);
    if(marginMode == ACCOUNT_MARGIN_MODE_RETAIL_HEDGING)
       PrintFormat("Hedging account: this EA may hold up to %d separate legs.", InpMaxOpenPositions);
@@ -167,13 +167,13 @@ void OnTick()
       return;
    lastProcessedBarTime = currentBarTime;
 
-//--- Basket protection first, and independent of any signal
+   //--- Basket protection first, and independent of any signal
    ManageBasketRisk();
 
    if(BarsCalculated(bandsHandle) < 2 || BarsCalculated(atrHandle) < 1)
       return;
 
-//--- Bollinger buffers: 0 = middle (the mean), 1 = upper, 2 = lower
+   //--- Bollinger buffers: 0 = middle (the mean), 1 = upper, 2 = lower
    double middle[], upper[], lower[], atr[], close[];
    ArraySetAsSeries(middle, true);
    ArraySetAsSeries(upper, true);
@@ -197,7 +197,7 @@ void OnTick()
    if(!IsSpreadAcceptable())
       return;
 
-//--- Signal: price closed outside a band, so the mean sits away from price
+   //--- Signal: price closed outside a band, so the mean sits away from price
    int direction = 0;
    if(close[1] < lower[1])
       direction = 1;
@@ -208,7 +208,7 @@ void OnTick()
    if(direction == 0)
       return;
 
-//--- The mean is the target
+   //--- The mean is the target
    OpenMeanReversionTrade(direction, middle[1], atr[0]);
   }
 
@@ -270,7 +270,6 @@ bool GetBasketView(SDemoBasket &basket)
    double signedVolume  = 0.0;
    double lowestEntry   = 0.0;
    double highestEntry  = 0.0;
-
    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       ulong ticket = PositionGetTicket(i);
@@ -381,7 +380,7 @@ void ManageBasketRisk()
    if(!GetBasketView(basket))
       return;
 
-//--- Aggregate loss cut, before anything else
+   //--- Aggregate loss cut, before anything else
    if(InpMaxBasketLossPercent > 0)
      {
       double maxLoss = AccountInfoDouble(ACCOUNT_BALANCE) * (InpMaxBasketLossPercent / 100.0);
@@ -394,8 +393,8 @@ void ManageBasketRisk()
         }
      }
 
-//--- Shared exit for an averaged basket
-   ManageBasketExit(basket);
+   //--- Shared exit for an averaged basket
+    ManageBasketExit(basket);
   }
 
 //+------------------------------------------------------------------+
@@ -406,7 +405,7 @@ bool IsAddAllowed(int direction, double entryPrice, double atrValue, const SDemo
    if(basket.positionCount == 0)
       return true;
 
-//--- An opposing signal is refused rather than hedged
+   //--- An opposing signal is refused rather than hedged
    if(basket.direction != 0 && basket.direction != direction)
      {
       PrintFormat("Opposing signal while %d %s leg(s) are open. Signal skipped.",
@@ -421,7 +420,7 @@ bool IsAddAllowed(int direction, double entryPrice, double atrValue, const SDemo
       return false;
      }
 
-//--- Spacing. Price closes outside a Bollinger band for several bars in a row
+   //--- Spacing. Price closes outside a Bollinger band for several bars in a row
    double spacing = atrValue * InpMinAddSpacingATR;
    if(spacing > 0 && basket.extremeEntry > 0)
      {
@@ -452,17 +451,17 @@ void OpenMeanReversionTrade(int direction, double meanPrice, double atrValue)
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
    double entryPrice = (direction == 1) ? tick.ask : tick.bid;
 
-//--- The basket this trade would join decides whether it may exist, and how large
+   //--- The basket this trade would join decides whether it may exist, and how large
    SDemoBasket basket;
    GetBasketView(basket);
 
    if(!IsAddAllowed(direction, entryPrice, atrValue, basket))
       return;
 
-//--- Expected move: how far price must travel to reach the mean.
+   //--- Expected move: how far price must travel to reach the mean.
    double expectedMove = MathAbs(meanPrice - entryPrice);
 
-//--- The target has to clear the broker's minimum distance as well
+   //--- The target has to clear the broker's minimum distance as well
    double brokerMinimum = ((double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point)
                           + (tick.ask - tick.bid);
    double minTargetDistance = MathMax(InpMinExpectedMovePoints * _Point, brokerMinimum);
@@ -475,10 +474,10 @@ void OpenMeanReversionTrade(int direction, double meanPrice, double atrValue)
       return;
      }
 
-//--- The target is a price, not a ratio of the stop
+   //--- The target is a price, not a ratio of the stop
    double targetPrice = NormalizeDouble(meanPrice, digits);
 
-//--- Structural stop. It protects against the mean never being reached and doesn't define position size
+   //--- Structural stop. It protects against the mean never being reached and doesn't define position size
    double stopDistance = atrValue * InpStopATRMultiplier;
    if(stopDistance < brokerMinimum)
       stopDistance = brokerMinimum;
@@ -487,7 +486,7 @@ void OpenMeanReversionTrade(int direction, double meanPrice, double atrValue)
                      ? NormalizeDouble(entryPrice - stopDistance, digits)
                      : NormalizeDouble(entryPrice + stopDistance, digits);
 
-//--- Target-profit sizing
+   //--- Target-profit sizing
    double sizeBaseValue = (InpSizeBase == SIZE_BASE_EQUITY)
                           ? AccountInfoDouble(ACCOUNT_EQUITY)
                           : AccountInfoDouble(ACCOUNT_BALANCE);
@@ -516,7 +515,7 @@ void OpenMeanReversionTrade(int direction, double meanPrice, double atrValue)
 
    double lotSize = FloorToVolumeStep(MathMin(rawLot, maxLot), lotStep);
 
-//--- The risk this position implies is an output of the model
+   //--- The risk this position implies is an output of the model
    double riskPerLot = ValuePerLot(stopDistance);
    if(riskPerLot > 0 && InpMaxImpliedRiskPercent > 0)
      {
@@ -559,7 +558,7 @@ void OpenMeanReversionTrade(int direction, double meanPrice, double atrValue)
       return;
      }
 
-//--- Two lines rather than one very long one
+   //--- Two lines rather than one very long one
    PrintFormat("%s leg %d/%d | Lot: %.2f | Entry: %.*f | Mean target: %.*f | Stop: %.*f",
                (direction == 1) ? "BUY" : "SELL",
                basket.positionCount + 1, InpMaxOpenPositions, lotSize,

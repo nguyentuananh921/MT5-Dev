@@ -204,18 +204,20 @@ void ManageGridPositions(double ask, double bid){
 //--- Description: Calculates the weighted average entry price (breakeven)
 //---              of all open positions (assumed to be in the same direction).
 //+------------------------------------------------------------------+
-double CalculateWeightedBreakevenPrice(){
+double CalculateWeightedBreakevenPrice()
+ {
    double totalCost = 0;
    double totalVolume = 0;
    int posType = -1;
    //--- Determine the type from the first position
-   for(int i = 0; i < PositionsTotal(); i++){
+   for(int i = 0; i < PositionsTotal(); i++)
+    {
       ulong ticket = PositionGetTicket(i);
       if(PositionSelectByTicket(ticket)){
          posType = (int)PositionGetInteger(POSITION_TYPE);
          break;
       }
-   }
+    }
    //--- Sum the cost and volume for positions matching the type
    for(int i = 0; i < PositionsTotal(); i++){
       ulong ticket = PositionGetTicket(i);
@@ -232,7 +234,7 @@ double CalculateWeightedBreakevenPrice(){
       return(totalCost / totalVolume);
    else
       return(0);
-}
+ }
   
 //+------------------------------------------------------------------+
 //--- Function: CheckBreakevenClose
@@ -241,7 +243,8 @@ double CalculateWeightedBreakevenPrice(){
 //---              current price has moved the specified points in a profitable
 //---              direction relative to breakeven. If so, closes all positions.
 //+------------------------------------------------------------------+
-void CheckBreakevenClose(double ask, double bid){
+void CheckBreakevenClose(double ask, double bid)
+ {
    //--- Ensure we have more than one position (grid positions)
    if(PositionsTotal() <= 1)
       return;
@@ -273,7 +276,7 @@ void CheckBreakevenClose(double ask, double bid){
          CloseAllPositions();
       }
    }
-}
+ }
   
 //+------------------------------------------------------------------+
 //--- Function: CloseAllPositions

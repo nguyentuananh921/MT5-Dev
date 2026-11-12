@@ -1,0 +1,107 @@
+//+------------------------------------------------------------------+
+//|                                             CommonDELib.mqh      |
+//|                         Copyright 2020, MetaQuotes Software Corp.|
+//| Lib https://www.mql5.com/en/articles/14710                       |
+//+------------------------------------------------------------------+
+//--- The functions that many classes use. They come from V3 one by one when a class asks for them
+#ifndef __COMMON_DELIB_MQH__
+#define __COMMON_DELIB_MQH__
+ #include "..\..\Entities\Defines\CommonDefines.mqh"
+ #include "..\Message\Message.mqh"
+ //+------------------------------------------------------------------+
+ //| Return time with milliseconds                                    |
+ //+------------------------------------------------------------------+
+ string TimeMSCtoString(const long time_msc, int flags=TIME_DATE|TIME_MINUTES|TIME_SECONDS)
+  {
+    return TimeToString(time_msc/1000,flags)+"."+IntegerToString(time_msc%1000,3,'0');
+  }
+ //+------------------------------------------------------------------+
+ //| Return the comparison type description (V3)                      |
+ //+------------------------------------------------------------------+
+ string ComparisonTypeDescription(const ENUM_COMPARER_TYPE type)
+  {
+   switch((int)type)
+     {
+      case EQUAL         : return " == ";
+      case MORE          : return " > ";
+      case LESS          : return " < ";
+      case EQUAL_OR_MORE : return " >= ";
+      case EQUAL_OR_LESS : return " <= ";
+      default            : return " != ";
+     }
+  }
+ bool IsEqualMqlParamArrays(const MqlParam &array1[], const MqlParam &array2[])
+  {
+    int total = ArraySize(array1);
+    int size  = ArraySize(array2);
+    if(total != size)
+        return false;
+    for(int i = 0; i < total; i++)
+      {
+        if(!IsEqualMqlParams(array1[i], array2[i]))
+            return false;
+      }
+    return true;
+  }
+ bool IsEqualMqlParams(const MqlParam &struct1, const MqlParam &struct2)
+    {
+      if(struct1.type != struct2.type)
+          return false;
+      switch(struct1.type)
+        {
+          case TYPE_BOOL    : case TYPE_CHAR : case TYPE_UCHAR : case TYPE_SHORT    : case TYPE_USHORT  :
+          case TYPE_COLOR   : case TYPE_INT  : case TYPE_UINT  : case TYPE_DATETIME : case TYPE_LONG    :
+          case TYPE_ULONG   : return(struct1.integer_value == struct2.integer_value);
+          case TYPE_FLOAT   :
+          case TYPE_DOUBLE  : return(NormalizeDouble(struct1.double_value - struct2.double_value, DBL_DIG) == 0);
+          case TYPE_STRING  : return(struct1.string_value == struct2.string_value);
+          default           : return false;
+        }
+    }
+ //+------------------------------------------------------------------+
+ //| Return week day names (V3)                                       |
+ //+------------------------------------------------------------------+
+ string DayOfWeekDescription(const ENUM_DAY_OF_WEEK day_of_week)
+  {
+   return
+     (
+      day_of_week==SUNDAY    ? CMessage::Text(MSG_LIB_TEXT_SUNDAY)    :
+      day_of_week==MONDAY    ? CMessage::Text(MSG_LIB_TEXT_MONDAY)    :
+      day_of_week==TUESDAY   ? CMessage::Text(MSG_LIB_TEXT_TUESDAY)   :
+      day_of_week==WEDNESDAY ? CMessage::Text(MSG_LIB_TEXT_WEDNESDAY) :
+      day_of_week==THURSDAY  ? CMessage::Text(MSG_LIB_TEXT_THURSDAY)  :
+      day_of_week==FRIDAY    ? CMessage::Text(MSG_LIB_TEXT_FRIDAY)    :
+      day_of_week==SATURDAY  ? CMessage::Text(MSG_LIB_TEXT_SATURDAY)  :
+      EnumToString(day_of_week)
+     );
+  }
+ //+------------------------------------------------------------------+
+ //| The sides (1 Buy, 2 Sell) of what was found on the bar `bar`: 0  |
+ //| when nothing was found on it                                     |
+ //+------------------------------------------------------------------+
+ int NewSidesOfBar(const long &times[],const long &sides[],const datetime bar,const long buy_side)
+  {
+   int bits=0;
+   for(int row=0;row<ArraySize(times);row++)
+      if(times[row]==(long)bar)
+         bits|=(sides[row]==buy_side ? 1 : 2);
+   return bits;
+  }
+ //+------------------------------------------------------------------+
+ //| The candles of `times` that are not in `found` yet go to it       |
+ //+------------------------------------------------------------------+
+ void AddFoundTimes(long &found[],const long &times[])
+  {
+   for(int row=0;row<ArraySize(times);row++)
+     {
+      bool there=false;
+      for(int k=0;k<ArraySize(found) && !there;k++)
+         there=(found[k]==times[row]);
+      if(there)
+         continue;
+      ArrayResize(found,ArraySize(found)+1);
+      found[ArraySize(found)-1]=times[row];
+     }
+  }
+ #define ALERT_SOUND_GAP_MS 2000   // a sound is not played while the last one plays: CGUIPannel::OnTimerEvent
+#endif // __COMMON_DELIB_MQH__

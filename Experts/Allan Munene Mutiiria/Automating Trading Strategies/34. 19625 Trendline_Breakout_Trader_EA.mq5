@@ -13,29 +13,33 @@ CTrade obj_Trade;          //--- Instantiate trade object
 //+------------------------------------------------------------------+
 //| Breakout definition enumeration                                  |
 //+------------------------------------------------------------------+
-enum ENUM_BREAKOUT_TYPE {
+enum ENUM_BREAKOUT_TYPE
+ {
    BREAKOUT_CLOSE = 0,      // Breakout on close above/below line
    BREAKOUT_CANDLE = 1      // Breakout on entire candle above/below line
-};
+ };
 //+------------------------------------------------------------------+
 //| Swing point structure                                            |
 //+------------------------------------------------------------------+
-struct Swing {     //--- Define swing point structure
+struct Swing
+ {     //--- Define swing point structure
    datetime time;  //--- Store swing time
    double price;   //--- Store swing price
-};
+ };
 //+------------------------------------------------------------------+
 //| Starting point structure                                         |
 //+------------------------------------------------------------------+
-struct StartingPoint { //--- Define starting point structure
+struct StartingPoint
+ { //--- Define starting point structure
    datetime time;      //--- Store starting point time
    double price;       //--- Store starting point price
    bool is_support;    //--- Indicate support/resistance flag
-};
+ };
 //+------------------------------------------------------------------+
 //| Trendline storage structure                                      |
 //+------------------------------------------------------------------+
-struct TrendlineInfo {      //--- Define trendline info structure
+struct TrendlineInfo
+ {      //--- Define trendline info structure
    string name;             //--- Store trendline name
    datetime start_time;     //--- Store start time
    datetime end_time;       //--- Store end time
@@ -47,7 +51,7 @@ struct TrendlineInfo {      //--- Define trendline info structure
    datetime creation_time;  //--- Store creation time
    int touch_indices[];     //--- Store touch indices array
    bool is_signaled;        //--- Indicate signal flag
-};
+ };
 //+------------------------------------------------------------------+
 //| Forward declarations                                             |
 //+------------------------------------------------------------------+
@@ -63,69 +67,73 @@ double CalculateRSquared(const datetime &times[], const double &prices[], int n,
 //+------------------------------------------------------------------+
 //| Inputs                                                           |
 //+------------------------------------------------------------------+
-input ENUM_BREAKOUT_TYPE BreakoutType = BREAKOUT_CLOSE; // Breakout Definition
-input int LookbackBars = 200;                           // Set bars for swing detection lookback
-input double TouchTolerance = 10.0;                     // Set tolerance for touch points (points)
-input int MinTouches = 3;                               // Set minimum touch points for valid trendline
-input double PenetrationTolerance = 5.0;                // Set allowance for bar penetration (points)
-input int ExtensionBars = 100;                          // Set bars to extend trendline right
-input int MinBarSpacing = 10;                           // Set minimum bar spacing between touches
-input double inpLot = 0.01;                             // Set lot size
-input double inpSLPoints = 100.0;                       // Set stop loss (points)
-input double inpRRRatio = 1.1;                          // Set risk:reward ratio
-input double MinAngle = 1.0;                            // Set minimum inclination angle (degrees)
-input double MaxAngle = 89.0;                           // Set maximum inclination angle (degrees)
-input double MinRSquared = 0.8;                         // Minimum R-squared for trendline acceptance
-input bool DeleteExpiredObjects = false;                // Enable deletion of expired/broken objects
-input bool EnableTradingSignals = true;                 // Enable buy/sell signals and trades
-input bool DrawTouchArrows = true;                      // Enable drawing arrows at touch points
-input bool DrawLabels = true;                           // Enable drawing trendline/point labels
-input color SupportLineColor = clrGreen;                // Set color for support trendlines
-input color ResistanceLineColor = clrRed;               // Set color for resistance trendlines
+   input ENUM_BREAKOUT_TYPE BreakoutType = BREAKOUT_CLOSE; // Breakout Definition
+   input int LookbackBars = 200;                           // Set bars for swing detection lookback
+   input double TouchTolerance = 10.0;                     // Set tolerance for touch points (points)
+   input int MinTouches = 3;                               // Set minimum touch points for valid trendline
+   input double PenetrationTolerance = 5.0;                // Set allowance for bar penetration (points)
+   input int ExtensionBars = 100;                          // Set bars to extend trendline right
+   input int MinBarSpacing = 10;                           // Set minimum bar spacing between touches
+   input double inpLot = 0.01;                             // Set lot size
+   input double inpSLPoints = 100.0;                       // Set stop loss (points)
+   input double inpRRRatio = 1.1;                          // Set risk:reward ratio
+   input double MinAngle = 1.0;                            // Set minimum inclination angle (degrees)
+   input double MaxAngle = 89.0;                           // Set maximum inclination angle (degrees)
+   input double MinRSquared = 0.8;                         // Minimum R-squared for trendline acceptance
+   input bool DeleteExpiredObjects = false;                // Enable deletion of expired/broken objects
+   input bool EnableTradingSignals = true;                 // Enable buy/sell signals and trades
+   input bool DrawTouchArrows = true;                      // Enable drawing arrows at touch points
+   input bool DrawLabels = true;                           // Enable drawing trendline/point labels
+   input color SupportLineColor = clrGreen;                // Set color for support trendlines
+   input color ResistanceLineColor = clrRed;               // Set color for resistance trendlines
 //+------------------------------------------------------------------+
 //| Global variables                                                 |
 //+------------------------------------------------------------------+
-Swing swingLows[];              //--- Store swing lows
-int numLows = 0;                //--- Track number of swing lows
-Swing swingHighs[];             //--- Store swing highs
-int numHighs = 0;               //--- Track number of swing highs
-TrendlineInfo trendlines[];     //--- Store trendlines
-int numTrendlines = 0;          //--- Track number of trendlines
-StartingPoint startingPoints[]; //--- Store used starting points
-int numStartingPoints = 0;      //--- Track number of starting points
+   Swing swingLows[];              //--- Store swing lows
+   int numLows = 0;                //--- Track number of swing lows
+   Swing swingHighs[];             //--- Store swing highs
+   int numHighs = 0;               //--- Track number of swing highs
+   TrendlineInfo trendlines[];     //--- Store trendlines
+   int numTrendlines = 0;          //--- Track number of trendlines
+   StartingPoint startingPoints[]; //--- Store used starting points
+   int numStartingPoints = 0;      //--- Track number of starting points
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit() {
+int OnInit()
+ {
    ArrayResize(trendlines, 0);     //--- Resize trendlines array
    numTrendlines = 0;              //--- Reset trendlines count
    ArrayResize(startingPoints, 0); //--- Resize starting points array
    numStartingPoints = 0;          //--- Reset starting points count
    return(INIT_SUCCEEDED);         //--- Return success
-}
+ }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason) {
+void OnDeinit(const int reason)
+ {
    ArrayResize(trendlines, 0);     //--- Resize trendlines array
    numTrendlines = 0;              //--- Reset trendlines count
    ArrayResize(startingPoints, 0); //--- Resize starting points array
    numStartingPoints = 0;          //--- Reset starting points count
-}
+ }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
-void OnTick() {
+void OnTick()
+ {
    if (!IsNewBar()) return;      //--- Exit if not new bar
    DetectSwings();               //--- Detect swings
    UpdateTrendlines();           //--- Update trendlines
    FindAndDrawTrendlines(true);  //--- Find/draw support trendlines
    FindAndDrawTrendlines(false); //--- Find/draw resistance trendlines
-}
+ }
 //+------------------------------------------------------------------+
 //| Check for new bar                                                |
 //+------------------------------------------------------------------+
-bool IsNewBar() {
+bool IsNewBar()
+ {
    static datetime lastTime = 0;                      //--- Store last bar time
    datetime currentTime = iTime(_Symbol, _Period, 0); //--- Get current bar time
    if (lastTime != currentTime) {                     //--- Check for new bar
@@ -133,11 +141,12 @@ bool IsNewBar() {
       return true;                                    //--- Indicate new bar
    }
    return false;                                      //--- Indicate no new bar
-}
+ }
 //+------------------------------------------------------------------+
 //| Sort swings by time (ascending, oldest first)                    |
 //+------------------------------------------------------------------+
-void SortSwings(Swing &swings[], int count) {
+void SortSwings(Swing &swings[], int count)
+ {
    for (int i = 0; i < count - 1; i++) {            //--- Iterate through swings
       for (int j = 0; j < count - i - 1; j++) {     //--- Compare adjacent swings
          if (swings[j].time > swings[j + 1].time) { //--- Check time order
@@ -147,11 +156,12 @@ void SortSwings(Swing &swings[], int count) {
          }
       }
    }
-}
+ }
 //+------------------------------------------------------------------+
 //| Detect swing highs and lows                                      |
 //+------------------------------------------------------------------+
-void DetectSwings() {
+void DetectSwings()
+ {
    numLows = 0;                                              //--- Reset lows count
    ArrayResize(swingLows, 0);                                //--- Resize lows array
    numHighs = 0;                                             //--- Reset highs count
@@ -192,11 +202,12 @@ void DetectSwings() {
    }
    if (numLows > 0) SortSwings(swingLows, numLows);     //--- Sort swing lows
    if (numHighs > 0) SortSwings(swingHighs, numHighs);  //--- Sort swing highs
-}
+ }
 //+------------------------------------------------------------------+
 //| Calculate visual inclination angle                               |
 //+------------------------------------------------------------------+
-double CalculateAngle(datetime time1, double price1, datetime time2, double price2) {
+double CalculateAngle(datetime time1, double price1, datetime time2, double price2)
+ {
    int x1, y1, x2, y2; //--- Declare coordinate variables
    if (!ChartTimePriceToXY(0, 0, time1, price1, x1, y1)) return 0.0; //--- Convert time1/price1 to XY
    if (!ChartTimePriceToXY(0, 0, time2, price2, x2, y2)) return 0.0; //--- Convert time2/price2 to XY
@@ -205,11 +216,12 @@ double CalculateAngle(datetime time1, double price1, datetime time2, double pric
    if (dx == 0.0) return (dy > 0.0 ? -90.0 : 90.0);                  //--- Handle vertical line case
    double angle = MathArctan(-dy / dx) * 180.0 / M_PI;               //--- Calculate angle in degrees
    return angle;                                                     //--- Return angle
-}
+ }
 //+------------------------------------------------------------------+
 //| Validate trendline                                               |
 //+------------------------------------------------------------------+
-bool ValidateTrendline(bool isSupport, datetime start_time, datetime ref_time, double ref_price, double slope, double tolerance_pen) {
+bool ValidateTrendline(bool isSupport, datetime start_time, datetime ref_time, double ref_price, double slope, double tolerance_pen)
+ {
    int bar_start = iBarShift(_Symbol, _Period, start_time); //--- Get start bar index
    if (bar_start < 0) return false;                         //--- Check invalid bar index
    for (int bar = bar_start; bar >= 0; bar--) {             //--- Iterate through bars
@@ -225,11 +237,12 @@ bool ValidateTrendline(bool isSupport, datetime start_time, datetime ref_time, d
       }
    }
    return true; //--- Return valid
-}
+ }
 //+------------------------------------------------------------------+
 //| Calculate R-squared for goodness of fit                          |
 //+------------------------------------------------------------------+
-double CalculateRSquared(const datetime &times[], const double &prices[], int n, double slope, double intercept) {
+double CalculateRSquared(const datetime &times[], const double &prices[], int n, double slope, double intercept)
+ {
    double sum_y = 0.0;                             //--- Initialize sum of y
    for (int k = 0; k < n; k++) {                   //--- Iterate through points
       sum_y += prices[k];                          //--- Accumulate y
@@ -245,22 +258,24 @@ double CalculateRSquared(const datetime &times[], const double &prices[], int n,
    }
    if (ss_tot == 0.0) return 1.0;                  //--- Handle constant y case
    return 1.0 - ss_res / ss_tot;                   //--- Calculate and return R-squared
-}
+ }
 //+------------------------------------------------------------------+
 //| Check if starting point is already used                          |
 //+------------------------------------------------------------------+
-bool IsStartingPointUsed(datetime time, double price, bool is_support) {
+bool IsStartingPointUsed(datetime time, double price, bool is_support)
+ {
    for (int i = 0; i < numStartingPoints; i++) { //--- Iterate through starting points
       if (startingPoints[i].time == time && MathAbs(startingPoints[i].price - price) < TouchTolerance * _Point && startingPoints[i].is_support == is_support) { //--- Check match
          return true; //--- Return used
       }
    }
    return false; //--- Return not used
-}
+ }
 //+------------------------------------------------------------------+
 //| Remove trendline from storage and optionally chart objects       |
 //+------------------------------------------------------------------+
-void RemoveTrendlineFromStorage(int index) {
+void RemoveTrendlineFromStorage(int index)
+ {
    if (index < 0 || index >= numTrendlines) return;             //--- Check valid index
    Print("Removing trendline from storage: ", trendlines[index].name); //--- Log removal
    if (DeleteExpiredObjects) {                                  //--- Check deletion flag
@@ -283,11 +298,12 @@ void RemoveTrendlineFromStorage(int index) {
    }
    ArrayResize(trendlines, numTrendlines - 1);                  //--- Resize trendlines array
    numTrendlines--;                                             //--- Decrement trendlines count
-}
+ }
 //+------------------------------------------------------------------+
 //| Update trendlines and check for signals                          |
 //+------------------------------------------------------------------+
-void UpdateTrendlines() {
+void UpdateTrendlines()
+ {
    datetime current_time = iTime(_Symbol, _Period, 0);     //--- Get current time
    double pointValue = _Point;                             //--- Get point value
    double pen_tolerance = PenetrationTolerance * pointValue; //--- Calculate penetration tolerance
@@ -393,24 +409,27 @@ void UpdateTrendlines() {
          RemoveTrendlineFromStorage(i);       //--- Remove trendline
       }
    }
-}
+ }
 //+------------------------------------------------------------------+
 //| Find and draw trendlines if no active one exists                 |
 //+------------------------------------------------------------------+
-void FindAndDrawTrendlines(bool isSupport) {
+void FindAndDrawTrendlines(bool isSupport)
+ {
    bool has_active = false;                        //--- Initialize active flag
-   for (int i = 0; i < numTrendlines; i++) {       //--- Iterate through trendlines
+   for (int i = 0; i < numTrendlines; i++)
+    {       //--- Iterate through trendlines
       if (trendlines[i].is_support == isSupport) { //--- Check type match
          has_active = true;                        //--- Set active flag
          break;                                    //--- Exit loop
       }
-   }
+    }
    if (has_active) return;                          //--- Exit if active trendline exists
    Swing swings[];                                  //--- Initialize swings array
    int numSwings;                                   //--- Initialize swings count
    color lineColor;                                 //--- Initialize line color
    string prefix;                                   //--- Initialize prefix
-   if (isSupport) {                                 //--- Handle support case
+   if (isSupport)
+    {                                 //--- Handle support case
       numSwings = numLows;                          //--- Set number of lows
       ArrayResize(swings, numSwings);               //--- Resize swings array
       for (int i = 0; i < numSwings; i++) {         //--- Iterate through lows
@@ -419,7 +438,9 @@ void FindAndDrawTrendlines(bool isSupport) {
       }
       lineColor = SupportLineColor;                 //--- Set support line color
       prefix = "Trendline_Support_";                //--- Set support prefix
-   } else {                                         //--- Handle resistance case
+    } 
+   else
+    {                                         //--- Handle resistance case
       numSwings = numHighs;                         //--- Set number of highs
       ArrayResize(swings, numSwings);               //--- Resize swings array
       for (int i = 0; i < numSwings; i++) {         //--- Iterate through highs
@@ -428,7 +449,7 @@ void FindAndDrawTrendlines(bool isSupport) {
       }
       lineColor = ResistanceLineColor;              //--- Set resistance line color
       prefix = "Trendline_Resistance_";             //--- Set resistance prefix
-   }
+    }
    if (numSwings < 2) return;                       //--- Exit if insufficient swings
    double pointValue = _Point;                      //--- Get point value
    double touch_tolerance = TouchTolerance * pointValue; //--- Calculate touch tolerance
@@ -440,8 +461,10 @@ void FindAndDrawTrendlines(bool isSupport) {
    double best_slope = 0.0;                         //--- Initialize best slope
    double best_intercept = 0.0;                     //--- Initialize best intercept
    datetime best_min_time = 0;                      //--- Initialize best min time
-   for (int i = 0; i < numSwings - 1; i++) {        //--- Iterate through first points
-      for (int j = i + 1; j < numSwings; j++) {     //--- Iterate through second points
+   for (int i = 0; i < numSwings - 1; i++)
+    {        //--- Iterate through first points
+      for (int j = i + 1; j < numSwings; j++)
+       {     //--- Iterate through second points
          datetime time1 = swings[i].time;           //--- Get first time
          double price1 = swings[i].price;           //--- Get first price
          datetime time2 = swings[j].time;           //--- Get second time
@@ -458,7 +481,8 @@ void FindAndDrawTrendlines(bool isSupport) {
          ArrayResize(touch_indices, touches + 1);   //--- Add second index
          touch_indices[touches] = j;                //--- Set second index
          touches++;                                 //--- Increment touches
-         for (int k = 0; k < numSwings; k++) {      //--- Iterate through swings
+         for (int k = 0; k < numSwings; k++)
+          {      //--- Iterate through swings
             if (k == i || k == j) continue;         //--- Skip used indices
             datetime tk = swings[k].time;           //--- Get swing time
             double dk = (double)(tk - time1);       //--- Calculate time difference
@@ -469,11 +493,13 @@ void FindAndDrawTrendlines(bool isSupport) {
                touch_indices[touches] = k;          //--- Set index
                touches++;                           //--- Increment touches
             }
-         }
-         if (touches >= MinTouches) {               //--- Check minimum touches
+          }
+         if (touches >= MinTouches)
+          {               //--- Check minimum touches
             ArraySort(touch_indices);               //--- Sort touch indices
             bool valid_spacing = true;              //--- Initialize spacing flag
-            for (int m = 0; m < touches - 1; m++) { //--- Iterate through touches
+            for (int m = 0; m < touches - 1; m++)
+             { //--- Iterate through touches
                int idx1 = touch_indices[m];         //--- Get first index
                int idx2 = touch_indices[m + 1];     //--- Get second index
                int bar1 = iBarShift(_Symbol, _Period, swings[idx1].time); //--- Get first bar
@@ -483,21 +509,24 @@ void FindAndDrawTrendlines(bool isSupport) {
                   valid_spacing = false;            //--- Mark invalid spacing
                   break;                            //--- Exit loop
                }
-            }
-            if (valid_spacing) {                        //--- Check valid spacing
+             }
+            if (valid_spacing)
+             {                        //--- Check valid spacing
                datetime touch_times[];                  //--- Initialize touch times
                double touch_prices[];                   //--- Initialize touch prices
                ArrayResize(touch_times, touches);       //--- Resize times array
                ArrayResize(touch_prices, touches);      //--- Resize prices array
-               for (int m = 0; m < touches; m++) {      //--- Iterate through touches
+               for (int m = 0; m < touches; m++)
+                {      //--- Iterate through touches
                   int idx = touch_indices[m];           //--- Get index
                   touch_times[m] = swings[idx].time;    //--- Set time
                   touch_prices[m] = swings[idx].price;  //--- Set price
-               }
+                }
                double slope = initial_slope;            //--- Use initial slope from two points
                double intercept = price1 - slope * (double)time1; //--- Calculate intercept
                double rsquared = CalculateRSquared(touch_times, touch_prices, touches, slope, intercept); //--- Calculate R-squared
-               if (rsquared >= MinRSquared) {           //--- Check minimum R-squared
+               if (rsquared >= MinRSquared)
+                {           //--- Check minimum R-squared
                   int adjusted_touch_indices[];         //--- Initialize adjusted indices
                   ArrayResize(adjusted_touch_indices, touches); //--- Resize to current touches
                   ArrayCopy(adjusted_touch_indices, touch_indices); //--- Copy indices
@@ -524,15 +553,16 @@ void FindAndDrawTrendlines(bool isSupport) {
                         }
                      }
                   }
-               }
-            }
-         }
-      }
-   }
-   if (max_touches < MinTouches) {                        //--- Check insufficient touches
+                }
+             }
+          }
+       }
+    }
+   if (max_touches < MinTouches)
+    {                        //--- Check insufficient touches
       string type = isSupport ? "Support" : "Resistance"; //--- Set type string
       return;                                             //--- Exit function
-   }
+    }
    int touch_indices[];                                   //--- Initialize touch indices
    ArrayResize(touch_indices, max_touches);               //--- Resize touch indices
    ArrayCopy(touch_indices, best_touch_indices);          //--- Copy best indices
@@ -543,14 +573,16 @@ void FindAndDrawTrendlines(bool isSupport) {
    double price_max = best_intercept + best_slope * (double)max_time; //--- Calculate max price
    datetime start_time_check = min_time;                  //--- Set start time check
    double start_price_check = price_min;                  //--- Set start price check (approximate if not exact)
-   if (IsStartingPointUsed(start_time_check, start_price_check, isSupport)) { //--- Check used starting point
+   if (IsStartingPointUsed(start_time_check, start_price_check, isSupport))
+    { //--- Check used starting point
       return; //--- Skip if used
-   }
+    }
    datetime time_end = iTime(_Symbol, _Period, 0) + PeriodSeconds(_Period) * ExtensionBars; //--- Calculate end time
    double dk_end = (double)(time_end - min_time);         //--- Calculate end time difference
    double price_end = price_min + best_slope * dk_end;    //--- Calculate end price
    string unique_name = prefix + TimeToString(TimeCurrent(), TIME_DATE|TIME_MINUTES|TIME_SECONDS); //--- Generate unique name
-   if (ObjectFind(0, unique_name) < 0) {                  //--- Check if trendline exists
+   if (ObjectFind(0, unique_name) < 0)
+    {                  //--- Check if trendline exists
       ObjectCreate(0, unique_name, OBJ_TREND, 0, min_time, price_min, time_end, price_end); //--- Create trendline
       ObjectSetInteger(0, unique_name, OBJPROP_COLOR, lineColor); //--- Set color
       ObjectSetInteger(0, unique_name, OBJPROP_STYLE, STYLE_SOLID); //--- Set style
@@ -558,7 +590,7 @@ void FindAndDrawTrendlines(bool isSupport) {
       ObjectSetInteger(0, unique_name, OBJPROP_RAY_RIGHT, false); //--- Disable right ray
       ObjectSetInteger(0, unique_name, OBJPROP_RAY_LEFT, false); //--- Disable left ray
       ObjectSetInteger(0, unique_name, OBJPROP_BACK, false); //--- Set to foreground
-   }
+    }
    ArrayResize(trendlines, numTrendlines + 1);               //--- Resize trendlines array
    trendlines[numTrendlines].name = unique_name;             //--- Set trendline name
    trendlines[numTrendlines].start_time = min_time;          //--- Set start time
@@ -578,7 +610,8 @@ void FindAndDrawTrendlines(bool isSupport) {
    startingPoints[numStartingPoints].price = start_price_check; //--- Set starting point price
    startingPoints[numStartingPoints].is_support = isSupport; //--- Set starting point type
    numStartingPoints++;                                      //--- Increment starting points count
-   if (DrawTouchArrows) {                                    //--- Check draw arrows
+   if (DrawTouchArrows)
+    {                                    //--- Check draw arrows
       for (int m = 0; m < touches; m++) {                    //--- Iterate through touches
          int idx = touch_indices[m];                         //--- Get touch index
          datetime tk_time = swings[idx].time;                //--- Get touch time
@@ -593,11 +626,12 @@ void FindAndDrawTrendlines(bool isSupport) {
             ObjectSetInteger(0, arrow_name, OBJPROP_BACK, false); //--- Set to foreground
          }
       }
-   }
+    }
    double angle = CalculateAngle(min_time, price_min, max_time, price_max); //--- Calculate angle
    string type = isSupport ? "Support" : "Resistance"; //--- Set type string
    Print(type + " Trendline " + unique_name + " drawn with " + IntegerToString(touches) + " touches. Inclination angle: " + DoubleToString(angle, 2) + " degrees."); //--- Log trendline
-   if (DrawLabels) {                                            //--- Check draw labels
+   if (DrawLabels)
+    {                                            //--- Check draw labels
       datetime mid_time = min_time + (max_time - min_time) / 2; //--- Calculate mid time
       double dk_mid = (double)(mid_time - min_time);            //--- Calculate mid time difference
       double mid_price = price_min + best_slope * dk_mid;       //--- Calculate mid price
@@ -606,7 +640,8 @@ void FindAndDrawTrendlines(bool isSupport) {
       int label_anchor = isSupport ? ANCHOR_TOP : ANCHOR_BOTTOM;//--- Set label anchor
       string label_text = type + " Trendline";                  //--- Set label text
       string label_name = unique_name + "_label";               //--- Generate label name
-      if (ObjectFind(0, label_name) < 0) {                      //--- Check if label exists
+      if (ObjectFind(0, label_name) < 0)
+       {                      //--- Check if label exists
          ObjectCreate(0, label_name, OBJ_TEXT, 0, mid_time, label_price); //--- Create label
          ObjectSetString(0, label_name, OBJPROP_TEXT, label_text); //--- Set text
          ObjectSetInteger(0, label_name, OBJPROP_COLOR, clrBlack); //--- Set color
@@ -614,10 +649,11 @@ void FindAndDrawTrendlines(bool isSupport) {
          ObjectSetInteger(0, label_name, OBJPROP_ANCHOR, label_anchor); //--- Set anchor
          ObjectSetDouble(0, label_name, OBJPROP_ANGLE, angle);  //--- Set angle
          ObjectSetInteger(0, label_name, OBJPROP_BACK, false);  //--- Set to foreground
-      }
+       }
       color point_label_color = isSupport ? clrSaddleBrown : clrDarkGoldenrod; //--- Set point label color
       double point_text_offset = 20.0 * _Point;    //--- Set point text offset
-      for (int m = 0; m < touches; m++) {          //--- Iterate through touches
+      for (int m = 0; m < touches; m++)
+       {          //--- Iterate through touches
          int idx = touch_indices[m];               //--- Get touch index
          datetime tk_time = swings[idx].time;      //--- Get touch time
          double tk_price = swings[idx].price;      //--- Get touch price
@@ -641,7 +677,7 @@ void FindAndDrawTrendlines(bool isSupport) {
             ObjectSetDouble(0, text_name, OBJPROP_ANGLE, 0); //--- Set angle
             ObjectSetInteger(0, text_name, OBJPROP_BACK, false); //--- Set to foreground
          }
-      }
-   }
-}
+       }
+    }
+ }
 //+------------------------------------------------------------------+

@@ -14,7 +14,8 @@
 //+------------------------------------------------------------------+
 //| Input Parameters Structure                                       | //--- Define a structure for trading parameters
 //+------------------------------------------------------------------+
-struct TradingParameters {
+struct TradingParameters 
+ {
    string            symbols;                  //--- Store comma-separated symbol list
    int               per_signal_cci;           //--- Set period for CCI signal
    int               per_trend_cci;            //--- Set period for CCI trend
@@ -34,12 +35,13 @@ struct TradingParameters {
    string            comment;                  //--- Store trade comment
    int               tester_max_balance;       //--- Set tester balance limit
    bool              debug_mode;               //--- Enable debug mode
-};
+ };
 
 //+------------------------------------------------------------------+
 //| Symbol Data Structure                                            | //--- Define a structure for symbol-specific data
 //+------------------------------------------------------------------+
-struct SymbolData {
+struct SymbolData 
+ {
    string            name;                     //--- Store symbol name
    datetime          last_bar_time;            //--- Track last bar timestamp
    int               cci_signal_handle;        //--- Hold CCI signal indicator handle
@@ -50,13 +52,14 @@ struct SymbolData {
    double            cci_trend_data[];         //--- Store CCI trend data
    double            ao_signal_data[];         //--- Store AO signal data
    double            ao_trend_data[];          //--- Store AO trend data
-};
+ };
 
 //+------------------------------------------------------------------+
 //| Trading Strategy Class                                           | //--- Implement a class for trading strategy logic
 //+------------------------------------------------------------------+
-class CTradingStrategy {
-private:
+class CTradingStrategy
+ {
+  private:
    CTrade            m_trade;                  //--- Initialize trade object for trading operations
    TradingParameters m_params;                 //--- Store trading parameters
    SymbolData        m_symbols[];             //--- Store array of symbol data
@@ -67,31 +70,38 @@ private:
    const int         CCI_TREND_BUY_VALUE;      //--- Define constant for CCI trend buy threshold
    const int         CCI_TREND_SELL_VALUE;     //--- Define constant for CCI trend sell threshold
    
-   void PrintDebug(string text) {              //--- Define method to print debug messages
-      if(m_params.debug_mode && !MQLInfoInteger(MQL_OPTIMIZATION)) { //--- Check debug mode and optimization status
+   void PrintDebug(string text)
+    {              //--- Define method to print debug messages
+      if(m_params.debug_mode && !MQLInfoInteger(MQL_OPTIMIZATION))
+       { //--- Check debug mode and optimization status
          Print(text);                          //--- Output debug message
-      }
-   }
+       }
+    }
    
-   void PrintMessage(string text) {            //--- Define method to print informational messages
-      if(!MQLInfoInteger(MQL_OPTIMIZATION)) {  //--- Check if not in optimization mode
+   void PrintMessage(string text)
+     {            //--- Define method to print informational messages
+      if(!MQLInfoInteger(MQL_OPTIMIZATION))
+       {  //--- Check if not in optimization mode
          Print(text);                          //--- Output message
-      }
-   }
+       }
+    }
    
-   void PrepareSymbolsList() {                 //--- Define method to prepare symbol list
+   void PrepareSymbolsList()
+    {                 //--- Define method to prepare symbol list
       string symbols_array[];                  //--- Initialize temporary array for symbols
       ushort sep = StringGetCharacter(",", 0); //--- Get comma separator character
       m_array_size = StringSplit(m_params.symbols, sep, symbols_array); //--- Split symbols string into array
       ArrayResize(m_symbols, m_array_size);    //--- Resize symbol data array
-      for(int i = 0; i < m_array_size; i++) {  //--- Iterate through symbols
+      for(int i = 0; i < m_array_size; i++)
+       {  //--- Iterate through symbols
          m_symbols[i].name = symbols_array[i]; //--- Set symbol name
          m_symbols[i].last_bar_time = 0;       //--- Initialize last bar time
          SymbolSelect(m_symbols[i].name, true); //--- Ensure symbol is in market watch
-      }
-   }
-   
-   bool InitializeIndicators(int index) {      //--- Define method to initialize indicators
+       }
+    }
+   //--- Define method to initialize indicators
+   bool InitializeIndicators(int index)
+    {      
       m_symbols[index].cci_signal_handle = iCCI(m_symbols[index].name, m_params.tf_signal, m_params.per_signal_cci, m_params.price_cci); //--- Create CCI signal indicator
       if(m_symbols[index].cci_signal_handle == INVALID_HANDLE) { //--- Check for invalid handle
          Print("INITIALIZATION OF CCI SIGNAL FAILED: ", m_symbols[index].name); //--- Log error
@@ -118,8 +128,9 @@ private:
       ArraySetAsSeries(m_symbols[index].ao_trend_data, true); //--- Set AO trend data as series
       return true;                             //--- Return success
    }
-   
-   bool UpdateIndicatorData(int index) {       //--- Define method to update indicator data
+   //--- Define method to update indicator data
+   bool UpdateIndicatorData(int index)
+    {       
       if(CopyBuffer(m_symbols[index].cci_signal_handle, 0, 0, 3, m_symbols[index].cci_signal_data) < 3) { //--- Copy CCI signal data
          Print("UNABLE TO COPY CCI SIGNAL DATA: ", m_symbols[index].name); //--- Log error
          return false;                         //--- Return failure
@@ -137,9 +148,9 @@ private:
          return false;                         //--- Return failure
       }
       return true;                             //--- Return success
-   }
-   
-   int CountOrders(string symbol, int magic, ENUM_POSITION_TYPE type) { //--- Define method to count orders
+    }   
+   int CountOrders(string symbol, int magic, ENUM_POSITION_TYPE type)
+    { //--- Define method to count orders
       int count = 0;                           //--- Initialize order counter
       for(int i = PositionsTotal() - 1; i >= 0; i--) { //--- Iterate through positions
          ulong ticket = PositionGetTicket(i);   //--- Get position ticket
@@ -152,9 +163,10 @@ private:
          }
       }
       return count;                            //--- Return order count
-   }
-   
-   long OpenOrder(string symbol, ENUM_ORDER_TYPE type, double price, double sl, double tp, double lots, int magic, string comment) { //--- Define method to open orders
+    }
+   //--- Define method to open orders
+   long OpenOrder(string symbol, ENUM_ORDER_TYPE type, double price, double sl, double tp, double lots, int magic, string comment)
+    { 
       long ticket = m_trade.PositionOpen(symbol, type, lots, price, sl, tp, comment); //--- Execute position open
       if(ticket < 0) {                         //--- Check for order failure
          PrintMessage(StringFormat("Info - OrderSend %s %d_%s_%.5f error %.5f_%.5f_%.5f_#%d", //--- Log error
@@ -164,16 +176,18 @@ private:
             comment, type, symbol, price, sl, tp));
       }
       return ticket;                           //--- Return order ticket
-   }
+    }
 
-public:
-   CTradingStrategy() : CCI_TREND_BUY_VALUE(-114), CCI_TREND_SELL_VALUE(134) { //--- Initialize constructor with constants
+  public:
+   CTradingStrategy() : CCI_TREND_BUY_VALUE(-114), CCI_TREND_SELL_VALUE(134)
+    { //--- Initialize constructor with constants
       m_last_day = 0;                          //--- Set initial last day
       m_is_new_day = true;                     //--- Set new day flag
       m_array_size = 0;                        //--- Set initial array size
-   }
-   
-   bool Init() {                               //--- Define initialization method
+    }
+   //--- Define initialization method
+   bool Init()
+    {                               
       m_params.symbols = "EURUSDm,GBPUSDm,AUDUSDm"; //--- Set default symbols
       m_params.per_signal_cci = 20;            //--- Set CCI signal period
       m_params.per_trend_cci = 24;             //--- Set CCI trend period
@@ -206,25 +220,28 @@ public:
       PrintMessage("Current Spread on " + Symbol() + ": " + //--- Log current spread
          IntegerToString((int)SymbolInfoInteger(Symbol(), SYMBOL_SPREAD)));
       return true;                             //--- Return success
-   }
-   
-   void OnTick() {                             //--- Define tick handling method
+    }
+   //--- Define tick handling method
+   void OnTick()
+    {                             
       datetime new_day = iTime(Symbol(), PERIOD_D1, 0); //--- Get current day timestamp
       m_is_new_day = (m_last_day != new_day);  //--- Check for new day
       if(m_is_new_day) {                       //--- Handle new day
          m_last_day = new_day;                 //--- Update last day
       }
-      
-      for(int i = 0; i < m_array_size; i++) {  //--- Iterate through symbols
+      //--- Iterate through symbols
+      for(int i = 0; i < m_array_size; i++)
+       {  
          bool is_new_bar = false;              //--- Initialize new bar flag
          bool buy_signal = false, sell_signal = false; //--- Initialize signal flags
          bool buy_trend = false, sell_trend = false; //--- Initialize trend flags
-         
-         datetime new_time = iTime(m_symbols[i].name, m_params.tf_signal, 0); //--- Get current bar time
-         if(!m_params.trade_anytime && m_symbols[i].last_bar_time != new_time) { //--- Check for new bar
+         //--- Get current bar time
+         datetime new_time = iTime(m_symbols[i].name, m_params.tf_signal, 0); 
+         if(!m_params.trade_anytime && m_symbols[i].last_bar_time != new_time)
+          { //--- Check for new bar
             is_new_bar = true;                 //--- Set new bar flag
             m_symbols[i].last_bar_time = new_time; //--- Update last bar time
-         }
+          }
          
          if(!UpdateIndicatorData(i)) continue; //--- Update indicators, skip on failure
          
@@ -259,32 +276,39 @@ public:
          
          // Execute trades
          if(spread < m_params.max_spread && total_orders == 0 && //--- Check spread and open orders
-            (m_params.trade_anytime || is_new_bar)) { //--- Check trade timing
-            if(buy_signal && buy_trend) {         //--- Check buy conditions
+            (m_params.trade_anytime || is_new_bar))
+          //--- Check trade timing
+          { 
+            //--- Check buy conditions
+            if(buy_signal && buy_trend)
+             {         
                double sl = m_params.stop == 0 ? 0 : ask - m_params.stop * point; //--- Calculate stop-loss
                double tp = m_params.take == 0 ? 0 : ask + m_params.take * point; //--- Calculate take-profit
                OpenOrder(m_symbols[i].name, ORDER_TYPE_BUY, ask, sl, tp, m_params.lots, //--- Open buy order
                         m_params.magic, "Open BUY " + m_params.comment);
-            }
-            if(sell_signal && sell_trend) {       //--- Check sell conditions
+             }
+            //--- Check sell conditions
+            if(sell_signal && sell_trend)
+             {       
                double sl = m_params.stop == 0 ? 0 : bid + m_params.stop * point; //--- Calculate stop-loss
                double tp = m_params.take == 0 ? 0 : bid - m_params.take * point; //--- Calculate take-profit
                OpenOrder(m_symbols[i].name, ORDER_TYPE_SELL, bid, sl, tp, m_params.lots, //--- Open sell order
                         m_params.magic, "Open SELL " + m_params.comment);
-            }
-         }
-         
-         // Debug output
-         if((m_params.trade_anytime || is_new_bar) && (buy_signal || sell_signal)) { //--- Check debug conditions
+             }
+          }         
+         // Debug output Check debug conditions
+         if((m_params.trade_anytime || is_new_bar) && (buy_signal || sell_signal))
+          { 
             PrintDebug(StringFormat("Debug - IsNewBar: %b - candle_shift: %d - buy_signal: %b - " //--- Log debug information
                                   "sell_signal: %b - buy_trend: %b - sell_trend: %b",
                                   is_new_bar, m_candle_shift, buy_signal, sell_signal, 
                                   buy_trend, sell_trend));
-         }
-      }
-   }
-   
-   bool CloseAllTrades() {                     //--- Define method to close all trades
+          }
+       }
+    }
+   //--- Define method to close all trades
+   bool CloseAllTrades()
+    {                     
       for(int i = PositionsTotal() - 1; i >= 0; i--) { //--- Iterate through positions
          ulong ticket = PositionGetTicket(i);   //--- Get position ticket
          if(PositionSelectByTicket(ticket) &&   //--- Select position
@@ -307,8 +331,8 @@ public:
          }
       }
       return true;                             //--- Return success
-   }
-};
+    }
+ };
 
 //+------------------------------------------------------------------+
 //| Global Variables and Functions                                   | //--- Define global variables and functions
@@ -318,15 +342,18 @@ CTradingStrategy g_strategy;                   //--- Initialize global strategy 
 //+------------------------------------------------------------------+
 //| Expert Advisor Functions                                         | //--- Define EA core functions
 //+------------------------------------------------------------------+
-int OnInit() {                                 //--- Define initialization function
+int OnInit()
+ {                                 //--- Define initialization function
    return g_strategy.Init() ? INIT_SUCCEEDED : INIT_FAILED; //--- Initialize strategy and return status
-}
+ }
 
-void OnDeinit(const int reason) {              //--- Define deinitialization function
+void OnDeinit(const int reason)
+ {              //--- Define deinitialization function
    g_strategy.CloseAllTrades();                //--- Close all trades
-}
+ }
 
-void OnTick() {                                //--- Define tick processing function
+void OnTick()
+ {                                //--- Define tick processing function
    g_strategy.OnTick();                        //--- Process tick event
-}
+ }
 //+------------------------------------------------------------------+

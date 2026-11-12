@@ -17,7 +17,7 @@
 #include <Vendors\Anhnt\Library\4. Combination Lib V4\Trading\TradingControl.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\GraphElementsCollection.mqh>
 #include <Vendors\Anhnt\Library\4. Combination Lib V4\Services\DELib\DatabaseService.mqh> 
-#include "Services\BarMarkerSync.mqh"
+#include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\BarMarkerCollection.mqh>
 #include "Services\PythonBridge.mqh"
 //--- The EA is the parent: it owns its children and the models, and passes the events down to them
 CAccountsCollection m_AccountsCollection; // the accounts: the table accounts, the account of the terminal has its row
@@ -35,21 +35,20 @@ CTradeEventsCollection m_TradeEventsCollection;   // the trading events of the a
 CTradingControl    m_TradingControl;      // the trading requests and the pending requests of them (RAM), on the lists of the collections (V1 CTradingEngine::m_trading_control)
 CGraphElementsCollection m_GraphElementsCollection;   // the layer over the chart and the markers on it
 CPythonBridge      m_PythonBridge;        // starts Python when it is not running: the tables are made before, Python only adds rows
-CBarMarkerSync     m_BarMarkerSync;       // the View of the table BarTimeSeriesCollection: the markers of what Python found
+CBarMarkerCollection m_BarMarkerCollection;   // the markers of what was found on the candles of the chart (BarTimeSeriesCollection, SignalsCollection)
 CChartObj         *m_ChartObj=NULL;       // the chart the EA runs on
 CGUIPannel         m_GUIPannel;
 CDatabaseService *m_DatabaseService = NULL;
 ulong              g_series_refresh_ms=0;  // when the bars of the chart were read last (EA_SERIES_REFRESH_MS)
 ulong              g_trade_refresh_ms=0;   // when the history, the orders and the events were looked at last (EA_TRADE_REFRESH_MS)
-ulong              g_debug_ms=0;            // MY DEBUG
-bool               g_debug_first_timer=false; // MY DEBUG
 //+------------------------------------------------------------------+
 int OnInit()
   {
    Breadcrumb("OnInit: DatabaseService_Create");
    // Build account key & open Account DB   
    string account_key =::AccountInfoString(ACCOUNT_COMPANY) + ::AccountInfoString(ACCOUNT_SERVER) + "_" + (string)::AccountInfoInteger(ACCOUNT_LOGIN);
-   m_DatabaseService = new CDatabaseService("Database", "Accounts", account_key + ".sqlite3", account_key);
+   if(m_DatabaseService == NULL)   // a chart change keeps it (OnDeinit): its databases stay open (CDatabaseService::OnInitEvent, m_first_start)
+      m_DatabaseService = new CDatabaseService("Database", "Accounts", account_key + ".sqlite3", account_key);
    if(m_DatabaseService == NULL || !m_DatabaseService.OnInitEvent())
      {
       if(m_DatabaseService != NULL)
@@ -60,14 +59,14 @@ int OnInit()
       return INIT_FAILED;
      }
    //--- Every model writes its own table, after the tables it depends on: timeframes, accounts, then symbol_account, then Setting_SymbolTF
-   if(m_ChartObj!=NULL)
-      delete m_ChartObj;
-   m_ChartObj=new CChartObj(::ChartID());
+   if(m_ChartObj==NULL)   // a chart change keeps it (OnDeinit): CChartObj::OnInitEvent reads the view of the new TF
+      m_ChartObj=new CChartObj(::ChartID());
    // makes Setting_IndicatorTemplate and the table timeframes (all the TFs of MT5, which Setting_SymbolTF refers to)
     Breadcrumb("OnInit: m_IndicatorTemplateManager.OnInitEvent");
     m_IndicatorTemplateManager.SetDatabaseService(m_DatabaseService);
     if(!m_IndicatorTemplateManager.OnInitEvent())
       return INIT_FAILED;   
+    Breadcrumb("OnInit: m_ChartObj.OnInitEvent");
     m_ChartObj.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
     if(!m_ChartObj.OnInitEvent())
       return INIT_FAILED;    
@@ -120,30 +119,21 @@ int OnInit()
        return INIT_FAILED;
       }
    // m_BarTimeSeriesCollection
-    Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSymbolsCollection");
-    m_BarTimeSeriesCollection.SetSymbolsCollection(&m_SymbolsCollection);   // the owner of symbol_account: the id of a symbol 
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSyncManager");
     m_BarTimeSeriesCollection.SetSyncManager(&m_SyncManager);
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSymbolTFManager");
     m_BarTimeSeriesCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the pairs the library keeps up to date after OnInit
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetBarInformationManager");
     m_BarTimeSeriesCollection.SetBarInformationManager(&m_BarInformationManager);   // the parameters of the types it finds
-    m_BarTimeSeriesCollection.SetDatabaseService(m_DatabaseService);
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.OnInitEvent");
-    if(!m_BarTimeSeriesCollection.OnInitEvent())// opens the file of the account and makes its tables (the bars, what was found on them)
+    if(!m_BarTimeSeriesCollection.OnInitEvent())   // a series for every pair of Setting_SymbolTF
       {
         ::Print(__FUNCTION__," > failed to OnInitEvent BarTimeSeriesCollection");
         return INIT_FAILED;
        }
-    Breadcrumb("OnInit: m_BarTimeSeriesCollection.CreateCollection"); 
-    if(!m_BarTimeSeriesCollection.CreateCollection(&m_SymbolTFManager))
-      {
-       ::Print(__FUNCTION__," > failed to create the BarTimeSeriesCollection");
-       return INIT_FAILED;
-      }
    // m_GraphElementsCollection
-    Breadcrumb("OnInit: m_GraphElementsCollection.OnInit");
-    m_GraphElementsCollection.OnInit();   // the layer is made before the panel windows, so they stack above it
+    Breadcrumb("OnInit: m_GraphElementsCollection.OnInitEvent");
+    m_GraphElementsCollection.OnInitEvent();   // the layer is made before the panel windows, so they stack above it
    // m_SignalsCollection
     Breadcrumb("OnInit: m_SignalsCollection.SetBarTimeSeriesCollection");
     m_SignalsCollection.SetBarTimeSeriesCollection(&m_BarTimeSeriesCollection);   // the bars the signals are found on
@@ -155,18 +145,20 @@ int OnInit()
     m_SignalsCollection.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);   // the templates whose signals it finds
     m_SignalsCollection.SetIndicatorsCollection(&m_IndicatorsCollection);   // the indicator of a template on a pair: its values in RAM
     Breadcrumb("OnInit: m_SignalsCollection.OnInitEvent");
-    m_SignalsCollection.SetDatabaseService(m_DatabaseService);
-    m_SignalsCollection.OnInitEvent();   // makes the tables of the signals in the file of the account
+    m_SignalsCollection.OnInitEvent();   // a series for every template on every pair
    // m_PythonBridge
     Breadcrumb("OnInit: m_PythonBridge.OnInitEvent");
     m_PythonBridge.SetDatabaseService(m_DatabaseService);
     m_PythonBridge.OnInitEvent();   // after every table is made: Python starts when it finds none running
-    g_debug_ms=::GetTickCount64();   // MY DEBUG
-   // m_BarMarkerSync
-    Breadcrumb("OnInit: m_BarMarkerSync.OnInitEvent");
-    m_BarMarkerSync.OnInitEvent(&m_GraphElementsCollection,&m_BarTimeSeriesCollection,&m_SignalsCollection,&m_BarInformationManager,&m_IndicatorTemplateManager);
-    ::Print("MY DEBUG    OnInit: m_BarMarkerSync.OnInitEvent took ",::GetTickCount64()-g_debug_ms," ms");
-    g_debug_ms=::GetTickCount64();   // MY DEBUG
+   // m_BarMarkerCollection
+    Breadcrumb("OnInit: m_BarMarkerCollection.OnInitEvent");
+    m_BarMarkerCollection.SetChartObj(m_ChartObj);
+    m_BarMarkerCollection.SetGraphElementsCollection(&m_GraphElementsCollection);
+    m_BarMarkerCollection.SetBarTimeSeriesCollection(&m_BarTimeSeriesCollection);
+    m_BarMarkerCollection.SetSignalsCollection(&m_SignalsCollection);
+    m_BarMarkerCollection.SetSymbolTFManager(&m_SymbolTFManager);
+    m_BarMarkerCollection.SetBarInformationManager(&m_BarInformationManager);   // given to the markers: they decide what they show
+    m_BarMarkerCollection.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
    // m_GUIPannel
     Breadcrumb("OnInit: m_GUIPannel.SetSymbolsCollection");
     m_GUIPannel.SetSymbolsCollection(&m_SymbolsCollection);
@@ -179,18 +171,13 @@ int OnInit()
     m_GUIPannel.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);
     Breadcrumb("OnInit: m_GUIPannel.SetBarInformationManager");
     m_GUIPannel.SetBarInformationManager(&m_BarInformationManager);
-    Breadcrumb("OnInit: m_GUIPannel.SetBarTimeSeriesCollection");
-    m_GUIPannel.SetBarTimeSeriesCollection(&m_BarTimeSeriesCollection);   // the popup of a candle asks what was found on it
-    Breadcrumb("OnInit: m_GUIPannel.SetSignalsCollection");
-    m_GUIPannel.SetSignalsCollection(&m_SignalsCollection);
+    Breadcrumb("OnInit: m_GUIPannel.SetBarMarkerCollection");
+    m_GUIPannel.SetBarMarkerCollection(&m_BarMarkerCollection);   // the popup of a candle reads what was found on it (RAM)
     Breadcrumb("OnInit: m_GUIPannel.SetGraphElementsCollection");
     m_GUIPannel.SetGraphElementsCollection(&m_GraphElementsCollection);   // and lights the box of the candle on its marker
     Breadcrumb("OnInit: m_GUIPannel.OnInit");
     if(!m_GUIPannel.OnInit(_UninitReason))
         return(INIT_FAILED);
-    ::Print("MY DEBUG    OnInit: the m_GUIPannel setters and m_GUIPannel.OnInit took ",::GetTickCount64()-g_debug_ms," ms");
-    g_debug_ms=::GetTickCount64();   // MY DEBUG: OnTimer tells how long after OnInit it came first
-    g_debug_first_timer=true;        // MY DEBUG
    ::EventSetMillisecondTimer(EA_TIMER_MS);
    return(INIT_SUCCEEDED);
   }
@@ -198,11 +185,18 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    ::EventKillTimer();
-   m_BarTimeSeriesCollection.UpdateDataToDB();   // what the library found and has not written yet goes to the table, then its progress (not written: judged again next time)
-   m_SignalsCollection.UpdateDataToDB();         // the same for the signals of the indicator templates
+   //--- Every reason: the markers and the box on the candle go (a chart change: the new TF has other candles, its first CHARTEVENT_CHART_CHANGE draws them).
+   //--- Each child looks at the reason itself
+   m_BarMarkerCollection.DeleteMarkers();
+   m_BarTimeSeriesCollection.OnDeinitEvent(reason);   // a chart change: the rows read for the view of the old TF go (read again when it comes back)
+   m_SignalsCollection.OnDeinitEvent(reason);
    m_PythonBridge.OnDeinitEvent(reason);   // the EA is closed: the row of Python is cleared, Python stops with its workers
    m_GUIPannel.OnDeinit(reason);
-   m_BarMarkerSync.DeleteMarkers();   // the markers and the box on the candle
+   //--- A chart change (or new inputs): the EA starts again at once with the same account. Every object stays, RAM keeps what waits to be written
+   if(reason==REASON_CHARTCHANGE || reason==REASON_PARAMETERS)
+      return;
+   m_BarTimeSeriesCollection.UpdateDataToDB();   // what the library found and has not written yet goes to the table, then its progress (not written: judged again next time)
+   m_SignalsCollection.UpdateDataToDB();         // the same for the signals of the indicator templates
    if(m_ChartObj!=NULL)
      {
       delete m_ChartObj;
@@ -240,18 +234,10 @@ void OnTimer()
   {
    if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
       return;
-   if(g_debug_first_timer)   // MY DEBUG
-     {
-      g_debug_first_timer=false;
-      ::Print("MY DEBUG    OnTimer: the first call came ",::GetTickCount64()-g_debug_ms," ms after the end of OnInit");
-     }
-   ulong debug_timer_ms=::GetTickCount64();   // MY DEBUG
    Breadcrumb("OnTimer: m_SymbolsCollection.OnTimerEvent");
    m_SymbolsCollection.OnTimerEvent();   // the Market Watch, once a second (V3): a new symbol gets its line in symbol_account, its event goes to the chart
    Breadcrumb("OnTimer: m_GUIPannel.OnTimerEvent");
    m_GUIPannel.OnTimerEvent();   // the controls take their steps from it (the spin buttons)
-   Breadcrumb("OnTimer: m_BarMarkerSync.ArrangeIfPending");
-   m_BarMarkerSync.ArrangeIfPending();   // the chart moved or zoomed: the badges are placed again
    Breadcrumb("OnTimer: m_GraphElementsCollection.OnTimerEvent");
    m_GraphElementsCollection.OnTimerEvent();   // the markers: the layer is painted again when one asked
    //--- The history of the terminal goes to the table Orders: the past beat after beat from OnInit on, later only for a while after a trade
@@ -270,20 +256,16 @@ void OnTimer()
        Breadcrumb("OnTimer: m_BarTimeSeriesCollection.RefreshSeriesAllExceptCurrent");
        if(!::MQLInfoInteger(MQL_TESTER))
           m_BarTimeSeriesCollection.RefreshSeriesAllExceptCurrent();   // the other symbols have no tick on this chart (DoEasy CEngine::OnTimer)
-       Breadcrumb("OnTimer: m_BarTimeSeriesCollection.OnTimerEvent");
-       m_BarTimeSeriesCollection.OnTimerEvent();   // a step of the delete of the rows of a type whose parameter changed (the table, every pair)
+       //Breadcrumb("OnTimer: m_BarTimeSeriesCollection.OnTimerEvent");
+       //m_BarTimeSeriesCollection.OnTimerEvent();   // a step of the delete of the rows of a type whose parameter changed (the table, every pair)
       // Signal Collection: the same rhythm as the series (the chart's symbol is in OnTick)
        Breadcrumb("OnTimer: m_SignalsCollection.RefreshSeriesAllExceptCurrent");
        if(!::MQLInfoInteger(MQL_TESTER))
           m_SignalsCollection.RefreshSeriesAllExceptCurrent();
-       Breadcrumb("OnTimer: m_SignalsCollection.OnTimerEvent");
-       m_SignalsCollection.OnTimerEvent();   // a step of the delete of the signals of a deleted template (the table, every pair)
        Breadcrumb("OnTimer: m_PythonBridge.OnTimerEvent");
       m_PythonBridge.OnTimerEvent();    // Python that stopped is started again
       Breadcrumb("OnTimer: done");
      }
-   if(::GetTickCount64()-debug_timer_ms>=1000)   // MY DEBUG: a beat that holds the thread of the EA for a second or more
-      ::Print("MY DEBUG    OnTimer: this call took ",::GetTickCount64()-debug_timer_ms," ms");
   }
 //+------------------------------------------------------------------+
 void OnTrade()
@@ -313,13 +295,13 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
    if(id>=CHARTEVENT_CUSTOM)
       Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);   // MY DEBUG: the events of the controls and of the managers, not the mouse
-   m_SyncManager.OnChartEvent(id,lparam,dparam,sparam);   // Python wrote more marks: RAM first, the collections read it next
+   m_SyncManager.OnChartEvent(id,lparam,dparam,sparam);   // Python wrote more marks: RAM first, the collections read it next; a parameter changed: its marks go
    m_PythonBridge.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair came or went: Python calculates its history at once
    m_GUIPannel.OnChartEvent(id,lparam,dparam,sparam);
    m_GraphElementsCollection.OnChartEvent(id,lparam,dparam,sparam);   // the layer follows the chart, the markers hear the mouse
    m_IndicatorsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a pair or a template added or deleted: its indicators are made or go
-   m_BarTimeSeriesCollection.OnChartEvent(id,lparam,dparam,sparam);   // a parameter of a type changed: its rows are judged again
+   m_BarTimeSeriesCollection.OnChartEvent(id,lparam,dparam,sparam);   // a parameter of a type changed: its rows on RAM go
    m_SignalsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a template was deleted: its signals go
-   m_BarMarkerSync.OnChartEvent(id,lparam,dparam,sparam);   //--- A pair picked in the panel: the manager moves the chart itself
+   m_BarMarkerCollection.OnChartEvent(id,lparam,dparam,sparam);   //--- A pair picked in the panel: the manager moves the chart itself
    m_SymbolTFManager.OnChartEvent(id,lparam,dparam,sparam,m_ChartObj);
   }

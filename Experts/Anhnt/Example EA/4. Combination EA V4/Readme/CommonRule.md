@@ -14,11 +14,22 @@
     + Print debug ra file lấy tên file là tên class kèm Debug_<which> 
   - Log có sẵn trong workspace      
   - Cấu trúc file: 
-    + MỖI CLASS MỘT FILE (.mqh) có include guard đầy đủ cả declaration và implementation.
-    + Tránh viết inline method.
-    + Ở các class khác nhau sẽ cùng dùng tên một method làm cùng một việc ví dụ 
-      -Modify DB UpdateDataToDB + Overload, ReadDataFromDB + OverLoad
-      -Update RAM UpdateTemplate + Overload, RefreshSeries,SendEvents,RefreshTimeseries....
+    + MỖI CLASS MỘT FILE (.mqh) có include guard đầy đủ cả declaration và implementation. Tránh viết inline method.
+  - Method Rule: Từ V4 các method tuân thủ Live working in RAM, Save on DB for no more calculation vì vậy tên Method cần gợi nhớ rằng nó làm việc với RAM hay DB, tuân thủ nguyên tắc CRUD và cần gợi nhớ method cũ nào trong history.
+  - Phía Python đa phần là working with DB và cũng cần đảm bảo nguyên tắc Sync Every where, no Duplicate everywhere, uu tiên method trong có sẵn thay vì viết mới.
+     + Ví dụ: Phía EA
+      - CreateTable_IndicatorTemplateSetting,CreateTable_SymbolTFSetting
+      - PopulateTable_IndicatorTemplateSetting()
+      - Hành vi sửa số lượng nhỏ: AddRow_<Which>,DeleteRow_<Which>, 
+      - Modify số lượng nhỏ   HighLightRow_<Which>, UpdateRow_<Which>
+      - Hành vi sửa hàng loạt:   SyncTable_<Which>,
+     + Phía Library: 
+      - ReadDataFromDB + OverLoad, UpdateDataToDB + Overload.
+      - Update RAM UpdateTemplate + Overload, RefreshSeries,SendEvents,RefreshTimeseries...
+    + Các method dùng chung được khai trong Services\DebLib theo các tên khác nhau tùy phạm vi sử dụng.Các method của Class
+    + Từ V4 các method có 2 việc: Update RAM hay DB và tên Method phải gợi nhớ việc này tuân thủ nguyên tắc CRUD
+      -ReadDataFromDB + OverLoad, UpdateDataToDB + Overload, 
+      -Update RAM UpdateTemplate + Overload, RefreshSeries,SendEvents,RefreshTimeseries....    
 - No Duplicate Everywhere detail
   - Enum và Define: 
     - Hạn chế dùng number thay vì đó dùng Enum ví dụ thay vì 1 hay 2 nữa mà thay vì thế trong code mình sẽ phải là PRICE_CLOSE và PRICE_OPEN.
@@ -27,6 +38,7 @@
     - Các Enum và define dùng riêng cho class nào thì khai báo trong class đó
   - Properties 
     - Properties trong class: Tên của các Properties sẽ dựa trên class thống nhất giữa các layer
+    - Các Properties trong declaration sẽ được declared theo nguyên tắc cha con tuân thủ folding rule trong Coding Rule.
       + CTimeSeriesEngine CBarTimeSeriesCollection  -> m_BarTimeSeriesCollection;
       + CGUIPannel        CWindow                   -> m_window_main;
       + Nếu Properties là pointer thì comment rõ ngay cạnh là class nào hold nó.
@@ -35,26 +47,9 @@
         m_list_Table_<Table> (bản sao), m_list_Pending_<Table> (CHỈ RAM, phần chưa ghi). Ví dụ CBarSeriesDE: m_list_Table_BarSeriesDE; CBarControl: m_list_Table_BarTimeSeriesCollection,
         m_list_Pending_BarTimeSeriesCollection.
       + List chỉ chứa đối tượng con (không phải bản sao table) thì mang tên theo con: m_list_timeseries (CBarTimeSeriesDE), m_list_series (CBarSeriesDE).
-    - Các Properties trong declaration sẽ được declared theo nguyên tắc cha con tuân thủ folding rule trong Coding Rule.
-  - Python (Lib V4\Python) tuân thủ CÙNG các rule này (No Duplicate, Sync   
-    Everywhere, đặt tên theo table / class, Update & Implementation Rule): đổi ở phía MQL thì rà phía Python cùng lúc và ngược lại. Chi tiết và danh sách tên cần rà: Python.md, mục "Quy tắc chung".
-  - Method Rule: Các method cần tên thống nhất để có thể biết nó làm gì với Object nào cả phía EA, Library và Python đảm bảo nguyên tắc Sync Every where, no Duplicate everywhere, uu tiên method trong có sẵn thay vì viết mới.
-     Ví dụ: Phía EA
-      - CreateTable_IndicatorTemplateSetting,CreateTable_SymbolTFSetting
-      - PopulateTable_IndicatorTemplateSetting()
-      - Hành vi sửa số lượng nhỏ: AddRow_<Which>,DeleteRow_<Which>, 
-      - Modify số lượng nhỏ   HighLightRow_<Which>, UpdateRow_<Which>
-      - Hành vi sửa hàng loạt:   SyncTable_<Which>,
-    + Các method dùng chung được khai trong Services\DebLib theo các tên khác nhau tùy phạm vi sử dụng.
-    + Trong Library 
-     + R1. Method có sẵn ở DoEasy /V1/ V2 giữ tên gốc: RefreshSeries, SyncDataFromDB, SetProperty, Time().
-     + R2. Method của class: <Action><Which>, KHÔNG có hậu tố tên class (biến gọi đã cho biết class: CBar *bar=...; bar.TopBody()).       
-     + R3. Họ method theo type (một method cho mỗi BAR_INFOR_TYPE_*): Find<Type> (FindHammer, FindSwingHigh), bộ chọn theo type: Find(type,index).
-     + R4. Hàm global (ngoài class) giữ tiền tố vì không có biến nào cho biết nó thuộc đâu: LibDatabase_InList, các hàm trong Services\DELib.
-     + R5. Cùng tên ở cha và con (kế thừa hay chứa nhau) là cùng một việc, cha làm phần mình rồi chuyển xuống con:
-       CBarTimeSeriesCollection::SyncDataFromDB -> CBarTimeSeriesDE::SyncDataFromDB -> CBarSeriesDE::SyncDataFromDB -> CBarControl::SyncDataFromDB.
-     + R6. Python đối chiếu: module tương ứng class (patterns.py ~ CBarPattern, swing.py ~ CBarSwing), hàm tương ứng Which (hammer, find_swings).
-     + Áp dụng dần: class nào động tới thì đổi tên theo R2 / R3 (tên cũ *_BarControl, *_BarSeriesDE... đổi khi sửa file đó).
+    
+  - Python (Lib V4\Python) tuân thủ CÙNG các rule này (No Duplicate, Sync Everywhere, đặt tên theo table / class, 
+  - Update & Implementation Rule): đổi ở phía MQL thì rà phía Python cùng lúc và ngược lại. Chi tiết và danh sách tên cần rà: Python.md, mục "Quy tắc chung". 
   - Module rule:Chương trình được module hóa theo nguyên tắc chung như class CGUIPannel   
      + GUIPannel_Define.mqh    -> định nghĩa các Enum, Macro.
      + GUIPannel.mqh           -> chứa các declaration hạn chế viết inline (trừ method ngắn gọn return giá trị trực tiếp) 

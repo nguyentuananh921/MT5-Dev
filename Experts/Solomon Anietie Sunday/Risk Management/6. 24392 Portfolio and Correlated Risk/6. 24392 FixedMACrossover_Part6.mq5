@@ -54,67 +54,67 @@ enum ENUM_OFFSET_MODE
   };
 
 //--- Input Parameters
-input group "Trading Signal"
-input int              InpFastMA = 10;                      // Fast MA period
-input int              InpSlowMA = 20;                      // Slow MA period
+   input group "Trading Signal"
+   input int              InpFastMA = 10;                      // Fast MA period
+   input int              InpSlowMA = 20;                      // Slow MA period
 
-input group "Risk Model"
-input ENUM_RISK_MODE   InpRiskMode = RISK_PERCENT;          // How risk per trade is defined
-input ENUM_RISK_BASE   InpRiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
-input double           InpRiskPercent = 1.0;                // Risk per trade [%] (percent mode)
-input double           InpFixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
-input double           InpFixedLotSize = 0.10;              // Lot size (fixed-lot mode)
-input bool             InpAllowMinLotOverRisk = true;       // Trade min lot even if it exceeds intended risk
+   input group "Risk Model"
+   input ENUM_RISK_MODE   InpRiskMode = RISK_PERCENT;          // How risk per trade is defined
+   input ENUM_RISK_BASE   InpRiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
+   input double           InpRiskPercent = 1.0;                // Risk per trade [%] (percent mode)
+   input double           InpFixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
+   input double           InpFixedLotSize = 0.10;              // Lot size (fixed-lot mode)
+   input bool             InpAllowMinLotOverRisk = true;       // Trade min lot even if it exceeds intended risk
 
-input group "Trade Settings"
-input bool             InpAllowHedging = false;             // Allow opposing position (hedging)
-input int              InpATRPeriod = 14;                   // ATR Period for Volatility Calculation
-input double           InpATRMultiplier = 1.5;              // ATR Multiplier for Stop-Loss Distance
-input double           InpTPRatio = 2.0;                    // Take Profit Ratio
-input double           InpMaxSpreadPips = 2.0;              // Maximum allowed spread
+   input group "Trade Settings"
+   input bool             InpAllowHedging = false;             // Allow opposing position (hedging)
+   input int              InpATRPeriod = 14;                   // ATR Period for Volatility Calculation
+   input double           InpATRMultiplier = 1.5;              // ATR Multiplier for Stop-Loss Distance
+   input double           InpTPRatio = 2.0;                    // Take Profit Ratio
+   input double           InpMaxSpreadPips = 2.0;              // Maximum allowed spread
 
-input group "Order Execution"
-input ENUM_ENTRY_MODE  InpEntryMode = ENTRY_MARKET;         // Order type used to enter
-input ENUM_OFFSET_MODE InpPendingOffsetMode = OFFSET_ATR;   // How the pending entry offset is measured
-input double           InpPendingOffsetATR = 0.5;           // Pending offset as ATR multiple (ATR mode)
-input int              InpPendingOffsetPoints = 150;        // Pending offset in points (points mode)
-input int              InpPendingExpiryBars = 10;           // Delete untriggered pending after N bars [0 = never]
+   input group "Order Execution"
+   input ENUM_ENTRY_MODE  InpEntryMode = ENTRY_MARKET;         // Order type used to enter
+   input ENUM_OFFSET_MODE InpPendingOffsetMode = OFFSET_ATR;   // How the pending entry offset is measured
+   input double           InpPendingOffsetATR = 0.5;           // Pending offset as ATR multiple (ATR mode)
+   input int              InpPendingOffsetPoints = 150;        // Pending offset in points (points mode)
+   input int              InpPendingExpiryBars = 10;           // Delete untriggered pending after N bars [0 = never]
 
-input group "Adaptive Risk (Drawdown)"
-input bool             InpEnableAdaptiveRisk  = false;      // Reduce risk during drawdowns
-input double           InpDDLevel             = 3.0;        // Drawdown % that triggers reduced risk
-input double           InpRiskReductionFactor = 0.5;        // Adaptive risk multiplier when triggered [0.5 = half risk]
-input bool             InpApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot during drawdowns
+   input group "Adaptive Risk (Drawdown)"
+   input bool             InpEnableAdaptiveRisk  = false;      // Reduce risk during drawdowns
+   input double           InpDDLevel             = 3.0;        // Drawdown % that triggers reduced risk
+   input double           InpRiskReductionFactor = 0.5;        // Adaptive risk multiplier when triggered [0.5 = half risk]
+   input bool             InpApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot during drawdowns
 
-input group "Broker & Margin Safety"
-input double           InpMaxMarginUsagePercent   = 50.0;   // Max % of free margin one new trade may use
-input bool             InpEnableAdaptiveMarginCap = false;  // Scale the margin cap with account-wide margin level
-input double           InpMarginLevelSafe         = 500.0;  // Margin safe level [%] full cap applies
-input double           InpMarginLevelDanger       = 150.0;  // Margin caution level [%] new trades are blocked
+   input group "Broker & Margin Safety"
+   input double           InpMaxMarginUsagePercent   = 50.0;   // Max % of free margin one new trade may use
+   input bool             InpEnableAdaptiveMarginCap = false;  // Scale the margin cap with account-wide margin level
+   input double           InpMarginLevelSafe         = 500.0;  // Margin safe level [%] full cap applies
+   input double           InpMarginLevelDanger       = 150.0;  // Margin caution level [%] new trades are blocked
 
-input group "Basket Risk"
-input bool             InpEnableBasketRisk = true;          // Measure and limit risk across all open positions
-input int              InpMaxBasketPositions = 1;           // Max concurrent positions for this EA [1 = no stacking]
-input double           InpMaxBasketLossPercent = 3.0;       // Close the whole basket if it loses this % [0 = off]
-input ENUM_RISK_BASE   InpBasketLossBase = RISK_BASE_BALANCE; // Basket cut-loss measured against
-input double           InpMaxBasketMarginPercent = 25.0;    // Max % of account equity this basket may tie up [0 = off]
-input bool             InpEnableMAETracking = true;         // Track how far the basket goes against you
-input int              InpMaxBasketHoldBars = 0;            // Close a losing basket after N bars [0 = off]
+   input group "Basket Risk"
+   input bool             InpEnableBasketRisk = true;          // Measure and limit risk across all open positions
+   input int              InpMaxBasketPositions = 1;           // Max concurrent positions for this EA [1 = no stacking]
+   input double           InpMaxBasketLossPercent = 3.0;       // Close the whole basket if it loses this % [0 = off]
+   input ENUM_RISK_BASE   InpBasketLossBase = RISK_BASE_BALANCE; // Basket cut-loss measured against
+   input double           InpMaxBasketMarginPercent = 25.0;    // Max % of account equity this basket may tie up [0 = off]
+   input bool             InpEnableMAETracking = true;         // Track how far the basket goes against you
+   input int              InpMaxBasketHoldBars = 0;            // Close a losing basket after N bars [0 = off]
 
-input group "Portfolio Risk (account-wide)"
-input bool                 InpEnablePortfolioRisk = true;       // Check account-wide limits before trading
-input ENUM_PORTFOLIO_SCOPE InpPortfolioScope = PORTFOLIO_ACCOUNT_WIDE; // What counts as the portfolio
-input string               InpExtraPortfolioMagics = "";        // Extra magic numbers, comma-separated (filtered scope)
-input int                  InpMaxPortfolioPositions = 6;        // Max positions across the whole portfolio [0 = off]
-input int                  InpMaxPositionsPerSymbol = 2;        // Max positions on any one symbol [0 = off]
-input int                  InpMaxPortfolioSymbols = 4;          // Max distinct symbols traded at once [0 = off]
-input double               InpMaxPortfolioMarginPercent = 40.0; // Max % of equity tied up in margin [0 = off]
-input double               InpMaxPortfolioLossPercent = 6.0;    // Block new trades past this floating loss % [0 = off]
-input double               InpMaxNetCurrencyLots = 2.0;         // Max net lots exposed to one currency [0 = off]
-input bool                 InpLogPortfolioSnapshot = false;     // Log the portfolio picture every bar
+   input group "Portfolio Risk (account-wide)"
+   input bool                 InpEnablePortfolioRisk = true;       // Check account-wide limits before trading
+   input ENUM_PORTFOLIO_SCOPE InpPortfolioScope = PORTFOLIO_ACCOUNT_WIDE; // What counts as the portfolio
+   input string               InpExtraPortfolioMagics = "";        // Extra magic numbers, comma-separated (filtered scope)
+   input int                  InpMaxPortfolioPositions = 6;        // Max positions across the whole portfolio [0 = off]
+   input int                  InpMaxPositionsPerSymbol = 2;        // Max positions on any one symbol [0 = off]
+   input int                  InpMaxPortfolioSymbols = 4;          // Max distinct symbols traded at once [0 = off]
+   input double               InpMaxPortfolioMarginPercent = 40.0; // Max % of equity tied up in margin [0 = off]
+   input double               InpMaxPortfolioLossPercent = 6.0;    // Block new trades past this floating loss % [0 = off]
+   input double               InpMaxNetCurrencyLots = 2.0;         // Max net lots exposed to one currency [0 = off]
+   input bool                 InpLogPortfolioSnapshot = false;     // Log the portfolio picture every bar
 
-input group "General"
-input int              InpMagicNumber = 12345;              // EA Magic Number
+   input group "General"
+   input int              InpMagicNumber = 12345;              // EA Magic Number
 
 //+------------------------------------------------------------------+
 //| A fully-specified trade before anything is sent to the broker.   |
@@ -147,26 +147,26 @@ struct SBasketState
   };
 
 //--- Global Variables
-CTrade trade;
-CPortfolioRisk portfolio;
-int fastMaHandle, slowMaHandle;
-int atrHandle;
-double g_peakEquity = 0.0;
+   CTrade trade;
+   CPortfolioRisk portfolio;
+   int fastMaHandle, slowMaHandle;
+   int atrHandle;
+   double g_peakEquity = 0.0;
 
 //--- Basket tracking. In-memory only.
-double g_BasketMaxAdverse = 0.0;    // Worst floating loss this basket has reached (positive number)
-double g_BasketMaxFavour  = 0.0;    // Best floating profit this basket has reached
-int    g_BasketPeakCount  = 0;      // Most positions this basket has held at once
+   double g_BasketMaxAdverse = 0.0;    // Worst floating loss this basket has reached (positive number)
+   double g_BasketMaxFavour  = 0.0;    // Best floating profit this basket has reached
+   int    g_BasketPeakCount  = 0;      // Most positions this basket has held at once
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
   {
-//--- Set the Magic Number for all trades
+   //--- Set the Magic Number for all trades
    trade.SetExpertInpMagicNumber(InpMagicNumber);
 
-//--- Initialize Handles
+   //--- Initialize Handles
    fastMaHandle = iMA(_Symbol, _Period, InpFastMA, 0, MODE_SMA, PRICE_CLOSE);
    slowMaHandle = iMA(_Symbol, _Period, InpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
    atrHandle = iATR(_Symbol, _Period, InpATRPeriod);
@@ -176,7 +176,7 @@ int OnInit()
       return INIT_FAILED;
      }
 
-//--- Validate signal inputs
+   //--- Validate signal inputs
    if(InpFastMA <= 0 || InpSlowMA <= 0)
      {
       Print("Moving Average periods must be greater than zero.");
@@ -189,7 +189,7 @@ int OnInit()
       return INIT_PARAMETERS_INCORRECT;
      }
 
-//--- Validate only the risk input the selected mode actually uses
+   //--- Validate only the risk input the selected mode actually uses
    if(InpRiskMode == RISK_PERCENT && InpRiskPercent <= 0)
      {
       Print("Risk per trade [%] must be greater than zero in percentage mode.");
@@ -220,7 +220,7 @@ int OnInit()
       return INIT_PARAMETERS_INCORRECT;
      }
 
-//--- Validate pending-order inputs only when a pending entry is selected
+   //--- Validate pending-order inputs only when a pending entry is selected
    if(InpEntryMode != ENTRY_MARKET)
      {
       if(InpPendingOffsetMode == OFFSET_ATR && InpPendingOffsetATR <= 0)
@@ -254,7 +254,7 @@ int OnInit()
       return INIT_PARAMETERS_INCORRECT;
      }
 
-//--- Validate basket inputs
+   //--- Validate basket inputs
    if(InpEnableBasketRisk)
      {
       if(InpMaxBasketPositions < 1)
@@ -279,7 +279,7 @@ int OnInit()
          Print("Note: InpAllowHedging is on but InpMaxBasketPositions is 1, so an opposing position can never be opened.");
      }
 
-//--- Configure the shared portfolio view
+   //--- Configure the shared portfolio view
    if(InpEnablePortfolioRisk)
      {
       portfolio.SetScope(InpPortfolioScope);
@@ -294,7 +294,7 @@ int OnInit()
       if(InpPortfolioScope == PORTFOLIO_MAGIC_FILTERED && InpExtraPortfolioMagics == "")
          Print("Portfolio scope is magic-filtered but no extra magic numbers were listed, so only this EA is counted.");
      }
-//--- EA initialization successful
+   //--- EA initialization successful
    return(INIT_SUCCEEDED);
   }
 
@@ -335,7 +335,7 @@ void RegisterExtraMagics()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
-//--- Deinitialize indicator
+   //--- Deinitialize indicator
    IndicatorRelease(fastMaHandle);
    IndicatorRelease(slowMaHandle);
    IndicatorRelease(atrHandle);
@@ -346,29 +346,29 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
-//--- Get the opening time of the current bar
+   //--- Get the opening time of the current bar
    datetime currentBarTime = iTime(_Symbol, _Period, 0);
    if(currentBarTime == 0)
       return;
 
-//--- Static variable to remember the last bar we processed
+   //--- Static variable to remember the last bar we processed
    static datetime lastProcessedBarTime = 0;
 
-//--- If this bar has already been processed, exit immediately
+   //--- If this bar has already been processed, exit immediately
    if(currentBarTime == lastProcessedBarTime)
       return;
 
-//--- Mark this bar as processed
+   //--- Mark this bar as processed
    lastProcessedBarTime = currentBarTime;
 
-//--- Housekeeping runs every new bar, whether or not a signal appears.
+   //--- Housekeeping runs every new bar, whether or not a signal appears.
    ManagePendingOrders();
    ManageBasketRisk();
 
    if(InpEnablePortfolioRisk && InpLogPortfolioSnapshot)
       portfolio.PrintSnapshot();
 
-//--- Ensure indicators are ready
+   //--- Ensure indicators are ready
    if(BarsCalculated(fastMaHandle) < 3 ||
       BarsCalculated(slowMaHandle) < 3 ||
       BarsCalculated(atrHandle) < 1)
@@ -377,21 +377,21 @@ void OnTick()
       return;
      }
 
-//--- Populate the MA buffer
+   //--- Populate the MA buffer
    double fast[], slow[];
    ArraySetAsSeries(fast, true);
    ArraySetAsSeries(slow, true);
    int fastCopied = CopyBuffer(fastMaHandle, 0, 0, 3, fast);
    int slowCopied = CopyBuffer(slowMaHandle, 0, 0, 3, slow);
 
-//--- Validate that we have enough MA data
+   //--- Validate that we have enough MA data
    if(fastCopied < 3 || slowCopied < 3)
      {
       Print("Failed to get enough Moving Average Data");
       return;
      }
 
-//--- Populate the ATR
+   //--- Populate the ATR
    double atrArray[];
    ArraySetAsSeries(atrArray, true);
    if(CopyBuffer(atrHandle, 0, 0, 1, atrArray) < 1)
@@ -401,14 +401,14 @@ void OnTick()
      }
    double atrValue = atrArray[0];
 
-//--- Validate that we have a valid ATR value
+   //--- Validate that we have a valid ATR value
    if(atrValue <= 0)
      {
       Print("Invalid ATR value: ", atrValue);
       return;
      }
 
-//--- Retrieve market prices
+   //--- Retrieve market prices
    MqlTick tick;
    if(!SymbolInfoTick(_Symbol, tick))
      {
@@ -416,11 +416,11 @@ void OnTick()
       return;
      }
 
-//--- Check Spread before trading
+   //--- Check Spread before trading
    if(!IsSpreadAcceptable())
       return;
 
-//--- Identify the signal on the latest closed bar (index 1)
+   //--- Identify the signal on the latest closed bar (index 1)
    int direction = 0;
    if(fast[1] > slow[1] && fast[2] <= slow[2])
       direction = 1;
@@ -431,7 +431,7 @@ void OnTick()
    if(direction == 0)
       return;
 
-//--- Plan, validate, then execute - three separate responsibilities
+   //--- Plan, validate, then execute - three separate responsibilities
    STradePlan plan;
    if(!BuildTradePlan(direction, atrValue, tick, plan))
       return;
@@ -627,11 +627,11 @@ double GetDrawdownRiskFactor()
 
    double equity = AccountInfoDouble(ACCOUNT_EQUITY);
 
-//--- Initialize or update the peak
+   //--- Initialize or update the peak
    if(g_peakEquity == 0.0 || equity > g_peakEquity)
       g_peakEquity = equity;
 
-//--- Calculate current drawdown from peak
+   //--- Calculate current drawdown from peak
    double drawdownPercent = 0.0;
    if(g_peakEquity > 0.0)
       drawdownPercent = (g_peakEquity - equity) / g_peakEquity * 100.0;
@@ -666,7 +666,7 @@ double GetRiskAmount()
       riskAmount = riskBaseValue * (InpRiskPercent / 100.0);
      }
 
-//--- Drawdown reduction scales the final amount
+   //--- Drawdown reduction scales the final amount
    return riskAmount * GetDrawdownRiskFactor();
   }
 
@@ -681,7 +681,7 @@ double FloorToVolumeStep(double volume, double lotStep)
    double steps  = NormalizeDouble(volume / lotStep, 8);
    double result = MathFloor(steps) * lotStep;
 
-//--- Match the step's own precision so the value sent to the broker is clean
+   //--- Match the step's own precision so the value sent to the broker is clean
    int stepDigits = (int)MathMax(0, MathCeil(-MathLog10(lotStep)));
    return NormalizeDouble(result, stepDigits);
   }
@@ -751,13 +751,13 @@ double CalculateLotSize(double stopDistance, double riskAmount)
       rawLot = riskAmount / monetaryRiskPerLot;
      }
 
-//--- Round down to the broker's volume step
+   //--- Round down to the broker's volume step
    double lotSize = FloorToVolumeStep(rawLot, lotStep);
 
    if(lotSize > maxLot)
       lotSize = FloorToVolumeStep(maxLot, lotStep);
 
-//--- Below the minimum tradable volume the intended risk is unreachable
+   //--- Below the minimum tradable volume the intended risk is unreachable
    if(lotSize < minLot)
      {
       if(!InpAllowMinLotOverRisk)
@@ -783,14 +783,14 @@ double GetMarginUsageCap()
    if(!InpEnableAdaptiveMarginCap)
       return InpMaxMarginUsagePercent;
 
-//--- No margin currently used anywhere on the account (flat)
+   //--- No margin currently used anywhere on the account (flat)
    double marginUsed = AccountInfoDouble(ACCOUNT_MARGIN);
    if(marginUsed <= 0.0)
       return InpMaxMarginUsagePercent;
 
    double marginLevel = AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
 
-//--- Account-wide margin level already stressed - block new exposure
+   //--- Account-wide margin level already stressed - block new exposure
    if(marginLevel <= InpMarginLevelDanger)
      {
       PrintFormat("Adaptive Margin Cap | Margin Level: %.1f%% at/below danger threshold (%.1f%%). New trades blocked.",
@@ -798,11 +798,11 @@ double GetMarginUsageCap()
       return 0.0;
      }
 
-//--- Margin level healthy - full cap applies
+   //--- Margin level healthy - full cap applies
    if(marginLevel >= InpMarginLevelSafe)
       return InpMaxMarginUsagePercent;
 
-//--- Scale linearly between the danger and safe thresholds
+   //--- Scale linearly between the danger and safe thresholds
    double ratio = (marginLevel - InpMarginLevelDanger) / (InpMarginLevelSafe - InpMarginLevelDanger);
    double cap = InpMaxMarginUsagePercent * ratio;
 
@@ -817,8 +817,8 @@ double GetMarginUsageCap()
 //+------------------------------------------------------------------+
 double ValidateMarginForLot(ENUM_ORDER_TYPE orderType, double lotSize, double price)
   {
-//--- Margin required for a single lot; market-order margin scales
-//--- linearly with volume, so this is enough to size any lot from
+   //--- Margin required for a single lot; market-order margin scales
+   //--- linearly with volume, so this is enough to size any lot from
    double marginPerLot = 0.0;
    ResetLastError();
    if(!OrderCalcMargin(orderType, _Symbol, 1.0, price, marginPerLot) || marginPerLot <= 0.0)
@@ -999,7 +999,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
 
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
-//--- Everything below is anchored to the intended entry
+   //--- Everything below is anchored to the intended entry
    plan.entryPrice = ResolveEntryPrice(plan.orderType, atrValue, tick);
    if(plan.entryPrice <= 0)
      {
@@ -1008,7 +1008,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
      }
    plan.entryPrice = NormalizeDouble(plan.entryPrice, digits);
 
-//--- Volatility-based stop distance, widened if the broker demands it
+   //--- Volatility-based stop distance, widened if the broker demands it
    double stopDistance = atrValue * InpATRMultiplier;
    double minStop      = GetMinStopDistance(tick);
 
@@ -1019,7 +1019,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
       stopDistance = minStop;
      }
 
-//--- Stops and targets measured from the intended entry
+   //--- Stops and targets measured from the intended entry
    if(direction == 1)
      {
       plan.stopLoss   = NormalizeDouble(plan.entryPrice - stopDistance, digits);
@@ -1031,7 +1031,7 @@ bool BuildTradePlan(int direction, double atrValue, const MqlTick &tick, STradeP
       plan.takeProfit = NormalizeDouble(plan.entryPrice - (stopDistance * InpTPRatio), digits);
      }
 
-//--- Re-derive the sizing distance from the plan's own entry and stop.
+   //--- Re-derive the sizing distance from the plan's own entry and stop.
    plan.stopDistance = MathAbs(plan.entryPrice - plan.stopLoss);
    if(plan.stopDistance <= 0)
      {
@@ -1101,7 +1101,7 @@ bool GetBasketState(SBasketState &basket)
    if(basket.totalVolume > 0)
       basket.weightedEntryPrice = weightedEntrySum / basket.totalVolume;
 
-//--- Net direction
+   //--- Net direction
    if(signedVolume > 0)
       basket.netDirection = 1;
    else
@@ -1132,7 +1132,7 @@ void CloseBasket(string reason)
                      ticket, trade.ResultRetcode(), trade.ResultRetcodeDescription());
      }
 
-//--- Any pending order belonging to this basket is now orphaned intent
+   //--- Any pending order belonging to this basket is now orphaned intent
    for(int i = OrdersTotal() - 1; i >= 0; i--)
      {
       ulong ticket = OrderGetTicket(i);
@@ -1198,7 +1198,7 @@ void ManageBasketRisk()
 
    UpdateBasketExcursion(basket);
 
-//--- Aggregate loss cut. The individual stops are still in place
+   //--- Aggregate loss cut. The individual stops are still in place
    if(InpMaxBasketLossPercent > 0)
      {
       double lossBase = (InpBasketLossBase == RISK_BASE_EQUITY)
@@ -1215,7 +1215,7 @@ void ManageBasketRisk()
         }
      }
 
-//--- Time stop.
+   //--- Time stop.
    if(InpMaxBasketHoldBars > 0 && basket.floatingPL < 0 && basket.oldestOpenTime > 0)
      {
       int barSeconds = PeriodSeconds(_Period);
@@ -1244,7 +1244,7 @@ bool IsBasketAcceptingNewTrade(const STradePlan &plan)
    SBasketState basket;
    bool hasBasket = GetBasketState(basket);
 
-//--- Position count ceiling, counting pending orders as committed intent
+   //--- Position count ceiling, counting pending orders as committed intent
    int committed = (hasBasket ? basket.positionCount : 0) + CountPendingOrders();
    if(committed >= InpMaxBasketPositions)
      {
@@ -1253,7 +1253,7 @@ bool IsBasketAcceptingNewTrade(const STradePlan &plan)
       return false;
      }
 
-//--- Aggregate margin ceiling for this EA's basket
+   //--- Aggregate margin ceiling for this EA's basket
    if(InpMaxBasketMarginPercent > 0)
      {
       double newLegMargin = 0.0;

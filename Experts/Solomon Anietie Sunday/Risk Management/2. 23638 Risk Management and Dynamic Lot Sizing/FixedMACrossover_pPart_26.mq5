@@ -50,45 +50,42 @@ double g_PeakEquity = 0.0;
 //+------------------------------------------------------------------+
 int OnInit()
   {
-//--- Set the Magic Number for all trades
-   trade.SetExpertMagicNumber(InpMagicNumber);
+   //--- Set the Magic Number for all trades
+    trade.SetExpertMagicNumber(InpMagicNumber);
 
-//--- Initialize Handles
-   fastHandle = iMA(_Symbol, _Period, InpFastMA, 0, MODE_SMA, PRICE_CLOSE);
-   slowHandle = iMA(_Symbol, _Period, InpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
-   atrHandle = iATR(_Symbol, _Period, InpATRPeriod);
+   //--- Initialize Handles
+    fastHandle = iMA(_Symbol, _Period, InpFastMA, 0, MODE_SMA, PRICE_CLOSE);
+    slowHandle = iMA(_Symbol, _Period, InpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
+    atrHandle = iATR(_Symbol, _Period, InpATRPeriod);
 
-   if(fastHandle == INVALID_HANDLE || slowHandle == INVALID_HANDLE || atrHandle == INVALID_HANDLE)
+    if(fastHandle == INVALID_HANDLE || slowHandle == INVALID_HANDLE || atrHandle == INVALID_HANDLE)
+      {
+         return INIT_FAILED;
+      }
+
+   //--- Validate user inputs
+    if(InpFastMA <= 0 || InpSlowMA <= 0)
      {
-      return INIT_FAILED;
+         Print("Moving Average periods must be greater than zero.");
+         return INIT_PARAMETERS_INCORRECT;
      }
-
-//--- Validate user inputs
-   if(InpFastMA <= 0 || InpSlowMA <= 0)
+    if(InpFastMA >= InpSlowMA)
      {
-      Print("Moving Average periods must be greater than zero.");
-      return INIT_PARAMETERS_INCORRECT;
+         Print("FastMA should be smaller than SlowMA.");
+         return INIT_PARAMETERS_INCORRECT;
      }
-
-   if(InpFastMA >= InpSlowMA)
+    if(InpRiskPercent <= 0)
      {
-      Print("FastMA should be smaller than SlowMA.");
-      return INIT_PARAMETERS_INCORRECT;
+         Print("Risk per trade must be greater than zero.");
+         return INIT_PARAMETERS_INCORRECT;
      }
-
-   if(InpRiskPercent <= 0)
+    if(InpATRPeriod <= 0 || InpATRMultiplier <= 0)
      {
-      Print("Risk per trade must be greater than zero.");
-      return INIT_PARAMETERS_INCORRECT;
+         Print("ATR parameters must be greater than zero.");
+         return INIT_PARAMETERS_INCORRECT;
      }
-
-   if(InpATRPeriod <= 0 || InpATRMultiplier <= 0)
-     {
-      Print("ATR parameters must be greater than zero.");
-      return INIT_PARAMETERS_INCORRECT;
-     }
-//--- EA initialization successful
-   return(INIT_SUCCEEDED);
+   //--- EA initialization successful
+      return(INIT_SUCCEEDED);
   }
 
 //+------------------------------------------------------------------+
@@ -96,103 +93,103 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
-//--- Deinitialize indicator
-   IndicatorRelease(fastHandle);
-   IndicatorRelease(slowHandle);
-   IndicatorRelease(atrHandle);
+   //--- Deinitialize indicator
+      IndicatorRelease(fastHandle);
+      IndicatorRelease(slowHandle);
+      IndicatorRelease(atrHandle);
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
   {
-//--- Get the opening time of the current bar
-   datetime currentBarTime = iTime(_Symbol, _Period, 0);
-   if(currentBarTime == 0)
-      return;
+   //--- Get the opening time of the current bar
+      datetime currentBarTime = iTime(_Symbol, _Period, 0);
+      if(currentBarTime == 0)
+         return;
 
-//--- Static variable to remember the last bar we processed
-   static datetime lastProcessedBarTime = 0;
+   //--- Static variable to remember the last bar we processed
+      static datetime lastProcessedBarTime = 0;
 
-//--- If this bar has already been processed, exit immediately
-   if(currentBarTime == lastProcessedBarTime)
-      return;
+   //--- If this bar has already been processed, exit immediately
+      if(currentBarTime == lastProcessedBarTime)
+         return;
 
-//--- Mark this bar as processed
-   lastProcessedBarTime = currentBarTime;
+   //--- Mark this bar as processed
+      lastProcessedBarTime = currentBarTime;
 
-//--- Ensure indicators are ready
-   if(BarsCalculated(fastHandle) < 3 ||
-      BarsCalculated(slowHandle) < 3 ||
-      BarsCalculated(atrHandle) < 1)
-     {
-      Print("Indicators are not ready yet.");
-      return;
-     }
+   //--- Ensure indicators are ready
+      if(BarsCalculated(fastHandle) < 3 ||
+         BarsCalculated(slowHandle) < 3 ||
+         BarsCalculated(atrHandle) < 1)
+      {
+         Print("Indicators are not ready yet.");
+         return;
+      }
 
-//--- Populate the MA buffer
-   double fast[], slow[];
-   ArraySetAsSeries(fast, true);
-   ArraySetAsSeries(slow, true);
-   int fastCopied = CopyBuffer(fastHandle, 0, 0, 3, fast);
-   int slowCopied = CopyBuffer(slowHandle, 0, 0, 3, slow);
+   //--- Populate the MA buffer
+      double fast[], slow[];
+      ArraySetAsSeries(fast, true);
+      ArraySetAsSeries(slow, true);
+      int fastCopied = CopyBuffer(fastHandle, 0, 0, 3, fast);
+      int slowCopied = CopyBuffer(slowHandle, 0, 0, 3, slow);
 
-//--- Validate that we have enough MA data
-   if(fastCopied < 3 || slowCopied < 3)
-     {
-      Print("Failed to get enough Moving Average Data");
-      return;
-     }
+   //--- Validate that we have enough MA data
+      if(fastCopied < 3 || slowCopied < 3)
+      {
+         Print("Failed to get enough Moving Average Data");
+         return;
+      }
 
-//--- Populate the ATR
-   double atrArray[];
-   ArraySetAsSeries(atrArray, true);
-   if(CopyBuffer(atrHandle, 0, 0, 1, atrArray) < 1)
-     {
-      Print("Failed to get ATR data");
-      return;
-     }
-   double atrValue = atrArray[0];
+   //--- Populate the ATR
+      double atrArray[];
+      ArraySetAsSeries(atrArray, true);
+      if(CopyBuffer(atrHandle, 0, 0, 1, atrArray) < 1)
+      {
+         Print("Failed to get ATR data");
+         return;
+      }
+      double atrValue = atrArray[0];
 
-//--- Validate that we have a valid ATR value
-   if(atrValue <= 0)
-     {
-      Print("Invalid ATR value: ", atrValue);
-      return;
-     }
+   //--- Validate that we have a valid ATR value
+      if(atrValue <= 0)
+      {
+         Print("Invalid ATR value: ", atrValue);
+         return;
+      }
 
-//--- Retrieve market prices
-   MqlTick tick;
-   if(!SymbolInfoTick(_Symbol, tick))
-     {
-      Print("Failed to obtain market prices.");
-      return;
-     }
-   double ask = tick.ask;
-   double bid = tick.bid;
+   //--- Retrieve market prices
+      MqlTick tick;
+      if(!SymbolInfoTick(_Symbol, tick))
+      {
+         Print("Failed to obtain market prices.");
+         return;
+      }
+      double ask = tick.ask;
+      double bid = tick.bid;
 
-//--- Check Spread before trading
-   if(!IsSpreadAcceptable())
-      return;
+   //--- Check Spread before trading
+      if(!IsSpreadAcceptable())
+         return;
 
-//--- Calculate the dynamic stop distance
-   double stopDistance = atrValue * InpATRMultiplier;
+   //--- Calculate the dynamic stop distance
+      double stopDistance = atrValue * InpATRMultiplier;
 
-//--- Validate minimum stop distance
-   double minStopDistance = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
-   if(stopDistance < minStopDistance)
-     {
-      Print("Stop distance too tight. Adjusting from ", stopDistance, " to ", minStopDistance);
-      stopDistance = minStopDistance;
-     }
+   //--- Validate minimum stop distance
+      double minStopDistance = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * _Point;
+      if(stopDistance < minStopDistance)
+      {
+         Print("Stop distance too tight. Adjusting from ", stopDistance, " to ", minStopDistance);
+         stopDistance = minStopDistance;
+      }
 
-   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
-//--- Check crossover on the latest closed bar (index 1) and execute trade
-   if(fast[1] > slow[1] && fast[2] <= slow[2])
-      OpenPosition(1, ask, stopDistance, digits);
-   else
-      if(fast[1] < slow[1] && fast[2] >= slow[2])
-         OpenPosition(-1, bid, stopDistance, digits);
+      int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+   //--- Check crossover on the latest closed bar (index 1) and execute trade
+      if(fast[1] > slow[1] && fast[2] <= slow[2])
+         OpenPosition(1, ask, stopDistance, digits);
+      else
+         if(fast[1] < slow[1] && fast[2] >= slow[2])
+            OpenPosition(-1, bid, stopDistance, digits);
   }
 
 //+------------------------------------------------------------------+
@@ -283,14 +280,14 @@ double CalculateLotSize(double stopDistance)
       return 0.0;
      }
 
-//--- Confine and round to the broker's volume rules
-   double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double maxLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   double lotStep = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   //--- Confine and round to the broker's volume rules
+      double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+      double maxLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+      double lotStep = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
 
-   double lotSize = riskAmount / monetaryRiskPerLot;
-   lotSize = MathMax(minLot, MathMin(lotSize, maxLot));
-   lotSize = NormalizeDouble(lotSize / lotStep, 0) * lotStep;
+     double lotSize = riskAmount / monetaryRiskPerLot;
+     lotSize = MathMax(minLot, MathMin(lotSize, maxLot));
+     lotSize = NormalizeDouble(lotSize / lotStep, 0) * lotStep;
 
    return lotSize;
   }
@@ -306,23 +303,23 @@ double GetAdaptiveRiskPercent()
 
    double equity = AccountInfoDouble(ACCOUNT_EQUITY);
 
-//--- Initialize or update the peak
-   if(g_PeakEquity == 0.0 || equity > g_PeakEquity)
-      g_PeakEquity = equity;
+   //--- Initialize or update the peak
+      if(g_PeakEquity == 0.0 || equity > g_PeakEquity)
+         g_PeakEquity = equity;
 
-//--- Calculate current drawdown from peak
-   double drawdownPercent = 0.0;
-   if(g_PeakEquity > 0.0)
-      drawdownPercent = (g_PeakEquity - equity) / g_PeakEquity * 100.0;
+   //--- Calculate current drawdown from peak
+      double drawdownPercent = 0.0;
+      if(g_PeakEquity > 0.0)
+         drawdownPercent = (g_PeakEquity - equity) / g_PeakEquity * 100.0;
 
-   PrintFormat("Adaptive Risk | Drawdown: %.2f%% | Risk Used: %.2f%%",
-               drawdownPercent,
-               (drawdownPercent >= InpDDLevel) ? InpRiskPercent * InpRiskReductionFactor : InpRiskPercent);
+      PrintFormat("Adaptive Risk | Drawdown: %.2f%% | Risk Used: %.2f%%",
+                  drawdownPercent,
+                  (drawdownPercent >= InpDDLevel) ? InpRiskPercent * InpRiskReductionFactor : InpRiskPercent);
 
-   if(drawdownPercent >= InpDDLevel)
-      return InpRiskPercent * InpRiskReductionFactor;
+      if(drawdownPercent >= InpDDLevel)
+         return InpRiskPercent * InpRiskReductionFactor;
 
-   return InpRiskPercent;
+      return InpRiskPercent;
   }
 
 //+------------------------------------------------------------------+
@@ -331,42 +328,42 @@ double GetAdaptiveRiskPercent()
 //+------------------------------------------------------------------+
 void OpenPosition(int direction, double price, double stopDistance, int digits)
   {
-//--- Position awareness check, same rule as Part 1
-   bool canOpenTrade = false;
-   if(InpAllowHedging)
-      canOpenTrade = (CountOpenPositionsByDirection(direction) == 0);
-   else
-      canOpenTrade = (CountOpenPositions() == 0);
+   //--- Position awareness check, same rule as Part 1
+      bool canOpenTrade = false;
+      if(InpAllowHedging)
+         canOpenTrade = (CountOpenPositionsByDirection(direction) == 0);
+      else
+         canOpenTrade = (CountOpenPositions() == 0);
 
-   if(!canOpenTrade)
-      return;
+      if(!canOpenTrade)
+         return;
 
-//--- Lot size from the validated stop distance
-   double lotSize = CalculateLotSize(stopDistance);
-   if(lotSize <= 0)
-     {
-      Print("Calculated lot size is invalid. Trade skipped.");
-      return;
-     }
+   //--- Lot size from the validated stop distance
+      double lotSize = CalculateLotSize(stopDistance);
+      if(lotSize <= 0)
+      {
+         Print("Calculated lot size is invalid. Trade skipped.");
+         return;
+      }
 
-//--- SL/TP and execution, direction-specific
-   double sl, tp;
-   if(direction == 1)
-     {
-      sl = NormalizeDouble(price - stopDistance, digits);
-      tp = NormalizeDouble(price + (stopDistance * InpTPRatio), digits);
-      if(!trade.Buy(lotSize, _Symbol, 0.0, sl, tp, "Fixed EA Buy"))
-         PrintFormat("Buy failed. Retcode: %u (%s)", trade.ResultRetcode(),
-                     trade.ResultRetcodeDescription());
-     }
-   else
-     {
-      sl = NormalizeDouble(price + stopDistance, digits);
-      tp = NormalizeDouble(price - (stopDistance * InpTPRatio), digits);
-      if(!trade.Sell(lotSize, _Symbol, 0.0, sl, tp, "Fixed EA Sell"))
-         PrintFormat("Sell failed. Retcode: %u (%s)", trade.ResultRetcode(),
-                     trade.ResultRetcodeDescription());
-     }
+   //--- SL/TP and execution, direction-specific
+      double sl, tp;
+      if(direction == 1)
+      {
+         sl = NormalizeDouble(price - stopDistance, digits);
+         tp = NormalizeDouble(price + (stopDistance * InpTPRatio), digits);
+         if(!trade.Buy(lotSize, _Symbol, 0.0, sl, tp, "Fixed EA Buy"))
+            PrintFormat("Buy failed. Retcode: %u (%s)", trade.ResultRetcode(),
+                        trade.ResultRetcodeDescription());
+      }
+      else
+      {
+         sl = NormalizeDouble(price + stopDistance, digits);
+         tp = NormalizeDouble(price - (stopDistance * InpTPRatio), digits);
+         if(!trade.Sell(lotSize, _Symbol, 0.0, sl, tp, "Fixed EA Sell"))
+            PrintFormat("Sell failed. Retcode: %u (%s)", trade.ResultRetcode(),
+                        trade.ResultRetcodeDescription());
+      }
   }
 
 //+------------------------------------------------------------------+

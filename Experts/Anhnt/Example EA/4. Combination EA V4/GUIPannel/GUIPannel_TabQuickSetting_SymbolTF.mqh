@@ -261,7 +261,7 @@
      }
    m_treeview_SymbolTF.UpdateTreeList(true);
   }
- //--- Symbol without TFs: start tracking it on the chart TF; TF leaf: ask to navigate there
+ //--- Symbol: the chart goes there, the TF stays; TF leaf: the chart goes to that pair
  void CGUIPannel::OnClickTreeView_SymbolTFSetting(const long item_id)
   {
    if(m_SymbolTFManager==NULL)
@@ -271,8 +271,7 @@
       return;
    if(item.NodeLevel()==0)
      {
-      if(item.ChildrenTotal()==0 && m_SymbolTFManager.Read_RAM(item.LabelText(),(ENUM_TIMEFRAMES)::Period())==NULL)
-         m_SymbolTFManager.Update_SymbolTF_Setting(item.LabelText(),(ENUM_TIMEFRAMES)::Period(),SYMBOLTF_MANAGER_EVENT_ADDED);
+      m_SymbolTFManager.Update_SymbolTF_Setting(item.LabelText(),(ENUM_TIMEFRAMES)::Period(),SYMBOLTF_MANAGER_EVENT_SETTING_CHANGED);
       return;
      }
    CTreeItem *parent=item.ParentItem();
@@ -339,7 +338,7 @@
       ::ChartRedraw(this.m_chart_id);
       return;
      }
-   //--- Symbol TF tree: a symbol leaf starts tracking it, a TF leaf asks to navigate there
+   //--- Symbol TF tree: the chart goes to the node picked
    if(id==CHARTEVENT_CUSTOM+CHANGE_EVENT_TREE_PATH && lparam==m_treeview_SymbolTF.ObjectID())
      {
       this.OnClickTreeView_SymbolTFSetting((long)dparam);

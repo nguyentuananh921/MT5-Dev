@@ -27,21 +27,24 @@ input ENUM_TIMEFRAMES timeframe_bos = PERIOD_M5; // Input the timeframe for Brea
 //+------------------------------------------------------------------+
 //| Expert initialization function                                     |
 //+------------------------------------------------------------------+
-int OnInit(){
+int OnInit()
+ {
    return(INIT_SUCCEEDED); //--- Return successful initialization status
-}
+ }
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                   |
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason){
+void OnDeinit(const int reason)
+ {
    ObjectsDeleteAll(0,RECTANGLE_PREFIX);
    ObjectsDeleteAll(0,UPPER_LINE_PREFIX);
    ObjectsDeleteAll(0,LOWER_LINE_PREFIX);
-}
+ }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
-void OnTick(){
+void OnTick()
+ {
    static datetime midnight = iTime(_Symbol,PERIOD_D1,0); //--- Store the current day's midnight time
    static datetime sixAM = midnight + 6 * 3600; //--- Calculate 6 AM time by adding 6 hours to midnight
    static datetime scanBarTime = sixAM + 1 * PeriodSeconds(_Period); //--- Set the time of the next bar after 6 AM for scanning
@@ -50,7 +53,8 @@ void OnTick(){
    static datetime validBreakTime_start = scanBarTime; //--- Set the start time for valid breakout detection
    static datetime validBreakTime_end = midnight + (6+5) * 3600; //--- Set the end time for valid breakouts to 11 AM
 
-   if (isNewDay()){ //--- Check if a new trading day has started
+   if (isNewDay())
+    { //--- Check if a new trading day has started
       midnight = iTime(_Symbol,PERIOD_D1,0); //--- Update midnight time for the new day
       sixAM = midnight + 6 * 3600; //--- Recalculate 6 AM time for the new day
       scanBarTime = sixAM + 1 * PeriodSeconds(_Period); //--- Update the scan bar time to the next bar after 6 AM
@@ -69,35 +73,41 @@ void OnTick(){
 
       swing_H = -1.0; //--- Reset the swing high price for the new day
       swing_L = -1.0; //--- Reset the swing low price for the new day
-   }
-
-   if (isNewBar()){ //--- Check if a new bar has formed on the current timeframe
+    }
+   //--- Check if a new bar has formed on the current timeframe
+   if (isNewBar())
+    { 
       datetime currentBarTime = iTime(_Symbol,_Period,0); //--- Get the time of the current bar
-
-      if (currentBarTime == scanBarTime && !isHaveDailyRange_Prices){ //--- Check if it's time to scan for daily range and range is not yet calculated
+      //--- Check if it's time to scan for daily range and range is not yet calculated
+      if (currentBarTime == scanBarTime && !isHaveDailyRange_Prices)
+       { 
          Print("WE HAVE ENOUGH BARS DATA FOR DOCUMENTATION. MAKE THE EXTRACTION"); //--- Log that the scan for daily range is starting
          int total_bars = int((sixAM - midnight)/PeriodSeconds(_Period))+1; //--- Calculate the number of bars from midnight to 6 AM
          Print("Total Bars for scan = ",total_bars); //--- Log the total number of bars to scan
          int highest_price_bar_index = -1; //--- Initialize the index of the bar with the highest price
          int lowest_price_bar_index = -1; //--- Initialize the index of the bar with the lowest price
-
-         for (int i=1; i<=total_bars ; i++){ //--- Loop through each bar from midnight to 6 AM
+         //--- Loop through each bar from midnight to 6 AM
+         for (int i=1; i<=total_bars ; i++)
+          { 
             double open_i = open(i); //--- Get the open price of the i-th bar
             double close_i = close(i); //--- Get the close price of the i-th bar
 
             double highest_price_i = (open_i > close_i) ? open_i : close_i; //--- Determine the highest price (open or close) of the bar
             double lowest_price_i = (open_i < close_i) ? open_i : close_i; //--- Determine the lowest price (open or close) of the bar
-
-            if (highest_price_i > maximum_price){ //--- Check if the bar's highest price exceeds the current maximum
+            //--- Check if the bar's highest price exceeds the current maximum
+            if (highest_price_i > maximum_price)
+             { 
                maximum_price = highest_price_i; //--- Update the maximum price
                highest_price_bar_index = i; //--- Store the bar index of the maximum price
                maximum_time = time(i); //--- Store the time of the maximum price
-            }
-            if (lowest_price_i < minimum_price){ //--- Check if the bar's lowest price is below the current minimum
+             }
+            //--- Check if the bar's lowest price is below the current minimum
+            if (lowest_price_i < minimum_price)
+             { 
                minimum_price = lowest_price_i; //--- Update the minimum price
                lowest_price_bar_index = i; //--- Store the bar index of the minimum price
                minimum_time = time(i); //--- Store the time of the minimum price
-            }
+             }
          }
          Print("Maximum Price = ",maximum_price,", Bar index = ",highest_price_bar_index,", Time = ",maximum_time); //--- Log the maximum price, its bar index, and time
          Print("Minimum Price = ",minimum_price,", Bar index = ",lowest_price_bar_index,", Time = ",minimum_time); //--- Log the minimum price, its bar index, and time
@@ -107,78 +117,94 @@ void OnTick(){
          create_Line(LOWER_LINE_PREFIX+TimeToString(midnight),midnight,minimum_price,sixAM,minimum_price,3,clrRed,DoubleToString(minimum_price,_Digits)); //--- Draw the lower line for the range
 
          isHaveDailyRange_Prices = true; //--- Set the flag to indicate that the daily range is calculated
-      }
-   }
-
+       }
+    }
    double barClose = close(1); //--- Get the closing price of the previous bar
    datetime barTime = time(1); //--- Get the time of the previous bar
-
-   if (barClose > maximum_price && isHaveDailyRange_Prices && !isHaveRangeBreak
-       && barTime >= validBreakTime_start && barTime <= validBreakTime_end
-   ){ //--- Check for a breakout above the maximum price within the valid time window
+   //--- Check for a breakout above the maximum price within the valid time window
+   if (barClose > maximum_price && isHaveDailyRange_Prices && !isHaveRangeBreak&& barTime >= validBreakTime_start 
+      && barTime <= validBreakTime_end)
+    { 
       Print("CLOSE Price broke the HIGH range. ",barClose," > ",maximum_price); //--- Log the breakout above the high range
       isHaveRangeBreak = true; //--- Set the flag to indicate a range breakout has occurred
       drawBreakPoint(TimeToString(barTime),barTime,barClose,234,clrBlack,-1); //--- Draw a breakpoint marker for the high breakout
-   }
+    }
+   //--- Check for a breakout below the minimum price within the valid time window
    else if (barClose < minimum_price && isHaveDailyRange_Prices && !isHaveRangeBreak
-            && barTime >= validBreakTime_start && barTime <= validBreakTime_end
-   ){ //--- Check for a breakout below the minimum price within the valid time window
+            && barTime >= validBreakTime_start && barTime <= validBreakTime_end)
+    { 
       Print("CLOSE Price broke the LOW range. ",barClose," < ",minimum_price); //--- Log the breakout below the low range
       isHaveRangeBreak = true; //--- Set the flag to indicate a range breakout has occurred
       drawBreakPoint(TimeToString(barTime),barTime,barClose,233,clrBlue,1); //--- Draw a breakpoint marker for the low breakout
-   }
-
+    }
    // Break of Structure logic
-   if (isHaveDailyRange_Prices){ //--- Proceed with BoS logic only if the daily range is calculated
+   if (isHaveDailyRange_Prices)
+    { 
+     //--- Proceed with BoS logic only if the daily range is calculated
       static bool isNewBar_bos = false; //--- Initialize flag to indicate a new bar on the BoS timeframe
       int currBars = iBars(_Symbol,timeframe_bos); //--- Get the current number of bars on the BoS timeframe
       static int prevBars = currBars; //--- Store the previous number of bars for comparison
-      if (prevBars == currBars){isNewBar_bos = false;} //--- Set flag to false if no new bar has formed
-      else if (prevBars != currBars){isNewBar_bos = true; prevBars = currBars;} //--- Set flag to true and update prevBars if a new bar has formed
+      if (prevBars == currBars)
+       {isNewBar_bos = false;} //--- Set flag to false if no new bar has formed
+      else if (prevBars != currBars)
+       {isNewBar_bos = true; prevBars = currBars;} //--- Set flag to true and update prevBars if a new bar has formed
 
       const int length = 4; //--- Define the number of bars to check for swing high/low (must be > 2)
       int right_index, left_index; //--- Declare variables to store indices for bars to the right and left
       int curr_bar = length; //--- Set the current bar index for swing analysis
       bool isSwingHigh = true, isSwingLow = true; //--- Initialize flags to determine if the current bar is a swing high or low
 
-      if (isNewBar_bos){ //--- Check if a new bar has formed on the BoS timeframe
-         for (int a=1; a<=length; a++){ //--- Loop through the specified number of bars to check for swings
+      if (isNewBar_bos)
+       { //--- Check if a new bar has formed on the BoS timeframe
+         for (int a=1; a<=length; a++)
+          { //--- Loop through the specified number of bars to check for swings
             right_index = curr_bar - a; //--- Calculate the right-side bar index
             left_index = curr_bar + a; //--- Calculate the left-side bar index
-            if ( (high(curr_bar,timeframe_bos) <= high(right_index,timeframe_bos)) || (high(curr_bar,timeframe_bos) < high(left_index,timeframe_bos)) ){ //--- Check if the current bar's high is not the highest
+            if ( (high(curr_bar,timeframe_bos) <= high(right_index,timeframe_bos)) || 
+               (high(curr_bar,timeframe_bos) < high(left_index,timeframe_bos)) )
+             { //--- Check if the current bar's high is not the highest
                isSwingHigh = false; //--- Set flag to false if the bar is not a swing high
-            }
-            if ( (low(curr_bar,timeframe_bos) >= low(right_index,timeframe_bos)) || (low(curr_bar,timeframe_bos) > low(left_index,timeframe_bos)) ){ //--- Check if the current bar's low is not the lowest
+             }
+            if ( (low(curr_bar,timeframe_bos) >= low(right_index,timeframe_bos)) || 
+             (low(curr_bar,timeframe_bos) > low(left_index,timeframe_bos)) )
+             { //--- Check if the current bar's low is not the lowest
                isSwingLow = false; //--- Set flag to false if the bar is not a swing low
-            }
-         }
-
-         if (isSwingHigh){ //--- Check if the current bar is a swing high
+             }
+          }
+         //--- Check if the current bar is a swing high
+         if (isSwingHigh)
+          { 
             swing_H = high(curr_bar,timeframe_bos); //--- Store the swing high price
             Print("WE DO HAVE A SWING HIGH @ BAR INDEX ",curr_bar," H: ",high(curr_bar,timeframe_bos)); //--- Log the swing high details
             drawSwingPoint(TimeToString(time(curr_bar,timeframe_bos)),time(curr_bar,timeframe_bos),high(curr_bar,timeframe_bos),77,clrBlue,-1); //--- Draw a marker for the swing high
-         }
-         if (isSwingLow){ //--- Check if the current bar is a swing low
+          }
+         //--- Check if the current bar is a swing low
+         if (isSwingLow)
+          { 
             swing_L = low(curr_bar,timeframe_bos); //--- Store the swing low price
             Print("WE DO HAVE A SWING LOW @ BAR INDEX ",curr_bar," L: ",low(curr_bar,timeframe_bos)); //--- Log the swing low details
             drawSwingPoint(TimeToString(time(curr_bar,timeframe_bos)),time(curr_bar,timeframe_bos),low(curr_bar,timeframe_bos),77,clrRed,+1); //--- Draw a marker for the swing low
-         }
-      }
-
+          }
+       }
       double Ask = NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK),_Digits); //--- Get and normalize the current Ask price
       double Bid = NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_BID),_Digits); //--- Get and normalize the current Bid price
-
-      if (swing_H > 0 && Ask > swing_H && swing_H <= maximum_price && swing_H >= minimum_price){ //--- Check if the Ask price breaks above the swing high within the range
+      //--- Check if the Ask price breaks above the swing high within the range
+      if (swing_H > 0 && Ask > swing_H && swing_H <= maximum_price && swing_H >= minimum_price)
+       { 
          Print("$$$$$$$$$ BUY SIGNAL NOW. BREAK OF SWING HIGH WITHIN RANGE"); //--- Log a buy signal due to swing high breakout
          int swing_H_index = 0; //--- Initialize the index of the swing high bar
-         for (int i=0; i<=length*2+1000; i++){ //--- Loop through bars to find the swing high
+         //--- Loop through bars to find the swing high
+         for (int i=0; i<=length*2+1000; i++)
+          { 
             double high_sel = high(i,timeframe_bos); //--- Get the high price of the i-th bar
-            if (high_sel == swing_H){ //--- Check if the high matches the swing high
+            //--- Check if the high matches the swing high
+            if (high_sel == swing_H)
+             { 
                swing_H_index = i; //--- Store the bar index
                Print("BREAK HIGH FOUND @ BAR INDEX ",swing_H_index); //--- Log the swing high bar index
                break; //--- Exit the loop once found
-            }
-         }
+             }
+          }
          drawBreakLevel(TimeToString(time(0,timeframe_bos)),time(swing_H_index,timeframe_bos),high(swing_H_index,timeframe_bos),
          time(0,timeframe_bos),high(swing_H_index,timeframe_bos),clrBlue,-1); //--- Draw a line to mark the swing high breakout
 
@@ -190,30 +216,37 @@ void OnTick(){
          swing_H = -1.0; //--- Reset the swing high price
          return; //--- Exit the OnTick function to avoid further processing
       }
-      if (swing_L > 0 && Bid < swing_L && swing_L <= maximum_price && swing_L >= minimum_price){ //--- Check if the Bid price breaks below the swing low within the range
+      //--- Check if the Bid price breaks below the swing low within the range
+      if (swing_L > 0 && Bid < swing_L && swing_L <= maximum_price && swing_L >= minimum_price)
+       { 
          Print("$$$$$$$$$ SELL SIGNAL NOW. BREAK OF SWING LOW WITHIN RANGE"); //--- Log a sell signal due to swing low breakout
          int swing_L_index = 0; //--- Initialize the index of the swing low bar
-         for (int i=0; i<=length*2+1000; i++){ //--- Loop through bars to find the swing low
+         //--- Loop through bars to find the swing low
+         for (int i=0; i<=length*2+1000; i++)
+          { 
             double low_sel = low(i,timeframe_bos); //--- Get the low price of the i-th bar
-            if (low_sel == swing_L){ //--- Check if the low matches the swing low
+            //--- Check if the low matches the swing low
+            if (low_sel == swing_L)
+             { 
                swing_L_index = i; //--- Store the bar index
                Print("BREAK LOW FOUND @ BAR INDEX ",swing_L_index); //--- Log the swing low bar index
                break; //--- Exit the loop once found
-            }
-         }
+             }
+          }
          drawBreakLevel(TimeToString(time(0,timeframe_bos)),time(swing_L_index,timeframe_bos),low(swing_L_index,timeframe_bos),
          time(0,timeframe_bos),low(swing_L_index,timeframe_bos),clrRed,+1); //--- Draw a line to mark the swing low breakout
-
-         if (isTakenTrade == false){ //--- Check if no trade is taken yet
+         //--- Check if no trade is taken yet
+         if (isTakenTrade == false)
+          { 
             obj_Trade.Sell(0.01,_Symbol,Bid,maximum_price,minimum_price); //--- Execute a sell trade with 0.01 lots, using maximum price as SL and maximum as TP
             isTakenTrade = true; //--- Set the flag to indicate a trade is taken
-         }
+          }
 
          swing_L = -1.0; //--- Reset the swing low price
          return; //--- Exit the OnTick function to avoid further processing
-      }
-   }
-}
+       }
+    }
+ }
 
 //+------------------------------------------------------------------+
 //| Helper functions for price and time data                          |
@@ -229,11 +262,15 @@ double low(int index,ENUM_TIMEFRAMES tf_bos){return (iLow(_Symbol,tf_bos,index))
 datetime time(int index,ENUM_TIMEFRAMES tf_bos){return (iTime(_Symbol,tf_bos,index));} //--- Return the time of the specified bar index on the BoS timeframe
 
 //+------------------------------------------------------------------+
-//| Function to create a rectangle object                             |
+//| Function to create a rectangle object                            |
+//| Define a function to draw a rectangle on the chart               |
 //+------------------------------------------------------------------+
 void create_Rectangle(string objName,datetime time1,double price1,
-               datetime time2,double price2,color clr){ //--- Define a function to draw a rectangle on the chart
-   if (ObjectFind(0,objName) < 0){ //--- Check if the rectangle object does not already exist
+               datetime time2,double price2,color clr)
+ { 
+   //--- Check if the rectangle object does not already exist
+   if (ObjectFind(0,objName) < 0)
+    { 
       ObjectCreate(0,objName,OBJ_RECTANGLE,0,time1,price1,time2,price2); //--- Create a rectangle object with specified coordinates
 
       ObjectSetInteger(0,objName,OBJPROP_TIME,0,time1); //--- Set the first time coordinate of the rectangle
@@ -245,15 +282,19 @@ void create_Rectangle(string objName,datetime time1,double price1,
       ObjectSetInteger(0,objName,OBJPROP_BACK,false); //--- Ensure the rectangle is drawn in the foreground
 
       ChartRedraw(0); //--- Redraw the chart to display the rectangle
-   }
-}
+    }
+ }
 
 //+------------------------------------------------------------------+
-//| Function to create a line object with text                        |
+//| Function to create a line object with text                       |
+//| Define a function to draw a trend line with text                 |
 //+------------------------------------------------------------------+
 void create_Line(string objName,datetime time1,double price1,
-               datetime time2,double price2,int width,color clr,string text){ //--- Define a function to draw a trend line with text
-   if (ObjectFind(0,objName) < 0){ //--- Check if the line object does not already exist
+               datetime time2,double price2,int width,color clr,string text)
+ { 
+   //--- Check if the line object does not already exist
+   if (ObjectFind(0,objName) < 0)
+    { 
       ObjectCreate(0,objName,OBJ_TREND,0,time1,price1,time2,price2); //--- Create a trend line object with specified coordinates
 
       ObjectSetInteger(0,objName,OBJPROP_TIME,0,time1); //--- Set the first time coordinate of the line
@@ -265,9 +306,10 @@ void create_Line(string objName,datetime time1,double price1,
       ObjectSetInteger(0,objName,OBJPROP_BACK,false); //--- Ensure the line is drawn in the foreground
 
       long scale = 0; //--- Initialize a variable to store the chart scale
-      if(!ChartGetInteger(0,CHART_SCALE,0,scale)){ //--- Attempt to get the chart scale
+      if(!ChartGetInteger(0,CHART_SCALE,0,scale))
+       { //--- Attempt to get the chart scale
          Print("UNABLE TO GET THE CHART SCALE. DEFAULT OF ",scale," IS CONSIDERED"); //--- Log if the chart scale cannot be retrieved
-      }
+       }
 
       int fontsize = 11; //--- Set the default font size for the text
       if (scale==0){fontsize=5;} //--- Adjust font size for minimized chart scale
@@ -287,24 +329,28 @@ void create_Line(string objName,datetime time1,double price1,
       ObjectSetString(0,objNameDescr,OBJPROP_FONT,"Calibri"); //--- Set the font type to Calibri
 
       ChartRedraw(0); //--- Redraw the chart to display the line and text
-   }
-}
+    }
+ }
 
 //+------------------------------------------------------------------+
-//| Function to check for a new bar                                   |
+//| Function to check for a new bar                                  |
+//| Define a function to detect a new bar on the current timeframe   |
 //+------------------------------------------------------------------+
-bool isNewBar(){ //--- Define a function to detect a new bar on the current timeframe
+bool isNewBar()
+ { 
    static int prevBars = 0; //--- Store the previous number of bars
    int currBars = iBars(_Symbol,_Period); //--- Get the current number of bars
    if (prevBars==currBars) return (false); //--- Return false if no new bar has formed
    prevBars = currBars; //--- Update the previous bar count
    return (true); //--- Return true if a new bar has formed
-}
+ }
 
 //+------------------------------------------------------------------+
-//| Function to check for a new day                                   |
+//| Function to check for a new day                                  |
+//| Define a function to detect a new trading day                    |
 //+------------------------------------------------------------------+
-bool isNewDay(){ //--- Define a function to detect a new trading day
+bool isNewDay()
+ { 
    bool newDay = false; //--- Initialize the new day flag
 
    MqlDateTime Str_DateTime; //--- Declare a structure to hold date and time information
@@ -312,25 +358,30 @@ bool isNewDay(){ //--- Define a function to detect a new trading day
 
    static int prevDay = 0; //--- Store the previous day's date
    int currDay = Str_DateTime.day; //--- Get the current day's date
-
-   if (prevDay == currDay){ //--- Check if the current day is the same as the previous day
+   //--- Check if the current day is the same as the previous day
+   if (prevDay == currDay)
+    { 
       newDay = false; //--- Set the flag to false (no new day)
-   }
-   else if (prevDay != currDay){ //--- Check if a new day has started
+    }
+   else if (prevDay != currDay)
+    { //--- Check if a new day has started
       Print("WE HAVE A NEW DAY WITH DATE ",currDay); //--- Log the new day
       prevDay = currDay; //--- Update the previous day
       newDay = true; //--- Set the flag to true (new day)
-   }
-
+    }
    return (newDay); //--- Return the new day status
-}
+ }
 
 //+------------------------------------------------------------------+
-//| Function to draw a breakpoint marker                              |
+//| Function to draw a breakpoint marker                             |
+//| Define a function to draw a breakpoint marker                    |
 //+------------------------------------------------------------------+
 void drawBreakPoint(string objName,datetime time,double price,int arrCode,
-   color clr,int direction){ //--- Define a function to draw a breakpoint marker
-   if (ObjectFind(0,objName) < 0){ //--- Check if the breakpoint object does not already exist
+   color clr,int direction)
+ { 
+   //--- Check if the breakpoint object does not already exist
+   if (ObjectFind(0,objName) < 0)
+    { 
       ObjectCreate(0,objName,OBJ_ARROW,0,time,price); //--- Create an arrow object at the specified time and price
       ObjectSetInteger(0,objName,OBJPROP_ARROWCODE,arrCode); //--- Set the arrow code for the marker
       ObjectSetInteger(0,objName,OBJPROP_COLOR,clr); //--- Set the color of the arrow
@@ -343,24 +394,32 @@ void drawBreakPoint(string objName,datetime time,double price,int arrCode,
       ObjectCreate(0,objNameDescr,OBJ_TEXT,0,time,price); //--- Create a text object at the breakpoint
       ObjectSetInteger(0,objNameDescr,OBJPROP_COLOR,clr); //--- Set the color of the text
       ObjectSetInteger(0,objNameDescr,OBJPROP_FONTSIZE,12); //--- Set the font size of the text
-      if (direction > 0) { //--- Check if the breakout is upward
+      //--- Check if the breakout is upward
+      if (direction > 0) 
+       { 
          ObjectSetInteger(0,objNameDescr,OBJPROP_ANCHOR,ANCHOR_LEFT_UPPER); //--- Set the text anchor to left upper
          ObjectSetString(0,objNameDescr,OBJPROP_TEXT, " " + txt); //--- Set the text content
-      }
-      if (direction < 0) { //--- Check if the breakout is downward
+       }
+      //--- Check if the breakout is downward
+      if (direction < 0) 
+       { 
          ObjectSetInteger(0,objNameDescr,OBJPROP_ANCHOR,ANCHOR_LEFT_LOWER); //--- Set the text anchor to left lower
          ObjectSetString(0,objNameDescr,OBJPROP_TEXT, " " + txt); //--- Set the text content
-      }
-   }
+       }
+    }
    ChartRedraw(0); //--- Redraw the chart to display the breakpoint
-}
+ }
 
 //+------------------------------------------------------------------+
-//| Function to draw a swing point marker                             |
+//| Function to draw a swing point marker                            |
+//| Define a function to draw a swing point marker                   |
 //+------------------------------------------------------------------+
 void drawSwingPoint(string objName,datetime time,double price,int arrCode,
-   color clr,int direction){ //--- Define a function to draw a swing point marker
-   if (ObjectFind(0,objName) < 0){ //--- Check if the swing point object does not already exist
+   color clr,int direction)
+ { 
+   //--- Check if the swing point object does not already exist
+   if (ObjectFind(0,objName) < 0)
+    { 
       ObjectCreate(0,objName,OBJ_ARROW,0,time,price); //--- Create an arrow object at the specified time and price
       ObjectSetInteger(0,objName,OBJPROP_ARROWCODE,arrCode); //--- Set the arrow code for the marker
       ObjectSetInteger(0,objName,OBJPROP_COLOR,clr); //--- Set the color of the arrow
@@ -374,25 +433,32 @@ void drawSwingPoint(string objName,datetime time,double price,int arrCode,
       ObjectCreate(0,objName_Descr,OBJ_TEXT,0,time,price); //--- Create a text object at the swing point
       ObjectSetInteger(0,objName_Descr,OBJPROP_COLOR,clr); //--- Set the color of the text
       ObjectSetInteger(0,objName_Descr,OBJPROP_FONTSIZE,10); //--- Set the font size of the text
-
-      if (direction > 0) { //--- Check if the swing is a low
+      //--- Check if the swing is a low
+      if (direction > 0) 
+       { 
          ObjectSetString(0,objName_Descr,OBJPROP_TEXT,"  "+text); //--- Set the text content
          ObjectSetInteger(0,objName_Descr,OBJPROP_ANCHOR,ANCHOR_LEFT_UPPER); //--- Set the text anchor to left upper
-      }
-      if (direction < 0) { //--- Check if the swing is a high
+       }
+      //--- Check if the swing is a high
+      if (direction < 0) 
+       { 
          ObjectSetString(0,objName_Descr,OBJPROP_TEXT,"  "+text); //--- Set the text content
          ObjectSetInteger(0,objName_Descr,OBJPROP_ANCHOR,ANCHOR_LEFT_LOWER); //--- Set the text anchor to left lower
-      }
-   }
+       }
+    }
    ChartRedraw(0); //--- Redraw the chart to display the swing point
-}
+ }
 
 //+------------------------------------------------------------------+
-//| Function to draw a break level line                               |
+//| Function to draw a break level line                              |
+//| Define a function to draw a break level line                     |
 //+------------------------------------------------------------------+
 void drawBreakLevel(string objName,datetime time1,double price1,
-   datetime time2,double price2,color clr,int direction){ //--- Define a function to draw a break level line
-   if (ObjectFind(0,objName) < 0){ //--- Check if the break level object does not already exist
+   datetime time2,double price2,color clr,int direction)
+ { 
+   //--- Check if the break level object does not already exist
+   if (ObjectFind(0,objName) < 0)
+    { 
       ObjectCreate(0,objName,OBJ_ARROWED_LINE,0,time1,price1,time2,price2); //--- Create an arrowed line object
       ObjectSetInteger(0,objName,OBJPROP_TIME,0,time1); //--- Set the first time coordinate of the line
       ObjectSetDouble(0,objName,OBJPROP_PRICE,0,price1); //--- Set the first price coordinate of the line
@@ -407,15 +473,18 @@ void drawBreakLevel(string objName,datetime time1,double price1,
       ObjectCreate(0,objName_Descr,OBJ_TEXT,0,time2,price2); //--- Create a text object at the line's end
       ObjectSetInteger(0,objName_Descr,OBJPROP_COLOR,clr); //--- Set the color of the text
       ObjectSetInteger(0,objName_Descr,OBJPROP_FONTSIZE,10); //--- Set the font size of the text
-
-      if (direction > 0) { //--- Check if the break is upward
+      //--- Check if the break is upward
+      if (direction > 0) 
+       { 
          ObjectSetString(0,objName_Descr,OBJPROP_TEXT,text+"  "); //--- Set the text content
          ObjectSetInteger(0,objName_Descr,OBJPROP_ANCHOR,ANCHOR_RIGHT_UPPER); //--- Set the text anchor to right upper
-      }
-      if (direction < 0) { //--- Check if the break is downward
+       }
+      //--- Check if the break is downward
+      if (direction < 0) 
+       { 
          ObjectSetString(0,objName_Descr,OBJPROP_TEXT,text+"  "); //--- Set the text content
          ObjectSetInteger(0,objName_Descr,OBJPROP_ANCHOR,ANCHOR_RIGHT_LOWER); //--- Set the text anchor to right lower
-      }
-   }
+       }
+    }
    ChartRedraw(0); //--- Redraw the chart to display the break level
 }

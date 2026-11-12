@@ -90,18 +90,17 @@
    SIndicatorsRow catalog;
    if(m_IndicatorTemplateManager==NULL)
       return;
-   long ids[];
    ENUM_INDICATOR types[];
    string params[],display[];
    bool buy[],sell[],sound[],message[],show[];
-   int total=m_IndicatorTemplateManager.Read_RAM(ids,types,params,display,buy,sell,sound,message,show);
+   int total=m_IndicatorTemplateManager.Read_RAM(types,params,display,buy,sell,sound,message,show);
    for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
      {
       m_sections_indicator.ClearBody(g);
       int row=0;
       for(int i=0;i<total;i++)
          if(m_IndicatorTemplateManager.Read_RAM(types[i],catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
-            this.AddRow_IndicatorTemplateSetting(g,row++,ids[i],display[i],show[i],buy[i],sell[i],sound[i],message[i]);
+            this.AddRow_IndicatorTemplateSetting(g,row++,this.RowHandle_IndicatorTemplateSetting(types[i],params[i]),display[i],show[i],buy[i],sell[i],sound[i],message[i]);
      }
    this.SyncSections_IndicatorTemplateSetting();
    m_sections_indicator.Arrange();
@@ -112,22 +111,22 @@
    SIndicatorsRow catalog;
    if(m_IndicatorTemplateManager==NULL)
       return;
-   long ids[];
    ENUM_INDICATOR types[];
    string params[],display[];
    bool buy[],sell[],sound[],message[],show[];
-   int total=m_IndicatorTemplateManager.Read_RAM(ids,types,params,display,buy,sell,sound,message,show);
+   int total=m_IndicatorTemplateManager.Read_RAM(types,params,display,buy,sell,sound,message,show);
    bool any_show[INDICATOR_SECTIONS_TOTAL],any_signal[INDICATOR_SECTIONS_TOTAL],any_alert[INDICATOR_SECTIONS_TOTAL];
    ::ArrayInitialize(any_show,false);
    ::ArrayInitialize(any_signal,false);
    ::ArrayInitialize(any_alert,false);
    for(int i=0;i<total;i++)
      {
-      m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_SHOW_ON_CHART,show[i]);
-      m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_BUY_SIGNAL,buy[i]);
-      m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_SELL_SIGNAL,sell[i]);
-      m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_SOUND_ALERT,sound[i]);
-      m_sections_indicator.SetBodyState(ids[i],INDICATOR_SLOT_MESSAGE_ALERT,message[i]);
+      long row_handle=this.RowHandle_IndicatorTemplateSetting(types[i],params[i]);
+      m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_SHOW_ON_CHART,show[i]);
+      m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_BUY_SIGNAL,buy[i]);
+      m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_SELL_SIGNAL,sell[i]);
+      m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_SOUND_ALERT,sound[i]);
+      m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_MESSAGE_ALERT,message[i]);
       for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
          if(m_IndicatorTemplateManager.Read_RAM(types[i],catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
            {
@@ -143,18 +142,23 @@
       m_sections_indicator.SetToggle(g,INDICATOR_TOGGLE_ALERT,any_alert[g]);
      }
   }
- //--- The template of an id: the key the manager knows it by
+ //--- The number of the row of a template on the panel: a control event carries a number
+ long CGUIPannel::RowHandle_IndicatorTemplateSetting(const ENUM_INDICATOR type,const string params_text)
+  {
+   CIndicatorSetting *setting=m_IndicatorTemplateManager.Read_RAM(type,params_text);
+   return (setting!=NULL ? setting.ID() : WRONG_VALUE);
+  }
+ //--- The template of a row of the panel: the key the manager knows it by
  bool CGUIPannel::TemplateOfId_IndicatorTemplateSetting(const long id,ENUM_INDICATOR &type,string &params_text)
   {
    if(m_IndicatorTemplateManager==NULL)
       return false;
-   long ids[];
    ENUM_INDICATOR types[];
    string params[];
    bool buy[],sell[];
-   int total=m_IndicatorTemplateManager.Read_RAM(ids,types,params,buy,sell);
+   int total=m_IndicatorTemplateManager.Read_RAM(types,params,buy,sell);
    for(int i=0;i<total;i++)
-      if(ids[i]==id)
+      if(this.RowHandle_IndicatorTemplateSetting(types[i],params[i])==id)
         {
          type=types[i];
          params_text=params[i];
@@ -195,7 +199,7 @@
       ::ChartRedraw(this.m_chart_id);
       return;
      }
-   //--- A template went (dparam = its id): its row goes, the rows under it move up
+   //--- A template went (lparam = its type, sparam = its params, dparam = the handle of its row): its row goes, the rows under it move up
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
      {
       m_sections_indicator.RemoveRows((long)dparam);
@@ -230,12 +234,12 @@
       return;
      }
    //--- A control of a row: the delete button, or the switch of a flag
-   long template_id;
+   long row_handle;
    int slot;
    string param;
    ENUM_INDICATOR type;
    string params_text;
-   if(!m_sections_indicator.BodyOf(lparam,template_id,slot,param) || !this.TemplateOfId_IndicatorTemplateSetting(template_id,type,params_text))
+   if(!m_sections_indicator.BodyOf(lparam,row_handle,slot,param) || !this.TemplateOfId_IndicatorTemplateSetting(row_handle,type,params_text))
      return;
    if(slot==INDICATOR_SLOT_DELETE)
      m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params_text);

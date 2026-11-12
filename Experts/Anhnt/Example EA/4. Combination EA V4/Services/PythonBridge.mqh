@@ -1,9 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                                 PythonBridge.mqh |
+//| CRUD table Setting_PythonBridge in Common Database               |
 //+------------------------------------------------------------------+
-//--- Python is the other Controller of the database: the EA only starts it when it is not running. No socket and no message: Python takes the place in the
-//--- table Setting_PythonBridge (its process id) and writes the time it was alive there once a second, the EA reads it and clears the place when it is closed.
-//--- A launch needs "Allow DLL imports" in the options of the EA
 #ifndef __PYTHONBRIDGE_MQH__
 #define __PYTHONBRIDGE_MQH__
  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Bases\BaseObj.mqh>
@@ -32,7 +30,7 @@
  #define PYTHON_CURRENT_DONE_FILE                 "Python_CurrentDone.flag"      // the newest bars of every pair are there, it ends
  #define PYTHON_HISTORY_FILE                      "Python_HistoryDone.flag"      // every worker of the history is asleep
  //--- The other way: the EA makes it, Python takes it away (libdb.JOBS_FLAG)
- #define PYTHON_JOBS_FILE                         "Python_Jobs.flag"             // a template or a pair came or went, or the rows of a changed parameter are deleted: the Current worker runs again at once
+ #define PYTHON_JOBS_FILE                         "Python_Jobs.flag"             // a template or a pair came or went, or the marks of a changed parameter are deleted: the Current worker runs again at once
 #ifndef CPYTHONBRIDGE_MQH_DECLARATION
 #define CPYTHONBRIDGE_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -223,6 +221,13 @@
   {
    if(m_launch_ms!=0 && ::GetTickCount64()-m_launch_ms<PYTHON_RELAUNCH_BLOCK_MS)
       return;
+   //--- The terminal has no connection to the server: Python could not connect to it (mt5.initialize), it is started when the connection is back
+   if(!::TerminalInfoInteger(TERMINAL_CONNECTED))
+     {
+      m_launch_ms=::GetTickCount64();   // told once every PYTHON_RELAUNCH_BLOCK_MS
+      ::Print(__FUNCTION__," > the terminal is not connected to the server: Python is started when it is");
+      return;
+     }
    string command=PYTHON_EXE+" \""+::TerminalInfoString(TERMINAL_DATA_PATH)+PYTHON_SCRIPT+"\" --database \""+this.m_CDatabaseService.GetDatabaseFile("Common")+"\"";   // where the table is: what the EA decides is in Setting_PythonBridge
    uchar bytes[];
    ::StringToCharArray(command,bytes,0,WHOLE_ARRAY,CP_ACP);
@@ -243,7 +248,7 @@
    if(this.TellMilestone(PYTHON_CURRENT_START_FILE,"Current Python start"))
      {
       m_symboltf_told=false;   // a new run of Current (it took the file of the run before away): the library waits for its SYMBOLTF_DONE
-      ::EventChartCustom(::ChartID(),(ushort)PYTHON_BRIDGE_EVENT_CURRENT_START,0,0.0,"");
+      this.EventSend((ushort)PYTHON_BRIDGE_EVENT_CURRENT_START,0,0.0,"");
      }
    this.TellMilestone(PYTHON_CURRENT_START_CURRENT_CHART_FILE,"Current Python: the chart pair is in the database");
    //--- The file of this milestone stays while Python runs (Current takes it away when it starts again): an EA loaded again while Python runs (a new compile, the
@@ -252,7 +257,7 @@
      {
       m_symboltf_told=true;
       ::Print("Python Current Python: every pair of Setting_SymbolTF is in the database");
-      ::EventChartCustom(::ChartID(),(ushort)PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE,0,0.0,"");   // CSyncManager, then the collections hear it: what Python wrote goes to RAM, the library judges
+      this.EventSend((ushort)PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE,0,0.0,"");   // CSyncManager, then the collections hear it: what Python wrote goes to RAM, the library judges
      }
    this.TellMilestone(PYTHON_CURRENT_DONE_FILE,"Current Python complete: every Symbol + TF is in the database");
    this.TellMilestone(PYTHON_HISTORY_FILE,"history complete: every symbol and timeframe has its history, only the new bars go on");

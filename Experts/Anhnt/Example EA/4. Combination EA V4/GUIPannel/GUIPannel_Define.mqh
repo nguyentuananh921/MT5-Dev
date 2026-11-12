@@ -31,6 +31,7 @@
   #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\HistoryCollection.mqh>   // the table Orders: the tables of the Trade Manage window
   #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\MarketCollection.mqh>    // the positions: their numbers on the caption
   #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\GraphElementsCollection.mqh>   // the markers: the popup lights the box of its candle
+  #include <Vendors\Anhnt\Library\4. Combination Lib V4\Collections\BarMarkerCollection.mqh>   // the rows of a candle on RAM: the popup reads them
   #include <Vendors\Anhnt\Library\4. Combination Lib V4\Entities\Graph\Composite\BarMarker.mqh>
  // Define GUI control
   #define M_SUBWINDOW_MAIN                0  //The EA runs in the main window of its own chart: one EA instance per chart

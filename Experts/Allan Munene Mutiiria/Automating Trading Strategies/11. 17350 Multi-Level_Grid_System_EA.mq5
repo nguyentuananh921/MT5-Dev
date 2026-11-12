@@ -12,11 +12,11 @@
 CTrade obj_Trade; //--- Instantiates the CTrade object used for managing trade operations
 
 //--- Closure Mode Enumeration and Inputs
-enum ClosureMode {
+enum ClosureMode 
+ {
    CLOSE_BY_PROFIT,      //--- Use total profit (in currency) to close positions
    CLOSE_BY_POINTS       //--- Use points threshold from breakeven to close positions
-};
-
+ };
 input group "General EA Settings"
 input ClosureMode closureMode = CLOSE_BY_POINTS;
 input double inpLotSize = 0.01;
@@ -26,12 +26,12 @@ input int inpGridSize = 1000;
 input double inpMultiplier = 2.0;
 input int inpBreakevenPts = 50;
 input int maxBaskets = 5;
-
 input group "MA Indicator Settings"
 input int inpMAPeriod = 21;
 
 //--- Basket Structure
-struct BasketInfo {
+struct BasketInfo 
+ {
    int basketId;            //--- Unique basket identifier (e.g., 1, 2, 3...)
    long magic;              //--- Unique magic number for this basket to differentiate its trades
    int direction;           //--- Direction of the basket: POSITION_TYPE_BUY or POSITION_TYPE_SELL
@@ -40,7 +40,7 @@ struct BasketInfo {
    double gridSize;         //--- The next grid level price for the basket
    double takeProfit;       //--- The current take-profit price for the basket
    datetime signalTime;     //--- Timestamp of the signal to avoid duplicate trade entries
-};
+ };
 
 BasketInfo baskets[];       //--- Dynamic array to store active basket information
 int nextBasketId = 1;       //--- Counter for assigning unique IDs to new baskets
@@ -71,7 +71,8 @@ int CountBasketPositions(int basketId); //--- Prototype to count the number of o
 //+------------------------------------------------------------------+
 //--- Expert initialization function
 //+------------------------------------------------------------------+
-int OnInit() {
+int OnInit() 
+ {
    handle = iMA(_Symbol, _Period, inpMAPeriod, 0, MODE_SMA, PRICE_CLOSE); //--- Initialize the Moving Average indicator with specified period and parameters
    if(handle == INVALID_HANDLE) {
       Print("ERROR: Unable to initialize Moving Average indicator!"); //--- Log error if indicator initialization fails
@@ -81,19 +82,21 @@ int OnInit() {
    ArrayResize(baskets, 0); //--- Initialize the baskets array as empty at startup
    obj_Trade.SetExpertMagicNumber(baseMagic); //--- Set the default magic number for trade operations
    return(INIT_SUCCEEDED); //--- Signal that initialization completed successfully
-}
+ }
 
 //+------------------------------------------------------------------+
 //--- Expert deinitialization function
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason) {
+void OnDeinit(const int reason) 
+ {
    IndicatorRelease(handle); //--- Release the indicator handle to free up resources when the EA is removed
-}
+ }
 
 //+------------------------------------------------------------------+
 //--- Expert tick function
 //+------------------------------------------------------------------+
-void OnTick() {
+void OnTick() 
+ {
    if(IsNewBar()) { //--- Execute logic only when a new bar is detected
       UpdateMovingAverage(); //--- Update the Moving Average data for the current bar
       double ask = NormalizeDouble(SymbolInfoDouble(_Symbol, SYMBOL_ASK), _Digits); //--- Get and normalize the current ask price
@@ -103,16 +106,18 @@ void OnTick() {
       CheckForNewSignal(ask, bid);
 
       //--- Loop through all active baskets to manage grid positions and potential closures
-      for(int i = 0; i < ArraySize(baskets); i++) {
+      for(int i = 0; i < ArraySize(baskets); i++) 
+       {
          ManageGridPositions(i, ask, bid); //--- Manage grid trading for the current basket
          if(closureMode == CLOSE_BY_PROFIT) CheckAndCloseProfitTargets(); //--- If using profit target closure mode, check for profit conditions
          if(closureMode == CLOSE_BY_POINTS && CountBasketPositions(baskets[i].basketId) > 1) {
             CheckBreakevenClose(i, ask, bid); //--- If using points-based closure and multiple positions exist, check breakeven conditions
          }
-      }
+       }
 
       //--- Remove inactive baskets that no longer have any open positions
-      for(int i = ArraySize(baskets) - 1; i >= 0; i--) {
+      for(int i = ArraySize(baskets) - 1; i >= 0; i--) 
+       {
          if(CountBasketPositions(baskets[i].basketId) == 0) {
             Print("Removing inactive basket ID: ", baskets[i].basketId); //--- Log the removal of an inactive basket
             for(int j = i; j < ArraySize(baskets) - 1; j++) {
@@ -120,14 +125,15 @@ void OnTick() {
             }
             ArrayResize(baskets, ArraySize(baskets) - 1); //--- Resize the baskets array to remove the empty slot
          }
-      }
+       }
    }
 }
 
 //+------------------------------------------------------------------+
 //--- Check for New Crossover Signal
 //+------------------------------------------------------------------+
-void CheckForNewSignal(double ask, double bid) {
+void CheckForNewSignal(double ask, double bid) 
+ {
    double close1 = iClose(_Symbol, _Period, 1); //--- Retrieve the close price of the previous bar
    double close2 = iClose(_Symbol, _Period, 2); //--- Retrieve the close price of the bar before the previous one
    datetime currentBarTime = iTime(_Symbol, _Period, 1); //--- Get the time of the current bar
@@ -200,12 +206,14 @@ bool ExecuteInitialTrade(int basketIdx, double ask, double bid, int direction) {
 //+------------------------------------------------------------------+
 //--- Manage Grid Positions
 //+------------------------------------------------------------------+
-void ManageGridPositions(int basketIdx, double ask, double bid) {
+void ManageGridPositions(int basketIdx, double ask, double bid) 
+ {
    bool newPositionOpened = false; //--- Flag to track if a new grid position has been opened
    string comment = GetPositionComment(baskets[basketIdx].basketId, false); //--- Generate a comment for grid trades in this basket
    obj_Trade.SetExpertMagicNumber(baskets[basketIdx].magic); //--- Ensure the trade object uses the basket's unique magic number
 
-   if(baskets[basketIdx].direction == POSITION_TYPE_BUY) {
+   if(baskets[basketIdx].direction == POSITION_TYPE_BUY) 
+    {
       if(ask <= baskets[basketIdx].gridSize) { //--- Check if the ask price has reached the grid level for a buy order
          baskets[basketIdx].currentLotSize *= inpMultiplier; //--- Increase the lot size based on the defined multiplier
          if(obj_Trade.Buy(baskets[basketIdx].currentLotSize, _Symbol, ask, 0, baskets[basketIdx].takeProfit, comment)) {
@@ -216,7 +224,9 @@ void ManageGridPositions(int basketIdx, double ask, double bid) {
             Print("Basket ", baskets[basketIdx].basketId, ": Grid BUY failed, error: ", GetLastError()); //--- Log an error if the grid buy order fails
          }
       }
-   } else if(baskets[basketIdx].direction == POSITION_TYPE_SELL) {
+    } 
+   else if(baskets[basketIdx].direction == POSITION_TYPE_SELL) 
+    {
       if(bid >= baskets[basketIdx].gridSize) { //--- Check if the bid price has reached the grid level for a sell order
          baskets[basketIdx].currentLotSize *= inpMultiplier; //--- Increase the lot size based on the multiplier for grid orders
          if(obj_Trade.Sell(baskets[basketIdx].currentLotSize, _Symbol, bid, 0, baskets[basketIdx].takeProfit, comment)) {
@@ -227,7 +237,7 @@ void ManageGridPositions(int basketIdx, double ask, double bid) {
             Print("Basket ", baskets[basketIdx].basketId, ": Grid SELL failed, error: ", GetLastError()); //--- Log an error if the grid sell order fails
          }
       }
-   }
+    }
 
    //--- If a new grid position was opened and there are multiple positions, adjust the take profit to breakeven
    if(newPositionOpened && CountBasketPositions(baskets[basketIdx].basketId) > 1) {
@@ -253,10 +263,12 @@ void ManageGridPositions(int basketIdx, double ask, double bid) {
 //+------------------------------------------------------------------+
 //--- Calculate Weighted Breakeven Price for a Basket
 //+------------------------------------------------------------------+
-double CalculateBreakevenPrice(int basketId) {
+double CalculateBreakevenPrice(int basketId) 
+ {
    double weightedSum = 0.0; //--- Initialize sum for weighted prices
    double totalLots = 0.0;   //--- Initialize sum for total lot sizes
-   for(int i = 0; i < PositionsTotal(); i++) { //--- Loop over all open positions
+   for(int i = 0; i < PositionsTotal(); i++) 
+    { //--- Loop over all open positions
       ulong ticket = PositionGetTicket(i); //--- Retrieve the ticket for the current position
       if(PositionSelectByTicket(ticket) && PositionGetString(POSITION_SYMBOL) == _Symbol && 
          StringFind(PositionGetString(POSITION_COMMENT), "Basket_" + IntegerToString(basketId)) >= 0) { //--- Check if the position belongs to the specified basket
@@ -267,7 +279,7 @@ double CalculateBreakevenPrice(int basketId) {
       }
    }
    return (totalLots > 0) ? (weightedSum / totalLots) : 0; //--- Return the weighted average price (breakeven) or 0 if no positions found
-}
+ }
 
 //+------------------------------------------------------------------+
 //--- Check Breakeven Close
