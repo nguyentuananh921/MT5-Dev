@@ -66,18 +66,6 @@
    long   bar_time;
    long   signal_direction;
   };
-//--- Removed in V5: unused / only for the removed newest-bar read
-// struct SBarCandleRow
-//  {
-//   long   tf_enum;
-//   long   type_infor;
-//   long   bar_time;
-//   long   signal_direction;
-//  };
-// struct SBarNewestRow
-//  {
-//   long   bar_time;
-//  };
  class CBarInformationManager : public CBaseObj
   {
     private:

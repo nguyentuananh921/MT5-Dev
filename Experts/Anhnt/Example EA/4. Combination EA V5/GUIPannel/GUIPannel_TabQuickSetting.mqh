@@ -25,7 +25,7 @@
    if(!m_tabs_quickSetting.CreateTabs(this.m_chart_id,M_SUBWINDOW_MAIN,"TabsQuickSetting",x_gap,y_gap))
       return(false);
    //--- The icon of each tab, in the order of ENUM_TAB_QUICK_SETTING
-   uint tab_icons[TAB_QUICK_SETTING_TOTAL]={IMAGE_RESOURCE_BMP32_INDICATOR_PNG,IMAGE_RESOURCE_BMP32_SYMBOL_PNG,IMAGE_RESOURCE_BMP32_CANDLE_MARKER_CANDLE_PNG,IMAGE_RESOURCE_BMP32_RISK_MANAGEMENT_PNG,IMAGE_RESOURCE_BMP32_SMARTMONEY_PNG};
+   uint tab_icons[TAB_QUICK_SETTING_TOTAL]={IMAGE_RESOURCE_BMP32_INDICATOR_PNG,IMAGE_RESOURCE_BMP32_SYMBOL_PNG,IMAGE_RESOURCE_BMP32_CANDLE_MARKER_CANDLE_PNG,IMAGE_RESOURCE_BMP32_STRATEGY_PNG,IMAGE_RESOURCE_BMP32_RISK_MANAGEMENT_PNG,IMAGE_RESOURCE_BMP32_SMARTMONEY_PNG};
    for(int i=0;i<TAB_QUICK_SETTING_TOTAL;i++)
      {
       CButtonTriggered *button=m_tabs_quickSetting.GetButtonsGroupPointer().GetButtonPointer(i);
@@ -43,6 +43,9 @@
    PopulateSections_IndicatorTemplateSetting();
    Breadcrumb("CreateTab_QuickSetting: CreateSections_BarInformation");
    if(!CreateSections_BarInformation())
+      return(false);
+   Breadcrumb("CreateTab_QuickSetting: CreateSections_Strategy");
+   if(!CreateSections_Strategy())
       return(false);
    Breadcrumb("CreateTab_QuickSetting: CreateTreeView_SymbolTFSetting");
    if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,M_CONTROL_BORDER_GAP))

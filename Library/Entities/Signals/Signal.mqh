@@ -9,7 +9,7 @@
  #include <Arrays\ArrayLong.mqh>
  #include <Arrays\ArrayInt.mqh>
  #include "..\Bases\BaseObj.mqh"
- //#include "..\Indicators\IndicatorDE.mqh"
+ #include "..\Defines\EventDefines.mqh"
 #ifndef CSIGNAL_MQH_DECLARATION
 #define CSIGNAL_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -49,6 +49,9 @@
     ENUM_SIGNAL_DIRECTION HistoryDir(const int index) const { return (ENUM_SIGNAL_DIRECTION)this.m_hist_dir.At(index); }
    //--- A row goes in its place by its time, one per bar (false: the bar has one already)
     bool              AddRow(const datetime time,const ENUM_SIGNAL_DIRECTION direction);
+   //--- V5: a row Python found (CPythonBridge) is added and told (Event Rule): SERIES_EVENTS_SIGNAL, lparam = EventPack(bar time, type, side, is_new),
+   //--- dparam = the timeframe, sparam = the symbol;the params. False: the bar had it already (judged on RAM before: no second event)
+    bool              StoreRow(const datetime time,const ENUM_SIGNAL_DIRECTION direction,const bool is_new);
    //--- The rows before the time go. Returns how many went
     int               DeleteRows(const datetime before);
     datetime          JudgedTo(void)                const { return this.m_judged_to;       }
@@ -70,6 +73,18 @@
    if(pos>0 && this.m_hist_time.At(pos-1)==(long)time)
       return false;   // the bar has a row already
    return (this.m_hist_time.Insert((long)time,pos) && this.m_hist_dir.Insert((int)direction,pos));
+  }
+ //+------------------------------------------------------------------+
+ //| A row of Python is added and told                                 |
+ //+------------------------------------------------------------------+
+ bool CSignal::StoreRow(const datetime time,const ENUM_SIGNAL_DIRECTION direction,const bool is_new)
+  {
+   if(!this.AddRow(time,direction))
+      return false;
+   //--- RAM changed: told, with all the Automation Trading needs (no asking back)
+   const string text=this.m_symbol+";"+this.m_params_text;
+   this.EventSend((ushort)SERIES_EVENTS_SIGNAL,this.EventPack(time,(long)this.m_ind_type,direction,is_new),(double)this.m_timeframe,text);
+   return true;
   }
  //+------------------------------------------------------------------+
  //| The rows before a time go                                         |

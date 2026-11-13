@@ -18,6 +18,7 @@ import MetaTrader5 as mt5
 # TABLE_BARS = "BarSeriesDE"   # Removed in V5: no bar is kept in the DB, they are taken from the terminal
 TABLE_RESULT = "BarTimeSeriesCollection"
 TABLE_IND_RESULT = "SignalsCollection"
+TABLE_STRATEGY_RESULT = "StrategyCollection"   # V5: the entries and exits of the strategies (key strategy_id, role "entry" / "exit"), CStrategyManager makes it
 TABLE_SYNC = "Setting_Sync"
 TABLE_PYTHON_BRIDGE = "Setting_PythonBridge"   # the EA writes its constants here in OnInit, Python reads them (setting)
 PLACE_NAMES = ("pid", "alive_at")              # the place of Python, not a setting
@@ -118,6 +119,26 @@ def timeframes():
         finally:
             link.close()
     return _timeframes
+
+
+def strategies():
+    """The strategies of the EA (CStrategyManager makes the tables): the rows of Setting_Strategy (its tf), each with its rows of Setting_StrategyIndicator (an indicator slot
+    with its row of indicators: type_name, params of the strategy or of indicators, level_high, level_low) and of Setting_StrategyCondition. Read at each call: the user may change them."""
+    signals = setting_int("collection_signals")
+    sides = {signal_direction("BUY"): "BUY", signal_direction("SELL"): "SELL"}
+    link = sqlite3.connect(database_path().as_uri() + "?mode=ro", uri=True, timeout=BUSY_MS / 1000.0)
+    link.row_factory = sqlite3.Row
+    try:
+        out = [dict(row) for row in link.execute("SELECT strategy_id, name, reference, tf_enum FROM Setting_Strategy ORDER BY strategy_id")]   # tf_enum None: the tf of the chart
+        for strategy in out:
+            strategy["slots"] = [dict(row) for row in link.execute(   # tf_enum None: the tf of the strategy; params: the strategy's, else the standard of indicators
+                "SELECT s.slot, s.collection, s.source_id, s.tf_enum, i.type_name, COALESCE(s.params, i.params) AS params, i.level_high, i.level_low FROM Setting_StrategyIndicator s "
+                "LEFT JOIN indicators i ON s.collection = ? AND i.type_enum = s.source_id WHERE s.strategy_id = ?", (signals, strategy["strategy_id"]))]
+            strategy["conditions"] = [dict(row, signal_direction=sides.get(row["signal_direction"], "NONE")) for row in link.execute(
+                "SELECT role, signal_direction, slot, rule FROM Setting_StrategyCondition WHERE strategy_id = ?", (strategy["strategy_id"],))]
+    finally:
+        link.close()
+    return out
 
 
 def settings_ready():
@@ -399,7 +420,7 @@ class LibDatabase:
         if not self.open_account():
             return False   # no row of this account in accounts yet, or no file of it: the EA makes them when it starts on the account
         names = {row[0] for row in self.acc.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-        return {TABLE_RESULT, TABLE_IND_RESULT} <= names
+        return {TABLE_RESULT, TABLE_IND_RESULT, TABLE_STRATEGY_RESULT} <= names
 
     def bridge_python_bridge(self):
         """The place of Python in the table: (the process id that holds it, the seconds since its mark); None when the lines are not there. 0 and a huge age when nobody holds it."""
@@ -485,6 +506,12 @@ class LibDatabase:
         if key is None:
             return set()
         return {(row[0], row[1]) for row in self.db.execute("SELECT name, tf_enum FROM Setting_SymbolTF WHERE account_key = ?", (key,))}
+
+    def pairs_in_order(self, chart, library):
+        """pairs(), the pair of the chart first (chart_pair()), then the pairs of Setting_SymbolTF (library_pairs()), then every other pair: the order of Current and Kronos."""
+        pairs = self.pairs()
+        pairs.sort(key=lambda pair: 0 if chart == (pair[0], pair[1]) else 1 if (pair[0], pair[1]) in library else 2)
+        return pairs
 
     def account_symbol(self, name):
         """The name on this account of a symbol of symbol_base (XAUUSD -> XAUUSDc), None when the account has none."""

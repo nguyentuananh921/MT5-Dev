@@ -5,6 +5,7 @@
 //| told (Event Rule: the class that changes the data tells it, the   |
 //| Automation Trading listens)                                       |
 //+------------------------------------------------------------------+
+//--- V5: the library judges the new bars on RAM only (fastest); Python saves to the database, its rows of the same bars are refused (AddRow / NewRow)
 //--- New in V5: the steps that were written twice (V4 CBarControl::Calculate, CSignalSeriesDE::Calculate) are here once.
 //--- CBarControl (bits on CBar) and CSignalsCollection (rows of CSignal) give what differs: the judge, what it needs, where a row goes
 #ifndef __JUDGECONTROL_MQH__

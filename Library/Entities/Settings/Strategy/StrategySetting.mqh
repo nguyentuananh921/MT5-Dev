@@ -1,0 +1,106 @@
+//+------------------------------------------------------------------+
+//|                                              StrategySetting.mqh |
+//|                                     Copyright 2026, Anhnt        |
+//| 1 instance = 1 row of Setting_Strategy and its rows of           |
+//| Setting_StrategyIndicator (its slots) and                        |
+//| Setting_StrategyCondition (its conditions)                       |
+//| New in V5, as CBarInformationSetting                             |
+//+------------------------------------------------------------------+
+#ifndef __STRATEGYSETTING_MQH__
+#define __STRATEGYSETTING_MQH__
+ #include <Arrays\ArrayObj.mqh>
+ #include "StrategyIndicatorSetting.mqh"
+ #include "StrategyConditionSetting.mqh"
+ #include "..\..\Defines\EventDefines.mqh"
+#ifndef CSTRATEGYSETTING_MQH_DECLARATION
+#define CSTRATEGYSETTING_MQH_DECLARATION
+ class CStrategySetting : public CBaseObj
+  {
+    private:
+     long                       m_strategy_id;     // identity
+     string                     m_reference;       // a note to find where it comes from (the article, the EA)
+     ENUM_TIMEFRAMES            m_tf;              // the tf it trades on; PERIOD_CURRENT (NULL in the table): the tf of the chart
+     bool                       m_show_on_chart;   // its entries are drawn on the chart (CBarMarker)
+     CArrayObj                  m_list_indicator;  // CStrategyIndicatorSetting, in the order of the table
+     CArrayObj                  m_list_condition;  // CStrategyConditionSetting
+    public:
+                                CStrategySetting(const long strategy_id,const string name,const string reference,const ENUM_TIMEFRAMES tf);
+                               ~CStrategySetting(void) {}
+     long                       StrategyId(void)      const { return m_strategy_id;   }
+     string                     Name(void)            const { return m_name;          }
+     string                     Reference(void)       const { return m_reference;     }
+     ENUM_TIMEFRAMES            Timeframe(void)       const { return m_tf;            }
+     void                       Timeframe(const ENUM_TIMEFRAMES tf);   // fires STRATEGY_MANAGER_EVENT_TF_CHANGED when it changes
+   //--- show_on_chart fires STRATEGY_MANAGER_EVENT_SHOW_CHANGED when it changes, unless notify is false
+     bool                       ShowOnChart(void)     const { return m_show_on_chart; }
+     void                       ShowOnChart(const bool on,const bool notify=true);
+   //--- The slots and the conditions: (1) one more, (2) how many, (3) one of them
+     bool                       AddIndicator(const string slot,const ENUM_OBJECT_DE_TYPE collection,const long source_id,const ENUM_TIMEFRAMES tf,const string params);
+     bool                       AddCondition(const string role,const ENUM_SIGNAL_DIRECTION signal_direction,const string slot,const string rule);
+     int                        IndicatorsTotal(void) const { return m_list_indicator.Total(); }
+     int                        ConditionsTotal(void) const { return m_list_condition.Total(); }
+     CStrategyIndicatorSetting *Indicator(const int index) const { return m_list_indicator.At(index); }
+     CStrategyIndicatorSetting *Indicator(const string slot) const;   // by its name (NULL: none)
+     CStrategyConditionSetting *Condition(const int index) const { return m_list_condition.At(index); }
+  };
+#endif // CSTRATEGYSETTING_MQH_DECLARATION
+#ifndef CSTRATEGYSETTING_MQH_IMPLEMENTATION
+#define CSTRATEGYSETTING_MQH_IMPLEMENTATION
+ CStrategySetting::CStrategySetting(const long strategy_id,const string name,const string reference,const ENUM_TIMEFRAMES tf) :
+                                    m_strategy_id(strategy_id),m_reference(reference),m_tf(tf),m_show_on_chart(false)
+  {
+   this.m_object_type=OBJECT_DE_TYPE_STRATEGY_SETTING;
+   this.m_name=name;   // the name Python, the Web and the user call it
+  }
+ //--- The event: lparam = the strategy_id
+ void CStrategySetting::ShowOnChart(const bool on,const bool notify=true)
+  {
+   if(m_show_on_chart == on)
+      return;
+   m_show_on_chart = on;
+   if(notify)
+      this.EventSend((ushort)STRATEGY_MANAGER_EVENT_SHOW_CHANGED, m_strategy_id, 0.0, "");
+  }
+ void CStrategySetting::Timeframe(const ENUM_TIMEFRAMES tf)
+  {
+   if(m_tf == tf)
+      return;
+   m_tf = tf;
+   this.EventSend((ushort)STRATEGY_MANAGER_EVENT_TF_CHANGED, m_strategy_id, 0.0, "");
+  }
+ bool CStrategySetting::AddIndicator(const string slot,const ENUM_OBJECT_DE_TYPE collection,const long source_id,const ENUM_TIMEFRAMES tf,const string params)
+  {
+   CStrategyIndicatorSetting *row = new CStrategyIndicatorSetting(slot, collection, source_id, tf, params);
+   if(row == NULL)
+      return false;
+   if(!m_list_indicator.Add(row))
+     {
+      delete row;
+      return false;
+     }
+   return true;
+  }
+ CStrategyIndicatorSetting *CStrategySetting::Indicator(const string slot) const
+  {
+   for(int i = 0; i < m_list_indicator.Total(); i++)
+     {
+      CStrategyIndicatorSetting *row = m_list_indicator.At(i);
+      if(row != NULL && row.Slot() == slot)
+         return row;
+     }
+   return NULL;
+  }
+ bool CStrategySetting::AddCondition(const string role,const ENUM_SIGNAL_DIRECTION signal_direction,const string slot,const string rule)
+  {
+   CStrategyConditionSetting *row = new CStrategyConditionSetting(role, signal_direction, slot, rule);
+   if(row == NULL)
+      return false;
+   if(!m_list_condition.Add(row))
+     {
+      delete row;
+      return false;
+     }
+   return true;
+  }
+#endif // CSTRATEGYSETTING_MQH_IMPLEMENTATION
+#endif // __STRATEGYSETTING_MQH__

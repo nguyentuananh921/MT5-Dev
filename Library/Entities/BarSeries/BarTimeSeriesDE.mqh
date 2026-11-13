@@ -12,8 +12,7 @@
 #define CBARTIMESERIESDE_MQH_DECLARATION
  //+------------------------------------------------------------------+
  //| Symbol timeseries class                                          |
- //+------------------------------------------------------------------+
- //class CBarTimeSeriesDE : public CBaseObj
+ //+------------------------------------------------------------------+ 
  class CBarTimeSeriesDE : public CBaseObjExt
   {
    private:

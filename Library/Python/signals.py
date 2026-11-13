@@ -119,7 +119,8 @@ RULES = {"SAR": sar, "MA": ma, "MACD": macd, "BANDS": bands, "ADX": adx,
          "AMA": ma, "FRAMA": ma, "DEMA": ma, "TEMA": ma, "VIDYA": ma,
          "STDDEV": ma, "AD": ma, "BWMFI": ma,   # no natural direction: the slope stands in, as in V2
          "ENVELOPES": envelopes,
-         "ALLIGATOR": two_line_cross(0, 2), "RVI": two_line_cross(0, 1), "ICHIMOKU": two_line_cross(0, 1),
+         "ALLIGATOR": two_line_cross(2, 0), "RVI": two_line_cross(0, 1), "ICHIMOKU": two_line_cross(0, 1),   # Alligator: Lips (2, fast) crosses Jaw (0, slow), Bill Williams
+
          "AO": zero_cross(), "AC": zero_cross(), "FORCE": zero_cross(), "OSMA": zero_cross(), "TRIX": zero_cross(),
          "CHAIKIN": zero_cross(), "OBV": zero_cross(), "BEARS": zero_cross(), "BULLS": zero_cross(), "GATOR": zero_cross(),
          "FRACTALS": fractals, "VOLUMES": volumes}

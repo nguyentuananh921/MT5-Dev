@@ -8,10 +8,12 @@
 #define __BARMARKERCOLLECTION_MQH__
  #include "..\Entities\Bases\BaseObj.mqh"
  #include "..\Entities\Graph\Composite\BarMarker.mqh"
+ #include "..\Entities\Graph\Composite\StrategyTrade.mqh"
  #include "..\Entities\Chart\ChartObj.mqh"
  #include "GraphElementsCollection.mqh"
  #include "BarTimeSeriesCollection.mqh"
  #include "SignalsCollection.mqh"
+ #include "StrategyCollection.mqh"
  #include "Settings\SymbolTFManager.mqh"
  #include "Settings\BarInformationManager.mqh"
  #include "..\Entities\Defines\BarDefines.mqh"
@@ -23,12 +25,13 @@
  struct SBarMarkerRow
   {
    long              tf;            // the TF of the pair
-   long              collection;    // COLLECTION_SERIES_ID (a type of information) or COLLECTION_SIGNALS_ID (an indicator template)
-   long              type;          // ENUM_BAR_INFOR_TYPE or ENUM_INDICATOR
+   long              collection;    // COLLECTION_SERIES_ID (a type of information), COLLECTION_SIGNALS_ID (an indicator template) or COLLECTION_STRATEGY_ID (the entry of a strategy)
+   long              type;          // ENUM_BAR_INFOR_TYPE, ENUM_INDICATOR or the strategy_id
    string            params;        // the params of the template ("" for a type)
    long              time;          // the open time of the bar
    long              side;          // SIGNAL_DIRECTION_BUY or SIGNAL_DIRECTION_SELL
   };
+ #define BAR_MARKER_TRADE_NAME      "StrategyTrade_"
  //+------------------------------------------------------------------+
  //| Draws what was found on the candles of the chart                 |
  //+------------------------------------------------------------------+
@@ -42,15 +45,23 @@
     CSymbolTFManager          *m_SymbolTFManager;            // EA owns: what is shown (the sides of the chart pair), given to CBarMarker::Arrange
     CBarInformationManager    *m_BarInformationManager;      // EA owns: what is shown (the types of each side), given to CBarMarker::Arrange
     CIndicatorTemplateManager *m_IndicatorTemplateManager;   // EA owns: what is shown (the templates of each side), given to CBarMarker::Arrange
+    CStrategyCollection       *m_StrategyCollection;         // EA owns: the entries of the strategies on the pairs
+    CStrategyManager          *m_StrategyManager;            // EA owns: what is shown (show_on_chart of each strategy), given to CBarMarker::Arrange
    //--- The candles and sides of the rows, sorted and once each: time of the candle * 2 + the side
     void                       Collect(const SBarMarkerRow &rows[],long &keys[]);
    //--- The rows on RAM from_time to to_time of (1) the series of a pair (the types of information, CBarControl), (2) the series of a template on a pair, after the ones in the list.
    //--- Nothing is filtered: the view decides what it shows
     void                       CollectTypes(CBarSeriesDE *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
     void                       CollectIndicators(CSignal *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
+   //--- (3) the entries and exits of a strategy on a pair (params: the role)
+    void                       CollectStrategies(CStrategyBase *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
+   //--- The tf a strategy decides on (PERIOD_CURRENT in its setting: the tf of the chart)
+    ENUM_TIMEFRAMES            StrategyTimeframe(const long strategy_id);
+   //--- The trades of the strategies of the chart pair that the chart shows (CStrategyTrade, entry to exit): made again, then placed
+    void                       SyncTrades(void);
    public:
                                CBarMarkerCollection(void) : m_ChartObj(NULL),m_GraphElementsCollection(NULL),m_BarTimeSeriesCollection(NULL),m_SignalsCollection(NULL),m_SymbolTFManager(NULL),
-                                                            m_BarInformationManager(NULL),m_IndicatorTemplateManager(NULL) { }
+                                                            m_BarInformationManager(NULL),m_IndicatorTemplateManager(NULL),m_StrategyCollection(NULL),m_StrategyManager(NULL) { }
    //--- The classes it asks (the EA owns them)
     void                       SetChartObj(CChartObj *chart)                                  { this.m_ChartObj=chart;                   }
     void                       SetGraphElementsCollection(CGraphElementsCollection *collection) { this.m_GraphElementsCollection=collection; }
@@ -59,6 +70,8 @@
     void                       SetSymbolTFManager(CSymbolTFManager *manager)                  { this.m_SymbolTFManager=manager;          }
     void                       SetBarInformationManager(CBarInformationManager *manager)      { this.m_BarInformationManager=manager;    }
     void                       SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
+    void                       SetStrategyCollection(CStrategyCollection *collection)         { this.m_StrategyCollection=collection;    }
+    void                       SetStrategyManager(CStrategyManager *manager)                  { this.m_StrategyManager=manager;          }
    //--- The rows of the TFs asked of a symbol from_time to to_time (both in), joined on RAM; what RAM has not is loaded first (load on demand).
    //--- The markers of the chart and the popup of a candle read it. Returns how many
     int                        Read_RAM(const string symbol,const long &asked_tfs[],const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
@@ -178,6 +191,60 @@
      }
   }
  //+------------------------------------------------------------------+
+ //| The tf a strategy decides on: its own (Setting_Strategy.tf_enum), |
+ //| the tf of the chart when none is set                             |
+ //+------------------------------------------------------------------+
+ ENUM_TIMEFRAMES CBarMarkerCollection::StrategyTimeframe(const long strategy_id)
+  {
+   CStrategySetting *strategy=(this.m_StrategyManager!=NULL ? this.m_StrategyManager.Read_RAM(strategy_id) : NULL);
+   if(strategy==NULL || strategy.Timeframe()==PERIOD_CURRENT)
+      return this.m_ChartObj.Timeframe();
+   return strategy.Timeframe();
+  }
+ //+------------------------------------------------------------------+
+ //| The entries and exits of a strategy on RAM (on its tf), each on   |
+ //| the candle of the chart that holds its time                      |
+ //+------------------------------------------------------------------+
+ void CBarMarkerCollection::CollectStrategies(CStrategyBase *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[])
+  {
+   if(series==NULL)
+      return;
+   const string symbol=series.Symbol();
+   const ENUM_TIMEFRAMES chart_tf=this.m_ChartObj.Timeframe();
+   const datetime last=(datetime)(to_time+::PeriodSeconds(chart_tf)-1);   // a candle of the chart holds the bars of a shorter tf until its end
+   int low=0,high=series.HistoryTotal();
+   while(low<high)
+     {
+      int mid=(low+high)/2;
+      if(series.HistoryTime(mid)<from_time)
+         low=mid+1;
+      else
+         high=mid;
+     }
+   for(int i=low;i<series.HistoryTotal();i++)
+     {
+      if(series.HistoryTime(i)>last)
+         break;
+      const long side=(long)series.HistoryDir(i);
+      if(side!=(long)SIGNAL_DIRECTION_BUY && side!=(long)SIGNAL_DIRECTION_SELL)
+         continue;
+      const int shift=::iBarShift(symbol,chart_tf,series.HistoryTime(i),false);
+      const datetime candle=(shift>=0 ? ::iTime(symbol,chart_tf,shift) : 0);
+      if(candle<from_time || candle>to_time)
+         continue;
+      const int n=::ArraySize(rows);
+      ::ArrayResize(rows,n+1,1000);
+      rows[n].tf=(long)series.Timeframe();
+      rows[n].collection=COLLECTION_STRATEGY_ID;
+      rows[n].type=series.StrategyId();
+      rows[n].params=STRATEGY_ROLE_ENTRY;   // the role: an exit is on the side it closes
+      if(series.HistoryExit(i))
+         rows[n].params=STRATEGY_ROLE_EXIT;
+      rows[n].time=(long)candle;   // the tf of the row stays the strategy's (the popup shows it)
+      rows[n].side=side;
+     }
+  }
+ //+------------------------------------------------------------------+
  //| The rows of the TFs asked, joined on RAM. Load on demand: what is |
  //| asked before the 1000 bars of a series is read, nothing between   |
  //+------------------------------------------------------------------+
@@ -213,6 +280,19 @@
          if(signals!=NULL && signals.Symbol()==symbol && signals.Timeframe()==timeframe)
             this.CollectIndicators(signals,from_time,to_time,rows);
         }
+     }
+   //--- The strategies: each on the tf it decides on (not the tfs asked), its rows on the candles of the chart. Load on demand as above, on its tf
+   CArrayObj *strategy_list=(this.m_StrategyCollection!=NULL && this.m_ChartObj!=NULL ? this.m_StrategyCollection.GetList() : NULL);   // a series for each strategy on each pair
+   for(int s=0;strategy_list!=NULL && s<strategy_list.Total();s++)
+     {
+      CStrategyBase *strategy=strategy_list.At(s);
+      if(strategy==NULL || strategy.Symbol()!=symbol || strategy.Timeframe()!=this.StrategyTimeframe(strategy.StrategyId()))
+         continue;
+      CBarSeriesDE *bars=this.m_BarTimeSeriesCollection.GetSeries(symbol,strategy.Timeframe());
+      CBar *oldest=(bars!=NULL && bars.GetList().Total()>0 ? bars.GetList().At(0) : NULL);
+      if(oldest!=NULL && from_time<oldest.Time())
+         this.m_StrategyCollection.ReadDataFromDB(symbol,strategy.Timeframe(),from_time,(datetime)::MathMin((long)to_time+::PeriodSeconds(this.m_ChartObj.Timeframe())-1,(long)oldest.Time()-1));
+      this.CollectStrategies(strategy,from_time,to_time,rows);
      }
    return ::ArraySize(rows);
   }
@@ -303,7 +383,7 @@
      {
       if(markers[i]==NULL)
          continue;
-      long types[],ind_types[];
+      long types[],ind_types[],strategies[],strategy_exits[];
       string ind_params[];
       for(;next<rows_total && order[next]/rows_total<=keys[i];next++)
         {
@@ -315,6 +395,18 @@
             const int n=::ArraySize(types);
             ::ArrayResize(types,n+1,8);
             types[n]=rows[r].type;
+           }
+         else if(rows[r].collection==COLLECTION_STRATEGY_ID && rows[r].params==STRATEGY_ROLE_EXIT)
+           {
+            const int n=::ArraySize(strategy_exits);
+            ::ArrayResize(strategy_exits,n+1,4);
+            strategy_exits[n]=rows[r].type;
+           }
+         else if(rows[r].collection==COLLECTION_STRATEGY_ID)
+           {
+            const int n=::ArraySize(strategies);
+            ::ArrayResize(strategies,n+1,4);
+            strategies[n]=rows[r].type;
            }
          else
            {
@@ -330,11 +422,12 @@
       int shift=::iBarShift(symbol,timeframe,bar_time,false);
       if(shift<0)
          continue;
-      markers[i].SetMarker(bar_time,::iHigh(symbol,timeframe,shift),::iLow(symbol,timeframe,shift),is_buy,types,ind_types,ind_params);
+      markers[i].SetMarker(bar_time,::iHigh(symbol,timeframe,shift),::iLow(symbol,timeframe,shift),is_buy,types,ind_types,ind_params,strategies,strategy_exits);
      }
    const ulong debug_t3=::GetMicrosecondCount();
    //--- The markers decide what they show, then the badges are placed: an event told one candle, the badges from it (the ones before it stay)
-   CBarMarker::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_SymbolTFManager,this.m_BarInformationManager,this.m_IndicatorTemplateManager,time);
+   CBarMarker::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_SymbolTFManager,this.m_BarInformationManager,this.m_IndicatorTemplateManager,this.m_StrategyManager,time);
+   this.SyncTrades();
    const ulong debug_t4=::GetMicrosecondCount();
    ::ChartRedraw(this.m_ChartObj.ID());
    const ulong debug_t5=::GetMicrosecondCount();
@@ -348,6 +441,60 @@
    ::Print(debug_text);
   }
  //+------------------------------------------------------------------+
+ //| The trades of the strategies on the chart pair that the chart     |
+ //| shows: a trade a CStrategyTrade, made again (a few of them)       |
+ //+------------------------------------------------------------------+
+ void CBarMarkerCollection::SyncTrades(void)
+  {
+   if(this.m_ChartObj==NULL || this.m_GraphElementsCollection==NULL || this.m_StrategyCollection==NULL)
+      return;
+   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
+     {
+      CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
+      if(dynamic_cast<CStrategyTrade *>(child)==NULL)
+         continue;
+      this.m_GraphElementsCollection.DeleteChild(child);
+      delete child;
+     }
+   datetime from_time=0,to_time=0;
+   if(!this.m_ChartObj.VisibleRange(from_time,to_time))
+      return;
+   const string symbol=this.m_ChartObj.Symbol();
+   const ENUM_TIMEFRAMES timeframe=this.m_ChartObj.Timeframe();
+   CArrayObj *list=this.m_StrategyCollection.GetList();
+   int debug_series=0,debug_rows=0,debug_trades=0,debug_made=0;
+   for(int s=0;s<list.Total();s++)
+     {
+      CStrategyBase *series=list.At(s);
+      if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=this.StrategyTimeframe(series.StrategyId()))
+         continue;   // a strategy is drawn from the tf it decides on, on any chart tf
+      datetime entries[],exits[];
+      bool is_buy[];
+      const int total=series.Trades(entries,exits,is_buy);
+      debug_series++;
+      debug_rows+=series.HistoryTotal();
+      debug_trades+=total;
+      for(int t=0;t<total;t++)
+        {
+         if(exits[t]<from_time || entries[t]>to_time+::PeriodSeconds(timeframe))
+            continue;   // the trade is out of the view
+         CStrategyTrade *trade=new CStrategyTrade();
+         if(trade==NULL || !trade.Create(this.m_ChartObj.ID(),BAR_MARKER_TRADE_NAME+(string)series.StrategyId()+"_"+(string)(long)entries[t],series.StrategyId(),
+                                         entries[t],exits[t],is_buy[t]) ||
+            !this.m_GraphElementsCollection.AddChild(trade))
+           {
+            delete trade;
+            continue;
+           }
+         debug_made++;
+        }
+     }
+   CStrategyTrade::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_StrategyManager);
+   string debug_text="MY DEBUG CBarMarkerCollection::SyncTrades "+symbol+" "+::EnumToString(timeframe)+" view "+::TimeToString(from_time)+" .. "+::TimeToString(to_time)+": "+
+                     (string)debug_series+" strategy series of the pair, "+(string)debug_rows+" rows on RAM, "+(string)debug_trades+" trades paired, "+(string)debug_made+" lines made in the view";
+   ::Print(debug_text);
+  }
+ //+------------------------------------------------------------------+
  //| The markers and the box on the candle go                         |
  //+------------------------------------------------------------------+
  void CBarMarkerCollection::DeleteMarkers(void)
@@ -358,7 +505,7 @@
    for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
      {
       CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
-      if(dynamic_cast<CBarMarker *>(child)==NULL)
+      if(dynamic_cast<CBarMarker *>(child)==NULL && dynamic_cast<CStrategyTrade *>(child)==NULL)
          continue;
       this.m_GraphElementsCollection.DeleteChild(child);
       delete child;
@@ -393,17 +540,35 @@
       if(symbol==chart_symbol)
          this.SyncMarkers(bar);   // the library found something on a candle of the chart pair
      }
-   //--- Python wrote its part and the collections read it to RAM (they hear it before), a template went, the rows of a type went (its parameter changed): drawn once
+   //--- A strategy entered or exited (dparam = the tf it decides on, its key = the strategy_id): the candle of the chart that holds the bar
+   if(id==CHARTEVENT_CUSTOM+STRATEGY_EVENT_ENTRY || id==CHARTEVENT_CUSTOM+STRATEGY_EVENT_EXIT)
+     {
+      datetime bar;
+      long key;
+      ENUM_SIGNAL_DIRECTION side;
+      bool is_new;
+      string symbol,extra;
+      this.EventUnpack(lparam,bar,key,side,is_new);
+      this.EventUnpackText(sparam,symbol,extra);
+      const int shift=::iBarShift(chart_symbol,chart_tf,bar,false);
+      if(symbol==chart_symbol && (long)dparam==(long)this.StrategyTimeframe(key) && shift>=0)
+         this.SyncMarkers(::iTime(chart_symbol,chart_tf,shift));
+     }
+   //--- Python wrote its part and the collections read it to RAM (they hear it before), a template went, the rows of a type went (its parameter changed),
+   //--- the tf of a strategy changed (its rows are of another series): drawn once
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE ||
+      id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_TF_CHANGED ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE ||
       id==CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED)
       this.SyncMarkers();
    //--- The view: a switch of what is shown changed, the data did not. The markers decide again (CBarMarker::Arrange)
    if((id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED && sparam==chart_symbol && (ENUM_TIMEFRAMES)lparam==chart_tf) ||
       id==CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SHOW_CHANGED ||
-      id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED)
+      id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED ||
+      id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SHOW_CHANGED)
      {
-      CBarMarker::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_SymbolTFManager,this.m_BarInformationManager,this.m_IndicatorTemplateManager);
+      CBarMarker::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_SymbolTFManager,this.m_BarInformationManager,this.m_IndicatorTemplateManager,this.m_StrategyManager);
+      CStrategyTrade::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_StrategyManager);
       ::ChartRedraw(this.m_ChartObj.ID());
      }
   }

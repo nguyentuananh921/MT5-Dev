@@ -14,6 +14,7 @@
 //| Include files                                                    |
 //+------------------------------------------------------------------+
 #include "Trading.mqh"
+#include "..\Entities\Defines\EventDefines.mqh"
  #ifndef CTRADINGCONTROL_MQH_DECLARATION
  #define CTRADINGCONTROL_MQH_DECLARATION
 //+------------------------------------------------------------------+
@@ -98,6 +99,8 @@ class CTradingControl : public CTrading
      //--- Close every open position on (symbol,dir) - queries the live broker state directly,
      //--- no CMarketCollection dependency needed.
        void                 ClosePositions(const string symbol, const ENUM_POSITION_TYPE dir);
+     //--- Event Rule: Trade listens; TRADE_SETUP_EVENT_CLOSE_ALL (the panel, emergency) closes every position of the account
+       void                 OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
      //--- Modify SL (or TP) to new_price on every open position on (symbol,dir), keeping each
      //--- position's own current TP (or SL) untouched.
        bool                 ModifyPositions(const string symbol, const ENUM_POSITION_TYPE dir, const bool modify_sl, const double new_price);
@@ -1347,6 +1350,19 @@ class CTradingControl : public CTrading
       if((ENUM_POSITION_TYPE)::PositionGetInteger(POSITION_TYPE) != dir) continue;
       this.ClosePosition(ticket);
      }
+  }
+ void CTradingControl::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+  {
+   if(id!=CHARTEVENT_CUSTOM+TRADE_SETUP_EVENT_CLOSE_ALL)
+      return;
+   int total=::PositionsTotal(),closed=0;
+   for(int i=total-1; i>=0; i--)
+     {
+      ulong ticket=::PositionGetTicket(i);
+      if(ticket!=0 && this.ClosePosition(ticket))
+         closed++;
+     }
+   ::Print(__FUNCTION__," > close all positions: ",closed," of ",total," positions of the account closed");
   }
  //+------------------------------------------------------------------+
  //| Modify SL (or TP) to new_price on every open position on (symbol,dir) |

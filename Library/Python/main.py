@@ -30,6 +30,7 @@ from pathlib import Path
 import pandas as pd
 
 import data
+import hub
 import indicators
 import libdb
 import momentum
@@ -37,6 +38,9 @@ import patterns
 import signals
 import structure
 import swing
+from Strategy import Profitunity
+
+STRATEGIES = {Profitunity.NAME: Profitunity}   # Setting_Strategy.name -> the module that calculates it as its source EA
 
 CHUNK_BARS = 20000      # the bars of the first load of a pair (the newest ones, so that what the chart shows comes first); Current asks fewer when the pair has a newest bar synced (bars_needed)
 REALTIME_BARS = 5000    # the newest bars the Live worker asks at most when a bar closed (bars_needed)
@@ -276,6 +280,16 @@ def build_jobs(db):
         jobs.append(Job(display, libdb.Source(libdb.TABLE_IND_RESULT, libdb.setting_int("collection_signals"), ("type_enum", "params"), (type_enum, params_text)), indicators.context(params),
                         # lambda bars, since, until, name=name, params=params: signals.found(name, bars, params, since, until)))
                         lambda bars, since, until, name=name, params=params, levels=(level_high, level_low): signals.found(name, bars, params, since, until, levels)))
+    # V5: the strategies of the EA (CStrategyManager), each as its source EA (Strategy\<name>.py): two jobs, the entries and the exits (key strategy_id, role)
+    for strategy in libdb.strategies():
+        module = STRATEGIES.get(strategy["name"])
+        if module is None:
+            continue
+        for role in ("entry", "exit"):
+            jobs.append(Job(f"{strategy['name']} {role}", libdb.Source(libdb.TABLE_STRATEGY_RESULT, libdb.setting_int("collection_strategy"), ("strategy_id", "role"), (strategy["strategy_id"], role)),
+                            module.CONTEXT,
+                            lambda bars, since, until, module=module, strategy=strategy, role=role:
+                                [(bar_time, side) for bar_time, found_role, side in module.calculate(strategy, bars, since, until) if found_role == role]))
     return jobs
 
 
@@ -380,6 +394,8 @@ def calculate_new(rnd, pair, job, live, count):
         with timed("calculation"):
             found = job.calculate(bars, state[0], None)
         db.write_result(job.source, symbol, tf_enum, found, last_update=int(bars["time"].iloc[-1]), defer=True)
+        #--- V5: the event with its data goes at once (the EA, the web View), the rows wait for their turn in the database; is_new as the EA: judged at one new bar
+        hub.send(hub.result_lines(job.source, symbol, tf_enum, found, len(bars) > 1 and state[0] == int(bars["time"].iloc[-2])))
         return len(found)
     bars = rnd.bars(pair, count)
     if int(bars["time"].iloc[0]) <= state[0] or len(bars) < count:   # the bars reach the newest bar synced (or the terminal has no more): no gap
@@ -470,9 +486,13 @@ def count_locked(pair, label, error):
 
 
 def worker_command(terminal, role, symbol=None):
-    """The command of a worker: the Current one, the Live one (role "current", "live") or the History one of a symbol (role "history")."""
-    command = [sys.executable, str(Path(__file__).resolve()), "--parent-pid", str(os.getpid())]
-    command += ["--symbol", symbol] if role == "history" else ["--" + role]
+    """The command of a worker: the Current one, the Live one (role "current", "live"), the History one of a symbol (role "history") or the web one (role "server":
+    server.py, the bars for the web View and Kronos; V5)."""
+    if role == "server":
+        command = [sys.executable, str(Path(__file__).resolve().parent / "server.py"), "--parent-pid", str(os.getpid())]
+    else:
+        command = [sys.executable, str(Path(__file__).resolve()), "--parent-pid", str(os.getpid())]
+        command += ["--symbol", symbol] if role == "history" else ["--" + role]
     if terminal:
         command += ["--terminal", terminal]
     return command
@@ -548,7 +568,7 @@ def run_parent(terminal):
                     now_model = (frozenset(db.symbols()), len(build_jobs(db)))
                 except Exception:
                     now_model = model
-                for role in ("current", "live"):   # History is paused (Update Note)
+                for role in ("current", "live", "server"):   # History is paused (Update Note); V5: server.py, the web View and Kronos
                     worker = workers.get(role)
                     if worker is None or worker.poll() is not None:
                         if role == "current" and worker is not None and worker.returncode == 0 and now_model == model:
@@ -694,8 +714,7 @@ def run_current(parent_pid):
             chart = libdb.chart_pair()
         except (KeyError, sqlite3.OperationalError):
             chart = None   # the EA has not written the pair of the chart yet
-        pairs = db.pairs()
-        pairs.sort(key=lambda pair: 0 if chart == (pair[0], pair[1]) else 1 if (pair[0], pair[1]) in rnd.library else 2)
+        pairs = db.pairs_in_order(chart, rnd.library)
         for pair in pairs:
             first = chart == (pair[0], pair[1]) or (pair[0], pair[1]) in rnd.library
             try:

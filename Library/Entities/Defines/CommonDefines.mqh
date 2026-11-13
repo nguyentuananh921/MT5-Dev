@@ -147,6 +147,10 @@
     OBJECT_DE_TYPE_SYMBOLTF_SETTING,                               // "Pair Symbol + TF setting" object type (CSymbolTFSetting: a row of Setting_SymbolTF)
     OBJECT_DE_TYPE_INDICATOR_SETTING,                              // "Indicator template setting" object type (V2 / V3 CIndicatorSetting: a row of Setting_IndicatorTemplate)
     OBJECT_DE_TYPE_BAR_INFORMATION_SETTING,                        // "Bar information setting" object type (V3 CPatternSetting: a row of Setting_BarInformation, its rows of Setting_BarSetup)
+    OBJECT_DE_TYPE_STRATEGY_SETTING,                               // "Strategy setting" object type (CStrategySetting: a row of Setting_Strategy, its slots and conditions)
+    OBJECT_DE_TYPE_STRATEGY_INDICATOR_SETTING,                     // "Strategy slot setting" object type (CStrategyIndicatorSetting: a row of Setting_StrategyIndicator)
+    OBJECT_DE_TYPE_STRATEGY_CONDITION_SETTING,                     // "Strategy condition setting" object type (CStrategyConditionSetting: a row of Setting_StrategyCondition)
+    OBJECT_DE_TYPE_STRATEGY,                                       // "Strategy on a pair" object type (CStrategyBase: its rows of StrategyCollection)
    //--- Standard graphical objects (keep last: values are OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_xxx)
     OBJECT_DE_TYPE_GSTD_OBJ,                                       // Standard graphical object
     OBJECT_DE_TYPE_GSTD_TREND              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TREND,            // "Trend line" object type
@@ -163,7 +167,8 @@
     COLLECTION_SERIES_ID                   =  0x777F,                                         // CBarTimeSeriesCollection: tables BarSeriesDE, BarTimeSeriesCollection
     COLLECTION_SIGNALS_ID                  =  0x778A,                                         // CSignalsCollection: table SignalsCollection (the value of V2)
     COLLECTION_INDICATORS_ID               =  0x7782,                                         // CIndicatorsCollection: the handles of the templates on the pairs, no table (the value of V1)
-    COLLECTION_TICKSERIES_ID               =  0x7784                                          // CTickSeriesCollection: the ticks of the symbols, RAM only, no table (the value of DoEasy)
+    COLLECTION_TICKSERIES_ID               =  0x7784,                                         // CTickSeriesCollection: the ticks of the symbols, RAM only, no table (the value of DoEasy)
+    COLLECTION_STRATEGY_ID                 =  0x778B                                          // CStrategyCollection: table StrategyCollection, the entries and exits of the strategies (V5)
   };
  //+------------------------------------------------------------------+
  //| The direction of a signal: column signal_direction of the tables |

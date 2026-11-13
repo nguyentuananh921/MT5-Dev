@@ -95,8 +95,9 @@
    TRADE_SETUP_EVENT_NO_EVENT = BAR_MARKER_EVENTS_NEXT_CODE,  // No event
    TRADE_SETUP_EVENT_SEND,                                  // Send order clicked: lparam SIGNAL_DIRECTION_BUY/SELL, dparam lots, sparam symbol
    TRADE_SETUP_EVENT_CLOSE,                                 // Close icon clicked: lparam SIGNAL_DIRECTION_BUY/SELL, sparam symbol
+   TRADE_SETUP_EVENT_CLOSE_ALL,                             // Close all positions clicked (emergency, no confirmation): every position of the account
   };
- #define TRADE_SETUP_EVENTS_NEXT_CODE  (TRADE_SETUP_EVENT_CLOSE+1)  // The code of the next event after the last trade setup event code
+ #define TRADE_SETUP_EVENTS_NEXT_CODE  (TRADE_SETUP_EVENT_CLOSE_ALL+1)  // The code of the next event after the last trade setup event code
  //+------------------------------------------------------------------+
  //| Events of the bubbles of the trading levels                      |
  //+------------------------------------------------------------------+
@@ -196,6 +197,30 @@
    MARKET_WATCH_EVENT_SYMBOL_SORT,                          // Sorting symbols in the Market Watch window
   };
  #define SYMBOL_EVENTS_NEXT_CODE  (MARKET_WATCH_EVENT_SYMBOL_SORT+1)  // The code of the next event after the last symbol event code
+ //+------------------------------------------------------------------+
+ //| Events of the strategies (CStrategyManager): lparam = the        |
+ //| strategy_id, sparam = the slot                                   |
+ //+------------------------------------------------------------------+
+ enum ENUM_STRATEGY_MANAGER_EVENT
+  {
+   STRATEGY_MANAGER_EVENT_NO_EVENT = SYMBOL_EVENTS_NEXT_CODE,  // No event
+   STRATEGY_MANAGER_EVENT_SLOT_CHANGED,                        // The params or the tf of a slot changed (Setting_StrategyIndicator)
+   STRATEGY_MANAGER_EVENT_SHOW_CHANGED,                        // The show_on_chart flag of a strategy changed (Setting_Strategy): its markers are shown or hidden
+   STRATEGY_MANAGER_EVENT_TF_CHANGED,                          // The tf of a strategy changed (Setting_Strategy): its markers are of another series
+  };
+ #define STRATEGY_MANAGER_EVENTS_NEXT_CODE  (STRATEGY_MANAGER_EVENT_TF_CHANGED+1)  // The code of the next event after the last strategy event code
+ //+------------------------------------------------------------------+
+ //| Events of the results of a strategy on a pair (CStrategyBase,    |
+ //| the rows Python found): lparam = CBaseObj::EventPack, its key =  |
+ //| the strategy_id, dparam = the timeframe, sparam = the symbol     |
+ //+------------------------------------------------------------------+
+ enum ENUM_STRATEGY_EVENT
+  {
+   STRATEGY_EVENT_NO_EVENT = STRATEGY_MANAGER_EVENTS_NEXT_CODE,  // No event
+   STRATEGY_EVENT_ENTRY,                                         // The strategy enters: the side is the one it opens
+   STRATEGY_EVENT_EXIT,                                          // The strategy exits: the side is the one it closes
+  };
+ #define STRATEGY_EVENTS_NEXT_CODE  (STRATEGY_EVENT_EXIT+1)  // The code of the next event after the last strategy result event code
  //+------------------------------------------------------------------+
  //| List of trading event flags on the account                       |
  //+------------------------------------------------------------------+

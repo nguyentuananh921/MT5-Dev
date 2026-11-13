@@ -16,6 +16,7 @@
       CSymbolTFManager                   *m_SymbolTFManager;                  // the Symbol+TF pairs the TF switch lists
       CIndicatorTemplateManager          *m_IndicatorTemplateManager;         // the indicator templates of the Quick Setting tab
       CBarInformationManager             *m_BarInformationManager;            // the information of a bar (the candle patterns) of the Candle tab
+      CStrategyManager                   *m_StrategyManager;                  // the strategies of the Strategy tab
       CBarMarkerCollection               *m_BarMarkerCollection;              // the rows of a candle joined on RAM (load on demand): the popup of a candle asks it
       CGraphElementsCollection           *m_GraphElementsCollection;          // the layer and the markers: the popup lights the box of its candle
       CHistoryCollection                 *m_HistoryCollection;                // the table Orders: the tables of the Trade Manage window are read through it
@@ -34,6 +35,7 @@
       CTabs                               m_tabs_main;      
      //Trade tab    
       CButton                             m_btn_tradeManage;                   // in the Trading tab: opens m_window_tradeManage
+      CButton                             m_btn_closeallPosition;              // in the Trading tab: closes every position of the account (emergency, no confirmation)
      // Quick Setting tab of m_tabs_main (GUIPannel_TabQuickSetting.mqh)
       CTabs                               m_tabs_quickSetting;  
      //Indicator tab
@@ -44,6 +46,8 @@
       CTable                              m_table_SymbolTFSeting; 
      //Candle Tab
         CSections                         m_sections_candle;      // one section for each ENUM_BAR_INFORMATION_GROUP: its toggle (the information switch) shows or hides the CBarMarker of the group on the chart, its body has the types
+     //Strategy Tab
+        CSections                         m_sections_strategy;    // one section for each strategy: its toggles (show, trade, available), a row for each of its slots
      // Trade Manage window (GUIPannel_Window_TradeManager.mqh): the tabs of the positions, the button of the columns of the table of the tab
       CWindow                             m_window_tradeManage;
       CTabs                               m_tabs_tradeManage;
@@ -64,8 +68,11 @@
       CFrame                              m_frame_indicator_parameter;         // the form
       CTextEdit                           m_param_edits[INDICATOR_PARAM_SLOTS_MAX];   // plain numeric params, caption = param name
       CComboBox                           m_param_combo[INDICATOR_PARAM_SLOTS_MAX];   // enum-like params (Method, Applied Price...)
-      CButton                             m_btn_add_indicator_form;            // in the form: gives the manager the new template
-      ENUM_INDICATOR                      m_current_param_type;                // type the form shows, IND_CUSTOM = none     
+      CButton                             m_btn_add_indicator_form;            // in the form: gives the manager the new template (Save: the slot of a strategy)
+      ENUM_INDICATOR                      m_current_param_type;                // type the form shows, IND_CUSTOM = none
+      CComboBox                           m_combo_param_tf;                    // in the form, only for the slot of a strategy: its tf (STRATEGY_TFS)
+      long                                m_edit_strategy_id;                  // the form edits a slot of this strategy (Edit of the Strategy tab), WRONG_VALUE = it adds a template
+      string                              m_edit_strategy_slot;
      //Private Method
      // For GUI implemented in GUIPannel_Lifecycle.mqh
       bool                                CreateGUIPannel(void);
@@ -84,6 +91,7 @@
       bool                                CreateTab_QuickSetting(const int x_gap,const int y_gap);
      // For the Trade Manage window implementation in GUIPannel_Window_TradeManager.mqh
       bool                                CreateButton_TradeManage(void);
+      bool                                CreateButton_CloseAllPosition(void);
       bool                                CreateWindow_TradeManage(const string caption_text,const int x_gap,const int y_gap);
       bool                                CreateTabs_TradeManage(void);
       bool                                CreateTable_Trade(CTable &table,const string name,const int tab,const int columns,const string &captions[],const int &widths[],const int &numbers[],
@@ -110,6 +118,14 @@
       bool                                CreateBlock_BarInformation(const int section,int &row,const ENUM_BAR_INFOR_TYPE type,const string name,const int candles,const bool have_buy,const bool have_sell,const bool show_buy,const bool show_sell,const bool sound,const bool message);
       void                                SyncSections_BarInformation(void);
       void                                OnEvent_Tab_Candle(const int id,const long &lparam,const double &dparam,const string &sparam);
+     // For the Strategy tab implementation in GUIPannel_TabQuickSetting_Strategy.mqh
+      bool                                CreateSections_Strategy(void);
+      bool                                AddRow_Strategy(const int section,CStrategySetting *strategy);
+      string                              SlotText_Strategy(CStrategyIndicatorSetting *slot);
+      void                                OpenWindow_EditSlot_Strategy(const long value);
+      void                                SaveSlot_Strategy(void);
+      void                                SyncSections_Strategy(void);
+      void                                OnEvent_Tab_Strategy(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the Indicator tab implementation in GUIPannel_TabQuickSetting_Indicator.mqh
       bool                                CreateSections_IndicatorTemplateSetting(const int y);
       bool                                AddRow_IndicatorTemplateSetting(const int section,const int row,const long id,const string display,const bool show,const bool buy,const bool sell,const bool sound,const bool message);
@@ -121,11 +137,13 @@
      // For the Add Indicator window implementation in GUIPannel_TabQuickSetting_AddIndicator.mqh
       bool                                CreateWindow_AddIndicator(const string caption_text,const int x_gap,const int y_gap);
       void                                OpenWindow_AddIndicator(void);
+      void                                Mode_AddIndicator(const long strategy_id,const string slot);
       bool                                CreateTreeView_IndicatorTemplateSetting(const int x_gap,const int y_gap);
       void                                PopulateTreeView_IndicatorTemplateSetting(void);
       void                                SyncTreeView_IndicatorTemplateSetting(void);
       bool                                CreateCFrame_IndicatorParameter(const int x_gap,const int y_gap);
-      void                                ShowCFrame_IndicatorParameter(const ENUM_INDICATOR type);
+      void                                ShowCFrame_IndicatorParameter(const ENUM_INDICATOR type,const string params_text="");
+      bool                                ReadCFrame_IndicatorParameter(MqlParam &params[]);
       void                                OnClickAddIndicatorBtnOnForm(void);
       void                                OnEvent_Window_AddIndicator(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the Symbol TF tab implementation in GUIPannel_TabQuickSetting_SymbolTF.mqh
@@ -177,6 +195,7 @@
       void                                SetSymbolTFManager(CSymbolTFManager *manager)               { m_SymbolTFManager=manager; }
       void                                SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { m_IndicatorTemplateManager=manager; }
       void                                SetBarInformationManager(CBarInformationManager *manager)       { m_BarInformationManager=manager; }
+      void                                SetStrategyManager(CStrategyManager *manager)                   { m_StrategyManager=manager; }
       void                                SetBarMarkerCollection(CBarMarkerCollection *collection)        { m_BarMarkerCollection=collection; }
       void                                SetGraphElementsCollection(CGraphElementsCollection *collection) { m_GraphElementsCollection=collection; }
       void                                SetHistoryCollection(CHistoryCollection *collection)            { m_HistoryCollection=collection; }
@@ -191,6 +210,7 @@
   #include "GUIPannel_TabQuickSetting.mqh"             //Implementation of the Quick Setting tab of m_tabs_main
    #include "GUIPannel_TabQuickSetting_Indicator.mqh"   //The Indicator tab: the table of the indicator templates
    #include "GUIPannel_TabQuickSetting_Candle.mqh"      //The Candle tab: a switch for each group of the information of a bar
+   #include "GUIPannel_TabQuickSetting_Strategy.mqh"    //The Strategy tab: a section for each strategy, a row for each of its slots
    #include "GUIPannel_TabQuickSetting_AddIndicator.mqh"   //The Add Indicator window, opened by the Add button of the Indicator tab
    #include "GUIPannel_TabQuickSetting_SymbolTF.mqh"   //The Symbol TF tab: the tree and the table of the pairs
  #include "GUIPannel_Window_TradeManager.mqh"            //The Trade Manage window: the tabs and the helpers of its tables

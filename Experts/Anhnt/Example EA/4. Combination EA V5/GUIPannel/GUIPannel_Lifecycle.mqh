@@ -109,6 +109,12 @@
       ::Print(__FUNCTION__," > Failed to create the Trade Manage button!");
       return(false);
      }
+    Breadcrumb("CreateGUIPannel: CreateButton_CloseAllPosition");
+    if(!CreateButton_CloseAllPosition())
+     {
+      ::Print(__FUNCTION__," > Failed to create the Close all positions button!");
+      return(false);
+     }
     Breadcrumb("CreateGUIPannel: CreateWindow_TradeManage");
     if(!CreateWindow_TradeManage("Trade Manage",60,60))
      {
@@ -137,12 +143,14 @@
                                 m_SymbolTFManager(NULL),
                                 m_IndicatorTemplateManager(NULL),
                                 m_BarInformationManager(NULL),
+                                m_StrategyManager(NULL),
                                 m_BarMarkerCollection(NULL),
                                 m_GraphElementsCollection(NULL),
                                 m_candle_info_shown_bar(0),
                                 m_candle_info_last_bar(0),
                                 m_candle_info_by_marker(false),
-                                m_current_param_type(IND_CUSTOM)
+                                m_current_param_type(IND_CUSTOM),
+                                m_edit_strategy_id(WRONG_VALUE)
   {
    this.m_chart_id=::ChartID();
   }
@@ -298,6 +306,7 @@
    this.OnEvent_Window_TradeManage(id,lparam,dparam,sparam);
    this.OnEvent_Tab_Indicator(id,lparam,dparam,sparam);
    this.OnEvent_Tab_Candle(id,lparam,dparam,sparam);
+   this.OnEvent_Tab_Strategy(id,lparam,dparam,sparam);
    this.OnEvent_Tab_SymbolTF(id,lparam,dparam,sparam);
    //--- The window changed its width (border, full screen): the combobox stays next to the caption buttons
    if(id==CHARTEVENT_CUSTOM+WINDOW_EVENT_CHANGE_XSIZE && lparam==m_window_main.ObjectID())

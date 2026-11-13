@@ -26,6 +26,7 @@
   #include <Combination Lib V5\Collections\Settings\SymbolTFManager.mqh>
   #include <Combination Lib V5\Collections\Settings\IndicatorTemplateManager.mqh>
   #include <Combination Lib V5\Collections\Settings\BarInformationManager.mqh>
+  #include <Combination Lib V5\Collections\Settings\StrategyManager.mqh>
   #include <Combination Lib V5\Collections\BarTimeSeriesCollection.mqh>   // what was found on a candle
   #include <Combination Lib V5\Collections\SignalsCollection.mqh>
   #include <Combination Lib V5\Collections\HistoryCollection.mqh>   // the table Orders: the tables of the Trade Manage window
@@ -68,6 +69,7 @@
       TAB_QUICK_SETTING_INDICATOR,
       TAB_QUICK_SETTING_SYMBOL_TF,
       TAB_QUICK_SETTING_CANDLE,
+      TAB_QUICK_SETTING_STRATEGY,
       TAB_QUICK_SETTING_RISK_MANAGEMENT,
       TAB_QUICK_SETTING_SMART_MONEY,
       TAB_QUICK_SETTING_TOTAL
@@ -161,6 +163,29 @@
     #define M_INDICATOR_TOGGLE_SIGNAL_X    ((M_INDICATOR_COLUMN_BUY_SIGNAL+M_INDICATOR_COLUMN_SELL_SIGNAL)/2)     // the toggle of a section over the two columns it rules
     #define M_INDICATOR_TOGGLE_ALERT_X     ((M_INDICATOR_COLUMN_SOUND_ALERT+M_INDICATOR_COLUMN_MESSAGE_ALERT)/2)
     #define M_BUTTON_ADD_WIDTH          80
+   //m_sections_strategy: a section for each strategy of CStrategyManager, a row for each of its slots: [edit][name (params)]
+    enum ENUM_STRATEGY_TOGGLE   // the toggles of the header of a section of m_sections_strategy
+     {
+      STRATEGY_TOGGLE_SHOW,      // show_on_chart of the strategy: its entries on the chart (CBarMarker)
+      STRATEGY_TOGGLE_TRADE,     // ON: the templates of its indicators are made (CIndicatorTemplateManager)
+      STRATEGY_TOGGLE_AVAILABLE  // every slot has its source: set by the panel, a click does not change it
+     };
+    enum ENUM_STRATEGY_SLOT     // what a control of a row stands for
+     {
+      STRATEGY_SLOT_EDIT,        // edits the indicator of the slot in the strategy (not wired yet)
+      STRATEGY_SLOT_LABEL
+     };
+    enum ENUM_STRATEGY_COLUMN   // the columns of the body of m_sections_strategy
+     {
+      STRATEGY_COLUMN_EDIT,
+      STRATEGY_COLUMN_LABEL,
+      STRATEGY_COLUMN_TOTAL
+     };
+    #define M_STRATEGY_SLOTS_MAX           100   // the value of a row: the section * M_STRATEGY_SLOTS_MAX + the slot
+    #define M_STRATEGY_ROW_TF              (M_STRATEGY_SLOTS_MAX-1)   // the "slot" of the first row: the tf of the strategy
+    #define M_STRATEGY_TOGGLE_SHOW_X       (M_INDICATOR_TOGGLE_SHOW_X)     // the toggles stand where those of the Indicator tab are
+    #define M_STRATEGY_TOGGLE_TRADE_X      (M_INDICATOR_TOGGLE_SIGNAL_X)
+    #define M_STRATEGY_TOGGLE_AVAILABLE_X  (M_INDICATOR_TOGGLE_ALERT_X)
    //m_window_addIndicator (Add Indicator): the tree of the types (left) and the form of the parameters (right)
     //#define PARAM_ROW_H               26    // a control and a gap M_CONTROL_HEIGHT
     #define PARAM_ROW_H               M_CONTROL_HEIGHT    // a control and a gap M_CONTROL_HEIGHT
@@ -170,7 +195,9 @@
     #define PARAM_FORM_X              (M_CONTROL_BORDER_GAP + M_TREEVIEW_ADDINDICATOR_WIDTH + M_CONTROL_BORDER_GAP)
     #define PARAM_FORM_Y              (M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP)   // below the caption of the window
     #define INDICATOR_FRAME_W         (M_WINDOW_MAIN_WIDTH - PARAM_FORM_X - 2 * M_CONTROL_BORDER_GAP)   // the form takes what is left of the window, as wide as the main window
-    #define INDICATOR_FRAME_H         (M_CONTROL_HEIGHT + INDICATOR_PARAM_SLOTS_MAX * PARAM_ROW_H + M_CONTROL_HEIGHT + 2 * M_CONTROL_BORDER_GAP)   // the caption, a row for each slot, the Add button
+    #define INDICATOR_FRAME_H         (M_CONTROL_HEIGHT + (INDICATOR_PARAM_SLOTS_MAX + 1) * PARAM_ROW_H + M_CONTROL_HEIGHT + 2 * M_CONTROL_BORDER_GAP)   // the caption, a row for each slot, the tf of a strategy slot (Edit), the Add button
+    #define M_STRATEGY_TF_TOTAL       10    // the tf of a strategy slot: the tf of the strategy (PERIOD_CURRENT), then M1 .. MN1
+    const ENUM_TIMEFRAMES STRATEGY_TFS[M_STRATEGY_TF_TOTAL]={PERIOD_CURRENT,PERIOD_M1,PERIOD_M5,PERIOD_M15,PERIOD_M30,PERIOD_H1,PERIOD_H4,PERIOD_D1,PERIOD_W1,PERIOD_MN1};
     #define M_WINDOW_ADDINDICATOR_WIDTH    M_WINDOW_MAIN_WIDTH
     #define M_WINDOW_ADDINDICATOR_HEIGHT   (PARAM_FORM_Y + INDICATOR_FRAME_H + M_CONTROL_BORDER_GAP)
    //m_window_candle_infomation (GUIPannel_Window_CandleInfo.mqh): the popup of what was found in a candle
@@ -178,7 +205,8 @@
     #define CANDLE_INFO_WINDOW_H        220
     #define CANDLE_INFO_CURSOR_INSET    15   // how far INSIDE the popup's near edge the cursor sits when it appears, not a gap
     #define CANDLE_INFO_CANDLE_GAP      40   // room between the candle column and the popup: clears a CBarMarker
-    #define CANDLE_INFO_SOURCE_TOTAL    (BAR_INFORMATION_SIGNAL+1)   // the source of a row is its group (ENUM_BAR_INFORMATION_GROUP): the signal of an indicator is the last one
+    #define CANDLE_INFO_SOURCE_STRATEGY (BAR_INFORMATION_SIGNAL+1)   // the entry of a strategy (CStrategyCollection): after the groups and the signal of an indicator
+    #define CANDLE_INFO_SOURCE_TOTAL    (CANDLE_INFO_SOURCE_STRATEGY+1)   // the source of a row is its group (ENUM_BAR_INFORMATION_GROUP), the signal of an indicator, or a strategy
     #define COLUMNS_CANDLEINFO_TOTAL    4
     #define COL_CI_TIME     0
     #define COL_CI_SOURCE   1

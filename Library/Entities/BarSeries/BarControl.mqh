@@ -55,6 +55,9 @@
     virtual bool      Prepare(const int target,CArrayObj *list,const datetime since);
     virtual bool      StoreRow(const int target,const datetime time,const ENUM_SIGNAL_DIRECTION side) { return this.NewRow(this.GetBar(time),target,side); }
    public:
+   //--- V5: a row Python found (CPythonBridge) is set on its bar and told by the event of its type (Event Rule): lparam = EventPack(bar time,
+   //--- type, side, is_new), dparam = the timeframe, sparam = the symbol. False when the bar had it already (judged on RAM before: no second event)
+    bool              StoreRow(const datetime time,const ENUM_BAR_INFOR_TYPE type,const ENUM_SIGNAL_DIRECTION side,const bool is_new);
    //--- What the control needs to judge and to read (CBarSeriesDE gives them): the bars of the series, the pair, the collection the rows are of, the managers
     void              SetListSeries(CArrayObj *list)                                 { this.m_list_series=list;                 }
     void              SetSymbolPeriod(const string symbol,const ENUM_TIMEFRAMES timeframe) { this.m_symbol=symbol; this.m_timeframe=timeframe; }
@@ -115,6 +118,17 @@
    this.m_bar_tmp.SetSymbolPeriod(this.m_symbol,this.m_timeframe,time);
    this.m_list_series.Sort(SORT_BY_BAR_TIME);
    return this.m_list_series.At(this.m_list_series.Search(&this.m_bar_tmp));
+  }
+ //+------------------------------------------------------------------+
+ //| V5: a row of Python is set on its bar and told                    |
+ //+------------------------------------------------------------------+
+ bool CBarControl::StoreRow(const datetime time,const ENUM_BAR_INFOR_TYPE type,const ENUM_SIGNAL_DIRECTION side,const bool is_new)
+  {
+   if(!this.NewRow(this.GetBar(time),(long)type,(long)side))
+      return false;   // the bar has it already (judged on RAM, or read from the table): no event
+   //--- RAM changed: told (Event Rule), with all the Automation Trading needs (no asking back)
+   this.EventSend(this.EventOf(type),this.EventPack(time,(long)type,side,is_new),(double)this.m_timeframe,this.EventPackText(this.m_symbol));
+   return true;
   }
  //+------------------------------------------------------------------+
  //| The judge of the type: the class that finds it                    |

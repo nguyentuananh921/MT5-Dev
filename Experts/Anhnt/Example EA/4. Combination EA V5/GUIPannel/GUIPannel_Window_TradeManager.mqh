@@ -19,6 +19,14 @@
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btn_tradeManage);
    return m_btn_tradeManage.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnTradeManage",M_CONTROL_BORDER_GAP,M_CONTROL_BORDER_GAP,M_BUTTON_TRADEMANAGE_WIDTH,M_CONTROL_HEIGHT);
   }
+ //--- The button in the Trading tab, right of Trade Manage: every position of the account is closed at once (emergency, no confirmation)
+ bool CGUIPannel::CreateButton_CloseAllPosition(void)
+  {
+   m_btn_closeallPosition.SetText("Close All");
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btn_closeallPosition);
+   return m_btn_closeallPosition.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnCloseAllPosition",2*M_CONTROL_BORDER_GAP+M_BUTTON_TRADEMANAGE_WIDTH,M_CONTROL_BORDER_GAP,
+                                        M_BUTTON_TRADEMANAGE_WIDTH,M_CONTROL_HEIGHT);
+  }
  //--- The tabs of the window, under its caption: the header on top, the content fills what is left
  bool CGUIPannel::CreateTabs_TradeManage(void)
   {
@@ -306,6 +314,12 @@
    if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && lparam==m_btn_tradeManage.ObjectID())
      {
       this.OpenWindow_TradeManage();
+      return;
+     }
+   //--- Close All: the View only tells it, Trade (CTradingControl::OnChartEvent) closes the positions
+   if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && lparam==m_btn_closeallPosition.ObjectID())
+     {
+      this.EventSend((ushort)TRADE_SETUP_EVENT_CLOSE_ALL,0,0.0,"");
       return;
      }
    //--- The window changed its width: the Columns button stays at the right end of the header of the tabs

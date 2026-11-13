@@ -33,8 +33,8 @@
      void              RefreshTimeseries(CBarTimeSeriesDE *timeseries);
     //--- A pair of Setting_SymbolTF is (1) made (OnInit, SYMBOLTF_MANAGER_EVENT_ADDED): the library judges it, (2) taken away (SYMBOLTF_MANAGER_EVENT_DELETE): the library
     //--- stops, Python Live judges it from its progress (Setting_SymbolTF is what tells Python)
-     bool              Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
-     bool              Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
+     bool              AddSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe);
+     bool              DeleteSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe);
    public:
     //--- Return the timeseries list (public as in DoEasy CTimeSeriesCollection: CSignalsCollection walks the pairs in RAM)
      CArrayObj        *GetList(void)              { return &this.m_list_timeseries; }
@@ -83,7 +83,7 @@
     CBar             *GetBar(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime bar_time);
    //--- The "New bar" flag of a symbol and a timeframe (true once for a new bar)
     bool              IsNewBar(const string symbol,const ENUM_TIMEFRAMES timeframe);
-   //--- The bars follow MT5 (each series judges its new bars and tells them), as DoEasy CTimeSeriesCollection::Refresh: (1) a timeseries of a symbol,
+   //--- The bars follow MT5 (each series tells its new bars; V5: Python judges them), as DoEasy CTimeSeriesCollection::Refresh: (1) a timeseries of a symbol,
    //--- (2) all timeseries of a symbol (OnTick), (3) all timeseries of all symbols (OnTick in the tester), (4) all except the current symbol (OnTimer)
     void              RefreshSeries(const string symbol,const ENUM_TIMEFRAMES timeframe);
     void              RefreshSeries(const string symbol);
@@ -153,7 +153,7 @@
       return false;
    bool complete=true;
    for(int i=0;i<total;i++)
-      complete=this.Create_RAM(symbols[i],timeframes[i]) && complete;
+      complete=this.AddSeries_BarTimeSeriesCollection(symbols[i],timeframes[i]) && complete;
    for(int i=this.m_list_timeseries.Total()-1;i>=0;i--)
      {
       CBarTimeSeriesDE *timeseries=this.m_list_timeseries.At(i);
@@ -165,7 +165,7 @@
          for(int k=0;series!=NULL && k<total && !kept;k++)
             kept=(symbols[k]==series.Symbol() && timeframes[k]==series.Timeframe());
          if(series!=NULL && !kept)
-            this.Delete_RAM(series.Symbol(),series.Timeframe());
+            this.DeleteSeries_BarTimeSeriesCollection(series.Symbol(),series.Timeframe());
         }
      }
    return complete;
@@ -173,7 +173,7 @@
  //+------------------------------------------------------------------+
  //| A pair of Setting_SymbolTF is made: the library judges it         |
  //+------------------------------------------------------------------+
- bool CBarTimeSeriesCollection::Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CBarTimeSeriesCollection::AddSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    if(this.GetSeries(symbol,timeframe)!=NULL)
       return true;
@@ -192,7 +192,7 @@
  //+------------------------------------------------------------------+
  //| A pair left Setting_SymbolTF: the library stops judging it        |
  //+------------------------------------------------------------------+
- bool CBarTimeSeriesCollection::Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CBarTimeSeriesCollection::DeleteSeries_BarTimeSeriesCollection(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    int index=this.IndexTimeSeries(symbol);
    CBarTimeSeriesDE *timeseries=this.m_list_timeseries.At(index);
@@ -524,7 +524,7 @@
      {
       CBarSeriesDE *series=list.At(j);
       if(series!=NULL)
-         timeseries.RefreshSeries(series.Timeframe());   // the series judges its new bars itself
+         timeseries.RefreshSeries(series.Timeframe());   // the series tells its new bars itself
      }
   }
  //+------------------------------------------------------------------+
@@ -558,9 +558,9 @@
   {
    //--- Setting_SymbolTF changed (CSymbolTFManager told it, lparam the TF, sparam the symbol): who judges the pair changes with it
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
-      return this.Create_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
+      return this.AddSeries_BarTimeSeriesCollection(sparam,(ENUM_TIMEFRAMES)lparam);
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
-      return this.Delete_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
+      return this.DeleteSeries_BarTimeSeriesCollection(sparam,(ENUM_TIMEFRAMES)lparam);
    //--- Python wrote the first chunk of every pair of Setting_SymbolTF (CPythonBridge told it): what is in the table goes to RAM
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
       return this.ReadDataFromDB();

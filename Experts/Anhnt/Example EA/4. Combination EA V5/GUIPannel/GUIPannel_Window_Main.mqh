@@ -123,11 +123,16 @@
    ::TextSetFont(DEF_FONT,-DEF_FONT_SIZE*10,FW_BOLD);   // the font of the labels (CLabel: DEF_FONT, FW_BOLD): the width of each text
    int x=m_window_main.X()+m_window_main.Width()-m_window_main.CaptionRightLimit()-M_SYMBOLTF_COMBO_WIDTH-M_CAPTION_LABEL_GAP;   // the left edge of the combobox
    int y=m_window_main.Y()+M_CAPTION_LABEL_Y;
+   bool changed=false;   // a label shown, hidden or drawn again: the chart is redrawn once (Draw(false) and Hide do not)
    for(int i=0;i<3;i++)
      {
       if(!shown[i])
         {
-         labels[i].Hide();
+         if(labels[i].IsVisible())
+           {
+            labels[i].Hide();
+            changed=true;
+           }
          continue;
         }
       uint text_w=0,text_h=0;
@@ -146,7 +151,10 @@
       labels[i].SetText(texts[i]);
       labels[i].Show();
       labels[i].Draw(false);
+      changed=true;
      }
+   if(changed)
+      ::ChartRedraw(this.m_chart_id);
   }
  //+------------------------------------------------------------------+
  //| The list follows the Symbols of the collection, the chart's      |

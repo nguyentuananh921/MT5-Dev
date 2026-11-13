@@ -141,95 +141,97 @@ struct SImage
  #define IMAGE_RESOURCE_BMP16_DOWN_THICK_BLACK_BMP (uint)123
  #define IMAGE_RESOURCE_BMP16_DOWN_THIN_BLACK_BMP (uint)124
  #define IMAGE_RESOURCE_BMP16_DOWN_THIN_WHITE_BMP (uint)125
- #define IMAGE_RESOURCE_BMP16_FOLDER_BMP (uint)126
- #define IMAGE_RESOURCE_BMP16_FOLDER_W10_BMP (uint)127
- #define IMAGE_RESOURCE_BMP16_FULL_SCREEN_BMP (uint)128
- #define IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG (uint)129
- #define IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG (uint)130
- #define IMAGE_RESOURCE_BMP16_INDICATOR_BMP (uint)131
- #define IMAGE_RESOURCE_BMP16_INDICATOR_OFF_PNG (uint)132
- #define IMAGE_RESOURCE_BMP16_LEFT_THIN_BLACK_BMP (uint)133
- #define IMAGE_RESOURCE_BMP16_LEFT_THIN_WHITE_BMP (uint)134
- #define IMAGE_RESOURCE_BMP16_LOGO_BMP (uint)135
- #define IMAGE_RESOURCE_BMP16_MINIMIZE_TO_WINDOW_BMP (uint)136
- #define IMAGE_RESOURCE_BMP16_PIE_CHART_BMP (uint)137
- #define IMAGE_RESOURCE_BMP16_PIE_CHART_COLORLESS_BMP (uint)138
- #define IMAGE_RESOURCE_BMP16_POINTER_TEXT_SELECT_BMP (uint)139
- #define IMAGE_RESOURCE_BMP16_POINTER_X_RS_BMP (uint)140
- #define IMAGE_RESOURCE_BMP16_POINTER_X_RS_BLUE_BMP (uint)141
- #define IMAGE_RESOURCE_BMP16_POINTER_X_RS_REL_BMP (uint)142
- #define IMAGE_RESOURCE_BMP16_POINTER_X_SCROLL_BMP (uint)143
- #define IMAGE_RESOURCE_BMP16_POINTER_X_SCROLL_BLUE_BMP (uint)144
- #define IMAGE_RESOURCE_BMP16_POINTER_XY1_RS_BMP (uint)145
- #define IMAGE_RESOURCE_BMP16_POINTER_XY1_RS_BLUE_BMP (uint)146
- #define IMAGE_RESOURCE_BMP16_POINTER_XY2_RS_BMP (uint)147
- #define IMAGE_RESOURCE_BMP16_POINTER_XY2_RS_BLUE_BMP (uint)148
- #define IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BMP (uint)149
- #define IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BLUE_BMP (uint)150
- #define IMAGE_RESOURCE_BMP16_POINTER_Y_RS_REL_BMP (uint)151
- #define IMAGE_RESOURCE_BMP16_POINTER_Y_SCROLL_BMP (uint)152
- #define IMAGE_RESOURCE_BMP16_POINTER_Y_SCROLL_BLUE_BMP (uint)153
- #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_BMP (uint)154
- #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_LOCKED_BMP (uint)155
- #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_ON_BMP (uint)156
- #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_ON_LOCKED_BMP (uint)157
- #define IMAGE_RESOURCE_BMP16_RIGHT_THICK_BLACK_BMP (uint)158
- #define IMAGE_RESOURCE_BMP16_RIGHT_THIN_BLACK_BMP (uint)159
- #define IMAGE_RESOURCE_BMP16_RIGHT_THIN_WHITE_BMP (uint)160
- #define IMAGE_RESOURCE_BMP16_SAVE_PNG (uint)161
- #define IMAGE_RESOURCE_BMP16_SCRIPT_BMP (uint)162
- #define IMAGE_RESOURCE_BMP16_SCROLL_DOWN_BLACK_BMP (uint)163
- #define IMAGE_RESOURCE_BMP16_SCROLL_DOWN_WHITE_BMP (uint)164
- #define IMAGE_RESOURCE_BMP16_SCROLL_LEFT_BLACK_BMP (uint)165
- #define IMAGE_RESOURCE_BMP16_SCROLL_LEFT_WHITE_BMP (uint)166
- #define IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_BLACK_BMP (uint)167
- #define IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_WHITE_BMP (uint)168
- #define IMAGE_RESOURCE_BMP16_SCROLL_UP_BLACK_BMP (uint)169
- #define IMAGE_RESOURCE_BMP16_SCROLL_UP_WHITE_BMP (uint)170
- #define IMAGE_RESOURCE_BMP16_SEARCH_BMP (uint)171
- #define IMAGE_RESOURCE_BMP16_SEARCH_GRAY_BMP (uint)172
- #define IMAGE_RESOURCE_BMP16_SPIN_DEC_BMP (uint)173
- #define IMAGE_RESOURCE_BMP16_SPIN_INC_BMP (uint)174
- #define IMAGE_RESOURCE_BMP16_START_BMP (uint)175
- #define IMAGE_RESOURCE_BMP16_START_GRAY_BMP (uint)176
- #define IMAGE_RESOURCE_BMP16_STOP_GRAY_BMP (uint)177
- #define IMAGE_RESOURCE_BMP16_STOP_RED_BMP (uint)178
- #define IMAGE_RESOURCE_BMP16_TEXT_FILE_BMP (uint)179
- #define IMAGE_RESOURCE_BMP16_TEXT_FILE_W10_BMP (uint)180
- #define IMAGE_RESOURCE_BMP16_UP_THIN_BLACK_BMP (uint)181
- #define IMAGE_RESOURCE_BMP16_UP_THIN_WHITE_BMP (uint)182
- #define IMAGE_RESOURCE_BMP16_UPDATE_SETTING_PNG (uint)183
- #define IMAGE_RESOURCE_BMP32_CANDLE_MARKER_CANDLE_PNG (uint)184
- #define IMAGE_RESOURCE_BMP32_MAINPANNEL_PNG (uint)185
- #define IMAGE_RESOURCE_BMP32_RISK_MANAGEMENT_PNG (uint)186
- #define IMAGE_RESOURCE_BMP32_SETTING_PNG (uint)187
- #define IMAGE_RESOURCE_BMP32_SMARTMONEY_PNG (uint)188
- #define IMAGE_RESOURCE_BMP32_SYMBOL_PNG (uint)189
- #define IMAGE_RESOURCE_BMP32_INDICATOR_PNG (uint)190
- #define IMAGE_RESOURCE_BMP60_ORDER_EA_MQL5_JOB_PNG (uint)191
- #define IMAGE_RESOURCE_BMP60_RISK_MANAGEMENT_ICON_PNG (uint)192
- #define IMAGE_RESOURCE_BMP64_000_BMP (uint)193
- #define IMAGE_RESOURCE_BMP64_BAR_CHART_BMP (uint)194
- #define IMAGE_RESOURCE_BMP64_BAR_CHART_GRAY_BMP (uint)195
- #define IMAGE_RESOURCE_BMP64_CALCULATOR_BMP (uint)196
- #define IMAGE_RESOURCE_BMP64_CALCULATOR_GRAY_BMP (uint)197
- #define IMAGE_RESOURCE_BMP64_COINS_BMP (uint)198
- #define IMAGE_RESOURCE_BMP64_COINS_GRAY_BMP (uint)199
- #define IMAGE_RESOURCE_BMP64_GOLD_BMP (uint)200
- #define IMAGE_RESOURCE_BMP64_GOLD_COLORLESS_BMP (uint)201
- #define IMAGE_RESOURCE_BMP64_GOLD_GRAY_BMP (uint)202
- #define IMAGE_RESOURCE_BMP64_INVOICE_BMP (uint)203
- #define IMAGE_RESOURCE_BMP64_INVOICE_GRAY_BMP (uint)204
- #define IMAGE_RESOURCE_BMP64_LINE_CHART_BMP (uint)205
- #define IMAGE_RESOURCE_BMP64_LINE_CHART_GRAY_BMP (uint)206
- #define IMAGE_RESOURCE_BMP64_NO_IMAGE_BMP (uint)207
- #define IMAGE_RESOURCE_BMP64_PIE_CHART_BMP (uint)208
- #define IMAGE_RESOURCE_BMP64_PIE_CHART_COLORLESS_BMP (uint)209
- #define IMAGE_RESOURCE_BMP64_PIE_CHART_GRAY_BMP (uint)210
- #define IMAGE_RESOURCE_BMP64_SAFE_BMP (uint)211
- #define IMAGE_RESOURCE_BMP64_SAFE_COLORLESS_BMP (uint)212
- #define IMAGE_RESOURCE_BMP64_SAFE_GRAY_BMP (uint)213
- #define IMAGE_RESOURCE_TOTAL (uint)214
+ #define IMAGE_RESOURCE_BMP16_EDIT_PNG (uint)126
+ #define IMAGE_RESOURCE_BMP16_FOLDER_BMP (uint)127
+ #define IMAGE_RESOURCE_BMP16_FOLDER_W10_BMP (uint)128
+ #define IMAGE_RESOURCE_BMP16_FULL_SCREEN_BMP (uint)129
+ #define IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG (uint)130
+ #define IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG (uint)131
+ #define IMAGE_RESOURCE_BMP16_INDICATOR_BMP (uint)132
+ #define IMAGE_RESOURCE_BMP16_INDICATOR_OFF_PNG (uint)133
+ #define IMAGE_RESOURCE_BMP16_LEFT_THIN_BLACK_BMP (uint)134
+ #define IMAGE_RESOURCE_BMP16_LEFT_THIN_WHITE_BMP (uint)135
+ #define IMAGE_RESOURCE_BMP16_LOGO_BMP (uint)136
+ #define IMAGE_RESOURCE_BMP16_MINIMIZE_TO_WINDOW_BMP (uint)137
+ #define IMAGE_RESOURCE_BMP16_PIE_CHART_BMP (uint)138
+ #define IMAGE_RESOURCE_BMP16_PIE_CHART_COLORLESS_BMP (uint)139
+ #define IMAGE_RESOURCE_BMP16_POINTER_TEXT_SELECT_BMP (uint)140
+ #define IMAGE_RESOURCE_BMP16_POINTER_X_RS_BMP (uint)141
+ #define IMAGE_RESOURCE_BMP16_POINTER_X_RS_BLUE_BMP (uint)142
+ #define IMAGE_RESOURCE_BMP16_POINTER_X_RS_REL_BMP (uint)143
+ #define IMAGE_RESOURCE_BMP16_POINTER_X_SCROLL_BMP (uint)144
+ #define IMAGE_RESOURCE_BMP16_POINTER_X_SCROLL_BLUE_BMP (uint)145
+ #define IMAGE_RESOURCE_BMP16_POINTER_XY1_RS_BMP (uint)146
+ #define IMAGE_RESOURCE_BMP16_POINTER_XY1_RS_BLUE_BMP (uint)147
+ #define IMAGE_RESOURCE_BMP16_POINTER_XY2_RS_BMP (uint)148
+ #define IMAGE_RESOURCE_BMP16_POINTER_XY2_RS_BLUE_BMP (uint)149
+ #define IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BMP (uint)150
+ #define IMAGE_RESOURCE_BMP16_POINTER_Y_RS_BLUE_BMP (uint)151
+ #define IMAGE_RESOURCE_BMP16_POINTER_Y_RS_REL_BMP (uint)152
+ #define IMAGE_RESOURCE_BMP16_POINTER_Y_SCROLL_BMP (uint)153
+ #define IMAGE_RESOURCE_BMP16_POINTER_Y_SCROLL_BLUE_BMP (uint)154
+ #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_BMP (uint)155
+ #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_OFF_LOCKED_BMP (uint)156
+ #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_ON_BMP (uint)157
+ #define IMAGE_RESOURCE_BMP16_RADIO_BUTTON_ON_LOCKED_BMP (uint)158
+ #define IMAGE_RESOURCE_BMP16_RIGHT_THICK_BLACK_BMP (uint)159
+ #define IMAGE_RESOURCE_BMP16_RIGHT_THIN_BLACK_BMP (uint)160
+ #define IMAGE_RESOURCE_BMP16_RIGHT_THIN_WHITE_BMP (uint)161
+ #define IMAGE_RESOURCE_BMP16_SAVE_PNG (uint)162
+ #define IMAGE_RESOURCE_BMP16_SCRIPT_BMP (uint)163
+ #define IMAGE_RESOURCE_BMP16_SCROLL_DOWN_BLACK_BMP (uint)164
+ #define IMAGE_RESOURCE_BMP16_SCROLL_DOWN_WHITE_BMP (uint)165
+ #define IMAGE_RESOURCE_BMP16_SCROLL_LEFT_BLACK_BMP (uint)166
+ #define IMAGE_RESOURCE_BMP16_SCROLL_LEFT_WHITE_BMP (uint)167
+ #define IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_BLACK_BMP (uint)168
+ #define IMAGE_RESOURCE_BMP16_SCROLL_RIGHT_WHITE_BMP (uint)169
+ #define IMAGE_RESOURCE_BMP16_SCROLL_UP_BLACK_BMP (uint)170
+ #define IMAGE_RESOURCE_BMP16_SCROLL_UP_WHITE_BMP (uint)171
+ #define IMAGE_RESOURCE_BMP16_SEARCH_BMP (uint)172
+ #define IMAGE_RESOURCE_BMP16_SEARCH_GRAY_BMP (uint)173
+ #define IMAGE_RESOURCE_BMP16_SPIN_DEC_BMP (uint)174
+ #define IMAGE_RESOURCE_BMP16_SPIN_INC_BMP (uint)175
+ #define IMAGE_RESOURCE_BMP16_START_BMP (uint)176
+ #define IMAGE_RESOURCE_BMP16_START_GRAY_BMP (uint)177
+ #define IMAGE_RESOURCE_BMP16_STOP_GRAY_BMP (uint)178
+ #define IMAGE_RESOURCE_BMP16_STOP_RED_BMP (uint)179
+ #define IMAGE_RESOURCE_BMP16_TEXT_FILE_BMP (uint)180
+ #define IMAGE_RESOURCE_BMP16_TEXT_FILE_W10_BMP (uint)181
+ #define IMAGE_RESOURCE_BMP16_UP_THIN_BLACK_BMP (uint)182
+ #define IMAGE_RESOURCE_BMP16_UP_THIN_WHITE_BMP (uint)183
+ #define IMAGE_RESOURCE_BMP16_UPDATE_SETTING_PNG (uint)184
+ #define IMAGE_RESOURCE_BMP32_CANDLE_MARKER_CANDLE_PNG (uint)185
+ #define IMAGE_RESOURCE_BMP32_MAINPANNEL_PNG (uint)186
+ #define IMAGE_RESOURCE_BMP32_RISK_MANAGEMENT_PNG (uint)187
+ #define IMAGE_RESOURCE_BMP32_SETTING_PNG (uint)188
+ #define IMAGE_RESOURCE_BMP32_SMARTMONEY_PNG (uint)189
+ #define IMAGE_RESOURCE_BMP32_STRATEGY_PNG (uint)190
+ #define IMAGE_RESOURCE_BMP32_SYMBOL_PNG (uint)191
+ #define IMAGE_RESOURCE_BMP32_INDICATOR_PNG (uint)192
+ #define IMAGE_RESOURCE_BMP60_ORDER_EA_MQL5_JOB_PNG (uint)193
+ #define IMAGE_RESOURCE_BMP60_RISK_MANAGEMENT_ICON_PNG (uint)194
+ #define IMAGE_RESOURCE_BMP64_000_BMP (uint)195
+ #define IMAGE_RESOURCE_BMP64_BAR_CHART_BMP (uint)196
+ #define IMAGE_RESOURCE_BMP64_BAR_CHART_GRAY_BMP (uint)197
+ #define IMAGE_RESOURCE_BMP64_CALCULATOR_BMP (uint)198
+ #define IMAGE_RESOURCE_BMP64_CALCULATOR_GRAY_BMP (uint)199
+ #define IMAGE_RESOURCE_BMP64_COINS_BMP (uint)200
+ #define IMAGE_RESOURCE_BMP64_COINS_GRAY_BMP (uint)201
+ #define IMAGE_RESOURCE_BMP64_GOLD_BMP (uint)202
+ #define IMAGE_RESOURCE_BMP64_GOLD_COLORLESS_BMP (uint)203
+ #define IMAGE_RESOURCE_BMP64_GOLD_GRAY_BMP (uint)204
+ #define IMAGE_RESOURCE_BMP64_INVOICE_BMP (uint)205
+ #define IMAGE_RESOURCE_BMP64_INVOICE_GRAY_BMP (uint)206
+ #define IMAGE_RESOURCE_BMP64_LINE_CHART_BMP (uint)207
+ #define IMAGE_RESOURCE_BMP64_LINE_CHART_GRAY_BMP (uint)208
+ #define IMAGE_RESOURCE_BMP64_NO_IMAGE_BMP (uint)209
+ #define IMAGE_RESOURCE_BMP64_PIE_CHART_BMP (uint)210
+ #define IMAGE_RESOURCE_BMP64_PIE_CHART_COLORLESS_BMP (uint)211
+ #define IMAGE_RESOURCE_BMP64_PIE_CHART_GRAY_BMP (uint)212
+ #define IMAGE_RESOURCE_BMP64_SAFE_BMP (uint)213
+ #define IMAGE_RESOURCE_BMP64_SAFE_COLORLESS_BMP (uint)214
+ #define IMAGE_RESOURCE_BMP64_SAFE_GRAY_BMP (uint)215
+ #define IMAGE_RESOURCE_TOTAL (uint)216
 
 //+--- Part 2 & 3: Pixel data + loader of a single image ------------+
 bool LoadImageData(const uint index, SImage &image)
@@ -4058,7 +4060,30 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_down_thin_white_bmp);
           return true;
          }
-       case 126: // bmp16_folder_bmp
+       case 126: // bmp16_edit_png
+         {
+          uint bmp16_edit_png[] = {
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4286408266,4291396191,4289360202,16777215,16777215,16777215,16777215,16777215,4280229679,4280163885,4280163885,4280163885,
+          4280163885,4280163885,4280427059,4287062309,4285688677,4289232239,4291198814,16777215,16777215,16777215,16777215,4282475373,4284519836,4286095267,4286029474,4286029474,4286029474,4286161829,4287608493,4290221881,
+          4290613032,4285623394,4286408522,16777215,16777215,16777215,4280229679,4284519580,4292008914,4294835438,4294835438,4294835438,4294835438,4293255114,4291271998,4291335460,4290944312,4286736680,16777215,16777215,
+          16777215,16777215,4280295465,4286030502,4294835438,4294835438,4294835438,4294835438,4293255114,4291403326,4291466788,4291403324,4287411625,4280558628,16777215,16777215,16777215,16777215,4280295465,4286161831,
+          4294835438,4294835438,4294835438,4293387473,4291272257,4292124196,4291469117,4293386442,4286557103,4280295465,16777215,16777215,16777215,16777215,4280295465,4286161831,4294835438,4294835438,4294835438,4292266146,
+          4292200356,4290746945,4293386440,4294835438,4286425516,4280295465,16777215,16777215,16777215,16777215,4280295465,4286161831,4294835438,4294835438,4294835438,4285820771,4292200354,4293387473,4294835438,4294835438,
+          4286161831,4280295465,16777215,16777215,16777215,16777215,4280295465,4286161831,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4286161831,4280295465,16777215,16777215,
+          16777215,16777215,4280295465,4286030502,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4286030502,4280295465,16777215,16777215,16777215,16777215,4280427059,4284454045,
+          4291942866,4294835438,4294835438,4294835438,4294835438,4294835438,4294835438,4291942866,4284454556,4280427059,16777215,16777215,16777215,16777215,16777215,4282541163,4284454299,4286095010,4286029474,4286029474,
+          4286029474,4286029474,4286095010,4284454299,4282475629,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4280229679,4280163885,4280163885,4280163885,4280163885,4280163885,4280163885,4280229679,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215
+          };
+          image.name   = "bmp16_edit_png";
+          image.width  = 16;
+          image.height = 16;
+          ArrayCopy(image.data, bmp16_edit_png);
+          return true;
+         }
+       case 127: // bmp16_folder_bmp
          {
           uint bmp16_folder_bmp[] = {
           4292135035,4294305678,4294239373,4294107273,4294041224,4294040969,4293909382,4293843331,4293711744,4293580157,4293646731,4290753392,16777215,16777215,16777215,16777215,4294305677,4294702769,4294835177,4294240921,
@@ -4081,7 +4106,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_folder_bmp);
           return true;
          }
-       case 127: // bmp16_folder_w10_bmp
+       case 128: // bmp16_folder_w10_bmp
          {
           uint bmp16_folder_w10_bmp[] = {
           4294103373,4294037580,4294037324,4293971788,4293971532,4293905739,4293905739,4293905483,4293839690,4293839690,4293773898,4293972586,16777215,16777215,16777215,16777215,4294037580,4294962083,4294962082,4294962080,
@@ -4104,7 +4129,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_folder_w10_bmp);
           return true;
          }
-       case 128: // bmp16_full_screen_bmp
+       case 129: // bmp16_full_screen_bmp
          {
           uint bmp16_full_screen_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4127,7 +4152,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_full_screen_bmp);
           return true;
          }
-       case 129: // bmp16_icons8_right_down_png
+       case 130: // bmp16_icons8_right_down_png
          {
           uint bmp16_icons8_right_down_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4150,7 +4175,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_icons8_right_down_png);
           return true;
          }
-       case 130: // bmp16_icons8_right_up_png
+       case 131: // bmp16_icons8_right_up_png
          {
           uint bmp16_icons8_right_up_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4173,7 +4198,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_icons8_right_up_png);
           return true;
          }
-       case 131: // bmp16_indicator_bmp
+       case 132: // bmp16_indicator_bmp
          {
           uint bmp16_indicator_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4282200070,4290351635,4290351635,
@@ -4196,7 +4221,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_indicator_bmp);
           return true;
          }
-       case 132: // bmp16_indicator_off_png
+       case 133: // bmp16_indicator_off_png
          {
           uint bmp16_indicator_off_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4278190080,4278190080,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4219,7 +4244,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_indicator_off_png);
           return true;
          }
-       case 133: // bmp16_left_thin_black_bmp
+       case 134: // bmp16_left_thin_black_bmp
          {
           uint bmp16_left_thin_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4242,7 +4267,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_left_thin_black_bmp);
           return true;
          }
-       case 134: // bmp16_left_thin_white_bmp
+       case 135: // bmp16_left_thin_white_bmp
          {
           uint bmp16_left_thin_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4265,7 +4290,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_left_thin_white_bmp);
           return true;
          }
-       case 135: // bmp16_logo_bmp
+       case 136: // bmp16_logo_bmp
          {
           uint bmp16_logo_bmp[] = {
           4283136706,4283202758,4283203530,4283203789,4283204305,4283204820,4283073495,4282942426,4282942942,4283140578,4283337957,4283338473,4283404525,4283470321,4283470836,4283471352,4283136706,4283203014,4283203273,4283204044,
@@ -4288,7 +4313,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_logo_bmp);
           return true;
          }
-       case 136: // bmp16_minimize_to_window_bmp
+       case 137: // bmp16_minimize_to_window_bmp
          {
           uint bmp16_minimize_to_window_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4311,7 +4336,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_minimize_to_window_bmp);
           return true;
          }
-       case 137: // bmp16_pie_chart_bmp
+       case 138: // bmp16_pie_chart_bmp
          {
           uint bmp16_pie_chart_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4334,7 +4359,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pie_chart_bmp);
           return true;
          }
-       case 138: // bmp16_pie_chart_colorless_bmp
+       case 139: // bmp16_pie_chart_colorless_bmp
          {
           uint bmp16_pie_chart_colorless_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4357,7 +4382,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pie_chart_colorless_bmp);
           return true;
          }
-       case 139: // bmp16_pointer_text_select_bmp
+       case 140: // bmp16_pointer_text_select_bmp
          {
           uint bmp16_pointer_text_select_bmp[] = {
           16777215,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,16777215,4294967295,4278190080,4278190080,4278190080,4294967295,4278190080,4278190080,4278190080,4294967295,16777215,4294967295,
@@ -4376,7 +4401,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_text_select_bmp);
           return true;
          }
-       case 140: // bmp16_pointer_x_rs_bmp
+       case 141: // bmp16_pointer_x_rs_bmp
          {
           uint bmp16_pointer_x_rs_bmp[] = {
           16777215,16777215,16777215,16777215,4278519046,4278454030,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4279374615,4279374615,16777215,
@@ -4397,7 +4422,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_x_rs_bmp);
           return true;
          }
-       case 141: // bmp16_pointer_x_rs_blue_bmp
+       case 142: // bmp16_pointer_x_rs_blue_bmp
          {
           uint bmp16_pointer_x_rs_blue_bmp[] = {
           16777215,16777215,16777215,16777215,4278256390,4278190861,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278520343,4278520343,16777215,
@@ -4418,7 +4443,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_x_rs_blue_bmp);
           return true;
          }
-       case 142: // bmp16_pointer_x_rs_rel_bmp
+       case 143: // bmp16_pointer_x_rs_rel_bmp
          {
           uint bmp16_pointer_x_rs_rel_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,4294967295,4294967295,4294967295,4294967295,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4445,7 +4470,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_x_rs_rel_bmp);
           return true;
          }
-       case 143: // bmp16_pointer_x_scroll_bmp
+       case 144: // bmp16_pointer_x_scroll_bmp
          {
           uint bmp16_pointer_x_scroll_bmp[] = {
           16777215,16777215,16777215,4294967295,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4294967295,16777215,16777215,16777215,16777215,16777215,4294967295,
@@ -4461,7 +4486,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_x_scroll_bmp);
           return true;
          }
-       case 144: // bmp16_pointer_x_scroll_blue_bmp
+       case 145: // bmp16_pointer_x_scroll_blue_bmp
          {
           uint bmp16_pointer_x_scroll_blue_bmp[] = {
           16777215,16777215,16777215,4294967295,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4294967295,16777215,16777215,16777215,16777215,16777215,4294967295,
@@ -4477,7 +4502,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_x_scroll_blue_bmp);
           return true;
          }
-       case 145: // bmp16_pointer_xy1_rs_bmp
+       case 146: // bmp16_pointer_xy1_rs_bmp
          {
           uint bmp16_pointer_xy1_rs_bmp[] = {
           4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4294967295,4294967295,
@@ -4502,7 +4527,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_xy1_rs_bmp);
           return true;
          }
-       case 146: // bmp16_pointer_xy1_rs_blue_bmp
+       case 147: // bmp16_pointer_xy1_rs_blue_bmp
          {
           uint bmp16_pointer_xy1_rs_blue_bmp[] = {
           4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4288002559,4288002559,
@@ -4527,7 +4552,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_xy1_rs_blue_bmp);
           return true;
          }
-       case 147: // bmp16_pointer_xy2_rs_bmp
+       case 148: // bmp16_pointer_xy2_rs_bmp
          {
           uint bmp16_pointer_xy2_rs_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,16777215,16777215,16777215,
@@ -4552,7 +4577,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_xy2_rs_bmp);
           return true;
          }
-       case 148: // bmp16_pointer_xy2_rs_blue_bmp
+       case 149: // bmp16_pointer_xy2_rs_blue_bmp
          {
           uint bmp16_pointer_xy2_rs_blue_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,16777215,16777215,16777215,
@@ -4577,7 +4602,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_xy2_rs_blue_bmp);
           return true;
          }
-       case 149: // bmp16_pointer_y_rs_bmp
+       case 150: // bmp16_pointer_y_rs_bmp
          {
           uint bmp16_pointer_y_rs_bmp[] = {
           16777215,16777215,16777215,16777215,4278190080,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4293256936,4278190080,16777215,16777215,16777215,16777215,16777215,
@@ -4598,7 +4623,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_y_rs_bmp);
           return true;
          }
-       case 150: // bmp16_pointer_y_rs_blue_bmp
+       case 151: // bmp16_pointer_y_rs_blue_bmp
          {
           uint bmp16_pointer_y_rs_blue_bmp[] = {
           16777215,16777215,16777215,16777215,4278190080,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4278190080,4286883560,4278190080,16777215,16777215,16777215,16777215,16777215,
@@ -4619,7 +4644,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_y_rs_blue_bmp);
           return true;
          }
-       case 151: // bmp16_pointer_y_rs_rel_bmp
+       case 152: // bmp16_pointer_y_rs_rel_bmp
          {
           uint bmp16_pointer_y_rs_rel_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4294967295,4294967295,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4646,7 +4671,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_y_rs_rel_bmp);
           return true;
          }
-       case 152: // bmp16_pointer_y_scroll_bmp
+       case 153: // bmp16_pointer_y_scroll_bmp
          {
           uint bmp16_pointer_y_scroll_bmp[] = {
           16777215,16777215,16777215,4294967295,16777215,16777215,16777215,16777215,16777215,4294967295,4278190080,4294967295,16777215,16777215,16777215,4294967295,4278190080,4278190080,4278190080,4294967295,
@@ -4662,7 +4687,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_y_scroll_bmp);
           return true;
          }
-       case 153: // bmp16_pointer_y_scroll_blue_bmp
+       case 154: // bmp16_pointer_y_scroll_blue_bmp
          {
           uint bmp16_pointer_y_scroll_blue_bmp[] = {
           16777215,16777215,16777215,4294967295,16777215,16777215,16777215,16777215,16777215,4294967295,4288002559,4294967295,16777215,16777215,16777215,4294967295,4288002559,4288002559,4288002559,4294967295,
@@ -4678,7 +4703,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_pointer_y_scroll_blue_bmp);
           return true;
          }
-       case 154: // bmp16_radio_button_off_bmp
+       case 155: // bmp16_radio_button_off_bmp
          {
           uint bmp16_radio_button_off_bmp[] = {
           16777215,16777215,16777215,4289572269,4284703587,4280821800,4278519045,4280821800,4284703587,4289572269,16777215,16777215,16777215,16777215,4293454056,4285822068,4283585106,4288453788,4292335575,4294638330,
@@ -4697,7 +4722,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_radio_button_off_bmp);
           return true;
          }
-       case 155: // bmp16_radio_button_off_locked_bmp
+       case 156: // bmp16_radio_button_off_locked_bmp
          {
           uint bmp16_radio_button_off_locked_bmp[] = {
           16777215,16777215,16777215,4293914607,4292927712,4292138196,4291677645,4292138196,4292927712,4293914607,16777215,16777215,16777215,16777215,4294638330,4293125091,4292664540,4293651435,4294440951,4294901502,
@@ -4716,7 +4741,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_radio_button_off_locked_bmp);
           return true;
          }
-       case 156: // bmp16_radio_button_on_bmp
+       case 157: // bmp16_radio_button_on_bmp
          {
           uint bmp16_radio_button_on_bmp[] = {
           16777215,16777215,16777215,4289572269,4284703587,4280821800,4278519045,4280821800,4284703587,4289572269,16777215,16777215,16777215,16777215,4293454056,4285822068,4283585106,4288453788,4292335575,4294638330,
@@ -4735,7 +4760,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_radio_button_on_bmp);
           return true;
          }
-       case 157: // bmp16_radio_button_on_locked_bmp
+       case 158: // bmp16_radio_button_on_locked_bmp
          {
           uint bmp16_radio_button_on_locked_bmp[] = {
           16777215,16777215,16777215,4293914607,4292927712,4292138196,4291677645,4292138196,4292927712,4293914607,16777215,16777215,16777215,16777215,4294638330,4293125091,4292664540,4293651435,4294440951,4294901502,
@@ -4754,7 +4779,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_radio_button_on_locked_bmp);
           return true;
          }
-       case 158: // bmp16_right_thick_black_bmp
+       case 159: // bmp16_right_thick_black_bmp
          {
           uint bmp16_right_thick_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4776,7 +4801,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_right_thick_black_bmp);
           return true;
          }
-       case 159: // bmp16_right_thin_black_bmp
+       case 160: // bmp16_right_thin_black_bmp
          {
           uint bmp16_right_thin_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4799,7 +4824,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_right_thin_black_bmp);
           return true;
          }
-       case 160: // bmp16_right_thin_white_bmp
+       case 161: // bmp16_right_thin_white_bmp
          {
           uint bmp16_right_thin_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4822,7 +4847,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_right_thin_white_bmp);
           return true;
          }
-       case 161: // bmp16_save_png
+       case 162: // bmp16_save_png
          {
           uint bmp16_save_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4845,7 +4870,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_save_png);
           return true;
          }
-       case 162: // bmp16_script_bmp
+       case 163: // bmp16_script_bmp
          {
           uint bmp16_script_bmp[] = {
           4281543954,4288181766,4290351635,4290351635,4290351635,4290351635,4290351635,4290351635,4290351635,4290351635,4290351635,4281543954,16777215,16777215,16777215,16777215,4288181766,4290351635,4294967295,4294967295,
@@ -4868,7 +4893,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_script_bmp);
           return true;
          }
-       case 163: // bmp16_scroll_down_black_bmp
+       case 164: // bmp16_scroll_down_black_bmp
          {
           uint bmp16_scroll_down_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4890,7 +4915,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_down_black_bmp);
           return true;
          }
-       case 164: // bmp16_scroll_down_white_bmp
+       case 165: // bmp16_scroll_down_white_bmp
          {
           uint bmp16_scroll_down_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4912,7 +4937,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_down_white_bmp);
           return true;
          }
-       case 165: // bmp16_scroll_left_black_bmp
+       case 166: // bmp16_scroll_left_black_bmp
          {
           uint bmp16_scroll_left_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4934,7 +4959,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_left_black_bmp);
           return true;
          }
-       case 166: // bmp16_scroll_left_white_bmp
+       case 167: // bmp16_scroll_left_white_bmp
          {
           uint bmp16_scroll_left_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4956,7 +4981,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_left_white_bmp);
           return true;
          }
-       case 167: // bmp16_scroll_right_black_bmp
+       case 168: // bmp16_scroll_right_black_bmp
          {
           uint bmp16_scroll_right_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -4978,7 +5003,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_right_black_bmp);
           return true;
          }
-       case 168: // bmp16_scroll_right_white_bmp
+       case 169: // bmp16_scroll_right_white_bmp
          {
           uint bmp16_scroll_right_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5000,7 +5025,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_right_white_bmp);
           return true;
          }
-       case 169: // bmp16_scroll_up_black_bmp
+       case 170: // bmp16_scroll_up_black_bmp
          {
           uint bmp16_scroll_up_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5022,7 +5047,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_up_black_bmp);
           return true;
          }
-       case 170: // bmp16_scroll_up_white_bmp
+       case 171: // bmp16_scroll_up_white_bmp
          {
           uint bmp16_scroll_up_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5044,7 +5069,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_scroll_up_white_bmp);
           return true;
          }
-       case 171: // bmp16_search_bmp
+       case 172: // bmp16_search_bmp
          {
           uint bmp16_search_bmp[] = {
           16777215,16777215,16777215,4280512697,4282287555,4280512697,16777215,16777215,16777215,16777215,4280512697,4282287555,4280512697,16777215,16777215,16777215,16777215,16777215,16777215,4278344646,
@@ -5067,7 +5092,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_search_bmp);
           return true;
          }
-       case 172: // bmp16_search_gray_bmp
+       case 173: // bmp16_search_gray_bmp
          {
           uint bmp16_search_gray_bmp[] = {
           16777215,16777215,16777215,4290164406,4290756543,4290164406,16777215,16777215,16777215,16777215,4290164406,4290756543,4290164406,16777215,16777215,16777215,16777215,16777215,16777215,4289835441,
@@ -5090,7 +5115,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_search_gray_bmp);
           return true;
          }
-       case 173: // bmp16_spin_dec_bmp
+       case 174: // bmp16_spin_dec_bmp
          {
           uint bmp16_spin_dec_bmp[] = {
           4278190080,4278190080,4278190080,4278190080,4278190080,16777215,4278190080,4278190080,4278190080,16777215,16777215,16777215,4278190080,16777215,16777215
@@ -5101,7 +5126,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_spin_dec_bmp);
           return true;
          }
-       case 174: // bmp16_spin_inc_bmp
+       case 175: // bmp16_spin_inc_bmp
          {
           uint bmp16_spin_inc_bmp[] = {
           16777215,16777215,4278190080,16777215,16777215,16777215,4278190080,4278190080,4278190080,16777215,4278190080,4278190080,4278190080,4278190080,4278190080
@@ -5112,7 +5137,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_spin_inc_bmp);
           return true;
          }
-       case 175: // bmp16_start_bmp
+       case 176: // bmp16_start_bmp
          {
           uint bmp16_start_bmp[] = {
           16777215,16777215,16777215,16777215,4292935642,4290903988,4289200022,4288020352,4288085888,4289200022,4290903988,4292935642,16777215,16777215,16777215,16777215,16777215,16777215,4294049774,4290969525,
@@ -5135,7 +5160,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_start_bmp);
           return true;
          }
-       case 176: // bmp16_start_gray_bmp
+       case 177: // bmp16_start_gray_bmp
          {
           uint bmp16_start_gray_bmp[] = {
           16777215,16777215,16777215,16777215,4294111986,4293190884,4292532954,4292006610,4292006610,4292532954,4293190884,4294111986,16777215,16777215,16777215,16777215,16777215,16777215,4294572537,4293256677,
@@ -5158,7 +5183,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_start_gray_bmp);
           return true;
          }
-       case 177: // bmp16_stop_gray_bmp
+       case 178: // bmp16_stop_gray_bmp
          {
           uint bmp16_stop_gray_bmp[] = {
           16777215,16777215,16777215,16777215,4294111986,4293256677,4292532954,4292072403,4292072403,4292532954,4293256677,4294111986,16777215,16777215,16777215,16777215,16777215,16777215,4294572537,4293256677,
@@ -5181,7 +5206,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_stop_gray_bmp);
           return true;
          }
-       case 178: // bmp16_stop_red_bmp
+       case 179: // bmp16_stop_red_bmp
          {
           uint bmp16_stop_red_bmp[] = {
           16777215,16777215,16777215,16777215,4294957786,4294948277,4294940310,4294934913,4294934913,4294940310,4294948277,4294957786,16777215,16777215,16777215,16777215,16777215,16777215,4294962926,4294948277,
@@ -5204,7 +5229,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_stop_red_bmp);
           return true;
          }
-       case 179: // bmp16_text_file_bmp
+       case 180: // bmp16_text_file_bmp
          {
           uint bmp16_text_file_bmp[] = {
           4290822336,4290822336,16777215,4290822336,4290822336,16777215,4290822336,4290822336,16777215,4290822336,4283190091,16777215,16777215,16777215,16777215,16777215,4290822336,4294769659,4290624957,4292401370,
@@ -5227,7 +5252,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_text_file_bmp);
           return true;
          }
-       case 180: // bmp16_text_file_w10_bmp
+       case 181: // bmp16_text_file_w10_bmp
          {
           uint bmp16_text_file_w10_bmp[] = {
           4289045925,4288914596,4288848546,4288782753,4288651168,4288585374,4288454045,4288387995,4288256666,4288848546,16777215,16777215,16777215,16777215,16777215,16777215,4288914596,4294835709,4294835709,4294835709,
@@ -5250,7 +5275,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_text_file_w10_bmp);
           return true;
          }
-       case 181: // bmp16_up_thin_black_bmp
+       case 182: // bmp16_up_thin_black_bmp
          {
           uint bmp16_up_thin_black_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5273,7 +5298,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_up_thin_black_bmp);
           return true;
          }
-       case 182: // bmp16_up_thin_white_bmp
+       case 183: // bmp16_up_thin_white_bmp
          {
           uint bmp16_up_thin_white_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5296,7 +5321,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_up_thin_white_bmp);
           return true;
          }
-       case 183: // bmp16_update_setting_png
+       case 184: // bmp16_update_setting_png
          {
           uint bmp16_update_setting_png[] = {
           16777215,16777215,16777215,16777215,4280540408,4280670967,4280605176,4280605683,4278239730,4278239217,4278239217,4278239729,4278239473,4278255615,16777215,16777215,16777215,16777215,4282433535,4280670456,
@@ -5319,7 +5344,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp16_update_setting_png);
           return true;
          }
-       case 184: // bmp32_candle_marker_candle_png
+       case 185: // bmp32_candle_marker_candle_png
          {
           uint bmp32_candle_marker_candle_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4294958879,16777215,16777215,16777215,16777215,
@@ -5381,7 +5406,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_candle_marker_candle_png);
           return true;
          }
-       case 185: // bmp32_mainpannel_png
+       case 186: // bmp32_mainpannel_png
          {
           uint bmp32_mainpannel_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5443,7 +5468,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_mainpannel_png);
           return true;
          }
-       case 186: // bmp32_risk_management_png
+       case 187: // bmp32_risk_management_png
          {
           uint bmp32_risk_management_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5505,7 +5530,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_risk_management_png);
           return true;
          }
-       case 187: // bmp32_setting_png
+       case 188: // bmp32_setting_png
          {
           uint bmp32_setting_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5567,7 +5592,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_setting_png);
           return true;
          }
-       case 188: // bmp32_smartmoney_png
+       case 189: // bmp32_smartmoney_png
          {
           uint bmp32_smartmoney_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4293573994,4293508203,4293573738,4293573739,4293506912,4293504845,4293439053,
@@ -5629,7 +5654,69 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_smartmoney_png);
           return true;
          }
-       case 189: // bmp32_symbol_png
+       case 190: // bmp32_strategy_png
+         {
+          uint bmp32_strategy_png[] = {
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,4285361517,4284508531,4284640375,4284508531,4284442487,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4285361517,4284771705,4285495426,4288193452,4286745749,4284640118,4284442995,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,4284574067,4285363584,4292142059,4292602610,4292602610,4287930280,4284903032,4278190080,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4284639603,4284771704,4284574068,4289377983,4292602610,
+          4292602610,4292602610,4291747044,4284968825,4284705654,4284771446,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,4284836985,4287732645,4291483872,4292602610,4292602610,4292602610,4292602610,4292602610,4292075753,4290036426,4284574068,4284900983,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4284444527,4284508274,4284836984,4284903032,4284903032,4284968825,
+          4288851639,4292602610,4292602610,4292602610,4292602610,4292602610,4292602610,4292602610,4291812837,4284574068,4284902775,4284903032,4284903032,4284639605,4284638837,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,4284900978,4284902775,4286416269,4289310131,4289441717,4289441717,4286087305,4288851639,4292602610,4292602610,4292602610,4292602610,4292602610,4292602610,4292602610,
+          4291812837,4284574068,4289112496,4289441717,4289441717,4288126115,4284639861,4284574323,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4284639861,4286876307,4294901502,
+          4294967295,4294967295,4294967295,4287863457,4287206045,4289904584,4289904584,4289904584,4289904584,4289904584,4289904584,4289904584,4289114811,4284639861,4294506744,4294967295,4294967295,4294967295,4290757319,4284902776,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4285034618,4290231232,4294967295,4294967295,4294967295,4294967295,4292862179,4287007894,4286613135,4286613135,4286613135,
+          4286613135,4286613135,4286613135,4286613135,4286678929,4290296768,4294967295,4294967295,4294967295,4294967295,4293980658,4284574068,4284703598,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,
+          4294967295,4294967295,4294243830,4284574068,4284311159,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,
+          4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294243830,4284574068,4284311159,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,
+          4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294243830,4284574068,4284311159,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,
+          4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294243830,4284574068,
+          4284574324,4284640117,4284508533,16777215,16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294769916,4286218634,4289902011,4286679184,4294967295,
+          4294967295,4294967295,4294967295,4294967295,4294967295,4294309367,4294178293,4294967295,4294967295,4294967295,4289507766,4284574581,4284714884,4284781188,4284575093,4284509046,16777215,16777215,16777215,16777215,
+          16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,4288454823,4284574068,4289375924,4294967295,4294967295,4294967295,4294967295,4294967295,4294112244,4285363583,4285231997,4293980401,
+          4294967295,4293717486,4284705910,4285051538,4285188251,4285188251,4285053846,4284574581,4284508530,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294769916,
+          4285034619,4287994787,4285692291,4294967295,4294967295,4294967295,4294967295,4294177780,4286416013,4285692291,4285758340,4286284427,4294046194,4291481041,4285037182,4285188251,4285188251,4285188251,4285188251,4284711037,
+          4284508532,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,4294572538,4294967295,4294572538,4294967295,4294967295,4294967295,4294967295,4291020490,
+          4287731358,4287073942,4289639096,4287928737,4290757319,4292467677,4284772215,4285187482,4285188251,4285188251,4285187995,4284577145,4284442739,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,
+          4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4292204506,4284705654,4293191143,4294967295,4294967295,4294704124,4285364096,4284778881,
+          4285120407,4285121177,4284846725,4284574837,4284115320,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4293651693,4291480784,
+          4290823111,4290823111,4290691526,4288784044,4284837239,4290099646,4294967295,4294967295,4294967295,4294967295,4289046959,4284641911,4284574068,4284574068,4284641912,4284574323,16777215,16777215,16777215,16777215,
+          16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,4294704124,4288717995,4284639861,4285889669,4286678928,4286678928,4286679184,4288126115,4292204762,4294967295,4294967295,4294967295,
+          4294967295,4294967295,4288915631,4284845443,4285120407,4285119639,4284848776,4284574838,16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294967295,
+          4289113009,4285889669,4292928228,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4287995042,4284847238,4285188251,4285188251,4284915594,4284575349,
+          16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4294375159,4284837239,4292204762,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,
+          4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4286219404,4284916107,4285188251,4285188251,4285049999,4284574324,16777215,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,
+          4294967295,4294967295,4294967295,4292796386,4284837239,4294769916,4294967295,4294967295,4294967295,4294967295,4293256936,4285823877,4288652458,4287928737,4294967295,4294967295,4294967295,4294835709,4284837495,4285051281,
+          4285188251,4285188251,4285119894,4284574068,4284443252,16777215,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4294967295,4292073176,4284969082,4294835709,4294967295,4294967295,
+          4294967295,4294967295,4294901502,4286678927,4284639861,4291414991,4294967295,4294967295,4294967295,4292599263,4284706166,4285187226,4285188251,4285188251,4285188251,4284576376,4284574322,16777215,16777215,16777215,
+          16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4293849072,4285363583,4284574068,4287402650,4294967295,4294967295,4294967295,4294967295,4293191400,4285363582,4287994785,4287665821,4294967295,4294967295,
+          4294440952,4288652202,4284841341,4285052307,4285052307,4285052307,4285052307,4284712063,4284574580,4284115320,16777215,16777215,16777215,4285034618,4290494147,4294967295,4294967295,4294967295,4291152076,4285889669,
+          4293059814,4284574068,4294177780,4294967295,4294967295,4294967295,4294967295,4294835709,4294967295,4294835709,4294967295,4292599263,4284837753,4284574581,4284574068,4284574068,4284574068,4284574068,4284574068,4284574068,
+          4284574581,4284574324,4284639348,16777215,16777215,4285100411,4290231232,4294967295,4294967295,4294967295,4293717486,4285297533,4284968825,4287007893,4294901502,4294967295,4294967295,4294967295,4294967295,4294967295,
+          4294967295,4294967295,4294967295,4288652716,4284845187,4285187994,4285188251,4285188251,4285188251,4285188251,4285188251,4285188251,4285188251,4284913542,4284575350,16777215,16777215,4284574068,4286942100,4294901502,
+          4294967295,4294967295,4294967295,4294112244,4292401885,4294704124,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4288323750,4284846981,4285188251,4285188251,4285188251,
+          4285188251,4285188251,4285188251,4285188251,4285188251,4284915851,4284575093,16777215,16777215,4284900978,4284902775,4286613135,4289770681,4290099646,4290099646,4290099646,4290099646,4290099646,4290099646,4290099646,
+          4290099646,4290099646,4290099646,4290099646,4290099646,4290099646,4290099646,4287468442,4284774010,4284914568,4284914825,4284914825,4284914825,4284914825,4284914825,4284914825,4284914825,4284709499,4284574837,16777215,
+          16777215,16777215,4284115320,4284508275,4284902776,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284903032,4284837239,
+          4284705654,4284640116,4284640116,4284574579,4284574579,4284574579,4284574579,4284574579,4284574579,4284508533,4284703601,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
+          16777215,16777215,16777215,16777215
+          };
+          image.name   = "bmp32_strategy_png";
+          image.width  = 32;
+          image.height = 32;
+          ArrayCopy(image.data, bmp32_strategy_png);
+          return true;
+         }
+       case 191: // bmp32_symbol_png
          {
           uint bmp32_symbol_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,4294954240,4294955264,4294955264,4294954240,4294951936,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -5691,7 +5778,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_symbol_png);
           return true;
          }
-       case 190: // bmp32_indicator_png
+       case 192: // bmp32_indicator_png
          {
           uint bmp32_indicator_png[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4285726859,4287711398,4288172972,4288436911,4288239277,4288107689,4287976359,4287581092,4287251103,
@@ -5753,7 +5840,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp32_indicator_png);
           return true;
          }
-       case 191: // bmp60_order_ea_mql5_job_png
+       case 193: // bmp60_order_ea_mql5_job_png
          {
           uint bmp60_order_ea_mql5_job_png[] = {
           4290164406,4290230199,4290230199,4290361785,4290427578,4290493371,4290559164,4290756543,4290822336,4290888129,4291085508,4291151301,4291217094,4291414473,4291480266,4291677645,4291743438,4291940817,4292006610,4292072403,
@@ -5943,7 +6030,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp60_order_ea_mql5_job_png);
           return true;
          }
-       case 192: // bmp60_risk_management_icon_png
+       case 194: // bmp60_risk_management_icon_png
          {
           uint bmp60_risk_management_icon_png[] = {
           4293059012,4292993219,4292927682,4292861632,4292795839,4292664510,4292598460,4292466875,4292335545,4292138680,4292007094,4291941301,4291809971,4291678641,4291547055,4291415469,4291283883,4291152298,4291020713,4290758311,
@@ -6133,7 +6220,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp60_risk_management_icon_png);
           return true;
          }
-       case 193: // bmp64_000_bmp
+       case 195: // bmp64_000_bmp
          {
           uint bmp64_000_bmp[] = {
           4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,4278190080,
@@ -6743,7 +6830,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_000_bmp);
           return true;
          }
-       case 194: // bmp64_bar_chart_bmp
+       case 196: // bmp64_bar_chart_bmp
          {
           uint bmp64_bar_chart_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -6958,7 +7045,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_bar_chart_bmp);
           return true;
          }
-       case 195: // bmp64_bar_chart_gray_bmp
+       case 197: // bmp64_bar_chart_gray_bmp
          {
           uint bmp64_bar_chart_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -7173,7 +7260,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_bar_chart_gray_bmp);
           return true;
          }
-       case 196: // bmp64_calculator_bmp
+       case 198: // bmp64_calculator_bmp
          {
           uint bmp64_calculator_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4281678658,4285101698,4288590276,4289314257,4289314257,4289314257,4286549661,4286549661,
@@ -7388,7 +7475,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_calculator_bmp);
           return true;
          }
-       case 197: // bmp64_calculator_gray_bmp
+       case 199: // bmp64_calculator_gray_bmp
          {
           uint bmp64_calculator_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,4282071867,4285887861,4289835441,4290624957,4290624957,4290624957,4287532686,4287532686,
@@ -7603,7 +7690,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_calculator_gray_bmp);
           return true;
          }
-       case 198: // bmp64_coins_bmp
+       case 200: // bmp64_coins_bmp
          {
           uint bmp64_coins_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -7818,7 +7905,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_coins_bmp);
           return true;
          }
-       case 199: // bmp64_coins_gray_bmp
+       case 201: // bmp64_coins_gray_bmp
          {
           uint bmp64_coins_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -8033,7 +8120,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_coins_gray_bmp);
           return true;
          }
-       case 200: // bmp64_gold_bmp
+       case 202: // bmp64_gold_bmp
          {
           uint bmp64_gold_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -8248,7 +8335,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_gold_bmp);
           return true;
          }
-       case 201: // bmp64_gold_colorless_bmp
+       case 203: // bmp64_gold_colorless_bmp
          {
           uint bmp64_gold_colorless_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -8463,7 +8550,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_gold_colorless_bmp);
           return true;
          }
-       case 202: // bmp64_gold_gray_bmp
+       case 204: // bmp64_gold_gray_bmp
          {
           uint bmp64_gold_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -8678,7 +8765,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_gold_gray_bmp);
           return true;
          }
-       case 203: // bmp64_invoice_bmp
+       case 205: // bmp64_invoice_bmp
          {
           uint bmp64_invoice_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,4289314257,
@@ -8893,7 +8980,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_invoice_bmp);
           return true;
          }
-       case 204: // bmp64_invoice_gray_bmp
+       case 206: // bmp64_invoice_gray_bmp
          {
           uint bmp64_invoice_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,4290624957,
@@ -9108,7 +9195,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_invoice_gray_bmp);
           return true;
          }
-       case 205: // bmp64_line_chart_bmp
+       case 207: // bmp64_line_chart_bmp
          {
           uint bmp64_line_chart_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -9323,7 +9410,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_line_chart_bmp);
           return true;
          }
-       case 206: // bmp64_line_chart_gray_bmp
+       case 208: // bmp64_line_chart_gray_bmp
          {
           uint bmp64_line_chart_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -9538,7 +9625,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_line_chart_gray_bmp);
           return true;
          }
-       case 207: // bmp64_no_image_bmp
+       case 209: // bmp64_no_image_bmp
          {
           uint bmp64_no_image_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -9753,7 +9840,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_no_image_bmp);
           return true;
          }
-       case 208: // bmp64_pie_chart_bmp
+       case 210: // bmp64_pie_chart_bmp
          {
           uint bmp64_pie_chart_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -9968,7 +10055,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_pie_chart_bmp);
           return true;
          }
-       case 209: // bmp64_pie_chart_colorless_bmp
+       case 211: // bmp64_pie_chart_colorless_bmp
          {
           uint bmp64_pie_chart_colorless_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -10183,7 +10270,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_pie_chart_colorless_bmp);
           return true;
          }
-       case 210: // bmp64_pie_chart_gray_bmp
+       case 212: // bmp64_pie_chart_gray_bmp
          {
           uint bmp64_pie_chart_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -10398,7 +10485,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_pie_chart_gray_bmp);
           return true;
          }
-       case 211: // bmp64_safe_bmp
+       case 213: // bmp64_safe_bmp
          {
           uint bmp64_safe_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -10613,7 +10700,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_safe_bmp);
           return true;
          }
-       case 212: // bmp64_safe_colorless_bmp
+       case 214: // bmp64_safe_colorless_bmp
          {
           uint bmp64_safe_colorless_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,
@@ -10828,7 +10915,7 @@ bool LoadImageData(const uint index, SImage &image)
           ArrayCopy(image.data, bmp64_safe_colorless_bmp);
           return true;
          }
-       case 213: // bmp64_safe_gray_bmp
+       case 215: // bmp64_safe_gray_bmp
          {
           uint bmp64_safe_gray_bmp[] = {
           16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,16777215,

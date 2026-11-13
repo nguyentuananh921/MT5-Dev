@@ -135,6 +135,17 @@
    int count=0;
    SBarMarkerRow rows[];
    const int total=m_BarMarkerCollection.Read_RAM(::Symbol(),asked_tfs,bar_time,until-1,rows);   // until is the next candle: it is out
+   //--- The entries and exits of the strategies first: they are what trades (the name: CStrategyManager, params: the role)
+   for(int i=0;i<total && m_StrategyManager!=NULL;i++)
+     {
+      if(rows[i].collection!=COLLECTION_STRATEGY_ID)
+         continue;
+      CStrategySetting *strategy=m_StrategyManager.Read_RAM(rows[i].type);
+      if(strategy==NULL)
+         continue;
+      this.AddRow_CandleInfo(count,strategy.Name()+" "+rows[i].params,CANDLE_INFO_SOURCE_STRATEGY,(ENUM_TIMEFRAMES)rows[i].tf,(ENUM_SIGNAL_DIRECTION)rows[i].side,(datetime)rows[i].time,
+                             row_label,row_tf,row_source,row_side,row_time);
+     }
    for(int i=0;i<total;i++)
      {
       if(rows[i].collection!=COLLECTION_SIGNALS_ID)
@@ -159,6 +170,7 @@
    source_img[BAR_INFORMATION_PRICE_ACTION_CANDLE]=IMAGE_RESOURCE_BMP16_CANDLE_PNG;
    source_img[BAR_INFORMATION_SMART_MONEY]=IMAGE_RESOURCE_BMP16_SIGNAL_PNG;
    source_img[BAR_INFORMATION_SIGNAL]=IMAGE_RESOURCE_BMP16_INDICATOR_BMP;
+   source_img[CANDLE_INFO_SOURCE_STRATEGY]=IMAGE_RESOURCE_BMP16_TRADE_ON_PNG;   // the icon of its marker (CBarMarker)
    uint side_img[]={IMAGE_RESOURCE_BMP16_ARROW_UP_PNG,IMAGE_RESOURCE_BMP16_ARROW_DOWN_PNG};
    for(int i=0;i<count;i++)
       m_table_candle_information_atBar.AddRow();
@@ -203,6 +215,8 @@
   {
    if(source==BAR_INFORMATION_SIGNAL)
       return "Signal";
+   if(source==CANDLE_INFO_SOURCE_STRATEGY)
+      return "Strategy";
    return (m_BarInformationManager!=NULL ? m_BarInformationManager.Read_RAM((ENUM_BAR_INFORMATION_GROUP)source) : "");
   }
  //+------------------------------------------------------------------+

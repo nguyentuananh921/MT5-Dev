@@ -26,8 +26,28 @@
  void CGUIPannel::OpenWindow_AddIndicator(void)
   {
    m_window_addIndicator.OpenWindow();
+   this.Mode_AddIndicator(WRONG_VALUE,"");   // the Add button of the tab: the form adds a template
    m_frame_indicator_parameter.Hide();   // shown again when a type is picked in the tree
    ::ChartRedraw(this.m_chart_id);
+  }
+ //--- What the form does: adds a template (strategy_id WRONG_VALUE), or updates the slot of a strategy (slot "": its tf); the caption and the button say it
+ void CGUIPannel::Mode_AddIndicator(const long strategy_id,const string slot)
+  {
+   m_edit_strategy_id=strategy_id;
+   m_edit_strategy_slot=slot;
+   string caption="Add Indicator";
+   string button="Add";
+   CStrategySetting *strategy=(strategy_id!=WRONG_VALUE && m_StrategyManager!=NULL ? m_StrategyManager.Read_RAM(strategy_id) : NULL);
+   if(strategy!=NULL)
+     {
+      caption="Edit "+strategy.Name()+" > "+slot;
+      if(slot=="")
+         caption="Edit "+strategy.Name()+" > Timeframe";
+      button="Update";
+     }
+   m_window_addIndicator.Caption(caption);
+   m_btn_add_indicator_form.SetText(button);
+   m_btn_add_indicator_form.Draw(true);
   }
  bool CGUIPannel::CreateTreeView_IndicatorTemplateSetting(const int x_gap,const int y_gap)
   {
@@ -110,15 +130,34 @@
                                           slot_w,M_CONTROL_HEIGHT,INDICATOR_PARAM_FIELD_W,140))
          return false;
      }
+   //--- The tf of a strategy slot: shown only while the form edits one
+   m_combo_param_tf.ItemsTotal(M_STRATEGY_TF_TOTAL);
+   m_frame_indicator_parameter.AddChild(&m_combo_param_tf);
+   if(!m_combo_param_tf.CreateComboBox(this.m_chart_id,M_SUBWINDOW_MAIN,"ParamComboTF",M_CONTROL_BORDER_GAP,M_CONTROL_HEIGHT,slot_w,M_CONTROL_HEIGHT,INDICATOR_PARAM_FIELD_W,140))
+      return false;
+   for(int i=0;i<M_STRATEGY_TF_TOTAL;i++)
+     {
+      string tf_text="Default";   // no tf chosen: the tf of the strategy (its own Default: the tf of the chart)
+      if(STRATEGY_TFS[i]!=PERIOD_CURRENT)
+         tf_text=::StringSubstr(::EnumToString(STRATEGY_TFS[i]),7);   // PERIOD_M15 -> M15
+      m_combo_param_tf.SetValue(i,tf_text);
+     }
+   CLabel *tf_caption=::GetPointer(m_combo_param_tf);
+   tf_caption.SetText("Timeframe");
    m_btn_add_indicator_form.SetText("Add");
    m_btn_add_indicator_form.IconFile(IMAGE_RESOURCE_BMP16_ADD_GREEN_PNG);
    m_frame_indicator_parameter.AddChild(&m_btn_add_indicator_form);
    //--- moved under the last parameter when a type is picked
    return m_btn_add_indicator_form.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnAddIndicatorForm",M_CONTROL_BORDER_GAP,M_CONTROL_HEIGHT,M_BUTTON_ADD_WIDTH,M_CONTROL_HEIGHT);
   }
- //--- Indicator tree leaf clicked: the parameters of this type, one under the other from the top, the Add button under the last one
- void CGUIPannel::ShowCFrame_IndicatorParameter(const ENUM_INDICATOR type)
+ //--- Indicator tree leaf clicked: the parameters of this type, one under the other from the top, the Add button under the last one.
+ //--- params_text (the Edit of a strategy slot): the values of the form are these, not the defaults; the tf of the slot under the last parameter
+ void CGUIPannel::ShowCFrame_IndicatorParameter(const ENUM_INDICATOR type,const string params_text="")
   {
+   string values[];
+   int given=0;
+   if(params_text!="")
+      given=::StringSplit(params_text,',',values);
    if(m_IndicatorTemplateManager==NULL)
      {
       ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
@@ -144,6 +183,15 @@
          for(int p=0;p<n;p++)
             m_param_combo[i].SetValue(p,parts[p]);
          int def_idx=(int)::StringToInteger(schema[i].default_value);
+         for(int p=0;p<n && i<given;p++)
+           {
+            string choice=parts[p];
+            string value=values[i];
+            ::StringToUpper(choice);
+            ::StringToUpper(value);
+            if(choice==value)
+               def_idx=p;   // the value of the slot (SMMA, MEDIAN), the case aside
+           }
          if(def_idx>=0 && def_idx<n)
             m_param_combo[i].SelectItem(def_idx);
          m_param_combo[i].GetListViewPointer().Draw(false);   // SetValue/SelectItem only store, repaint the list
@@ -156,25 +204,37 @@
       else
         {
          m_param_edits[i].SetText(schema[i].name);
-         m_param_edits[i].SetValue(schema[i].default_value);
+         if(i<given)
+            m_param_edits[i].SetValue(values[i]);
+         else
+            m_param_edits[i].SetValue(schema[i].default_value);
          m_param_edits[i].Move(x,y);
          m_param_edits[i].Show();
          m_param_edits[i].Draw(false);
         }
      }
-   m_btn_add_indicator_form.Move(m_frame_indicator_parameter.X()+M_CONTROL_BORDER_GAP,m_frame_indicator_parameter.Y()+M_CONTROL_HEIGHT+total*PARAM_ROW_H);
+   //--- The tf of a strategy slot under the last parameter (Edit), hidden for a template (Add)
+   int rows=total;
+   m_combo_param_tf.Hide();
+   if(m_edit_strategy_id!=WRONG_VALUE)
+     {
+      m_combo_param_tf.Move(m_frame_indicator_parameter.X()+M_CONTROL_BORDER_GAP,m_frame_indicator_parameter.Y()+M_CONTROL_HEIGHT+total*PARAM_ROW_H);
+      m_combo_param_tf.Show();
+      m_combo_param_tf.Draw(false);
+      rows++;
+     }
+   m_btn_add_indicator_form.Move(m_frame_indicator_parameter.X()+M_CONTROL_BORDER_GAP,m_frame_indicator_parameter.Y()+M_CONTROL_HEIGHT+rows*PARAM_ROW_H);
   }
- //--- Slot values -> MqlParam[] -> CIndicatorTemplateManager (data only, the table follows its ADDED event)
- void CGUIPannel::OnClickAddIndicatorBtnOnForm(void)
+ //--- The values of the form as the params of the type it shows (false: no manager)
+ bool CGUIPannel::ReadCFrame_IndicatorParameter(MqlParam &params[])
   {
    if(m_IndicatorTemplateManager==NULL)
      {
       ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
-      return;
+      return false;
      }
    SIndicatorParam schema[];
    int total=m_IndicatorTemplateManager.Read_RAM(m_current_param_type,schema);
-   MqlParam params[];
    ::ArrayResize(params,total);
    for(int i=0;i<total;i++)
      {
@@ -196,6 +256,14 @@
       else
          params[i].integer_value=(long)::StringToInteger(m_param_edits[i].GetValue());
      }
+   return true;
+  }
+ //--- Slot values -> MqlParam[] -> CIndicatorTemplateManager (data only, the table follows its ADDED event)
+ void CGUIPannel::OnClickAddIndicatorBtnOnForm(void)
+  {
+   MqlParam params[];
+   if(!this.ReadCFrame_IndicatorParameter(params))
+      return;
    if(!m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(m_current_param_type, params))
    ::Print(__FUNCTION__," > rejected: this template already exists");
   }
@@ -234,7 +302,14 @@
    if(id==CHARTEVENT_CUSTOM+WINDOW_EVENT_EXPAND && lparam==m_window_addIndicator.ObjectID())
      {
       m_frame_indicator_parameter.Hide();
-      if(m_current_param_type!=IND_CUSTOM)
+      if(m_edit_strategy_id!=WRONG_VALUE && m_StrategyManager!=NULL)
+        {
+         CStrategySetting *strategy=m_StrategyManager.Read_RAM(m_edit_strategy_id);
+         CStrategyIndicatorSetting *slot=(strategy!=NULL ? strategy.Indicator(m_edit_strategy_slot) : NULL);
+         if(slot!=NULL)
+            ShowCFrame_IndicatorParameter(m_current_param_type,m_StrategyManager.Read_RAM(slot));
+        }
+      else if(m_current_param_type!=IND_CUSTOM)
          ShowCFrame_IndicatorParameter(m_current_param_type);
       ::ChartRedraw(this.m_chart_id);
       return;
@@ -251,14 +326,19 @@
          m_treeview_indicator.ItemState(item_id,!clicked.ItemState(),true);
          return;
         }
+      if(m_edit_strategy_id!=WRONG_VALUE)
+         this.Mode_AddIndicator(WRONG_VALUE,"");   // another type picked: the form adds a template again
       ShowCFrame_IndicatorParameter((ENUM_INDICATOR)clicked.Value());
       ::ChartRedraw(this.m_chart_id);
       return;
      }
-   //--- The Add button of the form
+   //--- The button of the form: Add a template, or Save the slot of a strategy
    if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && lparam==m_btn_add_indicator_form.ObjectID())
      {
-      OnClickAddIndicatorBtnOnForm();
+      if(m_edit_strategy_id!=WRONG_VALUE)
+         this.SaveSlot_Strategy();
+      else
+         OnClickAddIndicatorBtnOnForm();
       return;
      }
   }

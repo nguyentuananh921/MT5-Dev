@@ -64,17 +64,17 @@
    //--- The object of the type (V1: CreateMA, CreateRSI...), NULL for a type that is not a standard indicator
     CIndicatorDE     *CreateIndicator(const ENUM_INDICATOR type,MqlParam &params[],const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- The indicator of a template on a pair is made (once)
-    bool              Create_RAM(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
+    bool              AddIndicatorToList(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- (1) every template on a pair, (2) a template on every pair
-    void              Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
-    void              Update_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
-    void              Create_RAM(const ENUM_INDICATOR type,const string params_text);  
+    void              AddPair(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              SeriesRefresh(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              AddTemplate(const ENUM_INDICATOR type,const string params_text);  
    //--- The indicators of (1) a pair, (2) a template go
-    void              Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
-    void              Delete_RAM(const ENUM_INDICATOR type,const string params_text);    
+    void              DeletePair(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              DeleteTemplate(const ENUM_INDICATOR type,const string params_text);    
    public:
    //--- The indicator of a template on a pair: its type and its params (the column params of the template), never the handle (NULL: none)
-    CIndicatorDE      *Read_RAM(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
+    CIndicatorDE      *GetIndicator(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
     void              SetSymbolTFManager(CSymbolTFManager *manager)                   { this.m_SymbolTFManager=manager;          }
     void              SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
     CArrayObj        *GetList(void)                                                   { return &this.m_list;                     }
@@ -100,7 +100,7 @@
    ENUM_TIMEFRAMES timeframes[];
    int pairs=this.m_SymbolTFManager.Read_RAM(symbols,timeframes);
    for(int i=0;i<pairs;i++)
-      this.Create_RAM(symbols[i],timeframes[i]);
+      this.AddPair(symbols[i],timeframes[i]);
    int filled=0;
    for(int i=0;i<this.m_list.Total();i++)
      {
@@ -111,10 +111,10 @@
    ::Print("Complete ",__FUNCTION__," > ",this.m_list.Total()," indicators on ",pairs," pairs of Setting_SymbolTF, the values of ",filled," of them in RAM (the others at the first new bar of their pair)");
    return true;
   } 
- bool CIndicatorsCollection::Create_RAM(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
+ bool CIndicatorsCollection::AddIndicatorToList(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    SIndicatorsRow catalog;
-   if(this.Read_RAM(type,params_text,symbol,timeframe)!=NULL)
+   if(this.GetIndicator(type,params_text,symbol,timeframe)!=NULL)
       return true;
    MqlParam params[];
    if(!this.m_IndicatorTemplateManager.ParamsFromText(type,params_text,params))
@@ -195,24 +195,24 @@
       default:            return NULL;   // not a standard indicator (IND_CUSTOM is not used)
      }
   }
- void CIndicatorsCollection::Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ void CIndicatorsCollection::AddPair(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    ENUM_INDICATOR types[];
    string texts[];
    bool buy[],sell[];
    int templates=this.m_IndicatorTemplateManager.Read_RAM(types,texts,buy,sell);
    for(int t=0;t<templates;t++)
-      this.Create_RAM(types[t],texts[t],symbol,timeframe);
+      this.AddIndicatorToList(types[t],texts[t],symbol,timeframe);
   }
- void CIndicatorsCollection::Create_RAM(const ENUM_INDICATOR type,const string params_text)
+ void CIndicatorsCollection::AddTemplate(const ENUM_INDICATOR type,const string params_text)
   {
    string symbols[];
    ENUM_TIMEFRAMES timeframes[];
    int pairs=this.m_SymbolTFManager.Read_RAM(symbols,timeframes);
    for(int i=0;i<pairs;i++)
-      this.Create_RAM(type,params_text,symbols[i],timeframes[i]);
+      this.AddIndicatorToList(type,params_text,symbols[i],timeframes[i]);
   }
- void CIndicatorsCollection::Update_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ void CIndicatorsCollection::SeriesRefresh(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    for(int i=0;i<this.m_list.Total();i++)
      {
@@ -221,7 +221,7 @@
          indicator.GetSeriesData().Refresh();
      }
   }
- void CIndicatorsCollection::Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ void CIndicatorsCollection::DeletePair(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    for(int i=this.m_list.Total()-1;i>=0;i--)
      {
@@ -230,7 +230,7 @@
          this.m_list.Delete(i);   // its handle is released
      }
   }
- void CIndicatorsCollection::Delete_RAM(const ENUM_INDICATOR type,const string params_text)
+ void CIndicatorsCollection::DeleteTemplate(const ENUM_INDICATOR type,const string params_text)
   {
    for(int i=this.m_list.Total()-1;i>=0;i--)
      {
@@ -239,7 +239,7 @@
          this.m_list.Delete(i);
      }
   }
- CIndicatorDE *CIndicatorsCollection::Read_RAM(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
+ CIndicatorDE *CIndicatorsCollection::GetIndicator(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    for(int i=0;i<this.m_list.Total();i++)
      {
@@ -259,29 +259,29 @@
    //--- A new bar of a pair (dparam = its TF, sparam = its symbol): the values of its indicators in RAM follow
    if(id==CHARTEVENT_CUSTOM+SERIES_EVENTS_NEW_BAR)
      {
-      this.Update_RAM(sparam,(ENUM_TIMEFRAMES)(long)dparam);
+      this.SeriesRefresh(sparam,(ENUM_TIMEFRAMES)(long)dparam);
       return true;
      }
    //--- A pair: lparam = its TF, sparam = its symbol
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
      {
-      this.Create_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
+      this.AddPair(sparam,(ENUM_TIMEFRAMES)lparam);
       return true;
      }
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
      {
-      this.Delete_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
+      this.DeletePair(sparam,(ENUM_TIMEFRAMES)lparam);
       return true;
      }
    //--- A template: lparam = its type, sparam = its params
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
      {
-      this.Create_RAM((ENUM_INDICATOR)lparam,sparam);
+      this.AddTemplate((ENUM_INDICATOR)lparam,sparam);
       return true;
      }
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
      {
-      this.Delete_RAM((ENUM_INDICATOR)lparam,sparam);
+      this.DeleteTemplate((ENUM_INDICATOR)lparam,sparam);
       return true;
      }
    return false;

@@ -60,15 +60,17 @@
    //--- V2: the signal of the indicator, or a new one added (its rule by the type, the managers); NULL for a type that is not a standard indicator
     CSignal          *GetOrCreateSignal(CIndicatorDE *indicator);
    //--- (1) every template on a pair, (2) a template on every pair (as CIndicatorsCollection)
-    void              Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
-    void              Create_RAM(const ENUM_INDICATOR type,const string params_text);
+    void              CreateSeries(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              CreateSeries(const ENUM_INDICATOR type,const string params_text);
    //--- The series of (1) a template, (2) a pair go
-    void              Delete_RAM(const ENUM_INDICATOR type,const string params_text);
-    void              Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe);
+    void              DeleteSeries(const ENUM_INDICATOR type,const string params_text);
+    void              DeleteSeries(const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- The new bars of every pair of a symbol: each series of the pair judges itself, its events go out, what is new on the newest closed bar is told
    //--- (as CBarTimeSeriesCollection::RefreshTimeseries_). False when the call had its share of time
     bool              RefreshTimeseries(CBarTimeSeriesDE *timeseries,const ulong started);
    public:
+   //--- The signal of a template on a pair, by its key (NULL: none): a row of Python goes to it (CSignal::StoreRow)
+    CSignal          *GetSeries(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
     void              SetBarTimeSeriesCollection(CBarTimeSeriesCollection *collection) { this.m_BarTimeSeriesCollection=collection; }
    //--- The signals of the templates on the pairs (CSignal): their rows on RAM are read by the views (CBarMarkerCollection)
     CArrayObj        *GetList(void)                                                    { return &this.m_list;        }
@@ -130,7 +132,7 @@
    ENUM_TIMEFRAMES timeframes[];
    int pairs=this.m_SymbolTFManager.Read_RAM(symbols,timeframes);
    for(int i=0;i<pairs;i++)
-      this.Create_RAM(symbols[i],timeframes[i]);
+      this.CreateSeries(symbols[i],timeframes[i]);
    return true;
   }
  //+------------------------------------------------------------------+
@@ -238,24 +240,24 @@
      }
    return signal;
   }
- void CSignalsCollection::Create_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ void CSignalsCollection::CreateSeries(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    ENUM_INDICATOR types[];
    string texts[];
    bool buy[],sell[];
    int templates=this.m_IndicatorTemplateManager.Read_RAM(types,texts,buy,sell);
    for(int t=0;t<templates;t++)
-      this.GetOrCreateSignal(this.m_IndicatorsCollection!=NULL ? this.m_IndicatorsCollection.Read_RAM(types[t],texts[t],symbol,timeframe) : NULL);
+      this.GetOrCreateSignal(this.m_IndicatorsCollection!=NULL ? this.m_IndicatorsCollection.GetIndicator(types[t],texts[t],symbol,timeframe) : NULL);
   }
- void CSignalsCollection::Create_RAM(const ENUM_INDICATOR type,const string params_text)
+ void CSignalsCollection::CreateSeries(const ENUM_INDICATOR type,const string params_text)
   {
    string symbols[];
    ENUM_TIMEFRAMES timeframes[];
    int pairs=this.m_SymbolTFManager.Read_RAM(symbols,timeframes);
    for(int i=0;i<pairs;i++)
-      this.GetOrCreateSignal(this.m_IndicatorsCollection!=NULL ? this.m_IndicatorsCollection.Read_RAM(type,params_text,symbols[i],timeframes[i]) : NULL);
+      this.GetOrCreateSignal(this.m_IndicatorsCollection!=NULL ? this.m_IndicatorsCollection.GetIndicator(type,params_text,symbols[i],timeframes[i]) : NULL);
   }
- void CSignalsCollection::Delete_RAM(const ENUM_INDICATOR type,const string params_text)
+ void CSignalsCollection::DeleteSeries(const ENUM_INDICATOR type,const string params_text)
   {
    for(int i=this.m_list.Total()-1;i>=0;i--)
      {
@@ -267,7 +269,7 @@
         }
      }
   }
- void CSignalsCollection::Delete_RAM(const string symbol,const ENUM_TIMEFRAMES timeframe)
+ void CSignalsCollection::DeleteSeries(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    for(int i=this.m_list.Total()-1;i>=0;i--)
      {
@@ -408,23 +410,23 @@
    //--- A pair: lparam = its TF, sparam = its symbol (CBarTimeSeriesCollection made its series already)
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
      {
-      this.Create_RAM(sparam,(ENUM_TIMEFRAMES)lparam);   // its rows: Python runs again, then PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE
+      this.CreateSeries(sparam,(ENUM_TIMEFRAMES)lparam);   // its rows: Python runs again, then PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE
       return true;
      }
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE)
      {
-      this.Delete_RAM(sparam,(ENUM_TIMEFRAMES)lparam);
+      this.DeleteSeries(sparam,(ENUM_TIMEFRAMES)lparam);
       return true;
      }
    //--- A template was added: its series are made on every pair (they wait for the progress of Python)
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED)
      {
-      this.Create_RAM((ENUM_INDICATOR)lparam,sparam);   // its rows: Python runs again, then PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE
+      this.CreateSeries((ENUM_INDICATOR)lparam,sparam);   // its rows: Python runs again, then PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE
       return true;
      }
    if(id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
       return false;
-   this.Delete_RAM((ENUM_INDICATOR)lparam,sparam);   // its rows and its marks: the Current worker of Python (CPythonBridge tells it)
+   this.DeleteSeries((ENUM_INDICATOR)lparam,sparam);   // its rows and its marks: the Current worker of Python (CPythonBridge tells it)
    ::Print("Complete ",__FUNCTION__," > the template ",::EnumToString((ENUM_INDICATOR)lparam)," (",sparam,") was deleted: Python deletes its signals");
    return true;
   }
@@ -594,6 +596,19 @@
   {
    CSignal *signal=this.m_list.At(target);
    return (signal!=NULL && signal.AddRow(time,side));
+  }
+ //+------------------------------------------------------------------+
+ //| V5: the signal of a template on a pair, by its key (CPythonBridge)|
+ //+------------------------------------------------------------------+
+ CSignal *CSignalsCollection::GetSeries(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe)
+  {
+   for(int i=0;i<this.m_list.Total();i++)
+     {
+      CSignal *signal=this.m_list.At(i);
+      if(signal!=NULL && signal.TypeIndicator()==type && signal.ParamsText()==params_text && signal.Symbol()==symbol && signal.Timeframe()==timeframe)
+         return signal;
+     }
+   return NULL;
   }
 #endif // CSIGNALSCOLLECTION_MQH_IMPLEMENTATION
 #endif // __SIGNALSCOLLECTION_MQH__

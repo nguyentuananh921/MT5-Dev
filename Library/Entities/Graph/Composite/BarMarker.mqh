@@ -13,6 +13,7 @@
  #include "..\..\..\Collections\Settings\SymbolTFManager.mqh"
  #include "..\..\..\Collections\Settings\BarInformationManager.mqh"
  #include "..\..\..\Collections\Settings\IndicatorTemplateManager.mqh"
+ #include "..\..\..\Collections\Settings\StrategyManager.mqh"
  #include "..\..\Chart\ChartObj.mqh"
  #define BAR_MARKER_GAP        4      // gap between the candles and the badge
  #define BAR_MARKER_BADGE_W    20     // badge width: the icon and a frame
@@ -20,7 +21,7 @@
  #define BAR_MARKER_LANE_GAP   2      // gap between stacked badges
  #define BAR_MARKER_MAX_LANES  3      // badges that would need a higher stack are not drawn
  #define BAR_MARKER_BOX_MARGIN 2      // box around the candle: pixels above the high and below the low
- #define BAR_MARKER_ICONS      3      // found by CSignalsCollection, by CBarTimeSeriesCollection, by both
+ #define BAR_MARKER_ICONS      5      // found by CSignalsCollection, by CBarTimeSeriesCollection, by both, the entry of a strategy, its exit (CStrategyCollection)
  #define BAR_MARKER_ARRANGE_MARGIN 3  // bars outside the visible ones that still take part in Arrange()
  #ifndef BAR_MARKER_BUY_COLOR
   #define BAR_MARKER_BUY_COLOR  (clrDodgerBlue)   // the EA may define it before the library (EA Configuration.mqh)
@@ -42,7 +43,9 @@
      long                          m_types[];                 // the sources of the badge: the types of information (CBarTimeSeriesCollection) found on the candle and side
      long                          m_ind_types[];             // and the indicator templates (CSignalsCollection): type and params
      string                        m_ind_params[];
-     bool                         m_is_buy;                  // Buy: blue badge below the candles, Sell: red badge above them
+     long                          m_strategies[];            // and the strategies that enter on the candle and side (CStrategyCollection): strategy_id
+     long                          m_strategy_exits[];        // and the ones that exit there: the side is the one they close
+     bool                         m_is_buy;                 // Buy: blue badge below the candles, Sell: red badge above them
      int                          m_offset;                  // pixels further out, set by Arrange() to clear the other badges
      bool                         m_layout_hidden;           // Arrange() found no room within the allowed stack
      bool                         m_on_chart;                // Arrange() found the candle on the chart: m_badge_x/y are valid
@@ -51,15 +54,16 @@
      bool                         m_hover;                   // the cursor is on the badge (Shift down)
      bool                         m_highlight;               // the panel asked for the box (Shift + hover on the candle), the cursor is not on the badge
      bool                         m_covered;
-     int                          m_icon;                    // Arrange() found it: the index in g_bar_marker_icon of the sources shown (0 signals, 1 series, 2 both)
+     int                          m_icon;                    // Arrange() found it: the index in g_bar_marker_icon of the sources shown (0 signals, 1 series, 2 both, 3 a strategy enters, 4 it exits)
     //Private method                // a panel window is under the cursor
      bool                      Geometry(int &x_center,int &y_high,int &y_low);
-     bool                      BaseGeometry(int &badge_x,int &edge_y,const int ref_shift,const int ref_x,const int ref_y,const int scale,const int width,const int height,const double price_max,const double price_min);
+     bool                      BaseGeometry(int &badge_x,int &edge_y,const string sym,const ENUM_TIMEFRAMES tf,const int ref_shift,const int ref_x,const int ref_y,const int scale,const int width,const int height,const double price_max,const double price_min);
      int                       BadgeY(const int edge_y,const int offset,const int height) const;
      int                       IconIndex(void);
    //--- What the badge shows: the side of the chart pair is shown (side_shown) and a source of the badge shows its side, asked to its manager
-   //--- (signals: the template in CIndicatorTemplateManager, series: the type in CBarInformationManager)
-     bool                      Shown(const bool side_shown,CBarInformationManager *information,CIndicatorTemplateManager *templates,bool &signals,bool &series);
+   //--- (signals: the template in CIndicatorTemplateManager, series: the type in CBarInformationManager, strategy: its show_on_chart in CStrategyManager)
+     bool                      Shown(const bool side_shown,CBarInformationManager *information,CIndicatorTemplateManager *templates,CStrategyManager *strategies,
+                                     bool &signals,bool &series,bool &strategy,bool &strategy_exit);
      void                      PlaceBox(void);
      void                      SetHover(const bool on);
      void                      PaintCandleBox(void);
@@ -69,8 +73,9 @@
      void                      HideBox(void);
    public:
      bool                      Create(const long chart_id,const int subwin,const string name);
-   //--- One marker = one candle and one side, its sources: the types of information and the indicator templates that found it (CBarMarkerCollection gives them)
-     void                      SetMarker(const datetime time,const double high,const double low,const bool is_buy,const long &types[],const long &ind_types[],const string &ind_params[]);
+   //--- One marker = one candle and one side, its sources: the types of information, the indicator templates and the strategies that found it (CBarMarkerCollection gives them)
+     void                      SetMarker(const datetime time,const double high,const double low,const bool is_buy,const long &types[],const long &ind_types[],const string &ind_params[],
+                                         const long &strategies[],const long &strategy_exits[]);
      void                      Show(void);
      void                      Hide(void);
      color                     Colour(void)                   const { return (this.m_is_buy ? BAR_MARKER_BUY_COLOR : BAR_MARKER_SELL_COLOR); }   // the side says the colour
@@ -83,7 +88,7 @@
    //--- What the chart shows: CChartObj (the bars, the scale, the size and the prices of the main window). What is shown: the managers (the side of the pair
    //--- once a pass, the type and the template of each source by Shown)
      static void               Arrange(CGBaseObj *parent,CChartObj *chart,CSymbolTFManager *pairs,CBarInformationManager *information,CIndicatorTemplateManager *templates,
-                                       const datetime from_time=0);
+                                       CStrategyManager *strategies,const datetime from_time=0);
    //--- The box on a candle without the cursor on its badge (Shift + hover on the candle): the marker of that candle takes it
      static void               HighlightCandle(CGBaseObj *parent,const datetime time);
      static void               ClearHighlight(void);
@@ -239,12 +244,10 @@
   }
  //--- Badge x, and the pixel edge it must stay clear of: the highest high (Sell) or the lowest low (Buy) of every candle under the badge's width.
  //--- No chart query: x from the reference bar (a bar is 1 << scale pixels), y from the reference price (the price scale is linear)
- bool CBarMarker::BaseGeometry(int &badge_x,int &edge_y,const int ref_shift,const int ref_x,const int ref_y,const int scale,const int width,const int height,const double price_max,const double price_min)
+ bool CBarMarker::BaseGeometry(int &badge_x,int &edge_y,const string sym,const ENUM_TIMEFRAMES tf,const int ref_shift,const int ref_x,const int ref_y,const int scale,const int width,const int height,const double price_max,const double price_min)
   {
    if(this.m_time==0 || height<=0 || price_max<=price_min)
       return false;
-   string sym=::ChartSymbol(this.ChartID());
-   ENUM_TIMEFRAMES tf=(ENUM_TIMEFRAMES)::ChartPeriod(this.ChartID());
    const int shift=::iBarShift(sym,tf,this.m_time,false);
    if(shift<0)
       return false;
@@ -325,7 +328,8 @@
    this.PlaceBox();
   }
  //--- One marker = one marked candle and one side: the colour says the side, the icon the collection(s) that found it
- void CBarMarker::SetMarker(const datetime time,const double high,const double low,const bool is_buy,const long &types[],const long &ind_types[],const string &ind_params[])
+ void CBarMarker::SetMarker(const datetime time,const double high,const double low,const bool is_buy,const long &types[],const long &ind_types[],const string &ind_params[],
+                            const long &strategies[],const long &strategy_exits[])
   {
    this.m_time  =time;
    this.m_high  =high;
@@ -334,9 +338,13 @@
    ::ArrayCopy(this.m_types,types);
    ::ArrayCopy(this.m_ind_types,ind_types);
    ::ArrayCopy(this.m_ind_params,ind_params);
+   ::ArrayCopy(this.m_strategies,strategies);
+   ::ArrayCopy(this.m_strategy_exits,strategy_exits);
    ::ArrayResize(this.m_types,::ArraySize(types));   // ArrayCopy keeps the size of a longer array
    ::ArrayResize(this.m_ind_types,::ArraySize(ind_types));
    ::ArrayResize(this.m_ind_params,::ArraySize(ind_params));
+   ::ArrayResize(this.m_strategies,::ArraySize(strategies));
+   ::ArrayResize(this.m_strategy_exits,::ArraySize(strategy_exits));
    this.m_offset=0;
    this.m_layout_hidden=false;
    this.m_on_chart=false;
@@ -361,12 +369,25 @@
    return this.m_icon;   // set by Arrange: Paint asks no manager
   }
  //--- The managers say it: the side of the chart pair (Setting_SymbolTF), the type (Setting_BarInformation) or the template (Setting_IndicatorTemplate) shows the side
- bool CBarMarker::Shown(const bool side_shown,CBarInformationManager *information,CIndicatorTemplateManager *templates,bool &signals,bool &series)
+ bool CBarMarker::Shown(const bool side_shown,CBarInformationManager *information,CIndicatorTemplateManager *templates,CStrategyManager *strategies,
+                        bool &signals,bool &series,bool &strategy,bool &strategy_exit)
   {
    signals=false;
    series=false;
+   strategy=false;
+   strategy_exit=false;
    if(!side_shown)
       return false;
+   for(int i=0;i<::ArraySize(this.m_strategies) && !strategy && strategies!=NULL;i++)
+     {
+      CStrategySetting *setting=strategies.Read_RAM(this.m_strategies[i]);
+      strategy=(setting!=NULL && setting.ShowOnChart());
+     }
+   for(int i=0;i<::ArraySize(this.m_strategy_exits) && !strategy_exit && strategies!=NULL;i++)
+     {
+      CStrategySetting *setting=strategies.Read_RAM(this.m_strategy_exits[i]);
+      strategy_exit=(setting!=NULL && setting.ShowOnChart());
+     }
    for(int i=0;i<::ArraySize(this.m_types) && !series;i++)
      {
       CBarInformationSetting *type=information.Read_RAM((ENUM_BAR_INFOR_TYPE)this.m_types[i]);
@@ -387,7 +408,7 @@
       else
          signals=setting.SellSignal();
      }
-   return (signals || series);
+   return (signals || series || strategy || strategy_exit);
   }
  //+------------------------------------------------------------------+
  //| The badge on the shared layer: colored square, frame, the icon   |
@@ -404,11 +425,11 @@
       g_bar_marker_icon[0].ReadImageData(IMAGE_RESOURCE_BMP16_INDICATOR_BMP);
       g_bar_marker_icon[1].ReadImageData(IMAGE_RESOURCE_BMP16_CANDLE_MARKER_CANDLE_PNG);
       g_bar_marker_icon[2].ReadImageData(IMAGE_RESOURCE_BMP16_CANDLE_MARKER_COMBINATION_PNG);
+      g_bar_marker_icon[3].ReadImageData(IMAGE_RESOURCE_BMP16_TRADE_ON_PNG);
+      g_bar_marker_icon[4].ReadImageData(IMAGE_RESOURCE_BMP16_TRADING_OFF_PNG);
       g_bar_marker_icon_loaded=true;
      }
-   color bg=(color)::ChartGetInteger(this.ChartID(),CHART_COLOR_BACKGROUND);
-   color fill=CColors::MixColors(bg,this.Colour(),120/255.0);
-   canvas.FillRectangle(x,y,x+BAR_MARKER_BADGE_W-1,y+BAR_MARKER_BADGE_H-1,::ColorToARGB(fill));
+   canvas.FillRectangle(x,y,x+BAR_MARKER_BADGE_W-1,y+BAR_MARKER_BADGE_H-1,::ColorToARGB(this.Colour(),120));   // the layer is ARGB: the chart shows through
    canvas.Rectangle(x,y,x+BAR_MARKER_BADGE_W-1,y+BAR_MARKER_BADGE_H-1,::ColorToARGB(this.Colour()));
    int icon=this.IconIndex();
    int ix=x+(BAR_MARKER_BADGE_W-(int)g_bar_marker_icon[icon].Width())/2;
@@ -436,10 +457,11 @@
  //| and the badge is not drawn. Only the candles on the chart count  |
  //+------------------------------------------------------------------+
  void CBarMarker::Arrange(CGBaseObj *parent,CChartObj *chart,CSymbolTFManager *pairs,CBarInformationManager *information,CIndicatorTemplateManager *templates,
-                          const datetime from_time=0)
+                          CStrategyManager *strategies,const datetime from_time=0)
   {
    if(parent==NULL || chart==NULL || pairs==NULL || information==NULL || templates==NULL)
       return;
+   const ulong debug_t0=::GetMicrosecondCount();
    const long chart_id=chart.ID();
    const string sym=chart.Symbol();
    const ENUM_TIMEFRAMES tf=chart.Timeframe();
@@ -453,11 +475,14 @@
    const int newest=first_visible_bar-visible_bars+1-BAR_MARKER_ARRANGE_MARGIN;
    datetime t_older=::iTime(sym,tf,first_visible_bar+BAR_MARKER_ARRANGE_MARGIN);
    datetime t_newer=::iTime(sym,tf,newest>0 ? newest : 0);
+   const ulong debug_t1=::GetMicrosecondCount();
    //--- One chart query a pass: the first visible bar at the top price, every badge is placed from it
    int ref_x=0,ref_y=0;
    const datetime ref_time=::iTime(sym,tf,first_visible_bar);
    if(ref_time==0 || !::ChartTimePriceToXY(chart_id,0,ref_time,price_max,ref_x,ref_y))
       return;   // the chart has not this bar yet
+   const ulong debug_t2=::GetMicrosecondCount();
+   int debug_shown=0,debug_hidden=0;
    CBarMarker *list[];
    int n=0;
    int  px[],py[];
@@ -489,21 +514,31 @@
          continue;
         }
       m.m_on_chart=false;
-      bool signals=false,series=false;
+      bool signals=false,series=false,strategy=false,strategy_exit=false;
       bool shown=false;   // the view decides: a switch of what is shown changes only this
       if(m.m_is_buy)
-         shown=m.Shown(pair_buy,information,templates,signals,series);
+         shown=m.Shown(pair_buy,information,templates,strategies,signals,series,strategy,strategy_exit);
       else
-         shown=m.Shown(pair_sell,information,templates,signals,series);
+         shown=m.Shown(pair_sell,information,templates,strategies,signals,series,strategy,strategy_exit);
       m.m_icon=1;
-      if(signals && series)
+      if(strategy)
+         m.m_icon=3;   // the entry of a strategy first: it is what trades
+      else if(strategy_exit)
+         m.m_icon=4;
+      else if(signals && series)
          m.m_icon=2;
       else if(signals)
          m.m_icon=0;
       if(shown && !m.m_visible)
+        {
          m.Show();
+         debug_shown++;
+        }
       else if(!shown && m.m_visible)
+        {
          m.Hide();
+         debug_hidden++;
+        }
       if(!m.m_visible || m.m_time<t_older || m.m_time>t_newer)
          continue;
       ::ArrayResize(list,n+1,256);
@@ -513,6 +548,7 @@
       n++;
      }
    ::ArraySort(order);
+   const ulong debug_t3=::GetMicrosecondCount();
    CBarMarker *sorted[];   // oldest candle first: the badges are placed from the left
    ::ArrayResize(sorted,n);
    for(int i=0; i<n; i++)
@@ -524,7 +560,7 @@
       CBarMarker *m=sorted[i];
       int bx=0,edge=0;
       m.m_layout_hidden=false;
-      if(!m.BaseGeometry(bx,edge,first_visible_bar,ref_x,ref_y,scale,width,height,price_max,price_min))
+      if(!m.BaseGeometry(bx,edge,sym,tf,first_visible_bar,ref_x,ref_y,scale,width,height,price_max,price_min))
         {
          m.m_offset=0;
          continue;
@@ -570,11 +606,21 @@
       pbuy[placed]=m.m_is_buy;
       placed++;
      }
+   const ulong debug_t4=::GetMicrosecondCount();
    if(m_bar_marker_box_owner!=NULL)
       m_bar_marker_box_owner.PlaceBox();
    else if(m_box_time!=0)
       CBarMarker::PlaceBoxOnCandle(m_box_time);
    CGLayerItem::Invalidate();
+   const ulong debug_t5=::GetMicrosecondCount();
+   string debug_from="every candle";
+   if(from_time>0)
+      debug_from="from "+::TimeToString(from_time);
+   string debug_text="MY DEBUG CBarMarker::Arrange "+sym+" "+::EnumToString(tf)+" "+debug_from+": "+(string)(parent.ChildrenTotal())+" children, "+(string)fixed+
+                     " kept before, "+(string)n+" placed of the view ("+(string)debug_shown+" shown, "+(string)debug_hidden+" hidden). chart getters "+
+                     (string)((debug_t1-debug_t0)/1000)+" ms, ChartTimePriceToXY "+(string)((debug_t2-debug_t1)/1000)+" ms, sources "+(string)((debug_t3-debug_t2)/1000)+
+                     " ms, place "+(string)((debug_t4-debug_t3)/1000)+" ms, box "+(string)((debug_t5-debug_t4)/1000)+" ms";
+   ::Print(debug_text);
   }
  //+------------------------------------------------------------------+
  //| Shift + the cursor on the badge: the box on the candle and the   |

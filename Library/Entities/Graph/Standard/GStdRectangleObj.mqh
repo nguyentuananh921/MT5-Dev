@@ -37,7 +37,7 @@
      virtual bool      SupportProperty(ENUM_GRAPH_OBJ_PROP_INTEGER property);
      virtual bool      SupportProperty(ENUM_GRAPH_OBJ_PROP_STRING property);
     //--- Return the (ENUM_OBJECT) type description
-     virtual string    TypeDescription(void)   const { return StdGraphObjectTypeDescription(OBJ_RECTANGLE); }
+  // virtual string    TypeDescription(void)   const { return StdGraphObjectTypeDescription(OBJ_RECTANGLE); }   // DoEasy: no StdGraphObjectTypeDescription in V5, no base declares it (never compiled until CKronosForecastBar)
   };
 #endif // CGSTDRECTANGLEOBJ_MQH_DECLARATION
 #ifndef CGSTDRECTANGLEOBJ_MQH_IMPLEMENTATION
