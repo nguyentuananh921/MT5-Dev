@@ -25,13 +25,9 @@
     string m_file_accounts; 
     int    m_db_account;
     // next to the Common DB: the workers of Python step aside while it is there
-      string m_file_write_flag;   
-    
-    
-    // ::AccountInfoString(ACCOUNT_COMPANY) + 
-    // ::AccountInfoString(ACCOUNT_SERVER) + 
-    // "_" + (string)::AccountInfoInteger(ACCOUNT_LOGIN);  
-     string m_account_key;    //m_account_key Set from EA use to Join Common Database and Accounts Database    
+      string m_file_write_flag;  
+    //m_account_key Set from EA use to Join Common Database and Accounts Database 
+     string m_account_key;       
    
      bool        MakeFolders(const string path);
      int         GetDatabaseHandle(const string target) const;

@@ -243,7 +243,10 @@ void OnTick()
   {
    if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
       return;
-   m_AccountsCollection.RefreshAccount();   // the account follows the terminal (RAM); its events (balance, credit, permissions, terms) go to the chart
+   //--- The money follows the price only while a position is open; the rest changes with a trade (OnTrade)
+   CAccount *account=m_AccountsCollection.GetCurrentAccount();
+   if(account!=NULL && m_MarketCollection.PositionsCount()>0)
+      account.RefreshMoney();
    //--- The series follow the ticks (DoEasy CEngine::OnTick): the chart's symbol; in the tester every symbol (no OnTimer there, as the DoEasy EAs)
    //--- The signals follow the series they are judged on (the newest closed bar is there now). V5: judged on RAM only, Python saves; its rows of the same bars are refused
    if(::MQLInfoInteger(MQL_TESTER))
@@ -309,6 +312,9 @@ void OnTrade()
       return;
    m_MarketCollection.RefreshMarket();
    m_HistoryCollection.RefreshHistory();
+   CAccount *account=m_AccountsCollection.GetCurrentAccount();
+   if(account!=NULL)
+      account.RefreshAccount();   // a trade or a deposit: the balance, the terms, the money (the profit of the last position closed)
    CArrayObj *list_changes=m_MarketCollection.GetListChanges();
    if(m_HistoryCollection.IsEvent() || m_MarketCollection.IsEvent() || (list_changes!=NULL && list_changes.Total()>0))
       m_TradeEventsCollection.Refresh(m_HistoryCollection.GetList(),m_MarketCollection.GetList(),list_changes,m_MarketCollection.GetListControl(),m_HistoryCollection.IsEvent(),
@@ -330,6 +336,7 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
    if(id>=CHARTEVENT_CUSTOM)
       Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);   // MY DEBUG: the events of the controls and of the managers, not the mouse
+   m_AccountsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a term of the account changed: its row of the table accounts
    m_SyncManager.OnChartEvent(id,lparam,dparam,sparam);   // Python wrote more marks: RAM first, the collections read it next; a parameter changed: its marks go
    m_PythonBridge.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair came or went: Python calculates its history at once
    m_GUIPannel.OnChartEvent(id,lparam,dparam,sparam);

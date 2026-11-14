@@ -342,7 +342,7 @@ class LibDatabase:
         self.db = None         # the file the accounts share (the settings, the accounts, the symbols)
         self.acc = None        # the file of the account the terminal is logged in to (the bars and what was found on them): Accounts\<account key>.sqlite3
         self.acc_key = None    # the account of that file
-        self.login_key = None      # the account_key of the row of the table accounts of the account the terminal is logged in to (asked once)
+        self.login_key = None      # the account_key the EA wrote in Setting_PythonBridge (asked once)
         self.pending_rows = [] # (sql, rows, (sync_object, key_id, params)) of what was found, written by flush_results() in parts of batch_rows rows
         self.pending_marks = []# (key of the source, marks) of how far it was synced, written by flush_results() in one transaction of the file the accounts share
         self.pending_count = 0 # the rows that wait

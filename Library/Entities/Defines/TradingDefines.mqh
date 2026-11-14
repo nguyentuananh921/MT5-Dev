@@ -395,9 +395,10 @@ enum ENUM_SORT_EVENTS_MODE
    ACCOUNT_PROP_NAME = (ACCOUNT_PROP_INTEGER_TOTAL+ACCOUNT_PROP_DOUBLE_TOTAL), // Client name
    ACCOUNT_PROP_SERVER,                                     // Trade server name
    ACCOUNT_PROP_CURRENCY,                                   // Deposit currency
-   ACCOUNT_PROP_COMPANY                                     // Name of a company serving an account
+   ACCOUNT_PROP_COMPANY,                                    // Name of a company serving an account
+   ACCOUNT_PROP_KEY                                         // account_key built once by the EA (CDatabaseService::GetAccountKey): the only identity of an account
   };
-#define ACCOUNT_PROP_STRING_TOTAL     (4)                   // Total number of account string properties
+#define ACCOUNT_PROP_STRING_TOTAL     (5)                   // Total number of account string properties
 #define ACCOUNT_PROP_TOTAL            (ACCOUNT_PROP_INTEGER_TOTAL+ACCOUNT_PROP_DOUBLE_TOTAL+ACCOUNT_PROP_STRING_TOTAL) // Total number of account properties
 //+------------------------------------------------------------------+
 //| From V3 TradingDefines (433-960, 1021-1051); the DOM part is not |

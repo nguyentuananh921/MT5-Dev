@@ -34,6 +34,8 @@
    //--- Return the index of the array the account's (1) double and (2) string properties are located at
     int               IndexProp(ENUM_ACCOUNT_PROP_DOUBLE property) const { return(int)property-ACCOUNT_PROP_INTEGER_TOTAL;                           }
     int               IndexProp(ENUM_ACCOUNT_PROP_STRING property) const { return(int)property-ACCOUNT_PROP_INTEGER_TOTAL-ACCOUNT_PROP_DOUBLE_TOTAL; }
+   //--- The properties just asked are compared with the last ones; each change goes to the chart
+    void              SendChanges(void);
    public:
    //--- Constructor
                       CAccount(void);
@@ -82,6 +84,7 @@
       string            Server(void)                                    const { return this.GetProperty(ACCOUNT_PROP_SERVER);                                        }
       string            Currency(void)                                  const { return this.GetProperty(ACCOUNT_PROP_CURRENCY);                                      }
       string            Company(void)                                   const { return this.GetProperty(ACCOUNT_PROP_COMPANY);                                       }
+      string            AccountKey(void)                                const { return this.GetProperty(ACCOUNT_PROP_KEY);                                           }
 
     //+------------------------------------------------------------------+
     //| Get and set the parameters of tracked property changes           |
@@ -265,8 +268,10 @@
       double            GetValueChangedComissionBlocked(void)           const { return this.GetPropDoubleChangedValue(ACCOUNT_PROP_COMMISSION_BLOCKED);              }
       bool              IsIncreasedComissionBlocked(void)               const { return (bool)this.GetPropDoubleFlagINC(ACCOUNT_PROP_COMMISSION_BLOCKED);             }
       bool              IsDecreasedComissionBlocked(void)               const { return (bool)this.GetPropDoubleFlagDEC(ACCOUNT_PROP_COMMISSION_BLOCKED);             }
-   //--- What changes while the EA runs is asked of the terminal, its events are made (as CBarSeriesDE::RefreshSeries)
+   //--- Everything that changes while the EA runs (OnInit, OnTrade): the terms, the balance, the money
     void              RefreshAccount(void);
+   //--- Only what follows the price (OnTick while a position is open): profit, equity, margin
+    void              RefreshMoney(void);
    //--- Return the margin required for opening a position or placing a pending order (V3)
     double            MarginForAction(const ENUM_ORDER_TYPE action,const string symbol,const double volume,const double price) const;
   };
@@ -308,11 +313,7 @@
  //+------------------------------------------------------------------+
  bool CAccount::IsEqual(CAccount *compared_account) const
   {
-   if(this.GetProperty(ACCOUNT_PROP_COMPANY)!=compared_account.GetProperty(ACCOUNT_PROP_COMPANY) ||
-      this.GetProperty(ACCOUNT_PROP_LOGIN)!=compared_account.GetProperty(ACCOUNT_PROP_LOGIN)     ||
-      this.GetProperty(ACCOUNT_PROP_NAME)!=compared_account.GetProperty(ACCOUNT_PROP_NAME)
-     ) return false;
-   return true;
+   return(compared_account!=NULL && this.AccountKey()==compared_account.AccountKey());   // the key alone: its fields are the EA's business
   }
  //+------------------------------------------------------------------+
  //| What changes while the EA runs is asked of the terminal (RAM     |
@@ -321,9 +322,6 @@
  //+------------------------------------------------------------------+
  void CAccount::RefreshAccount(void)
   {
-  //--- Initialize event data
-   this.m_is_event=false;
-   this.m_hash_sum=0;
   //--- The permissions and the terms the broker may change (the last four are columns of the table accounts: written again when they change)
    this.SetProperty(ACCOUNT_PROP_TRADE_ALLOWED,::AccountInfoInteger(ACCOUNT_TRADE_ALLOWED));
    this.SetProperty(ACCOUNT_PROP_TRADE_EXPERT,::AccountInfoInteger(ACCOUNT_TRADE_EXPERT));
@@ -331,9 +329,19 @@
    this.SetProperty(ACCOUNT_PROP_LIMIT_ORDERS,::AccountInfoInteger(ACCOUNT_LIMIT_ORDERS));
    this.SetProperty(ACCOUNT_PROP_MARGIN_SO_CALL,::AccountInfoDouble(ACCOUNT_MARGIN_SO_CALL));
    this.SetProperty(ACCOUNT_PROP_MARGIN_SO_SO,::AccountInfoDouble(ACCOUNT_MARGIN_SO_SO));
-  //--- The money and the margin
+  //--- What a trade or a deposit changes
    this.SetProperty(ACCOUNT_PROP_BALANCE,::AccountInfoDouble(ACCOUNT_BALANCE));
    this.SetProperty(ACCOUNT_PROP_CREDIT,::AccountInfoDouble(ACCOUNT_CREDIT));
+  //--- What follows the price, then the compare
+   this.RefreshMoney();
+  }
+ //+------------------------------------------------------------------+
+ //| What follows the price is asked of the terminal, then compared   |
+ //+------------------------------------------------------------------+
+ void CAccount::RefreshMoney(void)
+  {
+   this.m_is_event=false;
+   this.m_hash_sum=0;
    this.SetProperty(ACCOUNT_PROP_PROFIT,::AccountInfoDouble(ACCOUNT_PROFIT));
    this.SetProperty(ACCOUNT_PROP_EQUITY,::AccountInfoDouble(ACCOUNT_EQUITY));
    this.SetProperty(ACCOUNT_PROP_MARGIN,::AccountInfoDouble(ACCOUNT_MARGIN));
@@ -344,6 +352,14 @@
    this.SetProperty(ACCOUNT_PROP_ASSETS,::AccountInfoDouble(ACCOUNT_ASSETS));
    this.SetProperty(ACCOUNT_PROP_LIABILITIES,::AccountInfoDouble(ACCOUNT_LIABILITIES));
    this.SetProperty(ACCOUNT_PROP_COMMISSION_BLOCKED,::AccountInfoDouble(ACCOUNT_COMMISSION_BLOCKED));
+   this.SendChanges();
+  }
+ //+------------------------------------------------------------------+
+ //| The properties are compared with the last ones (CBaseObjExt);    |
+ //| the account tells each change itself                             |
+ //+------------------------------------------------------------------+
+ void CAccount::SendChanges(void)
+  {
   //--- The current values are the cells [3] of the arrays of changes of CBaseObjExt, where the changes are looked for
    for(int i=0;i<ACCOUNT_PROP_INTEGER_TOTAL;i++)
       this.m_long_prop_event[i][3]=this.m_long_prop[i];
@@ -352,6 +368,13 @@
   //--- Update the base object data and search for changes
    CBaseObjExt::Refresh();
    this.CheckEvents();
+  //--- The account tells its own changes (Parent Child: the child fires, nobody relays)
+   for(int i=0;i<this.m_list_events.Total();i++)
+     {
+      CEventBaseObj *event=this.m_list_events.At(i);
+      if(event!=NULL)
+         this.EventSend((ushort)event.ID(),event.LParam(),event.DParam(),event.SParam());
+     }
   }
 //+------------------------------------------------------------------+
 //| Return the margin required for opening a position                |
