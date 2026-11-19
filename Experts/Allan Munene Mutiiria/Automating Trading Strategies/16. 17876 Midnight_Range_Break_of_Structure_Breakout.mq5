@@ -25,14 +25,14 @@ double swing_H = -1.0, swing_L = -1.0; //--- Initialize variables to store the l
 input ENUM_TIMEFRAMES timeframe_bos = PERIOD_M5; // Input the timeframe for Break of Structure analysis
 
 //+------------------------------------------------------------------+
-//| Expert initialization function                                     |
+//| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
  {
    return(INIT_SUCCEEDED); //--- Return successful initialization status
  }
 //+------------------------------------------------------------------+
-//| Expert deinitialization function                                   |
+//| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
  {

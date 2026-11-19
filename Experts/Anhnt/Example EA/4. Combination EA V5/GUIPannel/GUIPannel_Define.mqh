@@ -29,7 +29,8 @@
   #include <Combination Lib V5\Collections\Settings\StrategyManager.mqh>
   #include <Combination Lib V5\Collections\BarTimeSeriesCollection.mqh>   // what was found on a candle
   #include <Combination Lib V5\Collections\SignalsCollection.mqh>
-  #include <Combination Lib V5\Collections\HistoryCollection.mqh>   // the table Orders: the tables of the Trade Manage window
+  #include <Combination Lib V5\Collections\HistoryCollection.mqh>   // the history of the terminal: the tables of the Trade Manage window
+ #include <Combination Lib V5\Trading\TradingControl.mqh>          // the changes of the SL / TP of a position: the Order detail window
   #include <Combination Lib V5\Collections\MarketCollection.mqh>    // the positions: their numbers on the caption
   #include <Combination Lib V5\Collections\GraphElementsCollection.mqh>   // the markers: the popup lights the box of its candle
   #include <Combination Lib V5\Collections\BarMarkerCollection.mqh>   // the rows of a candle on RAM: the popup reads them
@@ -163,22 +164,24 @@
     #define M_INDICATOR_TOGGLE_SIGNAL_X    ((M_INDICATOR_COLUMN_BUY_SIGNAL+M_INDICATOR_COLUMN_SELL_SIGNAL)/2)     // the toggle of a section over the two columns it rules
     #define M_INDICATOR_TOGGLE_ALERT_X     ((M_INDICATOR_COLUMN_SOUND_ALERT+M_INDICATOR_COLUMN_MESSAGE_ALERT)/2)
     #define M_BUTTON_ADD_WIDTH          80
-   //m_sections_strategy: a section for each strategy of CStrategyManager, a row for each of its slots: [edit][name (params)]
+   //m_sections_strategy: a section for each strategy of CStrategyManager, a row for each slot: [edit][name (params)][tf]
     enum ENUM_STRATEGY_TOGGLE   // the toggles of the header of a section of m_sections_strategy
      {
       STRATEGY_TOGGLE_SHOW,      // show_on_chart of the strategy: its entries on the chart (CBarMarker)
-      STRATEGY_TOGGLE_TRADE,     // ON: the templates of its indicators are made (CIndicatorTemplateManager)
-      STRATEGY_TOGGLE_AVAILABLE  // every slot has its source: set by the panel, a click does not change it
+      STRATEGY_TOGGLE_TRADE,     // enabled: On in trading (ON also makes the templates of its indicators)
+      STRATEGY_TOGGLE_AVAILABLE  // every slot has its source: written by CStrategyManager, a click does not change it
      };
     enum ENUM_STRATEGY_SLOT     // what a control of a row stands for
      {
       STRATEGY_SLOT_EDIT,        // edits the indicator of the slot in the strategy (not wired yet)
-      STRATEGY_SLOT_LABEL
+      STRATEGY_SLOT_LABEL,
+      STRATEGY_SLOT_TF
      };
     enum ENUM_STRATEGY_COLUMN   // the columns of the body of m_sections_strategy
      {
       STRATEGY_COLUMN_EDIT,
       STRATEGY_COLUMN_LABEL,
+      STRATEGY_COLUMN_TF,
       STRATEGY_COLUMN_TOTAL
      };
     #define M_STRATEGY_SLOTS_MAX           100   // the value of a row: the section * M_STRATEGY_SLOTS_MAX + the slot
@@ -190,7 +193,7 @@
     //#define PARAM_ROW_H               26    // a control and a gap M_CONTROL_HEIGHT
     #define PARAM_ROW_H               M_CONTROL_HEIGHT    // a control and a gap M_CONTROL_HEIGHT
     #define INDICATOR_PARAM_LABEL_W   150
-    #define INDICATOR_PARAM_FIELD_W   80
+    #define INDICATOR_PARAM_FIELD_W   110   // Change in V5 (was 80): a source of the Applied Price, RSI(14,CLOSE), is read whole
     #define M_TREEVIEW_ADDINDICATOR_WIDTH  200   // the tree of the types in the Add Indicator window
     #define PARAM_FORM_X              (M_CONTROL_BORDER_GAP + M_TREEVIEW_ADDINDICATOR_WIDTH + M_CONTROL_BORDER_GAP)
     #define PARAM_FORM_Y              (M_CONTROL_HEIGHT + M_CONTROL_BORDER_GAP)   // below the caption of the window

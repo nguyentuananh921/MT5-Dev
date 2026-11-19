@@ -108,21 +108,21 @@ double GetNetProfitSince(bool include_all_magic, ulong specific_magic, datetime 
     double total_net_profit = 0.0; // Initialize the total net profit
     ResetLastError(); // Reset any previous errors
 
-    // Check if the start date is valid
+   // Check if the start date is valid
     if((start_date > 0 || start_date != D'1971.01.01 00:00'))
-    {   
-        // Select the order history from the given start date to the current time
+     {   
+       // Select the order history from the given start date to the current time
         if(!HistorySelect(start_date, TimeCurrent())) 
-        {
+         {
           Print("Error when selecting orders: ", _LastError); 
           return 0.0; // Exit if unable to select the history
-        }
+         }
 
         int total_deals = HistoryDealsTotal(); // Get the total number of deals in history
     
-        // Iterate through all deals
+       // Iterate through all deals
         for(int i = 0; i < total_deals; i++)
-        {
+         {
           ulong deal_ticket = HistoryDealGetTicket(i); // Retrieve the deal ticket
 
           // Skip balance-type deals
@@ -148,8 +148,8 @@ double GetNetProfitSince(bool include_all_magic, ulong specific_magic, datetime 
                 total_net_profit += deal_net_profit; // Add to the total net profit
               }
           }
-        }
-    }
+         }
+     }
       
     return NormalizeDouble(total_net_profit, 2); // Return the total net profit rounded to 2 decimals
  }
@@ -159,11 +159,11 @@ double GetNetProfitSince(bool include_all_magic, ulong specific_magic, datetime 
 void GetIdealLot(double& nlot , double glot , double max_risk_per_operation , double& new_risk_per_operation, long StopLoss)
  {
   if(StopLoss <= 0)
-    {
+   {
     Print("[ERROR SL] Stop Loss distance is less than or equal to zero, now correct the stoploss distance: ", StopLoss);
     nlot = 0.0;
     return;
-    }
+   }
     Print("Max Lot: " , glot, "  |  RiskPerOperation: " , max_risk_per_operation); 
 
   new_risk_per_operation= 0;

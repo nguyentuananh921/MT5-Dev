@@ -26,6 +26,7 @@
  #define PYTHON_PORT                (8765)        // one port for the EA and the web View: server.py tells them apart by the first bytes
  #define PYTHON_CONNECT_TIMEOUT_MS  (100)         // V3
  #define PYTHON_RETRY_MS            (500)         // V3: no connection, tried again this much later (server.py starts with Python, a while after the EA)
+ #define PYTHON_STARTUP_MS          (120000)      // after Launch, server.py may not listen yet (69 s seen): no port is no news until then
  #define SEND_RETRY_MS              (300)         // V3: a message that does not go at once is sent again for this long at most
  enum ENUM_PYTHON_STATE   // V3
   {
@@ -324,7 +325,10 @@
   {
    if(id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE &&
       id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED && id!=CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE &&
-      id!=CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_RESET_DONE)
+      id!=CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_RESET_DONE &&
+      id!=CHARTEVENT_CUSTOM+MARKET_WATCH_EVENT_SYMBOL_ADD &&   // a new symbol of this account (its row of symbols is written): Current runs again for it
+      id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED &&   // New in V5: a strategy has all its slots now (Setting_Strategy.available): Python calculates its past
+      id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SLOT_CHANGED && id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_TF_CHANGED)   // its marks are gone (CSyncManager, before): its past again
       return;
    int handle=::FileOpen(this.FileNextToDatabase(PYTHON_JOBS_FILE),FILE_WRITE|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE);
    if(handle==INVALID_HANDLE)
@@ -363,9 +367,13 @@
    if(!::SocketConnect(this.m_socket,PYTHON_HOST,PYTHON_PORT,PYTHON_CONNECT_TIMEOUT_MS))
      {
       const int error=::GetLastError();
-      if(error!=this.m_connect_error)   // told once a kind: 4014 = the address is not in Tools > Options > Expert Advisors (allow WebRequest for the listed URL)
-         ::Print(__FUNCTION__," > server.py not reachable on ",PYTHON_HOST,":",PYTHON_PORT,", error ",error);
-      this.m_connect_error=error;
+      const bool starting=(error==ERR_NETSOCKET_CANNOT_CONNECT && this.m_launch_ms!=0 && ::GetTickCount64()-this.m_launch_ms<PYTHON_STARTUP_MS);
+      if(!starting)   // still starting: not told and not kept, so it is told once the time is over
+        {
+         if(error!=this.m_connect_error)   // told once a kind: 4014 = the address is not in Tools > Options > Expert Advisors (allow WebRequest for the listed URL)
+            ::Print(__FUNCTION__," > server.py not reachable on ",PYTHON_HOST,":",PYTHON_PORT,", error ",error);
+         this.m_connect_error=error;
+        }
       ::SocketClose(this.m_socket);
       this.m_socket=INVALID_HANDLE;
       return false;
@@ -503,7 +511,7 @@
  //| <signal_direction>|<is_new> and SignalsCollection|<name>|<tf_enum>|
  //| <type_enum>|<params>|<bar_time>|<signal_direction>|<is_new>       |
  //| (hub.py): the child of the collection of the table (CBarControl of |
- //| the series, CSignal) stores it and tells it (Event Rule)           |
+ //| the series, CSignal) stores it and tells it (Working with Event)   |
  //+------------------------------------------------------------------+
  void CPythonBridge::StoreRow(const string line)
   {

@@ -3,30 +3,14 @@
 //|                                    Copyright 2026, soloharbinger |
 //|                      https://www.mql5.com/en/users/soloharbinger |
 //+------------------------------------------------------------------+
-//|Building Your Personal Expert Advisor                             |
-//|1. From Fragile Script to Working EA                              |
-//|                           https://www.mql5.com/en/articles/23429 |
-//|2. Risk Management and Dynamic Lot Sizing                         |
-//|                           https://www.mql5.com/en/articles/23638 |
-//|3. Margin and Allowable Risk                                      |
-//|                           https://www.mql5.com/en/articles/23897 |
-//|4. Risk Models and Order Execution                                |
-//|                           https://www.mql5.com/en/articles/21231 |
-//|5. Basket Risk and Strategy-Specific Sizing                       |
-//|                           https://www.mql5.com/en/articles/24331 |
-//|6. Portfolio and Correlated Risk                                  |
-//|                           https://www.mql5.com/en/articles/24392 |
-//|7. Consolidating the Risk Framework                               |
-//|                           https://www.mql5.com/en/articles/24477 |
-//+------------------------------------------------------------------+
 #property copyright   "Copyright 2026, soloharbinger"
 #property link        "https://www.mql5.com/en/users/soloharbinger"
 #property description "The mean-reversion demo, rebuilt on the risk framework. It trades a completely different idea from the series EA - reversion to a mean - and it sizes positions from a profit target instead of a risk budget."
 #property version     "2.00"
 
 #include <Trade/Trade.mqh>
-#include <Risk Management/RiskTypes.mqh>
-#include <Risk Management/BasketRisk.mqh>
+#include "Include\RiskTypes.mqh"
+#include "Include\BasketRisk.mqh"
 
 //--- Input Parameters
 input group "Mean Reversion Signal"

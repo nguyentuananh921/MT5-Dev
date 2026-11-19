@@ -1,1 +1,1 @@
-- Làm việc trong D:\MT5-Dev: nạp skill `combination` (D:\MT5-Dev\skills\SKILL.md) trước khi trả lời hoặc sửa code. Mọi luật nằm ở đó.
+- Làm việc trong D:\MT5-Dev: đọc `D:\MT5-Dev\skills\AGENTS.md` trước khi trả lời hoặc sửa code. Mọi luật nằm ở đó.

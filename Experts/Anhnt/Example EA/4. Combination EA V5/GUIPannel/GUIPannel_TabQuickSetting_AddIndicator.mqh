@@ -124,10 +124,10 @@
       if(!m_param_edits[i].CreateTextEdit(this.m_chart_id,M_SUBWINDOW_MAIN,"ParamEdit"+(string)i,M_CONTROL_BORDER_GAP,M_CONTROL_HEIGHT,
                                           slot_w,M_CONTROL_HEIGHT,INDICATOR_PARAM_FIELD_W))
          return false;
-      m_param_combo[i].ItemsTotal(7);   // room for the largest choice list (PRICE_CHOICES)
+      m_param_combo[i].ItemsTotal(7);   // room for the largest choice list (PRICE_CHOICES); the sources of an Applied Price are added when shown (Rebuilding)
       m_frame_indicator_parameter.AddChild(&m_param_combo[i]);
       if(!m_param_combo[i].CreateComboBox(this.m_chart_id,M_SUBWINDOW_MAIN,"ParamCombo"+(string)i,M_CONTROL_BORDER_GAP,M_CONTROL_HEIGHT,
-                                          slot_w,M_CONTROL_HEIGHT,INDICATOR_PARAM_FIELD_W,140))
+                                          slot_w,M_CONTROL_HEIGHT,INDICATOR_PARAM_FIELD_W,200))   // Change in V5 (was 140): the 7 prices and the first sources without a scroll
          return false;
      }
    //--- The tf of a strategy slot: shown only while the form edits one
@@ -155,14 +155,12 @@
  void CGUIPannel::ShowCFrame_IndicatorParameter(const ENUM_INDICATOR type,const string params_text="")
   {
    string values[];
-   int given=0;
-   if(params_text!="")
-      given=::StringSplit(params_text,',',values);
    if(m_IndicatorTemplateManager==NULL)
      {
       ::Print(__FUNCTION__," > IndicatorTemplateManager is not set");
       return;
      }
+   int given=m_IndicatorTemplateManager.SplitParams(params_text,values);   // Change in V5: a source keeps its commas, "9,0,SMA,RSI(14,CLOSE)"
    m_current_param_type=type;
    SIndicatorParam schema[];
    int total=m_IndicatorTemplateManager.Read_RAM(type,schema);
@@ -179,6 +177,24 @@
         {
          string parts[];
          int n=::StringSplit(schema[i].choices,'|',parts);
+         //--- New in V5: the Applied Price of an MA also lists the templates drawn in a subwindow (as MT5 drops an MA on an indicator): TYPE(params)
+         if(schema[i].choices==PRICE_CHOICES && m_IndicatorTemplateManager.TakesSource(type))
+           {
+            ENUM_INDICATOR types[];
+            string texts[];
+            bool buy[],sell[];
+            int templates=m_IndicatorTemplateManager.Read_RAM(types,texts,buy,sell);
+            for(int t=0;t<templates;t++)
+              {
+               ENUM_INDICATOR source_type;
+               string source_params;
+               int applied;
+               if(m_IndicatorTemplateManager.IsOverlay(types[t]) || m_IndicatorTemplateManager.SourceOf(types[t],texts[t],source_type,source_params,applied))
+                  continue;   // a source is in a subwindow and has no source itself
+               ::ArrayResize(parts,n+1);
+               parts[n++]=m_IndicatorTemplateManager.SourceText(types[t],texts[t]);
+              }
+           }
          m_param_combo[i].GetListViewPointer().Rebuilding(n);
          for(int p=0;p<n;p++)
             m_param_combo[i].SetValue(p,parts[p]);
@@ -242,7 +258,13 @@
       if(schema[i].choices!="")
         {
          string sel_text=m_param_combo[i].GetValue();
-         if(schema[i].choices==PRICE_CHOICES)
+         params[i].string_value="";
+         if(schema[i].choices==PRICE_CHOICES && ::StringFind(sel_text,"(")>0)
+           {
+            params[i].string_value=sel_text;   // New in V5: a source, TYPE(params): its handle is put by who makes it
+            params[i].integer_value=0;
+           }
+         else if(schema[i].choices==PRICE_CHOICES)
             params[i].integer_value=m_IndicatorTemplateManager.ParamValueByDescription(sel_text,schema[i].choices);
          else if(schema[i].choices==CALCULATION_METHOD_CHOICES)
             params[i].integer_value=m_IndicatorTemplateManager.ParamValueByDescription(sel_text,schema[i].choices);

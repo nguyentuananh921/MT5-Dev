@@ -38,9 +38,7 @@ import patterns
 import signals
 import structure
 import swing
-from Strategy import Profitunity
-
-STRATEGIES = {Profitunity.NAME: Profitunity}   # Setting_Strategy.name -> the module that calculates it as its source EA
+from Strategy import engine   # V5: one engine for every strategy (was Strategy\Profitunity.py, one module per strategy)
 
 CHUNK_BARS = 20000      # the bars of the first load of a pair (the newest ones, so that what the chart shows comes first); Current asks fewer when the pair has a newest bar synced (bars_needed)
 REALTIME_BARS = 5000    # the newest bars the Live worker asks at most when a bar closed (bars_needed)
@@ -280,16 +278,15 @@ def build_jobs(db):
         jobs.append(Job(display, libdb.Source(libdb.TABLE_IND_RESULT, libdb.setting_int("collection_signals"), ("type_enum", "params"), (type_enum, params_text)), indicators.context(params),
                         # lambda bars, since, until, name=name, params=params: signals.found(name, bars, params, since, until)))
                         lambda bars, since, until, name=name, params=params, levels=(level_high, level_low): signals.found(name, bars, params, since, until, levels)))
-    # V5: the strategies of the EA (CStrategyManager), each as its source EA (Strategy\<name>.py): two jobs, the entries and the exits (key strategy_id, role)
+    # V5: the strategies of the EA (CStrategyManager), each by Strategy\engine.py from its conditions: two jobs, the entries and the exits (key strategy_id, role)
     for strategy in libdb.strategies():
-        module = STRATEGIES.get(strategy["name"])
-        if module is None:
-            continue
+        if not strategy["available"]:
+            continue   # V5: only what is available (its slots are there): On or shown later, its past is ready
         for role in ("entry", "exit"):
             jobs.append(Job(f"{strategy['name']} {role}", libdb.Source(libdb.TABLE_STRATEGY_RESULT, libdb.setting_int("collection_strategy"), ("strategy_id", "role"), (strategy["strategy_id"], role)),
-                            module.CONTEXT,
-                            lambda bars, since, until, module=module, strategy=strategy, role=role:
-                                [(bar_time, side) for bar_time, found_role, side in module.calculate(strategy, bars, since, until) if found_role == role]))
+                            engine.context(strategy),
+                            lambda bars, since, until, strategy=strategy, role=role:
+                                [(bar_time, side) for bar_time, found_role, side in engine.calculate(strategy, bars, since, until) if found_role == role]))
     return jobs
 
 
@@ -498,9 +495,23 @@ def worker_command(terminal, role, symbol=None):
     return command
 
 
+def rotate_logs():
+    """The logs of the last run are kept as Python_*.prev.txt (one run back, the one read after a hang or a crash), the new run writes new files: Debug does not grow run after run.
+    A file still open (another Python running) cannot be renamed on Windows: it is left as it is."""
+    folder = libdb.debug_path("Python_Parent.txt").parent
+    for path in folder.glob("Python_*.txt"):
+        if path.name.endswith(".prev.txt"):
+            continue
+        try:
+            path.replace(path.with_name(path.stem + ".prev.txt"))
+        except OSError:
+            pass
+
+
 def run_parent(terminal):
     """The Python the EA starts: it writes the mark of life, reads the Market Watch and keeps a worker running for every symbol of ours."""
     global _timing_file
+    rotate_logs()   # V5: before any log of this run is opened (a worker started again keeps appending to its file of this run)
     _timing_file = libdb.debug_path("Python_Timing.txt")   # the milestones of the parent (OnInit complete, history complete) are in the file of the times too
     start_log("Python_Parent.txt")
     keep_awake()

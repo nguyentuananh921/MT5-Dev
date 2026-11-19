@@ -46,6 +46,9 @@ FIRST_BYTES_SECONDS = 10.0    # a connection that says nothing this long is clos
 PARENT_CHECK_SECONDS = 5.0    # a worker of main.py looks at its parent at this pace (WORKER_CHECK_SECONDS of main.py)
 TERMINAL = threading.Lock()   # the MetaTrader5 package is not thread safe: one call to the terminal at a time
 WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"   # RFC 6455: the key of the handshake
+WEB_WAIT_SECONDS = 5.0        # a web View still open connects again within SOCKET_RETRY_MS of main.ts (2 s): waited this long before a new one is opened
+WEB_SEEN_SECONDS = 600.0      # a web View connected this recently is taken as still open (a tab in the background may reconnect a minute late)
+WEB_SEEN_TOUCH_SECONDS = 30.0 # the mark of a connected web View is kept fresh at this pace
 _forecasts = {}               # (symbol, tf_text) -> (from_time s, the lines of the forecast): the last forecast of each pair
 _clients = set()              # the EAs and web Views connected (Client)
 _hub_lock = threading.Lock()  # _forecasts and _clients
@@ -63,6 +66,15 @@ def recent_rates(symbol, tf_text, limit):
     return data.ask_history(lambda: mt5.copy_rates_from_pos(symbol, libdb.timeframes()[tf_text], 0, limit))
 
 
+def symbols():
+    """The symbols of the account (table symbols, the EA writes it: CSymbolTFManager; libdb.symbols, the ones Python keeps a worker for): what the web chooses from."""
+    db = libdb.LibDatabase()
+    try:
+        return db.symbols()
+    finally:
+        db.close()
+
+
 def fetch_bars(symbol, tf_text, limit, before_ms):
     with TERMINAL:
         if before_ms:
@@ -75,8 +87,9 @@ def fetch_bars(symbol, tf_text, limit, before_ms):
 class Client:
     """One EA (TCP), one web View (WebSocket) or one worker that sends (hub.py): the pairs it shows, (symbol, tf name), and how a text goes to it (one writer at a
     time: Kronos, the workers and its own thread all send)."""
-    def __init__(self, send_text):
+    def __init__(self, send_text, is_web=False):
         self.send_text, self.watching, self.lock = send_text, set(), threading.Lock()
+        self.is_web = is_web   # a web View (WebSocket): open_web_unless_shown looks for one
 
     def send(self, lines):
         with self.lock:
@@ -195,6 +208,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.web_socket()
             if url.path == "/timeframes":
                 return self.answer(200, list(libdb.timeframes()))
+            if url.path == "/symbols":   # V5: the symbols of the account (table symbols), the list of the symbol button of the web
+                return self.answer(200, symbols())
             if url.path == "/strategies":   # each slot with the names of its params (the inputs of the strategy on the web chart)
                 return self.answer(200, [dict(s, slots=[dict(slot, param_keys=list(indicators.PARAM_KEYS.get(slot["type_name"], ()))) for slot in s["slots"]])
                                          for s in libdb.strategies()])
@@ -228,7 +243,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Sec-WebSocket-Accept", accept)
         self.end_headers()
         self.wfile.flush()
-        client = Client(lambda text: self.write_frame(0x1, text.encode("utf-8")))
+        client = Client(lambda text: self.write_frame(0x1, text.encode("utf-8")), is_web=True)
         connect(client)
         try:
             while True:
@@ -245,6 +260,7 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             disconnect(client)
+            forget_closed_web()
             self.close_connection = True
 
     def read_frame(self):
@@ -296,6 +312,44 @@ def web_folder():
     return folder if (folder / "index.html").is_file() else None
 
 
+def web_seen_file():
+    """The mark of the last time a web View was connected (its time of change), in the folder of the program (MQL5\\Files\\<program>): it outlives a restart
+    of Python and a database deleted by hand (the database is in its Database folder)."""
+    return libdb.database_path().parent.parent / "web_seen.flag"
+
+
+def forget_closed_web():
+    """V5: a web View gone while the server runs was closed by the user (a server that stops is killed with its threads: this does not run), so the mark goes and
+    the next server opens one; another web View still connected keeps it."""
+    with _hub_lock:
+        shown = any(client.is_web for client in _clients)
+    if not shown:
+        try:
+            web_seen_file().unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def open_web_unless_shown(url):
+    """The web View is opened once when the server starts, unless one is connected after WEB_WAIT_SECONDS or was connected less than WEB_SEEN_SECONDS ago
+    (a tab in the background reconnects late: the browser slows its timers). While one is connected, the mark is kept fresh."""
+    mark = web_seen_file()
+    seen_before = mark.exists() and time.time() - mark.stat().st_mtime < WEB_SEEN_SECONDS
+    time.sleep(WEB_WAIT_SECONDS)
+    with _hub_lock:
+        shown = any(client.is_web for client in _clients)
+    if shown or seen_before:
+        print("server.py: a web View is open (or was a moment ago): no new one", flush=True)
+    else:
+        webbrowser.open(url)
+    while True:
+        with _hub_lock:
+            shown = any(client.is_web for client in _clients)
+        if shown:
+            mark.touch()
+        time.sleep(WEB_SEEN_TOUCH_SECONDS)
+
+
 def watch_parent(parent_pid):
     """A worker of main.py (--parent-pid): the server stops when the parent is gone, like the other workers (the EA is closed, its Python with it)."""
     db = libdb.LibDatabase()
@@ -332,8 +386,8 @@ def main():
         url = f"http://{HOST}:{port}"
         print(f"server.py: one port for the web View ({url}, WebSocket {url}/socket) and the EA ({HOST}:{port}): the bars of MT5 and the forecasts of Kronos, "
               f"{len(libdb.timeframes())} timeframes of the table timeframes" + ("" if web_folder() else " (no web View built: npm run build in EA V5\\Web)"), flush=True)
-        if web_folder():
-            webbrowser.open(url)   # once, when the server starts (with the EA): the web View is shown
+        if web_folder():   # in a thread: the old web View can connect only while the server serves
+            threading.Thread(target=open_web_unless_shown, args=(url,), daemon=True).start()
         server.serve_forever()
     finally:
         data.disconnect()

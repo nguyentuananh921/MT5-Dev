@@ -1,0 +1,400 @@
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, extname, join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const check = process.argv.includes('--check');
+
+const EA_ROOT = join('Experts', 'Anhnt', 'Example EA', '4. Combination EA V5');
+const scopes = [
+  {
+    id: 'EA Module',
+    root: EA_ROOT,
+    extensions: new Set(['.mq5', '.mqh']),
+    excludedDirectories: new Set(['Web']),
+  },
+  {
+    id: 'EA Web',
+    root: join(EA_ROOT, 'Web'),
+    extensions: new Set(['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.scss', '.html']),
+  },
+  {
+    id: 'Library',
+    root: 'Library',
+    extensions: new Set(['.mq5', '.mqh']),
+    excludedDirectories: new Set(['Python', 'Kronos', 'tradecanvas']),
+  },
+  {
+    id: 'Library\\Python',
+    root: join('Library', 'Python'),
+    extensions: new Set(['.py', '.pyi']),
+  },
+];
+
+const ignoredDirectories = new Set([
+  '.git',
+  '__pycache__',
+  '.venv',
+  'venv',
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+]);
+
+function toPosix(value) {
+  return value.split(sep).join('/');
+}
+
+function readSource(path) {
+  const bytes = readFileSync(path);
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return bytes.subarray(2).toString('utf16le');
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const swapped = Buffer.from(bytes.subarray(2));
+    for (let i = 0; i + 1 < swapped.length; i += 2) {
+      const current = swapped[i];
+      swapped[i] = swapped[i + 1];
+      swapped[i + 1] = current;
+    }
+    return swapped.toString('utf16le');
+  }
+  if (bytes.length > 1 && bytes[1] === 0) return bytes.toString('utf16le');
+  return bytes.toString('utf8');
+}
+
+function collectFiles(scope) {
+  const root = join(ROOT, scope.root);
+  if (!existsSync(root)) throw new Error(`Working scope not found: ${scope.id} (${scope.root})`);
+
+  const files = [];
+  function walk(directory) {
+    const entries = readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (ignoredDirectories.has(entry.name) || scope.excludedDirectories?.has(entry.name)) continue;
+        walk(join(directory, entry.name));
+        continue;
+      }
+      if (!entry.isFile() || !scope.extensions.has(extname(entry.name).toLowerCase())) continue;
+
+      const absolutePath = join(directory, entry.name);
+      files.push({
+        absolutePath,
+        relativePath: toPosix(relative(ROOT, absolutePath)),
+        content: readSource(absolutePath),
+      });
+    }
+  }
+
+  walk(root);
+  return files;
+}
+
+function unique(values) {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+
+function requiredFile(files, suffix) {
+  const file = files.find((entry) => entry.relativePath.endsWith(suffix));
+  if (!file) throw new Error(`Required documentation source not found: ${suffix}`);
+  return file;
+}
+
+function exportedNames(file) {
+  const names = [];
+  for (const match of file.content.matchAll(
+    /^\s*export\s+(?:declare\s+)?(?:default\s+)?(?:abstract\s+)?(?:async\s+)?(?:class|interface|type|enum|function|const|let|var)\s+([A-Za-z_$][\w$]*)/gm,
+  )) names.push(match[1]);
+  for (const match of file.content.matchAll(/^\s*export\s+(?:type\s+)?\{\s*([^}]+)\s*\}/gm)) {
+    names.push(...match[1].split(',').map((name) => name.trim().split(/\s+as\s+/).pop()).filter(Boolean));
+  }
+  return unique(names);
+}
+
+function pythonEntrypoints(file, includeNames) {
+  const names = [];
+  for (const match of file.content.matchAll(/^(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|^class\s+([A-Za-z_]\w*)\b/gm)) {
+    const name = match[1] ?? match[2];
+    if (includeNames.has(name)) names.push(name);
+  }
+  return unique(names);
+}
+
+function eaModuleMarkdown(files) {
+  const main = requiredFile(files, '/EA V5 SQLLite.mq5');
+  const events = ['OnInit', 'OnDeinit', 'OnTick', 'OnTimer', 'OnTradeTransaction']
+    .filter((name) => new RegExp(`\\b${name}\\s*\\(`).test(main.content));
+  const includes = [...main.content.matchAll(/^\s*#include\s+[<"]([^>"]+)[>"]/gm)].map((match) => match[1]);
+  const groups = new Map();
+  for (const include of includes) {
+    const normalized = include.replace(/\\/g, '/');
+    let group = 'Other';
+    if (normalized.includes('Configuration/')) group = 'Configuration';
+    else if (normalized.includes('GUIPannel/')) group = 'GUI';
+    else if (normalized.endsWith('PythonBridge.mqh')) group = 'Python bridge';
+    else if (normalized.includes('Combination Lib V5/Collections/')) group = 'Library collections';
+    else if (normalized.includes('Combination Lib V5/Trading/')) group = 'Library trading';
+    else if (normalized.includes('Combination Lib V5/Services/')) group = 'Library services';
+    groups.set(group, (groups.get(group) ?? 0) + 1);
+  }
+
+  return [
+    '<!-- Generated by scripts/gen-ai-docs.mjs. Do not edit by hand. -->',
+    '',
+    '# EA Module',
+    '',
+    `Entry point: \`${main.relativePath}\``,
+    '',
+    `Lifecycle: ${events.map((event) => `\`${event}\``).join(', ')}.`,
+    '',
+    '## Direct dependencies',
+    '',
+    ...[...groups].map(([group, count]) => `- ${group}: ${count}`),
+    '',
+  ].join('\n');
+}
+
+function webMarkdown(files) {
+  const modules = [
+    ['src/signals/index.ts', 'Signals'],
+    ['src/strategies/index.ts', 'Strategies'],
+    ['src/indicators/index.ts', 'Indicators'],
+    ['src/backtest/index.ts', 'Backtest'],
+  ];
+  return [
+    '<!-- Generated by scripts/gen-ai-docs.mjs. Do not edit by hand. -->',
+    '',
+    '# EA Web',
+    '',
+    'Public TypeScript surface:',
+    '',
+    ...modules.map(([path, label]) => {
+      const file = requiredFile(files, `/${path}`);
+      return `- **${label}:** ${exportedNames(file).map((name) => `\`${name}\``).join(', ')}`;
+    }),
+    '',
+  ].join('\n');
+}
+
+function libraryMarkdown(files) {
+  const areas = new Map();
+  for (const file of files) {
+    const parts = file.relativePath.split('/');
+    const area = parts[1] ?? 'root';
+    areas.set(area, (areas.get(area) ?? 0) + 1);
+  }
+  return [
+    '<!-- Generated by scripts/gen-ai-docs.mjs. Do not edit by hand. -->',
+    '',
+    '# Library (MQL5)',
+    '',
+    'MQL5 modules by top-level area:',
+    '',
+    ...[...areas]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([area, count]) => `- \`${area}\`: ${count} ${count === 1 ? 'source file' : 'source files'}`),
+    '',
+  ].join('\n');
+}
+
+function pythonMarkdown(files) {
+  const entrypoints = [
+    ['main.py', 'Worker lifecycle', new Set(['run_parent', 'run_worker', 'run_current', 'run_live'])],
+    ['server.py', 'EA/Web server', new Set(['EAHandler', 'Server', 'Handler', 'run_kronos', 'main'])],
+    ['libdb.py', 'Database access', new Set(['database_path', 'load_settings', 'settings_ready', 'LibDatabase'])],
+  ];
+  return [
+    '<!-- Generated by scripts/gen-ai-docs.mjs. Do not edit by hand. -->',
+    '',
+    '# Library\\Python',
+    '',
+    'Entry points and database boundary:',
+    '',
+    ...entrypoints.map(([name, role, symbols]) => {
+      const file = requiredFile(files, `/${name}`);
+      return `- **${role}** (\`${file.relativePath}\`): ${pythonEntrypoints(file, symbols).map((symbol) => `\`${symbol}\``).join(', ')}`;
+    }),
+    '',
+  ].join('\n');
+}
+
+function scopeMarkdown(scope, files) {
+  if (scope.id === 'EA Module') return eaModuleMarkdown(files);
+  if (scope.id === 'EA Web') return webMarkdown(files);
+  if (scope.id === 'Library') return libraryMarkdown(files);
+  return pythonMarkdown(files);
+}
+
+const databasePatterns = [
+  ['CREATE TABLE', /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["'`\[]?([A-Za-z_]\w*)/gi],
+  ['ALTER TABLE', /\bALTER\s+TABLE\s+["'`\[]?([A-Za-z_]\w*)/gi],
+  ['SELECT', /\bFROM\s+["'`\[]?([A-Za-z_]\w*)/gi],
+  ['JOIN', /\bJOIN\s+["'`\[]?([A-Za-z_]\w*)/gi],
+  ['INSERT', /\bINSERT(?:\s+OR\s+\w+)?\s+INTO\s+["'`\[]?([A-Za-z_]\w*)/gi],
+  ['UPDATE', /\bUPDATE\s+["'`\[]?([A-Za-z_]\w*)/gi],
+  ['DELETE', /\bDELETE\s+FROM\s+["'`\[]?([A-Za-z_]\w*)/gi],
+];
+
+function stringLiterals(file) {
+  const text = file.content;
+  const extension = extname(file.relativePath).toLowerCase();
+  const isMql = extension === '.mq5' || extension === '.mqh';
+  const literals = [];
+  let index = 0;
+  let line = 1;
+
+  function advance(end) {
+    line += text.slice(index, end).split('\n').length - 1;
+    index = end;
+  }
+
+  while (index < text.length) {
+    if (text.startsWith('//', index)) {
+      const end = text.indexOf('\n', index);
+      advance(end === -1 ? text.length : end);
+      continue;
+    }
+    if (text.startsWith('/*', index)) {
+      const close = text.indexOf('*/', index + 2);
+      advance(close === -1 ? text.length : close + 2);
+      continue;
+    }
+    if (extension === '.py' && text[index] === '#') {
+      const end = text.indexOf('\n', index);
+      advance(end === -1 ? text.length : end);
+      continue;
+    }
+
+    const quote = text[index];
+    if (quote !== '"' && quote !== "'" && quote !== '`') {
+      advance(index + 1);
+      continue;
+    }
+
+    const startLine = line;
+    const triple = quote !== '`' && text.startsWith(quote.repeat(3), index);
+    const delimiter = triple ? quote.repeat(3) : quote;
+    let cursor = index + delimiter.length;
+    let value = '';
+    while (cursor < text.length) {
+      if (text[cursor] === '\\' && cursor + 1 < text.length) {
+        value += text[cursor + 1];
+        cursor += 2;
+        continue;
+      }
+      if (isMql && quote === '"' && text.startsWith('""', cursor)) {
+        value += '"';
+        cursor += 2;
+        continue;
+      }
+      if (text.startsWith(delimiter, cursor)) {
+        cursor += delimiter.length;
+        break;
+      }
+      value += text[cursor];
+      cursor += 1;
+    }
+
+    literals.push({ text: value, line: startLine });
+    advance(cursor);
+  }
+
+  return literals;
+}
+
+function databaseMarkdown(files) {
+  const tables = new Map();
+  const parsedFiles = files.map((file) => ({ file, literals: stringLiterals(file) }));
+  const declaredTables = new Set();
+
+  for (const { literals } of parsedFiles) {
+    for (const literal of literals) {
+      for (const [operation, pattern] of databasePatterns.slice(0, 2)) {
+        for (const match of literal.text.matchAll(pattern)) declaredTables.add(match[1].toLowerCase());
+      }
+    }
+  }
+
+  for (const { file, literals } of parsedFiles) {
+    for (const literal of literals) {
+      for (const [operation, pattern] of databasePatterns) {
+        for (const match of literal.text.matchAll(pattern)) {
+          const tableName = match[1];
+          const key = tableName.toLowerCase();
+          if (!declaredTables.has(key)) continue;
+          if (!tables.has(key)) tables.set(key, { name: tableName, operations: new Set() });
+          tables.get(key).operations.add(operation);
+        }
+      }
+    }
+  }
+
+  const rows = [...tables.values()].sort((left, right) => left.name.localeCompare(right.name));
+  const has = (table, operations) => operations.some((operation) => table.operations.has(operation)) ? 'yes' : '—';
+  return [
+    '<!-- Generated by scripts/gen-ai-docs.mjs. Do not edit by hand. -->',
+    '',
+    '# Database',
+    '',
+    'Tables and operations detected in SQL string literals across the EA, Library and Python source scopes.',
+    'Runtime SQLite rows are not read; dynamically assembled SQL may be missed.',
+    '',
+    '| Table | DDL | Read | Write |',
+    '|---|---:|---:|---:|',
+    ...(rows.length
+      ? rows.map((table) => {
+          const schema = has(table, ['CREATE TABLE', 'ALTER TABLE']);
+          const read = has(table, ['SELECT', 'JOIN']);
+          const write = has(table, ['INSERT', 'UPDATE', 'DELETE']);
+          return `| \`${table.name}\` | ${schema} | ${read} | ${write} |`;
+        })
+      : ['| — | No tables detected | — | — |']),
+    '',
+  ].join('\n');
+}
+
+function databaseRoot() {
+  const agentsPath = join(ROOT, 'skills', 'AGENTS.md');
+  const agents = readSource(agentsPath);
+  const terminalMatch = agents.match(/^\s*-\s*terminal đang dùng:\s*(.+?)\s*$/mi);
+  if (!terminalMatch) throw new Error(`Could not find the active terminal path in ${agentsPath}`);
+  const terminalPath = terminalMatch[1].replace(/^`|`$/g, '').trim();
+  return join(terminalPath, 'MQL5', 'Files', 'EA V5 SQLLite', 'Database');
+}
+
+const scopeFiles = scopes.map((scope) => ({ scope, files: collectFiles(scope) }));
+const allCodeFiles = scopeFiles.flatMap(({ files }) => files);
+const outputs = [
+  ...scopeFiles.map(({ scope, files }) => ({
+    path: join(ROOT, scope.root, 'README.md'),
+    label: `${toPosix(scope.root)}/README.md`,
+    content: scopeMarkdown(scope, files),
+  })),
+  {
+    path: join(databaseRoot(), 'README.md'),
+    label: '<MT5_EA_DATABASE>/README.md',
+    content: databaseMarkdown(allCodeFiles),
+  },
+];
+
+let stale = 0;
+for (const { path: outputPath, label, content } of outputs) {
+  const current = existsSync(outputPath) ? readSource(outputPath).replace(/\r\n/g, '\n') : null;
+  const normalized = content.replace(/\r\n/g, '\n');
+  if (current === normalized) continue;
+
+  if (check) {
+    console.error(`out of date: ${label} (run \`npm run docs:gen\`)`);
+    stale += 1;
+    continue;
+  }
+
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, content, 'utf8');
+  console.log(`wrote ${label}`);
+}
+
+if (stale > 0) process.exitCode = 1;
+else if (check) console.log(`Working scope docs up to date (${outputs.length} documents)`);

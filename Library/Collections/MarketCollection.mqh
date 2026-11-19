@@ -40,9 +40,7 @@
         int             total_positions;        // Number of positions on the account
         double          total_volumes;          // Total volume of orders and positions on the account
        };
-      CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbols)
-      CSymbolTFManager   *m_SymbolTFManager;    // The EA holds it: the id of OUR symbol of an order (symbols)
-      CListObj          m_list_all_orders;      // List of pending orders and positions on the account (V3)
+      CListObj          m_list_all_orders;     // List of pending orders and positions on the account (V3)
       MqlDataMarket     m_struct_curr_market;   // Current data on market orders and positions on the account
       MqlDataMarket     m_struct_prev_market;   // Previous data on market orders and positions on the account
       CArrayObj         m_list_control;         // List of control orders
@@ -74,9 +72,6 @@
     public:
      //--- Return itself
        CMarketCollection *GetObject(void)          { return &this; }
-     //--- The collection the EA gives it: the id of a symbol of the account
-       void              SetSymbolsCollection(CSymbolsCollection *collection)  { this.m_SymbolsCollection=collection; }
-       void              SetSymbolTFManager(CSymbolTFManager *manager)         { this.m_SymbolTFManager=manager;      }
      //--- Return the list of (1) pending orders and positions on the account, (2) changed orders, (3) control orders and positions
        CArrayObj*        GetList(void)             { return &this.m_list_all_orders;}
        CArrayObj*        GetListChanges(void)      { return &this.m_list_changed;}
@@ -120,7 +115,7 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
-  CMarketCollection::CMarketCollection(void) : m_SymbolsCollection(NULL),m_SymbolTFManager(NULL),m_is_change_volume(false),m_change_volume_value(0)
+  CMarketCollection::CMarketCollection(void) : m_is_change_volume(false),m_change_volume_value(0)
    {
      this.m_object_type=COLLECTION_MARKET_ID;
      this.m_list_all_orders.Sort(SORT_BY_ORDER_TIME_OPEN);

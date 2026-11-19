@@ -10,14 +10,14 @@
 
 #include <Trade/Trade.mqh>
 CTrade obj_Trade;
-
-int handle_Fractals = INVALID_HANDLE; //--- Initialize fractals indicator handle with an invalid handle value
-int handle_Alligator = INVALID_HANDLE; //--- Initialize alligator indicator handle with an invalid handle value
-int handle_AO = INVALID_HANDLE; //--- Initialize Awesome Oscillator (AO) handle with an invalid handle value
-int handle_AC = INVALID_HANDLE; //--- Initialize Accelerator Oscillator (AC) handle with an invalid handle value
-
-double fractals_up[]; //--- Array to store values for upward fractals
-double fractals_down[]; //--- Array to store values for downward fractals
+//Declare handle 
+  int handle_Fractals = INVALID_HANDLE; //--- Initialize fractals indicator handle with an invalid handle value
+  int handle_Alligator = INVALID_HANDLE; //--- Initialize alligator indicator handle with an invalid handle value
+  int handle_AO = INVALID_HANDLE; //--- Initialize Awesome Oscillator (AO) handle with an invalid handle value
+  int handle_AC = INVALID_HANDLE; //--- Initialize Accelerator Oscillator (AC) handle with an invalid handle value
+// Signal 
+  double fractals_up[]; //--- Array to store values for upward fractals
+  double fractals_down[]; //--- Array to store values for downward fractals
 
 double alligator_jaws[]; //--- Array to store values for Alligator's Jaw line
 double alligator_teeth[]; //--- Array to store values for Alligator's Teeth line
@@ -119,8 +119,9 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
  { 
+   //--- Copy upward fractals data; check if copying is successful
    if (CopyBuffer(handle_Fractals,0,2,3,fractals_up) < 3)
-    { //--- Copy upward fractals data; check if copying is successful
+    { 
       Print("ERROR: UNABLE TO COPY THE FRACTALS UP DATA. REVERTING!"); //--- Print error message if failed
       return;
     }
@@ -155,12 +156,13 @@ void OnTick()
       Print("ERROR: UNABLE TO COPY THE AC COLOR DATA. REVERTING!");
       return;
     }
-
+   //--- Check if a new bar has formed
    if (isNewBar())
-    { //--- Check if a new bar has formed
+    { 
       const int index_fractal = 0;
+      //--- Detect upward fractal presence
       if (fractals_up[index_fractal] != EMPTY_VALUE)
-       { //--- Detect upward fractal presence
+       { 
          lastFractal_value = fractals_up[index_fractal]; //--- Store fractal value
          lastFractal_direction = FRACTAL_UP; //--- Set last fractal direction as up
        }

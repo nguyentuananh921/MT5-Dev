@@ -7,7 +7,7 @@
 //--- (649604 ticks of XAUUSD as objects). The Bid / Ask of a deal is CopyTicksRange of COrder::BidAskFromTicks, the pause of a symbol is CNewTickObj
 //--- Change from DoEasy Objects\Ticks\TickSeries.mqh (V2 Timeseries\Ticks\TickSeries.mqh): renamed CTickSeries -> CTickSeriesDE (as CBarSeriesDE, CSignalSeriesDE)
 //--- The ticks of one symbol, RAM only (MT5 keeps them: Readme "Live on RAM, Save on DB for no more calculation"). It owns the CNewTickObj of the symbol: its
-//--- TICK_EVENT_PAUSE / RESUME go up (Event Rule). Methods come from DoEasy one by one when a class asks (no Print, no Select by property)
+//--- TICK_EVENT_PAUSE / RESUME go up (Working with Event). Methods come from DoEasy one by one when a class asks (no Print, no Select by property)
 #ifndef __TICKSERIESDE_MQH__
 #define __TICKSERIESDE_MQH__
  #include <Arrays\ArrayObj.mqh>

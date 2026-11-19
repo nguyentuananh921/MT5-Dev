@@ -54,8 +54,8 @@ double bufferRSIFilter[];
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit(){
-//---
+int OnInit()
+ {
    
    handleMAFast = iMA(_Symbol,_Period,inpMA_Fast_Period,0,inpMA_Fast_Method,PRICE_CLOSE);
    handleMASlow = iMA(_Symbol,_Period,inpMA_Slow_Period,0,inpMA_Slow_Method,PRICE_CLOSE);
@@ -81,8 +81,6 @@ int OnInit(){
    createDashboard();
    
    Print("SUCCESS INITIALIZATION. ACCOUNT TYPE = ",trading_Account_Mode());
-   
-//---
    return(INIT_SUCCEEDED);
 }
 //+------------------------------------------------------------------+
@@ -100,46 +98,52 @@ void OnDeinit(const int reason){
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
-void OnTick(){
-//--- Check if data can be retrieved for the fast moving average (MA)
-   if (CopyBuffer(handleMAFast,0,0,3,bufferMAFast) < 3){
-   //--- Print error message for fast MA data retrieval failure
+void OnTick()
+{
+  //--- Check if data can be retrieved for the fast moving average (MA)
+   if (CopyBuffer(handleMAFast,0,0,3,bufferMAFast) < 3)
+   {
+     //--- Print error message for fast MA data retrieval failure
       Print("ERROR! Failed to retrieve the requested FAST MA data. Reverting.");
-   //--- Exit the function if data retrieval fails
+     //--- Exit the function if data retrieval fails
       return;
    }
-//--- Check if data can be retrieved for the slow moving average (MA)
-   if (CopyBuffer(handleMASlow,0,0,3,bufferMASlow) < 3){
-   //--- Print error message for slow MA data retrieval failure
+  //--- Check if data can be retrieved for the slow moving average (MA)
+   if (CopyBuffer(handleMASlow,0,0,3,bufferMASlow) < 3)
+    {
+     //--- Print error message for slow MA data retrieval failure
       Print("ERROR! Failed to retrieve the requested SLOW MA data. Reverting.");
-   //--- Exit the function if data retrieval fails
+     //--- Exit the function if data retrieval fails
       return;
-   }
-//--- Check if data can be retrieved for the RSI filter
-   if (CopyBuffer(handleRSIFilter,0,0,3,bufferRSIFilter) < 3){
-   //--- Print error message for RSI data retrieval failure
+    }
+   //--- Check if data can be retrieved for the RSI filter
+   if (CopyBuffer(handleRSIFilter,0,0,3,bufferRSIFilter) < 3)
+    {
+    //--- Print error message for RSI data retrieval failure
       Print("ERROR! Failed to retrieve the requested RSI data. Reverting.");
-   //--- Exit the function if data retrieval fails
+    //--- Exit the function if data retrieval fails
       return;
-   }
+    }
    
    //--- Check if a new bar has formed
-   if (isNewBar()){
-   //--- Print debug message for a new tick
+   if (isNewBar())
+   {
+     //--- Print debug message for a new tick
       //Print("THIS IS A NEW TICK");
       
-   //--- Identify if a buy crossover has occurred
+     //--- Identify if a buy crossover has occurred
       bool isMACrossOverBuy = bufferMAFast[1] > bufferMASlow[1] && bufferMAFast[2] <= bufferMASlow[2];
-   //--- Identify if a sell crossover has occurred
+     //--- Identify if a sell crossover has occurred
       bool isMACrossOverSell = bufferMAFast[1] < bufferMASlow[1] && bufferMAFast[2] >= bufferMASlow[2];
       
-   //--- Check if the RSI confirms a buy signal
+     //--- Check if the RSI confirms a buy signal
       bool isRSIConfirmBuy = bufferRSIFilter[1] >= inpRsiBUYThreshold;
-   //--- Check if the RSI confirms a sell signal
+     //--- Check if the RSI confirms a sell signal
       bool isRSIConfirmSell = bufferRSIFilter[1] <= inpRsiSELLThreshold;
       
-   //--- Handle buy signal conditions
-      if (isMACrossOverBuy){
+     //--- Handle buy signal conditions
+      if (isMACrossOverBuy)
+       {
          if (isRSIConfirmBuy){
          //--- Print buy signal message
             Print("BUY SIGNAL");
@@ -179,59 +183,64 @@ void OnTick(){
          //--- Create a visual signal on the chart for a buy
             createSignalText(textTime,textPrice,221,1,clrBlue,-90,"Buy Signal");
          }
-      }
-   //--- Handle sell signal conditions
-      else if (isMACrossOverSell){
-         if (isRSIConfirmSell){
-         //--- Print sell signal message
+       }
+     //--- Handle sell signal conditions
+      else if (isMACrossOverSell)
+       {
+        if (isRSIConfirmSell)
+         {
+          //--- Print sell signal message
             Print("SELL SIGNAL");
-         //--- Verify trading days filter before placing a trade
-            if (isCheckTradingDaysFilter()){
-            //--- Retrieve the current ask price
+          //--- Verify trading days filter before placing a trade
+           if (isCheckTradingDaysFilter())
+            {
+             //--- Retrieve the current ask price
                double Ask = SymbolInfoDouble(_Symbol,SYMBOL_ASK);
-            //--- Retrieve the current bid price
+             //--- Retrieve the current bid price
                double Bid = SymbolInfoDouble(_Symbol,SYMBOL_BID);
                
-            //--- Set the open price to the bid price
+             //--- Set the open price to the bid price
                double openPrice = Bid;
-            //--- Calculate the stop-loss price
+             //--- Calculate the stop-loss price
                double stoploss = Ask + inpSLPts*_Point;
-            //--- Calculate the take-profit price
-               double takeprofit = Ask - (inpSLPts*inpR2R)*_Point;
-            //--- Define the trade comment
+             //--- Calculate the take-profit price
+               double takeprofit = Ask - (inpSLPts*inpR2R)* _Point;
+             //--- Define the trade comment
                string comment = "SELL TRADE";
                
-            //--- Execute a sell trade
+             //--- Execute a sell trade
                obj_Trade.Sell(inpLots,_Symbol,openPrice,stoploss,takeprofit,comment);
-            //--- Initialize the ticket variable
+             //--- Initialize the ticket variable
                ulong ticket = 0;
-            //--- Retrieve the order result ticket
+             //--- Retrieve the order result ticket
                ticket = obj_Trade.ResultOrder();
-            //--- Print success message if the trade is opened
-               if (ticket > 0){
+             //--- Print success message if the trade is opened
+              if (ticket > 0)
+               {
                   Print("SUCCESS. Opened the SELL position with ticket # ",ticket);
                }
-            //--- Print error message if the trade fails to open
+             //--- Print error message if the trade fails to open
                else {Print("ERROR! Failed to open the SELL position.");}
             }
-         //--- Retrieve the time of the signal
+          //--- Retrieve the time of the signal
             datetime textTime = iTime(_Symbol,_Period,1);
-         //--- Retrieve the price of the signal
+          //--- Retrieve the price of the signal
             double textPrice = iHigh(_Symbol,_Period,1);
-         //--- Create a visual signal on the chart for a sell
+          //--- Create a visual signal on the chart for a sell
             createSignalText(textTime,textPrice,222,-1,clrRed,90,"Sell Signal");
          }
-      }
+       }
    }
-//--- Apply trailing stop if allowed in the input parameters
-   if (inpisAllowTrailingStop){
+  //--- Apply trailing stop if allowed in the input parameters
+   if (inpisAllowTrailingStop)
+    {
       applyTrailingStop(inpTrailPts,obj_Trade,inpMagicNo,inpMinTrailPts);
-   }
-   
-   if (PositionsTotal() > 0){
+    }   
+   if (PositionsTotal() > 0)
+    {
       ObjectSetString(0,DASH_POSITIONS,OBJPROP_TEXT,"Positions: "+IntegerToString(PositionsTotal()));
       ObjectSetString(0,DASH_PROFIT,OBJPROP_TEXT,"Profit: "+DoubleToString(AccountInfoDouble(ACCOUNT_PROFIT),2)+" "+AccountInfoString(ACCOUNT_CURRENCY));
-   }
+    }
    
 }
 //+------------------------------------------------------------------+

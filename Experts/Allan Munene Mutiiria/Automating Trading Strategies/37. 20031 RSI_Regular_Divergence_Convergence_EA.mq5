@@ -51,23 +51,24 @@ CTrade obj_Trade;                                  //--- Trade object for positi
 //+------------------------------------------------------------------+
 //| Swing Variables                                                  |
 //+------------------------------------------------------------------+
-double Last_High_Price = 0.0;                      //--- Last swing high price
-datetime Last_High_Time = 0;                       //--- Last swing high time
-double Prev_High_Price = 0.0;                      //--- Previous swing high price
-datetime Prev_High_Time = 0;                       //--- Previous swing high time
-double Last_Low_Price = 0.0;                       //--- Last swing low price
-datetime Last_Low_Time = 0;                        //--- Last swing low time
-double Prev_Low_Price = 0.0;                       //--- Previous swing low price
-datetime Prev_Low_Time = 0;                        //--- Previous swing low time
-double Last_High_RSI = 0.0;                        //--- Last swing high RSI value
-double Prev_High_RSI = 0.0;                        //--- Previous swing high RSI value
-double Last_Low_RSI = 0.0;                         //--- Last swing low RSI value
-double Prev_Low_RSI = 0.0;                         //--- Previous swing low RSI value
+   double Last_High_Price = 0.0;                      //--- Last swing high price
+   datetime Last_High_Time = 0;                       //--- Last swing high time
+   double Prev_High_Price = 0.0;                      //--- Previous swing high price
+   datetime Prev_High_Time = 0;                       //--- Previous swing high time
+   double Last_Low_Price = 0.0;                       //--- Last swing low price
+   datetime Last_Low_Time = 0;                        //--- Last swing low time
+   double Prev_Low_Price = 0.0;                       //--- Previous swing low price
+   datetime Prev_Low_Time = 0;                        //--- Previous swing low time
+   double Last_High_RSI = 0.0;                        //--- Last swing high RSI value
+   double Prev_High_RSI = 0.0;                        //--- Previous swing high RSI value
+   double Last_Low_RSI = 0.0;                         //--- Last swing low RSI value
+   double Prev_Low_RSI = 0.0;                         //--- Previous swing low RSI value
 
 //+------------------------------------------------------------------+
 //| Expert Initialization Function                                   |
 //+------------------------------------------------------------------+
-int OnInit() {
+int OnInit()
+ {
    RSI_Handle = iRSI(_Symbol, _Period, RSI_Period, RSI_Applied); //--- Create RSI indicator handle
    if (RSI_Handle == INVALID_HANDLE) {             //--- Check if RSI creation failed
       Print("Failed to create RSI indicator");     //--- Log error

@@ -16,7 +16,10 @@
  #include "Settings\SymbolTFManager.mqh"
  #include "Settings\StrategyManager.mqh"
  #include "IndicatorsCollection.mqh"
- #include "..\UseCases\Strategies\StrategyProfitunity.mqh"
+ #include "SignalsCollection.mqh"   // New in V5: the basic signal of a slot (rule "signal")
+ #include "PendingPairs.mqh"
+ #include "StrategyPairSlots.mqh"
+ #include "..\UseCases\Strategies\StrategyEngine.mqh"   // Change in V5: one engine for every strategy (was StrategyProfitunity.mqh)
 #ifndef CSTRATEGYCOLLECTION_MQH_DECLARATION
 #define CSTRATEGYCOLLECTION_MQH_DECLARATION
  class CStrategyCollection : public CBaseObj
@@ -27,12 +30,17 @@
     CSyncManager             *m_SyncManager;               // the EA holds it: Python wrote its part
     CStrategyManager         *m_StrategyManager;           // the EA holds it: the strategies, the table StrategyCollection
     CIndicatorsCollection    *m_IndicatorsCollection;      // the EA holds it: the indicator of a slot on a pair, its values on RAM (the new bars are judged on them)
+    CSignalsCollection       *m_SignalsCollection;         // New in V5: the EA holds it: the basic signal of a slot (rule "signal"), judged there before
     CArrayObj                 m_list;                      // the strategies on the pairs (CStrategyBase, owned)
-   //--- The CIndicatorDE of a slot of the strategy on the pair of the series (NULL: no template of its params yet)
-    CIndicatorDE     *SlotIndicator(CStrategySetting *strategy,const string slot,CStrategyBase *series);
-   //--- At a tick: the rule of the strategy looks at the series (its rule says when: Profitunity at a new closed bar of its tf, as isNewBar of the source EA),
-   //--- each move stored and told (CStrategyBase::StoreRow). WRONG_VALUE: the values are not on RAM yet, the next tick tries again
+    CPendingPairs             m_pending;                   // New in V5: the pairs whose new bar is not judged yet (RetryPending)
+    //CStrategyEngine           m_engine;                    // New in V5: the events of the conditions of any strategy combined (Concept.md)
+    CStrategyEngine           m_strategyengine;            // New in V5: the events of the conditions of any strategy combined (Concept.md)
+    CStrategyPairSlots        m_slots;                     // New in V5: the slots of the strategy on the pair judged now, as the engine reads them
+   //--- At a new closed bar of the tf of the strategy (isNewBar of a source EA): its slots refreshed, the engine gives the moves,
+   //--- each move stored and told (CStrategyBase::StoreRow). WRONG_VALUE: the values are not on RAM yet, the pair waits (RetryPending)
     int               Calculate(CStrategyBase *series);
+   //--- New in V5: every strategy of a pair judged. False: one is not ready (or Python writes): the pair waits
+    bool              JudgePair(const string symbol,const ENUM_TIMEFRAMES timeframe);
     int               FindIndex(const long strategy_id,const string symbol,const ENUM_TIMEFRAMES timeframe);
     CStrategyBase    *GetOrCreateSeries(const long strategy_id,const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- Every strategy on (1) a pair, every pair; the series of a pair go
@@ -46,6 +54,7 @@
     void              SetSyncManager(CSyncManager *manager)                           { this.m_SyncManager=manager; }
     void              SetStrategyManager(CStrategyManager *manager)                   { this.m_StrategyManager=manager; }
     void              SetIndicatorsCollection(CIndicatorsCollection *collection)      { this.m_IndicatorsCollection=collection; }
+    void              SetSignalsCollection(CSignalsCollection *collection)            { this.m_SignalsCollection=collection; }
    //--- A strategy on a pair (NULL: none): a row of Python goes to it (CStrategyBase::StoreRow)
     CStrategyBase    *GetSeries(const long strategy_id,const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- The strategies on the pairs: their rows on RAM are read by the views (CBarMarkerCollection)
@@ -56,16 +65,16 @@
     void              OnDeinitEvent(const int reason);
    //--- Python wrote its part (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE), a pair was added or deleted
     bool              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   //--- Every strategy runs in realtime (as CSignalsCollection): (1) every symbol (tester), (2) a symbol (the chart's: OnTick), (3) every symbol but the chart's (OnTimer)
+   //--- Change in V5 (as CSignalsCollection): judged at SERIES_EVENTS_NEW_BAR (OnChartEvent), nothing is asked while nothing is new.
+   //--- (1) every symbol: the tester only (no OnChartEvent there); (2) OnTimer: the pairs that wait, a symbol that rests is skipped
     void              RefreshSeries(void);
-    void              RefreshSeries(const string symbol);
-    void              RefreshSeriesAllExceptCurrent(void);
+    void              RetryPending(void);
    //--- The rows of the bars of (1) every pair, (2) one pair go to RAM
     bool              ReadDataFromDB(void);
     bool              ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- The rows of every strategy on a pair from_time to to_time go to RAM next to what is there (CBarMarkerCollection asks it). Returns the rows added
     int               ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time);
-                      CStrategyCollection(void) : m_BarTimeSeriesCollection(NULL),m_SymbolTFManager(NULL),m_SyncManager(NULL),m_StrategyManager(NULL),m_IndicatorsCollection(NULL)
+                      CStrategyCollection(void) : m_BarTimeSeriesCollection(NULL),m_SymbolTFManager(NULL),m_SyncManager(NULL),m_StrategyManager(NULL),m_IndicatorsCollection(NULL),m_SignalsCollection(NULL)
                                                   { this.m_object_type=COLLECTION_STRATEGY_ID; }
                      ~CStrategyCollection(void) {}
   };
@@ -214,19 +223,13 @@
          loaded++;
    return loaded;
   }
- CIndicatorDE *CStrategyCollection::SlotIndicator(CStrategySetting *strategy,const string slot,CStrategyBase *series)
-  {
-   CStrategyIndicatorSetting *row=strategy.Indicator(slot);
-   string params_text;
-   if(row==NULL || this.m_IndicatorsCollection==NULL || !this.m_StrategyManager.Read_RAM(row,params_text))
-      return NULL;
-   return this.m_IndicatorsCollection.GetIndicator((ENUM_INDICATOR)row.SourceId(),params_text,series.Symbol(),series.Timeframe());
-  }
  int CStrategyCollection::Calculate(CStrategyBase *series)
   {
    CStrategySetting *strategy=(this.m_StrategyManager!=NULL ? this.m_StrategyManager.Read_RAM(series.StrategyId()) : NULL);
    if(strategy==NULL || this.m_SyncManager==NULL || !this.m_SyncManager.IsPythonDone())
       return 0;   // the history is read after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE): the positions open come from it
+   if(!strategy.IsLive())
+      return 0;   // New in V5: not available, or neither On nor shown: Python has its past, nothing is judged live
    ENUM_TIMEFRAMES timeframe=strategy.Timeframe();
    if(timeframe==PERIOD_CURRENT)
       timeframe=::Period();   // not set: the tf of the chart
@@ -237,24 +240,21 @@
       return 0;   // Profitunity: no new closed bar of its tf since the last tick (isNewBar of the source EA)
    string roles[];
    ENUM_SIGNAL_DIRECTION sides[];
-   int moves=0;
-   if(strategy.Name()==PROFITUNITY_NAME)
+   //--- Change in V5: no strategy by its name any more: its slots on the pair, every indicator slot refreshed (the bar that just closed with its last value:
+   //--- the only refresh of a slot, CIndicatorsCollection does none), then the engine reads the events of its conditions
+   this.m_slots.SetCollections(this.m_IndicatorsCollection,this.m_SignalsCollection,this.m_StrategyManager);
+   this.m_slots.SetPair(strategy,series.Symbol(),series.Timeframe());
+   for(int s=0;s<strategy.IndicatorsTotal();s++)
      {
-      CIndicatorDE *fractals=this.SlotIndicator(strategy,"Fractals",series),*alligator=this.SlotIndicator(strategy,"Alligator",series);
-      CIndicatorDE *ao=this.SlotIndicator(strategy,"AO",series),*ac=this.SlotIndicator(strategy,"AC",series);
-      CIndicatorDE *slots[4];
-      slots[0]=fractals;
-      slots[1]=alligator;
-      slots[2]=ao;
-      slots[3]=ac;
-      for(int s=0;s<4;s++)
-         if(slots[s]!=NULL)
-            slots[s].GetSeriesData().Refresh();   // the bar that just closed with its last value (its new bar event may come after this tick)
-      moves=CStrategyProfitunity::Calculate(fractals,alligator,ao,ac,series.Symbol(),series.Timeframe(),1,
-                                            series.OpenTotal(SIGNAL_DIRECTION_BUY),series.OpenTotal(SIGNAL_DIRECTION_SELL),roles,sides);
+      CStrategyIndicatorSetting *slot=strategy.Indicator(s);
+      CIndicatorDE *indicator=(slot!=NULL && slot.Collection()==COLLECTION_SIGNALS_ID ? this.m_slots.Indicator(slot.Slot()) : NULL);
+      if(indicator!=NULL)
+         indicator.GetSeriesData().Refresh();
      }
+   const int moves=this.m_strategyengine.Calculate(strategy,::GetPointer(this.m_slots),series.Symbol(),series.Timeframe(),1,
+                                           series.OpenTotal(SIGNAL_DIRECTION_BUY),series.OpenTotal(SIGNAL_DIRECTION_SELL),roles,sides);
    if(moves==WRONG_VALUE)
-      return WRONG_VALUE;   // not judged: the next tick tries again
+      return WRONG_VALUE;   // not judged: the pair waits (RetryPending)
    series.SetJudgedTo(bar);
    for(int i=0;i<moves;i++)
       series.StoreRow(bar,roles[i],sides[i],true);   // RAM only: Python saves the same row, its line of this bar is refused
@@ -269,29 +269,69 @@
          this.Calculate(series);
      }
   }
- void CStrategyCollection::RefreshSeries(const string symbol)
+ //+------------------------------------------------------------------+
+ //| New in V5: every strategy of a pair (its own tf only: Calculate)  |
+ //+------------------------------------------------------------------+
+ bool CStrategyCollection::JudgePair(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
+   if(this.m_SyncManager==NULL || !this.m_SyncManager.IsPythonDone())
+      return false;   // the history is read after Python: the pair waits
+   bool done=true;
    for(int i=0;i<this.m_list.Total();i++)
      {
       CStrategyBase *series=this.m_list.At(i);
-      if(series!=NULL && series.Symbol()==symbol)
-         this.Calculate(series);
+      if(series!=NULL && series.Symbol()==symbol && series.Timeframe()==timeframe && this.Calculate(series)==WRONG_VALUE)
+         done=false;
      }
+   return done;
   }
- void CStrategyCollection::RefreshSeriesAllExceptCurrent(void)
+ //+------------------------------------------------------------------+
+ //| New in V5: OnTimer, only the pairs that wait; a symbol that rests |
+ //| is skipped until it ticks again                                   |
+ //+------------------------------------------------------------------+
+ void CStrategyCollection::RetryPending(void)
   {
-   for(int i=0;i<this.m_list.Total();i++)
+   if(this.m_BarTimeSeriesCollection==NULL)
+      return;
+   for(int i=this.m_pending.Total()-1;i>=0;i--)
      {
-      CStrategyBase *series=this.m_list.At(i);
-      if(series!=NULL && series.Symbol()!=::Symbol())
-         this.Calculate(series);   // the chart's symbol runs in OnTick
+      const string symbol=this.m_pending.Symbol(i);
+      CBarTimeSeriesDE *timeseries=this.m_BarTimeSeriesCollection.GetTimeseries(symbol);
+      if(timeseries==NULL)
+        {
+         this.m_pending.Delete(i);   // the pair is gone
+         continue;
+        }
+      if(timeseries.IsPaused())
+         continue;   // a closed market: it waits for its ticks
+      if(this.JudgePair(symbol,this.m_pending.Timeframe(i)))
+         this.m_pending.Delete(i);
      }
   }
  bool CStrategyCollection::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   //--- New in V5: a new bar of a pair (CBarSeriesDE: dparam = its TF, sparam = its symbol): its strategies are judged now, what is not ready waits
+   if(id==CHARTEVENT_CUSTOM+SERIES_EVENTS_NEW_BAR)
+     {
+      if(!this.JudgePair(sparam,(ENUM_TIMEFRAMES)(long)dparam))
+         this.m_pending.Add(sparam,(ENUM_TIMEFRAMES)(long)dparam);
+      return true;
+     }
    //--- Python wrote the first chunk of every pair: the rows go to RAM again
-   if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
-      return this.ReadDataFromDB();
+   //--- New in V5: a strategy became live or not (On, shown, available): its newest closed bar is judged at the next beats too
+   const bool read=(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE);
+   if(read || id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_ENABLED_CHANGED || id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SHOW_CHANGED ||
+      id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED)
+     {
+      bool done=(read ? this.ReadDataFromDB() : true);
+      //--- New in V5: the bars closed while Python wrote are judged at the next beats (RetryPending)
+      string symbols[];
+      ENUM_TIMEFRAMES timeframes[];
+      int pairs=(this.m_SymbolTFManager!=NULL ? this.m_SymbolTFManager.Read_RAM(symbols,timeframes) : 0);
+      for(int i=0;i<pairs;i++)
+         this.m_pending.Add(symbols[i],timeframes[i]);
+      return done;
+     }
    //--- A pair: lparam = its TF, sparam = its symbol
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
      {

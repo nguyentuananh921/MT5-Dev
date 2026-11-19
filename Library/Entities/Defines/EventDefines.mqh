@@ -156,7 +156,7 @@
    SERIES_EVENTS_NO_EVENT = BAR_INFORMATION_MANAGER_EVENTS_NEXT_CODE,  // No event
    SERIES_EVENTS_NEW_BAR,                                              // A new bar opened on a symbol and timeframe
    SERIES_EVENTS_MISSING_BARS,                                         // Bars were skipped and are filled now: lparam = the bars added at this beat (>1, the market closed is not counted), dparam = the timeframe, sparam = the symbol (V2)
-   SERIES_EVENTS_PATTERN,                                             // A row of a pattern was found: lparam = CBaseObj::EventPack, its key = the type of the bar information, dparam = its timeframe, sparam = its symbol (V2 SERIES_EVENTS_PATTERN)
+   SERIES_EVENTS_PATTERN,                                              // A row of a pattern was found: lparam = CBaseObj::EventPack, its key = the type of the bar information, dparam = its timeframe, sparam = its symbol (V2 SERIES_EVENTS_PATTERN)
    SERIES_EVENTS_SWING,                                                // A swing was found (CBarSwing): lparam = CBaseObj::EventPack, its time = its pivot bar, dparam = its timeframe, sparam = its symbol
    SERIES_EVENTS_BOS,                                                  // A BOS was found (CBarBOS): lparam = CBaseObj::EventPack, its time = the break bar, dparam = its timeframe, sparam = its symbol
    SERIES_EVENTS_CHOCH,                                                // A CHoCH was found (CBarCHoCH): lparam = CBaseObj::EventPack, its time = the break bar, dparam = its timeframe, sparam = its symbol
@@ -187,7 +187,8 @@
  #define TICK_EVENTS_NEXT_CODE  (TICK_EVENT_RESUME+1)  // The code of the next event after the last tick event code
  //+------------------------------------------------------------------+
  //| Market Watch events (V3, CSymbolsCollection::MarketWatchEvents-  |
- //| Control): lparam = time msc, dparam = index, sparam = symbol     |
+ //| Control): lparam = CBaseObj::EventPack (when, key = the index of |
+ //| the symbol in CSymbolsCollection, is_new = added), sparam = name |
  //+------------------------------------------------------------------+
  enum ENUM_MW_EVENT
   {
@@ -207,8 +208,10 @@
    STRATEGY_MANAGER_EVENT_SLOT_CHANGED,                        // The params or the tf of a slot changed (Setting_StrategyIndicator)
    STRATEGY_MANAGER_EVENT_SHOW_CHANGED,                        // The show_on_chart flag of a strategy changed (Setting_Strategy): its markers are shown or hidden
    STRATEGY_MANAGER_EVENT_TF_CHANGED,                          // The tf of a strategy changed (Setting_Strategy): its markers are of another series
+   STRATEGY_MANAGER_EVENT_ENABLED_CHANGED,                     // New in V5: On / Off in trading changed (Setting_Strategy.enabled): the EA judges it live or not
+   STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED,                   // New in V5: every slot has its source, or not any more (Setting_Strategy.available): Python calculates it or not
   };
- #define STRATEGY_MANAGER_EVENTS_NEXT_CODE  (STRATEGY_MANAGER_EVENT_TF_CHANGED+1)  // The code of the next event after the last strategy event code
+ #define STRATEGY_MANAGER_EVENTS_NEXT_CODE  (STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED+1)  // The code of the next event after the last strategy event code
  //+------------------------------------------------------------------+
  //| Events of the results of a strategy on a pair (CStrategyBase,    |
  //| the rows Python found): lparam = CBaseObj::EventPack, its key =  |
@@ -221,6 +224,44 @@
    STRATEGY_EVENT_EXIT,                                          // The strategy exits: the side is the one it closes
   };
  #define STRATEGY_EVENTS_NEXT_CODE  (STRATEGY_EVENT_EXIT+1)  // The code of the next event after the last strategy result event code
+ //+------------------------------------------------------------------+
+ //| Events of the account (CAccount): lparam = CBaseObj::EventPack,  |
+ //| its time = when, its key = the property (ENUM_ACCOUNT_PROP_*),   |
+ //| its side = up (BUY) / down (SELL); dparam = the change           |
+ //+------------------------------------------------------------------+
+ //--- New in V5 (was id = the property itself, as DoEasy: out of this chain, the same numbers as ENUM_TRADE_EVENT)
+ enum ENUM_ACCOUNT_EVENT
+  {
+   ACCOUNT_EVENT_NO_EVENT = STRATEGY_EVENTS_NEXT_CODE,      // No event
+   ACCOUNT_EVENT_PROPERTY_CHANGED,                          // A property of the account changed over its controlled value
+  };
+ #define ACCOUNT_EVENTS_NEXT_CODE  (ACCOUNT_EVENT_PROPERTY_CHANGED+1)  // The code of the next event after the last account event code
+ //+------------------------------------------------------------------+
+ //| Events of a symbol (CSymbol): lparam = CBaseObj::EventPack, its  |
+ //| time = when, its key = the property (ENUM_SYMBOL_PROP_*), its    |
+ //| side = up (BUY) / down (SELL); dparam = the change, sparam = the  |
+ //| symbol                                                           |
+ //+------------------------------------------------------------------+
+ //--- New in V5: the symbol tells its own changes (the controlled ones: CSymbolsCollection sets them)
+ enum ENUM_SYMBOL_EVENT
+  {
+   SYMBOL_EVENT_NO_EVENT = ACCOUNT_EVENTS_NEXT_CODE,       // No event
+   SYMBOL_EVENT_PROPERTY_CHANGED,                          // A property of the symbol changed over its controlled value
+  };
+ #define SYMBOL_OBJ_EVENTS_NEXT_CODE  (SYMBOL_EVENT_PROPERTY_CHANGED+1)  // The code of the next event after the last symbol object event code
+ //+------------------------------------------------------------------+
+ //| Events of the line of a position of a strategy on the chart      |
+ //| (CStrategyTrade): lparam = CBaseObj::EventPack, its time = the   |
+ //| entry, its key = the strategy_id, its side = the position;       |
+ //| dparam = the exit time, sparam = the symbol                      |
+ //+------------------------------------------------------------------+
+ //--- New in V5
+ enum ENUM_STRATEGY_TRADE_EVENT
+  {
+   STRATEGY_TRADE_EVENT_NO_EVENT = SYMBOL_OBJ_EVENTS_NEXT_CODE,   // No event
+   STRATEGY_TRADE_EVENT_CLICK,                                    // The line was clicked: the chart shows its entry and its exit (CChartObj::ShowRange)
+  };
+ #define STRATEGY_TRADE_EVENTS_NEXT_CODE  (STRATEGY_TRADE_EVENT_CLICK+1)  // The code of the next event after the last strategy trade event code
  //+------------------------------------------------------------------+
  //| List of trading event flags on the account                       |
  //+------------------------------------------------------------------+

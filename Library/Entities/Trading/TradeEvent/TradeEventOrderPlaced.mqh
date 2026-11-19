@@ -103,7 +103,7 @@
 void CTradeEventOrderPlaced::SendEvent(void)
   {
    this.PrintShort();
-   ::EventChartCustom(this.m_chart_id_main,(ushort)this.m_trade_event,this.TicketOrderEvent(),this.PriceOpen(),this.Symbol());
+   this.EventSend((ushort)this.m_trade_event,this.TicketOrderEvent(),this.PriceOpen(),this.Symbol());
   }
  #endif // CTRADEEVENTORDERPLACED_MQH_IMPLEMENTATION
 #endif // CTRADEEVENTORDERPLACED_MQH

@@ -6,6 +6,7 @@
 //--- The trading events of the account (V3: made from the lists of the history and of the market, kept in RAM: m_list_trade_events).
 //--- V1 / V3: the EA (as CEngine::TradeEventsControl) gives it the lists when the history or the market changed; each event goes to the chart itself (CTradeEvent::SendEvent).
 //--- V4: the new events are written to the table TradeEvent (Save on DB for no more calculation: UpdateDataToDB)
+//--- Change in V5: no table TradeEvent, RAM only (only Python saves what is found)
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
@@ -16,7 +17,6 @@
  //+------------------------------------------------------------------+
  #include "ListObj.mqh"
  #include "SymbolsCollection.mqh"
- #include "Settings\SyncManager.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "..\Entities\Trading\Order.mqh"
  #include "..\Entities\Trading\OrderControl.mqh"
@@ -30,26 +30,12 @@
  #ifndef CTRADEEVENTSCOLLECTION_MQH_DECLARATION
  #define CTRADEEVENTSCOLLECTION_MQH_DECLARATION
   //+------------------------------------------------------------------+
-  //| A column of the table TradeEvent and the property of CTradeEvent |
-  //| it keeps                                                         |
-  //+------------------------------------------------------------------+
-  struct SEventColumn
-   {
-    string            name;                                              // Column
-    string            type;                                              // SQL type of the column
-    int               prop;                                              // Property of CTradeEvent (ENUM_EVENT_PROP_*)
-   };
-  //+------------------------------------------------------------------+
   //| Collection of account trading events                             |
   //+------------------------------------------------------------------+
   class CTradeEventsCollection : public CBaseObjExt
    {
      private:
       CListObj          m_list_trade_events;             // List of events
-      
-      CSymbolsCollection *m_SymbolsCollection;          // The EA holds it: the id of OUR symbol of an event
-      CSymbolTFManager   *m_SymbolTFManager;            // The EA holds it: the id of OUR symbol of an event
-      
       bool              m_is_hedge;                      // Hedge account flag
       int               m_trade_event_code;              // Trading event code
       ENUM_TRADE_EVENT  m_trade_event;                   // Account trading event
@@ -89,10 +75,7 @@
        void              OnChangeEvent(CArrayObj* list_changes,const int index);
 
      public:
-      //--- The collection and the manager the EA gives it: the id of a symbol, the marks of Setting_Sync
-       void              SetSymbolsCollection(CSymbolsCollection *collection)                                { this.m_SymbolsCollection=collection;  }
-       void              SetSymbolTFManager(CSymbolTFManager *manager)                                       { this.m_SymbolTFManager=manager;       }
-      //--- Lifecycle: opens the file of the account and makes the table TradeEvent when it is not there (the marks of the table go with it)
+      //--- Lifecycle (as the other collections): nothing to make, the events live in RAM
        bool              OnInitEvent(void);
       //--- Return itself
        CTradeEventsCollection*GetObject(void)                                                                     { return &this;                                                         }
@@ -126,7 +109,7 @@
   //+------------------------------------------------------------------+
   //| Constructor                                                      |
   //+------------------------------------------------------------------+
-  CTradeEventsCollection::CTradeEventsCollection(void) : m_trade_event(TRADE_EVENT_NO_EVENT),m_trade_event_code(TRADE_EVENT_FLAG_NO_EVENT),m_SymbolsCollection(NULL),m_SymbolTFManager(NULL)
+  CTradeEventsCollection::CTradeEventsCollection(void) : m_trade_event(TRADE_EVENT_NO_EVENT),m_trade_event_code(TRADE_EVENT_FLAG_NO_EVENT)
    {
      this.m_object_type=COLLECTION_TRADE_EVENTS_ID;
      this.m_list_trade_events.Clear();

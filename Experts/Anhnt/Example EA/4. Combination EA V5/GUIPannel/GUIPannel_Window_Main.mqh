@@ -285,19 +285,20 @@
  //--- Change from V3 GUIPannel_MainWindows.mqh: the spread is Ask - Bid of the tick of now (SymbolInfoTick) until CSymbol is ported (one spread)
  void CGUIPannel::UpdateStatusBar_SymbolSpread(void)
   {
-   MqlTick tick;
-   double point=::SymbolInfoDouble(::Symbol(),SYMBOL_POINT);
-   if(!::SymbolInfoTick(::Symbol(),tick) || point<=0)
+   //--- Change in V5: the spread of CSymbol (RAM, CodingRule: the numbers of a symbol come from CSymbol), was (ask-bid)/point of the terminal
+   CSymbol *symbol=(m_SymbolsCollection!=NULL ? m_SymbolsCollection.GetSymbolObjByName(::Symbol()) : NULL);
+   if(symbol==NULL)
       return;
-   string text=::Symbol()+" spread: "+(string)(int)::MathRound((tick.ask-tick.bid)/point)+" pts";
+   string text=::Symbol()+" spread: "+(string)symbol.Spread()+" pts";
    if(m_status_bar.GetItemPointer(STATUS_BAR_SYMBOL_SPREAD).Text()!=text)
       m_status_bar.SetValue(STATUS_BAR_SYMBOL_SPREAD,text);
   }
  //+------------------------------------------------------------------+
  //| The equity of the current account, set when it changed           |
  //+------------------------------------------------------------------+
- //--- Change from V3: the arrow follows the reason of the event of the equity (Balance + Profit: it moves with the positions) (ENUM_BASE_EVENT_REASON), not the flags of the last refresh
- void CGUIPannel::UpdateStatusBar_Equity(const int reason=WRONG_VALUE)
+ //--- Change from V3: the arrow follows the side of the event of the equity (Balance + Profit: it moves with the positions), not the flags of the last refresh
+ //--- Change in V5: the side of ACCOUNT_EVENT_PROPERTY_CHANGED (EventPack), was the DoEasy reason (ENUM_BASE_EVENT_REASON)
+ void CGUIPannel::UpdateStatusBar_Equity(const ENUM_SIGNAL_DIRECTION side=SIGNAL_DIRECTION_NONE)
   {
    if(m_AccountsCollection==NULL)
       return;
@@ -310,7 +311,7 @@
    bool flat=(::NormalizeDouble(account.Equity()-account.Balance(),2)==0);
    if(item.Text()==text && !flat)
       return;
-   int image=(flat ? 2 : reason==BASE_EVENT_REASON_INC ? 0 : reason==BASE_EVENT_REASON_DEC ? 1 : 2);
+   int image=(flat ? 2 : side==SIGNAL_DIRECTION_BUY ? 0 : side==SIGNAL_DIRECTION_SELL ? 1 : 2);
    item.ChangeImage(0,image);
    //--- The text takes the color of the arrow: green up, red down, black for the first text and when flat
    color clr=(image==0 ? M_COLOR_PROFIT : image==1 ? M_COLOR_LOSS : clrBlack);

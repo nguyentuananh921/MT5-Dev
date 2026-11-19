@@ -69,7 +69,7 @@
   void CTradeEventPositionClose::SendEvent(void)
    {
     this.PrintShort();
-    ::EventChartCustom(this.m_chart_id_main,(ushort)this.m_trade_event,this.PositionID(),this.PriceClose(),this.Symbol());
+    this.EventSend((ushort)this.m_trade_event,this.PositionID(),this.PriceClose(),this.Symbol());
    }
   //+------------------------------------------------------------------+
   //| Create and return a short event message                          |

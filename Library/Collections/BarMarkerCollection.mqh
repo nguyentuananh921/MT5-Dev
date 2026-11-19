@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //|                                          BarMarkerCollection.mqh |
 //| Change from V4 4. Combination EA V4\Services\BarMarkerSync.mqh   |
-//| moved to Library, renamed CBarMarkerSync -> CBarMarkerCollection|
+//| moved to Library, renamed CBarMarkerSync -> CBarMarkerCollection |
 //+------------------------------------------------------------------+
 
 #ifndef __BARMARKERCOLLECTION_MQH__

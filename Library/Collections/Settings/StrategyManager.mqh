@@ -16,6 +16,7 @@
  #include "..\..\Entities\Defines\EventDefines.mqh"
  #include "..\..\Entities\Bases\BaseObj.mqh"
  #include "..\..\Entities\Settings\Strategy\Setting_Profitunity.mqh"
+ #include "..\..\Entities\Settings\Strategy\Setting_MACrossover.mqh"
  #include "..\ListObj.mqh"
  #include "IndicatorTemplateManager.mqh"
  #include "BarInformationManager.mqh"
@@ -28,7 +29,9 @@
    string                name;
    string                reference;
    long                  tf_enum;          // 0: NULL in the table, the tf of the chart
-   long                  show_on_chart;
+   long                  show_on_chart;    // only the drawing
+   long                  enabled;          // New in V5: On in trading (the user)
+   long                  available;        // New in V5: every slot has its source (written by CStrategyManager, not a click): Python calculates it
   };
  //--- Rows of the table StrategyCollection of the account (what Python found), as CDatabaseService::Read binds them
  struct SStrategyResultRow
@@ -75,6 +78,9 @@
      bool               SlotTemplate(CStrategyIndicatorSetting *slot, MqlParam &params[], string &params_text) const;
    //--- The source of a slot is there: an indicator, a template of these params; a bar information, its type
      bool               SlotAvailable(CStrategyIndicatorSetting *slot) const;
+   //--- New in V5: (1) a column the table of an older EA has not got yet; (2) available of a strategy computed again, written and told when it changed
+     bool               AddColumn(const string column);
+     void               RefreshAvailable(CStrategySetting *strategy, const bool notify = true);
     public:
                         CStrategyManager(void) : m_CDatabaseService(NULL), m_IndicatorTemplateManager(NULL), m_BarInformationManager(NULL) { this.m_list_strategy.Type(OBJECT_DE_TYPE_STRATEGY_SETTING); }
                        ~CStrategyManager(void) {}
@@ -93,8 +99,11 @@
      bool               Read_RAM(CStrategyIndicatorSetting *slot, string &params_text) const;
    //--- The strategy is ON: the templates of its indicators that are not there yet are made (CIndicatorTemplateManager tells each: ADDED), not shown on the chart
      bool               Create_IndicatorTemplate(const long strategy_id);
-   //--- A flag of a strategy (column "show_on_chart"): written, then the strategy tells it (STRATEGY_MANAGER_EVENT_SHOW_CHANGED)
+   //--- A flag of a strategy (column "show_on_chart", "enabled"): written, then the strategy tells it (STRATEGY_MANAGER_EVENT_SHOW_CHANGED / _ENABLED_CHANGED).
+   //--- Change in V5: enabled ON also makes the templates of its indicators (Create_IndicatorTemplate); OFF keeps them (another strategy or the user may use them)
      bool               Update_Strategy_Setting(const long strategy_id, const string column, const bool on);
+   //--- New in V5: a template came or went (lparam = its type), a slot changed: available of the strategies it touches follows
+     void               OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
    //--- The tf of a strategy (column "tf_enum", PERIOD_CURRENT: the tf of the chart): written, then the strategy tells it (STRATEGY_MANAGER_EVENT_TF_CHANGED)
      bool               Update_Strategy_Setting(const long strategy_id, const string column, const ENUM_TIMEFRAMES tf);
    //--- The table StrategyCollection of the account: the rows of a strategy on a pair from_time to to_time (WRONG_VALUE: not read)
@@ -110,6 +119,7 @@
  void CStrategyManager::Catalog(CArrayObj &out) const
   {
    out.Add(new CSetting_Profitunity());
+   out.Add(new CSetting_MACrossover());
   }
  //+------------------------------------------------------------------+
  //| What a strategy IS (name, reference, its slots and its           |
@@ -175,7 +185,7 @@
   {
    this.m_list_strategy.Clear();
    SStrategyRow strategies[];
-   if(!this.m_CDatabaseService.Read("Common", "SELECT strategy_id, name, reference, COALESCE(tf_enum, 0), show_on_chart FROM Setting_Strategy ORDER BY strategy_id", strategies))
+   if(!this.m_CDatabaseService.Read("Common", "SELECT strategy_id, name, reference, COALESCE(tf_enum, 0), show_on_chart, enabled, available FROM Setting_Strategy ORDER BY strategy_id", strategies))
       return false;
    for(int i = 0; i < ::ArraySize(strategies); i++)
      {
@@ -183,6 +193,8 @@
       if(strategy == NULL)
          continue;
       strategy.ShowOnChart(strategies[i].show_on_chart != 0, false);
+      strategy.EnabledTrading(strategies[i].enabled != 0, false);
+      strategy.SlotsAvailable(strategies[i].available != 0, false);
       if(!this.m_list_strategy.Add(strategy))
          delete strategy;
      }
@@ -310,15 +322,79 @@
  bool CStrategyManager::Update_Strategy_Setting(const long strategy_id, const string column, const bool on)
   {
    CStrategySetting *strategy = this.Read_RAM(strategy_id);
-   if(strategy == NULL || this.m_CDatabaseService == NULL || column != "show_on_chart")
+   if(strategy == NULL || this.m_CDatabaseService == NULL || (column != "show_on_chart" && column != "enabled"))
       return false;
-   if(!this.m_CDatabaseService.Update("Common", "UPDATE Setting_Strategy SET show_on_chart = " + (string)(int)on + " WHERE strategy_id = " + (string)strategy_id))
+   if(!this.m_CDatabaseService.Update("Common", "UPDATE Setting_Strategy SET " + column + " = " + (string)(int)on + " WHERE strategy_id = " + (string)strategy_id))
      {
       ::Print(__FUNCTION__, " > ", column, " of ", strategy.Name(), " not written");
       return false;
      }
-   strategy.ShowOnChart(on);
+   if(column == "show_on_chart")
+     {
+      strategy.ShowOnChart(on);
+      return true;
+     }
+   strategy.EnabledTrading(on);
+   if(on)
+      this.Create_IndicatorTemplate(strategy_id);   // the templates that are not there yet: their ADDED events make it available
    return true;
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: available of a strategy computed again (SlotAvailable, |
+ //| the one place of the rule); written and told only when it changed |
+ //+------------------------------------------------------------------+
+ void CStrategyManager::RefreshAvailable(CStrategySetting *strategy, const bool notify = true)
+  {
+   if(strategy == NULL || this.m_CDatabaseService == NULL)
+      return;
+   const bool available = this.Read_RAM(strategy.StrategyId(), "available");
+   if(available == strategy.SlotsAvailable())
+      return;
+   if(!this.m_CDatabaseService.Update("Common", "UPDATE Setting_Strategy SET available = " + (string)(int)available + " WHERE strategy_id = " + (string)strategy.StrategyId()))
+     {
+      ::Print(__FUNCTION__, " > available of ", strategy.Name(), " not written");
+      return;
+     }
+   strategy.SlotsAvailable(available, notify);   // STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED: Python (file_jobs), CStrategyCollection, the Strategy tab
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: only the strategies a template of this type touches    |
+ //| (lparam = its type), or the strategy whose slot changed           |
+ //+------------------------------------------------------------------+
+ void CStrategyManager::OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+  {
+   if(id == CHARTEVENT_CUSTOM + STRATEGY_MANAGER_EVENT_SLOT_CHANGED)
+     {
+      this.RefreshAvailable(this.Read_RAM(lparam));
+      return;
+     }
+   if(id != CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && id != CHARTEVENT_CUSTOM + INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
+      return;
+   for(int i = 0; i < this.m_list_strategy.Total(); i++)
+     {
+      CStrategySetting *strategy = this.m_list_strategy.At(i);
+      if(strategy == NULL)
+         continue;
+      for(int s = 0; s < strategy.IndicatorsTotal(); s++)
+        {
+         CStrategyIndicatorSetting *slot = strategy.Indicator(s);
+         if(slot != NULL && slot.Collection() == COLLECTION_SIGNALS_ID && slot.SourceId() == lparam)
+           {
+            this.RefreshAvailable(strategy);
+            break;
+           }
+        }
+     }
+  }
+ bool CStrategyManager::AddColumn(const string column)
+  {
+   SStrategyColumns columns;
+   if(!this.m_CDatabaseService.Read("Common", "SELECT COUNT(*) FROM pragma_table_info('Setting_Strategy') WHERE name = '" + column + "'", columns) || columns.count > 0)
+      return true;
+   if(this.m_CDatabaseService.Update("Common", "ALTER TABLE Setting_Strategy ADD COLUMN " + column + " INTEGER NOT NULL DEFAULT 0"))
+      return true;
+   ::Print(__FUNCTION__, " > DatabaseService can't add ", column, " to Setting_Strategy");
+   return false;
   }
  bool CStrategyManager::Update_Strategy_Setting(const long strategy_id, const string column, const ENUM_TIMEFRAMES tf)
   {
@@ -386,20 +462,16 @@
        return true;
     //--- tf_enum NULL: the tf of the chart (timeframes has no PERIOD_CURRENT)
     string sql_create_table_Setting_Strategy = "CREATE TABLE IF NOT EXISTS Setting_Strategy (strategy_id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL UNIQUE, "
-                                               "reference TEXT NOT NULL DEFAULT '', tf_enum INTEGER REFERENCES timeframes (tf_enum), show_on_chart INTEGER NOT NULL DEFAULT 0)";
+                                               "reference TEXT NOT NULL DEFAULT '', tf_enum INTEGER REFERENCES timeframes (tf_enum), show_on_chart INTEGER NOT NULL DEFAULT 0, "
+                                               "enabled INTEGER NOT NULL DEFAULT 0, available INTEGER NOT NULL DEFAULT 0)";
     if(!this.m_CDatabaseService.Create("Common", sql_create_table_Setting_Strategy))
       {
        ::Print(__FUNCTION__, " > DatabaseService can't create table Setting_Strategy");
        return false;
       }
-    //--- The table of an EA before show_on_chart gets it
-    SStrategyColumns columns;
-    if(this.m_CDatabaseService.Read("Common", "SELECT COUNT(*) FROM pragma_table_info('Setting_Strategy') WHERE name = 'show_on_chart'", columns) && columns.count < 1 &&
-       !this.m_CDatabaseService.Update("Common", "ALTER TABLE Setting_Strategy ADD COLUMN show_on_chart INTEGER NOT NULL DEFAULT 0"))
-      {
-       ::Print(__FUNCTION__, " > DatabaseService can't add show_on_chart to Setting_Strategy");
+    //--- The table of an EA before these columns gets them (Change in V5: enabled, available)
+    if(!this.AddColumn("show_on_chart") || !this.AddColumn("enabled") || !this.AddColumn("available"))
        return false;
-      }
     //--- The table of the account: the entries and exits Python found (role "entry" / "exit", the side opened or closed), same schema as SignalsCollection
     string sql_create_table_StrategyCollection = "CREATE TABLE IF NOT EXISTS StrategyCollection (name TEXT NOT NULL, tf_enum INTEGER NOT NULL, strategy_id INTEGER NOT NULL, "
                                                  "role TEXT NOT NULL, bar_time INTEGER NOT NULL, signal_direction INTEGER NOT NULL, "
@@ -444,6 +516,9 @@
     this.m_CDatabaseService.Delete("Common", "DELETE FROM Setting_Strategy WHERE strategy_id NOT IN (" + in_catalog + ")");
     if(!this.ReadDataFromDB())
        return false;
+    //--- New in V5: the templates may have changed while the EA did not run (deleted in the database): available of every strategy again, no event yet (nobody listens in OnInit)
+    for(int i = 0; i < this.m_list_strategy.Total(); i++)
+       this.RefreshAvailable(this.m_list_strategy.At(i), false);
     this.m_first_start = false;
     return true;
   }

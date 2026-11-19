@@ -120,7 +120,6 @@ let widget: { destroy?: () => void } | null = null;
 async function mountWidget(host: HTMLDivElement) {
 
     const params = new URLSearchParams(window.location.search);
-    const symbol = params.get('symbol') ?? remembered(SYMBOL_KEY) ?? 'XAUUSD';   // V5: the URL, else the one the user chose last
     const timeframe = (params.get('timeframe') ?? remembered(TIMEFRAME_KEY) ?? '15m') as
       | '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
     const theme = (params.get('theme') ?? remembered(THEME_KEY)) === 'light' ? 'light' : 'dark';
@@ -141,6 +140,11 @@ async function mountWidget(host: HTMLDivElement) {
     // `?bars=200000` loads that many generated 1m bars instead of Binance;
     // timeframe switches then resample locally (no network).
     const staticBars = Math.max(0, Math.floor(Number(params.get('bars')) || 0));
+    // V5: the list of the symbol button: the symbols of the account (GET /symbols, table symbols), not DEFAULT_SYMBOLS of TradeCanvas (Binance)
+    const symbols = staticBars ? undefined : await getJson<string[]>('/symbols').catch((err) => { console.warn('GET /symbols', err); return undefined; });
+    const chosen = remembered(SYMBOL_KEY);
+    // V5: the URL, else the one the user chose last while it is still a symbol of the EA, else the first one
+    const symbol = params.get('symbol') ?? (chosen && (!symbols?.length || symbols.includes(chosen)) ? chosen : symbols?.[0]) ?? 'XAUUSD';
 
     try {
       const { ChartWidget } = await import('@tradecanvas/chart/widget');
@@ -167,6 +171,7 @@ async function mountWidget(host: HTMLDivElement) {
 
       const instance = new ChartWidget(host, {
         symbol,
+        ...(symbols?.length ? { symbols } : {}),
         timeframe,
         theme,
         adapter,

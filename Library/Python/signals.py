@@ -1,6 +1,6 @@
 """Signal rules of the V2 indicator wrappers (CSignalSAR, CSignalMA, CSignalOscillator, CSignalTwoLineCross,
 CSignalZeroCross, CSignalBollinger, CSignalEnvelopes, CSignalADX, CSignalFractals) on the buffers of one indicator.
-ATR has no direction: no rule, never a signal. Volumes is judged against its own moving average only (no other signal is mixed in).
+ATR has no direction: no rule, never a signal. An MA on a source (V5) is the source against its MA (Volumes against their average is one).
 
 directions(): one value per bar - BUY (1), SELL (-1) or NONE (0), the rule of ComputeAt().
 flips():      the entries of the history - a bar whose direction is not NONE and differs from the previous bar's.
@@ -46,8 +46,12 @@ def macd(buffers, bars, params):
     return _direction((main > signal) & (main_previous <= signal_previous),
                       (main < signal) & (main_previous >= signal_previous))
 
+def price_of(buffers, bars, params):
+    """V5: what a rule compares with its bands: the close, or the source of an indicator on indicator (its last buffer, CSignalJudge::Price)."""
+    return np.asarray(buffers[-1], dtype=float) if "(" in params.get("applied", "") else bars["close"].to_numpy(dtype=float)
+
 def bands(buffers, bars, params):
-    middle, close = np.asarray(buffers[0], dtype=float), bars["close"].to_numpy(dtype=float)
+    middle, close = np.asarray(buffers[0], dtype=float), price_of(buffers, bars, params)
     return _direction(close > middle, close < middle)   # the MidBand cross is the primary signal
 
 def adx(buffers, bars, params):
@@ -87,7 +91,7 @@ def two_line_cross(main_buffer, signal_buffer, overbought=0.0, oversold=0.0):
     return rule
 
 def envelopes(buffers, bars, params):
-    upper, lower, close = np.asarray(buffers[0], dtype=float), np.asarray(buffers[1], dtype=float), bars["close"].to_numpy(dtype=float)
+    upper, lower, close = np.asarray(buffers[0], dtype=float), np.asarray(buffers[1], dtype=float), price_of(buffers, bars, params)
     return _direction(close < lower, close > upper)   # closed below the lower band = BUY, above the upper band = SELL
 
 def fractals(buffers, bars, params):
@@ -97,9 +101,10 @@ def fractals(buffers, bars, params):
     upper_known[2:], lower_known[2:] = upper[:-2], lower[:-2]
     return _direction(lower_known & ~upper_known, upper_known)   # an up fractal = swing high = SELL, a down fractal = BUY
 
-def volumes(buffers, bars, params):
-    volume, average = np.asarray(buffers[0], dtype=float), np.asarray(buffers[1], dtype=float)
-    return _direction(volume > average, volume < average)   # activity above its average = BUY, under it = SELL (not the direction of the price)
+def source_ma(buffers, bars, params):
+    # V5 (was volumes): an MA on a source (CSignalSourceMA), the source above its MA = BUY, under it = SELL; Volumes against their average is one of them
+    average, source = np.asarray(buffers[0], dtype=float), np.asarray(buffers[-1], dtype=float)
+    return _direction(source > average, source < average)
 
 # RULES = {"SAR": sar, "MA": ma, "RSI": rsi, "MACD": macd, "BANDS": bands, "ADX": adx,
 #          "ADXW": adx,
@@ -123,7 +128,8 @@ RULES = {"SAR": sar, "MA": ma, "MACD": macd, "BANDS": bands, "ADX": adx,
 
          "AO": zero_cross(), "AC": zero_cross(), "FORCE": zero_cross(), "OSMA": zero_cross(), "TRIX": zero_cross(),
          "CHAIKIN": zero_cross(), "OBV": zero_cross(), "BEARS": zero_cross(), "BULLS": zero_cross(), "GATOR": zero_cross(),
-         "FRACTALS": fractals, "VOLUMES": volumes}
+         "FRACTALS": fractals, "VOLUMES": ma}   # Change in V5: Volumes alone, the slope (as AD)
+MOVING_AVERAGES = ("MA", "AMA", "DEMA", "TEMA", "VIDYA")   # CIndicatorTemplateManager::IsMovingAverage (FRAMA can't be on an indicator: MT5 gives -nan)
 LEVELLED = {"RSI": oscillator, "CCI": oscillator, "DEMARKER": oscillator, "WPR": oscillator, "MFI": oscillator,   # (overbought, oversold)
             "STOCHASTIC": lambda high, low: two_line_cross(0, 1, high, low),
             "MOMENTUM": lambda high, low: zero_cross(high)}   # one line: level_high
@@ -131,6 +137,8 @@ LEVELLED = {"RSI": oscillator, "CCI": oscillator, "DEMARKER": oscillator, "WPR":
 def directions(name, buffers, bars, params, levels=(0.0, 0.0)):
     # if name not in RULES:
     rule = LEVELLED[name](*levels) if name in LEVELLED else RULES.get(name)
+    if name in MOVING_AVERAGES and "(" in params.get("applied", ""):
+        rule = source_ma   # V5: an average on a source, as CSignalsCollection::GetOrCreateSignal (any other type on a source keeps its rule)
     if rule is None:
         return np.zeros(len(bars), dtype=np.int8)   # ATR: no direction
     with np.errstate(invalid="ignore"):   # NaN compares as False = NONE

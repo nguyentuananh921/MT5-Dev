@@ -85,7 +85,7 @@
    void CTradeEventBalanceOperation::SendEvent(void)
      {
       this.PrintShort();
-      ::EventChartCustom(this.m_chart_id_main,(ushort)this.m_trade_event,this.TypeEvent(),this.Profit(),::AccountInfoString(ACCOUNT_CURRENCY));
+      this.EventSend((ushort)this.m_trade_event,this.TypeEvent(),this.Profit(),::AccountInfoString(ACCOUNT_CURRENCY));
      }
  #endif // CCTRADEEVENTBALANCEOPERATION_MQH_IMPLEMENTATION
 #endif // CCTRADEEVENTBALANCEOPERATION_MQH

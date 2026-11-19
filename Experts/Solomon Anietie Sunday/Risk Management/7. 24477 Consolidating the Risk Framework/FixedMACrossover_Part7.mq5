@@ -3,93 +3,79 @@
 //|                                    Copyright 2026, soloharbinger |
 //|                      https://www.mql5.com/en/users/soloharbinger |
 //+------------------------------------------------------------------+
-//|Building Your Personal Expert Advisor                             |
-//|1. From Fragile Script to Working EA                              |
-//|                           https://www.mql5.com/en/articles/23429 |
-//|2. Risk Management and Dynamic Lot Sizing                         |
-//|                           https://www.mql5.com/en/articles/23638 |
-//|3. Margin and Allowable Risk                                      |
-//|                           https://www.mql5.com/en/articles/23897 |
-//|4. Risk Models and Order Execution                                |
-//|                           https://www.mql5.com/en/articles/21231 |
-//|5. Basket Risk and Strategy-Specific Sizing                       |
-//|                           https://www.mql5.com/en/articles/24331 |
-//|6. Portfolio and Correlated Risk                                  |
-//|                           https://www.mql5.com/en/articles/24392 |
-//|7. Consolidating the Risk Framework                               |
-//|                           https://www.mql5.com/en/articles/24477 |
-//+------------------------------------------------------------------+
 #property copyright   "Copyright 2026, soloharbinger"
 #property link        "https://www.mql5.com/en/users/soloharbinger"
 #property description "The same EA as Part 6, with every risk control moved into the shared framework headers file. Install: copy the shared folder into MQL5/Include/ before compiling"
 #property version     "1.00"
 
-#include <SoloEA/TradeRisk.mqh>
-#include <SoloEA/BasketRisk.mqh>
-#include <SoloEA/PortfolioRisk.mqh>
+#include "Include\TradeRisk.mqh"
+#include "Include\BasketRisk.mqh"
+#include "Include\PortfolioRisk.mqh"
 
 //--- Input Parameters
-input group "Trading Signal"
-input int                  FastMA = 10;                      // Fast MA period
-input int                  SlowMA = 20;                      // Slow MA period
-input int                  ATRPeriod = 14;                   // ATR period for volatility
-input double               MaxSpreadPips = 2.0;              // Maximum allowed spread
-
-input group "Risk Model"
-input ENUM_RISK_MODE       RiskMode = RISK_PERCENT;          // How risk per trade is defined
-input ENUM_RISK_BASE       RiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
-input double               RiskPercent = 1.0;                // Risk per trade [%] (percent mode)
-input double               FixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
-input double               FixedLotSize = 0.10;              // Lot size (fixed-lot mode)
-input bool                 AllowMinLotOverRisk = true;       // Trade min lot even if it exceeds intended risk
-
-input group "Stops and Targets"
-input double               ATRMultiplier = 1.5;              // ATR multiplier for stop distance
-input double               TPRatio = 2.0;                    // Take profit ratio
-input bool                 AllowHedging = false;             // Allow opposing position
-
-input group "Order Execution"
-input ENUM_ENTRY_MODE      EntryMode = ENTRY_MARKET;         // Order type used to enter
-input ENUM_OFFSET_MODE     PendingOffsetMode = OFFSET_ATR;   // How the pending offset is measured
-input double               PendingOffsetATR = 0.5;           // Pending offset as ATR multiple
-input int                  PendingOffsetPoints = 150;        // Pending offset in points
-input int                  PendingExpiryBars = 10;           // Delete untriggered pending after N bars [0 = never]
-
-input group "Adaptive Risk (Drawdown)"
-input bool                 EnableAdaptiveRisk = false;       // Reduce risk during drawdowns
-input double               DDLevel = 3.0;                    // Drawdown % that triggers reduced risk
-input double               RiskReductionFactor = 0.5;        // Risk multiplier when triggered
-input bool                 ApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot
-
-input group "Broker & Margin Safety"
-input double               MaxMarginUsagePercent = 50.0;     // Max % of free margin one trade may use
-input bool                 EnableAdaptiveMarginCap = false;  // Scale the cap with account margin level
-input double               MarginLevelSafe = 500.0;          // Margin level [%] where the full cap applies
-input double               MarginLevelDanger = 150.0;        // Margin level [%] where trades are blocked
-
-input group "Basket Risk"
-input bool                 EnableBasketRisk = true;          // Limit risk across this EA's positions
-input int                  MaxBasketPositions = 1;           // Max concurrent positions [1 = no stacking]
-input double               MaxBasketLossPercent = 3.0;       // Close the basket at this loss % [0 = off]
-input ENUM_RISK_BASE       BasketLossBase = RISK_BASE_BALANCE; // Basket cut measured against
-input double               MaxBasketMarginPercent = 25.0;    // Max % of equity the basket may tie up [0 = off]
-input bool                 EnableMAETracking = true;         // Track adverse excursion
-input int                  MaxBasketHoldBars = 0;            // Close a losing basket after N bars [0 = off]
-
-input group "Portfolio Risk (account-wide)"
-input bool                 EnablePortfolioRisk = true;       // Check account-wide limits before trading
-input ENUM_PORTFOLIO_SCOPE PortfolioScope = PORTFOLIO_ACCOUNT_WIDE; // What counts as the portfolio
-input string               ExtraPortfolioMagics = "";        // Extra magic numbers, comma-separated
-input int                  MaxPortfolioPositions = 6;        // Max positions portfolio-wide [0 = off]
-input int                  MaxPositionsPerSymbol = 2;        // Max positions on one symbol [0 = off]
-input int                  MaxPortfolioSymbols = 4;          // Max distinct symbols at once [0 = off]
-input double               MaxPortfolioMarginPercent = 40.0; // Max % of equity in margin [0 = off]
-input double               MaxPortfolioLossPercent = 6.0;    // Block new trades past this loss % [0 = off]
-input double               MaxNetCurrencyLots = 2.0;         // Max net lots per currency [0 = off]
-input bool                 LogPortfolioSnapshot = false;     // Log the portfolio picture every bar
-
-input group "General"
-input int                  MagicNumber = 12345;              // EA Magic Number
+   input group "Trading Signal"
+   input int                  inpFastMA = 10;                      // Fast MA period
+   input int                  inpSlowMA = 20;                      // Slow MA period
+   input int                  inpATRPeriod = 14;                   // ATR period for volatility
+   input double               MaxSpreadPips = 2.0;              // Maximum allowed spread
+// Risk Model
+   input group "Risk Model"
+   input ENUM_RISK_MODE       RiskMode = RISK_PERCENT;          // How risk per trade is defined
+   input ENUM_RISK_BASE       RiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
+   //input double               RiskPercent = 1.0;                // Risk per trade [%] (percent mode)
+   //Chagne to uinify with    
+   input double               percentage_risk_per_operation  = 1.0;                // Risk per trade [%] (percent mode)
+   input double               FixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
+   input double               FixedLotSize = 0.10;              // Lot size (fixed-lot mode)
+   input bool                 AllowMinLotOverRisk = true;       // Trade min lot even if it exceeds intended risk
+// Stops Lost and Tabke Profit Targets
+   input group "Stops and Targets"
+   input double               ATRMultiplier = 1.5;              // ATR multiplier for stop distance
+   input double               TakeProfitRatio = 2.0;            // Take profit ratio
+   input bool                 AllowHedging = false;             // Allow opposing position
+// Order Execution 
+   input group "Order Execution"
+   input ENUM_ENTRY_MODE      EntryMode = ENTRY_MARKET;         // Order type used to enter
+   input ENUM_OFFSET_MODE     PendingOffsetMode = OFFSET_ATR;   // How the pending offset is measured
+   input double               PendingOffsetATR = 0.5;           // Pending offset as ATR multiple
+   input int                  PendingOffsetPoints = 150;        // Pending offset in points
+   input int                  PendingExpiryBars = 10;           // Delete untriggered pending after N bars [0 = never]
+// Adaptive Risk (Drawdown)
+   input group "Adaptive Risk (Drawdown)"
+   input bool                 EnableAdaptiveRisk = false;       // Reduce risk during drawdowns
+   input double               InpDropDownLevel = 3.0;           // Drawdown % that triggers reduced risk
+   input double               RiskReductionFactor = 0.5;        // Risk multiplier when triggered
+   input bool                 ApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot
+// Broker & Margin Safety
+   input group "Broker & Margin Safety"
+   input double               MaxMarginUsagePercent = 50.0;     // Max % of free margin one trade may use
+   input bool                 EnableAdaptiveMarginCap = false;  // Scale the cap with account margin level
+   input double               MarginLevelSafe = 500.0;          // Margin level [%] where the full cap applies
+   input double               MarginLevelDanger = 150.0;        // Margin level [%] where trades are blocked
+// Basket Risk
+   input group "Basket Risk"
+   input bool                 EnableBasketRisk = true;          // Limit risk across this EA's positions
+   input int                  MaxBasketPositions = 1;           // Max concurrent positions [1 = no stacking]
+   input double               MaxBasketLossPercent = 3.0;       // Close the basket at this loss % [0 = off]
+   input ENUM_RISK_BASE       BasketLossBase = RISK_BASE_BALANCE; // Basket cut measured against
+   input double               MaxBasketMarginPercent = 25.0;    // Max % of equity the basket may tie up [0 = off]
+   input bool                 EnableMAETracking = true;         // Track adverse excursion
+   input int                  MaxBasketHoldBars = 0;            // Close a losing basket after N bars [0 = off]
+// Portfolio Risk (account-wide)
+   input group "Portfolio Risk (account-wide)"
+   input bool                 EnablePortfolioRisk = true;       // Check account-wide limits before trading
+   input ENUM_PORTFOLIO_SCOPE PortfolioScope = PORTFOLIO_ACCOUNT_WIDE; // What counts as the portfolio
+   input string               ExtraPortfolioMagics = "";        // Extra magic numbers, comma-separated
+   input int                  MaxPortfolioPositions = 6;        // Max positions portfolio-wide [0 = off]
+   input int                  MaxPositionsPerSymbol = 2;        // Max positions on one symbol [0 = off]
+   input int                  MaxPortfolioSymbols = 4;          // Max distinct symbols at once [0 = off]
+   input double               MaxPortfolioMarginPercent = 40.0; // Max % of equity in margin [0 = off]
+   input double               MaxPortfolioLossPercent = 6.0;    // Block new trades past this loss % [0 = off]
+   input double               MaxNetCurrencyLots = 2.0;         // Max net lots per currency [0 = off]
+   input bool                 LogPortfolioSnapshot = false;     // Log the portfolio picture every bar
+// General
+   input group "General"
+   input int                  inpMagicNumber = 12345;              // EA Magic Number
 
 //--- The three tiers of risk: the trade, the basket, the account
 CTradeRisk      risk;
@@ -105,29 +91,29 @@ int atrHandle  = INVALID_HANDLE;
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
-  {
-//--- Strategy inputs are checked here
-   if(FastMA <= 0 || SlowMA <= 0)
+ {
+  //--- Strategy inputs are checked here
+   if(inpFastMA <= 0 || inpSlowMA <= 0)
      {
       Print("Moving Average periods must be greater than zero.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(FastMA >= SlowMA)
+   if(inpFastMA >= inpSlowMA)
      {
       Print("FastMA should be smaller than SlowMA.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   if(ATRPeriod <= 0)
+   if(inpATRPeriod <= 0)
      {
       Print("ATR period must be greater than zero.");
       return INIT_PARAMETERS_INCORRECT;
      }
 
-   fastHandle = iMA(_Symbol, _Period, FastMA, 0, MODE_SMA, PRICE_CLOSE);
-   slowHandle = iMA(_Symbol, _Period, SlowMA, 0, MODE_SMA, PRICE_CLOSE);
-   atrHandle  = iATR(_Symbol, _Period, ATRPeriod);
+   fastHandle = iMA(_Symbol, _Period, inpFastMA, 0, MODE_SMA, PRICE_CLOSE);
+   slowHandle = iMA(_Symbol, _Period, inpSlowMA, 0, MODE_SMA, PRICE_CLOSE);
+   atrHandle  = iATR(_Symbol, _Period, inpATRPeriod);
 
    if(fastHandle == INVALID_HANDLE || slowHandle == INVALID_HANDLE || atrHandle == INVALID_HANDLE)
      {
@@ -135,22 +121,22 @@ int OnInit()
       return INIT_FAILED;
      }
 
-//--- Tier one: the trade.
+  //--- Tier one: the trade.
    SRiskConfig riskCfg;
    riskCfg.SetDefaults();
-   riskCfg.magic                   = MagicNumber;
+   riskCfg.magic                   = inpMagicNumber;
    riskCfg.riskMode                = RiskMode;
    riskCfg.riskBase                = RiskBase;
-   riskCfg.riskPercent             = RiskPercent;
+   riskCfg.riskPercent             = percentage_risk_per_operation ;
    riskCfg.fixedCashRisk           = FixedCashRisk;
    riskCfg.fixedLotSize            = FixedLotSize;
    riskCfg.allowMinLotOverRisk     = AllowMinLotOverRisk;
    riskCfg.enableDrawdownScaling   = EnableAdaptiveRisk;
-   riskCfg.drawdownTrigger         = DDLevel;
+   riskCfg.drawdownTrigger         = InpDropDownLevel;
    riskCfg.drawdownFactor          = RiskReductionFactor;
    riskCfg.applyDrawdownToFixedLot = ApplyDrawdownToFixedLot;
    riskCfg.stopATRMultiplier       = ATRMultiplier;
-   riskCfg.tpRatio                 = TPRatio;
+   riskCfg.tpRatio                 = TakeProfitRatio;
    riskCfg.entryMode               = EntryMode;
    riskCfg.offsetMode              = PendingOffsetMode;
    riskCfg.pendingOffsetATR        = PendingOffsetATR;
@@ -165,10 +151,10 @@ int OnInit()
    if(!risk.Init(riskCfg))
       return INIT_PARAMETERS_INCORRECT;
 
-//--- Tier two: the basket
+  //--- Tier two: the basket
    SBasketConfig basketCfg;
    basketCfg.SetDefaults();
-   basketCfg.magic            = MagicNumber;
+   basketCfg.magic            = inpMagicNumber;
    basketCfg.enabled          = EnableBasketRisk;
    basketCfg.maxPositions     = MaxBasketPositions;
    basketCfg.maxLossPercent   = MaxBasketLossPercent;
@@ -180,15 +166,15 @@ int OnInit()
    if(!basket.Init(basketCfg))
       return INIT_PARAMETERS_INCORRECT;
 
-//--- Not an error, but the two settings contradict each other
+  //--- Not an error, but the two settings contradict each other
    if(EnableBasketRisk && AllowHedging && MaxBasketPositions < 2)
       Print("Note: AllowHedging is on but MaxBasketPositions is 1, so an opposing position can never be opened.");
 
-//--- Tier three: the account
+  //--- Tier three: the account
    if(EnablePortfolioRisk)
      {
       portfolio.SetScope(PortfolioScope);
-      portfolio.RegisterMagic(MagicNumber);
+      portfolio.RegisterMagic(inpMagicNumber);
       RegisterExtraMagics();
 
       portfolio.SetPositionLimits(MaxPortfolioPositions, MaxPositionsPerSymbol, MaxPortfolioSymbols);
@@ -313,8 +299,8 @@ int ReadSignal(double &atrValue)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick()
-  {
-//--- One decision per bar
+ {
+  //--- One decision per bar
    datetime currentBarTime = iTime(_Symbol, _Period, 0);
    if(currentBarTime == 0)
       return;
@@ -324,7 +310,7 @@ void OnTick()
       return;
    lastProcessedBarTime = currentBarTime;
 
-//--- Housekeeping runs every bar, before and regardless of any signal.
+  //--- Housekeeping runs every bar, before and regardless of any signal.
    risk.ManagePendingOrders();
    basket.Manage();
 
@@ -334,7 +320,7 @@ void OnTick()
    if(!IsSpreadAcceptable())
       return;
 
-//--- The strategy: the only part of this file that is about trading
+  //--- The strategy: the only part of this file that is about trading
    double atrValue = 0.0;
    int direction = ReadSignal(atrValue);
    if(direction == 0)
@@ -344,7 +330,7 @@ void OnTick()
    if(!SymbolInfoTick(_Symbol, tick))
       return;
 
-//--- Plan the trade, then pass it through all three scopes of risk in widening order.
+  //--- Plan the trade, then pass it through all three scopes of risk in widening order.
    STradePlan plan;
    if(!risk.BuildPlan(direction, atrValue, tick, plan))
       return;

@@ -49,7 +49,7 @@
        bool                   SetControlDataArraySizeLong(const int size);
        bool                   SetControlDataArraySizeDouble(const int size);
        bool                   CheckControlDataArraySize(bool check_long=true);
-       void                   CheckEvents(void);
+       void                   CheckEvents(const ushort id,const string sparam);   // Change in V5: each change goes to the chart at once (EventPack)
        long                   UshortToLong(const ushort ushort_value,const uchar to_byte,long &long_value);
        long                   UshortToByte(const ushort value,const uchar to_byte) const;
 
@@ -91,6 +91,7 @@
       CBaseEvent             *GetEventBase(const int index);
       int                    GetEventsTotal(void)   const   { return m_list_events.Total(); }
       virtual void           Refresh(void);
+     //Calulcation method 
       void                   SetGroupID1(const uchar group,uint &magic)  { magic&=0xFFF0FFFF; magic|=uint(ConvToXX(group,0)<<16); }
       void                   SetGroupID2(const uchar group,uint &magic)  { magic&=0xFF0FFFFF; magic|=uint(ConvToXX(group,1)<<16); }
       void                   SetPendReqID(const uchar id,uint &magic)    { magic&=0x00FFFFFF; magic|=(uint)id<<24;                }
@@ -351,19 +352,17 @@
   long CBaseObjExt::UshortToByte(const ushort value,const uchar to_byte) const
     { return(long)value<<(16*to_byte); }
 
-  void CBaseObjExt::CheckEvents(void)
+  //--- Change in V5: each change is sent at once (Parent Child: the child fires), packed as every event of the library: id = the event of the class,
+  //--- lparam = EventPack (when, key = the property, side = up / down), dparam = the change. Was DoEasy: m_list_events, id = the property, lparam = ms|reason|source
+  void CBaseObjExt::CheckEvents(const ushort id,const string sparam)
     {
     int total=m_list_events_base.Total();
-    if(total==0) return;
     for(int i=0;i<total;i++)
       {
         CBaseEvent *event=GetEventBase(i);
         if(event==NULL) continue;
-        long lvalue=0;
-        UshortToLong(MSCfromTime(TickTime()),0,lvalue);
-        UshortToLong(event.Reason(),1,lvalue);
-        UshortToLong((ushort)m_object_type,2,lvalue);
-        if(EventAdd((ushort)event.ID(),lvalue,event.Value(),m_name))
+        const ENUM_SIGNAL_DIRECTION side=(event.Reason()==BASE_EVENT_REASON_INC ? SIGNAL_DIRECTION_BUY : event.Reason()==BASE_EVENT_REASON_DEC ? SIGNAL_DIRECTION_SELL : SIGNAL_DIRECTION_NONE);
+        if(EventSend(id,EventPack(::TimeCurrent(),event.ID(),side,false),event.Value(),sparam))
           m_is_event=true;
       }
     }

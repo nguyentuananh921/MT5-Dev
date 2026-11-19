@@ -11,7 +11,7 @@
  #include "..\..\Defines\CommonDefines.mqh"
  #include "..\..\Defines\GUIDefines.mqh"
  #include "..\..\Defines\MouseDefines.mqh"
- #include "..\..\Defines\TradingDefines.mqh"   // ENUM_RISK_REWARD_RATIO: the levels of the Target
+ #include "..\..\Defines\RiskManagementDefines.mqh"   // ENUM_RISK_REWARD_RATIO: the levels of the Target
  #include "..\..\Defines\ImageDataDefine.mqh"
  #include "..\Properties\Colors.mqh"
  #include "..\..\Controls\Label.mqh"

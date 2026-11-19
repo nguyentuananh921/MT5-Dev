@@ -13,31 +13,33 @@
 //+------------------------------------------------------------------+
 //| Enums                                                            |
 //+------------------------------------------------------------------+
-enum CloseOnNewEnum {                                             // Define enum for closing on new Fibonacci
-   CloseOnNew_No  = 0,                                            // No
-   CloseOnNew_Yes = 1                                             // Yes
-};
-enum TrailingTypeEnum {                                           // Define enum for trailing stop types
-   Trailing_None   = 0,                                           // None
-   Trailing_Points = 2                                            // By Points
-};
+   enum CloseOnNewEnum
+   {                                             // Define enum for closing on new Fibonacci
+      CloseOnNew_No  = 0,                                            // No
+      CloseOnNew_Yes = 1                                             // Yes
+   };
+   enum TrailingTypeEnum
+   {                                           // Define enum for trailing stop types
+      Trailing_None   = 0,                                           // None
+      Trailing_Points = 2                                            // By Points
+   };
 
 //+------------------------------------------------------------------+
 //| Input Parameters                                                 |
 //+------------------------------------------------------------------+
-input bool   UseDailyApproach     = true;                         // Use daily candle (true) or array (false)
-input string fibLevelsStr         = "50,61.8";                    // Comma-separated Fib levels for entry (e.g., 50,61.8)
-input int    maxTradesPerLevel    = 1;                            // Max trades per level per Fib period (0=unlimited)
-input CloseOnNewEnum CloseOnNewFib = CloseOnNew_No;               // Close trades on new Fib calc
-input TrailingTypeEnum TrailingType = Trailing_None;              // Trailing Stop Type
-input double Trailing_Stop_Pips   = 30.0;                         // Trailing Stop in Pips (for Points type)
-input double Min_Profit_To_Trail_Pips = 50.0;                     // Min Profit to Start Trailing in Pips
-input int    LookbackSize         = 100;                          // Number of candles for array approach
-input double LotSize              = 0.1;                          // Trade lot size
-input int    MagicNumber          = 12345;                        // Magic number for trades
-input bool   IncludeCurrentBar    = false;                        // Include current bar in array calcs for updates
-input double SlBufferPercent      = 0.0;                          // SL buffer percent of range (0=no buffer)
-input double TpBufferPercent      = 0.0;                          // TP buffer percent of range (0=no buffer)
+   input bool   UseDailyApproach     = true;                         // Use daily candle (true) or array (false)
+   input string fibLevelsStr         = "50,61.8";                    // Comma-separated Fib levels for entry (e.g., 50,61.8)
+   input int    maxTradesPerLevel    = 1;                            // Max trades per level per Fib period (0=unlimited)
+   input CloseOnNewEnum CloseOnNewFib = CloseOnNew_No;               // Close trades on new Fib calc
+   input TrailingTypeEnum TrailingType = Trailing_None;              // Trailing Stop Type
+   input double Trailing_Stop_Pips   = 30.0;                         // Trailing Stop in Pips (for Points type)
+   input double Min_Profit_To_Trail_Pips = 50.0;                     // Min Profit to Start Trailing in Pips
+   input int    LookbackSize         = 100;                          // Number of candles for array approach
+   input double LotSize              = 0.1;                          // Trade lot size
+   input int    MagicNumber          = 12345;                        // Magic number for trades
+   input bool   IncludeCurrentBar    = false;                        // Include current bar in array calcs for updates
+   input double SlBufferPercent      = 0.0;                          // SL buffer percent of range (0=no buffer)
+   input double TpBufferPercent      = 0.0;                          // TP buffer percent of range (0=no buffer)
 
 //+------------------------------------------------------------------+
 //| Global Variables                                                 |
@@ -46,72 +48,78 @@ CTrade obj_Trade;                                                     //--- Trad
 int    barsTotal;                                                 //--- For daily approach
 #define FIB_OBJ "Fibonacci Retracement"                           //--- Define Fibonacci object name
 // Persistent variables for both approaches
-static double storedEntryLvls[];                                  //--- Array of entry levels
-static int    storedTradesCount[];                                //--- Trades count per level
-static double storedSl = 0.0;                                     //--- Stored stop loss
-static double storedTp = 0.0;                                     //--- Stored take profit
-static string storedInfo = "";                                    //--- Stored information string
-static bool   storedIsBullish = false;                            //--- Stored bullish flag
-static double fibLevels[];                                        //--- Parsed Fibonacci levels (original order)
-static string lastShownInfo = "";                                 //--- To detect changes and avoid unnecessary updates
+   static double storedEntryLvls[];                                  //--- Array of entry levels
+   static int    storedTradesCount[];                                //--- Trades count per level
+   static double storedSl = 0.0;                                     //--- Stored stop loss
+   static double storedTp = 0.0;                                     //--- Stored take profit
+   static string storedInfo = "";                                    //--- Stored information string
+   static bool   storedIsBullish = false;                            //--- Stored bullish flag
+   static double fibLevels[];                                        //--- Parsed Fibonacci levels (original order)
+   static string lastShownInfo = "";                                 //--- To detect changes and avoid unnecessary updates
 // For array approach
-static bool   fibCalculated = false;                              //--- Fibonacci calculated flag
-static double currentHigh = 0.0;                                  //--- Current high
-static double currentLow = 0.0;                                   //--- Current low
-static string fibName = "Fib_Array";                              //--- Fibonacci name for array
+   static bool   fibCalculated = false;                              //--- Fibonacci calculated flag
+   static double currentHigh = 0.0;                                  //--- Current high
+   static double currentLow = 0.0;                                   //--- Current low
+   static string fibName = "Fib_Array";                              //--- Fibonacci name for array
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit() {
+int OnInit()
+ {
    obj_Trade.SetExpertMagicNumber(MagicNumber);                       //--- Set magic number for trade object
    // Force initial calculation for daily approach
-   barsTotal = 0;                                                 //--- Ensure first tick updates
+    barsTotal = 0;                                                 //--- Ensure first tick updates
    // Parse fibLevelsStr into fibLevels array (from MQL5 docs: StringSplit)
-   string tempLevels[];                                           //--- Temporary levels array
-   ushort commaSep = StringGetCharacter(",", 0);                  //--- Get comma separator
-   int numLevels = StringSplit(fibLevelsStr, commaSep, tempLevels); //--- Split string into levels
-   ArrayResize(fibLevels, numLevels);                             //--- Resize fibLevels array
-   for (int i = 0; i < numLevels; i++) {                          //--- Iterate through levels
+      string tempLevels[];                                           //--- Temporary levels array
+      ushort commaSep = StringGetCharacter(",", 0);                  //--- Get comma separator
+      int numLevels = StringSplit(fibLevelsStr, commaSep, tempLevels); //--- Split string into levels
+      ArrayResize(fibLevels, numLevels);                             //--- Resize fibLevels array
+   for (int i = 0; i < numLevels; i++)
+    {                          //--- Iterate through levels
       fibLevels[i] = StringToDouble(tempLevels[i]);               //--- Convert to double
-   }
+    }
    ArrayResize(storedEntryLvls, numLevels);                       //--- Resize storedEntryLvls
    ArrayResize(storedTradesCount, numLevels);                     //--- Resize storedTradesCount
    // Clean up old labels
-   ObjectsDeleteAll(0, "InfoLabel_", -1, OBJ_LABEL);              //--- Delete all info labels
-   lastShownInfo = "";                                            //--- Reset last shown info
+      ObjectsDeleteAll(0, "InfoLabel_", -1, OBJ_LABEL);              //--- Delete all info labels
+      lastShownInfo = "";                                            //--- Reset last shown info
    // Clean up old Fib object for array
-   ObjectDelete(0, fibName);                                      //--- Delete Fibonacci object
-   fibCalculated = false;                                         //--- Reset calculated flag
-   return(INIT_SUCCEEDED);                                        //--- Return success
-}
+      ObjectDelete(0, fibName);                                      //--- Delete Fibonacci object
+      fibCalculated = false;                                         //--- Reset calculated flag
+      return(INIT_SUCCEEDED);                                        //--- Return success
+ }
 
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
-void OnDeinit(const int reason) {
+void OnDeinit(const int reason)
+ {
    ObjectsDeleteAll(0, "InfoLabel_", -1, OBJ_LABEL);              //--- Delete all info labels
    ObjectDelete(0, FIB_OBJ);                                      //--- Delete daily Fibonacci
    ObjectDelete(0, fibName);                                      //--- Delete array Fibonacci
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Close all positions with matching magic and symbol               |
 //+------------------------------------------------------------------+
-void CloseAllPositions() {
+void CloseAllPositions()
+ {
    for (int i = PositionsTotal() - 1; i >= 0; i--) {              //--- Iterate positions reverse
       if (PositionGetTicket(i) > 0 && PositionGetInteger(POSITION_MAGIC) == MagicNumber && PositionGetString(POSITION_SYMBOL) == _Symbol) { //--- Check position
          obj_Trade.PositionClose(PositionGetTicket(i));                //--- Close position
       }
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Apply Points Trailing Stop (from reference)                      |
 //+------------------------------------------------------------------+
-void ApplyPointsTrailing() {
+void ApplyPointsTrailing()
+ {
    double point = _Point;                                         //--- Get point value
-   for (int i = PositionsTotal() - 1; i >= 0; i--) {              //--- Iterate positions reverse
+   for (int i = PositionsTotal() - 1; i >= 0; i--)
+    {              //--- Iterate positions reverse
       if (PositionGetTicket(i) > 0) {                             //--- Check valid ticket
          if (PositionGetString(POSITION_SYMBOL) == _Symbol && PositionGetInteger(POSITION_MAGIC) == MagicNumber) { //--- Check symbol and magic
             double sl = PositionGetDouble(POSITION_SL);              //--- Get SL
@@ -131,13 +139,14 @@ void ApplyPointsTrailing() {
             }
          }
       }
-   }
-}
+    }
+ }
 
 //+------------------------------------------------------------------+
 //| Check if price breaches the current Fib extremes                 |
 //+------------------------------------------------------------------+
-bool IsBreach() {
+bool IsBreach()
+ {
    if (!fibCalculated) return false;                              //--- Return false if not calculated
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);            //--- Get bid price
    if (storedIsBullish) {                                         //--- Check bullish
@@ -147,12 +156,13 @@ bool IsBreach() {
       // For bearish, 0% is low, 100% is high
       return (bid > currentLow || bid < currentHigh);             //--- Check breach
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Display info using labels without flicker                        |
 //+------------------------------------------------------------------+
-void ShowLabels(string info) {
+void ShowLabels(string info)
+ {
    if (info == lastShownInfo) return;                             //--- Skip if no change
    lastShownInfo = info;                                          //--- Update last info
    // Split info into lines
@@ -178,23 +188,28 @@ void ShowLabels(string info) {
       if (ObjectFind(0, name) < 0) break;                        //--- Break if none
       ObjectDelete(0, name);                                     //--- Delete label
    }
-}
+ }
 
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
-void OnTick() {
+void OnTick()
+ {
    // Points trailing can run anytime
-   if (TrailingType == Trailing_Points && PositionsTotal() > 0) { //--- Check trailing
+   if (TrailingType == Trailing_Points && PositionsTotal() > 0)
+    { //--- Check trailing
       ApplyPointsTrailing();                                      //--- Apply trailing
-   }
-   if (UseDailyApproach) {                                        //--- Check daily approach
+    }
+   if (UseDailyApproach)
+    {                                        //--- Check daily approach
       // Daily approach logic remains the same
       int bars = iBars(_Symbol, PERIOD_D1);                       //--- Get daily bars
-      if (barsTotal != bars && TimeCurrent() > StringToTime("00:05")) { //--- Check new bar
-         if (CloseOnNewFib == CloseOnNew_Yes) {                   //--- Check close on new
+      if (barsTotal != bars && TimeCurrent() > StringToTime("00:05"))
+       { //--- Check new bar
+         if (CloseOnNewFib == CloseOnNew_Yes)
+          {                   //--- Check close on new
             CloseAllPositions();                                  //--- Close positions
-         }
+          }
          barsTotal = bars;                                        //--- Update bars total
          ObjectDelete(0, FIB_OBJ);                                //--- Delete Fib object
          double openPrice = iOpen(_Symbol, PERIOD_D1, 1);         //--- Get open price
@@ -206,7 +221,8 @@ void OnTick() {
          double range = high - low;                               //--- Calc range
          storedIsBullish = (closePrice > openPrice);              //--- Set bullish flag
          string levelsList = "";                                  //--- Init levels list
-         for (int i = 0; i < ArraySize(fibLevels); i++) {         //--- Iterate levels
+         for (int i = 0; i < ArraySize(fibLevels); i++)
+          {         //--- Iterate levels
             storedTradesCount[i] = 0;                             //--- Reset count
             if (storedIsBullish) {                                //--- Check bullish
                storedEntryLvls[i] = NormalizeDouble(high - range * fibLevels[i] / 100, _Digits); //--- Calc entry
@@ -214,14 +230,16 @@ void OnTick() {
                storedEntryLvls[i] = NormalizeDouble(low + range * fibLevels[i] / 100, _Digits); //--- Calc entry
             }
             levelsList += DoubleToString(fibLevels[i], 1) + ": " + DoubleToString(storedEntryLvls[i], _Digits) + "\n"; //--- Add to list
-         }
-         if (storedIsBullish) {                                   //--- Check bullish
+          }
+         if (storedIsBullish)//--- Check bullish
+          {                                   
             // Bullish: Fibo from low to high for correct 0% at high, 100% at low, green
             ObjectCreate(0, FIB_OBJ, OBJ_FIBO, 0, startingTime, low, endingTime, high); //--- Create Fib
             ObjectSetInteger(0, FIB_OBJ, OBJPROP_COLOR, clrGreen); //--- Set color
-            for (int i = 0; i < ObjectGetInteger(0, FIB_OBJ, OBJPROP_LEVELS); i++) { //--- Iterate levels
+            for (int i = 0; i < ObjectGetInteger(0, FIB_OBJ, OBJPROP_LEVELS); i++)
+             { //--- Iterate levels
                ObjectSetInteger(0, FIB_OBJ, OBJPROP_LEVELCOLOR, i, clrGreen); //--- Set level color
-            }
+             }
             storedSl = NormalizeDouble(low - range * (SlBufferPercent / 100), _Digits); //--- Calc SL
             storedTp = NormalizeDouble(high + range * (TpBufferPercent / 100), _Digits); //--- Calc TP
             storedInfo = "Daily Approach - Bullish\n" +           //--- Set info
@@ -231,13 +249,16 @@ void OnTick() {
                          "SL: " + DoubleToString(storedSl, _Digits) + "\n" +
                          "TP: " + DoubleToString(storedTp, _Digits);
             Print("New daily bar: Bullish Fibonacci levels calculated. Entries: ", levelsList); //--- Log
-         } else {                                                 //--- Handle bearish
+          } 
+         else //--- Handle bearish
+          {                                                 
             // Bearish: Fibo from high to low for correct 0% at low, 100% at high, red
             ObjectCreate(0, FIB_OBJ, OBJ_FIBO, 0, startingTime, high, endingTime, low); //--- Create Fib
             ObjectSetInteger(0, FIB_OBJ, OBJPROP_COLOR, clrRed);  //--- Set color
-            for (int i = 0; i < ObjectGetInteger(0, FIB_OBJ, OBJPROP_LEVELS); i++) { //--- Iterate levels
+            for (int i = 0; i < ObjectGetInteger(0, FIB_OBJ, OBJPROP_LEVELS); i++)
+             { //--- Iterate levels
                ObjectSetInteger(0, FIB_OBJ, OBJPROP_LEVELCOLOR, i, clrRed); //--- Set level color
-            }
+             }
             storedSl = NormalizeDouble(high + range * (SlBufferPercent / 100), _Digits); //--- Calc SL
             storedTp = NormalizeDouble(low - range * (TpBufferPercent / 100), _Digits); //--- Calc TP
             storedInfo = "Daily Approach - Bearish\n" +           //--- Set info
@@ -247,15 +268,17 @@ void OnTick() {
                          "SL: " + DoubleToString(storedSl, _Digits) + "\n" +
                          "TP: " + DoubleToString(storedTp, _Digits);
             Print("New daily bar: Bearish Fibonacci levels calculated. Entries: ", levelsList); //--- Log
-         }
-      }
+          }
+       }
       // Display info every tick using labels (but only update if changed)
       ShowLabels(storedInfo);                                        //--- Show labels
       // Entry logic: Checked every tick using stored levels (no existing position)
-      if (PositionsTotal() == 0) {                                   //--- Check no positions
+      if (PositionsTotal() == 0)
+       {                                   //--- Check no positions
          double close1 = iClose(_Symbol, _Period, 1);                //--- Get close 1
          double close2 = iClose(_Symbol, _Period, 2);                //--- Get close 2
-         for (int i = 0; i < ArraySize(storedEntryLvls); i++) {      //--- Iterate levels
+         for (int i = 0; i < ArraySize(storedEntryLvls); i++)
+          {      //--- Iterate levels
             // Only enter on levels 0 < fib <=100 (retracements), ignore 0/100/extensions for entry
             if (fibLevels[i] <= 0 || fibLevels[i] > 100.0) continue; //--- Skip invalid
             if ((maxTradesPerLevel == 0 || storedTradesCount[i] < maxTradesPerLevel) && //--- Check count
@@ -275,19 +298,24 @@ void OnTick() {
                storedTradesCount[i]++;                                //--- Increment count
                break;                                                 //--- Break loop
             }
-         }
-      }
-   } else {                                                       //--- Array approach
+          }
+       }
+    }
+   else //--- Array approach
+    {                                                       
       // Array approach: Calculate only when not calculated or breached
-      if (!fibCalculated || IsBreach()) {                          //--- Check recalc
-         if (fibCalculated) {                                      //--- Check calculated
+      if (!fibCalculated || IsBreach()) //--- Check recalc
+       {                          
+         if (fibCalculated)
+          {                                      //--- Check calculated
             // Invalidate and forget previous
             ObjectDelete(0, fibName);                              //--- Delete Fib
             fibCalculated = false;                                 //--- Reset flag
-         }
-         if (CloseOnNewFib == CloseOnNew_Yes) {                    //--- Check close
+          }
+         if (CloseOnNewFib == CloseOnNew_Yes)
+          {                    //--- Check close
             CloseAllPositions();                                   //--- Close positions
-         }
+          }
          int startShift = IncludeCurrentBar ? 0 : 1;               //--- Set start shift
          int copyCount = IncludeCurrentBar ? LookbackSize : LookbackSize; //--- Set copy count
          double high[], low[];                                     //--- High and low arrays
@@ -309,16 +337,21 @@ void OnTick() {
          double closeCandle = iClose(_Symbol, _Period, IncludeCurrentBar ? 0 : 1); //--- Get close
          storedIsBullish = (closeCandle > openCandle);             //--- Set bullish
          string levelsList = "";                                   //--- Init list
-         for (int i = 0; i < ArraySize(fibLevels); i++) {          //--- Iterate levels
+         for (int i = 0; i < ArraySize(fibLevels); i++)
+          {          //--- Iterate levels
             storedTradesCount[i] = 0;                              //--- Reset count
-            if (storedIsBullish) {                                 //--- Check bullish
+            if (storedIsBullish)
+             {                                 //--- Check bullish
                storedEntryLvls[i] = NormalizeDouble(highVal - range * fibLevels[i] / 100, _Digits); //--- Calc entry
-            } else {                                               //--- Handle bearish
+             }
+            else
+             {                                               //--- Handle bearish
                storedEntryLvls[i] = NormalizeDouble(lowVal + range * fibLevels[i] / 100, _Digits); //--- Calc entry
-            }
+             }
             levelsList += DoubleToString(fibLevels[i], 1) + ": " + DoubleToString(storedEntryLvls[i], _Digits) + "\n"; //--- Add to list
-         }
-         if (storedIsBullish) {                                    //--- Check bullish
+          }
+         if (storedIsBullish) //--- Check bullish
+          {                                    
             // Bullish: Anchor from low to high
             datetime time1 = pArray[lowestCandle].time;            //--- Time1
             double price1 = lowVal;                                //--- Price1
@@ -326,9 +359,10 @@ void OnTick() {
             double price2 = highVal;                               //--- Price2
             ObjectCreate(0, fibName, OBJ_FIBO, 0, time1, price1, time2, price2); //--- Create Fib
             ObjectSetInteger(0, fibName, OBJPROP_COLOR, clrGreen); //--- Set color
-            for (int i = 0; i < ObjectGetInteger(0, fibName, OBJPROP_LEVELS); i++) { //--- Iterate levels
+            for (int i = 0; i < ObjectGetInteger(0, fibName, OBJPROP_LEVELS); i++)
+             { //--- Iterate levels
                ObjectSetInteger(0, fibName, OBJPROP_LEVELCOLOR, i, clrGreen); //--- Set level color
-            }
+             }
             storedSl = NormalizeDouble(lowVal - range * (SlBufferPercent / 100), _Digits); //--- Calc SL
             storedTp = NormalizeDouble(highVal + range * (TpBufferPercent / 100), _Digits); //--- Calc TP
             storedInfo = "Array Approach - Bullish\n" +            //--- Set info
@@ -337,7 +371,9 @@ void OnTick() {
                          "Buy Entries:\n" + levelsList +
                          "SL: " + DoubleToString(storedSl, _Digits) + "\n" +
                          "TP: " + DoubleToString(storedTp, _Digits);
-         } else {                                                  //--- Handle bearish
+          }
+         else
+          {                                                  //--- Handle bearish
             // Bearish: Anchor from high to low
             datetime time1 = pArray[highestCandle].time;           //--- Time1
             double price1 = highVal;                               //--- Price1
@@ -345,9 +381,10 @@ void OnTick() {
             double price2 = lowVal;                                //--- Price2
             ObjectCreate(0, fibName, OBJ_FIBO, 0, time1, price1, time2, price2); //--- Create Fib
             ObjectSetInteger(0, fibName, OBJPROP_COLOR, clrRed);   //--- Set color
-            for (int i = 0; i < ObjectGetInteger(0, fibName, OBJPROP_LEVELS); i++) { //--- Iterate levels
+            for (int i = 0; i < ObjectGetInteger(0, fibName, OBJPROP_LEVELS); i++)
+             { //--- Iterate levels
                ObjectSetInteger(0, fibName, OBJPROP_LEVELCOLOR, i, clrRed); //--- Set level color
-            }
+             }
             storedSl = NormalizeDouble(highVal + range * (SlBufferPercent / 100), _Digits); //--- Calc SL
             storedTp = NormalizeDouble(lowVal - range * (TpBufferPercent / 100), _Digits); //--- Calc TP
             storedInfo = "Array Approach - Bearish\n" +            //--- Set info
@@ -356,15 +393,16 @@ void OnTick() {
                          "Sell Entries:\n" + levelsList +
                          "SL: " + DoubleToString(storedSl, _Digits) + "\n" +
                          "TP: " + DoubleToString(storedTp, _Digits);
-         }
+          }
          currentHigh = storedIsBullish ? highVal : lowVal;         //--- Set current high
          currentLow = storedIsBullish ? lowVal : highVal;          //--- Set current low
          fibCalculated = true;                                     //--- Set calculated
-      }
+       }
       // Display info using labels (but only update if changed)
-      ShowLabels(storedInfo);                                        //--- Show labels
+       ShowLabels(storedInfo);                                        //--- Show labels
       // Entry logic: Checked every tick using stored levels (no existing position)
-      if (PositionsTotal() == 0) {                                   //--- Check no positions
+      if (PositionsTotal() == 0)
+       {                                   //--- Check no positions
          double close1 = iClose(_Symbol, _Period, 1);                //--- Get close 1
          double close2 = iClose(_Symbol, _Period, 2);                //--- Get close 2
          for (int i = 0; i < ArraySize(storedEntryLvls); i++) {      //--- Iterate levels
@@ -387,8 +425,8 @@ void OnTick() {
                break;                                                 //--- Break loop
             }
          }
-      }
-   }
+       }
+    }
    // Redraw chart objects
    ChartRedraw();                                                 //--- Redraw chart
 }

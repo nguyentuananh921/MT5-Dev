@@ -10,34 +10,33 @@
 
 #include <Trade\Trade.mqh> //--- Include the Trade library for order management.
 CTrade obj_Trade; //--- Create an instance of the CTrade class to handle trading operations.
-
 // Input parameters
-input int    InpCCI36Period      = 36;              //--- CCI period 1
-input int    InpCCI55Period      = 55;              //--- CCI period 2
-input int    InpRSIPeriod        = 27;              //--- RSI period
-input int    InpMAFastPeriod     = 11;              //--- Fast MA period
-input int    InpMASlowPeriod     = 25;              //--- Slow MA period
-input double InpRSIThreshold     = 58.0;            //--- RSI threshold for Buy signal (Sell uses 100 - Threshold)
-input int    InpTakeProfitPoints = 300;             //--- Take profit in points
-input double InpLotSize          = 0.1;             //--- Trade lot size
+   input int    InpCCI36Period      = 36;              //--- CCI period 1
+   input int    InpCCI55Period      = 55;              //--- CCI period 2
+   input int    InpRSIPeriod        = 27;              //--- RSI period
+   input int    InpMAFastPeriod     = 11;              //--- Fast MA period
+   input int    InpMASlowPeriod     = 25;              //--- Slow MA period
+   input double InpRSIThreshold     = 58.0;            //--- RSI threshold for Buy signal (Sell uses 100 - Threshold)
+   input int    InpTakeProfitPoints = 300;             //--- Take profit in points
+   input double InpLotSize          = 0.1;             //--- Trade lot size
 
 // Pivot parameters for detecting swing highs/lows
-input int    PivotLeft  = 2;  //--- Number of bars to the left for pivot detection
-input int    PivotRight = 2;  //--- Number of bars to the right for pivot detection
+   input int    PivotLeft  = 2;  //--- Number of bars to the left for pivot detection
+   input int    PivotRight = 2;  //--- Number of bars to the right for pivot detection
 
 // Global indicator handles
-int handleCCI36;  //--- Handle for the CCI indicator with period InpCCI36Period
-int handleCCI55;  //--- Handle for the CCI indicator with period InpCCI55Period
-int handleRSI;    //--- Handle for the RSI indicator with period InpRSIPeriod
-int handleMA11;   //--- Handle for the fast moving average (MA) with period InpMAFastPeriod
-int handleMA25;   //--- Handle for the slow moving average (MA) with period InpMASlowPeriod
+   int handleCCI36;  //--- Handle for the CCI indicator with period InpCCI36Period
+   int handleCCI55;  //--- Handle for the CCI indicator with period InpCCI55Period
+   int handleRSI;    //--- Handle for the RSI indicator with period InpRSIPeriod
+   int handleMA11;   //--- Handle for the fast moving average (MA) with period InpMAFastPeriod
+   int handleMA25;   //--- Handle for the slow moving average (MA) with period InpMASlowPeriod
 
 // Global dynamic storage buffers
-double ma11_buffer[];  //--- Dynamic array to store fast MA values
-double ma25_buffer[];  //--- Dynamic array to store slow MA values
-double rsi_buffer[];   //--- Dynamic array to store RSI values
-double cci36_buffer[]; //--- Dynamic array to store CCI values (period 36)
-double cci55_buffer[]; //--- Dynamic array to store CCI values (period 55)
+   double ma11_buffer[];  //--- Dynamic array to store fast MA values
+   double ma25_buffer[];  //--- Dynamic array to store slow MA values
+   double rsi_buffer[];   //--- Dynamic array to store RSI values
+   double cci36_buffer[]; //--- Dynamic array to store CCI values (period 36)
+   double cci55_buffer[]; //--- Dynamic array to store CCI values (period 55)
 
 // To detect a new bar
 datetime lastBarTime = 0;  //--- Variable to store the time of the last processed bar
@@ -45,48 +44,52 @@ datetime lastBarTime = 0;  //--- Variable to store the time of the last processe
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit() {
+int OnInit()
+ {
    //--- Create CCI handle for period InpCCI36Period using the close price.
-   handleCCI36 = iCCI(_Symbol, _Period, InpCCI36Period, PRICE_CLOSE); //--- Create the CCI36 indicator handle.
-   if (handleCCI36 == INVALID_HANDLE) { //--- Check if the CCI36 handle is valid.
+    handleCCI36 = iCCI(_Symbol, _Period, InpCCI36Period, PRICE_CLOSE); //--- Create the CCI36 indicator handle.
+    if (handleCCI36 == INVALID_HANDLE)
+     { //--- Check if the CCI36 handle is valid.
       Print("Error creating CCI36 handle"); //--- Print an error message if invalid.
       return (INIT_FAILED); //--- Return failure if handle creation failed.
-   }
+     }
    
    //--- Create CCI handle for period InpCCI55Period using the close price.
-   handleCCI55 = iCCI(_Symbol, _Period, InpCCI55Period, PRICE_CLOSE); //--- Create the CCI55 indicator handle.
-   if (handleCCI55 == INVALID_HANDLE) { //--- Check if the CCI55 handle is valid.
+    handleCCI55 = iCCI(_Symbol, _Period, InpCCI55Period, PRICE_CLOSE); //--- Create the CCI55 indicator handle.
+    if (handleCCI55 == INVALID_HANDLE)
+     { //--- Check if the CCI55 handle is valid.
       Print("Error creating CCI55 handle"); //--- Print an error message if invalid.
       return (INIT_FAILED); //--- Return failure if handle creation failed.
-   }
-   
+     }   
    //--- Create RSI handle for period InpRSIPeriod using the close price.
-   handleRSI = iRSI(_Symbol, _Period, InpRSIPeriod, PRICE_CLOSE); //--- Create the RSI indicator handle.
-   if (handleRSI == INVALID_HANDLE) { //--- Check if the RSI handle is valid.
+    handleRSI = iRSI(_Symbol, _Period, InpRSIPeriod, PRICE_CLOSE); //--- Create the RSI indicator handle.
+    if (handleRSI == INVALID_HANDLE)
+     { //--- Check if the RSI handle is valid.
       Print("Error creating RSI handle"); //--- Print an error message if invalid.
       return (INIT_FAILED); //--- Return failure if handle creation failed.
-   }
+     }
    
    //--- Create fast MA handle using MODE_SMMA on the median price with period InpMAFastPeriod.
-   handleMA11 = iMA(_Symbol, _Period, InpMAFastPeriod, 0, MODE_SMMA, PRICE_MEDIAN); //--- Create the fast MA handle.
-   if (handleMA11 == INVALID_HANDLE) { //--- Check if the fast MA handle is valid.
+    handleMA11 = iMA(_Symbol, _Period, InpMAFastPeriod, 0, MODE_SMMA, PRICE_MEDIAN); //--- Create the fast MA handle.
+    if (handleMA11 == INVALID_HANDLE)
+     { //--- Check if the fast MA handle is valid.
       Print("Error creating MA11 handle"); //--- Print an error message if invalid.
       return (INIT_FAILED); //--- Return failure if handle creation failed.
-   }
-   
+     }   
    //--- Create slow MA handle using MODE_SMMA on the median price with period InpMASlowPeriod.
-   handleMA25 = iMA(_Symbol, _Period, InpMASlowPeriod, 0, MODE_SMMA, PRICE_MEDIAN); //--- Create the slow MA handle.
-   if (handleMA25 == INVALID_HANDLE) { //--- Check if the slow MA handle is valid.
+    handleMA25 = iMA(_Symbol, _Period, InpMASlowPeriod, 0, MODE_SMMA, PRICE_MEDIAN); //--- Create the slow MA handle.
+    if (handleMA25 == INVALID_HANDLE)
+     { //--- Check if the slow MA handle is valid.
       Print("Error creating MA25 handle"); //--- Print an error message if invalid.
       return (INIT_FAILED); //--- Return failure if handle creation failed.
-   }
+     }
    
    //--- Set the dynamic arrays as time series (index 0 = most recent closed bar).
-   ArraySetAsSeries(ma11_buffer, true); //--- Set ma11_buffer as a time series.
-   ArraySetAsSeries(ma25_buffer, true); //--- Set ma25_buffer as a time series.
-   ArraySetAsSeries(rsi_buffer, true);  //--- Set rsi_buffer as a time series.
-   ArraySetAsSeries(cci36_buffer, true); //--- Set cci36_buffer as a time series.
-   ArraySetAsSeries(cci55_buffer, true); //--- Set cci55_buffer as a time series.
+      ArraySetAsSeries(ma11_buffer, true); //--- Set ma11_buffer as a time series.
+      ArraySetAsSeries(ma25_buffer, true); //--- Set ma25_buffer as a time series.
+      ArraySetAsSeries(rsi_buffer, true);  //--- Set rsi_buffer as a time series.
+      ArraySetAsSeries(cci36_buffer, true); //--- Set cci36_buffer as a time series.
+      ArraySetAsSeries(cci55_buffer, true); //--- Set cci55_buffer as a time series.
    
    return (INIT_SUCCEEDED); //--- Return success after initialization.
 }

@@ -70,7 +70,7 @@
     string                name;
     string                params;    // default params của standard indicator
     string                display;   // default display
-    int                   buffers;   // the buffers its signal reads (Volumes: 2, its moving average is buffer 1)
+    int                   buffers;   // the buffers its signal reads (an MA on a source has one more: the source, CIndicatorDE::SetSource)
     int                   params_total;
     SIndicatorParamRow    param_schema[INDICATOR_PARAM_SLOTS_MAX];
    };  
@@ -361,11 +361,9 @@
       {{"Period", TYPE_INT, 14, INDICATOR_PARAM_DOMAIN_NONE}}
     },
     {
-      IND_VOLUMES, INDICATOR_GROUP_VOLUMES, "Volumes","TICK,20,SMA", "Volumes(TICK,20,SMA)", 2, 3,
+      IND_VOLUMES, INDICATOR_GROUP_VOLUMES, "Volumes","TICK", "Volumes(TICK)", 1, 1,   // Change in V5: its moving average is an MA on VOLUMES(TICK)
       {
-         {"Applied Volume",TYPE_INT, VOLUME_TICK,INDICATOR_PARAM_DOMAIN_APPLIED_VOLUME},
-         {"MA period",     TYPE_INT, 20,         INDICATOR_PARAM_DOMAIN_NONE},
-         {"MA method",     TYPE_INT, MODE_SMA,   INDICATOR_PARAM_DOMAIN_MA_METHOD}
+         {"Applied Volume",TYPE_INT, VOLUME_TICK,INDICATOR_PARAM_DOMAIN_APPLIED_VOLUME}
       }
     },
     {IND_BWMFI, INDICATOR_GROUP_VOLUMES, "Market Facilitation Index", "", "Market Facilitation Index", 1, 0, {}},
@@ -389,7 +387,7 @@
       bool               UpdateDataToDB(const ENUM_INDICATOR type,const string params_text);   // the row of a template goes
       bool               UpdateDataToDB(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on);
       bool               UpdateDataToDB(const ENUM_INDICATOR type,const string params_text,const string column,const bool on);
-      bool               ReadDataFromDB(void);      
+      bool               ReadDataFromDB(void);
      void               ParamTexts(const ENUM_INDICATOR type, MqlParam &params[], const int decimals, string &out[]) const;
       string             ParamDescription(const MqlParam &param,const string choices,const int decimals) const;
     public:
@@ -398,7 +396,19 @@
      //--- Lifecycle: create the catalog and template table, then load templates into RAM
         bool                 OnInitEvent(void);
      void                SetDatabaseService    (CDatabaseService   *databaseService)    {this.m_CDatabaseService=databaseService;}
-     bool                CompleteVolumesParams(MqlParam &params[]) const;
+   //--- New in V5, indicator on indicator: the applied param of a type is a price or another indicator, "9,0,SMA,RSI(14,CLOSE)" (the source: buffer 0, in a subwindow)
+     bool               TakesSource(const ENUM_INDICATOR type) const { return (type != IND_FRAMA && this.AppliedIndex(type) != WRONG_VALUE); }   // FRAMA on an indicator: MT5 gives -nan (it needs high / low, measured)
+   //--- The averages: on a source, their signal is the source against them (CSignalSourceMA); any other type on a source keeps its own rule
+     bool               IsMovingAverage(const ENUM_INDICATOR type) const { return (type == IND_MA || type == IND_AMA || type == IND_DEMA || type == IND_TEMA || type == IND_VIDYA); }
+     bool               IsOverlay(const ENUM_INDICATOR type) const;   // drawn on the prices (main window), else in a subwindow: only these can be a source
+   //--- The group of a template: the one of its source when it has one (an MA on Volumes is in Volumes, next to it, as on the chart), else the one of its type
+     ENUM_INDICATOR_GROUP Group(const ENUM_INDICATOR type, const string params_text) const;
+     int                AppliedIndex(const ENUM_INDICATOR type) const;   // the param that takes a price or a source (WRONG_VALUE: none)
+     string             TypeName(const ENUM_INDICATOR type) const { return ::StringSubstr(::EnumToString(type), 4); }   // as the column type_name of the table indicators
+     string             SourceText(const ENUM_INDICATOR type, const string params_text) const { return this.TypeName(type) + "(" + params_text + ")"; }
+     bool               SourceOf(const ENUM_INDICATOR type, const string params_text, ENUM_INDICATOR &source_type, string &source_params, int &applied) const;
+   //--- The values of a params text at the commas outside the brackets of a source
+     int                SplitParams(const string text, string &out[]) const;
      bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type, MqlParam &params[]);
      bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR type, const string params_text);
      bool                Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event);
@@ -581,30 +591,78 @@
  //     }
  //   return result;
  //  }
- //+------------------------------------------------------------------+
- //| The chart holds the Volumes alone: its MA period and method are   |
- //| of the row that has the same Applied Volume. False when no row    |
- //| has it (the Add form makes the Volumes with its MA)               |
- //+------------------------------------------------------------------+
- bool CIndicatorTemplateManager::CompleteVolumesParams(MqlParam &params[]) const
+ //--- Moved from CChartObj::ShowIndicatorOnChart: ADX, ADX Wilder and StdDev are of the group Trend but have their own scale
+ bool CIndicatorTemplateManager::IsOverlay(const ENUM_INDICATOR type) const
   {
-   ENUM_INDICATOR types[];
-   string texts[], display[];
-   bool buy[], sell[], sound[], message[], show[];
-   int total = this.Read_RAM(types, texts, display, buy, sell, sound, message, show);
-   for(int i = 0; i < total; i++)
+   SIndicatorsRow catalog;
+   bool own_scale = (type == IND_ADX || type == IND_ADXW || type == IND_STDDEV);
+   return ((!own_scale && this.Read_RAM(type, catalog) && catalog.group == INDICATOR_GROUP_TREND) || type == IND_FRACTALS);
+  }
+ ENUM_INDICATOR_GROUP CIndicatorTemplateManager::Group(const ENUM_INDICATOR type, const string params_text) const
+  {
+   SIndicatorsRow catalog;
+   ENUM_INDICATOR source_type;
+   string source_params;
+   int applied;
+   if(this.SourceOf(type, params_text, source_type, source_params, applied))
+      return this.Group(source_type, source_params);
+   return (this.Read_RAM(type, catalog) ? catalog.group : INDICATOR_GROUP_ANY);
+  }
+ int CIndicatorTemplateManager::AppliedIndex(const ENUM_INDICATOR type) const
+  {
+   SIndicatorParam schema[];
+   int total = this.Read_RAM(type, schema);
+   for(int p = 0; p < total; p++)
+      if(schema[p].choices == PRICE_CHOICES)
+         return p;
+   return WRONG_VALUE;
+  }
+ int CIndicatorTemplateManager::SplitParams(const string text, string &out[]) const
+  {
+   ::ArrayResize(out, 0);
+   if(text == "")
+      return 0;
+   int depth = 0, start = 0, length = ::StringLen(text);
+   for(int i = 0; i <= length; i++)
     {
-     MqlParam row_params[];
-     if(types[i] != IND_VOLUMES || !this.ParamsFromText(types[i], texts[i], row_params))
-        continue;
-     if(::ArraySize(row_params) > 1 && row_params[0].integer_value == params[0].integer_value)
+     ushort c = (i < length ? ::StringGetCharacter(text, i) : ',');
+     if(c == '(')
+        depth++;
+     else if(c == ')')
+        depth--;
+     else if(c == ',' && depth == 0)
       {
-       ::ArrayResize(params, ::ArraySize(row_params));
-       for(int p = 1; p < ::ArraySize(row_params); p++)
-          params[p] = row_params[p];
-       return true;
+       int n = ::ArraySize(out);
+       ::ArrayResize(out, n + 1);
+       out[n] = ::StringSubstr(text, start, i - start);
+       start = i + 1;
       }
     }
+   return ::ArraySize(out);
+  }
+ //+------------------------------------------------------------------+
+ //| The source of a template: its applied param is TYPE(params) (the  |
+ //| type_name of the table indicators). False: a price, or no source  |
+ //+------------------------------------------------------------------+
+ bool CIndicatorTemplateManager::SourceOf(const ENUM_INDICATOR type, const string params_text, ENUM_INDICATOR &source_type, string &source_params, int &applied) const
+  {
+   applied = this.AppliedIndex(type);
+   string values[];
+   if(!this.TakesSource(type) || applied == WRONG_VALUE || this.SplitParams(params_text, values) <= applied)
+      return false;
+   string value = values[applied];
+   int open = ::StringFind(value, "(");
+   if(open <= 0 || ::StringGetCharacter(value, ::StringLen(value) - 1) != ')')
+      return false;
+   string name = ::StringSubstr(value, 0, open);
+   source_params = ::StringSubstr(value, open + 1, ::StringLen(value) - open - 2);
+   for(int i = 0; i < ::ArraySize(standard_indicator_list); i++)
+      if(this.TypeName(standard_indicator_list[i].ind_type) == name)
+        {
+         source_type = standard_indicator_list[i].ind_type;
+         return true;
+        }
+   ::Print(__FUNCTION__, " > the source ", value, " is not an indicator of the catalog");
    return false;
   }
  //+------------------------------------------------------------------+
@@ -641,6 +699,8 @@
   }
  string CIndicatorTemplateManager::ParamDescription(const MqlParam &param,const string choices,const int decimals) const
   {
+   if(choices == PRICE_CHOICES && ::StringLen(param.string_value) > 0)
+      return param.string_value;   // New in V5: the source, TYPE(params)
    if(choices == PRICE_CHOICES)
       return StringSubstr(EnumToString((ENUM_APPLIED_PRICE)param.integer_value),6);
    if(choices == CALCULATION_METHOD_CHOICES)
@@ -753,22 +813,30 @@
   }
  //+------------------------------------------------------------------+
  //| The text of the table back to the params of the type: split at   |
- //| the commas, every value read by the schema                       |
+ //| the commas (SplitParams), every value read by the schema. A       |
+ //| source stays text in string_value: its handle is put by the user  |
+ //| (CIndicatorsCollection, CChartObj), 0 until then                 |
  //+------------------------------------------------------------------+
  bool CIndicatorTemplateManager::ParamsFromText(const ENUM_INDICATOR type, const string text, MqlParam &out_params[]) const
   {
    SIndicatorParam schema[];
    int schema_total = this.Read_RAM(type, schema);
    string params_text[];
-   int found = (text == "") ? 0 : ::StringSplit(text, ',', params_text);
+   int found = this.SplitParams(text, params_text);
    if(found < schema_total)   // a type without parameters (AO, AC, BW MFI, Fractals) has none to read
       return false;
    ::ArrayResize(out_params, schema_total);
    for(int p = 0; p < schema_total; p++)
     {
      out_params[p].type = schema[p].data_type;
+     out_params[p].string_value = "";
      string raw = params_text[p];
-     if(schema[p].choices != "")
+     if(schema[p].choices == PRICE_CHOICES && ::StringFind(raw, "(") > 0)
+       {
+        out_params[p].string_value = raw;
+        out_params[p].integer_value = 0;
+       }
+     else if(schema[p].choices != "")
         out_params[p].integer_value = this.ParamValueByDescription(raw,schema[p].choices);
      else if(schema[p].data_type == TYPE_DOUBLE)
         out_params[p].double_value = ::StringToDouble(raw);
@@ -959,31 +1027,29 @@
  //+------------------------------------------------------------------+
  // New In V4 after implemenation CDatabaseService
  bool CIndicatorTemplateManager::UpdateDataToDB(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on)
-  {    
-   SIndicatorsRow catalog;
+  {
    if(this.m_CDatabaseService == NULL)
      {
       ::Print(__FUNCTION__, " > DatabaseService is not set");
       return false;
      }
-   string in_group = "";
+   string in_group = "";   // Change in V5: by template (Group: an MA on Volumes is in Volumes), was type_enum IN (...)
    for(int i = 0; i < this.m_list_indicator.Total(); i++)
      {
       CIndicatorSetting *row = this.m_list_indicator.At(i);
-      if(row != NULL && this.Read_RAM(row.TypeEnum(), catalog) && catalog.group == group)
-         in_group += (in_group == "" ? "" : ",") + (string)(int)row.TypeEnum();
+      if(row != NULL && this.Group(row.TypeEnum(), row.Params()) == group)
+         in_group += (in_group == "" ? "(" : " OR (") + "type_enum = " + (string)(int)row.TypeEnum() + " AND params = '" + this.m_CDatabaseService.QuoteSQLText(row.Params()) + "')";
      }
    if(in_group == "")
       return true;
    string sql_update_group = "UPDATE Setting_IndicatorTemplate SET " +
                 first + " = " + (on ? "1" : "0") + ", " +
                 second + " = " + (on ? "1" : "0") +
-                " WHERE type_enum IN (" + in_group + ")";
+                " WHERE " + in_group;
    return this.m_CDatabaseService.Update("Common", sql_update_group);    
   }
  bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group,const string first,const string second,const bool on,const ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT event)
   {
-   SIndicatorsRow catalog;
    bool signal_pair = (first == "buy_signal" && second == "sell_signal");
    bool alert_pair  = (first == "sound_alert" && second == "message_alert");
    if(!signal_pair && !alert_pair)
@@ -997,7 +1063,7 @@
    for(int i = 0; i < this.m_list_indicator.Total(); i++)
      {
       CIndicatorSetting *row = this.m_list_indicator.At(i);
-      if(row == NULL || !this.Read_RAM(row.TypeEnum(), catalog) || catalog.group != group)
+      if(row == NULL || this.Group(row.TypeEnum(), row.Params()) != group)
          continue;
 
       has_rows = true;
@@ -1140,14 +1206,13 @@
   }
  bool CIndicatorTemplateManager::Update_IndicatorTemplate_Setting(const ENUM_INDICATOR_GROUP group, const bool on)
   {
-   SIndicatorsRow catalog;
    ENUM_INDICATOR types[];
    string params[], display[];
    bool buy[], sell[], sound[], message[], show[];
    int total = this.Read_RAM(types, params, display, buy, sell, sound, message, show);
    bool done = true;
    for(int i = 0; i < total; i++)
-      if(this.Read_RAM(types[i], catalog) && catalog.group == group)
+      if(this.Group(types[i], params[i]) == group)
       done = (this.Update_IndicatorTemplate_Setting(types[i], params[i], "show_on_chart", on,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED) && done);
    return done;
   }

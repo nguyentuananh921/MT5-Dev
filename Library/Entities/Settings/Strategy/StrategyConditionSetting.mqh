@@ -16,7 +16,7 @@
     private:
      string                     m_role;              // "entry", "exit", "stoploss", "takeprofit"
      ENUM_SIGNAL_DIRECTION      m_signal_direction;  // exit: the direction that closes the other side
-     string                     m_slot;
+     string                     m_slot;              //Same concept as source, can be indicator, swing,BOS,ChoCH, Candle Pattern, See 
      string                     m_rule;              // "signal" / "last_signal": the standard signal of the slot (signals.py); else a rule of the strategy, as its source EA (Web conditions.ts)
     public:
                                 CStrategyConditionSetting(const string role,const ENUM_SIGNAL_DIRECTION signal_direction,const string slot,const string rule);

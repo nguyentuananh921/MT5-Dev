@@ -17,6 +17,9 @@
  // Color 
   #define BAR_MARKER_BUY_COLOR   (clrDodgerBlue)   // CBarMarker: the badge of a Buy
   #define BAR_MARKER_SELL_COLOR  (clrRed)          // and of a Sell
+ //Implementation Risk Management
+  input group "General"
+  input int                  inpMagicNumber = 12345;  // EA Magic Number
  //+------------------------------------------------------------------+
  //| MY DEBUG: the step the EA is in is written to a file, over the     |
  //| one before: after an abnormal termination it is the last one done  |

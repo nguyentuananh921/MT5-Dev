@@ -51,8 +51,7 @@
  #include "..\Entities\Indicators\Standard\IndWPR.mqh"
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "Settings\SymbolTFManager.mqh"
- #include "Settings\IndicatorTemplateManager.mqh"
- #include "..\Services\DELib\DatabaseService.mqh"
+ #include "Settings\IndicatorTemplateManager.mqh" 
 #ifndef CINDICATORSCOLLECTION_MQH_DECLARATION
 #define CINDICATORSCOLLECTION_MQH_DECLARATION 
  class CIndicatorsCollection : public CBaseObj
@@ -67,20 +66,23 @@
     bool              AddIndicatorToList(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- (1) every template on a pair, (2) a template on every pair
     void              AddPair(const string symbol,const ENUM_TIMEFRAMES timeframe);
-    void              SeriesRefresh(const string symbol,const ENUM_TIMEFRAMES timeframe);
     void              AddTemplate(const ENUM_INDICATOR type,const string params_text);  
    //--- The indicators of (1) a pair, (2) a template go
     void              DeletePair(const string symbol,const ENUM_TIMEFRAMES timeframe);
-    void              DeleteTemplate(const ENUM_INDICATOR type,const string params_text);    
+    void              DeleteTemplate(const ENUM_INDICATOR type,const string params_text);
+   //--- New in V5: (1) an indicator another one is made on, (2) the sources no template and no reader needs any more go (one owner, one release)
+    bool              IsSourceOfAnother(CIndicatorDE *source) const;
+    void              DeleteUnusedSources(void);
    public:
    //--- The indicator of a template on a pair: its type and its params (the column params of the template), never the handle (NULL: none)
     CIndicatorDE      *GetIndicator(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
     void              SetSymbolTFManager(CSymbolTFManager *manager)                   { this.m_SymbolTFManager=manager;          }
     void              SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_IndicatorTemplateManager=manager; }
     CArrayObj        *GetList(void)                                                   { return &this.m_list;                     }
-   //--- Lifecycle: opens Common DB, makes the table indicators, writes the catalog to it (UpdateDataToDB), then every template on every pair
+   //--- Lifecycle: every template on every pair of Setting_SymbolTF (RAM only, the managers own the tables)
     bool              OnInitEvent(void);
-   //--- A pair or a template added (made) or deleted (gone): SYMBOLTF_MANAGER_EVENT_ADDED / _DELETE, INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED / _DELETE; a new bar: SERIES_EVENTS_NEW_BAR
+   //--- A pair or a template added (made) or deleted (gone): SYMBOLTF_MANAGER_EVENT_ADDED / _DELETE, INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED / _DELETE
+   //--- Change in V5: no refresh at SERIES_EVENTS_NEW_BAR any more: the users refresh what they read when they judge (CSignalsCollection::Prepare, CStrategyCollection), the event comes after the tick
     bool              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);   
                       CIndicatorsCollection(void) : m_SymbolTFManager(NULL),m_IndicatorTemplateManager(NULL) { this.m_object_type=COLLECTION_INDICATORS_ID; }
                      ~CIndicatorsCollection(void) {}
@@ -119,6 +121,22 @@
    MqlParam params[];
    if(!this.m_IndicatorTemplateManager.ParamsFromText(type,params_text,params))
       return false;
+   //--- New in V5: an indicator on indicator: its source first (shared, found by its type and params), its handle in the applied param
+   CIndicatorDE *source=NULL;
+   ENUM_INDICATOR source_type;
+   string source_params;
+   int applied=WRONG_VALUE;
+   if(this.m_IndicatorTemplateManager.SourceOf(type,params_text,source_type,source_params,applied))
+     {
+      if(this.AddIndicatorToList(source_type,source_params,symbol,timeframe))
+         source=this.GetIndicator(source_type,source_params,symbol,timeframe);
+      if(source==NULL || source.Handle()==INVALID_HANDLE)
+        {
+         ::Print(__FUNCTION__," > no source ",source_params," for ",params_text," on ",symbol);
+         return false;
+        }
+      params[applied].integer_value=source.Handle();
+     }
    CIndicatorDE *indicator=this.CreateIndicator(type,params,symbol,timeframe);
    if(indicator==NULL)
       return false;
@@ -136,6 +154,7 @@
       return false;
      }
    indicator.SetBuffersTotal(buffers_total);
+   indicator.SetSource(source,0);   // New in V5: the source is buffer buffers_total (buffer 0 of the source)
    if(indicator.Handle()==INVALID_HANDLE || !this.m_list.Add(indicator))
      {
       delete indicator;
@@ -144,7 +163,7 @@
    string timeframe_name=this.m_SymbolTFManager.Read_RAM((ENUM_TIMEFRAMES)timeframe);   // the table timeframes
    indicator.SetTimeframeDescription(timeframe_name);
    indicator.SetShortName(indicator.Name()+"("+symbol+","+timeframe_name+")");   // as V1: "MA(EURUSD,H1)"
-   indicator.GetSeriesData().Create();   // 0 when MT5 has not calculated it yet: the first new bar of the pair makes it
+   indicator.GetSeriesData().Create();   // 0 when MT5 has not calculated it yet: the first Refresh of a user makes it (CIndicatorSeriesDE::Refresh)
    return true;
   }
  //+------------------------------------------------------------------+
@@ -212,18 +231,9 @@
    for(int i=0;i<pairs;i++)
       this.AddIndicatorToList(type,params_text,symbols[i],timeframes[i]);
   }
- void CIndicatorsCollection::SeriesRefresh(const string symbol,const ENUM_TIMEFRAMES timeframe)
-  {
-   for(int i=0;i<this.m_list.Total();i++)
-     {
-      CIndicatorDE *indicator=this.m_list.At(i);
-      if(indicator!=NULL && indicator.Symbol()==symbol && indicator.Timeframe()==timeframe)
-         indicator.GetSeriesData().Refresh();
-     }
-  }
  void CIndicatorsCollection::DeletePair(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
-   for(int i=this.m_list.Total()-1;i>=0;i--)
+   for(int i=this.m_list.Total()-1;i>=0;i--)   // from the end: a reader is after its source (made after it), it goes first
      {
       CIndicatorDE *indicator=this.m_list.At(i);
       if(indicator!=NULL && indicator.Symbol()==symbol && indicator.Timeframe()==timeframe)
@@ -235,7 +245,27 @@
    for(int i=this.m_list.Total()-1;i>=0;i--)
      {
       CIndicatorDE *indicator=this.m_list.At(i);
-      if(indicator!=NULL && indicator.IsOf(type,params_text,indicator.Symbol(),indicator.Timeframe()))
+      if(indicator!=NULL && indicator.IsOf(type,params_text,indicator.Symbol(),indicator.Timeframe()) && !this.IsSourceOfAnother(indicator))
+         this.m_list.Delete(i);   // New in V5: a source another indicator reads stays
+     }
+   this.DeleteUnusedSources();
+  }
+ bool CIndicatorsCollection::IsSourceOfAnother(CIndicatorDE *source) const
+  {
+   for(int i=0;i<this.m_list.Total();i++)
+     {
+      CIndicatorDE *indicator=this.m_list.At(i);
+      if(indicator!=NULL && indicator!=source && indicator.SourceIndicator()==source)
+         return true;
+     }
+   return false;
+  }
+ void CIndicatorsCollection::DeleteUnusedSources(void)
+  {
+   for(int i=this.m_list.Total()-1;i>=0;i--)   // from the end: the source of a deleted reader is before it, its turn comes after
+     {
+      CIndicatorDE *indicator=this.m_list.At(i);
+      if(indicator!=NULL && this.m_IndicatorTemplateManager.Read_RAM(indicator.TypeIndicator(),indicator.ParamsText())==NULL && !this.IsSourceOfAnother(indicator))
          this.m_list.Delete(i);
      }
   }
@@ -256,12 +286,6 @@
   {
    if(this.m_SymbolTFManager==NULL || this.m_IndicatorTemplateManager==NULL)
       return false;
-   //--- A new bar of a pair (dparam = its TF, sparam = its symbol): the values of its indicators in RAM follow
-   if(id==CHARTEVENT_CUSTOM+SERIES_EVENTS_NEW_BAR)
-     {
-      this.SeriesRefresh(sparam,(ENUM_TIMEFRAMES)(long)dparam);
-      return true;
-     }
    //--- A pair: lparam = its TF, sparam = its symbol
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
      {

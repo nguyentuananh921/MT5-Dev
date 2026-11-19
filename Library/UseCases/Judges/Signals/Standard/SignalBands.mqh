@@ -18,9 +18,9 @@
   };
  ENUM_SIGNAL_DIRECTION CSignalBollinger::ComputeAt(const int index) const
   {
-   CBar *bar=this.m_list.At(index);
+   double price=this.Price(index);   // Change in V5 (was the close of the bar): the source of Bands on an indicator
    double middle=this.Buf(0,index);
-   return (bar!=NULL && bar.Close()>middle ? SIGNAL_DIRECTION_BUY : (bar!=NULL && bar.Close()<middle ? SIGNAL_DIRECTION_SELL : SIGNAL_DIRECTION_NONE));
+   return (price>middle ? SIGNAL_DIRECTION_BUY : (price<middle ? SIGNAL_DIRECTION_SELL : SIGNAL_DIRECTION_NONE));
   }
  //+------------------------------------------------------------------+
  //| Envelopes: closed below the lower band = Buy, above the upper    |
@@ -34,7 +34,7 @@
   };
  ENUM_SIGNAL_DIRECTION CSignalEnvelopes::ComputeAt(const int index) const
   {
-   CBar *bar=this.m_list.At(index);
-   return (bar!=NULL && bar.Close()<this.Buf(1,index) ? SIGNAL_DIRECTION_BUY : (bar!=NULL && bar.Close()>this.Buf(0,index) ? SIGNAL_DIRECTION_SELL : SIGNAL_DIRECTION_NONE));
+   double price=this.Price(index);   // Change in V5 (was the close of the bar): the source of Envelopes on an indicator
+   return (price<this.Buf(1,index) ? SIGNAL_DIRECTION_BUY : (price>this.Buf(0,index) ? SIGNAL_DIRECTION_SELL : SIGNAL_DIRECTION_NONE));
   }
 #endif // __SIGNALBANDS_MQH__

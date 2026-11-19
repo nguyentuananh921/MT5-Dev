@@ -47,9 +47,11 @@
     int               HistoryTotal(void)            const { return this.m_hist_time.Total();                  }
     datetime          HistoryTime(const int index)  const { return (datetime)this.m_hist_time.At(index);      }
     ENUM_SIGNAL_DIRECTION HistoryDir(const int index) const { return (ENUM_SIGNAL_DIRECTION)this.m_hist_dir.At(index); }
+   //--- New in V5: the row of a bar (SIGNAL_DIRECTION_NONE: no flip on it): a strategy reads the basic signal of its slot here (rule "signal"), it does not judge it again
+    ENUM_SIGNAL_DIRECTION DirectionAt(const datetime time) const;
    //--- A row goes in its place by its time, one per bar (false: the bar has one already)
     bool              AddRow(const datetime time,const ENUM_SIGNAL_DIRECTION direction);
-   //--- V5: a row Python found (CPythonBridge) is added and told (Event Rule): SERIES_EVENTS_SIGNAL, lparam = EventPack(bar time, type, side, is_new),
+   //--- V5: a row Python found (CPythonBridge) is added and told (Working with Event): SERIES_EVENTS_SIGNAL, lparam = EventPack(bar time, type, side, is_new),
    //--- dparam = the timeframe, sparam = the symbol;the params. False: the bar had it already (judged on RAM before: no second event)
     bool              StoreRow(const datetime time,const ENUM_SIGNAL_DIRECTION direction,const bool is_new);
    //--- The rows before the time go. Returns how many went
@@ -62,6 +64,22 @@
 #endif // CSIGNAL_MQH_DECLARATION
 #ifndef CSIGNAL_MQH_IMPLEMENTATION
 #define CSIGNAL_MQH_IMPLEMENTATION
+ //+------------------------------------------------------------------+
+ //| New in V5: the row of the bar, from the newest (the bars a        |
+ //| strategy asks are the newest ones)                                |
+ //+------------------------------------------------------------------+
+ ENUM_SIGNAL_DIRECTION CSignal::DirectionAt(const datetime time) const
+  {
+   for(int i=this.m_hist_time.Total()-1;i>=0;i--)
+     {
+      const long row=this.m_hist_time.At(i);
+      if(row==(long)time)
+         return (ENUM_SIGNAL_DIRECTION)this.m_hist_dir.At(i);
+      if(row<(long)time)
+         break;
+     }
+   return SIGNAL_DIRECTION_NONE;
+  }
  //+------------------------------------------------------------------+
  //| A row goes in its place by its time                               |
  //+------------------------------------------------------------------+

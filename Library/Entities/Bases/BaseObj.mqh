@@ -55,8 +55,17 @@
      //What the key and the text after the symbol mean is told by the id of the event (EventDefines.mqh)
       void               EventUnpack(const long lparam,datetime &time,long &key,ENUM_SIGNAL_DIRECTION &side,bool &is_new) const;
       void               EventUnpackText(const string sparam,string &symbol,string &extra) const;
-     //An event goes on the bus of the chart (its queue): OnChartEvent of the EA gives it to every hand
+     //Change in V5: an event goes on the bus of the EA (a queue in the program, not the chart of MT5: EventChartCustom lost the events sent in OnTrade, error 4104).
+     //The EA (the parent) takes them in order at the end of each of its handlers (EventNext) and gives each to every child, as OnChartEvent did
       bool               EventSend(const ushort id,const long lparam,const double dparam,const string sparam) const;
+      static bool        EventNext(ushort &id,long &lparam,double &dparam,string &sparam);   // the oldest event waiting; false: none
+    private:
+      static ushort      s_event_id[];
+      static long        s_event_lparam[];
+      static double      s_event_dparam[];
+      static string      s_event_sparam[];
+      static int         s_event_next;   // the index of the oldest event not taken yet
+    public:
      CBaseObj() : m_program((ENUM_PROGRAM_TYPE)::MQLInfoInteger(MQL_PROGRAM_TYPE)),
                   m_name_program(::MQLInfoString(MQL_PROGRAM_NAME)),
                                   m_global_error(ERR_SUCCESS),
@@ -89,9 +98,40 @@
     symbol=(split<0 ? sparam : ::StringSubstr(sparam,0,split));
     extra=(split<0 ? "" : ::StringSubstr(sparam,split+1));
    }
+  ushort CBaseObj::s_event_id[];
+  long   CBaseObj::s_event_lparam[];
+  double CBaseObj::s_event_dparam[];
+  string CBaseObj::s_event_sparam[];
+  int    CBaseObj::s_event_next=0;
   bool CBaseObj::EventSend(const ushort id,const long lparam,const double dparam,const string sparam) const
    {
-    return ::EventChartCustom(::ChartID(),id,lparam,dparam,sparam);
+    const int n=::ArraySize(s_event_id);
+    if(::ArrayResize(s_event_id,n+1,64)!=n+1 || ::ArrayResize(s_event_lparam,n+1,64)!=n+1 || ::ArrayResize(s_event_dparam,n+1,64)!=n+1 || ::ArrayResize(s_event_sparam,n+1,64)!=n+1)
+       return false;
+    s_event_id[n]=id;
+    s_event_lparam[n]=lparam;
+    s_event_dparam[n]=dparam;
+    s_event_sparam[n]=sparam;
+    return true;
+   }
+  bool CBaseObj::EventNext(ushort &id,long &lparam,double &dparam,string &sparam)
+   {
+    if(s_event_next>=::ArraySize(s_event_id))
+      {
+       //--- every event taken: the queue starts again empty
+       ::ArrayResize(s_event_id,0,64);
+       ::ArrayResize(s_event_lparam,0,64);
+       ::ArrayResize(s_event_dparam,0,64);
+       ::ArrayResize(s_event_sparam,0,64);
+       s_event_next=0;
+       return false;
+      }
+    id=s_event_id[s_event_next];
+    lparam=s_event_lparam[s_event_next];
+    dparam=s_event_dparam[s_event_next];
+    sparam=s_event_sparam[s_event_next];
+    s_event_next++;
+    return true;
    }
 #endif // CBASEOBJ_MQH_IMPLEMENTATION
 #endif // __CBASEOBJ_MQH__

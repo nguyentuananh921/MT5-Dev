@@ -81,7 +81,7 @@
   void CTradeEventModify::SendEvent(void)
    {
       this.PrintShort();
-      ::EventChartCustom(this.m_chart_id_main,(ushort)this.m_trade_event,this.TicketOrderEvent(),this.m_price,this.Symbol());
+      this.EventSend((ushort)this.m_trade_event,this.TicketOrderEvent(),this.m_price,this.Symbol());
    }
   //+------------------------------------------------------------------+
   //| Create and return a short event message                          |

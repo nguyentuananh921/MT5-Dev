@@ -4,7 +4,39 @@ import pandas as pd
 import talib
 from numpy.lib.stride_tricks import sliding_window_view
 
+def split_params(text):
+    """The values of a params text at the commas outside the brackets of a source: "9,0,SMA,RSI(14,CLOSE)" -> 9 | 0 | SMA | RSI(14,CLOSE) (CIndicatorTemplateManager::SplitParams)."""
+    values, depth, start = [], 0, 0
+    for i, c in enumerate(text + ","):
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif c == "," and depth == 0:
+            values.append(text[start:i])
+            start = i + 1
+    return values if text else []
+
+def source_of(applied):
+    """(type_name, params) of a source "RSI(14,CLOSE)", None for a price (V5 indicator on indicator: buffer 0 of the source, as MT5 does with a handle)."""
+    open_at = applied.find("(")
+    if open_at <= 0 or not applied.endswith(")"):
+        return None
+    name = applied[:open_at]
+    keys = PARAM_KEYS.get(name)
+    values = split_params(applied[open_at + 1:-1])
+    if keys is None or len(keys) != len(values):
+        raise ValueError(f"unknown source {applied}")
+    return name, dict(zip(keys, values))
+
+SOURCE_COLUMN = "__source__"   # V5: the values of the source, given to a calculation by compute() (the applied param says SOURCE_COLUMN)
+
 def applied_price(df, applied):
+    if applied == SOURCE_COLUMN:
+        return df[SOURCE_COLUMN].to_numpy(dtype=float)
+    source = source_of(applied)
+    if source is not None:   # V5: the values of another indicator, its buffer 0 (matched to MT5 iMA(..., handle) to 1e-10)
+        return np.asarray(compute(source[0], df, source[1])[0][0], dtype=float)
     name = applied.replace("PRICE_", "").upper()
     o, h, l, c = (df[k].to_numpy(dtype=float) for k in ("open", "high", "low", "close"))
     if name == "CLOSE":
@@ -380,8 +412,7 @@ def mfi(df, p):
     return [talib.MFI(h, l, c, df["tick_volume"].to_numpy(dtype=float), int(p["period"]))], {}
 
 def volumes(df, p):
-    volume = volume_of(df, p)
-    return [volume, moving_average(volume, int(p["ma_period"]), p["method"])], {}   # the volume and its moving average (the method of the MA indicator): the EA draws both
+    return [volume_of(df, p)], {}   # Change in V5: its moving average is an MA on VOLUMES(TICK)
 
 def bw_mfi(df, p):
     _, h, l, _c = ohlc(df)
@@ -440,7 +471,7 @@ PARAM_KEYS = {
     "OBV": ("volume",),
     "AD": ("volume",),
     "MFI": ("period",),
-    "VOLUMES": ("volume", "ma_period", "method"),
+    "VOLUMES": ("volume",),   # Change in V5: ("volume", "ma_period", "method") -> an MA on VOLUMES(TICK)
     "BWMFI": (),
     "FRACTALS": (),
 }
@@ -451,7 +482,8 @@ WARMUP_PERIODS = 10    # and at least this many of its longest period (an EMA 20
 def context(params):
     """The bars before a bar an indicator of a template needs: WARMUP_PERIODS of its longest period, WARMUP_BARS at least. A shift is not a period."""
     periods = [int(value) for key, value in params.items() if "shift" not in key and value.lstrip("-").isdigit()]
-    return max([WARMUP_BARS] + [WARMUP_PERIODS * period for period in periods])
+    sources = [source_of(value) for value in params.values() if "(" in value]   # V5: the bars its source needs come before its own
+    return max([WARMUP_BARS] + [WARMUP_PERIODS * period for period in periods]) + sum(context(source[1]) for source in sources if source)
 
 def from_template(type_name, params_total, params_text):
     """(type_name, params) of one row of Setting_IndicatorTemplate (its type from the table indicators, its saved params), None when Python does not calculate it (yet)
@@ -459,10 +491,24 @@ def from_template(type_name, params_total, params_text):
     keys = PARAM_KEYS.get(type_name)
     if keys is None or len(keys) != params_total:
         return None
-    values = params_text.split(",") if params_text else []   # 14,0,EMA,CLOSE
+    values = split_params(params_text)   # 14,0,EMA,CLOSE or 9,0,SMA,RSI(14,CLOSE)
     if len(values) != len(keys):
         return None
-    return type_name, dict(zip(keys, values))
+    params = dict(zip(keys, values))
+    if not valid_applied(params.get("applied")):
+        return None   # V5: a price the EA does not write (PPLIED_PRICE::8 of a line of another program): not calculated, said once by the caller
+    return type_name, params
+
+PRICES = ("CLOSE", "OPEN", "HIGH", "LOW", "MEDIAN", "TYPICAL", "WEIGHTED")
+
+def valid_applied(applied):
+    """None (no applied param), a price of applied_price, or a source of the catalog (source_of)."""
+    if applied is None or applied.replace("PRICE_", "").upper() in PRICES:
+        return True
+    try:
+        return source_of(applied) is not None and all(valid_applied(value) for key, value in source_of(applied)[1].items() if key == "applied")
+    except ValueError:
+        return False
 
 COMPUTE = {"SAR": sar, "MA": ma, "BANDS": bands, "ALLIGATOR": alligator, "ICHIMOKU": ichimoku, "ENVELOPES": envelopes,
            "FRAMA": frama, "AMA": ama, "DEMA": dema, "TEMA": tema, "VIDYA": vidya, "ADX": adx, "ADXW": adx_wilder,
@@ -471,7 +517,23 @@ COMPUTE = {"SAR": sar, "MA": ma, "BANDS": bands, "ALLIGATOR": alligator, "ICHIMO
            "AO": awesome, "AC": accelerator, "GATOR": gator, "BEARS": bears, "BULLS": bulls, "CHAIKIN": chaikin,
            "OBV": obv, "AD": accumulation, "MFI": mfi, "VOLUMES": volumes, "BWMFI": bw_mfi, "FRACTALS": fractals}
 
+def has_source(params):
+    """V5: an indicator on indicator (its applied param is TYPE(params))."""
+    return "(" in params.get("applied", "")
+
 def compute(name, df, params):
     if name not in COMPUTE:
         raise ValueError(f"indicator {name} is not implemented in Python yet")
-    return COMPUTE[name](df, params)
+    if not has_source(params):
+        return COMPUTE[name](df, params)
+    # V5 indicator on indicator: the source on every bar, the indicator on the bars from its first value (a source starts with NaN, as MT5 starts there),
+    # the source is the last buffer, as the EA (CIndicatorDE::SetSource)
+    source = applied_price(df, params["applied"])
+    valid = np.flatnonzero(~np.isnan(source))
+    start = int(valid[0]) if len(valid) else len(source)
+    part = df.iloc[start:].reset_index(drop=True).assign(**{SOURCE_COLUMN: source[start:]})
+    if part.empty:
+        return [np.full(len(df), np.nan), source], {}
+    buffers, alternatives = COMPUTE[name](part, dict(params, applied=SOURCE_COLUMN))
+    pad = lambda values: np.concatenate([np.full(start, np.nan), np.asarray(values, dtype=float)])
+    return [pad(b) for b in buffers] + [source], {k: [(label, pad(v)) for label, v in alts] for k, alts in alternatives.items()}

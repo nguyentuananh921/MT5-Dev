@@ -39,6 +39,10 @@
     bool              IsPresentSymbolInControlList(const string symbol_name);
    //--- Return the number of visible symbols (V3)
     int               SymbolsTotalVisible(void)                    const;
+   //--- New in V5: one event of the Market Watch, packed (EventPack) and sent
+    void              SendMarketWatchEvent(const ENUM_MW_EVENT id,const int index,const string name,const bool is_new);
+   //--- New in V5: the object of a symbol, added to the list with what it tells (its controlled properties): its index, WRONG_VALUE when not added
+    int               AddSymbol(const string name);
    public:
    //--- Return the full collection list 'as is'
     CArrayObj        *GetList(void)                                   { return &this.m_list_all_symbols; }
@@ -51,7 +55,7 @@
                       CSymbolsCollection(void);
                      ~CSymbolsCollection(void);
     void              SetSymbolTFManager(CSymbolTFManager *manager)   { this.m_SymbolTFManager=manager; }
-   //--- Lifecycle: the chart symbol and the Market Watch have their lines in symbols, then the symbols of this account are read from the database
+   //--- Lifecycle: the symbols of this account are read from the database (CSymbolTFManager writes their rows), the Market Watch is the starting point
     bool              OnInitEvent(void);
    //--- Working with the Market Watch window events (V3): fires MARKET_WATCH_EVENT_SYMBOL_ADD / _DEL / _SORT; a new symbol gets its line and its object
     void              MarketWatchEventsControl(const bool send_events=true);
@@ -116,8 +120,10 @@
     int total=this.m_SymbolTFManager.ReadDataFromDB(names);
     if(total==0)
        ::Print(__FUNCTION__," > no symbol of this account from SymbolTFManager");
+    //--- Only what is in the Market Watch: the collection follows it (a row of a symbol removed from it stays, CSymbol would put it back: DoEasy SetToMarketWatch)
     for(int i=0;i<total;i++)
-       this.m_list_all_symbols.Add(new CSymbolCommon(names[i],this.m_list_all_symbols.Total()));   
+       if(this.IsPresentSymbolInMW(names[i]))
+          this.AddSymbol(names[i]);
    // The current Market Watch is the starting point, no event for what is already there
    this.MarketWatchEventsControl(false);
    this.m_check_ms=::GetTickCount64();
@@ -217,7 +223,8 @@
    this.m_list_events.Clear();   // events are sent to the chart: the list only holds the current ones
    this.m_delta_symbol=this.m_total_symbols-this.m_total_symbol_prev;
    bool told=false;
-   //--- A symbol was added: lparam = event time in milliseconds, dparam = symbol index, sparam = symbol name
+   //--- Change in V5: the events are packed as every event of the library (EventPack: key = the index of the symbol in the list, sparam = its name), was DoEasy (lparam = ms, dparam = index)
+   //--- A symbol was added: its row of symbols, its object
    for(int i=0;i<total_symbols;i++)
      {
       string name=::SymbolName(i,true);
@@ -227,33 +234,58 @@
        if(this.m_SymbolTFManager!=NULL)
           this.m_SymbolTFManager.Update_SymbolTF_Setting(name);
       int index=this.GetIndexObjByName(name);
-      if(index==WRONG_VALUE && this.m_list_all_symbols.Add(new CSymbolCommon(name,this.m_list_all_symbols.Total())))
-         index=this.m_list_all_symbols.Total()-1;
-      if(this.EventAdd((ushort)MARKET_WATCH_EVENT_SYMBOL_ADD,this.TickTime(),index,name))
-         this.EventSend((ushort)MARKET_WATCH_EVENT_SYMBOL_ADD,this.TickTime(),index,name);
+      if(index==WRONG_VALUE)
+         index=this.AddSymbol(name);
+      this.SendMarketWatchEvent(MARKET_WATCH_EVENT_SYMBOL_ADD,index,name,true);
       told=true;
      }
-   //--- A symbol was removed: lparam = event time in milliseconds, dparam = -1, sparam = removed symbol name
+   //--- A symbol was removed from the Market Watch: its object and its row stay (others point to it)
    int total=this.m_list_names.Total();
    for(int i=0;i<total;i++)
      {
       string name=this.m_list_names.At(i);
       if(name==NULL || this.IsPresentSymbolInMW(name))
          continue;
-      if(this.EventAdd((ushort)MARKET_WATCH_EVENT_SYMBOL_DEL,this.TickTime(),WRONG_VALUE,name))
-         this.EventSend((ushort)MARKET_WATCH_EVENT_SYMBOL_DEL,this.TickTime(),WRONG_VALUE,name);
+      this.SendMarketWatchEvent(MARKET_WATCH_EVENT_SYMBOL_DEL,this.GetIndexObjByName(name),name,false);
       told=true;
      }
-   //--- The symbols were sorted: lparam = event time in milliseconds, dparam = current symbol index, sparam = current symbol name
+   //--- The symbols were sorted: the symbol of the chart
    if(!told)
-     {
-      int index=this.GetIndexObjByName(::Symbol());
-      if(this.EventAdd((ushort)MARKET_WATCH_EVENT_SYMBOL_SORT,this.TickTime(),index,::Symbol()))
-         this.EventSend((ushort)MARKET_WATCH_EVENT_SYMBOL_SORT,this.TickTime(),index,::Symbol());
-     }
+      this.SendMarketWatchEvent(MARKET_WATCH_EVENT_SYMBOL_SORT,this.GetIndexObjByName(::Symbol()),::Symbol(),false);
    this.CopySymbolsNames();
    this.m_total_symbol_prev=this.m_total_symbols;
    this.m_hash_sum_prev=this.m_hash_sum;
+  }
+ //+------------------------------------------------------------------+
+ //| The object of a symbol: what it tells is set here (as            |
+ //| CAccountsCollection does for CAccount). Spread 0: every change   |
+ //| (the status bar of the panel)                                    |
+ //+------------------------------------------------------------------+
+ int CSymbolsCollection::AddSymbol(const string name)
+  {
+   CSymbolCommon *symbol=new CSymbolCommon(name,this.m_list_all_symbols.Total());
+   if(symbol==NULL)
+      return WRONG_VALUE;
+   if(!this.m_list_all_symbols.Add(symbol))
+     {
+      delete symbol;
+      return WRONG_VALUE;
+     }
+   symbol.SetControlSpreadInc(0);
+   symbol.SetControlSpreadDec(0);
+   return this.m_list_all_symbols.Total()-1;
+  }
+ //+------------------------------------------------------------------+
+ //| An event of the Market Watch: lparam = EventPack (when, key = the |
+ //| index of the symbol in the list, is_new = a new symbol), sparam = |
+ //| the name. Told once (EventAdd keeps the events of this check)     |
+ //+------------------------------------------------------------------+
+ void CSymbolsCollection::SendMarketWatchEvent(const ENUM_MW_EVENT id,const int index,const string name,const bool is_new)
+  {
+   const long lparam=this.EventPack(::TimeCurrent(),index,SIGNAL_DIRECTION_NONE,is_new);
+   const string sparam=this.EventPackText(name);
+   if(this.EventAdd((ushort)id,lparam,0.0,sparam))
+      this.EventSend((ushort)id,lparam,0.0,sparam);
   }
  //+------------------------------------------------------------------+
  //| Checks the Market Watch window once a second                     |

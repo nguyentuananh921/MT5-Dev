@@ -29,7 +29,8 @@ double rsiBuffer[];                //--- Array to store the RSI values retrieved
 datetime lastBarTime = 0;          //--- Holds the time of the last processed bar to prevent duplicate signals.
 
 //--- Struct to track individual position recovery states
-struct PositionRecovery {
+struct PositionRecovery
+ {
    CTrade trade;                    //--- Object to handle trading operations.
    double initialLotSize;           //--- Initial lot size for this position.
    double currentLotSize;           //--- Current lot size in the recovery sequence.
@@ -66,24 +67,31 @@ struct PositionRecovery {
    }
 
    //--- Calculate dynamic zones and targets
-   void CalculateZones() {
-      if (lastOrderType == ORDER_TYPE_BUY) { //--- If the last order was a BUY...
+   void CalculateZones()
+    {
+      if (lastOrderType == ORDER_TYPE_BUY)
+       { //--- If the last order was a BUY...
          zoneHigh = lastOrderPrice;         //--- Set upper boundary at the last order price.
          zoneLow = zoneHigh - zoneSize;     //--- Set lower boundary below the last order price.
          zoneTargetHigh = zoneHigh + targetSize; //--- Define target range above recovery zone.
          zoneTargetLow = zoneLow - targetSize;   //--- Define target range below recovery zone.
-      } else if (lastOrderType == ORDER_TYPE_SELL) { //--- If the last order was a SELL...
+       }
+      else if (lastOrderType == ORDER_TYPE_SELL)
+       { //--- If the last order was a SELL...
          zoneLow = lastOrderPrice;                //--- Set lower boundary at the last order price.
          zoneHigh = zoneLow + zoneSize;           //--- Set upper boundary above the last order price.
          zoneTargetLow = zoneLow - targetSize;    //--- Define target range below recovery zone.
          zoneTargetHigh = zoneHigh + targetSize;  //--- Define target range above recovery zone.
-      }
-   }
+       }
+    }
 
    //--- Open a trade with comments for position type
-   bool OpenTrade(ENUM_ORDER_TYPE type, string comment) {
-      if (type == ORDER_TYPE_BUY) { //--- For a BUY order...
-         if (trade.Buy(currentLotSize, symbol, 0, 0, 0, comment)) { //--- Attempt to place a BUY trade.
+   bool OpenTrade(ENUM_ORDER_TYPE type, string comment)
+    {
+      if (type == ORDER_TYPE_BUY)
+       { //--- For a BUY order...
+         if (trade.Buy(currentLotSize, symbol, 0, 0, 0, comment))
+          { //--- Attempt to place a BUY trade.
             lastOrderType = ORDER_TYPE_BUY;                        //--- Update the last order type.
             lastOrderPrice = SymbolInfoDouble(symbol, SYMBOL_BID); //--- Record the current price.
             ArrayResize(tickets, ArraySize(tickets) + 1);          //--- Resize the tickets array.
@@ -92,9 +100,12 @@ struct PositionRecovery {
             isRecovery = false;                                    //--- Ensure recovery is inactive for initial trade.
             Print("Opened BUY Position, Ticket: ", tickets[ArraySize(tickets) - 1]);
             return true;                                           //--- Return success.
-         }
-      } else if (type == ORDER_TYPE_SELL) { //--- For a SELL order...
-         if (trade.Sell(currentLotSize, symbol, 0, 0, 0, comment)) { //--- Attempt to place a SELL trade.
+          }
+       } 
+      else if (type == ORDER_TYPE_SELL)
+       { //--- For a SELL order...
+         if (trade.Sell(currentLotSize, symbol, 0, 0, 0, comment))
+          { //--- Attempt to place a SELL trade.
             lastOrderType = ORDER_TYPE_SELL;                        //--- Update the last order type.
             lastOrderPrice = SymbolInfoDouble(symbol, SYMBOL_BID);  //--- Record the current price.
             ArrayResize(tickets, ArraySize(tickets) + 1);           //--- Resize the tickets array.
@@ -103,25 +114,31 @@ struct PositionRecovery {
             isRecovery = false;                                     //--- Ensure recovery is inactive for initial trade.
             Print("Opened SELL Position, Ticket: ", tickets[ArraySize(tickets) - 1]);
             return true;                                            //--- Return success.
-         }
-      }
+          }
+       }
       return false; //--- If the trade was not placed, return false.
-   }
+    }
 
    //--- Get the entry price of a position by ticket
-   double GetPositionEntryPrice(ulong ticket) {
-      if (PositionSelectByTicket(ticket)) {
+   double GetPositionEntryPrice(ulong ticket)
+    {
+      if (PositionSelectByTicket(ticket))
+       {
          return PositionGetDouble(POSITION_PRICE_OPEN);
-      } else {
+       } 
+      else
+       {
          Print("Failed to select position by ticket: ", ticket);
          return 0.0;
-      }
-   }
+       }
+    }
 
    //--- Manage zone recovery
-   void ManageZones() {
+   void ManageZones()
+    {
       double currentPrice = SymbolInfoDouble(symbol, SYMBOL_BID); //--- Get the current price.
-      if (lastOrderType == ORDER_TYPE_BUY && currentPrice <= zoneLow) { //--- If price drops below the recovery zone for a BUY...
+      if (lastOrderType == ORDER_TYPE_BUY && currentPrice <= zoneLow)
+       { //--- If price drops below the recovery zone for a BUY...
          double previousLotSize = currentLotSize;                       //--- Store the current lot size temporarily.
          currentLotSize *= multiplier;                                 //--- Tentatively increase lot size.
          if (OpenTrade(ORDER_TYPE_SELL, "Recovery Position")) {        //--- Attempt to open a SELL recovery trade.
@@ -129,7 +146,9 @@ struct PositionRecovery {
          } else {
             currentLotSize = previousLotSize;                          //--- Revert the lot size if the trade fails.
          }
-      } else if (lastOrderType == ORDER_TYPE_SELL && currentPrice >= zoneHigh) { //--- If price rises above the recovery zone for a SELL...
+       } 
+      else if (lastOrderType == ORDER_TYPE_SELL && currentPrice >= zoneHigh)
+       { //--- If price rises above the recovery zone for a SELL...
          double previousLotSize = currentLotSize;                       //--- Store the current lot size temporarily.
          currentLotSize *= multiplier;                                 //--- Tentatively increase lot size.
          if (OpenTrade(ORDER_TYPE_BUY, "Recovery Position")) {         //--- Attempt to open a BUY recovery trade.
@@ -137,18 +156,22 @@ struct PositionRecovery {
          } else {
             currentLotSize = previousLotSize;                          //--- Revert the lot size if the trade fails.
          }
-      }
+       }
    }
 
    //--- Check and close trades at targets
-   void CheckCloseAtTargets() {
+   void CheckCloseAtTargets()
+    {
       double currentPrice = SymbolInfoDouble(symbol, SYMBOL_BID); //--- Get the current price.
-      if (lastOrderType == ORDER_TYPE_BUY && currentPrice >= zoneTargetHigh) { //--- If price reaches the target for a BUY...
+      if (lastOrderType == ORDER_TYPE_BUY && currentPrice >= zoneTargetHigh)
+       { //--- If price reaches the target for a BUY...
          ClosePositionsAtTarget();                               //--- Close positions that meet the target criteria.
-      } else if (lastOrderType == ORDER_TYPE_SELL && currentPrice <= zoneTargetLow) { //--- If price reaches the target for a SELL...
+       } 
+      else if (lastOrderType == ORDER_TYPE_SELL && currentPrice <= zoneTargetLow)
+       { //--- If price reaches the target for a SELL...
          ClosePositionsAtTarget();                               //--- Close positions that meet the target criteria.
-      }
-   }
+       }
+    }
 
    //--- Apply trailing stop logic to initial positions
    void ApplyTrailingStop() {

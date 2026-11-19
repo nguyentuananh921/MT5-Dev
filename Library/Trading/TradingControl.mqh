@@ -5,7 +5,7 @@
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //|                             https://mql5.com/en/users/artmedia70 |
 //+------------------------------------------------------------------+
-//--- Ported from V3 Trading\TradingControl.mqh (2026 1031): RAM only (the pending requests); the StopLost / Trailing / lot by risk part is not ported (RiskManagement is made again)
+//--- Ported from V3 Trading\TradingControl.mqh (2026 1031): RAM only (the pending requests)
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
@@ -15,8 +15,23 @@
 //+------------------------------------------------------------------+
 #include "Trading.mqh"
 #include "..\Entities\Defines\EventDefines.mqh"
+#include "..\Services\DELib\DatabaseService.mqh"
  #ifndef CTRADINGCONTROL_MQH_DECLARATION
  #define CTRADINGCONTROL_MQH_DECLARATION
+ //--- Rows of TradingOrderDetail as CDatabaseService::Read binds them (the order of the SELECT): local variables only
+ struct STradingOrderDetailBidAsk
+  {
+   long                  ticket;
+   double                bid;
+   double                ask;
+  };
+ struct STradingOrderDetailChange
+  {
+   long                  time_msc;
+   long                  event;
+   double                sl;
+   double                tp;
+  };
 //+------------------------------------------------------------------+
 //| Class for managing pending trading requests                      |
 //+------------------------------------------------------------------+
@@ -36,7 +51,20 @@ class CTradingControl : public CTrading
       double               GetActualDataAccount(const int property);
       double               GetActualDataSymbol(const int property,const CSymbol *symbol);
       double               GetActualDataEvent(const int property);
-   
+     // New in V5: the lifecycle of a position, only what MT5 does not keep 
+     // TradingOrderDetail table , file of the account; Python does not touch it)
+      CDatabaseService    *m_CDatabaseService;   // The EA holds it
+      bool                 IsDeal(const COrder *order) const;
+      bool                 IsPositionEvent(const ENUM_TRADE_EVENT event) const;
+      bool                 IsCloseEvent(const ENUM_TRADE_EVENT event) const;
+      bool                 IsModifyEvent(const ENUM_TRADE_EVENT event) const;
+      string               OrderDetailValues(const long position_id,const long time_msc,const long ticket,const int event,const double sl,const double tp,const double bid,const double ask) const;
+      bool                 UpdateDataToDB(const string values);
+     //--- The Bid / Ask of the deals of a position on RAM (COrder), from the ticks of the terminal
+      void                 DealsBidAsk(const long position_id);
+     //--- A position closed: its deals (Bid / Ask) and the changes of its SL / TP of this run written
+      bool                 UpdateDataToDB(const long position_id);
+
     public:
      //--- Return itself
       CTradingControl     *GetObject(void)            { return &this;   }
@@ -99,8 +127,14 @@ class CTradingControl : public CTrading
      //--- Close every open position on (symbol,dir) - queries the live broker state directly,
      //--- no CMarketCollection dependency needed.
        void                 ClosePositions(const string symbol, const ENUM_POSITION_TYPE dir);
-     //--- Event Rule: Trade listens; TRADE_SETUP_EVENT_CLOSE_ALL (the panel, emergency) closes every position of the account
+     //--- Working with Event: Trade listens; TRADE_SETUP_EVENT_CLOSE_ALL (the panel, emergency) closes every position of the account;
+     //--- a trading event of a position (lparam = its id): the Bid / Ask of its deals, written when it is closed
        void                 OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
+     //--- New in V5: lifecycle as the other managers: makes TradingOrderDetail, puts the Bid / Ask of the deals on RAM (the ones missing: from the ticks, written)
+       void                 SetDatabaseService(CDatabaseService *databaseService) { this.m_CDatabaseService=databaseService; }
+       bool                 OnInitEvent(void);
+     //--- The changes of the SL / TP of a position, oldest first (load on demand: the table; a position not closed yet: the events of this run). Returns how many
+       int                  ReadDataFromDB(const long position_id,long &times[],long &events[],double &sls[],double &tps[]);
      //--- Modify SL (or TP) to new_price on every open position on (symbol,dir), keeping each
      //--- position's own current TP (or SL) untouched.
        bool                 ModifyPositions(const string symbol, const ENUM_POSITION_TYPE dir, const bool modify_sl, const double new_price);
@@ -113,7 +147,7 @@ class CTradingControl : public CTrading
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CTradingControl::CTradingControl()
+ CTradingControl::CTradingControl() : m_CDatabaseService(NULL)
   {
    this.m_list_request.Clear();
    this.m_list_request.Sort();
@@ -1353,6 +1387,17 @@ class CTradingControl : public CTrading
   }
  void CTradingControl::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   if(id>CHARTEVENT_CUSTOM+TRADE_EVENT_NO_EVENT && id<CHARTEVENT_CUSTOM+TRADE_EVENTS_NEXT_CODE)
+     {
+      const ENUM_TRADE_EVENT event=(ENUM_TRADE_EVENT)(id-CHARTEVENT_CUSTOM);
+      if(this.IsPositionEvent(event))
+        {
+         this.DealsBidAsk(lparam);
+         if(this.IsCloseEvent(event))
+            this.UpdateDataToDB(lparam);
+        }
+      return;
+     }
    if(id!=CHARTEVENT_CUSTOM+TRADE_SETUP_EVENT_CLOSE_ALL)
       return;
    int total=::PositionsTotal(),closed=0;
@@ -1416,6 +1461,205 @@ class CTradingControl : public CTrading
    if(!ok) ::Print("CTradingControl::SendNewOrder: ", symbol, " FAILED, order_type_idx=", order_type_idx,
                    " lot=", lot, " price=", price, " error=", ::GetLastError());
    return ok;
+  }
+ //+------------------------------------------------------------------+
+ //| A deal of a position (the balance operations are not)            |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::IsDeal(const COrder *order) const
+  {
+   return(order!=NULL && order.Status()==ORDER_STATUS_DEAL && order.TypeOrder()<=ORDER_TYPE_SELL);
+  }
+ //+------------------------------------------------------------------+
+ //| A trading event whose lparam is the id of a position             |
+ //| (CTradeEventPositionOpen / CTradeEventPositionClose::SendEvent)  |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::IsPositionEvent(const ENUM_TRADE_EVENT event) const
+  {
+   return(event>=TRADE_EVENT_PENDING_ORDER_ACTIVATED && event<=TRADE_EVENT_TRIGGERED_STOP_LIMIT_ORDER);
+  }
+ //+------------------------------------------------------------------+
+ //| The position closed (whole or a part): its lifecycle is written  |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::IsCloseEvent(const ENUM_TRADE_EVENT event) const
+  {
+   return(event==TRADE_EVENT_POSITION_CLOSED || event==TRADE_EVENT_POSITION_CLOSED_BY_POS || event==TRADE_EVENT_POSITION_CLOSED_BY_SL ||
+          event==TRADE_EVENT_POSITION_CLOSED_BY_TP || event==TRADE_EVENT_POSITION_CLOSED_PARTIAL || event==TRADE_EVENT_POSITION_CLOSED_PARTIAL_BY_POS ||
+          event==TRADE_EVENT_POSITION_CLOSED_PARTIAL_BY_SL || event==TRADE_EVENT_POSITION_CLOSED_PARTIAL_BY_TP);
+  }
+ //+------------------------------------------------------------------+
+ //| A change of the SL / TP of a position                            |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::IsModifyEvent(const ENUM_TRADE_EVENT event) const
+  {
+   return(event==TRADE_EVENT_MODIFY_POSITION_SL_TP || event==TRADE_EVENT_MODIFY_POSITION_SL || event==TRADE_EVENT_MODIFY_POSITION_TP);
+  }
+ //+------------------------------------------------------------------+
+ //| One row of the VALUES of an INSERT into TradingOrderDetail       |
+ //+------------------------------------------------------------------+
+ string CTradingControl::OrderDetailValues(const long position_id,const long time_msc,const long ticket,const int event,const double sl,const double tp,const double bid,const double ask) const
+  {
+   return "("+(string)position_id+", "+(string)time_msc+", "+(string)ticket+", "+(string)event+", "+::DoubleToString(sl,8)+", "+::DoubleToString(tp,8)+", "+
+          ::DoubleToString(bid,8)+", "+::DoubleToString(ask,8)+")";
+  }
+ //+------------------------------------------------------------------+
+ //| Rows written (a row already there is kept)                       |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::UpdateDataToDB(const string values)
+  {
+   if(values=="" || this.m_CDatabaseService==NULL)
+      return true;
+   if(!this.m_CDatabaseService.Create("Account","INSERT OR IGNORE INTO TradingOrderDetail (position_id, time_msc, ticket, event, sl, tp, bid, ask) VALUES "+values))
+     {
+      ::Print(__FUNCTION__," > TradingOrderDetail not written");
+      return false;
+     }
+   return true;
+  }
+ //+------------------------------------------------------------------+
+ //| The Bid / Ask of the deals of a position on RAM: the last tick   |
+ //| at or before each deal (COrder::BidAskFromTicks)                 |
+ //+------------------------------------------------------------------+
+ void CTradingControl::DealsBidAsk(const long position_id)
+  {
+   CArrayObj *list=(this.m_history_collection!=NULL ? this.m_history_collection.GetList() : NULL);
+   if(list==NULL)
+      return;
+   for(int i=0;i<list.Total();i++)
+     {
+      COrder *deal=list.At(i);
+      if(this.IsDeal(deal) && deal.PositionID()==position_id && deal.Bid()==0)
+         deal.BidAskFromTicks();
+     }
+  }
+ //+------------------------------------------------------------------+
+ //| A position closed: the Bid / Ask of its deals and the changes of |
+ //| its SL / TP of this run (the events of CTradeEventsCollection)   |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::UpdateDataToDB(const long position_id)
+  {
+   string values="";
+   CArrayObj *list=(this.m_history_collection!=NULL ? this.m_history_collection.GetList() : NULL);
+   for(int i=0;list!=NULL && i<list.Total();i++)
+     {
+      COrder *deal=list.At(i);
+      if(!this.IsDeal(deal) || deal.PositionID()!=position_id)
+         continue;
+      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(position_id,deal.GetProperty(ORDER_PROP_TIME_OPEN),deal.Ticket(),TRADE_EVENT_NO_EVENT,0,0,deal.Bid(),deal.Ask());
+     }
+   CArrayObj *events=(this.m_trade_event_collection!=NULL ? this.m_trade_event_collection.GetList() : NULL);
+   for(int i=0;events!=NULL && i<events.Total();i++)
+     {
+      CTradeEvent *event=events.At(i);
+      if(event==NULL || event.PositionID()!=position_id || !this.IsModifyEvent(event.TypeEvent()))
+         continue;
+      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(position_id,event.TimeEvent(),0,event.TypeEvent(),event.PriceStopLoss(),event.PriceTakeProfit(),0,0);
+     }
+   return this.UpdateDataToDB(values);
+  }
+ //+------------------------------------------------------------------+
+ //| Makes TradingOrderDetail; the Bid / Ask of every deal of the     |
+ //| history on RAM: from the table, the ones missing from the ticks  |
+ //| (the first start: all; then the positions closed while the EA    |
+ //| was off), written. A chart change keeps them (m_first_start)    |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::OnInitEvent(void)
+  {
+   if(!this.m_first_start)
+      return true;
+   if(this.m_CDatabaseService==NULL || this.m_history_collection==NULL)
+      return false;
+   if(!this.m_CDatabaseService.Create("Account","CREATE TABLE IF NOT EXISTS TradingOrderDetail (position_id INTEGER NOT NULL, time_msc INTEGER NOT NULL, ticket INTEGER NOT NULL, "
+                                      "event INTEGER NOT NULL, sl REAL, tp REAL, bid REAL, ask REAL, PRIMARY KEY (position_id, time_msc, ticket, event))"))
+     {
+      ::Print(__FUNCTION__," > DatabaseService can't create table TradingOrderDetail");
+      return false;
+     }
+   const ulong start=::GetTickCount64();
+   STradingOrderDetailBidAsk rows[];
+   if(!this.m_CDatabaseService.Read("Account","SELECT ticket, COALESCE(bid, 0), COALESCE(ask, 0) FROM TradingOrderDetail WHERE ticket <> 0 ORDER BY ticket",rows))
+      return false;
+   const int total=::ArraySize(rows);
+   long tickets[];
+   ::ArrayResize(tickets,total);
+   for(int i=0;i<total;i++)
+      tickets[i]=rows[i].ticket;
+   CArrayObj *list=this.m_history_collection.GetList();
+   string values="";
+   int read=0,filled=0,batch=0;
+   for(int i=0;list!=NULL && i<list.Total();i++)
+     {
+      COrder *deal=list.At(i);
+      if(!this.IsDeal(deal))
+         continue;
+      const int k=(total>0 ? ::ArrayBsearch(tickets,deal.Ticket()) : -1);
+      if(k>=0 && tickets[k]==deal.Ticket())
+        {
+         deal.SetBidAsk(rows[k].bid,rows[k].ask);
+         read++;
+         continue;
+        }
+      deal.BidAskFromTicks();   // no tick any more: 0, written too so that it is not asked again
+      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(deal.PositionID(),deal.GetProperty(ORDER_PROP_TIME_OPEN),deal.Ticket(),TRADE_EVENT_NO_EVENT,0,0,deal.Bid(),deal.Ask());
+      filled++;
+      if(++batch>=500)
+        {
+         this.UpdateDataToDB(values);
+         values="";
+         batch=0;
+        }
+     }
+   this.UpdateDataToDB(values);
+   ::Print("Complete ",__FUNCTION__," > Bid / Ask of ",read," deals read from TradingOrderDetail, ",filled," deals from the ticks written, ",::GetTickCount64()-start," ms");
+   this.m_first_start=false;
+   return true;
+  }
+ //+------------------------------------------------------------------+
+ //| The changes of the SL / TP of a position, oldest first           |
+ //+------------------------------------------------------------------+
+ int CTradingControl::ReadDataFromDB(const long position_id,long &times[],long &events[],double &sls[],double &tps[])
+  {
+   ::ArrayResize(times,0);
+   ::ArrayResize(events,0);
+   ::ArrayResize(sls,0);
+   ::ArrayResize(tps,0);
+   int n=0;
+   STradingOrderDetailChange rows[];
+   if(this.m_CDatabaseService!=NULL &&
+      this.m_CDatabaseService.Read("Account","SELECT time_msc, event, COALESCE(sl, 0), COALESCE(tp, 0) FROM TradingOrderDetail WHERE position_id = "+(string)position_id+
+                                   " AND ticket = 0 ORDER BY time_msc",rows) && ::ArraySize(rows)>0)
+     {
+      n=::ArraySize(rows);
+      ::ArrayResize(times,n);
+      ::ArrayResize(events,n);
+      ::ArrayResize(sls,n);
+      ::ArrayResize(tps,n);
+      for(int i=0;i<n;i++)
+        {
+         times[i]=rows[i].time_msc;
+         events[i]=rows[i].event;
+         sls[i]=rows[i].sl;
+         tps[i]=rows[i].tp;
+        }
+      return n;
+     }
+   //--- Not written yet (the position is not closed): the events of this run
+   CArrayObj *list=(this.m_trade_event_collection!=NULL ? this.m_trade_event_collection.GetList() : NULL);
+   for(int i=0;list!=NULL && i<list.Total();i++)
+     {
+      CTradeEvent *event=list.At(i);
+      if(event==NULL || event.PositionID()!=position_id || !this.IsModifyEvent(event.TypeEvent()))
+         continue;
+      ::ArrayResize(times,n+1);
+      ::ArrayResize(events,n+1);
+      ::ArrayResize(sls,n+1);
+      ::ArrayResize(tps,n+1);
+      times[n]=event.TimeEvent();
+      events[n]=event.TypeEvent();
+      sls[n]=event.PriceStopLoss();
+      tps[n]=event.PriceTakeProfit();
+      n++;
+     }
+   return n;
   }
  #endif // CTRADINGCONTROL_MQH_IMPLEMENTATION
 #endif // __TRADINGCONTROL_MQH__

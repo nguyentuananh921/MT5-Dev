@@ -33,6 +33,7 @@
     int               m_handle;                                                   // The handle: only this object releases it (one release is the end of it for every user)
     string            m_params_text;                                              // Its identity with its type: the column params of its template
     string            m_timeframe_description;                                    // The name of the timeframe (the table timeframes)
+    CIndicatorDE     *m_source;                                                   // New in V5: the indicator it is made on (NULL: a price), owned by CIndicatorsCollection
     CIndicatorTemplateManager *m_IndicatorTemplateManager;
    //--- Return the index of the array the indicator's (1) double and (2) string properties are actually located at
     int               IndexProp(ENUM_INDICATOR_PROP_DOUBLE property)        const { return(int)property-INDICATOR_PROP_INTEGER_TOTAL;                            }
@@ -48,7 +49,7 @@
                                    MqlParam &mql_params[]);
    public:
    //--- Default constructor
-                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE),m_IndicatorTemplateManager(NULL) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
+                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE),m_source(NULL),m_IndicatorTemplateManager(NULL) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
    //--- Destructor
                      ~CIndicatorDE(void);
    //--- Set indicator's (1) integer, (2) real and (3) string property
@@ -82,6 +83,9 @@
     void              SetID(const long id)                            { this.SetProperty(INDICATOR_PROP_ID,id); this.m_series_data.SetIndID(id); }
     void              SetBuffersTotal(const int buffers_total)        { this.m_buffers_total=buffers_total; this.m_series_data.SetBuffersTotal(buffers_total); }
     void              SetTimeframeDescription(const string text)      { this.m_timeframe_description=text; }   // the one copy of the name (the table timeframes)
+   //--- New in V5: (1) the source is its last buffer (after SetBuffersTotal), (2) the indicator it is made on (NULL: a price)
+    void              SetSource(CIndicatorDE *source,const int buffer);
+    CIndicatorDE     *SourceIndicator(void)                     const { return this.m_source;                                                 }
    //--- Return indicator's (1) status, (2) group, (3) timeframe, (4) type, (5) handle, (6) ID,
    //--- (7) empty value of buffers, (8) name, (9) short name, (10) symbol, (11) number of buffers
     ENUM_INDICATOR_STATUS Status(void)                          const { return (ENUM_INDICATOR_STATUS)this.GetProperty(INDICATOR_PROP_STATUS);}
@@ -137,10 +141,17 @@
    if(this.m_handle!=INVALID_HANDLE)
       ::IndicatorRelease(this.m_handle);
   }
+ void CIndicatorDE::SetSource(CIndicatorDE *source,const int buffer)
+  {
+   if(source==NULL)
+      return;
+   this.m_source=source;
+   this.SetBuffersTotal(this.m_buffers_total+1);
+   this.m_series_data.SetSource(source.Handle(),buffer);
+  }
  //+------------------------------------------------------------------+
- //| Closed parametric constructor. Volumes: the handle takes the kind |
- //| of volume only (its period and method are the ones of its moving |
- //| average, CIndVolumes)                                            |
+ //| Closed parametric constructor. An indicator on indicator has the  |
+ //| handle of its source in its applied param (CIndicatorsCollection) |
  //+------------------------------------------------------------------+
  CIndicatorDE::CIndicatorDE(ENUM_INDICATOR ind_type,
                             string symbol,
@@ -162,7 +173,8 @@
     for(int i=0;i<count;i++)
        this.m_mql_param[i]=mql_params[i];
    //--- Create indicator handle
-    this.m_handle=::IndicatorCreate(symbol,timeframe,ind_type,(ind_type==IND_VOLUMES ? (int)::fmin(count,1) : count),this.m_mql_param);
+    this.m_source=NULL;
+    this.m_handle=::IndicatorCreate(symbol,timeframe,ind_type,count,this.m_mql_param);
     if(this.m_handle==INVALID_HANDLE)
        ::Print(__FUNCTION__," > IndicatorCreate failed for ",name," ",symbol," ",::EnumToString(timeframe),", error ",::GetLastError());
    //--- Save integer properties
@@ -179,7 +191,7 @@
     this.m_string_prop[this.IndexProp(INDICATOR_PROP_SHORTNAME)]= shortname;
    //--- V4: the buffers the signal reads and the values in RAM
     this.m_buffers_total=0;
-    this.m_series_data.SetIndicator(this.Symbol(),timeframe,ind_type,this.m_handle,INVALID_HANDLE,this.m_buffers_total);
+    this.m_series_data.SetIndicator(this.Symbol(),timeframe,ind_type,this.m_handle,this.m_buffers_total);
   }
  //+------------------------------------------------------------------+
  //| Compare CIndicatorDE objects with each other                     |

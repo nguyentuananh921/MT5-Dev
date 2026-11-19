@@ -1,4 +1,4 @@
-"""hub.py: a worker sends what it calculated to the hub of server.py (one port: socket_port of Setting_PythonBridge), as events with all their data (Readme Event Rule):
+"""hub.py: a worker sends what it calculated to the hub of server.py (one port: socket_port of Setting_PythonBridge), as events with all their data (Working with Event):
 the columns of the result table and is_new, one line each (the protocol at the top of server.py). The EA stores them in RAM and fires its events; the web View shows them.
 It never waits: no hub (server.py not up yet, gone), the lines are dropped; the database has them (Save Calculation), a listener loads what it misses (Load on demand)."""
 import socket

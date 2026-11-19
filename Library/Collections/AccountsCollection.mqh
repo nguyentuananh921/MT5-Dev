@@ -4,7 +4,8 @@
 //| Link https://www.mql5.com/en/articles/6952                       |
 //| Lib https://www.mql5.com/en/articles/14710                       |
 //+------------------------------------------------------------------+
-//--- Role: CRUD table accounts (Common DB); account_key of CDatabaseService joins Common DB and the account DB
+//--- Role: table accounts (Common DB): Create if not there, Read all rows, 
+//--- Update only the row of the logged-in account (OnInit, a term changed, OnDeinit), no Delete
 //--- Change from V3: renamed SaveObjects -> UpdateDataToDB, LoadObjects -> ReadDataFromDB
 //--- Change from V4: DB access through CDatabaseService (was DatabaseDELib)
 //--- TODO: <việc chưa xong>
@@ -43,7 +44,7 @@
  class CAccountsCollection : public CBaseObjExt
   {
    private:    
-    CListObj          m_list_accounts;                             // Account object list: the account the terminal is logged in to, the others of the table
+    CListObj          m_list_accounts;                             // Account object list: the account the terminal is logged in to, mirror of table accounts in Database
     int               m_index_current;                             // Index of an account object featuring the current account data
     CDatabaseService  *m_CDatabaseService;                         // The EA holds it
    //--- Check the account object presence in the collection list
@@ -81,8 +82,7 @@
   {
    this.m_object_type=COLLECTION_ACCOUNT_ID;
    this.m_list_accounts.Clear();
-   this.m_list_accounts.Type(COLLECTION_ACCOUNT_ID);
-   ::ZeroMemory(this.m_tick);
+   this.m_list_accounts.Type(COLLECTION_ACCOUNT_ID);   
   }
  //+------------------------------------------------------------------+
  //| Destructor                                                       |
@@ -171,7 +171,7 @@
          delete account;
          return false;
         }
-      //--- Its events (Event Rule): every change of the money (balance, credit, profit, equity as V1 CTradingEngine::OnInitEvent), of the permissions and of the terms.
+      //--- Its events (Working with Event): every change of the money (balance, credit, profit, equity as V1 CTradingEngine::OnInitEvent), of the permissions and of the terms.
       //--- Not margin (its level comes from the Configuration of the EA with the Automatic Trade)
       account.SetControlBalanceInc(0);       account.SetControlBalanceDec(0);
       account.SetControlProfitInc(0);        account.SetControlProfitDec(0);
@@ -295,14 +295,19 @@
 
   }
  //+------------------------------------------------------------------+
- //| An event of CAccount (id: the property, source in lparam 32-47): |
- //| a column of the table accounts changed, its row is written again |
+ //| An event of CAccount (ACCOUNT_EVENT_PROPERTY_CHANGED, its key:   |
+ //| the property): a column of the table accounts changed, its row   |
+ //| is written again                                                 |
  //+------------------------------------------------------------------+
  void CAccountsCollection::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
-   if(id<CHARTEVENT_CUSTOM || ((lparam>>32)&0xFFFF)!=OBJECT_DE_TYPE_ACCOUNT)
+   if(id!=CHARTEVENT_CUSTOM+ACCOUNT_EVENT_PROPERTY_CHANGED)
       return;
-   const int property=id-CHARTEVENT_CUSTOM;
+   datetime time;
+   long property;
+   ENUM_SIGNAL_DIRECTION side;
+   bool is_new;
+   this.EventUnpack(lparam,time,property,side,is_new);
    if(property==ACCOUNT_PROP_LEVERAGE || property==ACCOUNT_PROP_LIMIT_ORDERS || property==ACCOUNT_PROP_MARGIN_SO_CALL || property==ACCOUNT_PROP_MARGIN_SO_SO)
       this.UpdateDataToDB();
   }

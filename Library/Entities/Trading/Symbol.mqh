@@ -19,6 +19,7 @@
 //+------------------------------------------------------------------+
  #include "..\..\Entities\Bases\BaseObjExt.mqh"
  #include "..\Defines\TradingDefines.mqh"
+ #include "..\Defines\EventDefines.mqh"   // SYMBOL_EVENT_PROPERTY_CHANGED
  #include "..\..\Services\DELib\CommonDELib.mqh"
  #include "TradeObj.mqh"
  //#include "..\TradingExecution\TradeObj.mqh"
@@ -228,8 +229,10 @@
     //--- Compare CSymbol objects by all properties (for searching for equal symbol objects)
       bool              IsEqual(CSymbol* compared_symbol) const;
 
-    //--- Update all symbol data
-      virtual void      Refresh(void);
+    //--- Update all symbol data, each controlled change goes to the chart (Change in V5: was Refresh, an override of CBaseObjExt::Refresh)
+      void              RefreshSymbol(void);
+    //--- New in V5: only what a tick changes (the quotes, the spread), each controlled change goes to the chart: OnTick of the chart symbol
+      void              RefreshTick(void);
     //--- Update quote data by a symbol
       bool              RefreshRates(void);
 
@@ -3152,7 +3155,7 @@
  //+------------------------------------------------------------------+
  //| Update all symbol data                                           |
  //+------------------------------------------------------------------+
- void CSymbol::Refresh(void)
+ void CSymbol::RefreshSymbol(void)
   {
    //--- Update quote data
     if(!this.RefreshRates())
@@ -3240,9 +3243,27 @@
      for(int i=0;i<SYMBOL_PROP_DOUBLE_TOTAL;i++)
       this.m_double_prop_event[i][3]=this.m_double_prop[i];
    
-   //--- Update the base object data and search for changes
+   //--- Update the base object data and search for changes; the symbol tells them itself
      CBaseObjExt::Refresh();
-     this.CheckEvents();
+     this.CheckEvents((ushort)SYMBOL_EVENT_PROPERTY_CHANGED,this.EventPackText(this.m_name));
+  }
+ //+------------------------------------------------------------------+
+ //| What a tick changes: the quotes (RefreshRates) and the spread,   |
+ //| then the compare. The rest stays as RefreshSymbol left it        |
+ //+------------------------------------------------------------------+
+ void CSymbol::RefreshTick(void)
+  {
+   if(!this.RefreshRates())
+      return;
+   this.m_is_event=false;
+   this.m_hash_sum=0;
+   this.m_long_prop[SYMBOL_PROP_SPREAD]=::SymbolInfoInteger(this.m_name,SYMBOL_SPREAD);
+   for(int i=0;i<SYMBOL_PROP_INTEGER_TOTAL;i++)
+      this.m_long_prop_event[i][3]=this.m_long_prop[i];
+   for(int i=0;i<SYMBOL_PROP_DOUBLE_TOTAL;i++)
+      this.m_double_prop_event[i][3]=this.m_double_prop[i];
+   CBaseObjExt::Refresh();
+   this.CheckEvents((ushort)SYMBOL_EVENT_PROPERTY_CHANGED,this.EventPackText(this.m_name));
   }
  //+------------------------------------------------------------------+
  //| Update quote data by a symbol                                    |

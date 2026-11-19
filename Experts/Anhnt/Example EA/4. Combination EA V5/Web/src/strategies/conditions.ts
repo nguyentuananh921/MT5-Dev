@@ -35,9 +35,10 @@ const STRATEGY_RULES: Record<string, Rule> = {
     if (jaw[i] > bar.close && jaw[i - 1] < before) return SELL;
     return NONE;
   }),
-  //--- Profitunity 01. 16365, ac_color: the colour of the AC (buffer 0) as Accelerator.mq5 gives it, green (AC >= the one before) = BUY, red = SELL
-  color: ([ac], bars) => Int8Array.from(bars, (_, i) => (i === 0 || Number.isNaN(ac[i]) || Number.isNaN(ac[i - 1]) ? NONE : ac[i] >= ac[i - 1] ? BUY : SELL)),
+  //--- rising (Profitunity 01. 16365 ac_color on AC): buffer 0 against the bar before, >= = BUY, < = SELL (Accelerator.mq5 colours it green on >=)
+  rising: ([value], bars) => Int8Array.from(bars, (_, i) => (i === 0 || Number.isNaN(value[i]) || Number.isNaN(value[i - 1]) ? NONE : value[i] >= value[i - 1] ? BUY : SELL)),
   //--- Profitunity 01. 16365, lastFractal_direction: the newest fractal (known 2 bars after its middle, as src\signals), a down one = BUY, it wins over an up one
+  //--- From shift 3, not 2 as the source EA: why at CSetting_Profitunity (Library), condition last_fractal
   last_fractal: ([upper, lower], bars) => {
     const out = new Int8Array(bars.length);
     for (let i = 0; i < bars.length; i++) {

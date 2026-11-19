@@ -63,16 +63,19 @@
     CWndInd          *GetIndicator(const int win_num,const int ind_index);
    //--- Scan the chart on init and compare every chart window after changes
     void              Refresh(const bool send_events=true);
-   //--- Event Rule: (1) the chart changed (CHARTEVENT_CHART_CHANGE: an indicator added, removed or changed): Refresh, (2) an object of a trade made by the
+   //--- Working with Event: (1) the chart changed (CHARTEVENT_CHART_CHANGE: an indicator added, removed or changed): Refresh, (2) an object of a trade made by the
    //--- terminal (CHARTEVENT_OBJECT_CREATE of "autotrade ...", DoEasy CChartObjectsControl): CHART_OBJ_EVENT_OBJECTS_CHANGE once for the objects of the trade
     void              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   //--- Whether an indicator of the chart is a row of its own: the MA drawn over Volumes is a part of it, its Applied Price is not a price
+   //--- The params of an indicator of the chart as the schema has them (FRAMA: its Shift)
     bool              ChartIdentity(const ENUM_INDICATOR type,MqlParam &params[]) const;
-   //--- The params of an indicator of the chart as the params of its template: ChartIdentity, the Volumes completed
-    bool              ChartTemplateParams(const ENUM_INDICATOR type,MqlParam &params[]) const;
+   //--- Change in V5: the type and the params of a line as the ones of its template. In a subwindow, an MA after the first line is made on the first line
+   //--- (MT5 "First Indicator's Data": its applied param tells nothing, 1 when dropped by hand, a handle when made by a program): its source, TYPE(params)
+    bool              LineIdentity(const CWndInd *ind,ENUM_INDICATOR &type,MqlParam &params[]) const;
+   //--- New in V5: the subwindow whose first line is the indicator (WRONG_VALUE: none, or in the main window)
+    int               SourceWindow(const ENUM_INDICATOR type,const string params_text) const;
    //--- The same indicator of the chart: the name, the type and the params as text
     bool              SameOnChart(const CWndInd *first,const CWndInd *second) const;
-   //--- The parameters of the indicator the chart holds: Volumes keeps only its Applied Volume (its MA period is for the average drawn with it)
+   //--- The parameters the chart indicator is made with (FRAMA: no Shift)
     void              ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[]) const;
    //--- (1) Check, (2) attach and (3) detach an indicator of the chart by its type and parameters
     bool              IsIndicatorShownOnChart(const ENUM_INDICATOR type,const string params_text);
@@ -92,6 +95,8 @@
     double            PriceMax(void)                            const { return this.m_price_max;                                      }
     double            PriceMin(void)                            const { return this.m_price_min;                                      }
     bool              VisibleRange(datetime &from_time,datetime &to_time) const;
+   //--- New in V5: the chart shows the bars from_time .. to_time, as big as they fit (autoscroll off, CHART_SCALE, ChartNavigate): STRATEGY_TRADE_EVENT_CLICK
+    bool              ShowRange(const datetime from_time,const datetime to_time);
    //--- Set the chart symbol and timeframe
     bool              SetSymbol(const string symbol,const ENUM_TIMEFRAMES timeframe=PERIOD_CURRENT);
   };
@@ -237,6 +242,17 @@
  //+------------------------------------------------------------------+
  void CChartObj::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   //--- New in V5: the line of a position was clicked (CStrategyTrade): its entry (EventPack) and its exit (dparam) are shown
+   if(id==CHARTEVENT_CUSTOM+STRATEGY_TRADE_EVENT_CLICK && sparam==this.Symbol())
+     {
+      datetime entry;
+      long strategy_id;
+      ENUM_SIGNAL_DIRECTION side;
+      bool is_new;
+      this.EventUnpack(lparam,entry,strategy_id,side,is_new);
+      this.ShowRange(entry,(datetime)(long)dparam);
+      return;
+     }
    SIndicatorsRow catalog;
    if(this.m_IndicatorTemplateManager!=NULL)
      {
@@ -257,9 +273,7 @@
          CWndInd *new_ind=this.GetIndicator((int)dparam,(int)lparam);
          ENUM_INDICATOR old_type,new_type;
          MqlParam old_params[],new_params[];
-         if(old_ind==NULL || new_ind==NULL || !old_ind.GetIdentity(old_type,old_params) || !new_ind.GetIdentity(new_type,new_params))
-            return;
-         if(!this.ChartTemplateParams(old_type,old_params) || !this.ChartTemplateParams(new_type,new_params))
+         if(!this.LineIdentity(old_ind,old_type,old_params) || !this.LineIdentity(new_ind,new_type,new_params))
             return;
          if(this.m_IndicatorTemplateManager.Read_RAM(new_type,this.m_IndicatorTemplateManager.ParamsText(new_type,new_params))!=NULL)
             return;
@@ -278,7 +292,7 @@
             ind=this.GetLastAddedIndicator();
          ENUM_INDICATOR type;
          MqlParam params[];
-         if(ind==NULL || !ind.GetIdentity(type,params) || !this.m_IndicatorTemplateManager.Read_RAM(type,catalog) || !this.ChartTemplateParams(type,params))
+         if(!this.LineIdentity(ind,type,params) || !this.m_IndicatorTemplateManager.Read_RAM(type,catalog))
             return;
          string text=this.m_IndicatorTemplateManager.ParamsText(type,params);
          if(this.m_IndicatorTemplateManager.Read_RAM(type,text)==NULL)
@@ -339,6 +353,35 @@
            height!=this.m_height_in_pixels || price_max!=this.m_price_max || price_min!=this.m_price_min);
   }
  //+------------------------------------------------------------------+
+ //| New in V5: the bars from_time .. to_time with a margin of a third |
+ //| of them on each side, at the biggest scale they fit (a bar is     |
+ //| 1 << scale pixels), the newest of them a margin from the right    |
+ //+------------------------------------------------------------------+
+ bool CChartObj::ShowRange(const datetime from_time,const datetime to_time)
+  {
+   const string sym=this.Symbol();
+   const ENUM_TIMEFRAMES tf=this.Timeframe();
+   const int from_shift=::iBarShift(sym,tf,from_time,false),to_shift=::iBarShift(sym,tf,to_time,false);
+   const int width=(int)::ChartGetInteger(this.m_chart_id,CHART_WIDTH_IN_PIXELS);
+   if(from_shift<0 || to_shift<0 || width<=0)
+      return false;
+   const int bars=::MathAbs(from_shift-to_shift)+1;
+   const int margin=::MathMax(bars/3,3);
+   int scale=0;
+   for(int s=5;s>=0;s--)
+      if((bars+2*margin)*(1<<s)<=width)
+        {
+         scale=s;
+         break;
+        }
+   ::ChartSetInteger(this.m_chart_id,CHART_AUTOSCROLL,false);   // the new ticks do not take the chart back to the newest bar
+   ::ChartSetInteger(this.m_chart_id,CHART_SCALE,scale);
+   const int newest=::MathMin(from_shift,to_shift);
+   ::ChartNavigate(this.m_chart_id,CHART_END,-::MathMax(newest-margin,0));
+   ::ChartRedraw(this.m_chart_id);   // CHARTEVENT_CHART_CHANGE: the markers and the lines follow (SyncMarkers, SyncTrades)
+   return true;
+  }
+ //+------------------------------------------------------------------+
  //| The open time of the oldest and the newest bar the chart shows    |
  //+------------------------------------------------------------------+
  bool CChartObj::VisibleRange(datetime &from_time,datetime &to_time) const
@@ -372,7 +415,7 @@
   {
    if(ind==NULL)
       return;
-   ::EventChartCustom(::ChartID(),(ushort)event,ind.Index(),ind.WindowNum(),ind.Name());
+   this.EventSend((ushort)event,ind.Index(),ind.WindowNum(),ind.Name());
   } //+------------------------------------------------------------------+
  //| Set the chart symbol                                             |
  //+------------------------------------------------------------------+
@@ -390,14 +433,8 @@
    this.SetAvailable(false);   // the chart is changing: the EA stops until OnDeinit
    return true;
   }
- //+------------------------------------------------------------------+
- //| The MA drawn over Volumes takes its data from the handle of the  |
- //| Volumes: its Applied Price is not a price, it is no row          |
- //+------------------------------------------------------------------+
  bool CChartObj::ChartIdentity(const ENUM_INDICATOR type,MqlParam &params[]) const
   {
-   if(type==IND_MA && ::ArraySize(params)>3 && (params[3].integer_value<PRICE_CLOSE || params[3].integer_value>PRICE_WEIGHTED))
-      return false;
    //--- FRAMA of the chart has no Shift (period, applied price): the schema has it, 0
    if(type==IND_FRAMA && ::ArraySize(params)==2)
      {
@@ -410,11 +447,49 @@
      }
    return true;
   }
- bool CChartObj::ChartTemplateParams(const ENUM_INDICATOR type,MqlParam &params[]) const
+ //+------------------------------------------------------------------+
+ //| Change in V5: the template of a line. An MA after the first line  |
+ //| of a subwindow is made on that first line (the applied param of   |
+ //| the chart can't tell it, measured); elsewhere an applied param    |
+ //| that is not a price is a line of another program: no template     |
+ //+------------------------------------------------------------------+
+ bool CChartObj::LineIdentity(const CWndInd *ind,ENUM_INDICATOR &type,MqlParam &params[]) const
   {
-   if(!this.ChartIdentity(type,params))
+   if(this.m_IndicatorTemplateManager==NULL || ind==NULL || !ind.GetIdentity(type,params) || !this.ChartIdentity(type,params))
       return false;
-   return (type!=IND_VOLUMES || ::ArraySize(params)!=1 || this.m_IndicatorTemplateManager.CompleteVolumesParams(params));
+   int applied=this.m_IndicatorTemplateManager.AppliedIndex(type);
+   if(applied<0 || applied>=::ArraySize(params))
+      return true;
+   params[applied].string_value="";
+   if(ind.WindowNum()>0 && ind.Index()>0)
+     {
+      if(!this.m_IndicatorTemplateManager.TakesSource(type))
+         return false;   // on the first line, but a type that can't be on an indicator (FRAMA): no template rather than a wrong one
+      CWndInd first(this.m_chart_id,ind.WindowNum(),0);
+      ENUM_INDICATOR source_type;
+      MqlParam source_params[];
+      if(!first.GetIdentity(source_type,source_params) || !this.ChartIdentity(source_type,source_params))
+         return false;
+      params[applied].string_value=this.m_IndicatorTemplateManager.SourceText(source_type,this.m_IndicatorTemplateManager.ParamsText(source_type,source_params));
+      params[applied].integer_value=0;
+      return true;
+     }
+   return (params[applied].integer_value>=PRICE_CLOSE && params[applied].integer_value<=PRICE_WEIGHTED);
+  }
+ int CChartObj::SourceWindow(const ENUM_INDICATOR type,const string params_text) const
+  {
+   int windows=(int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL);
+   for(int win=1;win<windows;win++)
+     {
+      if(::ChartIndicatorsTotal(this.m_chart_id,win)<1)
+         continue;
+      CWndInd first(this.m_chart_id,win,0);
+      ENUM_INDICATOR line_type;
+      MqlParam line_params[];
+      if(this.LineIdentity(::GetPointer(first),line_type,line_params) && line_type==type && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
+         return win;
+     }
+   return WRONG_VALUE;
   }
  bool CChartObj::SameOnChart(const CWndInd *first,const CWndInd *second) const
   {
@@ -427,13 +502,12 @@
    return (first_type==second_type && this.m_IndicatorTemplateManager.ParamsText(first_type,first_params)==this.m_IndicatorTemplateManager.ParamsText(second_type,second_params));
   }
  //+------------------------------------------------------------------+
- //| The parameters the chart indicator is made with: Volumes keeps   |
- //| only its Applied Volume (the MA period is for the average),      |
- //| FRAMA drops its Shift (the chart holds period, applied price)    |
+ //| The parameters the chart indicator is made with: FRAMA drops its  |
+ //| Shift (the chart holds period, applied price)                    |
  //+------------------------------------------------------------------+
  void CChartObj::ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[]) const
   {
-   int count=(type==IND_VOLUMES ? ::MathMin(1,::ArraySize(params)) : ::ArraySize(params));
+   int count=::ArraySize(params);
    ::ArrayResize(out,count);
    for(int i=0;i<count;i++)
       out[i]=params[i];
@@ -460,7 +534,7 @@
          CWndInd ind(this.m_chart_id,win,k);
          ENUM_INDICATOR line_type;
          MqlParam line_params[];
-         if(ind.GetIdentity(line_type,line_params) && line_type==type && this.ChartTemplateParams(line_type,line_params) && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
+         if(this.LineIdentity(::GetPointer(ind),line_type,line_params) && line_type==type && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
             return true;
         }
      }
@@ -468,7 +542,8 @@
   }
  //+------------------------------------------------------------------+
  //| Attach the indicator: trend group to the main window, the rest   |
- //| to a new subwindow                                               |
+ //| to a new subwindow; an MA on a source to the subwindow of the     |
+ //| source, after it (the source is attached first when not shown)    |
  //+------------------------------------------------------------------+
  void CChartObj::ShowIndicatorOnChart(const ENUM_INDICATOR type,MqlParam &params[])
   {
@@ -493,25 +568,37 @@
       for(int i=0;i<::ArraySize(params);i++)
          chart_params[i]=params[i];
      }
+   //--- New in V5: an MA on a source takes the handle of the first line of the subwindow of the source
+   int source_window=WRONG_VALUE;
+   ENUM_INDICATOR source_type;
+   string source_params;
+   int applied=WRONG_VALUE;
+   if(this.m_IndicatorTemplateManager.SourceOf(type,this.m_IndicatorTemplateManager.ParamsText(type,params),source_type,source_params,applied))
+     {
+      source_window=this.SourceWindow(source_type,source_params);
+      MqlParam source_mql[];
+      if(source_window<0 && this.m_IndicatorTemplateManager.ParamsFromText(source_type,source_params,source_mql))
+        {
+         this.ShowIndicatorOnChart(source_type,source_mql);
+         source_window=this.SourceWindow(source_type,source_params);
+        }
+      if(source_window<0)
+        {
+         ::Print(DFUN,indicator_name," on ",source_params,": the source is not in a subwindow of its own");
+         return;
+        }
+      chart_params[applied].integer_value=::ChartIndicatorGet(this.m_chart_id,source_window,::ChartIndicatorName(this.m_chart_id,source_window,0));   // never released (one owner: the chart)
+     }
    int handle=::IndicatorCreate(this.Symbol(),this.Timeframe(),type,::ArraySize(chart_params),chart_params);
    if(handle==INVALID_HANDLE)
      {
       ::Print(DFUN,indicator_name," with ",::ArraySize(chart_params)," params: IndicatorCreate failed, error ",::GetLastError());
       return;
      }
-   //--- ADX, ADX Wilder and StdDev are of the group Trend but have their own scale: a subwindow
-   bool own_scale=(type==IND_ADX || type==IND_ADXW || type==IND_STDDEV);
-   bool overlay=((!own_scale && this.m_IndicatorTemplateManager.Read_RAM(type,catalog) && catalog.group==INDICATOR_GROUP_TREND) || type==IND_FRACTALS);
-   int sub_window=(overlay ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
+   bool overlay=this.m_IndicatorTemplateManager.IsOverlay(type);
+   int sub_window=(source_window>0 ? source_window : overlay ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
    if(!::ChartIndicatorAdd(this.m_chart_id,sub_window,handle))
       ::Print(DFUN,indicator_name,": ChartIndicatorAdd failed, error ",::GetLastError());
-   //--- Volumes comes with its moving average: it takes the data of the volumes and goes to the same window
-   if(type==IND_VOLUMES && ::ArraySize(params)>2)
-     {
-      int average=::iMA(this.Symbol(),this.Timeframe(),(int)params[1].integer_value,0,(ENUM_MA_METHOD)params[2].integer_value,handle);
-      if(average!=INVALID_HANDLE)
-         ::ChartIndicatorAdd(this.m_chart_id,sub_window,average);
-     }
   }
  //+------------------------------------------------------------------+
  //| Detach the first indicator with this type and parameters         |
@@ -542,15 +629,15 @@
          CWndInd ind(this.m_chart_id,win,k);
          ENUM_INDICATOR line_type;
          MqlParam line_params[];
-         if(ind.GetIdentity(line_type,line_params) && line_type==type && this.ChartTemplateParams(line_type,line_params) && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
+         if(this.LineIdentity(::GetPointer(ind),line_type,line_params) && line_type==type && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
            {
-            //--- the moving average of the volumes goes first: it lives in the same window, after the volumes
-            if(type==IND_VOLUMES)
-               for(int a=::ChartIndicatorsTotal(this.m_chart_id,win)-1;a>k;a--)
+            //--- Change in V5 (was the average of Volumes): the first line of a subwindow is the source of the MAs after it, they go with it (as MT5)
+            if(win>0 && k==0)
+               for(int a=::ChartIndicatorsTotal(this.m_chart_id,win)-1;a>0;a--)
                  {
-                  string average_name=::ChartIndicatorName(this.m_chart_id,win,a);
-                  if(::StringFind(average_name,"MA(")==0)
-                     ::ChartIndicatorDelete(this.m_chart_id,win,average_name);
+                  CWndInd reader(this.m_chart_id,win,a);
+                  if(this.m_IndicatorTemplateManager.TakesSource(reader.TypeIndicator()))
+                     ::ChartIndicatorDelete(this.m_chart_id,win,reader.Name());
                  }
             ::ChartIndicatorDelete(this.m_chart_id,win,ind.Name());
             return;

@@ -55,7 +55,7 @@
     virtual bool      Prepare(const int target,CArrayObj *list,const datetime since);
     virtual bool      StoreRow(const int target,const datetime time,const ENUM_SIGNAL_DIRECTION side) { return this.NewRow(this.GetBar(time),target,side); }
    public:
-   //--- V5: a row Python found (CPythonBridge) is set on its bar and told by the event of its type (Event Rule): lparam = EventPack(bar time,
+   //--- V5: a row Python found (CPythonBridge) is set on its bar and told by the event of its type (Working with Event): lparam = EventPack(bar time,
    //--- type, side, is_new), dparam = the timeframe, sparam = the symbol. False when the bar had it already (judged on RAM before: no second event)
     bool              StoreRow(const datetime time,const ENUM_BAR_INFOR_TYPE type,const ENUM_SIGNAL_DIRECTION side,const bool is_new);
    //--- What the control needs to judge and to read (CBarSeriesDE gives them): the bars of the series, the pair, the collection the rows are of, the managers
@@ -126,7 +126,7 @@
   {
    if(!this.NewRow(this.GetBar(time),(long)type,(long)side))
       return false;   // the bar has it already (judged on RAM, or read from the table): no event
-   //--- RAM changed: told (Event Rule), with all the Automation Trading needs (no asking back)
+   //--- RAM changed: told (Working with Event), with all the Automation Trading needs (no asking back)
    this.EventSend(this.EventOf(type),this.EventPack(time,(long)type,side,is_new),(double)this.m_timeframe,this.EventPackText(this.m_symbol));
    return true;
   }
@@ -379,7 +379,7 @@
 //      finished=false;   // Python has not made the first chunk of any type of the pair: the timer looks again
 //   if(finished)
 //      this.m_judged_to=last_closed;
-//   //--- RAM changed: told (Event Rule), each kind by its own event (EventOf), each row with what it is
+//   //--- RAM changed: told (Working with Event), each kind by its own event (EventOf), each row with what it is
 //   const ushort events[]={(ushort)SERIES_EVENTS_PATTERN,(ushort)SERIES_EVENTS_SWING,(ushort)SERIES_EVENTS_BOS,(ushort)SERIES_EVENTS_CHOCH};
 //   for(int e=0;e<::ArraySize(events);e++)
 //     {

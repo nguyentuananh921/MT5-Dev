@@ -138,6 +138,7 @@
  //+------------------------------------------------------------------+
  CGUIPannel::CGUIPannel(void) : m_SymbolsCollection(NULL),
                                 m_HistoryCollection(NULL),
+                                m_TradingControl(NULL),
                                 m_AccountsCollection(NULL),
                                 m_MarketCollection(NULL),
                                 m_SymbolTFManager(NULL),
@@ -182,7 +183,7 @@
   {
    if(m_first_start)
       return;
-   this.UpdateStatusBar_SymbolSpread();
+   //--- Change in V5: the spread follows SYMBOL_EVENT_PROPERTY_CHANGED of the chart symbol (OnChartEvent), not every tick
   }
  //+------------------------------------------------------------------+
  //| Timer: every child takes its step                                |
@@ -260,30 +261,39 @@
      }
    for(int i=0;i<this.ChildrenTotal();i++)
       this.Child(i).OnChartEvent(id,lparam,dparam,sparam);
-   //--- A trading event (CTradeEvent::SendEvent, lparam = a ticket): the tables of the Trade Manage window show it; an account event has the same ids (its source is in lparam)
-   if(id>CHARTEVENT_CUSTOM+TRADE_EVENT_NO_EVENT && id<CHARTEVENT_CUSTOM+TRADE_EVENTS_NEXT_CODE && ((lparam>>32)&0xFFFF)!=OBJECT_DE_TYPE_ACCOUNT)
+   //--- A trading event (CTradeEvent::SendEvent, lparam = a ticket): the tables of the Trade Manage window show it
+   if(id>CHARTEVENT_CUSTOM+TRADE_EVENT_NO_EVENT && id<CHARTEVENT_CUSTOM+TRADE_EVENTS_NEXT_CODE)
      {
       this.RefreshTables_TradeManage();
       this.UpdateCaption_Position();
       return;
      }
-   //--- The floating profit of the account changed (an event at each change, V1): the caption follows, the numbers of the positions with it
-   if(id==CHARTEVENT_CUSTOM+ACCOUNT_PROP_PROFIT && ((lparam>>32)&0xFFFF)==OBJECT_DE_TYPE_ACCOUNT)
+   //--- A property of the account changed (CAccount::SendChanges: the key = the property, the side = up / down)
+   if(id==CHARTEVENT_CUSTOM+ACCOUNT_EVENT_PROPERTY_CHANGED)
      {
-      this.UpdateCaption_Position();
+      datetime time;
+      long property;
+      ENUM_SIGNAL_DIRECTION side;
+      bool is_new;
+      this.EventUnpack(lparam,time,property,side,is_new);
+      if(property==ACCOUNT_PROP_PROFIT)        // the caption follows, the numbers of the positions with it
+         this.UpdateCaption_Position();
+      else if(property==ACCOUNT_PROP_EQUITY)   // the arrow follows the side
+         this.UpdateStatusBar_Equity(side);
+      else if(property==ACCOUNT_PROP_BALANCE)  // a position closed into the balance can leave the equity as it was: the status bar looks again whether it is flat
+         this.UpdateStatusBar_Equity();
       return;
      }
-   //--- The equity of the account changed (CAccountsCollection::RefreshAccount: id = the property, the reason in the second ushort of lparam,
-   //--- the source in the third, as DoEasy: the trading events use the same ids with lparam = ticket)
-   if(id==CHARTEVENT_CUSTOM+ACCOUNT_PROP_EQUITY && ((lparam>>32)&0xFFFF)==OBJECT_DE_TYPE_ACCOUNT)
+   //--- New in V5: the spread of the chart symbol changed (CSymbol::RefreshTick)
+   if(id==CHARTEVENT_CUSTOM+SYMBOL_EVENT_PROPERTY_CHANGED && sparam==::Symbol())
      {
-      this.UpdateStatusBar_Equity((int)((lparam>>16)&0xFFFF));
-      return;
-     }
-   //--- A position closed into the balance can leave the equity as it was (no equity event): the status bar looks again whether it is flat
-   if(id==CHARTEVENT_CUSTOM+ACCOUNT_PROP_BALANCE && ((lparam>>32)&0xFFFF)==OBJECT_DE_TYPE_ACCOUNT)
-     {
-      this.UpdateStatusBar_Equity();
+      datetime time;
+      long property;
+      ENUM_SIGNAL_DIRECTION side;
+      bool is_new;
+      this.EventUnpack(lparam,time,property,side,is_new);
+      if(property==SYMBOL_PROP_SPREAD)
+         this.UpdateStatusBar_SymbolSpread();
       return;
      }
    //--- A Symbol picked in the combobox of the caption: the manager tells the EA, the EA moves the chart, the TF stays

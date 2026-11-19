@@ -2676,7 +2676,7 @@ bool CTrading::OpenPosition(const ENUM_POSITION_TYPE type,
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If "Wait and repeat" is received as a result of sending a request -
@@ -2913,7 +2913,7 @@ bool CTrading::ModifyPosition(const ulong ticket,const SL sl=WRONG_VALUE,const T
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If the check result is "waiting" - set the last error code to the return structure and display the message in the journal,
@@ -3119,7 +3119,7 @@ bool CTrading::ClosePosition(const ulong ticket,const double volume=WRONG_VALUE,
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If "Wait and repeat" is received as a result of sending a request -
@@ -3361,7 +3361,7 @@ bool CTrading::ClosePositionBy(const ulong ticket,const ulong ticket_by)
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If "Wait and repeat" is received as a result of sending a request -
@@ -3593,7 +3593,7 @@ bool CTrading::PlaceOrder(const ENUM_ORDER_TYPE order_type,
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If "Wait and repeat" is received as a result of sending a request -
@@ -3938,7 +3938,7 @@ bool CTrading::ModifyOrder(const ulong ticket,
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If the check result is "waiting" - set the last error code to the return structure and display the message in the journal,
@@ -4142,7 +4142,7 @@ bool CTrading::DeleteOrder(const ulong ticket)
          //--- update data and start the next iteration
          if(method==ERROR_CODE_PROCESSING_METHOD_REFRESH)
            {
-            symbol_obj.Refresh();
+            symbol_obj.RefreshSymbol();
             continue;
            }
          //--- If the check result is "waiting" - set the last error code to the return structure and display the message in the journal,
@@ -4239,8 +4239,7 @@ double CTrading::CorrectVolume(const double price,const ENUM_ORDER_TYPE order_ty
          ::Print(CMessage::Text(MSG_LIB_TEXT_NOT_POSSIBILITY_CORRECT_LOT));
       return 0;
      }
-//--- Update account and symbol data (Change from V3: CAccount::Refresh -> RefreshAccount)
-   this.m_account.RefreshAccount();
+//--- Update the symbol data. Change in V5: the account is not asked again (its RAM is fresh: RefreshMoney on OnTick with a position, RefreshAccount on OnTrade)
    symbol_obj.RefreshRates();
 //--- Calculate the lot, which is closest to the acceptable one
    double vol=symbol_obj.NormalizedLot(this.m_account.Equity()*this.m_account.Leverage()/symbol_obj.TradeContractSize()/(symbol_obj.CurrencyBase()=="USD" ? 1.0 : symbol_obj.BidLast()));

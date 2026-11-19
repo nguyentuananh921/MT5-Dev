@@ -33,9 +33,9 @@ CIndicatorsCollection m_IndicatorsCollection;   // the indicator of each templat
 CBarTimeSeriesCollection m_BarTimeSeriesCollection;   // the bars of every symbol and timeframe: the series are added when a class asks for them
 CSignalsCollection m_SignalsCollection;   // the signals of the indicator templates on the bars: the table SignalsCollection
 CStrategyCollection m_StrategyCollection; // V5: the entries and exits of the strategies on the pairs: the table StrategyCollection
-CHistoryCollection m_HistoryCollection;   // the history of the terminal in RAM (GetList); the table Orders is its own: the lines it keeps are not written again
-CMarketCollection  m_MarketCollection;    // the pending orders and the positions on the account: RAM only (GetList), never in the table Orders
-CTradeEventsCollection m_TradeEventsCollection;   // the trading events of the account: each one is a line of the table TradeEvent
+CHistoryCollection m_HistoryCollection;   // the history of the terminal in RAM (GetList), no table (Change in V5)
+CMarketCollection  m_MarketCollection;    // the pending orders and the positions on the account: RAM only (GetList)
+CTradeEventsCollection m_TradeEventsCollection;   // the trading events of the account: RAM only, no table (Change in V5)
 CTradingControl    m_TradingControl;      // the trading requests and the pending requests of them (RAM), on the lists of the collections (V1 CTradingEngine::m_trading_control)
 CGraphElementsCollection m_GraphElementsCollection;   // the layer over the chart and the markers on it
 CPythonBridge      m_PythonBridge;        // starts Python when it is not running: the tables are made before, Python only adds rows
@@ -63,7 +63,7 @@ int OnInit()
         }
       return INIT_FAILED;
      }
-   //--- Every model writes its own table, after the tables it depends on: timeframes, accounts, then symbol_account, then Setting_SymbolTF
+   //--- Every model writes its own table, after the tables it depends on: timeframes, accounts, then symbols, then Setting_SymbolTF
    if(m_ChartObj==NULL)   // a chart change keeps it (OnDeinit): CChartObj::OnInitEvent reads the view of the new TF
       m_ChartObj=new CChartObj(::ChartID());
    // makes Setting_IndicatorTemplate and the table timeframes (all the TFs of MT5, which Setting_SymbolTF refers to)
@@ -78,7 +78,7 @@ int OnInit()
    // m_AccountsCollection  
     Breadcrumb("OnInit: m_AccountsCollection.OnInitEvent");
     m_AccountsCollection.SetDatabaseService(m_DatabaseService);
-    m_AccountsCollection.OnInitEvent();
+    if(!m_AccountsCollection.OnInitEvent()) return INIT_FAILED;
    // m_SymbolTFManager: the center, before m_SymbolsCollection (which reads the symbols from its RAM)
     Breadcrumb("OnInit: m_SymbolTFManager.OnInitEvent");
     m_SymbolTFManager.SetDatabaseService(m_DatabaseService);
@@ -86,7 +86,11 @@ int OnInit()
    // m_SymbolsCollection
     Breadcrumb("OnInit: m_SymbolsCollection.OnInitEvent");
     m_SymbolsCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the center: every work with the database goes through it
-    m_SymbolsCollection.OnInitEvent();
+    if(!m_SymbolsCollection.OnInitEvent())
+      {
+       ::Print(__FUNCTION__," > failed to OnInitEvent SymbolsCollection");
+       return INIT_FAILED;
+      }
    // m_BarInformationManager
     Breadcrumb("OnInit: m_BarInformationManager.OnInitEvent");
     m_BarInformationManager.SetDatabaseService(m_DatabaseService);
@@ -103,16 +107,10 @@ int OnInit()
     m_SyncManager.OnInitEvent();   // makes Setting_Sync: the collections move their old table of progress there when they open the file of the account
    // m_HistoryCollection + m_MarketCollection
     Breadcrumb("OnInit: m_HistoryCollection.OnInitEvent");
-    m_HistoryCollection.SetSymbolsCollection(&m_SymbolsCollection);   // the owner of symbol_account: the id of a symbol
-    m_HistoryCollection.SetSymbolTFManager(&m_SymbolTFManager);       // the id of a symbol
-    m_HistoryCollection.OnInitEvent();   // the table Orders is its own (the history only): made when not there, its lines read (which orders are written, the Bid / Ask of the deals)
-    m_MarketCollection.SetSymbolsCollection(&m_SymbolsCollection);   // the pending orders and positions on the account: RAM only
-    m_MarketCollection.SetSymbolTFManager(&m_SymbolTFManager);       // the id of a symbol
+    m_HistoryCollection.OnInitEvent();   // RAM only (Change in V5: no table Orders)
     Breadcrumb("OnInit: m_TradeEventsCollection.OnInitEvent");
    // m_TradeEventsCollection
-    m_TradeEventsCollection.SetSymbolsCollection(&m_SymbolsCollection);
-    m_TradeEventsCollection.SetSymbolTFManager(&m_SymbolTFManager);       // the id of a symbol
-    m_TradeEventsCollection.OnInitEvent();   // opens the file of the account and makes the table TradeEvent (the events themselves are in RAM, V3)
+    m_TradeEventsCollection.OnInitEvent();   // RAM only (Change in V5: no table TradeEvent)
     Breadcrumb("OnInit: m_MarketCollection.RefreshMarket");
     m_MarketCollection.RefreshMarket();     // the first call loads the list: no event
     Breadcrumb("OnInit: m_HistoryCollection.RefreshHistory");
@@ -120,6 +118,11 @@ int OnInit()
    // m_TradingControl (DoEasy CEngine::CollectionOnInit)
     Breadcrumb("OnInit: m_TradingControl.OnInit");
     m_TradingControl.OnInit(m_AccountsCollection.GetCurrentAccount(),&m_SymbolsCollection,&m_MarketCollection,&m_HistoryCollection,&m_TradeEventsCollection);
+    Breadcrumb("OnInit: m_TradingControl.OnInitEvent");
+    m_TradingControl.SetDatabaseService(m_DatabaseService);
+    m_TradingControl.OnInitEvent();   // makes TradingOrderDetail, puts the Bid / Ask of the deals of the history on RAM (after RefreshHistory)
+    //Set EA Magic Number
+     m_TradingControl.SetMagic((ulong)inpMagicNumber);
    // m_IndicatorsCollection (its series copy the buffers of MT5 on RAM, nothing in the database)
     Breadcrumb("OnInit: m_IndicatorsCollection.OnInitEvent");
     m_IndicatorsCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the pairs
@@ -163,7 +166,8 @@ int OnInit()
     m_StrategyCollection.SetSyncManager(&m_SyncManager);
     m_StrategyCollection.SetSymbolTFManager(&m_SymbolTFManager);
     m_StrategyCollection.SetStrategyManager(&m_StrategyManager);   // the strategies, the table StrategyCollection
-    m_StrategyCollection.SetIndicatorsCollection(&m_IndicatorsCollection);   // the values of the slots on RAM: the new bars are judged on them
+    m_StrategyCollection.SetIndicatorsCollection(&m_IndicatorsCollection);
+    m_StrategyCollection.SetSignalsCollection(&m_SignalsCollection);   // New in V5: the basic signal of a slot (rule "signal": AO of Profitunity)   // the values of the slots on RAM: the new bars are judged on them
     m_StrategyCollection.OnInitEvent();   // a series for every strategy on every pair
    // m_PythonBridge
     Breadcrumb("OnInit: m_PythonBridge.OnInitEvent");
@@ -189,6 +193,7 @@ int OnInit()
     Breadcrumb("OnInit: m_GUIPannel.SetSymbolsCollection");
     m_GUIPannel.SetSymbolsCollection(&m_SymbolsCollection);
     m_GUIPannel.SetHistoryCollection(&m_HistoryCollection);   // the tables of the Trade Manage window are read through it
+    m_GUIPannel.SetTradingControl(&m_TradingControl);   // the changes of the SL / TP of a position (Order detail)
     m_GUIPannel.SetAccountsCollection(&m_AccountsCollection);   // the balance of the status bar, the profit of the caption
     m_GUIPannel.SetMarketCollection(&m_MarketCollection);   // the numbers of the positions on the caption
     Breadcrumb("OnInit: m_GUIPannel.SetSymbolTFManager");
@@ -207,6 +212,7 @@ int OnInit()
     if(!m_GUIPannel.OnInit(_UninitReason))
         return(INIT_FAILED);
    ::EventSetMillisecondTimer(EA_TIMER_MS);
+   DispatchBusEvents();   // V5: the events the children sent in OnInit
    return(INIT_SUCCEEDED);
   }
 //+------------------------------------------------------------------+
@@ -244,24 +250,25 @@ void OnTick()
    if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
       return;
    //--- The money follows the price only while a position is open; the rest changes with a trade (OnTrade)
-   CAccount *account=m_AccountsCollection.GetCurrentAccount();
-   if(account!=NULL && m_MarketCollection.PositionsCount()>0)
+    CAccount *account=m_AccountsCollection.GetCurrentAccount();
+    if(account!=NULL && m_MarketCollection.PositionsCount()>0)
       account.RefreshMoney();
+   //--- Only the chart symbol ticks here: its quotes and spread, its changes go to the chart (the other symbols are refreshed by Trading before a request)
+    CSymbol *symbol=m_SymbolsCollection.GetSymbolObjByName(::Symbol());
+    if(symbol!=NULL)
+      symbol.RefreshTick();
    //--- The series follow the ticks (DoEasy CEngine::OnTick): the chart's symbol; in the tester every symbol (no OnTimer there, as the DoEasy EAs)
-   //--- The signals follow the series they are judged on (the newest closed bar is there now). V5: judged on RAM only, Python saves; its rows of the same bars are refused
-   if(::MQLInfoInteger(MQL_TESTER))
+   //--- Change in V5: the signals and the strategies are judged at SERIES_EVENTS_NEW_BAR (OnChartEvent), not at every tick. The tester has no OnChartEvent: they follow the ticks there
+    if(::MQLInfoInteger(MQL_TESTER))
      {
       m_BarTimeSeriesCollection.RefreshSeries();
       m_SignalsCollection.RefreshSeries();
       m_StrategyCollection.RefreshSeries();
      }
-   else
-     {
+    else
       m_BarTimeSeriesCollection.RefreshSeries(::Symbol());
-      m_SignalsCollection.RefreshSeries(::Symbol());
-      m_StrategyCollection.RefreshSeries(::Symbol());   // every strategy runs in realtime: its rule says what a tick does (Profitunity: a new closed bar of its tf)
-     }
    m_GUIPannel.OnTickEvent();
+   DispatchBusEvents();
   }
 //+------------------------------------------------------------------+
 void OnTimer()
@@ -269,7 +276,7 @@ void OnTimer()
    if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
       return;
    Breadcrumb("OnTimer: m_SymbolsCollection.OnTimerEvent");
-   m_SymbolsCollection.OnTimerEvent();   // the Market Watch, once a second (V3): a new symbol gets its line in symbol_account, its event goes to the chart
+   m_SymbolsCollection.OnTimerEvent();   // the Market Watch, once a second (V3): a new symbol gets its row in symbols (CSymbolTFManager), its event goes to the chart
    Breadcrumb("OnTimer: m_GUIPannel.OnTimerEvent");
    m_GUIPannel.OnTimerEvent();   // the controls take their steps from it (the spin buttons)
    Breadcrumb("OnTimer: m_GraphElementsCollection.OnTimerEvent");
@@ -292,35 +299,41 @@ void OnTimer()
           m_BarTimeSeriesCollection.RefreshSeriesAllExceptCurrent();   // the other symbols have no tick on this chart (DoEasy CEngine::OnTimer)
        //Breadcrumb("OnTimer: m_BarTimeSeriesCollection.OnTimerEvent");
        //m_BarTimeSeriesCollection.OnTimerEvent();   // a step of the delete of the rows of a type whose parameter changed (the table, every pair)
-      // Signal Collection: the same rhythm as the series (the chart's symbol is in OnTick)
-       Breadcrumb("OnTimer: m_SignalsCollection.RefreshSeriesAllExceptCurrent");
+      // Change in V5: the signals and the strategies follow SERIES_EVENTS_NEW_BAR; here only the pairs that wait (not ready at their new bar), a symbol that rests is skipped
+       Breadcrumb("OnTimer: m_SignalsCollection.RetryPending");
        if(!::MQLInfoInteger(MQL_TESTER))
-          m_SignalsCollection.RefreshSeriesAllExceptCurrent();
-      // Strategy Collection: the other symbols have no tick on this chart
-       Breadcrumb("OnTimer: m_StrategyCollection.RefreshSeriesAllExceptCurrent");
+          m_SignalsCollection.RetryPending();
+       Breadcrumb("OnTimer: m_StrategyCollection.RetryPending");
        if(!::MQLInfoInteger(MQL_TESTER))
-          m_StrategyCollection.RefreshSeriesAllExceptCurrent();
+          m_StrategyCollection.RetryPending();
        Breadcrumb("OnTimer: m_PythonBridge.OnTimerEvent");
       m_PythonBridge.OnTimerEvent();    // Python that stopped is started again
       Breadcrumb("OnTimer: done");
      }
+   DispatchBusEvents();
   }
 //+------------------------------------------------------------------+
 void OnTrade()
   {
    if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
+     {
+      ::Print("MY DEBUG OnTrade: skipped, the chart is not available");
       return;
+     }
    m_MarketCollection.RefreshMarket();
    m_HistoryCollection.RefreshHistory();
    CAccount *account=m_AccountsCollection.GetCurrentAccount();
    if(account!=NULL)
       account.RefreshAccount();   // a trade or a deposit: the balance, the terms, the money (the profit of the last position closed)
+   ::Print("MY DEBUG OnTrade: positions on RAM ",m_MarketCollection.PositionsCount()," (terminal ",::PositionsTotal(),"), profit on RAM ",
+           (account!=NULL ? ::DoubleToString(account.Profit(),2) : "no account")," (terminal ",::DoubleToString(::AccountInfoDouble(ACCOUNT_PROFIT),2),")");
    CArrayObj *list_changes=m_MarketCollection.GetListChanges();
    if(m_HistoryCollection.IsEvent() || m_MarketCollection.IsEvent() || (list_changes!=NULL && list_changes.Total()>0))
       m_TradeEventsCollection.Refresh(m_HistoryCollection.GetList(),m_MarketCollection.GetList(),list_changes,m_MarketCollection.GetListControl(),m_HistoryCollection.IsEvent(),
                                       m_MarketCollection.IsEvent(),m_HistoryCollection.NewOrders(),m_MarketCollection.NewPendingOrders(),m_MarketCollection.NewPositions(),
                                       m_HistoryCollection.NewDeals(),m_MarketCollection.ChangedVolumeValue());
    m_GUIPannel.OnTradeEvent();
+   DispatchBusEvents();   // the events of the account and of the trade (were lost on the chart in OnTrade: EventChartCustom error 4104)
   }
 //+------------------------------------------------------------------+
 void OnTradeTransaction(const MqlTradeTransaction &trans,const MqlTradeRequest &request,const MqlTradeResult &result)
@@ -332,11 +345,35 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
   {
    if(m_ChartObj!=NULL && !m_ChartObj.IsAvailable())   // the chart is changing
       return;
+   DispatchEvent(id,lparam,dparam,sparam);
+   DispatchBusEvents();
+  }
+//+------------------------------------------------------------------+
+//| New in V5: the bus of the EA. The children send their events with |
+//| CBaseObj::EventSend (a queue in the program, not the chart): the |
+//| EA (the parent) takes them in order at the end of each handler    |
+//| and gives each to every child, as an event of the chart           |
+//+------------------------------------------------------------------+
+void DispatchBusEvents(void)
+  {
+   ushort id;
+   long lparam;
+   double dparam;
+   string sparam;
+   while((m_ChartObj==NULL || m_ChartObj.IsAvailable()) && CBaseObj::EventNext(id,lparam,dparam,sparam))
+      DispatchEvent(CHARTEVENT_CUSTOM+id,lparam,dparam,sparam);   // an event a child sends while it handles one goes at the end of the queue: taken here too
+  }
+//+------------------------------------------------------------------+
+//| An event of the chart or of the bus to every child               |
+//+------------------------------------------------------------------+
+void DispatchEvent(const int id,const long lparam,const double dparam,const string sparam)
+  {
    if(m_ChartObj!=NULL)
       m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
    if(id>=CHARTEVENT_CUSTOM)
       Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);   // MY DEBUG: the events of the controls and of the managers, not the mouse
    m_AccountsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a term of the account changed: its row of the table accounts
+   m_StrategyManager.OnChartEvent(id,lparam,dparam,sparam);   // New in V5: a template came or went, a slot changed: available of the strategies it touches
    m_SyncManager.OnChartEvent(id,lparam,dparam,sparam);   // Python wrote more marks: RAM first, the collections read it next; a parameter changed: its marks go
    m_PythonBridge.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair came or went: Python calculates its history at once
    m_GUIPannel.OnChartEvent(id,lparam,dparam,sparam);
@@ -350,8 +387,8 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
    m_IndicatorsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a pair or a template added or deleted: its indicators are made or go
    m_BarTimeSeriesCollection.OnChartEvent(id,lparam,dparam,sparam);   // a parameter of a type changed: its rows on RAM go
    if(!deleted)
-      m_SignalsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair added: their signals are made on the indicators
-   m_StrategyCollection.OnChartEvent(id,lparam,dparam,sparam);  // before the markers: the rows are on RAM when they are drawn
+      m_SignalsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair added: their signals are made on the indicators; a new bar: its signals are judged
+   m_StrategyCollection.OnChartEvent(id,lparam,dparam,sparam);  // a new bar: its strategies are judged, before the markers: the rows are on RAM when they are drawn
    m_BarMarkerCollection.OnChartEvent(id,lparam,dparam,sparam);   //--- A pair picked in the panel: the manager moves the chart itself
    m_KronosForecastCollection.OnChartEvent(id,lparam,dparam,sparam);   // a new bar of the chart pair: the bars foretold it reached go
    m_SymbolTFManager.OnChartEvent(id,lparam,dparam,sparam,m_ChartObj);

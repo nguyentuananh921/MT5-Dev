@@ -33,14 +33,19 @@
    m_window_order_detail.OpenWindow();
    ::ChartRedraw(this.m_chart_id);
   }
- //--- The orders and the deals of the position, oldest first (live from the terminal). A zero is left blank
+ //--- The orders and the deals of the position (the terminal; the Bid / Ask of a deal put on it by CTradingControl) and the changes of its SL / TP
+ //--- (CTradingControl::ReadDataFromDB), oldest first. A zero is left blank
  void CGUIPannel::FillTable_OrderDetail(const long position_id)
   {
    CArrayObj *list=(m_HistoryCollection!=NULL ? m_HistoryCollection.GetList() : NULL);
    if(list==NULL)
       return;
-   long keys[][2];   // the time, the index in the list
+   long change_time[],change_event[];
+   double change_sl[],change_tp[];
+   const int changes=(m_TradingControl!=NULL ? m_TradingControl.ReadDataFromDB(position_id,change_time,change_event,change_sl,change_tp) : 0);
+   long keys[][2];   // the time, the index in the list (a change of the SL / TP: -1 - its index)
    int found=0;
+   string symbol="",direction="";
    for(int i=0;i<list.Total();i++)
      {
       COrder *order=list.At(i);
@@ -55,26 +60,54 @@
       keys[found][0]=order.GetProperty(ORDER_PROP_TIME_OPEN);
       keys[found][1]=i;
       found++;
+      if(symbol=="")
+        {
+         const long type=order.GetProperty(ORDER_PROP_TYPE);
+         symbol=order.GetProperty(ORDER_PROP_SYMBOL);
+         direction=(type==ORDER_TYPE_BUY || type==ORDER_TYPE_BUY_LIMIT || type==ORDER_TYPE_BUY_STOP || type==ORDER_TYPE_BUY_STOP_LIMIT ? "BUY" : "SELL");
+        }
+     }
+   for(int j=0;j<changes;j++)
+     {
+      ::ArrayResize(keys,found+1);
+      keys[found][0]=change_time[j];
+      keys[found][1]=-1-j;
+      found++;
      }
    if(found>1)
       ::ArraySort(keys);
    int rows=::MathMin(found,ORDER_DETAIL_ROWS_MAX);
    string cells[];
    ::ArrayResize(cells,rows*COLUMNS_ORDER_DETAIL_TOTAL);
+   const int digits=(int)::SymbolInfoInteger(symbol,SYMBOL_DIGITS);
    for(int row=0;row<rows;row++)
      {
-      COrder *order=list.At((int)keys[row][1]);
-      const bool deal=(order.GetProperty(ORDER_PROP_STATUS)==ORDER_STATUS_DEAL);
-      if(deal && order.GetProperty(ORDER_PROP_BID)==0)
-         order.BidAskFromTicks();   // the tick of its time, kept on RAM
-      const string symbol=order.GetProperty(ORDER_PROP_SYMBOL);
-      const int digits=(int)::SymbolInfoInteger(symbol,SYMBOL_DIGITS);
-      const long type=order.GetProperty(ORDER_PROP_TYPE);
-      const long entry=order.GetProperty(ORDER_PROP_DEAL_ENTRY);
-      const double sl=order.GetProperty(ORDER_PROP_SL),tp=order.GetProperty(ORDER_PROP_TP),bid=order.GetProperty(ORDER_PROP_BID),ask=order.GetProperty(ORDER_PROP_ASK);
       string time=::TimeToString((datetime)(keys[row][0]/1000),TIME_DATE|TIME_SECONDS);
       ::StringReplace(time,".","-");
       int c=row*COLUMNS_ORDER_DETAIL_TOTAL;
+      if(keys[row][1]<0)
+        {
+         //--- A change of the SL / TP: no price, volume, Bid / Ask of its own
+         const int j=(int)(-1-keys[row][1]);
+         const long event=change_event[j];
+         cells[c++]=symbol;
+         cells[c++]=direction;
+         cells[c++]=time;
+         cells[c++]=(event==TRADE_EVENT_MODIFY_POSITION_SL ? "MODIFY SL" : event==TRADE_EVENT_MODIFY_POSITION_TP ? "MODIFY TP" : "MODIFY SL/TP");
+         cells[c++]="";
+         cells[c++]=(change_sl[j]!=0 ? ::DoubleToString(change_sl[j],digits) : "");
+         cells[c++]=(change_tp[j]!=0 ? ::DoubleToString(change_tp[j],digits) : "");
+         cells[c++]="";
+         cells[c++]="";
+         cells[c++]="";
+         cells[c++]="";
+         continue;
+        }
+      COrder *order=list.At((int)keys[row][1]);
+      const bool deal=(order.GetProperty(ORDER_PROP_STATUS)==ORDER_STATUS_DEAL);
+      const long type=order.GetProperty(ORDER_PROP_TYPE);
+      const long entry=order.GetProperty(ORDER_PROP_DEAL_ENTRY);
+      const double sl=order.GetProperty(ORDER_PROP_SL),tp=order.GetProperty(ORDER_PROP_TP),bid=order.GetProperty(ORDER_PROP_BID),ask=order.GetProperty(ORDER_PROP_ASK);
       cells[c++]=symbol;
       cells[c++]=(type==ORDER_TYPE_BUY || type==ORDER_TYPE_BUY_LIMIT || type==ORDER_TYPE_BUY_STOP || type==ORDER_TYPE_BUY_STOP_LIMIT ? "BUY" : "SELL");   // a pending order too
       cells[c++]=time;

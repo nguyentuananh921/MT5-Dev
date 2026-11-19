@@ -35,10 +35,25 @@
 		},
 		{
 			"path": "D:/MT5-Dev/skills"
+		},
+		{
+			"path": "D:/MT5-Dev/Experts/Gamuchirai Zororo Ndawana/Reimagining Classic Strategies"
+		},
+		{
+			"path": "D:/MT5-Dev/Experts/Gamuchirai Zororo Ndawana/Self Optimizing Expert Advisors"
+		},
+		{
+			"path": "../../../Niquel Mendoza/Risk Management"
 		}
 	],
 	"settings": {
 		"clangd.fallbackFlags": [
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5/Include",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Allan Munene Mutiiria/Automating Trading Strategies",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Allan Munene Mutiiria/Automating Trading Strategies/Include",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Combination Lib V5",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Include/Combination Lib V5/Include",
 			"-xc++",
 			"-std=c++17",
 			"-D__MQL__",
@@ -55,8 +70,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5/Include"
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

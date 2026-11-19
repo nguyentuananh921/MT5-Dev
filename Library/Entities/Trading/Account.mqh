@@ -9,7 +9,7 @@
 //+------------------------------------------------------------------+
 //--- An account, asked of the terminal (Readme "Live on RAM, Save on DB for no more calculation"): who it is and its terms are asked once (the constructor) and
 //--- are the row of the table accounts (CAccountsCollection writes it); what changes is asked by RefreshAccount and lives in RAM only, a change over a controlled
-//--- value is its event (Event Rule). Change from V3: Refresh -> RefreshAccount (as RefreshSeries), the reads not written twice (V3: constructor and Refresh)
+//--- value is its event (Working with Event). Change from V3: Refresh -> RefreshAccount (as RefreshSeries), the reads not written twice (V3: constructor and Refresh)
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
@@ -19,6 +19,7 @@
  //| Include files                                                    |
  //+------------------------------------------------------------------+
  #include "..\Defines\TradingDefines.mqh"
+ #include "..\Defines\EventDefines.mqh"   // ACCOUNT_EVENT_PROPERTY_CHANGED
  #include "..\Bases\BaseObjExt.mqh"
  #ifndef CACCOUNT_MQH_DECLARATION
  #define CACCOUNT_MQH_DECLARATION
@@ -318,7 +319,8 @@
  //+------------------------------------------------------------------+
  //| What changes while the EA runs is asked of the terminal (RAM     |
  //| only); a change over a controlled value is an event of the       |
- //| account (Event Rule: the method that changes the data tells it)  |
+ //| account (Working with Event: the method that changes the data    |
+ //| tells it)                                                        |
  //+------------------------------------------------------------------+
  void CAccount::RefreshAccount(void)
   {
@@ -367,14 +369,8 @@
       this.m_double_prop_event[i][3]=this.m_double_prop[i];
   //--- Update the base object data and search for changes
    CBaseObjExt::Refresh();
-   this.CheckEvents();
   //--- The account tells its own changes (Parent Child: the child fires, nobody relays)
-   for(int i=0;i<this.m_list_events.Total();i++)
-     {
-      CEventBaseObj *event=this.m_list_events.At(i);
-      if(event!=NULL)
-         this.EventSend((ushort)event.ID(),event.LParam(),event.DParam(),event.SParam());
-     }
+   this.CheckEvents((ushort)ACCOUNT_EVENT_PROPERTY_CHANGED,"");
   }
 //+------------------------------------------------------------------+
 //| Return the margin required for opening a position                |

@@ -10,6 +10,7 @@
  #include "..\Entities\Defines\EventDefines.mqh"
  #include "BarTimeSeriesCollection.mqh"
  #include "IndicatorsCollection.mqh"
+ #include "PendingPairs.mqh"
  #include "Settings\SyncManager.mqh"
  #include "Settings\IndicatorTemplateManager.mqh"
  //--- V5: as V2, the collection makes the CSignal of an indicator (GetOrCreateSignal): it knows the classes of the rules
@@ -23,7 +24,7 @@
  #include "..\UseCases\Judges\Signals\Standard\SignalCrossover.mqh"
  #include "..\UseCases\Judges\Signals\Standard\SignalBands.mqh"
  #include "..\UseCases\Judges\Signals\Standard\SignalFractals.mqh"
- #include "..\UseCases\Judges\Signals\Standard\SignalVolumes.mqh"
+ #include "..\UseCases\Judges\Signals\Standard\SignalSourceMA.mqh"   // Change in V5: was SignalVolumes.mqh (CSignalVolumes)
 #ifndef CSIGNALSCOLLECTION_MQH_DECLARATION
 #define CSIGNALSCOLLECTION_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -40,6 +41,7 @@
     CIndicatorsCollection *m_IndicatorsCollection;   // the EA holds it: the indicator of a template on a pair (type + params, never the handle): its buffers in RAM
     CArrayObj         m_list;                    // V2: the signals (CSignal, owned), one for each indicator (each template on each pair of Setting_SymbolTF)
     CArrayObj         m_list_judge;              // V5: the judge of each signal (CSignalJudge, owned), at the same index as its CSignal (an entity does not hold its rule)
+    CPendingPairs     m_pending;                 // New in V5: the pairs whose new bar is not judged yet (RetryPending)
    //--- V5 (moved from CSignal, Interface Adapters): (1) the new bars of the list judged from the progress, the rows set on the signal, the events told,
    //--- (2) the rows of the bars of the list, (3) from_time to to_time go to RAM, (4) the newest bar synced of the template on the pair (Setting_Sync in RAM)
     //int               Calculate(CSignal *signal,CSignalJudge *judge,CArrayObj *list);
@@ -68,6 +70,8 @@
    //--- The new bars of every pair of a symbol: each series of the pair judges itself, its events go out, what is new on the newest closed bar is told
    //--- (as CBarTimeSeriesCollection::RefreshTimeseries_). False when the call had its share of time
     bool              RefreshTimeseries(CBarTimeSeriesDE *timeseries,const ulong started);
+   //--- New in V5: the signals of a pair judged up to its newest closed bar. False: not all of them (not ready, Python writes, the share of time is over)
+    bool              JudgePair(const string symbol,const ENUM_TIMEFRAMES timeframe,const ulong started);
    public:
    //--- The signal of a template on a pair, by its key (NULL: none): a row of Python goes to it (CSignal::StoreRow)
     CSignal          *GetSeries(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe);
@@ -84,12 +88,10 @@
     void              OnDeinitEvent(const int reason);
    //--- Python wrote its part (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE), a pair or a template was added or deleted
     bool              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);
-   //--- The new bars of the pairs of Setting_SymbolTF (the series of CBarTimeSeriesCollection), each series judges itself: the rows and the marks wait in RAM.
-   //--- As CBarTimeSeriesCollection: (1) every symbol (tester), (2) a symbol (the chart's: OnTick), (3) every symbol but the chart's (OnTimer). Called after the same
-   //--- Refresh of CBarTimeSeriesCollection: the bars have the newest closed one
+   //--- Change in V5: the new bars are judged at SERIES_EVENTS_NEW_BAR (OnChartEvent), nothing is asked while nothing is new (a closed market: no tick, no bar, no event).
+   //--- (1) every symbol: the tester only (no OnChartEvent there), after CBarTimeSeriesCollection::RefreshSeries; (2) OnTimer: the pairs that wait, a symbol that rests is skipped
     void              RefreshSeries(void);
-    void              RefreshSeries(const string symbol);
-    void              RefreshSeriesAllExceptCurrent(void);
+    void              RetryPending(void);
    //--- The rows of the bars of (1) every pair, (2) one pair go to RAM, each series reads its own: after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE). Event: SERIES_EVENTS_SIGNAL ALL of the pair
     bool              ReadDataFromDB(void);
     bool              ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe);
@@ -165,7 +167,9 @@
    double level_high=0.0,level_low=0.0;   // V5: the levels of the rule, from the one map that writes them to the table indicators for Python
    if(this.m_IndicatorTemplateManager!=NULL)
       this.m_IndicatorTemplateManager.Read_RAM(indicator.TypeIndicator(),level_high,level_low);
-   switch(indicator.TypeIndicator())
+   if(indicator.SourceIndicator()!=NULL && this.m_IndicatorTemplateManager!=NULL && this.m_IndicatorTemplateManager.IsMovingAverage(indicator.TypeIndicator()))
+      judge=new CSignalSourceMA();   // New in V5: an average on a source, the source against it (any other type on a source: its own rule below)
+   else switch(indicator.TypeIndicator())
      {
       case IND_SAR:        judge=new CSignalSAR();                    break;
       case IND_MA:         judge=new CSignalMA();                     break;
@@ -210,7 +214,7 @@
       case IND_BANDS:      judge=new CSignalBollinger();              break;
       case IND_ENVELOPES:  judge=new CSignalEnvelopes();              break;
       case IND_FRACTALS:   judge=new CSignalFractals();               break;
-      case IND_VOLUMES:    judge=new CSignalVolumes();                break;
+      case IND_VOLUMES:    judge=new CSignalMA();                     break;   // Change in V5: the slope (as AD); against its average: an MA on VOLUMES
       case IND_ATR:        judge=new CSignalJudge();                       break;   // no direction: never a signal
       default:             return NULL;   // not a standard indicator
      }
@@ -226,6 +230,8 @@
    //judge.SetIndicator(indicator);
    signal.SetKey(indicator.Symbol(),indicator.Timeframe(),indicator.TypeIndicator(),indicator.ParamsText());   // V5: the entity keeps its key (data)
    judge.SetSource(indicator);   // V5: the one link to the indicator, through the port (bound once: 1-1)
+   if(indicator.SourceIndicator()!=NULL)
+      judge.SetPriceBuffer(indicator.BuffersTotal()-1);   // New in V5: the input of an indicator on indicator is its last buffer (CIndicatorDE::SetSource), not the close
    if(!this.m_list.Add(signal))
      {
       delete signal;
@@ -335,26 +341,31 @@
       if(!this.RefreshTimeseries(list.At(i),started))
          return;   // this call has had its share: the rest is done at the next ones
   }
- void CSignalsCollection::RefreshSeries(const string symbol)
-  {
-   if(this.m_BarTimeSeriesCollection!=NULL)
-      this.RefreshTimeseries(this.m_BarTimeSeriesCollection.GetTimeseries(symbol),::GetTickCount64());
-  }
- void CSignalsCollection::RefreshSeriesAllExceptCurrent(void)
+ //+------------------------------------------------------------------+
+ //| New in V5: OnTimer, only the pairs that wait (not ready at their  |
+ //| SERIES_EVENTS_NEW_BAR, or Python wrote): a symbol that rests is   |
+ //| skipped until it ticks again. Nothing waits: nothing is done      |
+ //+------------------------------------------------------------------+
+ void CSignalsCollection::RetryPending(void)
   {
    if(this.m_BarTimeSeriesCollection==NULL)
       return;
    ulong started=::GetTickCount64();
-   CArrayObj *list=this.m_BarTimeSeriesCollection.GetList();
-   for(int i=0;i<list.Total();i++)
+   for(int i=this.m_pending.Total()-1;i>=0;i--)
      {
-      CBarTimeSeriesDE *timeseries=list.At(i);
-      if(timeseries==NULL || timeseries.Symbol()==::Symbol())
-         continue;   // the chart's symbol follows its ticks (OnTick)
+      const string symbol=this.m_pending.Symbol(i);
+      CBarTimeSeriesDE *timeseries=this.m_BarTimeSeriesCollection.GetTimeseries(symbol);
+      if(timeseries==NULL)
+        {
+         this.m_pending.Delete(i);   // the pair is gone
+         continue;
+        }
       if(timeseries.IsPaused())
-         continue;   // the symbol rests (TICK_EVENT_PAUSE): no new bar to judge
-      if(!this.RefreshTimeseries(timeseries,started))
-         return;
+         continue;   // a closed market: it waits for its ticks
+      if(::GetTickCount64()-started>BAR_UPDATE_BUDGET_MS)
+         return;     // this beat has had its share
+      if(this.JudgePair(symbol,this.m_pending.Timeframe(i),started))
+         this.m_pending.Delete(i);
      }
   }
  //+------------------------------------------------------------------+
@@ -373,40 +384,66 @@
       CBarSeriesDE *bars=list.At(i);
       if(bars==NULL)
          continue;
-      const string symbol=bars.Symbol();
-      const ENUM_TIMEFRAMES timeframe=bars.Timeframe();
-      datetime last_closed=::iTime(symbol,timeframe,1);
-      if(last_closed==0)
-         continue;
-      bool budget=false;   // this call has had its share: the rest of the pair is judged at the next ones
-      for(int s=0;s<this.m_list.Total();s++)
-        {
-         CSignal *series=this.m_list.At(s);
-         if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=timeframe)
-            continue;
-         if(series.JudgedTo()==last_closed)
-            continue;   // each tick comes here: nothing to judge
-         if(::GetTickCount64()-started>BAR_UPDATE_BUDGET_MS)
-           {
-            budget=true;
-            break;
-           }
-         //this.Calculate(series,this.m_list_judge.At(s),bars.GetList());   // V5: the judge of the signal at the same index; not ready: the next call tries again
-         this.Calculate(s,bars.GetList());   // not ready: the next call tries again
-        }
-      if(budget)
+      this.JudgePair(bars.Symbol(),bars.Timeframe(),started);   // not ready: the next call tries again
+      if(::GetTickCount64()-started>BAR_UPDATE_BUDGET_MS)
          return false;   // this call has had its share: the rest is done at the next ones
      }
    return true;
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5 (the loop of RefreshTimeseries): every signal of the    |
+ //| pair judged up to its newest closed bar. False: one is not        |
+ //+------------------------------------------------------------------+
+ bool CSignalsCollection::JudgePair(const string symbol,const ENUM_TIMEFRAMES timeframe,const ulong started)
+  {
+   if(this.m_BarTimeSeriesCollection==NULL || this.m_SyncManager==NULL || this.m_IndicatorsCollection==NULL)
+      return true;
+   if(!this.m_SyncManager.IsPythonDone())
+      return false;   // Python Current writes the pairs of Setting_SymbolTF now: one writer for a pair at a time
+   CBarSeriesDE *bars=this.m_BarTimeSeriesCollection.GetSeries(symbol,timeframe);
+   if(bars==NULL)
+      return true;    // the pair is gone
+   const datetime last_closed=::iTime(symbol,timeframe,1);
+   if(last_closed==0)
+      return false;
+   bool done=true;
+   for(int s=0;s<this.m_list.Total();s++)
+     {
+      CSignal *series=this.m_list.At(s);
+      if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=timeframe || series.JudgedTo()==last_closed)
+         continue;
+      if(::GetTickCount64()-started>BAR_UPDATE_BUDGET_MS)
+         return false;   // the share of time is over: the rest waits
+      this.Calculate(s,bars.GetList());
+      if(series.JudgedTo()!=last_closed)
+         done=false;     // not ready (MT5 has not calculated the indicator yet): it waits
+     }
+   return done;
   }
  //+------------------------------------------------------------------+
  //| A pair or a template added or deleted, Python wrote more          |
  //+------------------------------------------------------------------+
  bool CSignalsCollection::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   //--- New in V5: a new bar of a pair (CBarSeriesDE: dparam = its TF, sparam = its symbol): its signals are judged now, what is not ready waits
+   if(id==CHARTEVENT_CUSTOM+SERIES_EVENTS_NEW_BAR)
+     {
+      if(!this.JudgePair(sparam,(ENUM_TIMEFRAMES)(long)dparam,::GetTickCount64()))
+         this.m_pending.Add(sparam,(ENUM_TIMEFRAMES)(long)dparam);
+      return true;
+     }
    //--- Python wrote the first chunk of every pair (CSyncManager has read its marks already): the series and the rows go to RAM again
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE)
-      return this.ReadDataFromDB();
+     {
+      bool done=this.ReadDataFromDB();
+      //--- New in V5: the bars closed while Python wrote are judged at the next beats (RetryPending)
+      string symbols[];
+      ENUM_TIMEFRAMES timeframes[];
+      int pairs=(this.m_SymbolTFManager!=NULL ? this.m_SymbolTFManager.Read_RAM(symbols,timeframes) : 0);
+      for(int i=0;i<pairs;i++)
+         this.m_pending.Add(symbols[i],timeframes[i]);
+      return done;
+     }
    //--- A pair: lparam = its TF, sparam = its symbol (CBarTimeSeriesCollection made its series already)
    if(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED)
      {
@@ -496,7 +533,7 @@
  //+------------------------------------------------------------------+
  //| V5 (moved from CSignal::Calculate(list)): the new bars of the     |
  //| list are judged from the progress, the rows set on the signal     |
- //| (RAM only: Python saves), each one told (Event Rule)              |
+ //| (RAM only: Python saves), each one told (Working with Event)      |
  //+------------------------------------------------------------------+
 // int CSignalsCollection::Calculate(CSignal *signal,CSignalJudge *judge,CArrayObj *list)
 //  {
@@ -539,7 +576,7 @@
 //        }
 //   this.m_SyncManager.Update_Sync_Setting(this.m_object_type,(long)signal.TypeIndicator(),symbol,timeframe,last_closed,this.m_object_type,true,signal.ParamsText());   // the mark stays in RAM
 //   signal.SetJudgedTo(last_closed);
-//   //--- RAM changed: told (Event Rule), each row by its own event with its bar; sparam: the symbol;the params of the template
+//   //--- RAM changed: told (Working with Event), each row by its own event with its bar; sparam: the symbol;the params of the template
 //   const string text=symbol+";"+signal.ParamsText();
 //   for(int k=0;k<::ArraySize(told_params);k++)
 //      this.EventSend((ushort)SERIES_EVENTS_SIGNAL,told_params[k],(double)timeframe,text);

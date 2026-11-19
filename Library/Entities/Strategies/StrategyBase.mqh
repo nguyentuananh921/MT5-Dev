@@ -41,7 +41,7 @@
     ENUM_SIGNAL_DIRECTION HistoryDir(const int index) const { return (ENUM_SIGNAL_DIRECTION)this.m_hist_dir.At(index); }
    //--- A row goes in its place by its time (false: the bar has this role already)
     bool              AddRow(const datetime time,const string role,const ENUM_SIGNAL_DIRECTION direction);
-   //--- A row Python found (CPythonBridge) is added and told (Event Rule): STRATEGY_EVENT_ENTRY / STRATEGY_EVENT_EXIT,
+   //--- A row Python found (CPythonBridge) is added and told (Working with Event): STRATEGY_EVENT_ENTRY / STRATEGY_EVENT_EXIT,
    //--- lparam = EventPack(bar time, strategy_id, side, is_new), dparam = the timeframe, sparam = the symbol. False: the bar had it already (no event)
     bool              StoreRow(const datetime time,const string role,const ENUM_SIGNAL_DIRECTION direction,const bool is_new);
    //--- The rows before the time go. Returns how many went

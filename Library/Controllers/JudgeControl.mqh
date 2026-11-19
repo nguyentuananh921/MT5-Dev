@@ -2,8 +2,8 @@
 //|                                                 JudgeControl.mqh |
 //| Controllers (Clean Architecture): a new closed bar is judged from |
 //| the progress of a key, what is found is set on its entity and     |
-//| told (Event Rule: the class that changes the data tells it, the   |
-//| Automation Trading listens)                                       |
+//| told (Working with Event: the class that changes the data tells   |
+//| it, the Automation Trading listens)                               |
 //+------------------------------------------------------------------+
 //--- V5: the library judges the new bars on RAM only (fastest); Python saves to the database, its rows of the same bars are refused (AddRow / NewRow)
 //--- New in V5: the steps that were written twice (V4 CBarControl::Calculate, CSignalSeriesDE::Calculate) are here once.
@@ -87,9 +87,9 @@
          ::ArrayResize(told,n+1);
          told[n]=this.EventPack((datetime)times[i],key,sides[i],since==previous_closed);
         }
-   sync.Update_Sync_Setting(sync_object,key,symbol,timeframe,last_closed,sync_object,true,params);   // the mark stays in RAM
+   sync.Update_Sync_Setting(sync_object,key,symbol,timeframe,last_closed,sync_object,params);   // the mark stays in RAM
    judged_to=last_closed;
-   //--- RAM changed: each new row told (Event Rule), with all the Automation Trading needs (no asking back)
+   //--- RAM changed: each new row told (Working with Event), with all the Automation Trading needs (no asking back)
    for(int k=0;k<::ArraySize(told);k++)
       this.EventSend(event_id,told[k],(double)timeframe,text);
    return ::ArraySize(told);

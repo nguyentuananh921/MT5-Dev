@@ -19,7 +19,8 @@
       CStrategyManager                   *m_StrategyManager;                  // the strategies of the Strategy tab
       CBarMarkerCollection               *m_BarMarkerCollection;              // the rows of a candle joined on RAM (load on demand): the popup of a candle asks it
       CGraphElementsCollection           *m_GraphElementsCollection;          // the layer and the markers: the popup lights the box of its candle
-      CHistoryCollection                 *m_HistoryCollection;                // the table Orders: the tables of the Trade Manage window are read through it
+      CHistoryCollection                 *m_HistoryCollection;                // the history of the terminal on RAM: the tables of the Trade Manage window are read through it
+      CTradingControl                    *m_TradingControl;                   // the changes of the SL / TP of a position (TradingOrderDetail): the Order detail window
       CAccountsCollection                *m_AccountsCollection;               // the account in RAM: the equity of the status bar, the profit of the caption
       CMarketCollection                  *m_MarketCollection;                 // the positions in RAM: their numbers on the caption
      // For Layer 2 GUI Control Elements implementation in GUIPannel_Window_Main.mqh
@@ -70,7 +71,7 @@
       CComboBox                           m_param_combo[INDICATOR_PARAM_SLOTS_MAX];   // enum-like params (Method, Applied Price...)
       CButton                             m_btn_add_indicator_form;            // in the form: gives the manager the new template (Save: the slot of a strategy)
       ENUM_INDICATOR                      m_current_param_type;                // type the form shows, IND_CUSTOM = none
-      CComboBox                           m_combo_param_tf;                    // in the form, only for the slot of a strategy: its tf (STRATEGY_TFS)
+      CComboBox                           m_combo_param_tf;                    // in the form: the timeframe of the strategy slot being edited
       long                                m_edit_strategy_id;                  // the form edits a slot of this strategy (Edit of the Strategy tab), WRONG_VALUE = it adds a template
       string                              m_edit_strategy_slot;
      //Private Method
@@ -176,7 +177,7 @@
      //For status Bar on the bottom of Main Window
       bool                                CreateStatusBar(const int x_gap,const int y_gap);
       void                                UpdateStatusBar_SymbolSpread(void);
-      void                                UpdateStatusBar_Equity(const int reason=WRONG_VALUE);
+      void                                UpdateStatusBar_Equity(const ENUM_SIGNAL_DIRECTION side=SIGNAL_DIRECTION_NONE);
      //For MenuBar on top of Main Window
       bool                                CreateMenuBar(const int x_gap,const int y_gap);
     public:
@@ -199,6 +200,7 @@
       void                                SetBarMarkerCollection(CBarMarkerCollection *collection)        { m_BarMarkerCollection=collection; }
       void                                SetGraphElementsCollection(CGraphElementsCollection *collection) { m_GraphElementsCollection=collection; }
       void                                SetHistoryCollection(CHistoryCollection *collection)            { m_HistoryCollection=collection; }
+      void                                SetTradingControl(CTradingControl *control)                     { m_TradingControl=control; }
       void                                SetAccountsCollection(CAccountsCollection *collection)          { m_AccountsCollection=collection; }
       void                                SetMarketCollection(CMarketCollection *collection)              { m_MarketCollection=collection; }
      // The tables of the Trade Manage window are read again (on a trading event)

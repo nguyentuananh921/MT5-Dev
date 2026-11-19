@@ -222,7 +222,7 @@
       if(event==NULL || !this.EventAdd((ushort)event.ID(),event.LParam(),event.DParam(),event.SParam()))
          continue;   // told already
       this.m_is_event=true;
-      ::EventChartCustom(::ChartID(),(ushort)event.ID(),event.LParam(),event.DParam(),event.SParam());   // the parent and the siblings hear it
+      this.EventSend((ushort)event.ID(),event.LParam(),event.DParam(),event.SParam());   // the parent and the siblings hear it (the bus of the EA)
      }
   }
 #endif // CTICKSERIESCOLLECTION_MQH_IMPLEMENTATION

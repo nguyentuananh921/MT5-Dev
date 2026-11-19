@@ -7,8 +7,9 @@
 //--- The history of the account (V3 m_list_all_orders): the orders and deals of the terminal live in RAM (the terminal keeps them, they are made again at each
 //--- start); the table Orders of the file of the account is this class's (as CBarTimeSeriesCollection owns its tables) and keeps only what the terminal has not or
 //--- what must not be done again (Readme "Live on RAM, Save on DB for no more calculation"): the line of each history order and deal, the Bid / Ask of a deal.
-//--- Change from DoEasy / V3: base CObject -> CBaseObjExt (Event Rule), Refresh -> RefreshHistory (as RefreshSeries, RefreshAccount), ReadDataFromDB / UpdateDataToDB
+//--- Change from DoEasy / V3: base CObject -> CBaseObjExt (Working with Event), Refresh -> RefreshHistory (as RefreshSeries, RefreshAccount), ReadDataFromDB / UpdateDataToDB
 //--- (the table moved here from COrderControl); MQL5 only
+//--- Change in V5: no table Orders, RAM only (only Python saves what is found; the terminal keeps the history)
 #property copyright "Copyright 2019, MetaQuotes Software Corp."
 #property link      "https://mql5.com/en/users/artmedia70"
 #property version   "1.00"
@@ -20,7 +21,6 @@
 #include <Arrays\ArrayLong.mqh>
 #include "ListObj.mqh"
 #include "SymbolsCollection.mqh"
-#include "Settings\SyncManager.mqh"
 #include "..\Entities\Bases\BaseObjExt.mqh"
 #include "..\Entities\Defines\CommonDefines.mqh"
 #include "..\Entities\Defines\EventDefines.mqh"
@@ -30,23 +30,12 @@
  #ifndef CHISTORYCOLLECTION_MQH_DECLARATION
  #define CHISTORYCOLLECTION_MQH_DECLARATION
 //+------------------------------------------------------------------+
-//| A column of the table Orders and the property of COrder it keeps |
-//+------------------------------------------------------------------+
-struct SOrderColumn
-  {
-   string            name;                                              // Column
-   string            type;                                              // SQL type of the column
-   int               prop;                                              // Property of COrder (ENUM_ORDER_PROP_*)
-  };
-//+------------------------------------------------------------------+
 //| Collection of historical orders and deals                        |
 //+------------------------------------------------------------------+
 class CHistoryCollection : public CBaseObjExt
   {
    private:
-    CSymbolsCollection *m_SymbolsCollection;  // The EA holds it: the id of OUR symbol of an order (symbols)
-    CSymbolTFManager   *m_SymbolTFManager;    // The EA holds it: the id of OUR symbol of an order (symbols)
-    CListObj            m_list_all_orders;      // List of all historical orders and deals (V3), owned
+    CListObj           m_list_all_orders;      // List of all historical orders and deals (V3), owned
     int                 m_index_order;          // Index of the last order added to the collection from the terminal history list
     int                 m_index_deal;           // Index of the last deal added to the collection from the terminal history list
     int                 m_delta_order;          // Difference in the number of orders compared to the previous check
@@ -55,19 +44,15 @@ class CHistoryCollection : public CBaseObjExt
      bool              IsPresentOrderInList(const ulong order_ticket,const ENUM_ORDER_TYPE type);
     //--- Return the "lost" order type and ticket
      ulong             OrderSearch(const int start,ENUM_ORDER_TYPE &order_type);
-    //--- Create the order object (deal=true: a deal) and place it to the list: a line of the table gives it back its Bid / Ask, one that has no line waits to be written
-    //--- (Change from V3: the deals come here too)
+    //--- Create the order object (deal=true: a deal) and place it to the list; a deal that just happened gets the tick of its time (Change from V3: the deals come here too)
      bool              CreateNewOrder(const ulong order_ticket,const ENUM_ORDER_TYPE order_type,const bool deal=false);
    public:
     //--- Return the full collection list 'as is'
      CArrayObj        *GetList(void)                                                                       { return &this.m_list_all_orders;      }
-    //--- The collection and the manager the EA gives it: the id of a symbol of the account, the marks of Setting_Sync
-     void              SetSymbolsCollection(CSymbolsCollection *collection)                                { this.m_SymbolsCollection=collection;  }
-     void              SetSymbolTFManager(CSymbolTFManager *manager)                                       { this.m_SymbolTFManager=manager;       }
     //--- Return the number of (1) new orders, (2) new deals, (3) occurred trading event flag
      int               NewOrders(void)                                                               const { return this.m_delta_order;     }
      int               NewDeals(void)                                                                const { return this.m_delta_deal;      }
-    //--- Lifecycle: opens the file of the account, makes the table Orders (the lines of what is on the account now, of an older table, go), reads its lines
+    //--- Lifecycle (as the other collections): nothing to make, the history lives in RAM (RefreshHistory)
      bool              OnInitEvent(void);
     //--- Update the list of orders, fill in data on the number of new ones and set the trading event flag (V1 / V3; the first call makes the past again: no flag);
     //--- the EA (as CEngine::TradeEventsControl) gives the lists to CTradeEventsCollection, whose events go to the chart
@@ -83,7 +68,7 @@ class CHistoryCollection : public CBaseObjExt
 //+------------------------------------------------------------------+
 //| Constructor                                                      |
 //+------------------------------------------------------------------+
-CHistoryCollection::CHistoryCollection(void) : m_SymbolsCollection(NULL),m_SymbolTFManager(NULL),m_index_deal(0),m_delta_deal(0),m_index_order(0),
+CHistoryCollection::CHistoryCollection(void) : m_index_deal(0),m_delta_deal(0),m_index_order(0),
                                                m_delta_order(0)
   {
    this.m_object_type=COLLECTION_HISTORY_ID;
@@ -101,7 +86,7 @@ bool CHistoryCollection::OnInitEvent(void)
 //+------------------------------------------------------------------+
 //| Update the list of orders and deals                              |
 //+------------------------------------------------------------------+
-//--- Change from V3: Refresh -> RefreshHistory; what has no line is written (the first call is the past: no flag)
+//--- Change from V3: Refresh -> RefreshHistory (the first call is the past: no flag)
 void CHistoryCollection::RefreshHistory(void)
   {
    this.m_is_event=false;
@@ -185,9 +170,8 @@ ulong CHistoryCollection::OrderSearch(const int start,ENUM_ORDER_TYPE &order_typ
    return order_ticket;
   }
 //+------------------------------------------------------------------+
-//| Create the order object and place it to the list: a line of the  |
-//| table gives it back its Bid / Ask; with no line it waits to be   |
-//| written (a deal that just happened gets the tick of its time)    |
+//| Create the order object and place it to the list (a deal that    |
+//| just happened gets the tick of its time)                         |
 //+------------------------------------------------------------------+
 bool CHistoryCollection::CreateNewOrder(const ulong order_ticket,const ENUM_ORDER_TYPE order_type,const bool deal=false)
   {

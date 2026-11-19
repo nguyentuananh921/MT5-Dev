@@ -19,12 +19,13 @@
  #include <Object.mqh>
  #include "..\Defines\CommonDefines.mqh" 
  #include "..\Defines\TradingDefines.mqh"
+ #include "..\Bases\BaseObj.mqh"
  #include "..\..\Services\Message\Message.mqh"
  #include "..\..\Services\DELib\CommonDELib.mqh"
  #include "..\..\Services\DELib\TradingDELib.mqh"
 #ifndef CTRADEEVENT_MQH_DECLARATION
 #define CTRADEEVENT_MQH_DECLARATION
-class CTradeEvent : public CObject
+class CTradeEvent : public CBaseObj   // Change in V5 (was CObject): a child of the library, it fires with EventSend (the bus of the EA)
   {
    private:
       int               m_event_code;                                   // Event code

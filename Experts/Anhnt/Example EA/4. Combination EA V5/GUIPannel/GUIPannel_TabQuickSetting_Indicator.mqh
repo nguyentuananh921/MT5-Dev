@@ -87,20 +87,41 @@
  //--- The rows of every template (at the start). The sections keep their toggles
  void CGUIPannel::PopulateSections_IndicatorTemplateSetting(void)
   {
-   SIndicatorsRow catalog;
    if(m_IndicatorTemplateManager==NULL)
       return;
    ENUM_INDICATOR types[];
    string params[],display[];
    bool buy[],sell[],sound[],message[],show[];
    int total=m_IndicatorTemplateManager.Read_RAM(types,params,display,buy,sell,sound,message,show);
+   //--- Change in V5: a template on a source is in the group of its source, right under it when the source is a template too (as on the chart)
+   string source_of[];
+   bool source_listed[];
+   ::ArrayResize(source_of,total);
+   ::ArrayResize(source_listed,total);
+   for(int i=0;i<total;i++)
+     {
+      ENUM_INDICATOR source_type;
+      string source_params;
+      int applied;
+      source_of[i]=(m_IndicatorTemplateManager.SourceOf(types[i],params[i],source_type,source_params,applied) ? m_IndicatorTemplateManager.SourceText(source_type,source_params) : "");
+      source_listed[i]=false;
+      for(int s=0;s<total && source_of[i]!="";s++)
+         source_listed[i]=(source_listed[i] || m_IndicatorTemplateManager.SourceText(types[s],params[s])==source_of[i]);
+     }
    for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
      {
       m_sections_indicator.ClearBody(g);
       int row=0;
       for(int i=0;i<total;i++)
-         if(m_IndicatorTemplateManager.Read_RAM(types[i],catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
-            this.AddRow_IndicatorTemplateSetting(g,row++,this.RowHandle_IndicatorTemplateSetting(types[i],params[i]),display[i],show[i],buy[i],sell[i],sound[i],message[i]);
+        {
+         if(source_listed[i] || m_IndicatorTemplateManager.Group(types[i],params[i])!=INDICATOR_SECTION_GROUPS[g])
+            continue;   // a template on a template comes under it
+         this.AddRow_IndicatorTemplateSetting(g,row++,this.RowHandle_IndicatorTemplateSetting(types[i],params[i]),display[i],show[i],buy[i],sell[i],sound[i],message[i]);
+         string text=m_IndicatorTemplateManager.SourceText(types[i],params[i]);
+         for(int r=0;r<total;r++)
+            if(source_listed[r] && source_of[r]==text)
+               this.AddRow_IndicatorTemplateSetting(g,row++,this.RowHandle_IndicatorTemplateSetting(types[r],params[r]),display[r],show[r],buy[r],sell[r],sound[r],message[r]);
+        }
      }
    this.SyncSections_IndicatorTemplateSetting();
    m_sections_indicator.Arrange();
@@ -108,7 +129,6 @@
  //--- The switches take their state from the database, the toggle of a section is ON while any switch of its two columns is
  void CGUIPannel::SyncSections_IndicatorTemplateSetting(void)
   {
-   SIndicatorsRow catalog;
    if(m_IndicatorTemplateManager==NULL)
       return;
    ENUM_INDICATOR types[];
@@ -128,7 +148,7 @@
       m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_SOUND_ALERT,sound[i]);
       m_sections_indicator.SetBodyState(row_handle,INDICATOR_SLOT_MESSAGE_ALERT,message[i]);
       for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
-         if(m_IndicatorTemplateManager.Read_RAM(types[i],catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
+         if(m_IndicatorTemplateManager.Group(types[i],params[i])==INDICATOR_SECTION_GROUPS[g])
            {
             any_show[g]=(any_show[g] || show[i]);
             any_signal[g]=(any_signal[g] || buy[i] || sell[i]);
@@ -171,7 +191,6 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent_Tab_Indicator(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
-   SIndicatorsRow catalog;
    //--- The tab was opened, the scroll moved, a window changed its size, a header was clicked: the sections are arranged again
    m_sections_indicator.OnChartEvent(id,lparam,dparam,sparam);
    //--- The window changed its width: the Add button stays at the right of the tab
@@ -184,15 +203,31 @@
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED && m_IndicatorTemplateManager!=NULL)
      {
       CIndicatorSetting *row=m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR)lparam,sparam);
-      for(int g=0;g<INDICATOR_SECTIONS_TOTAL && row!=NULL;g++)
-         if(m_IndicatorTemplateManager.Read_RAM(row.TypeEnum(),catalog) && catalog.group==INDICATOR_SECTION_GROUPS[g])
-           {
-            m_sections_indicator.RemoveRows(row.ID());   // made already: the tab was built after the template came (OnInit, from the chart)
-            this.AddRow_IndicatorTemplateSetting(g,m_sections_indicator.RowsTotal(g),row.ID(),row.Display(),row.ShowOnChart(),row.BuySignal(),row.SellSignal(),row.SoundAlert(),row.MessageAlert());
-            break;
-           }
-      this.SyncSections_IndicatorTemplateSetting();
-      m_sections_indicator.Arrange();
+      ENUM_INDICATOR source_type;
+      string source_params;
+      int applied;
+      bool reader_or_source=(row!=NULL && m_IndicatorTemplateManager.SourceOf(row.TypeEnum(),row.Params(),source_type,source_params,applied));
+      ENUM_INDICATOR types[];
+      string params[];
+      bool buy[],sell[];
+      int total=(row!=NULL && !reader_or_source ? m_IndicatorTemplateManager.Read_RAM(types,params,buy,sell) : 0);
+      for(int i=0;i<total && !reader_or_source;i++)   // the source of a template there already: that template comes under it
+         reader_or_source=(m_IndicatorTemplateManager.SourceOf(types[i],params[i],source_type,source_params,applied) &&
+                           m_IndicatorTemplateManager.SourceText(source_type,source_params)==m_IndicatorTemplateManager.SourceText(row.TypeEnum(),row.Params()));
+      if(reader_or_source)
+         this.PopulateSections_IndicatorTemplateSetting();   // New in V5: a template on a source goes under its source, not at the end: the sections are made again
+      else
+        {
+         for(int g=0;g<INDICATOR_SECTIONS_TOTAL && row!=NULL;g++)
+            if(m_IndicatorTemplateManager.Group(row.TypeEnum(),row.Params())==INDICATOR_SECTION_GROUPS[g])
+              {
+               m_sections_indicator.RemoveRows(row.ID());   // made already: the tab was built after the template came (OnInit, from the chart)
+               this.AddRow_IndicatorTemplateSetting(g,m_sections_indicator.RowsTotal(g),row.ID(),row.Display(),row.ShowOnChart(),row.BuySignal(),row.SellSignal(),row.SoundAlert(),row.MessageAlert());
+               break;
+              }
+         this.SyncSections_IndicatorTemplateSetting();
+         m_sections_indicator.Arrange();
+        }
       this.SyncTreeView_IndicatorTemplateSetting();   // the blue arrow of a type that has a template
       if(m_window_addIndicator.IsVisible())
          m_window_addIndicator.BringToTop();   // the new row was shown after it: the Add form stays above the tab

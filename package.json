@@ -1,0 +1,9 @@
+{
+  "name": "mt5-dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:gen": "node scripts/gen-ai-docs.mjs",
+    "docs:check": "node scripts/gen-ai-docs.mjs --check"
+  }
+}

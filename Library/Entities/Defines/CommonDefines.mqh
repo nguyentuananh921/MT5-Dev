@@ -113,7 +113,7 @@
     OBJECT_DE_TYPE_SIGNAL_ENVELOPES,                               // "Envelopes signal" object type
     OBJECT_DE_TYPE_SIGNAL_TWOLINECROSS,                            // "Two-line cross signal" object type
     OBJECT_DE_TYPE_SIGNAL_FRACTALS,                                // "Fractals reversal signal" object type
-    OBJECT_DE_TYPE_SIGNAL_VOLUMES,                                 // "Volumes against their average signal" object type (new in V4)
+    OBJECT_DE_TYPE_SIGNAL_SOURCE_MA,                               // "A source against its MA signal" object type (V4 SIGNAL_VOLUMES: Volumes against their average is one of them)
    //--- Ticks
     OBJECT_DE_TYPE_NEW_TICK,                                       // "New tick" object type
     OBJECT_DE_TYPE_TICK,                                           // "Tick" object type (CTick, DoEasy CDataTick)
