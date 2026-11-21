@@ -1,0 +1,19 @@
+{
+  "name": "mt5-marketplace",
+  "owner": {
+  "name": "Nguyen Tuan Anh",
+  "url": "https://github.com/nguyentuananh921/MT5-Dev"
+  },
+  "description": "MT5-Dev quantitative trading tools and skills.",
+  "plugins": [
+   {
+    "name": "mt5-tools",
+    "source": "./",
+    "description": "MQL5 and Python skills and rules for MT5-Dev.",
+    "repository": "https://github.com/nguyentuananh921/MT5-Dev",
+    "license": "MIT",
+    "keywords": ["mql5", "mt5", "trading", "python", "quant"],
+    "skills": ["./skills"]
+   }
+  ]
+}
