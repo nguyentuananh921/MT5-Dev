@@ -1,23 +1,109 @@
 # Coding Rule
 
-- **Khi coding:**
-  - Theo [Working workflow](../AGENTS.md#working-workflow).
-  - Đảm bảo Rules gate trong [AGENTS.md](../AGENTS.md).
-  - Đồng bộ các thành phần liên quan theo [Concept_SyncEverywhere.md](../concept/Concept_SyncEverywhere.md).
+- **Khi coding:** áp dụng ở bước Coding của [Working workflow](../AGENTS.md#working-workflow).
+- **Cấu trúc class và file:**
+  - Mỗi class một file, có include guard.
+  - Tách rõ Declaration và Implementation (mẫu `RiskSetting.mqh`: guard → declaration → implementation); getter/setter chỉ viết inline khi ngắn gọn.
+  - Module: `<Class>_Define.mqh`, `<Class>.mqh`, `<Class>_Lifecycle.mqh`, `<Class>_Window_<Name>.mqh`.
+- **Folding Rule:** căn lề để folding được, áp dụng ở mọi thành phần (Sync Everywhere), kể cả file `.md` trong `skills\`.
+  - **Code (MQL5):**
+    - Mỗi khối (`#ifndef`/`#endif`, class, method, `if`/`for`/`switch`) thụt sâu hơn khối cha một bậc; dấu đóng (`}`, `#endif`) thẳng cột với dấu mở.
+    - Theo cách thụt lề sẵn có của file; file mới theo mẫu `RiskSetting.mqh`.
+  - **Markdown:**
+    - VS Code chỉ fold theo heading (`##`, `###`) và list item có dòng con; khoảng trắng lẻ đầu dòng không tạo cấp.
+    - Item cấp ngoài (`-`, `1.`) và đoạn văn ở cột 0; không thụt 1 khoảng trắng lẻ.
+    - Sau marker luôn có 1 khoảng trắng: `- …`, `0. …`; viết liền (`-Trước`, `0.**Bàn**`) thì không phải list, cả đoạn thành văn bản thường.
+    - Dòng con thụt đúng vị trí chữ của item cha: 2 khoảng trắng dưới `-`, 3 dưới `1.`.
+      - Sai: ` 0. **Gate**` (chữ ở cột 4) với dòng con `   - …` (cột 3): dòng con thành list riêng, không fold được.
+      - Đúng: `0. **Gate**` ở cột 0, dòng con `   - …` thụt 3.
+    - Danh sách số đánh liên tục, không trùng số (`0.`, `1.`, `2.`…).
+    - Một dòng trống giữa heading, đoạn văn và list; không để hai dòng trống liền.
+    - Item dài nhiều ý thì tách mỗi ý một dòng con.
 
 Các mục dưới đây bổ sung chi tiết implementation.
 
-## Cấu trúc class và file
+## Implementation Rule
 
-- **Class:** mỗi class một file, có include guard.
-- **Getter/setter:** tách rõ Declaration và Implementation; chỉ viết inline khi method ngắn gọn.
-- **Module:** `<Class>_Define.mqh`, `<Class>.mqh`, `<Class>_Lifecycle.mqh`, `<Class>_Window_<Name>.mqh`.
+Goal của implementation là sẽ implement một concept hay feature mới dựa trên một Optimize Idea hoặc Reference cụ thể.
+
+0. **Bàn trước, làm một thể:** theo [Working workflow](../AGENTS.md#working-workflow) và [CommunicationRule.md](CommunicationRule.md).
+   - Khi còn việc cần chốt thì không code/compile.
+1. **New Concept:** concept đã có trong hệ thống thì dùng cái đã có; chưa có thì giữ nguyên tên và cấu trúc của tác giả để sau rà soát đối chiếu được với bản gốc.
+   - No Duplicate ở mức concept: hệ thống đã có concept này chưa; mức method/member/key/enum ở bước 3.
+   - Kết quả: danh sách thành phần và class bị ảnh hưởng (bước Plan của AGENTS.md).
+   - Ví dụ: key của `Setting_Risk` theo tên input của `FixedMACrossover_Part7.mq5` (`TakeProfitRatio`, `percentage_risk_per_operation`).
+2. **Trace trong phạm vi bị ảnh hưởng** (theo kết quả bước 1), trước lần sửa đầu tiên:
+   - Nơi ghi/đọc/so sánh dữ liệu ở các thành phần đó (EA, Web, Library, Python, Database) và lineage.
+   - Với event ([Event.md](../Notes/Event.md), gate 4), trace cả listener: event mới thì ai phải nghe, params đổi thì ai phải `EventUnpack` lại, data đổi mà không fire thì ai bị lỡ (vd `SLOT_CHANGED` chưa có `CPythonBridge` nghe).
+   - Báo cả danh sách một lần, sửa một lượt.
+3. **Tránh thêm method mới (cách tìm của No Duplicate):** trước khi thêm method/member/key/enum trong phạm vi đã trace, kể cả khi port từ tác giả:
+   - Sửa method cũ, đừng thêm method song song.
+   - Grep theo **việc** nó làm (vd `spread`, `lot`, `margin`), không chỉ theo tên, trên toàn `Library\`:
+     - Collections; Trading (`CTrading`, `CTradingControl`, `CPendRequest`); Entities (`CSymbol`, `CAccount`).
+     - `CommonDELib.mqh` (các hàm `XxxDescription`), `CommonDefines.mqh`; control GUI thì tìm `ChangeSize`.
+     - Cái kế thừa: theo [Kiểm tra cái kế thừa trước](#kiểm-tra-cái-kế-thừa-trước).
+   - Đã có thì dùng cái đã có:
+     - Data lấy từ object sở hữu (số liệu symbol từ `CSymbol`: `Spread()`, `TradeStopLevel()`, `Point()`, `Digits()`, không tự tính); ngưỡng để trong Setting.
+     - Khác hành vi so với tác giả thì báo.
+   - Ghi kết quả vào đề xuất: `grep <việc> trong <phạm vi> → <kết quả>`; không có thì không code.
+     - Cái mới thật sự: báo và chờ đồng ý trước.
+   - Ví dụ: `IsSpreadAcceptable()` của tác giả không thêm vào `CTradingControl`: spread đã có `CSymbol::Spread()`, phép so đã có `PEND_REQ_ACTIVATE_BY_SYMBOL_SPREAD`; chỉ thêm key `MaxSpreadPips` vào `Setting_Risk`.
+4. **Chỉ sửa đúng phạm vi được nêu.**
+   - Làm dần: comment out → compile để thấy call site → sửa → compile sạch.
+   - Chỉ đổi thân method thì sửa tại chỗ; chỉ comment out khi đổi signature.
+   - Trước khi sửa, nói rõ diff (file, dòng).
+   - Khi Anhnt đang tự sửa tay một file thì chỉ đưa code trong chat.
+5. **Đọc cả method trước khi sửa:**
+   - Grep cả class tìm lời gọi trùng (cùng data, cùng việc) và sửa luôn trong lần đó.
+   - Review thì căn cứ code hiện tại, không căn cứ comment hay ghi chú cũ.
+6. **Dọn cái thay đổi này để lại:**
+   - Method/member mất caller cuối cùng vì thay đổi này, dòng mình comment out kèm header box mồ côi, comment hoặc tên method mô tả cách cũ.
+   - Không quét xoá cả Library theo "không ai gọi".
+   - "Kiểm tra" nghĩa là báo cáo; không xoá hay ghi đè file chưa xem nội dung.
+   - Chỉ xoá khi đã quét đủ (lineage, không filter tên, đọc được UTF-16) và nói rõ đã quét gì.
+7. **Port hoặc dời file:**
+   - Tra lineage theo **Giữ code gốc** (bên dưới) xem class nào giữ state, method nào làm việc; đặt đúng tầng đó.
+   - Copy từng concept/method, không bê nguyên file.
+   - Port từ tác giả ngoài lineage: theo bước 1 **New Concept**.
+   - Dời file: copy nguyên văn → comment out file cũ → compile → sửa tại chỗ, không viết lại từ đầu.
+8. Không tự commit hoặc push.
+
+- **Tên và màu vendor:** giữ nguyên tên member và màu mặc định; chỉ đổi tên khi nó che mất member của base class.
+- **Giữ code gốc:**
+  - "Không ai gọi" chưa chắc là dead code. Tra lineage:
+    - Library `2. DoEasy. Service functions Lib` → `4. Combination Lib` (V1) → V2 → V3 → V4.
+    - EA `4. Combination EA` → V2 → V3 Old → V3 → V4.
+  - Method public của bản gốc chưa được port thì giữ lại.
+  - Code Anhnt tự comment out là thay thế có chủ ý: không bật lại.
+- **Chart change (`REASON_CHARTCHANGE/PARAMETERS`):**
+  - Không ghi gì và không tạo lại gì. Class dùng guard `m_first_start`.
+  - Đọc luôn `new`/`delete` trong OnInit/OnDeinit của EA cho object đó trong cùng lượt.
+- **Phân tầng (gate 3 MVC):**
+  - Logic thuần thuộc về Engine/Manager, không thuộc `CGUIPannel`.
+  - Method không đụng control GUI thì không đặt trong `CGUIPannel`.
+  - Data đổi trước, Layer 1 theo sau.
+
+## Kiểm tra cái kế thừa trước
+
+- **CBaseObj:** đã có `m_available`, `m_first_start`, `m_object_type`, `GetFolderName()` và các method `Event*` (xem [Event.md](../Notes/Event.md)).
+- **Refresh:** không override `CBaseObjExt::Refresh`; đặt tên `RefreshX` (RefreshSeries, RefreshAccount…).
 
 ## Comment
 
-- **Comment của agent:** tiếng Anh, tối đa một dòng, chỉ cho điều không hiển nhiên; không viết banner kể chuyện, không gắn tag tên/ngày.
+- **Tài liệu nằm trong code:** chi tiết implementation (member, key, default, contract event) ghi trong code, không chép sang Note.
+- **Header class/file:** theo khung `//+---+`, tiếng Anh, ngắn:
+  - Vai trò; ai ghi/đọc data (DB, table); event fire/nghe kèm dparam/sparam.
+  - Nguồn port (lineage) và cái không port kèm lý do.
+- **Comment của agent:** tiếng Anh.
+  - Member một comment cuối dòng; trong thân method tối đa một dòng, chỉ cho điều không hiển nhiên.
+  - Không viết banner kể chuyện, không gắn tag tên/ngày.
 - **Header method:** theo khung `//+---+`.
 - **Python:** docstring một dòng.
+
+## Note của Anhnt trong code
+
+- **Note của Anhnt:** trong code (header file, dòng `// Update in V4…`) agent chỉ đọc, không sửa, không xoá, không đề xuất xoá.
+- **Trạng thái:** `[]` là việc chưa xong, `[v]` là đã xong; đưa `[]` vào danh sách rà soát.
 
 ## Debug print
 
@@ -26,18 +112,8 @@ Các mục dưới đây bổ sung chi tiết implementation.
   - Dòng log nói rõ đơn vị và ngữ cảnh ("1311 rows on 709 of the 1000 bars").
   - Ghi file chỉ vào `MQL5\Files\<program>\` qua `GetFolderName()`.
   - Đọc kết quả qua [Log Experts tab](#log-experts-tab).
-- **Trước khi thêm debug hay vá:** grep cơ chế tương đương đã có (redraw, guard, flag).
+- **Trước khi thêm debug hay vá:** tìm cơ chế tương đương đã có (redraw, guard, flag) theo bước 3 **Tránh thêm method mới**.
 - **Bug nằm trong một Control:** dựng test EA tối giản.
-
-## Note của Anhnt trong code
-
-- **Note của Anhnt:** trong code (header file, dòng `// Update in V4…`) agent chỉ đọc, không sửa, không xoá, không đề xuất xoá.
-- **Trạng thái:** `[]` là việc chưa xong, `[v]` là đã xong; đưa `[]` vào danh sách rà soát.
-
-## Kiểm tra cái kế thừa trước
-
-- **CBaseObj:** đã có `m_available`, `m_first_start`, `m_object_type`, `GetFolderName()` và các method `Event*` (xem [Concept_Event.md](../concept/Concept_Event.md)).
-- **Refresh:** không override `CBaseObjExt::Refresh`; đặt tên `RefreshX` (RefreshSeries, RefreshAccount…).
 
 ## Log Experts tab
 
@@ -48,55 +124,8 @@ Các mục dưới đây bổ sung chi tiết implementation.
 
 ## Lệnh
 
-- **Lệnh compile:**
-  ```powershell
-  # /log must be a scratchpad path; a bare /log drops the log next to the source.
-  Start-Process "C:\Program Files\MetaTrader 5\MetaEditor64.exe" -Wait -ArgumentList '/compile:"<file.mq5>"','/log:"<scratchpad>\compile.log"'
-  Get-Content "<scratchpad>\compile.log" -Encoding Unicode
-  ```
 - **Trước khi sửa:** Anhnt đóng tab file trong MetaEditor (MetaEditor không tự reload, buffer cũ sẽ đè lên).
-- **Sau khi sửa MQL5:** tự compile `EA V5 SQLLite.mq5` (include toàn bộ Library V5), đọc log và sửa lỗi của mình trước khi báo. Nếu Anhnt nói đã tự sửa và compile xong thì không compile lại.
+- **Sau khi sửa MQL5:**
+  - Tự compile `EA V5 SQLLite.mq5` (include toàn bộ Library V5), lệnh theo [Command.md](../Notes/Command.md#ea-module); đọc log và sửa lỗi của mình trước khi báo.
+  - Nếu Anhnt nói đã tự sửa và compile xong thì không compile lại.
 - **Python:** kiểm tra cú pháp bằng `ast.parse`; Python do Anhnt hoặc EA khởi động lại.
-
-## Implementation Rule
-
-- **Tên và màu vendor:** giữ nguyên tên member và màu mặc định; chỉ đổi tên khi nó che mất member của base class.
-- **Tái sử dụng code:**
-  - Sửa method cũ, đừng thêm method song song.
-  - Grep class đó (và `CMarketCollection`, `CommonDELib.mqh` với các hàm `XxxDescription`, `CommonDefines.mqh`) tìm method hoặc enum sẵn có trước khi viết; control GUI thì tìm `ChangeSize`.
-  - Số liệu theo symbol lấy từ `CSymbol` (`Spread()`, `TradeStopLevel()`, `Point()`, `Digits()`), không tự tính.
-  - Member, tham số hay enum mới: báo và chờ đồng ý trước.
-- **Giữ code gốc:**
-  - "Không ai gọi" chưa chắc là dead code. Tra lineage Library `2. DoEasy. Service functions Lib` → `4. Combination Lib` (V1) → V2 → V3 → V4; EA `4. Combination EA` → V2 → V3 Old → V3 → V4.
-  - Method public của bản gốc chưa được port thì giữ lại. Code Anhnt tự comment out là thay thế có chủ ý: không bật lại.
-- **Chart change (`REASON_CHARTCHANGE/PARAMETERS`):** không ghi gì và không tạo lại gì. Class dùng guard `m_first_start`. Đọc luôn `new`/`delete` trong OnInit/OnDeinit của EA cho object đó trong cùng lượt.
-- **Phân tầng:** logic thuần thuộc về Engine/Manager, không thuộc `CGUIPannel`. Method không đụng control GUI thì không đặt trong `CGUIPannel`. Data đổi trước, Layer 1 theo sau.
-- **Giao tiếp/review:**
-  - Không phân đúng/sai, không xin lỗi: nói ngắn mình hiểu gì, đề xuất gì (một khuyến nghị), đã sửa gì.
-  - Khác ý thì đưa dữ kiện (code, log, số đo, backtest), không tranh ai đúng (Rules gate 0: thị trường luôn đúng).
-  - Anhnt soát kỹ, bắt ngay fix chưa kiểm chứng hoặc thừa. Log/data đã chứng minh thì nói thẳng là xong, không hỏi lại "cậu xem đúng chưa".
-- **Ngôn ngữ:** file ghi chú, kế hoạch viết tiếng Việt; comment trong code tiếng Anh.
-
-## Cách làm một thay đổi
-
-0. **Bàn trước, làm một thể:** theo bước Communication/Plan trong `AGENTS.md`.
-   - Trước khi đề xuất, đọc Imp hiện tại, ProblemNote theo thành phần và `references\` theo từ khoá; dẫn tài liệu làm căn cứ, không hỏi lại điều đã chốt.
-   - Ghi kết luận, lý do/dữ kiện, trạng thái, thay đổi theo thành phần và việc còn mở vào Imp tương ứng. ProblemNote chỉ ghi History Update tóm tắt theo thứ tự implementation.
-   - Khi còn việc cần chốt thì không code/compile. Chốt xong mới code; sau khi làm, cập nhật Imp và ghi bước đã xử lý vào ProblemNote.
-1. **Rules gate:** áp dụng và ghi kết quả theo Rules gate trong `AGENTS.md`.
-2. **Trace mọi nơi ghi/đọc/so sánh dữ liệu** (EA, Library, Python, lineage) trước lần sửa đầu tiên.
-   - Với event, trace cả listener: event mới thì ai phải nghe, params đổi thì ai phải `EventUnpack` lại, data đổi mà không fire thì ai bị lỡ (vd `SLOT_CHANGED` chưa có `CPythonBridge` nghe).
-   - Báo cả danh sách một lần, sửa một lượt.
-3. **Chỉ sửa đúng phạm vi được nêu.**
-   - Làm dần: comment out → compile để thấy call site → sửa → compile sạch.
-   - Chỉ đổi thân method thì sửa tại chỗ; chỉ comment out khi đổi signature.
-   - Trước khi sửa, nói rõ diff (file, dòng). Khi Anhnt đang tự sửa tay một file thì chỉ đưa code trong chat.
-4. **Đọc cả method trước khi sửa:** grep cả class tìm lời gọi trùng (cùng data, cùng việc) và sửa luôn trong lần đó. Review thì căn cứ code hiện tại, không căn cứ comment hay ghi chú cũ.
-5. **Dọn cái thay đổi này để lại:**
-   - Method/member mất caller cuối cùng vì thay đổi này, dòng mình comment out kèm header box mồ côi, comment hoặc tên method mô tả cách cũ.
-   - Không quét xoá cả Library theo "không ai gọi". "Kiểm tra" nghĩa là báo cáo; không xoá hay ghi đè file chưa xem nội dung.
-   - Chỉ xoá khi đã quét đủ (lineage, không filter tên, đọc được UTF-16) và nói rõ đã quét gì.
-6. **Port hoặc dời file:**
-   - Tra DoEasy/V1/V2 xem class nào giữ state, method nào làm việc; đặt đúng tầng đó. Copy từng concept/method, không bê nguyên file.
-   - Dời file: copy nguyên văn → comment out file cũ → compile → sửa tại chỗ, không viết lại từ đầu.
-7. Không tự commit hoặc push.
