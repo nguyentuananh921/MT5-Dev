@@ -55,8 +55,6 @@
     void                       CollectIndicators(CSignal *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
    //--- (3) the entries and exits of a strategy on a pair (params: the role)
     void                       CollectStrategies(CStrategyBase *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
-   //--- The tf a strategy decides on (PERIOD_CURRENT in its setting: the tf of the chart)
-    ENUM_TIMEFRAMES            StrategyTimeframe(const long strategy_id);
    //--- The trades of the strategies of the chart pair that the chart shows (CStrategyTrade, entry to exit): made again, then placed
     void                       SyncTrades(void);
    public:
@@ -191,18 +189,7 @@
      }
   }
  //+------------------------------------------------------------------+
- //| The tf a strategy decides on: its own (Setting_Strategy.tf_enum), |
- //| the tf of the chart when none is set                             |
- //+------------------------------------------------------------------+
- ENUM_TIMEFRAMES CBarMarkerCollection::StrategyTimeframe(const long strategy_id)
-  {
-   CStrategySetting *strategy=(this.m_StrategyManager!=NULL ? this.m_StrategyManager.Read_RAM(strategy_id) : NULL);
-   if(strategy==NULL || strategy.Timeframe()==PERIOD_CURRENT)
-      return this.m_ChartObj.Timeframe();
-   return strategy.Timeframe();
-  }
- //+------------------------------------------------------------------+
- //| The entries and exits of a strategy on RAM (on its tf), each on   |
+ //| The entries and exits of a strategy series on RAM, each on       |
  //| the candle of the chart that holds its time                      |
  //+------------------------------------------------------------------+
  void CBarMarkerCollection::CollectStrategies(CStrategyBase *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[])
@@ -281,12 +268,12 @@
             this.CollectIndicators(signals,from_time,to_time,rows);
         }
      }
-   //--- The strategies: each on the tf it decides on (not the tfs asked), its rows on the candles of the chart. Load on demand as above, on its tf
+   //--- The strategies: the series of the chart Period (a strategy has no tf of its own; Python has every Period). Load on demand as above
    CArrayObj *strategy_list=(this.m_StrategyCollection!=NULL && this.m_ChartObj!=NULL ? this.m_StrategyCollection.GetList() : NULL);   // a series for each strategy on each pair
    for(int s=0;strategy_list!=NULL && s<strategy_list.Total();s++)
      {
       CStrategyBase *strategy=strategy_list.At(s);
-      if(strategy==NULL || strategy.Symbol()!=symbol || strategy.Timeframe()!=this.StrategyTimeframe(strategy.StrategyId()))
+      if(strategy==NULL || strategy.Symbol()!=symbol || strategy.Timeframe()!=this.m_ChartObj.Timeframe())
          continue;
       CBarSeriesDE *bars=this.m_BarTimeSeriesCollection.GetSeries(symbol,strategy.Timeframe());
       CBar *oldest=(bars!=NULL && bars.GetList().Total()>0 ? bars.GetList().At(0) : NULL);
@@ -466,8 +453,8 @@
    for(int s=0;s<list.Total();s++)
      {
       CStrategyBase *series=list.At(s);
-      if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=this.StrategyTimeframe(series.StrategyId()))
-         continue;   // a strategy is drawn from the tf it decides on, on any chart tf
+      if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=timeframe)
+         continue;   // a strategy is drawn from its series of the chart Period
       datetime entries[],exits[];
       bool is_buy[];
       const int total=series.Trades(entries,exits,is_buy);
@@ -540,7 +527,7 @@
       if(symbol==chart_symbol)
          this.SyncMarkers(bar);   // the library found something on a candle of the chart pair
      }
-   //--- A strategy entered or exited (dparam = the tf it decides on, its key = the strategy_id): the candle of the chart that holds the bar
+   //--- A strategy entered or exited (dparam = the tf of its series, its key = the strategy_id): the candle of the chart that holds the bar
    if(id==CHARTEVENT_CUSTOM+STRATEGY_EVENT_ENTRY || id==CHARTEVENT_CUSTOM+STRATEGY_EVENT_EXIT)
      {
       datetime bar;
@@ -551,13 +538,11 @@
       this.EventUnpack(lparam,bar,key,side,is_new);
       this.EventUnpackText(sparam,symbol,extra);
       const int shift=::iBarShift(chart_symbol,chart_tf,bar,false);
-      if(symbol==chart_symbol && (long)dparam==(long)this.StrategyTimeframe(key) && shift>=0)
+      if(symbol==chart_symbol && (long)dparam==(long)chart_tf && shift>=0)
          this.SyncMarkers(::iTime(chart_symbol,chart_tf,shift));
      }
-   //--- Python wrote its part and the collections read it to RAM (they hear it before), a template went, the rows of a type went (its parameter changed),
-   //--- the tf of a strategy changed (its rows are of another series): drawn once
+   //--- Python wrote its part and the collections read it to RAM (they hear it before), a template went, the rows of a type went (its parameter changed): drawn once
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE ||
-      id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_TF_CHANGED ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE ||
       id==CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED)
       this.SyncMarkers();

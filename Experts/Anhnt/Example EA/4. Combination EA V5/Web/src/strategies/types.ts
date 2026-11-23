@@ -4,7 +4,7 @@ export interface StrategyIndicatorRow {
   slot: string;
   collection: number;
   source_id: number;
-  tf_enum: number | null;   // null: the TF of the strategy
+  tf_enum: number | null;   // null: no Period set, the pair it is calculated on
   type_name: string | null; // the row of indicators (null: not an indicator slot)
   params: string | null;    // the strategy's (Setting_StrategyIndicator.params), else the standard of indicators
   level_high: number | null;
@@ -22,8 +22,7 @@ export interface StrategyConditionRow {
 export interface StrategyRow {
   strategy_id: number;
   name: string;
-  reference: string;
-  tf_enum: number | null;   // the TF it trades on (ENUM_TIMEFRAMES); null: the TF of the chart
+  reference: string;        // no tf of its own: each slot has its tf
   slots: StrategyIndicatorRow[];
   conditions: StrategyConditionRow[];
 }

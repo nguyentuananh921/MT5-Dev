@@ -22,4 +22,4 @@ Quan hệ sở hữu object trong mỗi module theo [ParentChild.md](ParentChild
   - Object sở hữu data đổi giá trị trên RAM rồi fire [Event](Event.md); listener trong EA biết qua Event.
   - Thành phần sở hữu table (một người ghi) nghe Event đó và ghi DB, để [các thành phần](../AGENTS.md#working-scope-và-sync-everywhere) ngoài EA (Python, Web) biết qua DB.
 - Ví dụ: `CRiskSetting::SetValue` đổi RAM và fire `RISK_SETTING_EVENT_CHANGED`; `CTradingControl` (chủ của `Setting_Risk`) nghe và ghi DB.
-  - [] Nhánh ghi DB này chưa có trong `CTradingControl`: làm cùng mục "Sửa Setting_Risk" trong [Strategy.md](Strategy.md#việc-chưa-làm).
+  - [v] Nhánh ghi DB này đã có: `CTradingControl::UpdateRiskSettingToDB`; mục "Sửa Setting_Risk" trong [Strategy.md](Strategy.md#việc-chưa-làm).

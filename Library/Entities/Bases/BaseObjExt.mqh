@@ -92,14 +92,17 @@
       int                    GetEventsTotal(void)   const   { return m_list_events.Total(); }
       virtual void           Refresh(void);
      //Calulcation method 
-      void                   SetGroupID1(const uchar group,uint &magic)  { magic&=0xFFF0FFFF; magic|=uint(ConvToXX(group,0)<<16); }
-      void                   SetGroupID2(const uchar group,uint &magic)  { magic&=0xFF0FFFFF; magic|=uint(ConvToXX(group,1)<<16); }
-      void                   SetPendReqID(const uchar id,uint &magic)    { magic&=0x00FFFFFF; magic|=(uint)id<<24;                }
+     //--- Magic (ulong): bits 0-15 MagicID (EA), 16-19 GroupID1, 20-23 GroupID2, 24-31 PendReqID, 32-63 StrategyID (New in V5)
+      void                   SetGroupID1(const uchar group,ulong &magic)   { magic&=0xFFFFFFFFFFF0FFFF; magic|=ulong(ConvToXX(group,0))<<16; }
+      void                   SetGroupID2(const uchar group,ulong &magic)   { magic&=0xFFFFFFFFFF0FFFFF; magic|=ulong(ConvToXX(group,1))<<16; }
+      void                   SetPendReqID(const uchar id,ulong &magic)     { magic&=0xFFFFFFFF00FFFFFF; magic|=ulong(id)<<24;              }
+      void                   SetStrategyID(const uint id,ulong &magic)     { magic&=0x00000000FFFFFFFF; magic|=ulong(id)<<32;              }
       uchar                  ConvToXX(const uchar number,const uchar index) const { return((number>15?15:number)<<(4*(index>1?1:index))); }
-      ushort                 GetMagicID(const uint magic)  const { return ushort(magic&0xFFFF);          }
-      uchar                  GetGroupID1(const uint magic) const { return uchar(magic>>16)&0x0F;          }
-      uchar                  GetGroupID2(const uint magic) const { return uchar((magic>>16)&0xF0)>>4;     }
-      uchar                  GetPendReqID(const uint magic)const { return uchar(magic>>24)&0xFF;           }
+      ushort                 GetMagicID(const ulong magic)  const { return ushort(magic&0xFFFF);          }
+      uchar                  GetGroupID1(const ulong magic) const { return uchar(magic>>16)&0x0F;          }
+      uchar                  GetGroupID2(const ulong magic) const { return uchar((magic>>16)&0xF0)>>4;     }
+      uchar                  GetPendReqID(const ulong magic)const { return uchar(magic>>24)&0xFF;           }
+      uint                   GetStrategyID(const ulong magic)const { return uint(magic>>32);               }
                      CBaseObjExt();
   };
 #endif // CBASEOBJEXT_MQH_DECLARATION

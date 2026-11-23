@@ -3,9 +3,10 @@
 //| The enums of RiskManagement in one place (Trading\RiskManagement)|
 //| Combined from RiskTypes.mqh of Part 7 (Solomon Anietie Sunday\   |
 //| Risk Management\7. 24477 ...\Include): ENUM_RISK_MODE,           |
-//| ENUM_RISK_BASE, ENUM_ENTRY_MODE, ENUM_OFFSET_MODE. Its configs   |
-//| (SRiskConfig, SBasketConfig) become Setting objects              |
-//| (Entities\Settings\Risk), not structs here                       |
+//| ENUM_RISK_BASE, ENUM_PORTFOLIO_SCOPE. Its configs (SRiskConfig,  |
+//| SBasketConfig) become CRiskSetting (Entities\Settings\Risk).     |
+//| Not ported: ENUM_ENTRY_MODE, ENUM_OFFSET_MODE: the order type    |
+//| (ENUM_ORDER_TYPE) and its price are decisions of the Strategy    |
 //+------------------------------------------------------------------+
 #ifndef __RISKMANAGEMENT_DEFINES_MQH__
 #define __RISKMANAGEMENT_DEFINES_MQH__
@@ -39,5 +40,166 @@ double RiskRewardRatioValue(const ENUM_RISK_REWARD_RATIO ratio)
       case ONE_TO_SIX:        return 6.0;
      }
    return 1.0;
+  }
+//+------------------------------------------------------------------+
+//| Part 7 RiskTypes.mqh: how the trader says how much to risk       |
+//+------------------------------------------------------------------+
+enum ENUM_RISK_MODE
+  {
+   RISK_PERCENT,                                            // Percentage of account
+   RISK_FIXED_CASH,                                         // Fixed cash amount
+   RISK_FIXED_LOT                                           // Fixed lot size
+  };
+#define RISK_MODES_TOTAL  (3)                               // the number of ENUM_RISK_MODE values
+//--- What the author wrote for each value (the comment of the enum: MQL5 cannot read it), for the View
+string RiskModeText(const ENUM_RISK_MODE mode)
+  {
+   switch(mode)
+     {
+      case RISK_PERCENT:    return "Percentage of account";
+      case RISK_FIXED_CASH: return "Fixed cash amount";
+      case RISK_FIXED_LOT:  return "Fixed lot size";
+     }
+   return "?";
+  }
+//--- The key of Setting_Risk that holds the amount of each mode (the input of Part 7)
+string RiskModeValueKey(const ENUM_RISK_MODE mode)
+  {
+   switch(mode)
+     {
+      case RISK_PERCENT:    return "percentage_risk_per_operation";
+      case RISK_FIXED_CASH: return "FixedCashRisk";
+      case RISK_FIXED_LOT:  return "FixedLotSize";
+     }
+   return "";
+  }
+//+------------------------------------------------------------------+
+//| Balance ignores open floating P/L; equity includes it            |
+//+------------------------------------------------------------------+
+enum ENUM_RISK_BASE
+  {
+   RISK_BASE_BALANCE,                                       // Account balance
+   RISK_BASE_EQUITY                                         // Account equity
+  };
+#define RISK_BASES_TOTAL  (2)                               // the number of ENUM_RISK_BASE values
+string RiskBaseText(const ENUM_RISK_BASE base)
+  {
+   switch(base)
+     {
+      case RISK_BASE_BALANCE: return "Balance";
+      case RISK_BASE_EQUITY:  return "Equity";
+     }
+   return "?";
+  }
+//+------------------------------------------------------------------+
+//| Part 7 PortfolioRisk.mqh: what counts as "the portfolio"         |
+//+------------------------------------------------------------------+
+enum ENUM_PORTFOLIO_SCOPE
+  {
+   PORTFOLIO_ACCOUNT_WIDE,                                  // Every position on the account
+   PORTFOLIO_MAGIC_FILTERED                                 // Only registered magic numbers
+  };
+#define PORTFOLIO_SCOPES_TOTAL  (2)                         // the number of ENUM_PORTFOLIO_SCOPE values
+string PortfolioScopeText(const ENUM_PORTFOLIO_SCOPE scope)
+  {
+   switch(scope)
+     {
+      case PORTFOLIO_ACCOUNT_WIDE:   return "Every position on the account";
+      case PORTFOLIO_MAGIC_FILTERED: return "Only registered magic numbers";
+     }
+   return "?";
+  }
+//--- The texts of the values of an enum by its type name (Setting_Risk.type), the value = the index; 0: not one of these enums
+int RiskEnumItems(const string type,string &items[])
+  {
+   ::ArrayResize(items,0);
+   if(type=="ENUM_RISK_MODE")
+     {
+      ::ArrayResize(items,RISK_MODES_TOTAL);
+      for(int i=0;i<RISK_MODES_TOTAL;i++)
+         items[i]=RiskModeText((ENUM_RISK_MODE)i);
+     }
+   else if(type=="ENUM_RISK_BASE")
+     {
+      ::ArrayResize(items,RISK_BASES_TOTAL);
+      for(int i=0;i<RISK_BASES_TOTAL;i++)
+         items[i]=RiskBaseText((ENUM_RISK_BASE)i);
+     }
+   else if(type=="ENUM_PORTFOLIO_SCOPE")
+     {
+      ::ArrayResize(items,PORTFOLIO_SCOPES_TOTAL);
+      for(int i=0;i<PORTFOLIO_SCOPES_TOTAL;i++)
+         items[i]=PortfolioScopeText((ENUM_PORTFOLIO_SCOPE)i);
+     }
+   return ::ArraySize(items);
+  }
+//+------------------------------------------------------------------+
+//| Part 7 RiskTypes.mqh STradePlan: a fully priced trade, built and |
+//| checked by CTradingControl::BuildPlan / ValidatePlan. New in V5:  |
+//| strategy_id, symbol (many                                        |
+//| strategies, many symbols); no isPending (market entries only)    |
+//+------------------------------------------------------------------+
+struct STradePlan
+  {
+   long              strategy_id;                           // the strategy of the Entry (goes into the magic)
+   string            symbol;                                // the symbol of the Entry
+   int               direction;                             // 1 = Buy, -1 = Sell
+   ENUM_ORDER_TYPE   orderType;                             // ORDER_TYPE_BUY / ORDER_TYPE_SELL
+   double            entryPrice;                            // Ask for a buy, Bid for a sell
+   double            stopLoss;                              // 0: the strategy gave no stop
+   double            takeProfit;                            // 0: no stop, no target
+   double            stopDistance;                          // from entryPrice and stopLoss (0: no stop)
+   double            lotSize;
+   double            riskAmount;                            // intended money risk (0 in fixed-lot mode)
+  };
+//+------------------------------------------------------------------+
+//| Part 7 RiskTypes.mqh SBasketState: the positions of the EA on a  |
+//| symbol seen as one (CMarketCollection::BasketState)              |
+//+------------------------------------------------------------------+
+struct SBasketState
+  {
+   int               positionCount;
+   double            totalVolume;
+   double            weightedEntryPrice;                    // volume-weighted average entry
+   double            floatingPL;                            // profit + swap
+   double            usedMargin;                            // computed per leg
+   int               netDirection;                          // 1 net long, -1 net short, 0 flat or balanced
+   datetime          oldestOpenTime;
+  };
+//+------------------------------------------------------------------+
+//| Part 7 PortfolioRisk.mqh: the portfolio and its currency exposure|
+//+------------------------------------------------------------------+
+struct SPortfolioState
+  {
+   int               positionCount;
+   int               pendingCount;
+   int               symbolCount;
+   double            totalVolume;
+   double            floatingPL;
+   double            usedMargin;
+   double            freeMargin;
+   double            marginLevel;
+   double            equity;
+   double            balance;
+  };
+struct SCurrencyExposure
+  {
+   string            currency;
+   double            netLots;                               // signed: positive = net long this currency
+   double            grossLots;                             // unsigned total, regardless of direction
+   int               positionCount;
+  };
+//+------------------------------------------------------------------+
+//| Part 7 RiskTypes.mqh: round a volume DOWN to the broker's step   |
+//| (CSymbol::NormalizedLot rounds to nearest: not the same)         |
+//+------------------------------------------------------------------+
+double FloorToVolumeStep(const double volume,const double lotStep)
+  {
+   if(lotStep<=0)
+      return volume;
+   double steps =::NormalizeDouble(volume/lotStep,8);
+   double result=::MathFloor(steps)*lotStep;
+   int stepDigits=(int)::MathMax(0,::MathCeil(-::MathLog10(lotStep)));
+   return ::NormalizeDouble(result,stepDigits);
   }
 #endif // __RISKMANAGEMENT_DEFINES_MQH__

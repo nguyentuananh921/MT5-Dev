@@ -2,20 +2,15 @@
 //|                            GUIPannel_TabQuickSetting_Strategy.mqh |
 //| Strategy tab: a section for each strategy of CStrategyManager    |
 //| (its name). The toggles of its header, three flags of their own: |
-//| show on the chart (show_on_chart), trade (enabled: ON also makes |
-//| the templates of its indicators) and available (every slot has   |
-//| its source: CStrategyManager writes it, a click does not). Its   |
-//| body has a row for each slot: edit, the name with params, and TF |
+//| show on the chart (show_on_chart), trade (trading_enabled: ON     |
+//| also makes the templates of its indicators) and available (every |
+//| slot has its source: CStrategyManager writes it, a click does    |
+//| not). Its body has a row for each slot: edit, the name with      |
+//| params, and TF                                                   |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABQUICKSETTING_STRATEGY_MQH
 #define CGUIPANNEL_TABQUICKSETTING_STRATEGY_MQH
 #include "GUIPannel.mqh"
-   //  enum ENUM_STRATEGY_SLOT
-   //   {
-   //    STRATEGY_SLOT_EDIT,
-   //    STRATEGY_SLOT_LABEL,
-   //    STRATEGY_SLOT_TF
-   //   };
  //--- One section for each strategy, in the order of Setting_Strategy (its index is the place of the strategy in Read_RAM(ids)), opened
  bool CGUIPannel::CreateSections_Strategy(void)
   {
@@ -37,7 +32,7 @@
       CStrategySetting *strategy=m_StrategyManager.Read_RAM(ids[s]);
       if(strategy==NULL)
          continue;
-      int section=m_sections_strategy.AddSection(strategy.Name(),icons,states,true);
+      int section=m_sections_strategy.AddSection(strategy.Name(),icons,states,false);   // closed at the start
       if(section==WRONG_VALUE || !this.AddRow_Strategy(section,strategy))
          return false;
      }
@@ -46,43 +41,7 @@
   }
  //--- The rows of a section: [edit][slot (params)][tf]
  bool CGUIPannel::AddRow_Strategy(const int section,CStrategySetting *strategy)
-  {
-  //Old versiont plan to remove
-      // for(int row=0;row<=strategy.IndicatorsTotal();row++)
-      //   {
-      //    long value=(long)section*M_STRATEGY_SLOTS_MAX+M_STRATEGY_ROW_TF;
-      //    string text="Timeframe  (Default: the chart)";
-      //    if(strategy.Timeframe()!=PERIOD_CURRENT)
-      //       text="Timeframe  ("+::StringSubstr(::EnumToString(strategy.Timeframe()),7)+")";   // PERIOD_M15 -> M15
-      //    if(row>0)
-      //      {
-      //       value=(long)section*M_STRATEGY_SLOTS_MAX+row-1;
-      //       text=this.SlotText_Strategy(strategy.Indicator(row-1));
-      //      }
-      //    const string key="Strategy"+(string)value;
-      //    CButton *edit=new CButton();
-      //    CLabel *name=new CLabel();
-      //    if(edit==NULL || name==NULL)
-      //       return false;
-      //    edit.IconFile(IMAGE_RESOURCE_BMP16_EDIT_PNG);
-      //    m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_STRATEGY,edit);
-      //    if(!edit.Create(this.m_chart_id,M_SUBWINDOW_MAIN,key+"_Edit",0,0,M_CONTROL_HEIGHT,M_CONTROL_HEIGHT))
-      //       return false;
-      //    edit.Hide();   // made at 0,0: Arrange shows it at its place
-      //    m_sections_strategy.StyleSwitch(edit);
-      //    if(!m_sections_strategy.AddControl(section,edit,STRATEGY_COLUMN_EDIT,row,value,STRATEGY_SLOT_EDIT))
-      //       return false;
-      //    name.SetText(text);
-      //    name.LabelXGap(0);
-      //    m_tabs_quickSetting.AddToElementsArray(TAB_QUICK_SETTING_STRATEGY,name);
-      //    if(!name.Create(this.m_chart_id,M_SUBWINDOW_MAIN,key+"_Name",0,0,M_INDICATOR_LABEL_WIDTH,M_CONTROL_HEIGHT))
-      //       return false;
-      //    name.Hide();
-      //    if(!m_sections_strategy.AddControl(section,name,STRATEGY_COLUMN_LABEL,row,value,STRATEGY_SLOT_LABEL))
-      //       return false;
-      //   }
-      // return true;
-  // New version plan to replace
+  {  
    if(strategy==NULL)
       return false;
    if(m_SymbolTFManager==NULL)
@@ -179,42 +138,7 @@
    const int section=(int)(value/M_STRATEGY_SLOTS_MAX);
    if(m_StrategyManager==NULL || section>=m_StrategyManager.Read_RAM(ids))
       return;
-   CStrategySetting *strategy=m_StrategyManager.Read_RAM(ids[section]);
-    //Plan to remove
-      // if(strategy!=NULL && value%M_STRATEGY_SLOTS_MAX==M_STRATEGY_ROW_TF)
-      //   {
-      //    m_window_addIndicator.OpenWindow();
-      //    this.Mode_AddIndicator(strategy.StrategyId(),"");
-      //    m_frame_indicator_parameter.Show();   // cascades to every control of the form: only the tf and the button stay
-      //    for(int i=0;i<INDICATOR_PARAM_SLOTS_MAX;i++)
-      //      {
-      //       m_param_edits[i].Hide();
-      //       m_param_combo[i].Hide();
-      //      }
-      //    for(int i=0;i<M_STRATEGY_TF_TOTAL;i++)
-      //       if(STRATEGY_TFS[i]==strategy.Timeframe())
-      //          m_combo_param_tf.SelectItem(i);
-      //    m_combo_param_tf.GetListViewPointer().Draw(false);
-      //    m_combo_param_tf.Move(m_frame_indicator_parameter.X()+M_CONTROL_BORDER_GAP,m_frame_indicator_parameter.Y()+M_CONTROL_HEIGHT);
-      //    m_combo_param_tf.Draw(false);
-      //    m_btn_add_indicator_form.Move(m_frame_indicator_parameter.X()+M_CONTROL_BORDER_GAP,m_frame_indicator_parameter.Y()+M_CONTROL_HEIGHT+PARAM_ROW_H);
-      //    ::ChartRedraw(this.m_chart_id);
-      //    return;
-      //   }
-      //    m_combo_param_tf.SelectItem(selected);
-      // m_combo_param_tf.GetListViewPointer().Draw(false);
-      // CStrategyIndicatorSetting *slot=(strategy!=NULL ? strategy.Indicator((int)(value%M_STRATEGY_SLOTS_MAX)) : NULL);
-      // if(slot==NULL || slot.Collection()!=COLLECTION_SIGNALS_ID)
-      //    return;   // a bar information has no params of an indicator
-      // m_window_addIndicator.OpenWindow();
-      // this.Mode_AddIndicator(strategy.StrategyId(),slot.Slot());
-      // for(int i=0;i<M_STRATEGY_TF_TOTAL;i++)
-      //    if(STRATEGY_TFS[i]==slot.Timeframe())
-      //       m_combo_param_tf.SelectItem(i);
-      // m_combo_param_tf.GetListViewPointer().Draw(false);
-      // this.ShowCFrame_IndicatorParameter((ENUM_INDICATOR)slot.SourceId(),m_StrategyManager.Read_RAM(slot));
-      // ::ChartRedraw(this.m_chart_id);
-    //Plan to replace
+   CStrategySetting *strategy=m_StrategyManager.Read_RAM(ids[section]);    
      if(strategy==NULL)
       return;
       CStrategyIndicatorSetting *slot=strategy.Indicator((int)(value%M_STRATEGY_SLOTS_MAX));
@@ -250,23 +174,14 @@
     //----------------------
    
   }
- //--- Save of the form: the params as the one text of the templates and the tf go to CStrategyManager (the tab follows its SLOT_CHANGED event);
- //--- the tf of the strategy (slot ""): its TF_CHANGED event
+ //--- Save of the form: the params as the one text of the templates and the tf of the slot go to CStrategyManager (the tab follows its SLOT_CHANGED event).
+ //--- A strategy has no tf of its own: only a slot is saved
  void CGUIPannel::SaveSlot_Strategy(void)
   {
    MqlParam params[];
-   if(m_StrategyManager==NULL)
+   if(m_StrategyManager==NULL || m_edit_strategy_slot=="")
       return;
    ENUM_TIMEFRAMES tf=PERIOD_CURRENT;
-   if(m_edit_strategy_slot=="")
-     {
-      for(int i=0;i<M_STRATEGY_TF_TOTAL;i++)
-         if(m_combo_param_tf.GetListViewPointer().SelectedItemIndex()==i)
-            tf=STRATEGY_TFS[i];
-      if(m_StrategyManager.Update_Strategy_Setting(m_edit_strategy_id,"tf_enum",tf))
-         m_window_addIndicator.CloseWindow();
-      return;
-     }
    if(m_SymbolTFManager==NULL)
       return;
    ENUM_TIMEFRAMES tfs[];
@@ -284,7 +199,7 @@
    if(m_StrategyManager.Update_StrategyIndicator_Setting(m_edit_strategy_id,m_edit_strategy_slot,m_IndicatorTemplateManager.ParamsText(m_current_param_type,params),tf))
       m_window_addIndicator.CloseWindow();
   }
- //--- The toggles follow the strategy on RAM (CStrategySetting): Show, Trade (enabled), Available (written by CStrategyManager)
+ //--- The toggles follow the strategy on RAM (CStrategySetting): Show, Trade (trading_enabled), Available (written by CStrategyManager)
  void CGUIPannel::SyncSections_Strategy(void)
   {
    if(m_StrategyManager==NULL)
@@ -314,8 +229,8 @@
       ::ChartRedraw(this.m_chart_id);
       return;
      }
-   //--- A slot or the tf of a strategy changed (lparam = its strategy_id): the rows of its section are made again (their text), Available follows
-   if((id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SLOT_CHANGED || id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_TF_CHANGED) && m_StrategyManager!=NULL)
+   //--- A slot changed (lparam = its strategy_id): the rows of its section are made again (their text), Available follows
+   if(id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SLOT_CHANGED && m_StrategyManager!=NULL)
      {
       long ids[];
       int total=m_StrategyManager.Read_RAM(ids);
@@ -399,9 +314,10 @@
    //--- Show: CStrategyManager writes show_on_chart, the strategy tells it (the markers and this toggle follow); dparam = the new state
    if(which==STRATEGY_TOGGLE_SHOW)
       m_StrategyManager.Update_Strategy_Setting(ids[section],"show_on_chart",dparam!=0);
-   //--- Change in V5: Trade writes enabled (ON also makes the templates of its indicators, OFF keeps them); the toggle follows its ENABLED_CHANGED event
+   //--- Change in V5: Trade writes trading_enabled: ON makes the templates of its slots (OFF keeps them); the toggle follows its ENABLED_CHANGED event.
+   //--- It does not let the strategy trade: that is the switch of the strategy in Auto of the Trading tab (Setting_Risk.EntryStrategies)
    if(which==STRATEGY_TOGGLE_TRADE)
-      m_StrategyManager.Update_Strategy_Setting(ids[section],"enabled",dparam!=0);
+      m_StrategyManager.Update_Strategy_Setting(ids[section],"trading_enabled",dparam!=0);
    //--- Available is what the managers hold, not a click: it goes back to it
    if(which==STRATEGY_TOGGLE_AVAILABLE)
       this.SyncSections_Strategy();

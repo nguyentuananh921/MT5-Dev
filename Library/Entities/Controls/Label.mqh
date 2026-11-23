@@ -28,6 +28,7 @@ class CLabel : public CGElement
     string            Text(void)                            const { return this.m_text;    }
     void              LabelXGap(const int x_gap)                  { this.m_text_x=x_gap; this.m_text_align=TA_LEFT; }
     void              LabelRightGap(const int x_gap)              { this.m_text_x=x_gap; this.m_text_align=TA_RIGHT; }   // the text ends x_gap before the right edge
+    void              TextAlign(const uint align)                 { this.m_text_align=align; }   // New in V5: TA_LEFT / TA_CENTER / TA_RIGHT (DrawContent places the text by it)
     void              FontWeight(const uint weight)               { this.m_font_weight=weight; }
                      CLabel(void);
                     ~CLabel(void) {}

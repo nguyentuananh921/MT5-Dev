@@ -500,7 +500,10 @@
   }
  void CBarTimeSeriesCollection::RefreshSeries(const string symbol)
   {
-   this.RefreshTimeseries(this.GetTimeseries(symbol));
+   CBarTimeSeriesDE *timeseries=this.GetTimeseries(symbol);
+   if(timeseries!=NULL)
+      timeseries.IsNewTick();   // New in V5: the chart's symbol (OnTick) tells its tick too (TICK_EVENT_NEW), as the others at OnTimer
+   this.RefreshTimeseries(timeseries);
   }
  void CBarTimeSeriesCollection::RefreshSeriesAllExceptCurrent(void)
   {

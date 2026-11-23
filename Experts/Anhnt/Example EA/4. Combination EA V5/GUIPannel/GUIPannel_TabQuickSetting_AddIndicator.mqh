@@ -137,7 +137,7 @@
       return false;
    for(int i=0;i<M_STRATEGY_TF_TOTAL;i++)
      {
-      string tf_text="Default";   // no tf chosen: the tf of the strategy (its own Default: the tf of the chart)
+      string tf_text="Default";   // no tf chosen: no Period set, the Period it is judged / drawn / traded on
       if(STRATEGY_TFS[i]!=PERIOD_CURRENT)
          tf_text=::StringSubstr(::EnumToString(STRATEGY_TFS[i]),7);   // PERIOD_M15 -> M15
       m_combo_param_tf.SetValue(i,tf_text);

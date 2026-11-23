@@ -5,6 +5,8 @@
 //| events are combined): each row of Setting_StrategyCondition asks |
 //| the judge of its rule for the event of its slot on the bar; the  |
 //| moves come from the rows that hold, as Web conditionStrategy.    |
+//| A row whose slot has its own tf is judged on the newest bar of   |
+//| that tf closed when the bar of the pair closes (engine.py same)  |
 //| New in V5 (was CStrategyProfitunity: one class per strategy)     |
 //+------------------------------------------------------------------+
 #ifndef __STRATEGYENGINE_MQH__
@@ -92,7 +94,22 @@
             ::Print(__FUNCTION__," > ",strategy.Name(),": no judge of the rule ",row.Rule()," (",row.Slot(),"): the row never holds");
          continue;
         }
-      if(!judge.Direction(slots,row.Slot(),symbol,timeframe,shift,events[c]))
+      //--- A slot on another tf (Strategy.md, TF của Slot): its newest bar closed when the bar of the pair closes, no look-ahead
+      ENUM_TIMEFRAMES row_tf=timeframe;
+      int row_shift=shift;
+      CStrategyIndicatorSetting *source=strategy.Indicator(row.Slot());
+      if(source!=NULL && source.Timeframe()!=PERIOD_CURRENT && source.Timeframe()!=timeframe)
+        {
+         const datetime bar=::iTime(symbol,timeframe,shift);
+         row_tf=source.Timeframe();
+         const datetime closed=bar+::PeriodSeconds(timeframe);
+         row_shift=(bar>0 ? ::iBarShift(symbol,row_tf,closed-1,false) : WRONG_VALUE);
+         if(row_shift>=0 && ::iTime(symbol,row_tf,row_shift)+::PeriodSeconds(row_tf)>closed)
+            row_shift++;   // that bar still forms then: the one before
+         if(row_shift<0)
+            return WRONG_VALUE;   // the bars of the tf of the slot are not there yet
+        }
+      if(!judge.Direction(slots,row.Slot(),symbol,row_tf,row_shift,events[c]))
          return WRONG_VALUE;
      }
    string role[4];

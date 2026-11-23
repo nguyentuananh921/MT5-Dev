@@ -34,7 +34,7 @@
    const uint icons[3]={IMAGE_RESOURCE_BMP16_VISIBLE_PNG,IMAGE_RESOURCE_BMP16_SIGNAL_BUY_PNG,IMAGE_RESOURCE_BMP16_BELL_PNG};
    const bool states[3]={false,false,false};
    for(int g=0;g<INDICATOR_SECTIONS_TOTAL;g++)
-      if(m_sections_indicator.AddSection(m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR_GROUP)INDICATOR_SECTION_GROUPS[g]),icons,states,true)==WRONG_VALUE)
+      if(m_sections_indicator.AddSection(m_IndicatorTemplateManager.Read_RAM((ENUM_INDICATOR_GROUP)INDICATOR_SECTION_GROUPS[g]),icons,states,false)==WRONG_VALUE)   // closed at the start
          return false;
    return true;
   }

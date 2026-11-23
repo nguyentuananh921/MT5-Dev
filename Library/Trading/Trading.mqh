@@ -70,14 +70,9 @@
     CArrayInt               m_list_errors;                   // Error list
     bool                    m_is_trade_disable;              // Flag disabling trading
     ENUM_ERROR_HANDLING_BEHAVIOR m_err_handling_behavior; // Behavior when handling error
-    //--- Return the number of (1) all positions, (2) buy, (3) sell positions
-     int                     PositionsTotalAll(void)          const;
-     int                     PositionsTotalLong(void)         const;
-     int                     PositionsTotalShort(void)        const;
-    //--- Return the number of (1) all pending orders, (2) buy, (3) sell pending orders
+    //--- Return the number of all pending orders. Change in V5: the counts of the positions (all, buy, sell) and of the buy / sell orders removed:
+    //--- no one called them, CMarketCollection::PositionsCount / HasPosition count them
      int                     OrdersTotalAll(void)             const;
-     int                     OrdersTotalLong(void)            const;
-     int                     OrdersTotalShort(void)           const;
     //--- Return the total volume of (1) buy, (2) sell positions
      double                  PositionsTotalVolumeLong(void)   const;
      double                  PositionsTotalVolumeShort(void)  const;
@@ -1592,48 +1587,6 @@ bool CTrading::CheckPriceByFreezeLevel(const ENUM_ORDER_TYPE order_type,const do
      );
   }
 //+------------------------------------------------------------------+
-//| Return the number of positions                                   |
-//+------------------------------------------------------------------+
-int CTrading::PositionsTotalAll(void) const
-  {
-   CArrayObj *list=this.m_market.GetList();
-   int total=0;
-   for(int i=0;i<list.Total();i++)
-     {
-      COrder *order=list.At(i);
-      if(this.m_market.HasPosition(order)) total++;
-     }
-   return total;
-  }
-//+------------------------------------------------------------------+
-//| Return the number of buy positions                               |
-//+------------------------------------------------------------------+
-int CTrading::PositionsTotalLong(void) const
-  {
-   CArrayObj *list=this.m_market.GetList();
-   int total=0;
-   for(int i=0;i<list.Total();i++)
-     {
-      COrder *order=list.At(i);
-      if(this.m_market.HasPosition(order,"",POSITION_TYPE_BUY)) total++;
-     }
-   return total;
-  }
-//+------------------------------------------------------------------+
-//| Return the number of sell positions                              |
-//+------------------------------------------------------------------+
-int CTrading::PositionsTotalShort(void) const
-  {
-   CArrayObj *list=this.m_market.GetList();
-   int total=0;
-   for(int i=0;i<list.Total();i++)
-     {
-      COrder *order=list.At(i);
-      if(this.m_market.HasPosition(order,"",POSITION_TYPE_SELL)) total++;
-     }
-   return total;
-  }
-//+------------------------------------------------------------------+
 //| Returns the number of pending orders                             |
 //+------------------------------------------------------------------+
 int CTrading::OrdersTotalAll(void) const
@@ -1644,34 +1597,6 @@ int CTrading::OrdersTotalAll(void) const
      {
       COrder *order=list.At(i);
       if(order!=NULL && order.Status()==ORDER_STATUS_MARKET_PENDING) total++;
-     }
-   return total;
-  }
-//+------------------------------------------------------------------+
-//| Return the number of buy pending orders                          |
-//+------------------------------------------------------------------+
-int CTrading::OrdersTotalLong(void) const
-  {
-   CArrayObj *list=this.m_market.GetList();
-   int total=0;
-   for(int i=0;i<list.Total();i++)
-     {
-      COrder *order=list.At(i);
-      if(order!=NULL && order.Status()==ORDER_STATUS_MARKET_PENDING && order.TypeByDirection()==ORDER_TYPE_BUY) total++;
-     }
-   return total;
-  }
-//+------------------------------------------------------------------+
-//| Return the number of sell pending orders                         |
-//+------------------------------------------------------------------+
-int CTrading::OrdersTotalShort(void) const
-  {
-   CArrayObj *list=this.m_market.GetList();
-   int total=0;
-   for(int i=0;i<list.Total();i++)
-     {
-      COrder *order=list.At(i);
-      if(order!=NULL && order.Status()==ORDER_STATUS_MARKET_PENDING && order.TypeByDirection()==ORDER_TYPE_SELL) total++;
      }
    return total;
   }
@@ -2617,7 +2542,7 @@ bool CTrading::OpenPosition(const ENUM_POSITION_TYPE type,
             if(id<1 || !symbol_obj.RefreshRates())
                return false;
             //--- Write the pending request object ID to the magic number and fill in the remaining unfilled fields of the trading request structure
-            uint mn=(magic==ULONG_MAX ? (uint)trade_obj.GetMagic() : (uint)magic);
+            ulong mn=(magic==ULONG_MAX ? trade_obj.GetMagic() : magic);   // V5: ulong keeps the StrategyID bits
             this.SetPendReqID((uchar)id,mn);
             this.m_request.magic=mn;
             this.m_request.action=TRADE_ACTION_DEAL;
@@ -2695,7 +2620,7 @@ bool CTrading::OpenPosition(const ENUM_POSITION_TYPE type,
                if(id<1 || !symbol_obj.RefreshRates())
                   return false;
                //--- Write the pending request object ID to the magic number and fill in the remaining unfilled fields of the trading request structure
-               uint mn=(magic==ULONG_MAX ? (uint)trade_obj.GetMagic() : (uint)magic);
+               ulong mn=(magic==ULONG_MAX ? trade_obj.GetMagic() : magic);   // V5: ulong keeps the StrategyID bits
                this.SetPendReqID((uchar)id,mn);
                this.m_request.magic=mn;
                this.m_request.action=TRADE_ACTION_DEAL;
@@ -3525,7 +3450,7 @@ bool CTrading::PlaceOrder(const ENUM_ORDER_TYPE order_type,
                return false;
             //--- Write the request ID to the magic number, while a symbol name is set in the request structure,
             //--- trading operation and order types
-            uint mn=(magic==ULONG_MAX ? (uint)trade_obj.GetMagic() : (uint)magic);
+            ulong mn=(magic==ULONG_MAX ? trade_obj.GetMagic() : magic);   // V5: ulong keeps the StrategyID bits
             this.SetPendReqID((uchar)id,mn);
             this.m_request.magic=mn;
             this.m_request.symbol=symbol_obj.Name();
@@ -3613,7 +3538,7 @@ bool CTrading::PlaceOrder(const ENUM_ORDER_TYPE order_type,
                   return false;
                //--- Write the request ID to the magic number, while a symbol name is set in the request structure,
                //--- trading operation and order types
-               uint mn=(magic==ULONG_MAX ? (uint)trade_obj.GetMagic() : (uint)magic);
+               ulong mn=(magic==ULONG_MAX ? trade_obj.GetMagic() : magic);   // V5: ulong keeps the StrategyID bits
                this.SetPendReqID((uchar)id,mn);
                this.m_request.magic=mn;
                this.m_request.symbol=symbol_obj.Name();
@@ -4184,7 +4109,7 @@ bool CTrading::DeleteOrder(const ulong ticket)
 double CTrading::CorrectStopLoss(const ENUM_ORDER_TYPE order_type,const double price_set,const double stop_loss,const CSymbol *symbol_obj,const uint spread_multiplier=1)
   {
    if(stop_loss==0) return 0;
-   uint lv=(symbol_obj.TradeStopLevel()==0 ? symbol_obj.Spread()*spread_multiplier : symbol_obj.TradeStopLevel()*spread_multiplier);
+   uint lv=symbol_obj.StopLevelMin(spread_multiplier);
    double price=(order_type==ORDER_TYPE_BUY ? symbol_obj.BidLast() : order_type==ORDER_TYPE_SELL ? symbol_obj.AskLast() : price_set);
    return
      (this.DirectionByActionType((ENUM_ACTION_TYPE)order_type)==ORDER_TYPE_BUY            ?
@@ -4198,7 +4123,7 @@ double CTrading::CorrectStopLoss(const ENUM_ORDER_TYPE order_type,const double p
 double CTrading::CorrectTakeProfit(const ENUM_ORDER_TYPE order_type,const double price_set,const double take_profit,const CSymbol *symbol_obj,const uint spread_multiplier=1)
   {
    if(take_profit==0) return 0;
-   uint lv=(symbol_obj.TradeStopLevel()==0 ? symbol_obj.Spread()*spread_multiplier : symbol_obj.TradeStopLevel()*spread_multiplier);
+   uint lv=symbol_obj.StopLevelMin(spread_multiplier);
    double price=(order_type==ORDER_TYPE_BUY ? symbol_obj.BidLast() : order_type==ORDER_TYPE_SELL ? symbol_obj.AskLast() : price_set);
    return
      (this.DirectionByActionType((ENUM_ACTION_TYPE)order_type)==ORDER_TYPE_BUY             ?
@@ -4212,7 +4137,7 @@ double CTrading::CorrectTakeProfit(const ENUM_ORDER_TYPE order_type,const double
 //+------------------------------------------------------------------+
 double CTrading::CorrectPricePending(const ENUM_ORDER_TYPE order_type,const double price_set,const double price,const CSymbol *symbol_obj,const uint spread_multiplier=1)
   {
-   uint lv=(symbol_obj.TradeStopLevel()==0 ? symbol_obj.Spread()*spread_multiplier : symbol_obj.TradeStopLevel()*spread_multiplier);
+   uint lv=symbol_obj.StopLevelMin(spread_multiplier);
    switch((int)order_type)
      {
       case ORDER_TYPE_BUY_LIMIT        :  return ::NormalizeDouble(fmin(symbol_obj.AskLast()-lv*symbol_obj.Point(),price_set),symbol_obj.Digits());

@@ -18,9 +18,10 @@
 #include <Combination Lib V5\Collections\TradeEventsCollection.mqh>
 #include <Combination Lib V5\Trading\TradingControl.mqh>
 #include <Combination Lib V5\Collections\GraphElementsCollection.mqh>
-#include <Combination Lib V5\Services\DELib\DatabaseService.mqh> 
+#include <Combination Lib V5\Services\DELib\DatabaseService.mqh>
+#include <Combination Lib V5\Services\DELib\PythonBridge.mqh>
 #include <Combination Lib V5\Collections\BarMarkerCollection.mqh>
-#include "Services\PythonBridge.mqh"
+
 //--- The EA is the parent: it owns its children and the models, and passes the events down to them
 CAccountsCollection m_AccountsCollection; // the accounts: the table accounts, the account of the terminal has its row
 CSymbolsCollection m_SymbolsCollection;   // the symbols of this account, read from the database
@@ -123,6 +124,9 @@ int OnInit()
     m_TradingControl.OnInitEvent();   // makes TradingOrderDetail, puts the Bid / Ask of the deals of the history on RAM (after RefreshHistory)
     //Set EA Magic Number
      m_TradingControl.SetMagic((ulong)inpMagicNumber);
+     m_TradingControl.SetStrategyManager(&m_StrategyManager);   // New in V5: which strategy is ON in trading (STRATEGY_EVENT_ENTRY)
+     m_TradingControl.SetIndicatorTemplateManager(&m_IndicatorTemplateManager);   // New in V5: the base that gives the stop (StopLossTemplateId)
+     m_TradingControl.SetIndicatorsCollection(&m_IndicatorsCollection);           // and its value on the pair
    // m_IndicatorsCollection (its series copy the buffers of MT5 on RAM, nothing in the database)
     Breadcrumb("OnInit: m_IndicatorsCollection.OnInitEvent");
     m_IndicatorsCollection.SetSymbolTFManager(&m_SymbolTFManager);   // the pairs
@@ -132,6 +136,7 @@ int OnInit()
        ::Print(__FUNCTION__," > failed to OnInitEvent IndicatorsCollection");
        return INIT_FAILED;
       }
+    m_TradingControl.SyncRoleIndicators();   // New in V5: the bases ON in Stop Loss / Trailing on the chart TF follow the ticks (BaseIndicatorStrategy.md)
    // m_BarTimeSeriesCollection
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSyncManager");
     m_BarTimeSeriesCollection.SetSyncManager(&m_SyncManager);

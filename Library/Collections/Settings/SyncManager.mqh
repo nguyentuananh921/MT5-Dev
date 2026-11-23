@@ -121,9 +121,9 @@
       this.EventSend((ushort)BAR_INFORMATION_MANAGER_EVENT_RESET_DONE, lparam, 0.0, "");
       return true;
      }
-   //--- New in V5: a slot (its params, its tf) or the tf of a strategy changed (lparam = strategy_id): its entries and exits were found with the old ones. Its marks go,
+   //--- New in V5: a slot (its params, its tf) changed (lparam = strategy_id): its entries and exits were found with the old ones. Its marks go,
    //--- then CPythonBridge (heard next, the same event) tells the Current worker, which deletes the old rows of a key without a mark and finds them again
-   if(id == CHARTEVENT_CUSTOM + STRATEGY_MANAGER_EVENT_SLOT_CHANGED || id == CHARTEVENT_CUSTOM + STRATEGY_MANAGER_EVENT_TF_CHANGED)
+   if(id == CHARTEVENT_CUSTOM + STRATEGY_MANAGER_EVENT_SLOT_CHANGED)
      {
       if(!this.DropMark(COLLECTION_STRATEGY_ID, lparam, STRATEGY_ROLE_ENTRY) || !this.DropMark(COLLECTION_STRATEGY_ID, lparam, STRATEGY_ROLE_EXIT))
         {

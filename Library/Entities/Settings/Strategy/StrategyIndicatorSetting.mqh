@@ -16,7 +16,7 @@
     private:
      ENUM_OBJECT_DE_TYPE        m_collection;      // COLLECTION_SIGNALS_ID: source_id = indicators.type_enum, COLLECTION_SERIES_ID: Setting_BarInformation.type_infor
      long                       m_source_id;
-     ENUM_TIMEFRAMES            m_tf;              // PERIOD_CURRENT (NULL in the table, Default): the tf of the strategy
+     ENUM_TIMEFRAMES            m_tf;              // PERIOD_CURRENT (NULL in the table, Default): no Period set, the Period it is judged / drawn / traded on
      string                     m_params;          // "" (NULL in the table): the params of indicators
     public:
                                 CStrategyIndicatorSetting(const string slot,const ENUM_OBJECT_DE_TYPE collection,const long source_id,const ENUM_TIMEFRAMES tf,const string params);

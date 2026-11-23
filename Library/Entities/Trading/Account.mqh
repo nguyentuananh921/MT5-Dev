@@ -32,6 +32,7 @@
     long              m_long_prop[ACCOUNT_PROP_INTEGER_TOTAL];           // Integer properties
     double            m_double_prop[ACCOUNT_PROP_DOUBLE_TOTAL];          // Real properties
     string            m_string_prop[ACCOUNT_PROP_STRING_TOTAL];          // String properties
+    double            m_peak_equity;                                     // New in V5: the highest equity seen since the EA started (RefreshMoney)
    //--- Return the index of the array the account's (1) double and (2) string properties are located at
     int               IndexProp(ENUM_ACCOUNT_PROP_DOUBLE property) const { return(int)property-ACCOUNT_PROP_INTEGER_TOTAL;                           }
     int               IndexProp(ENUM_ACCOUNT_PROP_STRING property) const { return(int)property-ACCOUNT_PROP_INTEGER_TOTAL-ACCOUNT_PROP_DOUBLE_TOTAL; }
@@ -275,6 +276,9 @@
     void              RefreshMoney(void);
    //--- Return the margin required for opening a position or placing a pending order (V3)
     double            MarginForAction(const ENUM_ORDER_TYPE action,const string symbol,const double volume,const double price) const;
+   //--- New in V5: how far the equity is under its peak since the EA started, %. Reference: Solomon Anietie Sunday\Risk Management\
+   //--- 7. 24477 Consolidating the Risk Framework\Include\TradeRisk.mqh, CTradeRisk::DrawdownFactor (its peak equity)
+    double            DrawdownPercent(void)                           const { return (this.m_peak_equity>0.0 ? (this.m_peak_equity-this.Equity())/this.m_peak_equity*100.0 : 0.0); }
   };
  #endif // CACCOUNT_MQH_DECLARATION
  #ifndef CACCOUNT_MQH_IMPLEMENTATION
@@ -283,7 +287,7 @@
  //| Constructor: what does not change is asked once, then the live    |
  //| part (RefreshAccount)                                            |
  //+------------------------------------------------------------------+
- CAccount::CAccount(void)
+ CAccount::CAccount(void) : m_peak_equity(0.0)
   {
    this.m_object_type=OBJECT_DE_TYPE_ACCOUNT;
   //--- Initialize control data
@@ -354,6 +358,8 @@
    this.SetProperty(ACCOUNT_PROP_ASSETS,::AccountInfoDouble(ACCOUNT_ASSETS));
    this.SetProperty(ACCOUNT_PROP_LIABILITIES,::AccountInfoDouble(ACCOUNT_LIABILITIES));
    this.SetProperty(ACCOUNT_PROP_COMMISSION_BLOCKED,::AccountInfoDouble(ACCOUNT_COMMISSION_BLOCKED));
+   if(this.Equity()>this.m_peak_equity)
+      this.m_peak_equity=this.Equity();
    this.SendChanges();
   }
  //+------------------------------------------------------------------+

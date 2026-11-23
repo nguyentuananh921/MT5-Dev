@@ -93,7 +93,7 @@
  enum ENUM_TRADE_SETUP_EVENT
   {
    TRADE_SETUP_EVENT_NO_EVENT = BAR_MARKER_EVENTS_NEXT_CODE,  // No event
-   TRADE_SETUP_EVENT_SEND,                                  // Send order clicked: lparam SIGNAL_DIRECTION_BUY/SELL, dparam lots, sparam symbol
+   TRADE_SETUP_EVENT_SEND,                                  // Send order clicked: lparam SIGNAL_DIRECTION_BUY/SELL, dparam lots (the lot chosen, <= MaxLot of the risk), sparam symbol. From CButton, not the Automation of Entry x Order: no spread gate; the risk tiers as usual, or the lot alone without SL / TP when the risk makes no plan
    TRADE_SETUP_EVENT_CLOSE,                                 // Close icon clicked: lparam SIGNAL_DIRECTION_BUY/SELL, sparam symbol
    TRADE_SETUP_EVENT_CLOSE_ALL,                             // Close all positions clicked (emergency, no confirmation): every position of the account
   };
@@ -175,7 +175,7 @@
   };
  #define PYTHON_BRIDGE_EVENTS_NEXT_CODE  (PYTHON_BRIDGE_EVENT_CURRENT_START+1)  // The code of the next event after the last Python bridge event code
  //+------------------------------------------------------------------+
- //| Tick events (CNewTickObj of a symbol other than the chart's).    |
+ //| Tick events (CNewTickObj of a symbol).                           |
  //| lparam = time_msc of the tick, dparam = its Bid, sparam = symbol  |
  //+------------------------------------------------------------------+
  enum ENUM_TICK_EVENT
@@ -183,8 +183,20 @@
    TICK_EVENT_NO_EVENT = PYTHON_BRIDGE_EVENTS_NEXT_CODE,   // No event
    TICK_EVENT_PAUSE,                                       // No tick for TICK_PAUSE_SECONDS (a closed market): the hands of the symbol rest (lparam: its last tick)
    TICK_EVENT_RESUME,                                      // The symbol ticks again after a pause: its hands go on
+   TICK_EVENT_NEW,                                         // New in V5: a new tick of the symbol (the chart's at OnTick, the others at OnTimer): what follows its ticks refreshes (no asking)
   };
- #define TICK_EVENTS_NEXT_CODE  (TICK_EVENT_RESUME+1)  // The code of the next event after the last tick event code
+ #define TICK_EVENTS_NEXT_CODE  (TICK_EVENT_NEW+1)  // The code of the next event after the last tick event code
+ //+------------------------------------------------------------------+
+ //| Indicator events (New in V5, BaseIndicatorStrategy.md: the value |
+ //| of a base with the role SL / Trailing follows the ticks).         |
+ //| lparam = the id of its template, dparam = the TF, sparam = symbol |
+ //+------------------------------------------------------------------+
+ enum ENUM_INDICATOR_EVENT
+  {
+   INDICATOR_EVENT_NO_EVENT = TICK_EVENTS_NEXT_CODE,       // No event
+   INDICATOR_EVENT_REFRESHED,                              // An indicator with a role in use refreshed its values on RAM at a new tick of its symbol
+  };
+ #define INDICATOR_EVENTS_NEXT_CODE  (INDICATOR_EVENT_REFRESHED+1)  // The code of the next event after the last indicator event code
  //+------------------------------------------------------------------+
  //| Market Watch events (V3, CSymbolsCollection::MarketWatchEvents-  |
  //| Control): lparam = CBaseObj::EventPack (when, key = the index of |
@@ -192,7 +204,7 @@
  //+------------------------------------------------------------------+
  enum ENUM_MW_EVENT
   {
-   MARKET_WATCH_EVENT_NO_EVENT = TICK_EVENTS_NEXT_CODE,    // No event
+   MARKET_WATCH_EVENT_NO_EVENT = INDICATOR_EVENTS_NEXT_CODE,   // No event
    MARKET_WATCH_EVENT_SYMBOL_ADD,                           // Adding a symbol to the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_DEL,                           // Removing a symbol from the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_SORT,                          // Sorting symbols in the Market Watch window
@@ -207,8 +219,7 @@
    STRATEGY_MANAGER_EVENT_NO_EVENT = SYMBOL_EVENTS_NEXT_CODE,  // No event
    STRATEGY_MANAGER_EVENT_SLOT_CHANGED,                        // The params or the tf of a slot changed (Setting_StrategyIndicator)
    STRATEGY_MANAGER_EVENT_SHOW_CHANGED,                        // The show_on_chart flag of a strategy changed (Setting_Strategy): its markers are shown or hidden
-   STRATEGY_MANAGER_EVENT_TF_CHANGED,                          // The tf of a strategy changed (Setting_Strategy): its markers are of another series
-   STRATEGY_MANAGER_EVENT_ENABLED_CHANGED,                     // New in V5: On / Off in trading changed (Setting_Strategy.enabled): the EA judges it live or not
+   STRATEGY_MANAGER_EVENT_ENABLED_CHANGED,                     // New in V5: On / Off in trading changed (Setting_Strategy.trading_enabled): the EA judges it live or not
    STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED,                   // New in V5: every slot has its source, or not any more (Setting_Strategy.available): Python calculates it or not
   };
  #define STRATEGY_MANAGER_EVENTS_NEXT_CODE  (STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED+1)  // The code of the next event after the last strategy event code
@@ -262,6 +273,30 @@
    STRATEGY_TRADE_EVENT_CLICK,                                    // The line was clicked: the chart shows its entry and its exit (CChartObj::ShowRange)
   };
  #define STRATEGY_TRADE_EVENTS_NEXT_CODE  (STRATEGY_TRADE_EVENT_CLICK+1)  // The code of the next event after the last strategy trade event code
+ //+------------------------------------------------------------------+
+ //| Events of the risk setting (CRiskSetting, Setting_Risk):         |
+ //| dparam = the new value, sparam = the name of the key             |
+ //+------------------------------------------------------------------+
+ enum ENUM_RISK_SETTING_EVENT
+  {
+   RISK_SETTING_EVENT_NO_EVENT = STRATEGY_TRADE_EVENTS_NEXT_CODE,  // No event
+   RISK_SETTING_EVENT_CHANGED,                                     // A key of Setting_Risk changed its value
+  };
+ #define RISK_SETTING_EVENTS_NEXT_CODE  (RISK_SETTING_EVENT_CHANGED+1)  // The code of the next event after the last risk setting event code
+ //+------------------------------------------------------------------+
+ //| Events of the risk (CTradingControl, TradingControl_Risk.mqh):    |
+ //| lparam = CBaseObj::EventPack, its time = the bar of the Entry,   |
+ //| its key = the strategy_id, its side = the side; dparam = the      |
+ //| tier that blocked (0 trade, 1 basket, 2 portfolio), sparam = the |
+ //| symbol                                                           |
+ //+------------------------------------------------------------------+
+ //--- New in V5
+ enum ENUM_RISK_EVENT
+  {
+   RISK_EVENT_NO_EVENT = RISK_SETTING_EVENTS_NEXT_CODE,            // No event
+   RISK_EVENT_ENTRY_BLOCKED,                                       // An Entry of a strategy is not traded: its plan failed a risk check (the log tells which)
+  };
+ #define RISK_EVENTS_NEXT_CODE  (RISK_EVENT_ENTRY_BLOCKED+1)  // The code of the next event after the last risk event code
  //+------------------------------------------------------------------+
  //| List of trading event flags on the account                       |
  //+------------------------------------------------------------------+

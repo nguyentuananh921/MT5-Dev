@@ -230,11 +230,8 @@
       return 0;   // the history is read after Python (PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE): the positions open come from it
    if(!strategy.IsLive())
       return 0;   // New in V5: not available, or neither On nor shown: Python has its past, nothing is judged live
-   ENUM_TIMEFRAMES timeframe=strategy.Timeframe();
-   if(timeframe==PERIOD_CURRENT)
-      timeframe=::Period();   // not set: the tf of the chart
-   if(series.Timeframe()!=timeframe)
-      return 0;   // the strategy computes its indicators and its entries on its own tf only
+   if(series.Timeframe()!=::Period())
+      return 0;   // judged live on the current Period (the trading); Python has every other Period
    const datetime bar=::iTime(series.Symbol(),series.Timeframe(),1);
    if(bar==0 || series.JudgedTo()==bar)
       return 0;   // Profitunity: no new closed bar of its tf since the last tick (isNewBar of the source EA)

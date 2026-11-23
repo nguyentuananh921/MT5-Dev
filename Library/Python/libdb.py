@@ -129,10 +129,10 @@ def strategies():
     link = sqlite3.connect(database_path().as_uri() + "?mode=ro", uri=True, timeout=BUSY_MS / 1000.0)
     link.row_factory = sqlite3.Row
     try:
-        # tf_enum None: the tf of the chart. V5: enabled = On in trading, available = every slot has its source (CStrategyManager writes both): Python calculates what is available
-        out = [dict(row) for row in link.execute("SELECT strategy_id, name, reference, tf_enum, enabled, available FROM Setting_Strategy ORDER BY strategy_id")]
+        # A strategy has no tf of its own (each slot has its tf). V5: trading_enabled = On in trading, available = every slot has its source (CStrategyManager writes both): Python calculates what is available
+        out = [dict(row) for row in link.execute("SELECT strategy_id, name, reference, trading_enabled, available FROM Setting_Strategy ORDER BY strategy_id")]
         for strategy in out:
-            strategy["slots"] = [dict(row) for row in link.execute(   # tf_enum None: the tf of the strategy; params: the strategy's, else the standard of indicators
+            strategy["slots"] = [dict(row) for row in link.execute(   # tf_enum None: no Period set, the pair it is calculated on; params: the strategy's, else the standard of indicators
                 "SELECT s.slot, s.collection, s.source_id, s.tf_enum, i.type_name, COALESCE(s.params, i.params) AS params, i.level_high, i.level_low FROM Setting_StrategyIndicator s "
                 "LEFT JOIN indicators i ON s.collection = ? AND i.type_enum = s.source_id WHERE s.strategy_id = ?", (signals, strategy["strategy_id"]))]
             strategy["conditions"] = [dict(row, signal_direction=sides.get(row["signal_direction"], "NONE")) for row in link.execute(

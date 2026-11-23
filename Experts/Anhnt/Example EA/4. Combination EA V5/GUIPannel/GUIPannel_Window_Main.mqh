@@ -265,19 +265,105 @@
    //--- Specify the number of parts and set their properties
    for(int i=0;i<STATUS_LABELS_TOTAL;i++)
       m_status_bar.AddItem("",STATUS_BAR_WIDTH[i]);
-   //--- Create a control element (follows the window's right and bottom edges)
+   //--- Create a control element (follows the window's right and bottom edges), two lines high
    m_window_main.AddChild(&m_status_bar);
-   if(!m_status_bar.CreateStatusBar(this.m_chart_id,M_SUBWINDOW_MAIN,"StatusBar",x_gap,y_gap,M_WINDOW_MAIN_WIDTH-2))
+   if(!m_status_bar.CreateStatusBar(this.m_chart_id,M_SUBWINDOW_MAIN,"StatusBar",x_gap,y_gap,M_WINDOW_MAIN_WIDTH-2,M_STATUS_BAR_HEIGHT))
       return(false);
-   //--- Equity icons: arrow up, arrow down, gray
+   //--- Change in V5: each item holds two labels (Parent Child: the EA makes them, the item moves them): the caption, small and gray, on top; the value, bold, under it
+   const string captions[STATUS_LABELS_TOTAL]={"Equity ("+::AccountInfoString(ACCOUNT_CURRENCY)+")","Spread","Bar","Margin Level"};
+   for(int i=0;i<STATUS_LABELS_TOTAL;i++)
+     {
+      CLabel *item=m_status_bar.GetItemPointer(i);
+      const int width=item.Width();
+      m_status_caption[i].FontSize(DEF_FONT_SIZE-2);
+      m_status_caption[i].TextAlign(TA_CENTER);
+      m_status_caption[i].SetText(captions[i]);
+      item.AddChild(&m_status_caption[i]);
+      if(!m_status_caption[i].Create(this.m_chart_id,M_SUBWINDOW_MAIN,"StatusCaption"+(string)i,0,2,width,M_STATUS_CAPTION_HEIGHT))
+         return(false);
+      m_status_caption[i].GetForeColorControl().InitColors(clrGray,clrGray,clrGray,clrGray);
+      m_status_caption[i].ColorChange(COLOR_STATE_DEFAULT);
+      m_status_value[i].FontWeight(FW_BOLD);
+      m_status_value[i].TextAlign(TA_CENTER);
+      item.AddChild(&m_status_value[i]);
+      if(!m_status_value[i].Create(this.m_chart_id,M_SUBWINDOW_MAIN,"StatusValue"+(string)i,0,2+M_STATUS_CAPTION_HEIGHT,width,M_STATUS_BAR_HEIGHT-M_STATUS_CAPTION_HEIGHT-4))
+         return(false);
+     }
+   //--- The arrow of the equity: its own label (an image of a label stays where it was put), moved next to the number: up, down, gray
    CLabel *equity_item=m_status_bar.GetItemPointer(STATUS_BAR_EQUITY);
-   equity_item.AddImagesGroup(2,3);
-   equity_item.AddImage(0,IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
-   equity_item.AddImage(0,IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
-   equity_item.AddImage(0,IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
-   equity_item.ChangeImage(0,2);
-   equity_item.LabelXGap(22);   // the text after the 16 px icon at x=2
+   equity_item.AddChild(&m_status_equity_icon);
+   if(!m_status_equity_icon.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"StatusEquityIcon",0,2+M_STATUS_CAPTION_HEIGHT+1,16,16))
+      return(false);
+   m_status_equity_icon.AddImagesGroup(0,0);
+   m_status_equity_icon.AddImage(0,IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_UP_PNG);
+   m_status_equity_icon.AddImage(0,IMAGE_RESOURCE_BMP16_ICONS8_RIGHT_DOWN_PNG);
+   m_status_equity_icon.AddImage(0,IMAGE_RESOURCE_BMP16_CIRCLE_GRAY_BMP);
+   m_status_equity_icon.ChangeImage(0,2);
    return(true);
+  }
+ //+------------------------------------------------------------------+
+ //| The arrow of the equity just left of its number (the number is   |
+ //| in the middle of the item: its width from the font of the label) |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::PlaceStatusBar_EquityIcon(void)
+  {
+   CLabel *item=m_status_bar.GetItemPointer(STATUS_BAR_EQUITY);
+   if(item==NULL)
+      return;
+   uint text_width=0,text_height=0;
+   ::TextSetFont(m_status_value[STATUS_BAR_EQUITY].Font(),-m_status_value[STATUS_BAR_EQUITY].FontSize()*10,FW_BOLD);
+   ::TextGetSize(m_status_value[STATUS_BAR_EQUITY].Text(),text_width,text_height);
+   const int x=item.X()+(item.Width()-(int)text_width)/2-M_STATUS_ICON_GAP-m_status_equity_icon.Width();
+   if(x!=m_status_equity_icon.X())
+      m_status_equity_icon.Move(::MathMax(x,item.X()),m_status_equity_icon.Y());
+  }
+ //+------------------------------------------------------------------+
+ //| The time left of the bar of the chart TF: s, m:ss or h:mm:ss     |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::UpdateStatusBar_BarTime(void)
+  {
+   const long left=(long)::iTime(::Symbol(),::Period(),0)+::PeriodSeconds(::Period())-(long)::TimeTradeServer();
+   string text="-";
+   if(left>=0)
+      text=(left<60 ? (string)left+"s" : left<3600 ? ::StringFormat("%d:%02d",left/60,left%60) : ::StringFormat("%d:%02d:%02d",left/3600,(left%3600)/60,left%60));
+   if(m_status_value[STATUS_BAR_SYMBOL_TIME].Text()==text)
+      return;
+   m_status_value[STATUS_BAR_SYMBOL_TIME].SetText(text);
+   m_status_value[STATUS_BAR_SYMBOL_TIME].Draw(false);
+  }
+ //+------------------------------------------------------------------+
+ //| The margin level of the account (no margin used: "-"): green at  |
+ //| or over MarginLevelSafe, red at or under MarginLevelDanger (new  |
+ //| trades blocked: CTradingControl::MarginUsageCap), orange between |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::UpdateStatusBar_MarginLevel(void)
+  {
+   CAccount *account=(m_AccountsCollection!=NULL ? m_AccountsCollection.GetCurrentAccount() : NULL);
+   if(account==NULL || m_TradingControl==NULL)
+      return;
+   CRiskSetting *risk=m_TradingControl.RiskSetting();
+   const double level=account.MarginLevel();
+   const bool used=(account.Margin()>0.0);
+   const string text=(used ? ::DoubleToString(level,0)+"%" : "-");
+   const color clr=(!used ? clrBlack : level>=risk.MarginLevelSafe() ? M_COLOR_PROFIT : level<=risk.MarginLevelDanger() ? M_COLOR_LOSS : M_COLOR_MARGIN_WARNING);
+   CLabel *item=GetPointer(m_status_value[STATUS_BAR_MARGIN_LEVEL]);
+   item.GetForeColorControl().InitColors(clr,clr,clr,clr);
+   item.ColorChange(COLOR_STATE_DEFAULT);
+   item.SetText(text);
+   item.Draw(false);
+  }
+ //+------------------------------------------------------------------+
+ //| The item that stretches (the first) changed its width with the   |
+ //| window: its labels take it, their text stays in the middle       |
+ //+------------------------------------------------------------------+
+ void CGUIPannel::ArrangeStatusBar(void)
+  {
+   CLabel *item=m_status_bar.GetItemPointer(0);
+   if(item==NULL)
+      return;
+   m_status_caption[0].Resize(item.Width(),m_status_caption[0].Height());
+   m_status_value[0].Resize(item.Width(),m_status_value[0].Height());
+   this.PlaceStatusBar_EquityIcon();
   }
  //+------------------------------------------------------------------+
  //| Symbol of the chart and its spread in points, set when it changed|
@@ -289,9 +375,11 @@
    CSymbol *symbol=(m_SymbolsCollection!=NULL ? m_SymbolsCollection.GetSymbolObjByName(::Symbol()) : NULL);
    if(symbol==NULL)
       return;
-   string text=::Symbol()+" spread: "+(string)symbol.Spread()+" pts";
-   if(m_status_bar.GetItemPointer(STATUS_BAR_SYMBOL_SPREAD).Text()!=text)
-      m_status_bar.SetValue(STATUS_BAR_SYMBOL_SPREAD,text);
+   string text=(string)symbol.Spread()+" pts";   // the symbol is in the combobox of the caption
+   if(m_status_value[STATUS_BAR_SYMBOL_SPREAD].Text()==text)
+      return;
+   m_status_value[STATUS_BAR_SYMBOL_SPREAD].SetText(text);
+   m_status_value[STATUS_BAR_SYMBOL_SPREAD].Draw(false);
   }
  //+------------------------------------------------------------------+
  //| The equity of the current account, set when it changed           |
@@ -305,19 +393,23 @@
    CAccount *account=m_AccountsCollection.GetCurrentAccount();
    if(account==NULL)
       return;
-   string text="Equity: "+::DoubleToString(account.Equity(),(int)account.CurrencyDigits())+" "+account.Currency();
-   CLabel *item=m_status_bar.GetItemPointer(STATUS_BAR_EQUITY);
+   string text=::DoubleToString(account.Equity(),(int)account.CurrencyDigits());   // the currency is in the caption
+   CLabel *item=GetPointer(m_status_value[STATUS_BAR_EQUITY]);
    //--- Up, down, gray: gray (black text) when the equity is the balance (no floating profit), the last move of a closed position stays nowhere
    bool flat=(::NormalizeDouble(account.Equity()-account.Balance(),2)==0);
    if(item.Text()==text && !flat)
       return;
    int image=(flat ? 2 : side==SIGNAL_DIRECTION_BUY ? 0 : side==SIGNAL_DIRECTION_SELL ? 1 : 2);
-   item.ChangeImage(0,image);
+   m_status_equity_icon.ChangeImage(0,image);
    //--- The text takes the color of the arrow: green up, red down, black for the first text and when flat
    color clr=(image==0 ? M_COLOR_PROFIT : image==1 ? M_COLOR_LOSS : clrBlack);
    item.GetForeColorControl().InitColors(clr,clr,clr,clr);
    item.ColorChange(COLOR_STATE_DEFAULT);
-   m_status_bar.SetValue(STATUS_BAR_EQUITY,text);
+   item.SetText(text);
+   item.Draw(false);
+   this.PlaceStatusBar_EquityIcon();   // the number changed its width
+   m_status_equity_icon.Draw(false);
+   this.UpdateStatusBar_MarginLevel();   // it moves with the equity
   }
  // For Main Tabs m_tabs_main below the TF switch of Main Window m_window_main
  //+------------------------------------------------------------------+
@@ -333,7 +425,7 @@
    m_tabs_main.AutoXResizeMode(true);
    m_tabs_main.AutoYResizeMode(true);
    m_tabs_main.AutoXResizeRightOffset(3);
-   m_tabs_main.AutoYResizeBottomOffset(25);
+   m_tabs_main.AutoYResizeBottomOffset(M_STATUS_BAR_HEIGHT+3);   // above the status bar
    //--- Add tabs with the specified properties: an icon each, no text
    for(int i=0;i<TAB_TAB_MAIN_TOTAL;i++)
       m_tabs_main.AddTab("",M_ICON32_WIDTH);

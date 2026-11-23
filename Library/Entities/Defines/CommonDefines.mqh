@@ -151,6 +151,7 @@
     OBJECT_DE_TYPE_STRATEGY_INDICATOR_SETTING,                     // "Strategy slot setting" object type (CStrategyIndicatorSetting: a row of Setting_StrategyIndicator)
     OBJECT_DE_TYPE_STRATEGY_CONDITION_SETTING,                     // "Strategy condition setting" object type (CStrategyConditionSetting: a row of Setting_StrategyCondition)
     OBJECT_DE_TYPE_STRATEGY,                                       // "Strategy on a pair" object type (CStrategyBase: its rows of StrategyCollection)
+    OBJECT_DE_TYPE_RISK_SETTING,                                   // "Risk setting" object type (CRiskSetting: the rows of Setting_Risk)
    //--- Standard graphical objects (keep last: values are OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_xxx)
     OBJECT_DE_TYPE_GSTD_OBJ,                                       // Standard graphical object
     OBJECT_DE_TYPE_GSTD_TREND              =  OBJECT_DE_TYPE_GSTD_OBJ+1+OBJ_TREND,            // "Trend line" object type

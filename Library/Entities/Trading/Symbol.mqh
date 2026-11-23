@@ -326,6 +326,13 @@
       double            LotsMax(void)                                const { return this.GetProperty(SYMBOL_PROP_VOLUME_MAX);                                  }
       double            LotsStep(void)                               const { return this.GetProperty(SYMBOL_PROP_VOLUME_STEP);                                 }
       double            VolumeLimit(void)                            const { return this.GetProperty(SYMBOL_PROP_VOLUME_LIMIT);                                }
+     //--- New in V5: the nearest a stop may be to the price it closes at, in points: the stops level, or the spread when the broker sets none (x multiplier).
+     //--- One rule: CTrading::CorrectStopLoss / CorrectTakeProfit / CorrectPricePending, the stop of a risk plan (CTradingControl::BuildPlan)
+      int               StopLevelMin(const uint multiplier=1)        const { return (int)((this.TradeStopLevel()==0 ? this.Spread() : this.TradeStopLevel())*multiplier); }
+     //--- New in V5: what one lot gains or loses over a price distance (0: unknown). Reference: Solomon Anietie Sunday\Risk Management\
+     //--- 7. 24477 Consolidating the Risk Framework\Include\TradeRisk.mqh, CTradeRisk::ValuePerLot
+      double            ValuePerLot(const double price_distance)     const { return (price_distance<=0 || this.TradeTickSize()<=0 || this.TradeTickValue()<=0 ? 0.0 :
+                                                                                     price_distance/this.TradeTickSize()*this.TradeTickValue());                      }
       double            SwapLong(void)                               const { return this.GetProperty(SYMBOL_PROP_SWAP_LONG);                                   }
       double            SwapShort(void)                              const { return this.GetProperty(SYMBOL_PROP_SWAP_SHORT);                                  }
       double            MarginInitial(void)                          const { return this.GetProperty(SYMBOL_PROP_MARGIN_INITIAL);                              }

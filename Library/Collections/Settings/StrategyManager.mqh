@@ -1,10 +1,10 @@
 //+------------------------------------------------------------------+
 //|                                              StrategyManager.mqh |
 //|                                     Copyright 2026, Anhnt        |
-//| Single source of truth for the strategies: a strategy (its tf),  |
-//| the sources it reads (a standard indicator with its params or a  |
-//| bar information, on a tf) and its conditions; levels stay in     |
-//| indicators                                                       |
+//| Single source of truth for the strategies: a strategy (no tf of  |
+//| its own), the sources it reads (a standard indicator with its    |
+//| params or a bar information, each slot on its tf) and its        |
+//| conditions; levels stay in indicators                            |
 //| Create tables Setting_Strategy, Setting_StrategyIndicator,       |
 //| Setting_StrategyCondition                                        |
 //| New in V5, as CBarInformationManager                             |
@@ -28,9 +28,8 @@
    long                  strategy_id;
    string                name;
    string                reference;
-   long                  tf_enum;          // 0: NULL in the table, the tf of the chart
-   long                  show_on_chart;    // only the drawing
-   long                  enabled;          // New in V5: On in trading (the user)
+   long                  show_on_chart;    // only the drawing   
+   long                  trading_enabled;          // New in V5: On in trading (the user)
    long                  available;        // New in V5: every slot has its source (written by CStrategyManager, not a click): Python calculates it
   };
  //--- Rows of the table StrategyCollection of the account (what Python found), as CDatabaseService::Read binds them
@@ -40,18 +39,13 @@
    string                role;             // "entry" / "exit"
    long                  signal_direction;
   };
- //--- How many columns a table has of the ones asked (pragma_table_info)
- struct SStrategyColumns
-  {
-   long                  count;
-  };
  struct SStrategyIndicatorRow              // Setting_StrategyIndicator
   {
    long                  strategy_id;
    string                slot;
    long                  collection;
    long                  source_id;
-   long                  tf_enum;          // 0: NULL in the table, the tf of the strategy
+   long                  tf_enum;          // 0: NULL in the table, no Period set (the Period it is judged on)
    string                params;           // "": NULL in the table, the params of indicators
   };
  struct SStrategyConditionRow              // Setting_StrategyCondition
@@ -99,17 +93,15 @@
      bool               Read_RAM(CStrategyIndicatorSetting *slot, string &params_text) const;
    //--- The strategy is ON: the templates of its indicators that are not there yet are made (CIndicatorTemplateManager tells each: ADDED), not shown on the chart
      bool               Create_IndicatorTemplate(const long strategy_id);
-   //--- A flag of a strategy (column "show_on_chart", "enabled"): written, then the strategy tells it (STRATEGY_MANAGER_EVENT_SHOW_CHANGED / _ENABLED_CHANGED).
-   //--- Change in V5: enabled ON also makes the templates of its indicators (Create_IndicatorTemplate); OFF keeps them (another strategy or the user may use them)
+   //--- A flag of a strategy (column "show_on_chart", "trading_enabled"): written, then the strategy tells it (STRATEGY_MANAGER_EVENT_SHOW_CHANGED / _ENABLED_CHANGED).
+   //--- Change in V5: trading_enabled ON also makes the templates of its indicators (Create_IndicatorTemplate); OFF keeps them (another strategy or the user may use them)
      bool               Update_Strategy_Setting(const long strategy_id, const string column, const bool on);
    //--- New in V5: a template came or went (lparam = its type), a slot changed: available of the strategies it touches follows
      void               OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam);
-   //--- The tf of a strategy (column "tf_enum", PERIOD_CURRENT: the tf of the chart): written, then the strategy tells it (STRATEGY_MANAGER_EVENT_TF_CHANGED)
-     bool               Update_Strategy_Setting(const long strategy_id, const string column, const ENUM_TIMEFRAMES tf);
    //--- The table StrategyCollection of the account: the rows of a strategy on a pair from_time to to_time (WRONG_VALUE: not read)
      int                ReadDataFromDB(const string symbol, const ENUM_TIMEFRAMES timeframe, const datetime from_time, const datetime to_time, const long strategy_id,
                                        long &times[], string &roles[], long &sides[]);
-   //--- The params ("": the standard of indicators) and the tf (PERIOD_CURRENT: the tf of the strategy) of a slot: written, then STRATEGY_MANAGER_EVENT_SLOT_CHANGED
+   //--- The params ("": the standard of indicators) and the tf (PERIOD_CURRENT: no Period set) of a slot: written, then STRATEGY_MANAGER_EVENT_SLOT_CHANGED
      bool               Update_StrategyIndicator_Setting(const long strategy_id, const string slot, const string params, const ENUM_TIMEFRAMES tf);
   };
 #endif // CSTRATEGYMANAGER_MQH_DECLARATION
@@ -124,17 +116,13 @@
  //+------------------------------------------------------------------+
  //| What a strategy IS (name, reference, its slots and its           |
  //| conditions) is written at every start; what the user sets (the   |
- //| tf of the strategy, the tf and the params of a slot) is only     |
- //| given to a row that is new                                       |
+ //| tf and the params of a slot) is only given to a row that is new  |
  //+------------------------------------------------------------------+
  bool CStrategyManager::WriteCatalog(CStrategySetting *strategy)
   {
    string id = (string)strategy.StrategyId();
-   string tf = "NULL";
-   if(strategy.Timeframe() != PERIOD_CURRENT)
-      tf = (string)(int)strategy.Timeframe();
-   if(!this.m_CDatabaseService.Create("Common", "INSERT INTO Setting_Strategy (strategy_id, name, reference, tf_enum) VALUES (" + id + ", '" +
-                                      this.m_CDatabaseService.QuoteSQLText(strategy.Name()) + "', '" + this.m_CDatabaseService.QuoteSQLText(strategy.Reference()) + "', " + tf + ") " +
+   if(!this.m_CDatabaseService.Create("Common", "INSERT INTO Setting_Strategy (strategy_id, name, reference) VALUES (" + id + ", '" +
+                                      this.m_CDatabaseService.QuoteSQLText(strategy.Name()) + "', '" + this.m_CDatabaseService.QuoteSQLText(strategy.Reference()) + "') " +
                                       "ON CONFLICT(strategy_id) DO UPDATE SET name = excluded.name, reference = excluded.reference"))
      {
       ::Print(__FUNCTION__, " > ", strategy.Name(), " not written");
@@ -185,15 +173,15 @@
   {
    this.m_list_strategy.Clear();
    SStrategyRow strategies[];
-   if(!this.m_CDatabaseService.Read("Common", "SELECT strategy_id, name, reference, COALESCE(tf_enum, 0), show_on_chart, enabled, available FROM Setting_Strategy ORDER BY strategy_id", strategies))
+   if(!this.m_CDatabaseService.Read("Common", "SELECT strategy_id, name, reference, show_on_chart, trading_enabled, available FROM Setting_Strategy ORDER BY strategy_id", strategies))
       return false;
    for(int i = 0; i < ::ArraySize(strategies); i++)
      {
-      CStrategySetting *strategy = new CStrategySetting(strategies[i].strategy_id, strategies[i].name, strategies[i].reference, (ENUM_TIMEFRAMES)(int)strategies[i].tf_enum);
+      CStrategySetting *strategy = new CStrategySetting(strategies[i].strategy_id, strategies[i].name, strategies[i].reference);
       if(strategy == NULL)
          continue;
       strategy.ShowOnChart(strategies[i].show_on_chart != 0, false);
-      strategy.EnabledTrading(strategies[i].enabled != 0, false);
+      strategy.EnabledTrading(strategies[i].trading_enabled != 0, false);
       strategy.SlotsAvailable(strategies[i].available != 0, false);
       if(!this.m_list_strategy.Add(strategy))
          delete strategy;
@@ -322,7 +310,7 @@
  bool CStrategyManager::Update_Strategy_Setting(const long strategy_id, const string column, const bool on)
   {
    CStrategySetting *strategy = this.Read_RAM(strategy_id);
-   if(strategy == NULL || this.m_CDatabaseService == NULL || (column != "show_on_chart" && column != "enabled"))
+   if(strategy == NULL || this.m_CDatabaseService == NULL || (column != "show_on_chart" && column != "trading_enabled"))
       return false;
    if(!this.m_CDatabaseService.Update("Common", "UPDATE Setting_Strategy SET " + column + " = " + (string)(int)on + " WHERE strategy_id = " + (string)strategy_id))
      {
@@ -388,29 +376,7 @@
   }
  bool CStrategyManager::AddColumn(const string column)
   {
-   SStrategyColumns columns;
-   if(!this.m_CDatabaseService.Read("Common", "SELECT COUNT(*) FROM pragma_table_info('Setting_Strategy') WHERE name = '" + column + "'", columns) || columns.count > 0)
-      return true;
-   if(this.m_CDatabaseService.Update("Common", "ALTER TABLE Setting_Strategy ADD COLUMN " + column + " INTEGER NOT NULL DEFAULT 0"))
-      return true;
-   ::Print(__FUNCTION__, " > DatabaseService can't add ", column, " to Setting_Strategy");
-   return false;
-  }
- bool CStrategyManager::Update_Strategy_Setting(const long strategy_id, const string column, const ENUM_TIMEFRAMES tf)
-  {
-   CStrategySetting *strategy = this.Read_RAM(strategy_id);
-   if(strategy == NULL || this.m_CDatabaseService == NULL || column != "tf_enum")
-      return false;
-   string value_tf = "NULL";
-   if(tf != PERIOD_CURRENT)
-      value_tf = (string)(int)tf;
-   if(!this.m_CDatabaseService.Update("Common", "UPDATE Setting_Strategy SET tf_enum = " + value_tf + " WHERE strategy_id = " + (string)strategy_id))
-     {
-      ::Print(__FUNCTION__, " > ", column, " of ", strategy.Name(), " not written");
-      return false;
-     }
-   strategy.Timeframe(tf);
-   return true;
+   return this.m_CDatabaseService.AddColumn("Common", "Setting_Strategy", column, "INTEGER NOT NULL DEFAULT 0");
   }
  int CStrategyManager::ReadDataFromDB(const string symbol, const ENUM_TIMEFRAMES timeframe, const datetime from_time, const datetime to_time, const long strategy_id,
                                       long &times[], string &roles[], long &sides[])
@@ -460,17 +426,17 @@
       }
     if(!this.m_first_start)   // a chart change writes nothing
        return true;
-    //--- tf_enum NULL: the tf of the chart (timeframes has no PERIOD_CURRENT)
+    //--- No tf_enum: a strategy has no tf of its own, each slot has its tf (Setting_StrategyIndicator.tf_enum)
     string sql_create_table_Setting_Strategy = "CREATE TABLE IF NOT EXISTS Setting_Strategy (strategy_id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL UNIQUE, "
-                                               "reference TEXT NOT NULL DEFAULT '', tf_enum INTEGER REFERENCES timeframes (tf_enum), show_on_chart INTEGER NOT NULL DEFAULT 0, "
-                                               "enabled INTEGER NOT NULL DEFAULT 0, available INTEGER NOT NULL DEFAULT 0)";
+                                               "reference TEXT NOT NULL DEFAULT '', show_on_chart INTEGER NOT NULL DEFAULT 0, "
+                                               "trading_enabled INTEGER NOT NULL DEFAULT 0, available INTEGER NOT NULL DEFAULT 0)";
     if(!this.m_CDatabaseService.Create("Common", sql_create_table_Setting_Strategy))
       {
        ::Print(__FUNCTION__, " > DatabaseService can't create table Setting_Strategy");
        return false;
       }
-    //--- The table of an EA before these columns gets them (Change in V5: enabled, available)
-    if(!this.AddColumn("show_on_chart") || !this.AddColumn("enabled") || !this.AddColumn("available"))
+    //--- The table of an EA before these columns gets them (Change in V5: trading_enabled, available)
+    if(!this.AddColumn("show_on_chart") || !this.AddColumn("trading_enabled") || !this.AddColumn("available"))
        return false;
     //--- The table of the account: the entries and exits Python found (role "entry" / "exit", the side opened or closed), same schema as SignalsCollection
     string sql_create_table_StrategyCollection = "CREATE TABLE IF NOT EXISTS StrategyCollection (name TEXT NOT NULL, tf_enum INTEGER NOT NULL, strategy_id INTEGER NOT NULL, "

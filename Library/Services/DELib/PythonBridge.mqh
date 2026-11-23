@@ -328,7 +328,7 @@
       id!=CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_RESET_DONE &&
       id!=CHARTEVENT_CUSTOM+MARKET_WATCH_EVENT_SYMBOL_ADD &&   // a new symbol of this account (its row of symbols is written): Current runs again for it
       id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED &&   // New in V5: a strategy has all its slots now (Setting_Strategy.available): Python calculates its past
-      id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SLOT_CHANGED && id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_TF_CHANGED)   // its marks are gone (CSyncManager, before): its past again
+      id!=CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SLOT_CHANGED)   // its marks are gone (CSyncManager, before): its past again
       return;
    int handle=::FileOpen(this.FileNextToDatabase(PYTHON_JOBS_FILE),FILE_WRITE|FILE_TXT|FILE_ANSI|FILE_SHARE_READ|FILE_SHARE_WRITE);
    if(handle==INVALID_HANDLE)

@@ -52,6 +52,8 @@
     CScrollV          m_scroll;               // a child of the tab: its size and place come with the sections
     int               m_column_x[];           // the x of each column in the body (empty: M_SECTION_COLUMN_WIDTH each)
     int               m_top_offset;           // how far under the top of the tab the sections start (the owner has controls above them)
+    int               m_left_offset;          // how far right of the left of the tab the sections start (two of them side by side)
+    int               m_width;                // the width they take, the scroll at its right end (0: to the right of the tab)
     int               m_toggle_x[];           // the x of each toggle of a header, from the indent of the body (the count of them is the number of toggles of a header)
     int               m_toggle_total;
     int               m_controls_made;        // for the names of the check boxes
@@ -64,7 +66,7 @@
     void              StyleSwitch(CButton *button);
    //--- A switch with no text: the icon of the flag it stands for at the left, then the switch (red OFF, green ON). Call it before Create
     void              FlagSwitch(CButtonTriggered *button,const uint flag_icon);
-                      CSections(void) : m_tabs(NULL),m_tab(WRONG_VALUE),m_top_offset(0),m_toggle_total(0),m_controls_made(0) {}
+                      CSections(void) : m_tabs(NULL),m_tab(WRONG_VALUE),m_top_offset(0),m_left_offset(0),m_width(0),m_toggle_total(0),m_controls_made(0) {}
                      ~CSections(void) {}
    //--- The x of each column of the bodies, from the indent
     void              SetColumns(const int &x[])  { ::ArrayCopy(m_column_x,x); }
@@ -72,13 +74,16 @@
     void              SetToggleColumns(const int &x[])                       { ::ArrayCopy(m_toggle_x,x); m_toggle_total=::ArraySize(m_toggle_x); }
    //--- The sections start this far under the top of the tab
     void              SetTopOffset(const int offset)                          { m_top_offset=offset; }
+   //--- The sections start this far right of the left of the tab and take this width (0: to the right of the tab): two of them side by side
+    void              SetLeftOffset(const int offset)                         { m_left_offset=offset; }
+    void              SetWidth(const int width)                               { m_width=width; }
    //--- The rows of the body of a section go (their controls freed): the owner makes them again
     void              ClearBody(const int section);
    //--- The rows that hold a control of this value go (their controls freed), the rows under them move up: one template (one type) went
     void              RemoveRows(const long value);
    //--- The scroll, in the tab of the tabs
     bool              Create(const long chart_id,const int subwin,CTabs *tabs,const int tab,const string name);
-   //--- A section: its header and its toggles (the flag icon and the state of each). Returns its index, WRONG_VALUE when it is not made
+   //--- A section: its header and its toggles (the flag icon and the state of each; icon 0: "ON" / "OFF" and the switch). Returns its index, WRONG_VALUE when it is not made
     int               AddSection(const string text,const uint &icons[],const bool &states[],const bool opened);
    //--- A toggle of the header: its switch with the flag icon, made and registered in the tab
     CButtonTriggered *NewToggle_Sections(const string name,const uint flag_icon,const bool on);
@@ -98,6 +103,8 @@
    //--- What the model holds goes into the controls
     void              SetToggle(const int section,const int which,const bool on);
     void              SetBodyState(const long value,const int slot,const bool on);
+   //--- The name of a section on its header (what is chosen in it)
+    void              SetHeaderText(const int section,const string text);
     int               SectionsTotal(void) const { return this.ChildrenTotal(); }
    //--- The rows of the body of a section (0: its body is not made yet, the owner may make it when it is opened)
     int               RowsTotal(const int section);
@@ -197,10 +204,22 @@
    CButtonTriggered *toggle=new CButtonTriggered();
    if(toggle==NULL)
       return NULL;
-   this.FlagSwitch(toggle,flag_icon);
+   //--- Change in V5: flag_icon 0 = no flag, its state as text ("ON" / "OFF", CButtonTriggered::StateTexts) then the switch
+   if(flag_icon==0)
+     {
+      toggle.IconFile(IMAGE_RESOURCE_BMP16_SWITCH_OFF_RED_PNG);
+      toggle.IconFileLocked(IMAGE_RESOURCE_BMP16_SWITCH_OFF_RED_PNG);
+      toggle.IconFilePressed(IMAGE_RESOURCE_BMP16_SWITCH_ON_GREEN_PNG);
+      toggle.IconFilePressedLocked(IMAGE_RESOURCE_BMP16_SWITCH_ON_GREEN_PNG);
+      toggle.LabelXGap(0);
+      toggle.IconXGap(M_SECTION_TEXT_TOGGLE_X);
+      toggle.StateTexts("ON","OFF");
+     }
+   else
+      this.FlagSwitch(toggle,flag_icon);
    toggle.SetState(on);
    m_tabs.AddToElementsArray(m_tab,toggle);
-   if(!toggle.Create(m_chart_id,m_subwindow,name,0,0,M_SECTION_TOGGLE_WIDTH,M_CONTROL_HEIGHT))
+   if(!toggle.Create(m_chart_id,m_subwindow,name,0,0,(flag_icon==0 ? M_SECTION_TEXT_TOGGLE_WIDTH : M_SECTION_TOGGLE_WIDTH),M_CONTROL_HEIGHT))
       return NULL;
    this.StyleSwitch(toggle);
    return toggle;
@@ -229,7 +248,9 @@
  //+------------------------------------------------------------------+
  int CSections::AddSection(const string text,const uint &icons[],const bool &states[],const bool opened)
   {
-   if(m_tabs==NULL || ::ArraySize(icons)<m_toggle_total || ::ArraySize(states)<m_toggle_total)
+   //--- Change in V5: a section may have fewer toggles (as many as its icons, none: empty arrays): the toggle of one section only
+   const int toggles=::MathMin(::ArraySize(icons),m_toggle_total);
+   if(m_tabs==NULL || ::ArraySize(states)<toggles)
       return WRONG_VALUE;
    int index=this.ChildrenTotal();
    CSection *section=new CSection();
@@ -250,12 +271,16 @@
    header.IconFilePressedLocked(IMAGE_RESOURCE_BMP16_ARROWDOWN_BLUE_BMP);
    header.SetState(opened);
    m_tabs.AddToElementsArray(m_tab,header);
-   if(!header.Create(m_chart_id,m_subwindow,m_name+"_Header"+(string)index,0,0,M_SECTION_HEADER_WIDTH,M_CONTROL_HEIGHT))
+   //--- Change in V5: the header ends where its first toggle starts (a click on the toggle does not open / close the section)
+   int header_width=M_SECTION_HEADER_WIDTH;
+   if(toggles>0)
+      header_width=::MathMin(header_width,M_SECTION_BODY_INDENT+m_toggle_x[0]);
+   if(!header.Create(m_chart_id,m_subwindow,m_name+"_Header"+(string)index,0,0,header_width,M_CONTROL_HEIGHT))
       return WRONG_VALUE;
    this.StyleSwitch(header);
    section.m_header=header;
-   ::ArrayResize(section.m_toggle,m_toggle_total);
-   for(int k=0;k<m_toggle_total;k++)
+   ::ArrayResize(section.m_toggle,toggles);
+   for(int k=0;k<toggles;k++)
      {
       CButtonTriggered *toggle=this.NewToggle_Sections(m_name+"_Toggle"+(string)index+"_"+(string)k,icons[k],states[k]);
       if(toggle==NULL)
@@ -411,7 +436,8 @@
   {
    if(m_tabs==NULL || m_tabs.SelectedTab()!=m_tab || !m_tabs.IsVisible())
       return;   // another tab is open, or the window is hidden (born hidden: nothing is shown before it)
-   const int x=m_tabs.X()+M_CONTROL_BORDER_GAP;
+   const int x=m_tabs.X()+M_CONTROL_BORDER_GAP+m_left_offset;
+   const int right=(m_width>0 ? x+m_width : m_tabs.X()+m_tabs.Width()-1);
    const int top=m_tabs.Y()+M_CONTROL_BORDER_GAP+m_top_offset;
    const int bottom=m_tabs.Y()+m_tabs.Height()-M_CONTROL_BORDER_GAP;
    const int total=this.ChildrenTotal();
@@ -428,7 +454,7 @@
         }
      }
    m_scroll.ChangeYSize(::MathMax(bottom-top-M_CONTROL_BORDER_GAP,1));
-   m_scroll.Move(m_tabs.X()+m_tabs.Width()-m_scroll.ScrollWidth()-1,top+1);
+   m_scroll.Move(right-m_scroll.ScrollWidth(),top+1);
    m_scroll.ChangeThumbSize((total_h+M_CONTROL_HEIGHT-1)/M_CONTROL_HEIGHT,::MathMax((bottom-top)/M_CONTROL_HEIGHT,1));
    if(m_scroll.IsScroll())
       m_scroll.Show();
@@ -594,6 +620,14 @@
               }
         }
      }
+  }
+ void CSections::SetHeaderText(const int section,const string text)
+  {
+   CSection *item=this.Section(section);
+   if(item==NULL || item.m_header==NULL)
+      return;
+   item.m_header.SetText(text);
+   item.m_header.Draw(true);
   }
 #endif // CSECTIONS_MQH_IMPLEMENTATION
 #endif // CSECTIONS_MQH

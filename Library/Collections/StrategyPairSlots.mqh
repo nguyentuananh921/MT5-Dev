@@ -3,8 +3,9 @@
 //|                                     Copyright 2026, Anhnt        |
 //| The slots of a strategy on a pair (the port CStrategySlots of     |
 //| UseCases): its indicator and its basic signal by the name of the |
-//| slot, through the collections. New in V5 (was SlotIndicator /     |
-//| SlotSignal of CStrategyCollection)                               |
+//| slot, through the collections, on the tf of the slot             |
+//| (PERIOD_CURRENT: the tf of the pair). New in V5 (was             |
+//| SlotIndicator / SlotSignal of CStrategyCollection)               |
 //+------------------------------------------------------------------+
 #ifndef __STRATEGYPAIRSLOTS_MQH__
 #define __STRATEGYPAIRSLOTS_MQH__
@@ -41,7 +42,7 @@
    string params_text;
    if(row==NULL || this.m_IndicatorsCollection==NULL || this.m_StrategyManager==NULL || !this.m_StrategyManager.Read_RAM(row,params_text))
       return NULL;
-   return this.m_IndicatorsCollection.GetIndicator((ENUM_INDICATOR)row.SourceId(),params_text,this.m_symbol,this.m_timeframe);
+   return this.m_IndicatorsCollection.GetIndicator((ENUM_INDICATOR)row.SourceId(),params_text,this.m_symbol,(row.Timeframe()!=PERIOD_CURRENT ? row.Timeframe() : this.m_timeframe));
   }
  CSignal *CStrategyPairSlots::Signal(const string slot)
   {
@@ -49,7 +50,7 @@
    string params_text;
    if(row==NULL || this.m_SignalsCollection==NULL || this.m_StrategyManager==NULL || !this.m_StrategyManager.Read_RAM(row,params_text))
       return NULL;
-   return this.m_SignalsCollection.GetSeries((ENUM_INDICATOR)row.SourceId(),params_text,this.m_symbol,this.m_timeframe);
+   return this.m_SignalsCollection.GetSeries((ENUM_INDICATOR)row.SourceId(),params_text,this.m_symbol,(row.Timeframe()!=PERIOD_CURRENT ? row.Timeframe() : this.m_timeframe));
   }
 #endif // CSTRATEGYPAIRSLOTS_MQH_IMPLEMENTATION
 #endif // __STRATEGYPAIRSLOTS_MQH__

@@ -19,7 +19,7 @@
 - [v] **Logic của base gửi ra theo [Event](Event.md):** `SERIES_EVENTS_SIGNAL` khi signal của template lật phía.
 - [v] **Role SL:** base có role SL thì SL là giá trị buffer của chính template (`CIndicatorsCollection`), vd SL = giá PSAR.
   - Riêng ATR (khoảng cách, không phải giá): SL = giá vào ∓ ATR × `ATRMultiplier` (Setting_Risk, key của tác giả Part 7).
-  - TP = giá vào ± khoảng SL × `TakeProfitRatio` (Setting_Risk), cho mọi base cung cấp SL (`CTradeRisk::BuildPlan`).
+  - TP = giá vào ± khoảng SL × `TakeProfitRatio` (Setting_Risk), cho mọi base cung cấp SL (`CTradingControl::BuildPlan`).
   - Một nguồn: `ATRMultiplier`, `TakeProfitRatio` (bê nguyên Part 7) chính là hệ số của base ATR và của TP, không phải nguồn SL/TP thứ hai của Strategy.
   - Nhiều base cùng role SL / Trailing: giá trị tốt nhất thắng, như mọi Strategy ([Strategy.md](Strategy.md#trading)).
   - **Giá trị của base đi theo tick, qua [Event](Event.md):** base có role SL / Trailing đang ON tự làm mới theo tick, không ai phải hỏi.
@@ -28,8 +28,8 @@
     - Indicator đang dùng role (template ON ở Stop Loss / Trailing, TF chart; `CTradingControl` đánh dấu) tự `Refresh` rồi fire `INDICATOR_EVENT_REFRESHED`.
     - Trading / View nghe `INDICATOR_EVENT_REFRESHED` để tính lại (vd panel Manual Entry: SL, TP, MaxLot).
     - [v] Code 2026-11-21, compile 0/0, chưa test trên terminal.
-  - Có SL thì `CTradeRisk` tính lot theo `RiskMode` 0/1 (xem [Strategy.md](Strategy.md)).
-  - [v] Code: `CTradeRisk::BuildPlan` nhận SL từ base (`CTradingControl::StopLossPrice`); user chọn base ở tab Trading, section Stop Loss.
+  - Có SL thì tầng Trade (`CTradingControl::CalculateLotSize`) tính lot theo `RiskMode` 0/1 (xem [Strategy.md](Strategy.md)).
+  - [v] Code: `CTradingControl::BuildPlan` nhận SL từ base (`CTradingControl::StopLossPrice`); user chọn base ở tab Trading, section Stop Loss.
   - [] **Role lấy từ judge, không viết cứng loại indicator:** đã hiểu chưa đúng concept này khi code.
     - GUI (`CGUIPannel::PopulateSections_TradingRisk`) và `CTradingControl::StopLossPrice` đang viết cứng `IND_SAR` / `IND_ATR`, nên section Trailing chỉ có PSAR.
     - Phải lấy role của base từ judge của `CSignalsCollection` (Rule theo role ở trên); thêm base mới có role SL thì không phải sửa code.

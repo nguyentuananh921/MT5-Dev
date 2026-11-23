@@ -53,7 +53,9 @@
       bool Delete(const string target, const string sql);
       template<typename T> bool Read(const string target, const string sql, T &resultOut);
       template<typename T> bool Read(const string target, const string sql, T &resultsOut[]);
-      
+     //--- V5: a table made before a column gets it (CREATE TABLE IF NOT EXISTS keeps an old table as it is); true when it is there
+      bool AddColumn(const string target, const string table, const string column, const string definition);
+
   };
  #endif // CDATABASESERVICE_MQH_DECLARATION
  #ifndef CDATABASESERVICE_MQH_IMPLEMENTATION
@@ -290,6 +292,23 @@ template<typename T> bool CDatabaseService::Read(const string target, const stri
     }
     ::DatabaseFinalize(request);
     return true;
+  }
+ //+------------------------------------------------------------------+
+ //| V5: the column added when the table has it not                   |
+ //+------------------------------------------------------------------+
+ struct SDatabaseServiceCount
+  {
+   long count;
+  };
+ bool CDatabaseService::AddColumn(const string target, const string table, const string column, const string definition)
+  {
+   SDatabaseServiceCount columns={0};
+   if(!this.Read(target, "SELECT COUNT(*) FROM pragma_table_info('" + table + "') WHERE name = '" + column + "'", columns))
+      return false;
+   if(columns.count > 0 || this.Update(target, "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition))
+      return true;
+   ::Print(__FUNCTION__, " > can't add ", column, " to ", table);
+   return false;
   }
 
  #endif // CDATABASESERVICE_MQH_IMPLEMENTATION

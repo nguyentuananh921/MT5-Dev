@@ -54,7 +54,18 @@ Note lại các command để chạy cho nhanh.
   git add skills/
   git commit -m "Update skills files"
   git push
-claude plugin marketplace update mt5-marketplace
+  claude plugin marketplace update mt5-marketplace
+  claude plugin list
+  claude --version
+  node -v
+  //MCP server
+   claude mcp add <ten-server> -- <lenh-chay> <tham-so-1> <tham-so-2>
+   claude mcp add my-mcp -- npx -y @modelcontextprotocol/server-filesystem D:\MT5-Dev
+  // Check mcp server
+   claude mcp list
+  //Create mcp server
+   pip install mcp
+   claude mcp add -s user mt5-tools -- python D:\MT5-Dev\scripts\mt5_mcp_server.py
  ```powershell
 
 /plugin marketplace add nguyentuananh921/MT5-Dev

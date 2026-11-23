@@ -21,9 +21,7 @@
 // Risk Model
    input group "Risk Model"
    input ENUM_RISK_MODE       RiskMode = RISK_PERCENT;          // How risk per trade is defined
-   input ENUM_RISK_BASE       RiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against
-   //input double               RiskPercent = 1.0;                // Risk per trade [%] (percent mode)
-   //Chagne to uinify with    
+   input ENUM_RISK_BASE       RiskBase = RISK_BASE_BALANCE;     // Risk percentage measured against   
    input double               percentage_risk_per_operation  = 1.0;                // Risk per trade [%] (percent mode)
    input double               FixedCashRisk = 100.0;            // Risk per trade [account currency] (cash mode)
    input double               FixedLotSize = 0.10;              // Lot size (fixed-lot mode)
@@ -43,7 +41,7 @@
 // Adaptive Risk (Drawdown)
    input group "Adaptive Risk (Drawdown)"
    input bool                 EnableAdaptiveRisk = false;       // Reduce risk during drawdowns
-   input double               InpDropDownLevel = 3.0;           // Drawdown % that triggers reduced risk
+   input double               DropDownLevel = 3.0;           // Drawdown % that triggers reduced risk
    input double               RiskReductionFactor = 0.5;        // Risk multiplier when triggered
    input bool                 ApplyDrawdownToFixedLot = false;  // Also shrink the fixed lot
 // Broker & Margin Safety
@@ -132,7 +130,7 @@ int OnInit()
    riskCfg.fixedLotSize            = FixedLotSize;
    riskCfg.allowMinLotOverRisk     = AllowMinLotOverRisk;
    riskCfg.enableDrawdownScaling   = EnableAdaptiveRisk;
-   riskCfg.drawdownTrigger         = InpDropDownLevel;
+   riskCfg.drawdownTrigger         = DropDownLevel;
    riskCfg.drawdownFactor          = RiskReductionFactor;
    riskCfg.applyDrawdownToFixedLot = ApplyDrawdownToFixedLot;
    riskCfg.stopATRMultiplier       = ATRMultiplier;

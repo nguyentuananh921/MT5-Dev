@@ -5,28 +5,12 @@
 //| the helpers every table of the window uses (CreateTable_Trade,   |
 //| FormatTradeRows), and the layout of the columns, kept in a file  |
 //| of the layout folder, FillTable_Trade (a query on the table      |
-//| Orders). The tables of the tabs: the History tab has its own     |
-//| module, the others come with their model                         |
+//| Orders). The tables of the tabs: the History and the Open tab    |
+//| have their own module, the others come with their model          |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_WINDOW_TRADEMANAGER_MQH
 #define CGUIPANNEL_WINDOW_TRADEMANAGER_MQH
 #include "GUIPannel.mqh"
- //--- The button in the Trading tab of m_tabs_main: it opens the window
- bool CGUIPannel::CreateButton_TradeManage(void)
-  {
-   m_btn_tradeManage.SetText("Trade Manage");
-   m_btn_tradeManage.IconFile(IMAGE_RESOURCE_BMP16_ARROWRIGHT_BLUE_BMP);
-   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btn_tradeManage);
-   return m_btn_tradeManage.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnTradeManage",M_CONTROL_BORDER_GAP,M_CONTROL_BORDER_GAP,M_BUTTON_TRADEMANAGE_WIDTH,M_CONTROL_HEIGHT);
-  }
- //--- The button in the Trading tab, right of Trade Manage: every position of the account is closed at once (emergency, no confirmation)
- bool CGUIPannel::CreateButton_CloseAllPosition(void)
-  {
-   m_btn_closeallPosition.SetText("Close All");
-   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btn_closeallPosition);
-   return m_btn_closeallPosition.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnCloseAllPosition",2*M_CONTROL_BORDER_GAP+M_BUTTON_TRADEMANAGE_WIDTH,M_CONTROL_BORDER_GAP,
-                                        M_BUTTON_TRADEMANAGE_WIDTH,M_CONTROL_HEIGHT);
-  }
  //--- The tabs of the window, under its caption: the header on top, the content fills what is left
  bool CGUIPannel::CreateTabs_TradeManage(void)
   {
@@ -127,7 +111,7 @@
       return false;
    if(!CreateTabs_TradeManage())
       return false;
-   if(!this.CreateTable_TradeManagerTabHistory())   // the tabs that have a table: History for now
+   if(!this.CreateTable_TradeManagerTabHistory() || !this.CreateTable_TradeManagerPosition())   // the tabs that have a table: History, Open
       return false;
    m_tabs_tradeManage.SelectTab(TAB_TRADE_HISTORY_POSITION);   // the first tab with a table
    m_btn_table_columns.Hide();   // it is there for the tabs that have a table: the window shows it when it opens
@@ -138,6 +122,8 @@
   {
    if(tab==TAB_TRADE_HISTORY_POSITION)
       return GetPointer(m_table_trade_history);
+   if(tab==TAB_TRADE_OPEN_POSITION)
+      return GetPointer(m_table_open_position);
    return NULL;
   }
  //--- The file of the columns the user chose for the table of a tab
@@ -303,6 +289,7 @@
    if(!m_window_tradeManage.IsVisible())
       return;
    this.FillTable_TradeManagerTabHistory();
+   this.FillTable_TradeManagerPosition();
    ::ChartRedraw(this.m_chart_id);
   }
  //+------------------------------------------------------------------+
@@ -310,18 +297,6 @@
  //+------------------------------------------------------------------+
  void CGUIPannel::OnEvent_Window_TradeManage(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
-   //--- The button of the Trading tab opens the window
-   if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && lparam==m_btn_tradeManage.ObjectID())
-     {
-      this.OpenWindow_TradeManage();
-      return;
-     }
-   //--- Close All: the View only tells it, Trade (CTradingControl::OnChartEvent) closes the positions
-   if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && lparam==m_btn_closeallPosition.ObjectID())
-     {
-      this.EventSend((ushort)TRADE_SETUP_EVENT_CLOSE_ALL,0,0.0,"");
-      return;
-     }
    //--- The window changed its width: the Columns button stays at the right end of the header of the tabs
    if(id==CHARTEVENT_CUSTOM+WINDOW_EVENT_CHANGE_XSIZE && lparam==m_window_tradeManage.ObjectID())
      {

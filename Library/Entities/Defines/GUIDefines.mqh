@@ -31,6 +31,8 @@
   #define M_FLAG_SWITCH_X               16   //where the switch icon is: after the icon of the flag
   #define M_SECTION_HEADER_WIDTH        170
   #define M_SECTION_TOGGLE_WIDTH        M_FLAG_SWITCH_WIDTH   //the flag icon and the switch
+  #define M_SECTION_TEXT_TOGGLE_WIDTH   54   //New in V5: a toggle with no flag (icon 0): "ON" / "OFF" then the switch
+  #define M_SECTION_TEXT_TOGGLE_X       34   //where its switch is: after "OFF"
   #define M_SECTION_BODY_INDENT         20   //the body is under the text of the header
   #define M_SECTION_COLUMN_WIDTH        192  //the second control of a row starts one column after the first; every control of a column is as wide
 // ──────────────────────────────────────────────────────────────────

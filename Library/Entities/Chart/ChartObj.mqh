@@ -120,6 +120,7 @@
    //--- Every start (a new attach, a TF change: the EA keeps this object): the chart works again, the terminal tells the objects it makes
    this.SetAvailable(true);
    ::ChartSetInteger(this.m_chart_id,CHART_EVENT_OBJECT_CREATE,true);   // the terminal tells the objects it makes (V2 CChartObjectsControl)
+   ::ChartSetInteger(this.m_chart_id,CHART_SHOW_TRADE_LEVELS,false);    // New in V5: no SL / TP lines of the terminal for the positions and the orders (the EA shows its trades)
    this.m_object_created=::EventChartCustom(this.m_chart_id,(ushort)CHART_OBJ_EVENT_OBJECTS_CHANGE,::ObjectsTotal(this.m_chart_id),0.0,"");   // a TF change redraws "autotrade" without a create event
    //--- A chart change: the indicators stay on the chart. What the chart shows is read at its first CHARTEVENT_CHART_CHANGE: here it is not drawn for the new TF yet
    //--- (the price scale of the old one), the view is told once, then

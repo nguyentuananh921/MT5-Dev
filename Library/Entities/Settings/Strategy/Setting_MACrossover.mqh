@@ -22,7 +22,7 @@
 #endif // CSETTING_MACROSSOVER_MQH_DECLARATION
 #ifndef CSETTING_MACROSSOVER_MQH_IMPLEMENTATION
 #define CSETTING_MACROSSOVER_MQH_IMPLEMENTATION
- CSetting_MACrossover::CSetting_MACrossover(void) : CStrategySetting(2, "MA Crossover", "24477 FixedMACrossover_Part7 (Solomon Anietie Sunday, Risk Management)", PERIOD_CURRENT)   // _Period of the source EA
+ CSetting_MACrossover::CSetting_MACrossover(void) : CStrategySetting(2, "MA Crossover", "24477 FixedMACrossover_Part7 (Solomon Anietie Sunday, Risk Management)")   // the slots PERIOD_CURRENT: _Period of the source EA
   {
    //--- The slots: iMA(_Symbol,_Period,FastMA,0,MODE_SMA,PRICE_CLOSE) and the same with SlowMA (inputs 10, 20)
    this.AddIndicator("FastMA", COLLECTION_SIGNALS_ID, (long)IND_MA, PERIOD_CURRENT, "10,0,SMA,CLOSE");

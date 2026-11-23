@@ -30,7 +30,7 @@
      }
     //Create Status Bar at the bottom of m_window_main
     Breadcrumb("CreateGUIPannel: CreateStatusBar");
-    if(!CreateStatusBar(1,M_WINDOW_MAIN_HEIGHT-M_CONTROL_HEIGHT-1))
+    if(!CreateStatusBar(1,M_WINDOW_MAIN_HEIGHT-M_STATUS_BAR_HEIGHT-1))
      {
       ::Print(__FUNCTION__," > Failed to create Status Bar!");
       return(false);
@@ -79,6 +79,8 @@
      }
     this.UpdateStatusBar_SymbolSpread();
     this.UpdateStatusBar_Equity();
+    this.UpdateStatusBar_MarginLevel();
+    this.UpdateStatusBar_BarTime();
     //--- Default to the Trading tab
     m_tabs_main.SelectTab(TAB_TAB_MAIN_TRADING);
     //Create the Add Indicator window (hidden): the tree of the types and the form of the parameters
@@ -101,6 +103,24 @@
     if(!CreateWindow_CandleInfo())
      {
       ::Print(__FUNCTION__," > Failed to create the Candle information window!");
+      return(false);
+     }
+    Breadcrumb("CreateGUIPannel: CreateButtons_OpenPosition");
+    if(!CreateButtons_OpenPosition())
+     {
+      ::Print(__FUNCTION__," > Failed to create the Open button of the Trading tab!");
+      return(false);
+     }
+    Breadcrumb("CreateGUIPannel: CreateSections_TradingRisk");
+    if(!CreateSections_TradingRisk())
+     {
+      ::Print(__FUNCTION__," > Failed to create the settings of the Automation of the Trading tab!");
+      return(false);
+     }
+    Breadcrumb("CreateGUIPannel: CreateSections_TradeSelect");
+    if(!CreateSections_TradeSelect())
+     {
+      ::Print(__FUNCTION__," > Failed to create the Manual Entry of the Trading tab!");
       return(false);
      }
     Breadcrumb("CreateGUIPannel: CreateButton_TradeManage");
@@ -136,7 +156,8 @@
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CGUIPannel::CGUIPannel(void) : m_SymbolsCollection(NULL),
+ CGUIPannel::CGUIPannel(void) : m_manual_order_type(0),
+                                m_SymbolsCollection(NULL),
                                 m_HistoryCollection(NULL),
                                 m_TradingControl(NULL),
                                 m_AccountsCollection(NULL),
@@ -192,6 +213,9 @@
   {
    for(int i=0;i<this.ChildrenTotal();i++)
       this.Child(i).OnTimerEvent();
+   //--- The time left of the bar is a clock: it follows the timer (drawn only when its text changes)
+   if(!m_first_start)
+      this.UpdateStatusBar_BarTime();
    //--- The sound waits while the last one plays: a new one would cut it (the pairs close their bar at the same time)
    static uint last_sound=0;
    if(this.m_alert_sound!="" && (last_sound==0 || ::GetTickCount()-last_sound>=ALERT_SOUND_GAP_MS))
@@ -276,14 +300,23 @@
       ENUM_SIGNAL_DIRECTION side;
       bool is_new;
       this.EventUnpack(lparam,time,property,side,is_new);
-      if(property==ACCOUNT_PROP_PROFIT)        // the caption follows, the numbers of the positions with it
+      if(property==ACCOUNT_PROP_PROFIT)        // the caption follows, the numbers of the positions with it; the Open tab its Price and Profit
+        {
          this.UpdateCaption_Position();
+         if(m_window_tradeManage.IsVisible())
+            this.FillTable_TradeManagerPosition();
+        }
       else if(property==ACCOUNT_PROP_EQUITY)   // the arrow follows the side
          this.UpdateStatusBar_Equity(side);
       else if(property==ACCOUNT_PROP_BALANCE)  // a position closed into the balance can leave the equity as it was: the status bar looks again whether it is flat
          this.UpdateStatusBar_Equity();
+      else if(property==ACCOUNT_PROP_MARGIN || property==ACCOUNT_PROP_MARGIN_LEVEL)   // a position opened / closed: the margin level
+         this.UpdateStatusBar_MarginLevel();
       return;
      }
+   //--- MarginLevelSafe / MarginLevelDanger changed (the tab Risk): the colour of the margin level follows
+   if(id==CHARTEVENT_CUSTOM+RISK_SETTING_EVENT_CHANGED && (sparam=="MarginLevelSafe" || sparam=="MarginLevelDanger"))
+      this.UpdateStatusBar_MarginLevel();
    //--- New in V5: the spread of the chart symbol changed (CSymbol::RefreshTick)
    if(id==CHARTEVENT_CUSTOM+SYMBOL_EVENT_PROPERTY_CHANGED && sparam==::Symbol())
      {
@@ -313,14 +346,19 @@
       return;
      }
    this.OnEvent_Window_AddIndicator(id,lparam,dparam,sparam);
+   this.OnEvent_Tab_Trading(id,lparam,dparam,sparam);
    this.OnEvent_Window_TradeManage(id,lparam,dparam,sparam);
    this.OnEvent_Tab_Indicator(id,lparam,dparam,sparam);
    this.OnEvent_Tab_Candle(id,lparam,dparam,sparam);
    this.OnEvent_Tab_Strategy(id,lparam,dparam,sparam);
+   this.OnEvent_Tab_Risk(id,lparam,dparam,sparam);
    this.OnEvent_Tab_SymbolTF(id,lparam,dparam,sparam);
    //--- The window changed its width (border, full screen): the combobox stays next to the caption buttons
    if(id==CHARTEVENT_CUSTOM+WINDOW_EVENT_CHANGE_XSIZE && lparam==m_window_main.ObjectID())
+     {
       this.ArrangeComboBox_SymbolTF();
+      this.ArrangeStatusBar();
+     }
    //--- Collapsed: only the numbers of the positions; expanded: the profit too (Expand shows every child again: the hidden ones are hidden again)
    if((id==CHARTEVENT_CUSTOM+WINDOW_EVENT_COLLAPSE || id==CHARTEVENT_CUSTOM+WINDOW_EVENT_EXPAND) && lparam==m_window_main.ObjectID())
       this.UpdateCaption_Position();

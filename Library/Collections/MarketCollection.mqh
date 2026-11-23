@@ -24,6 +24,8 @@
  #include "..\Entities\Trading\Orders\MarketPending.mqh"
  #include "..\Entities\Trading\Orders\MarketPosition.mqh"
  #include "..\Entities\Trading\OrderControl.mqh"
+ #include "..\Entities\Trading\Account.mqh"
+ #include "..\Entities\Defines\RiskManagementDefines.mqh"
  #ifndef CMARKETCOLLECTION_MQH_DECLARATION
  #define CMARKETCOLLECTION_MQH_DECLARATION
   //+------------------------------------------------------------------+
@@ -98,13 +100,13 @@
         double            SumFloatingProfit(const string symbol, const int distance_pts);
      //--- Sum of live Volume() over the positions matching symbol/dir - peer to SumFloatingProfit() above.
        double            SumVolume(const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE);
-       int               PositionsCount(const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE);
-     //--- (1) True if the order is an open position matching symbol/dir (""/WRONG_VALUE = any), (2) if symbol has an open position on the given side.
-       bool              HasPosition(const COrder *order, const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE);
+       int               PositionsCount(const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE, const long magic_id=0, const long strategy_id=0);
+     //--- (1) True if the order is an open position matching symbol/dir (""/WRONG_VALUE = any) and, New in V5, the MagicID of the EA / the StrategyID of its magic (0 = any), (2) if symbol has an open position on the given side.
+       bool              HasPosition(const COrder *order, const string symbol="", const ENUM_POSITION_TYPE dir=WRONG_VALUE, const long magic_id=0, const long strategy_id=0);
        bool              HasPosition(const string symbol, const ENUM_POSITION_TYPE dir);
-     //--- Live SL/TP of the first matching position on (symbol,dir), or 0 if none/not set.
-       double            GetSL(const string symbol, const ENUM_POSITION_TYPE dir);
-       double            GetTP(const string symbol, const ENUM_POSITION_TYPE dir);
+     //--- New in V5: the positions of a MagicID on a symbol seen as one, the margin of each leg from the account (false: no position).
+     //--- Reference: Solomon Anietie Sunday\Risk Management\7. 24477 Consolidating the Risk Framework\Include\BasketRisk.mqh, CBasketRisk::GetState
+       bool              BasketState(const string symbol, const long magic_id, const CAccount *account, SBasketState &basket_state);
      //--- Distinct (Symbol,Direction) pairs currently holding at least one open Position - moved
      //--- here from CTradingEngine (Anhnt/Claude, 2026-09-13), pure Collection-only data.
        int               GetDistinctSymbolsAndDirections(string &symbols[], ENUM_POSITION_TYPE &dirs[]);
@@ -422,11 +424,11 @@
   //+------------------------------------------------------------------+
   //| Number of open positions matching symbol/dir                     |
   //+------------------------------------------------------------------+
-  int CMarketCollection::PositionsCount(const string symbol, const ENUM_POSITION_TYPE dir)
+  int CMarketCollection::PositionsCount(const string symbol, const ENUM_POSITION_TYPE dir, const long magic_id, const long strategy_id)
    {
     int total = 0;
     for(int i = 0; i < this.m_list_all_orders.Total(); i++)
-       if(this.HasPosition(this.m_list_all_orders.At(i), symbol, dir)) total++;
+       if(this.HasPosition(this.m_list_all_orders.At(i), symbol, dir, magic_id, strategy_id)) total++;
     return total;
    }
   //+------------------------------------------------------------------+
@@ -458,40 +460,47 @@
   //+------------------------------------------------------------------+
   //| True if the order is an open position matching symbol/dir        |
   //+------------------------------------------------------------------+
-  bool CMarketCollection::HasPosition(const COrder *order, const string symbol, const ENUM_POSITION_TYPE dir)
+  bool CMarketCollection::HasPosition(const COrder *order, const string symbol, const ENUM_POSITION_TYPE dir, const long magic_id, const long strategy_id)
    {
     if(order == NULL || order.Status() != ORDER_STATUS_MARKET_POSITION) return false;
     if(symbol != "" && order.Symbol() != symbol) return false;
     if(dir != WRONG_VALUE && order.TypeOrder() != (long)dir) return false;
+    if(magic_id != 0 && order.MagicID() != magic_id) return false;
+    if(strategy_id != 0 && (long)this.GetStrategyID((ulong)order.Magic()) != strategy_id) return false;
     return true;
    }
   //+------------------------------------------------------------------+
-  //| Live SL of the first matching position on (symbol,dir)           |
+  //| New in V5: the positions of a MagicID on a symbol as one view    |
   //+------------------------------------------------------------------+
-  double CMarketCollection::GetSL(const string symbol, const ENUM_POSITION_TYPE dir)
+  bool CMarketCollection::BasketState(const string symbol, const long magic_id, const CAccount *account, SBasketState &basket_state)
    {
+    ::ZeroMemory(basket_state);
+    double weighted_entry_sum = 0.0, signed_volume = 0.0;
     for(int i = 0; i < this.m_list_all_orders.Total(); i++)
      {
-      COrder *pos = this.m_list_all_orders.At(i);
-      if(!this.HasPosition(pos, symbol, dir)) continue;
-      double sl = pos.StopLoss();
-      if(sl > 0) return sl;
+      COrder *order = this.m_list_all_orders.At(i);
+      if(!this.HasPosition(order, symbol, WRONG_VALUE, magic_id))
+         continue;
+      const double volume = order.Volume();
+      const bool is_buy = (order.TypeOrder() == (long)POSITION_TYPE_BUY);
+      basket_state.positionCount++;
+      basket_state.totalVolume += volume;
+      basket_state.floatingPL += order.Profit() + order.Swap();
+      weighted_entry_sum += order.PriceOpen() * volume;
+      signed_volume += (is_buy ? volume : -volume);
+      const double leg_margin = (account != NULL ? account.MarginForAction((is_buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL), symbol, volume, order.PriceOpen()) : EMPTY_VALUE);
+      if(leg_margin != EMPTY_VALUE)
+         basket_state.usedMargin += leg_margin;
+      const datetime open_time = (datetime)(order.TimeOpen() / 1000);
+      if(basket_state.oldestOpenTime == 0 || open_time < basket_state.oldestOpenTime)
+         basket_state.oldestOpenTime = open_time;
      }
-    return 0;
-   }
-  //+------------------------------------------------------------------+
-  //| Live TP of the first matching position on (symbol,dir)           |
-  //+------------------------------------------------------------------+
-  double CMarketCollection::GetTP(const string symbol, const ENUM_POSITION_TYPE dir)
-   {
-    for(int i = 0; i < this.m_list_all_orders.Total(); i++)
-     {
-      COrder *pos = this.m_list_all_orders.At(i);
-      if(!this.HasPosition(pos, symbol, dir)) continue;
-      double tp = pos.TakeProfit();
-      if(tp > 0) return tp;
-     }
-    return 0;
+    if(basket_state.positionCount == 0)
+       return false;
+    if(basket_state.totalVolume > 0)
+       basket_state.weightedEntryPrice = weighted_entry_sum / basket_state.totalVolume;
+    basket_state.netDirection = (signed_volume > 0 ? 1 : signed_volume < 0 ? -1 : 0);
+    return true;
    }
 
   //+------------------------------------------------------------------+

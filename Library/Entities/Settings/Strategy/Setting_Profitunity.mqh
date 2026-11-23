@@ -21,7 +21,7 @@
 #endif // CSETTING_PROFITUNITY_MQH_DECLARATION
 #ifndef CSETTING_PROFITUNITY_MQH_IMPLEMENTATION
 #define CSETTING_PROFITUNITY_MQH_IMPLEMENTATION
- CSetting_Profitunity::CSetting_Profitunity(void) : CStrategySetting(1, "Profitunity", "01. 16365 PROFITUNITY (TRADING CHAOS BY BILL WILLIAMS)", PERIOD_CURRENT)   // not set: the tf of the chart (_Period of the source EA)
+ CSetting_Profitunity::CSetting_Profitunity(void) : CStrategySetting(1, "Profitunity", "01. 16365 PROFITUNITY (TRADING CHAOS BY BILL WILLIAMS)")   // the slots PERIOD_CURRENT: _Period of the source EA
   {
    //--- The slots: the indicators of OnInit of the source EA, on the tf of the strategy
    this.AddIndicator("Fractals",  COLLECTION_SIGNALS_ID, (long)IND_FRACTALS,  PERIOD_CURRENT, "");

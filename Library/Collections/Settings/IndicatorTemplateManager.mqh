@@ -18,11 +18,6 @@
  #include "..\..\Entities\Settings\IndicatorSetting.mqh"
  #include "..\ListObj.mqh"
  #include "..\..\Services\DELib\DatabaseService.mqh"
- //--- V5: how many of the columns of the levels the table indicators has (pragma_table_info), as CDatabaseService::Read binds it
- struct SIndicatorsLevelColumns
-  {
-   long   count;
-  };
  //--- Rows of the table SignalsCollection of the account, as CDatabaseService::Read binds them (the order of the SELECT)
  struct SSignalResultRow
   {
@@ -496,16 +491,9 @@
            return false;
        }
       //--- V5: a table indicators made before the levels gets their columns (CREATE TABLE IF NOT EXISTS keeps an old table as it is)
-      SIndicatorsLevelColumns columns={0};
-      if(this.m_CDatabaseService.Read("Common", "SELECT COUNT(*) FROM pragma_table_info('indicators') WHERE name IN ('level_high','level_low')", columns) && columns.count<2)
-       {
-        if(!this.m_CDatabaseService.Update("Common", "ALTER TABLE indicators ADD COLUMN level_high REAL NOT NULL DEFAULT 0") ||
-           !this.m_CDatabaseService.Update("Common", "ALTER TABLE indicators ADD COLUMN level_low REAL NOT NULL DEFAULT 0"))
-          {
-           ::Print(__FUNCTION__, " > DatabaseService can't add the levels to the table indicators");
-           return false;
-          }
-       }
+      if(!this.m_CDatabaseService.AddColumn("Common", "indicators", "level_high", "REAL NOT NULL DEFAULT 0") ||
+         !this.m_CDatabaseService.AddColumn("Common", "indicators", "level_low", "REAL NOT NULL DEFAULT 0"))
+         return false;
        for(int i = 0; i < ArraySize(standard_indicator_list); i++)
         {
          SIndicatorsRow row = standard_indicator_list[i];

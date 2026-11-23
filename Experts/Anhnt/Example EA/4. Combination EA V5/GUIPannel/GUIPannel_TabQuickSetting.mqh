@@ -47,6 +47,9 @@
    Breadcrumb("CreateTab_QuickSetting: CreateSections_Strategy");
    if(!CreateSections_Strategy())
       return(false);
+   Breadcrumb("CreateTab_QuickSetting: CreateSections_RiskSetting");
+   if(!CreateSections_RiskSetting())
+      return(false);
    Breadcrumb("CreateTab_QuickSetting: CreateTreeView_SymbolTFSetting");
    if(!CreateTreeView_SymbolTFSetting(M_CONTROL_BORDER_GAP,M_CONTROL_BORDER_GAP))
       return(false);

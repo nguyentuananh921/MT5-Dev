@@ -7,20 +7,23 @@
 			"path": "D:/MT5-Dev/Library"
 		},
 		{
-			"path": "E:/Temp"
+			"path": "../../../Allan Munene Mutiiria/Automating Trading Strategies"
 		},
 		{
 			"path": "D:/MT5-Dev/skills"
 		},
 		{
-			"path": "../../../../../../../../../../.claude/projects/D--MT5-Dev/memory"
+			"path": "../../../Solomon Anietie Sunday/Risk Management"
+		},
+		{
+			"path": "D:/MT5-Dev"
 		}
 	],
 	"settings": {
 		"git.ignoreLimitWarning": true,
 		"clangd.fallbackFlags": [
-			"-Id:/MT5-Dev/Library",
-			"-Id:/MT5-Dev/Library/Include",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include",
 			"-xc++",
 			"-std=c++17",
 			"-D__MQL__",
@@ -37,8 +40,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5",
-			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5/Include"
+			"-Id:/MT5-Dev/Library",
+			"-Id:/MT5-Dev/Library/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

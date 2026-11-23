@@ -82,7 +82,8 @@
    //--- Lifecycle: every template on every pair of Setting_SymbolTF (RAM only, the managers own the tables)
     bool              OnInitEvent(void);
    //--- A pair or a template added (made) or deleted (gone): SYMBOLTF_MANAGER_EVENT_ADDED / _DELETE, INDICATOR_TEMPLATE_MANAGER_EVENT_ADDED / _DELETE
-   //--- Change in V5: no refresh at SERIES_EVENTS_NEW_BAR any more: the users refresh what they read when they judge (CSignalsCollection::Prepare, CStrategyCollection), the event comes after the tick
+   //--- Change in V5: no refresh at SERIES_EVENTS_NEW_BAR any more: the users refresh what they read when they judge (CSignalsCollection::Prepare, CStrategyCollection), the event comes after the tick.
+   //--- New in V5: TICK_EVENT_NEW of a symbol: its indicators in use in a role (Stop Loss / Trailing) refresh and tell INDICATOR_EVENT_REFRESHED (BaseIndicatorStrategy.md)
     bool              OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam);   
                       CIndicatorsCollection(void) : m_SymbolTFManager(NULL),m_IndicatorTemplateManager(NULL) { this.m_object_type=COLLECTION_INDICATORS_ID; }
                      ~CIndicatorsCollection(void) {}
@@ -306,6 +307,17 @@
    if(id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE)
      {
       this.DeleteTemplate((ENUM_INDICATOR)lparam,sparam);
+      return true;
+     }
+   //--- New in V5 (BaseIndicatorStrategy.md): a new tick of a symbol (sparam): its indicators in use in a role refresh and tell it; no tick (a closed market): nobody asks
+   if(id==CHARTEVENT_CUSTOM+TICK_EVENT_NEW)
+     {
+      for(int i=0;i<this.m_list.Total();i++)
+        {
+         CIndicatorDE *indicator=this.m_list.At(i);
+         if(indicator!=NULL && indicator.RoleInUse() && indicator.Symbol()==sparam)
+            indicator.OnNewTick();
+        }
       return true;
      }
    return false;
