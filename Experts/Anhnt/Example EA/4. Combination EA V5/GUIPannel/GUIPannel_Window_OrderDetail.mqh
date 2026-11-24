@@ -42,7 +42,8 @@
       return;
    long change_time[],change_event[];
    double change_sl[],change_tp[];
-   const int changes=(m_TradingControl!=NULL ? m_TradingControl.ReadDataFromDB(position_id,change_time,change_event,change_sl,change_tp) : 0);
+   long basket_id=0;
+   const int changes=(m_TradingControl!=NULL ? m_TradingControl.ReadDataFromDB(position_id,change_time,change_event,change_sl,change_tp,basket_id) : 0);
    long keys[][2];   // the time, the index in the list (a change of the SL / TP: -1 - its index)
    int found=0;
    string symbol="",direction="";

@@ -38,10 +38,12 @@
   };
  struct STradingOrderDetailChange
   {
+   long                  ticket;      // 0: a change of the SL / TP, else a deal
    long                  time_msc;
    long                  event;
    double                sl;
    double                tp;
+   long                  basket_id;
   };
 //+------------------------------------------------------------------+
 //| Class for managing pending trading requests                      |
@@ -69,14 +71,19 @@ class CTradingControl : public CTrading
       bool                 IsPositionEvent(const ENUM_TRADE_EVENT event) const;
       bool                 IsCloseEvent(const ENUM_TRADE_EVENT event) const;
       bool                 IsModifyEvent(const ENUM_TRADE_EVENT event) const;
-      string               OrderDetailValues(const long position_id,const long time_msc,const long ticket,const int event,const double sl,const double tp,const double bid,const double ask,const string source) const;
+      string               OrderDetailValues(const long position_id,const long time_msc,const long ticket,const int event,const double sl,const double tp,const double bid,const double ask,const string source,const long basket_id) const;
+     //--- New in V5: the basket of a position (Concepts.md, Phạm vi: symbol + side) = the position_id of the first position of the basket;
+     //--- on RAM for the positions of this run, kept in TradingOrderDetail.basket_id (the open ones read back at OnInitEvent by ReadDataFromDB). 0: not known
+      long                 m_basket_position[];
+      long                 m_basket_of_position[];
+      long                 BasketId(const long position_id);
       bool                 UpdateDataToDB(const string values);
      //--- The Bid / Ask of the deals of a position on RAM (COrder), from the ticks of the terminal
       void                 DealsBidAsk(const long position_id);
      //--- An action on a position: its deals (Bid / Ask) and the changes of its SL / TP of this run written, with their source
       bool                 UpdateDataToDB(const long position_id);
      //--- New in V5: the source of an action (MT5 keeps only SL / TP / Expert / Client): which part of the EA asked it. Set on RAM by the
-     //--- ticket of the position before the request (Trailing, Exit, Basket, CloseAll), written with the row of its event, then removed ("")
+     //--- ticket of the position before the request (Trailing, Exit, Basket, Portfolio, Manual), written with the row of its event, then removed ("")
       ulong                m_source_ticket[];
       string               m_source_text[];
       void                 SetSource(const ulong ticket,const string source);
@@ -96,18 +103,22 @@ class CTradingControl : public CTrading
       double               CalculateLotSize(const CSymbol *symbol,const double stop_distance,const double risk_amount);
       double               MarginUsageCap(void);
       double               CapLotToMargin(const CSymbol *symbol,const ENUM_ORDER_TYPE order_type,const double lot,const double price);
-      bool                 BuildPlan(CSymbol *symbol,const long strategy_id,const int direction,const double stop_loss,STradePlan &plan);
+      bool                 BuildPlan(CSymbol *symbol,const long strategy_id,const ENUM_ORDER_TYPE type,const double stop_loss,STradePlan &plan);
       bool                 ValidatePlan(const CSymbol *symbol,STradePlan &plan);
-      bool                 CheckTradeRisk(CSymbol *symbol,const long strategy_id,const datetime bar_time,const int direction,const double stop_loss,STradePlan &plan);
-     //--- The basket tier (CBasketRisk): the positions of the EA on one symbol; its excursion statistics, RAM only (a restart resets them)
+      bool                 CheckTradeRisk(CSymbol *symbol,const long strategy_id,const datetime bar_time,const ENUM_ORDER_TYPE type,const double stop_loss,const double lots,STradePlan &plan);
+     //--- The basket tier (CBasketRisk): the positions dealt on one symbol of one side (ORDER_TYPE_BUY / ORDER_TYPE_SELL), every magic; its excursion
+     //--- statistics, RAM only (a restart resets them)
       string               m_basket_symbols[];
+      ENUM_ORDER_TYPE      m_basket_types[];
       double               m_basket_max_adverse[];
       double               m_basket_max_favourable[];
       int                  m_basket_peak_count[];
-      int                  BasketIndexOf(const string symbol);
+      ulong                m_basket_cut_ms[];      // New in V5: when the basket was cut: its positions stay on RAM until OnTrade, not closed twice (RISK_CUT_WAIT_MS)
+      int                  BasketIndexOf(const string symbol,const ENUM_ORDER_TYPE type);
       void                 BasketUpdateExcursion(const string symbol,const SBasketState &basket_state);
-      void                 BasketResetTracking(const string symbol);
+      void                 BasketResetTracking(const string symbol,const ENUM_ORDER_TYPE type);
       void                 BasketManage(const string symbol,const long magic_id,const ENUM_TIMEFRAMES timeframe);
+      void                 BasketManageSide(const string symbol,const ENUM_ORDER_TYPE type,const long magic_id,const ENUM_TIMEFRAMES timeframe);
       bool                 BasketAcceptsNewTrade(const STradePlan &plan,const long magic_id);
       bool                 CheckBasketRisk(const STradePlan &plan,const long magic_id,const datetime bar_time);
      //--- The portfolio tier (CPortfolioRisk): the account, or the EA and the ExtraPortfolioMagics
@@ -120,40 +131,44 @@ class CTradingControl : public CTrading
       void                 PortfolioPrintSnapshot(void);
       bool                 PortfolioCanOpenPosition(const string symbol,const ENUM_ORDER_TYPE order_type,const double volume,const double price,string &reason);
       bool                 CheckPortfolioRisk(const STradePlan &plan,const datetime bar_time);
+     //--- New in V5: Exit x Portfolio (Concepts.md): the floating loss of the portfolio past MaxPortfolioLossPercent closes its positions
+      ulong                m_portfolio_cut_ms;     // when the portfolio was cut (RISK_CUT_WAIT_MS)
+      void                 PortfolioManage(void);
      //--- The strategies (which one trades: Setting_Risk.EntryStrategies)
       CStrategyManager    *m_strategy_manager;   // The EA holds it
      //--- The bases that give the stop (Setting_Risk.StopLossTemplates): their templates, their indicators on the pair (The EA holds them)
       CIndicatorTemplateManager *m_indicator_template_manager;
       CIndicatorsCollection *m_indicators_collection;
       //--- The stop of the bases ON in a role (key: StopLossTemplates at the Entry, TrailingTemplates for an open position), their value at the shift
-      //--- (1: the last closed bar for the Entry; 0: the bar now, refreshed at each tick, for the trailing). silent: a preview (ManualPlan) prints nothing
-      double               StopLossPrice(CSymbol *symbol_obj,const int direction,const bool silent=false,const string key="StopLossTemplates",const int shift=1);
-      //--- New in V5: a base ON in Trailing refreshed (INDICATOR_EVENT_REFRESHED, each tick): the SL of each position of the EA on the symbol moves to
-      //--- its value when that is better (BUY higher, SELL lower); CTrading::ModifyPosition checks the stop / freeze levels
+      //--- (1: the last closed bar for the Entry; 0: the bar now, for the trailing); each indicator refreshed before it is read. silent: prints nothing
+      double               StopLossPrice(CSymbol *symbol_obj,const ENUM_ORDER_TYPE type,const bool silent=false,const string key="StopLossTemplates",const int shift=1);
+      //--- A tick of the symbol (TICK_EVENT_NEW): the SL of each position of the EA on it moves to the value of the bases ON in Trailing when better
       void                 TrailPositions(const string symbol);
-      //--- New in V5: close the positions (symbol "": all; else the EA on it), of a strategy (strategy_id > 0), of a side (1 BUY, -1 SELL, 0 both): Close All, the Exit;
-      //--- source: who asked (TradingOrderDetail.source)
-      int                  ClosePositions(const string symbol,const long strategy_id,const int direction,const string source);
+      //--- Close the positions: symbol "" all, strategy_id > 0 one strategy, type WRONG_VALUE both sides; every_magic: not only the EA's
+      int                  ClosePositions(const string symbol,const long strategy_id,const ENUM_ORDER_TYPE type,const string source,const bool every_magic=false);
+     //--- Close the tickets, each with its source (TradingOrderDetail.source); how many closed
+      int                  CloseTickets(const ulong &tickets[],const string source);
       //--- New in V5: STRATEGY_EVENT_EXIT of a strategy in EntryStrategies: its positions of the side it closes, on the symbol
       void                 OnStrategyExit(const long lparam,const string symbol);
-     //--- RISK_SETTING_EVENT_CHANGED (sparam = the name of the key): the value on RAM is written to Setting_Risk (one writer: Working on RAM, save to DB)
+     //--- The keys of Setting_Risk changed on RAM (RISK_SETTING_EVENT_CHANGED), written at OnDeinitEvent
+      string               m_risk_changed[];
+      bool                 RiskKeyChanged(const string key) const;
       bool                 UpdateRiskSettingToDB(const string key);
      //--- STRATEGY_EVENT_ENTRY of a strategy in EntryStrategies: TradeEntry with its strategy_id
       void                 OnStrategyEntry(const long lparam,const string symbol);
-     //--- An Entry (strategy_id 0: by hand, TRADE_SETUP_EVENT_SEND): trade, basket, portfolio checks, then a pending request (spread <= MaxSpreadPips)
-      void                 TradeEntry(const string symbol,const long strategy_id,const datetime bar_time,const int direction,const double lots=0.0);
+     //--- An Entry through trade, basket, portfolio; strategy_id 0 = by hand, magic_chosen ULONG_MAX = the EA's
+      void                 TradeEntry(const string symbol,const long strategy_id,const datetime bar_time,const ENUM_ORDER_TYPE type,const double lots=0.0,const ulong magic_chosen=ULONG_MAX);
      //--- SERIES_EVENTS_NEW_BAR of the chart TF: the basket of the symbol is managed; the portfolio logged (LogPortfolioSnapshot)
       void                 OnRiskNewBar(const string symbol,const ENUM_TIMEFRAMES timeframe);
-     //--- The MagicID of the EA (the magic of the trade objects)
-      long                 MagicIdEA(const string symbol);
 
     public:
       CRiskSetting        *RiskSetting(void)          { return &this.m_risk_setting; }
+     //--- The MagicID of the EA (the magic of the trade objects)
+      long                 MagicIdEA(const string symbol);
      //--- What a Manual Entry (strategy 0) would be now: the stop of the bases ON, the lot of the risk capped by the margin (MaxLot); nothing is told
-      bool                 ManualPlan(const string symbol,const int direction,STradePlan &plan);
-     //--- The indicators of the templates ON in Stop Loss / Trailing on the chart TF follow the ticks (CIndicatorDE::SetRoleInUse); the others do not.
-     //--- At OnInit (after the indicators are made) and when StopLossTemplates / TrailingTemplates change
-      void                 SyncRoleIndicators(void);
+      bool                 ManualPlan(const string symbol,const ENUM_ORDER_TYPE type,STradePlan &plan);
+     //--- The keys of Setting_Risk changed on RAM go to the table (not at a chart change)
+      void                 OnDeinitEvent(const int reason);
       void                 SetStrategyManager(CStrategyManager *manager) { this.m_strategy_manager=manager; }
       void                 SetIndicatorTemplateManager(CIndicatorTemplateManager *manager) { this.m_indicator_template_manager=manager; }
       void                 SetIndicatorsCollection(CIndicatorsCollection *collection)      { this.m_indicators_collection=collection; }     //--- Return itself
@@ -216,8 +231,8 @@ class CTradingControl : public CTrading
                                                       const double actual_value);
      //--- Working with Event: Trade listens; STRATEGY_EVENT_ENTRY (a new Entry of a strategy in EntryStrategies): traded through the three tiers of the risk;
      //--- STRATEGY_EVENT_EXIT (a new Exit of a strategy in EntryStrategies): its positions of the side it closes (OnStrategyExit);
-     //--- INDICATOR_EVENT_REFRESHED of a base ON in Trailing: the SLs follow it (TrailPositions);
-     //--- SERIES_EVENTS_NEW_BAR of the chart TF: the basket of the symbol (BasketManage: its cut closes the positions itself, source Basket);
+     //--- TICK_EVENT_NEW of a symbol with positions: the baskets, the portfolio, the trailing; SERIES_EVENTS_NEW_BAR of the chart TF: the baskets;
+     //--- RISK_SETTING_EVENT_CHANGED: the key is kept for OnDeinitEvent;
      //--- TRADE_SETUP_EVENT_CLOSE_ALL (the panel, emergency) closes every position of the account; lparam > 0: only the ones of that strategy_id;
      //--- sparam = a symbol: only the positions of the EA (MagicID) on it;
      //--- a trading event of a position (lparam = its id): the Bid / Ask of its deals, written when it is closed
@@ -225,8 +240,9 @@ class CTradingControl : public CTrading
      //--- New in V5: lifecycle as the other managers: makes TradingOrderDetail, puts the Bid / Ask of the deals on RAM (the ones missing: from the ticks, written)
        void                 SetDatabaseService(CDatabaseService *databaseService) { this.m_CDatabaseService=databaseService; }
        bool                 OnInitEvent(void);
-     //--- The changes of the SL / TP of a position, oldest first (load on demand: the table; a position not closed yet: the events of this run). Returns how many
-       int                  ReadDataFromDB(const long position_id,long &times[],long &events[],double &sls[],double &tps[]);
+     //--- What the table keeps of a position (load on demand): the changes of its SL / TP, oldest first (none written: the events of this run), and its basket
+     //--- (0: not known). Returns how many changes
+       int                  ReadDataFromDB(const long position_id,long &times[],long &events[],double &sls[],double &tps[],long &basket_id);
   };
  #endif // CTRADINGCONTROL_MQH_DECLARATION
  #ifndef CTRADINGCONTROL_MQH_IMPLEMENTATION
@@ -234,7 +250,7 @@ class CTradingControl : public CTrading
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CTradingControl::CTradingControl() : m_CDatabaseService(NULL),m_risk_silent(false),m_strategy_manager(NULL),m_indicator_template_manager(NULL),m_indicators_collection(NULL)
+ CTradingControl::CTradingControl() : m_CDatabaseService(NULL),m_risk_silent(false),m_portfolio_cut_ms(0),m_strategy_manager(NULL),m_indicator_template_manager(NULL),m_indicators_collection(NULL)
   {
    this.m_list_request.Clear();
    this.m_list_request.Sort();
@@ -279,7 +295,7 @@ class CTradingControl : public CTrading
    //--- if the error has been caused by trading disabled on the terminal side and has been eliminated
       if(req_obj.Retcode()==10027 && terminal_trade_allowed)
       {
-         //--- if the current attempt has not exceeded the defined number of trading attempts yet
+        //--- if the current attempt has not exceeded the defined number of trading attempts yet
          if(req_obj.CurrentAttempt()<req_obj.TotalAttempts()+1)
          {
             //--- Set the request creation time equal to its creation time minus waiting time, i.e. send the request immediately
@@ -1480,14 +1496,22 @@ class CTradingControl : public CTrading
      }
    if(id==CHARTEVENT_CUSTOM+RISK_SETTING_EVENT_CHANGED)
      {
-      this.UpdateRiskSettingToDB(sparam);
-      if(::StringFind(sparam,"Templates")>=0)
-         this.SyncRoleIndicators();   // a base ON / OFF in Stop Loss / Trailing: its indicator follows the ticks or not
+      if(this.m_risk_setting.Index(sparam)>=0 && !this.RiskKeyChanged(sparam))
+        {
+         const int n=::ArraySize(this.m_risk_changed);
+         ::ArrayResize(this.m_risk_changed,n+1);
+         this.m_risk_changed[n]=sparam;   // working on RAM: written at OnDeinitEvent
+        }
       return;
      }
    if(id==CHARTEVENT_CUSTOM+TRADE_SETUP_EVENT_SEND)
      {
-      this.TradeEntry(sparam,0,::TimeCurrent(),((ENUM_SIGNAL_DIRECTION)lparam==SIGNAL_DIRECTION_BUY ? 1 : -1),dparam);   // by hand: no strategy, the lot chosen (<= MaxLot of the risk)
+      string parts[];   // sparam "symbol;magic" (panel) or "symbol" (the EA's magic)
+      const int count=::StringSplit(sparam,';',parts);
+      if(count<1)
+         return;
+      const ulong magic=(count>1 && parts[1]!="" ? (ulong)::StringToInteger(parts[1]) : ULONG_MAX);
+      this.TradeEntry(parts[0],0,::TimeCurrent(),((ENUM_SIGNAL_DIRECTION)lparam==SIGNAL_DIRECTION_BUY ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),dparam,magic);
       return;
      }
    if(id==CHARTEVENT_CUSTOM+SERIES_EVENTS_NEW_BAR)
@@ -1495,10 +1519,14 @@ class CTradingControl : public CTrading
       this.OnRiskNewBar(sparam,(ENUM_TIMEFRAMES)(int)dparam);
       return;
      }
-   //--- New in V5: a base in use refreshed at a tick (lparam = its template, dparam = TF, sparam = symbol): ON in Trailing on the chart TF, the SLs follow it
-   if(id==CHARTEVENT_CUSTOM+INDICATOR_EVENT_REFRESHED)
+   //--- A tick of a symbol with positions: their money on RAM, the baskets, the portfolio, the trailing
+   if(id==CHARTEVENT_CUSTOM+TICK_EVENT_NEW)
      {
-      if((int)dparam==(int)::Period() && this.m_risk_setting.IsIdOn("TrailingTemplates",lparam))
+      if(this.m_market.RefreshMoney(sparam)==0)
+         return;
+      this.BasketManage(sparam,0,::Period());
+      this.PortfolioManage();
+      if(this.m_risk_setting.Text("TrailingTemplates")!="")
          this.TrailPositions(sparam);
       return;
      }
@@ -1511,32 +1539,39 @@ class CTradingControl : public CTrading
    if(id!=CHARTEVENT_CUSTOM+TRADE_SETUP_EVENT_CLOSE_ALL)
       return;
    const int total=::PositionsTotal();
-   const int closed=this.ClosePositions(sparam,lparam,0,"CloseAll");
+   const int closed=this.ClosePositions(sparam,lparam,(ENUM_ORDER_TYPE)WRONG_VALUE,"Manual");   // the Exit of Manual (StrategyID 0): the user closes
    ::Print(__FUNCTION__," > close all positions",(lparam>0 ? " of the strategy "+(string)lparam : ""),(sparam!="" ? " of the EA on "+sparam : ""),": ",
            closed," of ",total," positions of the account closed");
   }
  //+------------------------------------------------------------------+
  //| Close the positions: symbol "" every symbol (else the positions  |
  //| of the EA on it, its MagicID), strategy_id > 0 only that strategy,|
- //| direction 1 BUY / -1 SELL / 0 both. Returns how many closed       |
+ //| type ORDER_TYPE_BUY / ORDER_TYPE_SELL, WRONG_VALUE both. Returns  |
+ //| how many closed                                                  |
  //+------------------------------------------------------------------+
- int CTradingControl::ClosePositions(const string symbol,const long strategy_id,const int direction,const string source)
+ int CTradingControl::ClosePositions(const string symbol,const long strategy_id,const ENUM_ORDER_TYPE type,const string source,const bool every_magic=false)
   {
    //--- The positions on RAM (CMarketCollection::HasPosition filters them: the symbol, the side, the MagicID of the EA, the StrategyID); their tickets
    //--- first, a close changes the list
-   const long magic_id=(symbol!="" ? this.MagicIdEA(symbol) : 0);
-   const ENUM_POSITION_TYPE dir=(direction==1 ? POSITION_TYPE_BUY : direction==-1 ? POSITION_TYPE_SELL : (ENUM_POSITION_TYPE)WRONG_VALUE);
+   const long magic_id=(symbol!="" && !every_magic ? this.MagicIdEA(symbol) : 0);
    ulong tickets[];
    CArrayObj *list=this.m_market.GetList();
    for(int i=0;list!=NULL && i<list.Total();i++)
      {
       COrder *order=list.At(i);
-      if(!this.m_market.HasPosition(order,symbol,dir,magic_id,(strategy_id>0 ? strategy_id : 0)))
+      if(!this.m_market.HasPosition(order,symbol,(ENUM_POSITION_TYPE)type,magic_id,(strategy_id>0 ? strategy_id : 0)))
          continue;
       const int n=::ArraySize(tickets);
       ::ArrayResize(tickets,n+1);
       tickets[n]=order.Ticket();
      }
+   return this.CloseTickets(tickets,source);
+  }
+ //+------------------------------------------------------------------+
+ //| Close the tickets, each with its source; how many closed         |
+ //+------------------------------------------------------------------+
+ int CTradingControl::CloseTickets(const ulong &tickets[],const string source)
+  {
    int closed=0;
    for(int i=0;i<::ArraySize(tickets);i++)
      {
@@ -1564,7 +1599,7 @@ class CTradingControl : public CTrading
    this.EventUnpack(lparam,bar_time,strategy_id,side,is_new);
    if(!is_new || strategy_id<=0 || !this.m_risk_setting.IsIdOn("EntryStrategies",strategy_id) || (side!=SIGNAL_DIRECTION_BUY && side!=SIGNAL_DIRECTION_SELL))
       return;   // a row of the past (the markers only), a strategy not in trading
-   const int closed=this.ClosePositions(symbol,strategy_id,(side==SIGNAL_DIRECTION_BUY ? 1 : -1),"Exit S"+(string)strategy_id);
+   const int closed=this.ClosePositions(symbol,strategy_id,(side==SIGNAL_DIRECTION_BUY ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),"Exit S"+(string)strategy_id);
    if(closed>0)
       ::PrintFormat("%s > %s strategy %I64d Exit: %d %s position(s) closed",__FUNCTION__,symbol,strategy_id,closed,(side==SIGNAL_DIRECTION_BUY ? "BUY" : "SELL"));
   }
@@ -1586,10 +1621,7 @@ class CTradingControl : public CTrading
   {
    if(timeframe!=::Period())
       return;
-   const long magic_id=this.MagicIdEA(symbol);
-   if(magic_id==0)
-      return;
-   this.BasketManage(symbol,magic_id,timeframe);
+   this.BasketManage(symbol,0,timeframe);   // magic 0: every position
    if(symbol==::Symbol() && this.m_risk_setting.PortfolioEnabled() && this.m_risk_setting.PortfolioLogSnapshot())
       this.PortfolioPrintSnapshot();
   }
@@ -1600,10 +1632,11 @@ class CTradingControl : public CTrading
  //| -/+ ATR x ATRMultiplier. Many ON: the nearest valid stop wins    |
  //| (the best protection, the best trailing). 0: none                |
  //+------------------------------------------------------------------+
- double CTradingControl::StopLossPrice(CSymbol *symbol_obj,const int direction,const bool silent=false,const string key="StopLossTemplates",const int shift=1)
+ double CTradingControl::StopLossPrice(CSymbol *symbol_obj,const ENUM_ORDER_TYPE type,const bool silent=false,const string key="StopLossTemplates",const int shift=1)
   {
    if(this.m_risk_setting.Text(key)=="" || symbol_obj==NULL || this.m_indicator_template_manager==NULL || this.m_indicators_collection==NULL || !symbol_obj.RefreshRates())
       return 0.0;
+   const int direction=(type==ORDER_TYPE_BUY ? 1 : -1);   // the sign of the price arithmetic of the side
    const double entry=(direction==1 ? symbol_obj.Ask() : symbol_obj.Bid());
    const double close_price=(direction==1 ? symbol_obj.Bid() : symbol_obj.Ask());   // the price the SL closes at: a stop past it is hit at once
    const datetime bar=::iTime(symbol_obj.Name(),::Period(),shift);
@@ -1617,8 +1650,9 @@ class CTradingControl : public CTrading
       CIndicatorSetting *setting=this.m_indicator_template_manager.Read_RAM(types[i],params[i]);
       if(setting==NULL || !this.m_risk_setting.IsIdOn(key,setting.ID()))
          continue;
-      //--- Its values on RAM follow the ticks (in use: SyncRoleIndicators; TICK_EVENT_NEW -> CIndicatorDE::OnNewTick), nothing is asked here
       CIndicatorDE *indicator=this.m_indicators_collection.GetIndicator(types[i],params[i],symbol_obj.Name(),::Period());
+      if(indicator!=NULL)
+         indicator.Refresh();   // the value of an indicator is not an Event (Event.md): read when it is needed
       const double value=(indicator!=NULL ? indicator.Value(0,bar) : EMPTY_VALUE);
       if(value==EMPTY_VALUE || value<=0)
         {
@@ -1661,6 +1695,27 @@ class CTradingControl : public CTrading
    return true;
   }
  //+------------------------------------------------------------------+
+ //| Is the key in the keys changed on RAM?                           |
+ //+------------------------------------------------------------------+
+ bool CTradingControl::RiskKeyChanged(const string key) const
+  {
+   for(int i=0;i<::ArraySize(this.m_risk_changed);i++)
+      if(this.m_risk_changed[i]==key)
+         return true;
+   return false;
+  }
+ //+------------------------------------------------------------------+
+ //| The EA closes: the keys changed on RAM go to Setting_Risk         |
+ //+------------------------------------------------------------------+
+ void CTradingControl::OnDeinitEvent(const int reason)
+  {
+   if(reason==REASON_CHARTCHANGE)
+      return;
+   for(int i=0;i<::ArraySize(this.m_risk_changed);i++)
+      this.UpdateRiskSettingToDB(this.m_risk_changed[i]);
+   ::ArrayResize(this.m_risk_changed,0);
+  }
+ //+------------------------------------------------------------------+
  //| A new Entry of a strategy ON in trading goes to TradeEntry       |
  //+------------------------------------------------------------------+
  void CTradingControl::OnStrategyEntry(const long lparam,const string symbol)
@@ -1677,15 +1732,14 @@ class CTradingControl : public CTrading
    CStrategySetting *setting=this.m_strategy_manager.Read_RAM(strategy_id);
    if(setting==NULL || !this.m_risk_setting.IsIdOn("EntryStrategies",strategy_id))
       return;
-   this.TradeEntry(symbol,strategy_id,bar_time,(side==SIGNAL_DIRECTION_BUY ? 1 : -1));
+   this.TradeEntry(symbol,strategy_id,bar_time,(side==SIGNAL_DIRECTION_BUY ? ORDER_TYPE_BUY : ORDER_TYPE_SELL));   // the side of the signal -> the type of the request
   }
  //+------------------------------------------------------------------+
- //| An Entry through the three tiers of the risk (Part 7 OnTick, in  |
- //| widening order), then a pending request with the magic of the EA |
- //| + the StrategyID and spread (points) <= MaxSpreadPips x 10;       |
- //| by hand (CButton, StrategyID 0): opened now, no spread gate       |
+ //| An Entry of a strategy or by hand (CButton, StrategyID 0): the    |
+ //| three tiers of the risk (Part 7 OnTick, in widening order), then  |
+ //| sent now with the magic of the EA + the StrategyID                |
  //+------------------------------------------------------------------+
- void CTradingControl::TradeEntry(const string symbol,const long strategy_id,const datetime bar_time,const int direction,const double lots=0.0)
+ void CTradingControl::TradeEntry(const string symbol,const long strategy_id,const datetime bar_time,const ENUM_ORDER_TYPE type,const double lots=0.0,const ulong magic_chosen=ULONG_MAX)
   {
    CSymbol *symbol_obj=this.m_symbol_collection.GetSymbolObjByName(symbol);
    CTradeObj *trade_obj=(symbol_obj!=NULL ? symbol_obj.GetTradeObj() : NULL);
@@ -1693,61 +1747,17 @@ class CTradingControl : public CTrading
       return;
    ulong magic=trade_obj.GetMagic();
    this.SetStrategyID((uint)strategy_id,magic);
-   const long magic_id=(long)this.GetMagicID(magic);
+   if(strategy_id==0 && magic_chosen!=ULONG_MAX)
+      magic=magic_chosen;   // the magic typed in the panel (0: none, as the terminal)
    STradePlan plan;
-   //--- By hand (strategy 0): the plan of the risk when it can be made (ManualPlan, as the panel shows it); else the lot chosen alone, no SL / TP:
-   //--- no role of a Strategy, no Risk (the risk cannot size it: no base ON in Stop Loss for a mode by risk...)
-   if(strategy_id==0 && !this.ManualPlan(symbol,direction,plan))
-     {
-      const double lot=FloorToVolumeStep(lots,symbol_obj.LotsStep());
-      if(lot<symbol_obj.LotsMin())
-         return;
-      if(!this.OpenPosition((direction==1 ? POSITION_TYPE_BUY : POSITION_TYPE_SELL),lot,symbol,magic,0,0))
-         ::PrintFormat("%s > %s by hand %s, lot %.2f without the risk: not opened",__FUNCTION__,symbol,(direction==1 ? "BUY" : "SELL"),lot);
+   //--- The tier that refuses tells RISK_EVENT_ENTRY_BLOCKED; the basket: the positions on the symbol of the side of the plan
+   if(!this.CheckTradeRisk(symbol_obj,strategy_id,bar_time,type,this.StopLossPrice(symbol_obj,type,strategy_id==0),lots,plan))
       return;
-     }
-   //--- The tier that refuses tells RISK_EVENT_ENTRY_BLOCKED
-   if(strategy_id!=0 && !this.CheckTradeRisk(symbol_obj,strategy_id,bar_time,direction,this.StopLossPrice(symbol_obj,direction),plan))
+   if(!this.CheckBasketRisk(plan,0,bar_time) || !this.CheckPortfolioRisk(plan,bar_time))
       return;
-   //--- By hand: the lot chosen in the panel, never over the MaxLot of the risk
-   if(strategy_id==0 && lots>0.0)
-      plan.lotSize=::MathMin(FloorToVolumeStep(lots,symbol_obj.LotsStep()),plan.lotSize);
-   if(!this.CheckBasketRisk(plan,magic_id,bar_time) || !this.CheckPortfolioRisk(plan,bar_time))
-      return;
-   //--- An Event from CButton (strategy_id 0) is not the Automation of Entry x Order: sent now, no spread gate
-   if(strategy_id==0)
-     {
-      if(!this.OpenPosition((plan.direction==1 ? POSITION_TYPE_BUY : POSITION_TYPE_SELL),plan.lotSize,plan.symbol,magic,plan.stopLoss,plan.takeProfit))
-         ::PrintFormat("%s > %s by hand %s: not opened",__FUNCTION__,symbol,(plan.direction==1 ? "BUY" : "SELL"));
-      return;
-     }
-   int id=this.CreatePReqPosition((plan.direction==1 ? POSITION_TYPE_BUY : POSITION_TYPE_SELL),plan.lotSize,plan.symbol,magic,plan.stopLoss,plan.takeProfit);
-   if(id<1)
-     {
-      ::PrintFormat("%s > %s strategy %I64d: the pending request is not made",__FUNCTION__,symbol,strategy_id);
-      return;
-     }
-   this.SetNewActivationProperties((uchar)id,PEND_REQ_ACTIVATION_SOURCE_SYMBOL,PEND_REQ_ACTIVATE_BY_SYMBOL_SPREAD,this.m_risk_setting.MaxSpreadPips()*10.0,EQUAL_OR_LESS,symbol_obj.Spread());
-   ::PrintFormat("%s > %s strategy %I64d %s: request #%d, lot %.2f, SL %.*f, TP %.*f, risk %.2f",__FUNCTION__,symbol,strategy_id,(plan.direction==1 ? "BUY" : "SELL"),
-                 id,plan.lotSize,symbol_obj.Digits(),plan.stopLoss,symbol_obj.Digits(),plan.takeProfit,plan.riskAmount);
-  }
- //+------------------------------------------------------------------+
- //| The indicators in use in a role follow the ticks: the template ON |
- //| in Stop Loss or Trailing, on the chart TF (BaseIndicatorStrategy) |
- //+------------------------------------------------------------------+
- void CTradingControl::SyncRoleIndicators(void)
-  {
-   if(this.m_indicators_collection==NULL)
-      return;
-   CArrayObj *list=this.m_indicators_collection.GetList();
-   for(int i=0;list!=NULL && i<list.Total();i++)
-     {
-      CIndicatorDE *indicator=list.At(i);
-      if(indicator==NULL)
-         continue;
-      const bool on=(this.m_risk_setting.IsIdOn("StopLossTemplates",indicator.ID()) || this.m_risk_setting.IsIdOn("TrailingTemplates",indicator.ID()));
-      indicator.SetRoleInUse(on && indicator.Timeframe()==::Period());
-     }
+   const bool opened=this.OpenPosition((ENUM_POSITION_TYPE)plan.orderType,plan.lotSize,plan.symbol,magic,plan.stopLoss,plan.takeProfit,(strategy_id==0 ? "Manual" : NULL));   // the comment tells DealSource a Manual of any magic
+   ::PrintFormat("%s > %s strategy %I64d %s: %s, lot %.2f, SL %.*f, TP %.*f, risk %.2f",__FUNCTION__,symbol,strategy_id,::EnumToString(plan.orderType),(opened ? "sent" : "not opened"),
+                 plan.lotSize,symbol_obj.Digits(),plan.stopLoss,symbol_obj.Digits(),plan.takeProfit,plan.riskAmount);
   }
  //+------------------------------------------------------------------+
  //| What a Manual Entry (strategy 0) would be now: the stop of the    |
@@ -1755,19 +1765,21 @@ class CTradingControl : public CTrading
  //| Nothing is told (no RISK_EVENT_ENTRY_BLOCKED): the View shows it; |
  //| false: the risk cannot make it, the lot chosen goes alone         |
  //+------------------------------------------------------------------+
- bool CTradingControl::ManualPlan(const string symbol,const int direction,STradePlan &plan)
+ bool CTradingControl::ManualPlan(const string symbol,const ENUM_ORDER_TYPE type,STradePlan &plan)
   {
    CSymbol *symbol_obj=this.m_symbol_collection.GetSymbolObjByName(symbol);
    if(symbol_obj==NULL)
       return false;
-   this.m_risk_silent=true;   // a preview at each tick: the reasons are printed when a trade of a strategy is asked
-   const bool ok=(this.BuildPlan(symbol_obj,0,direction,this.StopLossPrice(symbol_obj,direction,true),plan) && this.ValidatePlan(symbol_obj,plan));
+   if(this.m_risk_setting.RiskMode()!=RISK_FIXED_LOT && this.m_risk_setting.Text("StopLossTemplates")=="")
+      return false;   // a lot by the risk needs a stop: no base ON, nothing to calculate
+   this.m_risk_silent=true;   // a preview: the reasons are printed when a trade of a strategy is asked
+   const bool ok=(this.BuildPlan(symbol_obj,0,type,this.StopLossPrice(symbol_obj,type,true),plan) && this.ValidatePlan(symbol_obj,plan));
    this.m_risk_silent=false;
    return ok;
   }
  //+------------------------------------------------------------------+
  //| New in V5: Trailing = the role SL again while the position runs  |
- //| (Strategy.md): the value of the bases ON in Trailing at the bar  |
+ //| (Concepts.md): the value of the bases ON in Trailing at the bar  |
  //| now (StopLossPrice, shift 0); the SL of each position of the EA  |
  //| on the symbol (its MagicID, every strategy and by hand) moves to |
  //| it when better: BUY higher, SELL lower (no SL yet: set). The TP  |
@@ -1791,19 +1803,19 @@ class CTradingControl : public CTrading
       const ulong ticket=order.Ticket();
       if(!::PositionSelectByTicket(ticket))
          continue;   // closed since the list was read
-      const int direction=(order.TypeOrder()==(long)POSITION_TYPE_BUY ? 1 : -1);
-      const int side=(direction==1 ? 0 : 1);
+      const ENUM_ORDER_TYPE type=(ENUM_ORDER_TYPE)order.TypeOrder();   // a position: POSITION_TYPE_BUY / SELL = ORDER_TYPE_BUY / SELL
+      const int side=(type==ORDER_TYPE_BUY ? 0 : 1);
       if(stop[side]==WRONG_VALUE)
-         stop[side]=this.StopLossPrice(symbol_obj,direction,true,"TrailingTemplates",0);
+         stop[side]=this.StopLossPrice(symbol_obj,type,true,"TrailingTemplates",0);
       const double sl=::PositionGetDouble(POSITION_SL);
       const double tp=::PositionGetDouble(POSITION_TP);
-      if(stop[side]<=0 || (sl>0 && (direction==1 ? stop[side]<=sl : stop[side]>=sl)))
+      if(stop[side]<=0 || (sl>0 && (type==ORDER_TYPE_BUY ? stop[side]<=sl : stop[side]>=sl)))
          continue;   // no value on the right side, or not better than the SL now
       this.SetSource(ticket,"Trailing");
       if(!this.ModifyPosition(ticket,stop[side],tp))
          this.SetSource(ticket,"");
       else
-         ::PrintFormat("%s > %s #%I64u %s: SL %.*f -> %.*f",__FUNCTION__,symbol,ticket,(direction==1 ? "BUY" : "SELL"),
+         ::PrintFormat("%s > %s #%I64u %s: SL %.*f -> %.*f",__FUNCTION__,symbol,ticket,::EnumToString(type),
                        symbol_obj.Digits(),sl,symbol_obj.Digits(),stop[side]);
      }
   }
@@ -1842,10 +1854,49 @@ class CTradingControl : public CTrading
  //+------------------------------------------------------------------+
  //| One row of the VALUES of an INSERT into TradingOrderDetail       |
  //+------------------------------------------------------------------+
- string CTradingControl::OrderDetailValues(const long position_id,const long time_msc,const long ticket,const int event,const double sl,const double tp,const double bid,const double ask,const string source) const
+ string CTradingControl::OrderDetailValues(const long position_id,const long time_msc,const long ticket,const int event,const double sl,const double tp,const double bid,const double ask,const string source,const long basket_id) const
   {
    return "("+(string)position_id+", "+(string)time_msc+", "+(string)ticket+", "+(string)event+", "+::DoubleToString(sl,8)+", "+::DoubleToString(tp,8)+", "+
-          ::DoubleToString(bid,8)+", "+::DoubleToString(ask,8)+", '"+this.m_CDatabaseService.QuoteSQLText(source)+"')";
+          ::DoubleToString(bid,8)+", "+::DoubleToString(ask,8)+", '"+this.m_CDatabaseService.QuoteSQLText(source)+"', "+(string)basket_id+")";
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: the basket of a position: the one on RAM; an open      |
+ //| position new to RAM joins the basket of an open position of its   |
+ //| symbol and side, or starts one (its own position_id). 0: closed   |
+ //| and not known                                                     |
+ //+------------------------------------------------------------------+
+ long CTradingControl::BasketId(const long position_id)
+  {
+   for(int i=0;i<::ArraySize(this.m_basket_position);i++)
+      if(this.m_basket_position[i]==position_id)
+         return this.m_basket_of_position[i];
+   CArrayObj *list=this.m_market.GetList();
+   COrder *position=NULL;
+   for(int i=0;list!=NULL && i<list.Total() && position==NULL;i++)
+     {
+      COrder *order=list.At(i);
+      if(this.m_market.HasPosition(order) && order.PositionID()==position_id)
+         position=order;
+     }
+   if(position==NULL)
+      return 0;
+   long basket_id=position_id;
+   for(int i=0;i<::ArraySize(this.m_basket_position) && basket_id==position_id;i++)
+      for(int j=0;j<list.Total();j++)
+        {
+         COrder *order=list.At(j);
+         if(order.PositionID()==this.m_basket_position[i] && this.m_market.HasPosition(order,position.Symbol(),(ENUM_POSITION_TYPE)position.TypeOrder()))
+           {
+            basket_id=this.m_basket_of_position[i];
+            break;
+           }
+        }
+   const int n=::ArraySize(this.m_basket_position);
+   ::ArrayResize(this.m_basket_position,n+1);
+   ::ArrayResize(this.m_basket_of_position,n+1);
+   this.m_basket_position[n]=position_id;
+   this.m_basket_of_position[n]=basket_id;
+   return basket_id;
   }
  //+------------------------------------------------------------------+
  //| New in V5: the source of the next action on a position ("": none)|
@@ -1898,6 +1949,8 @@ class CTradingControl : public CTrading
       return "Terminal";   // by hand in the terminal (desktop, mobile, web)
    if(deal.DealEntry()==DEAL_ENTRY_IN)
      {
+      if(deal.Comment()=="Manual")
+         return "Manual";   // the magic chosen in the panel can carry the StrategyID of a strategy
       const long strategy_id=(long)this.GetStrategyID((ulong)deal.Magic());
       return (strategy_id>0 ? "Entry S"+(string)strategy_id : "Manual");
      }
@@ -1911,7 +1964,7 @@ class CTradingControl : public CTrading
   {
    if(values=="" || this.m_CDatabaseService==NULL)
       return true;
-   if(!this.m_CDatabaseService.Create("Account","INSERT OR IGNORE INTO TradingOrderDetail (position_id, time_msc, ticket, event, sl, tp, bid, ask, source) VALUES "+values))
+   if(!this.m_CDatabaseService.Create("Account","INSERT OR IGNORE INTO TradingOrderDetail (position_id, time_msc, ticket, event, sl, tp, bid, ask, source, basket_id) VALUES "+values))
      {
       ::Print(__FUNCTION__," > TradingOrderDetail not written");
       return false;
@@ -1941,13 +1994,14 @@ class CTradingControl : public CTrading
  bool CTradingControl::UpdateDataToDB(const long position_id)
   {
    string values="";
+   const long basket_id=this.BasketId(position_id);
    CArrayObj *list=(this.m_history_collection!=NULL ? this.m_history_collection.GetList() : NULL);
    for(int i=0;list!=NULL && i<list.Total();i++)
      {
       COrder *deal=list.At(i);
       if(!this.IsDeal(deal) || deal.PositionID()!=position_id)
          continue;
-      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(position_id,deal.GetProperty(ORDER_PROP_TIME_OPEN),deal.Ticket(),TRADE_EVENT_NO_EVENT,0,0,deal.Bid(),deal.Ask(),this.DealSource(deal));
+      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(position_id,deal.GetProperty(ORDER_PROP_TIME_OPEN),deal.Ticket(),TRADE_EVENT_NO_EVENT,0,0,deal.Bid(),deal.Ask(),this.DealSource(deal),basket_id);
      }
    //--- A change of the SL / TP not asked by the EA (no source set): by hand in the terminal. The rows written before are kept with theirs
    const string source=this.Source((ulong)position_id);
@@ -1958,7 +2012,7 @@ class CTradingControl : public CTrading
       if(event==NULL || event.PositionID()!=position_id || !this.IsModifyEvent(event.TypeEvent()))
          continue;
       values+=(values=="" ? "" : ", ")+this.OrderDetailValues(position_id,event.TimeEvent(),0,event.TypeEvent(),event.PriceStopLoss(),event.PriceTakeProfit(),0,0,
-                                                               (source!="" ? source : "Terminal"));
+                                                               (source!="" ? source : "Terminal"),basket_id);
      }
    return this.UpdateDataToDB(values);
   }
@@ -2018,10 +2072,36 @@ class CTradingControl : public CTrading
       return false;
    if(!this.m_CDatabaseService.Create("Account","CREATE TABLE IF NOT EXISTS TradingOrderDetail (position_id INTEGER NOT NULL, time_msc INTEGER NOT NULL, ticket INTEGER NOT NULL, "
                                       "event INTEGER NOT NULL, sl REAL, tp REAL, bid REAL, ask REAL, source TEXT NOT NULL DEFAULT '', PRIMARY KEY (position_id, time_msc, ticket, event))") ||
-      !this.m_CDatabaseService.AddColumn("Account","TradingOrderDetail","source","TEXT NOT NULL DEFAULT ''"))
+      !this.m_CDatabaseService.AddColumn("Account","TradingOrderDetail","source","TEXT NOT NULL DEFAULT ''") ||
+      !this.m_CDatabaseService.AddColumn("Account","TradingOrderDetail","basket_id","INTEGER NOT NULL DEFAULT 0"))
      {
       ::Print(__FUNCTION__," > DatabaseService can't create table TradingOrderDetail");
       return false;
+     }
+   //--- The baskets of the open positions back to RAM from the table, then the open positions without one (oldest first) join or start one
+   CArrayObj *open=this.m_market.GetList();
+   long change_times[],change_events[];
+   double change_sls[],change_tps[];
+   for(int i=0;open!=NULL && i<open.Total();i++)
+     {
+      COrder *order=open.At(i);
+      long basket_id=0;
+      if(!this.m_market.HasPosition(order))
+         continue;
+      this.ReadDataFromDB(order.PositionID(),change_times,change_events,change_sls,change_tps,basket_id);
+      if(basket_id==0)
+         continue;
+      const int n=::ArraySize(this.m_basket_position);
+      ::ArrayResize(this.m_basket_position,n+1);
+      ::ArrayResize(this.m_basket_of_position,n+1);
+      this.m_basket_position[n]=order.PositionID();
+      this.m_basket_of_position[n]=basket_id;
+     }
+   for(int i=0;open!=NULL && i<open.Total();i++)   // the list is sorted by the open time; the rows written without it get it
+     {
+      COrder *order=open.At(i);
+      if(this.m_market.HasPosition(order))
+         this.m_CDatabaseService.Create("Account","UPDATE TradingOrderDetail SET basket_id = "+(string)this.BasketId(order.PositionID())+" WHERE position_id = "+(string)order.PositionID()+" AND basket_id = 0");
      }
    const ulong start=::GetTickCount64();
    STradingOrderDetailBidAsk rows[];
@@ -2048,7 +2128,8 @@ class CTradingControl : public CTrading
          continue;
         }
       deal.BidAskFromTicks();   // no tick any more: 0, written too so that it is not asked again
-      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(deal.PositionID(),deal.GetProperty(ORDER_PROP_TIME_OPEN),deal.Ticket(),TRADE_EVENT_NO_EVENT,0,0,deal.Bid(),deal.Ask(),this.DealSource(deal));
+      values+=(values=="" ? "" : ", ")+this.OrderDetailValues(deal.PositionID(),deal.GetProperty(ORDER_PROP_TIME_OPEN),deal.Ticket(),TRADE_EVENT_NO_EVENT,0,0,deal.Bid(),deal.Ask(),this.DealSource(deal),
+                                                            this.BasketId(deal.PositionID()));
       filled++;
       if(++batch>=500)
         {
@@ -2065,31 +2146,38 @@ class CTradingControl : public CTrading
  //+------------------------------------------------------------------+
  //| The changes of the SL / TP of a position, oldest first           |
  //+------------------------------------------------------------------+
- int CTradingControl::ReadDataFromDB(const long position_id,long &times[],long &events[],double &sls[],double &tps[])
+ int CTradingControl::ReadDataFromDB(const long position_id,long &times[],long &events[],double &sls[],double &tps[],long &basket_id)
   {
    ::ArrayResize(times,0);
    ::ArrayResize(events,0);
    ::ArrayResize(sls,0);
    ::ArrayResize(tps,0);
+   basket_id=0;
    int n=0;
    STradingOrderDetailChange rows[];
+   //--- Every row of the position: its deals (ticket) and the changes of its SL / TP (ticket 0); the basket is on each of them
    if(this.m_CDatabaseService!=NULL &&
-      this.m_CDatabaseService.Read("Account","SELECT time_msc, event, COALESCE(sl, 0), COALESCE(tp, 0) FROM TradingOrderDetail WHERE position_id = "+(string)position_id+
-                                   " AND ticket = 0 ORDER BY time_msc",rows) && ::ArraySize(rows)>0)
+      this.m_CDatabaseService.Read("Account","SELECT ticket, time_msc, event, COALESCE(sl, 0), COALESCE(tp, 0), basket_id FROM TradingOrderDetail WHERE position_id = "+(string)position_id+
+                                   " ORDER BY time_msc",rows))
      {
-      n=::ArraySize(rows);
-      ::ArrayResize(times,n);
-      ::ArrayResize(events,n);
-      ::ArrayResize(sls,n);
-      ::ArrayResize(tps,n);
-      for(int i=0;i<n;i++)
+      for(int i=0;i<::ArraySize(rows);i++)
         {
-         times[i]=rows[i].time_msc;
-         events[i]=rows[i].event;
-         sls[i]=rows[i].sl;
-         tps[i]=rows[i].tp;
+         if(rows[i].basket_id>basket_id)
+            basket_id=rows[i].basket_id;
+         if(rows[i].ticket!=0)
+            continue;
+         ::ArrayResize(times,n+1);
+         ::ArrayResize(events,n+1);
+         ::ArrayResize(sls,n+1);
+         ::ArrayResize(tps,n+1);
+         times[n]=rows[i].time_msc;
+         events[n]=rows[i].event;
+         sls[n]=rows[i].sl;
+         tps[n]=rows[i].tp;
+         n++;
         }
-      return n;
+      if(n>0)
+         return n;
      }
    //--- Not written (the write failed): the events of this run
    CArrayObj *list=(this.m_trade_event_collection!=NULL ? this.m_trade_event_collection.GetList() : NULL);

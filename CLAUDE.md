@@ -1,1 +1,1 @@
-@D:/MT5-Dev/skills/AGENTS.md
+@skills/AGENTS.md

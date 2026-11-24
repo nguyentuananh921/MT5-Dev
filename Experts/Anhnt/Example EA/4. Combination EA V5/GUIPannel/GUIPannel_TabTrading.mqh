@@ -1,25 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                          GUIPannel_TabTrading.mqh |
-//| The Trading tab of m_tabs_main (TAB_TAB_MAIN_TRADING): the row of |
-//| buttons (Open, Close All, Trade Manage), m_sections_trade_        |
-//| automation_setting (what the Automation uses for an Entry: Auto,  |
-//| Lot Size, Stop Loss, Trailing), m_sections_trade_select (the      |
-//| Manual Entry, Order Type), and what the user does in them.        |
-//| Auto (its header on the row of the buttons): a row for each       |
-//| strategy available, its switch = the strategy takes part in       |
-//| trading (Setting_Risk.EntryStrategies: CTradingControl uses it);  |
-//| the toggle of its header turns every strategy below ON / OFF (as  |
-//| the Indicator tab). Not the toggle Trade of the Strategy tab       |
-//| (trading_enabled): that one makes the strategy and turns its      |
-//| slots ON (their templates); this one only lets it trade.          |
-//| The View only tells CRiskSetting / the Trade: CTradingControl     |
-//| writes Setting_Risk. Moved from GUIPannel_Window_TradeManager.mqh |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABTRADING_MQH
 #define CGUIPANNEL_TABTRADING_MQH
-#include "GUIPannel.mqh"
- //--- The row of buttons, left of Close All: Open, which opens the direction chosen in m_sections_trade_select
- //--- (its text and the picture of the side as in the tables of the trades: SyncButton_OpenPosition)
+#include "GUIPannel.mqh" 
  bool CGUIPannel::CreateButtons_OpenPosition(void)
   {
    m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_btn_manual_open_position);
@@ -52,9 +36,9 @@
    return m_btn_manual_close_all_Position.Create(this.m_chart_id,M_SUBWINDOW_MAIN,"BtnCloseAllPosition",M_TRADING_X_CLOSEALL,M_CONTROL_BORDER_GAP,
                                         M_BUTTON_CLOSEALL_WIDTH,M_CONTROL_HEIGHT);
   }
- //--- m_sections_trade_automation_setting, left under the row of buttons: what the Automation uses for an Entry: Auto (its header toggle: the Automation
- //--- ON / OFF; the strategies available that take part in trading), then Setting_Risk: Lot Size, Stop Loss, Trailing (BaseIndicatorStrategy.md: a base
- //--- with the role). The other keys of Setting_Risk: the Risk Management tab (GUIPannel_TabQuickSetting_Risk.mqh)
+ //--- m_sections_trade_automation_setting: Auto sets the Automation Entry of the strategies of CStrategyManager (a row per strategy available,
+ //--- its switch loaded from DB, SetIdOn("EntryStrategies") of Setting_Risk); Manual (StrategyID 0) is always ON, not in Auto. Lot Size, Stop Loss, Trailing of Setting_Risk
+ // Manual Strategy allway on.
  bool CGUIPannel::CreateSections_TradingRisk(void)
   {
    if(!m_sections_trade_automation_setting.Create(this.m_chart_id,M_SUBWINDOW_MAIN,&m_tabs_main,TAB_TAB_MAIN_TRADING,"SectionsTradeAuto"))
@@ -68,8 +52,7 @@
    const string titles[TRADE_AUTO_SECTION_TOTAL]={"Auto","Lot Size","Stop Loss","Trailing"};
    for(int s=0;s<TRADE_AUTO_SECTION_TOTAL;s++)
      {
-      //--- Every section: a toggle on the header, "ON" / "OFF" and the switch (no flag), ON when a row below is ON (SyncSections_TradingRisk).
-      //--- Auto, Stop Loss, Trailing: it turns every row below ON / OFF; Lot Size: its modes exclude each other, one is always ON (the toggle stays ON)
+      //--- The header toggle: ON when a row is ON; Auto, Stop Loss, Trailing: turns every row ON / OFF; Lot Size: stays ON
       uint icons[1]={0};
       bool states[1]={false};
       if(m_sections_trade_automation_setting.AddSection(titles[s],icons,states,false)==WRONG_VALUE)   // closed at the start: the headers tell what is ON
@@ -164,9 +147,7 @@
    CRiskSetting *risk=(m_TradingControl!=NULL ? m_TradingControl.RiskSetting() : NULL);
    for(int s=0;s<TRADE_AUTO_SECTION_TOTAL;s++)
       m_sections_trade_automation_setting.ClearBody(s);
-   //--- Auto (its header toggle: the Automation ON / OFF): a row for each strategy whose slots all have their source (available), its switch = it takes part
-   //--- in trading (Setting_Risk.EntryStrategies), the value of the row = strategy_id. It does not make the slots: the toggle Trade of the Strategy tab
-   //--- (trading_enabled) does
+   //--- Auto: a row for each strategy available, its switch = allowed to Open Position (EntryStrategies), the value of the row = strategy_id
    if(m_StrategyManager!=NULL)
      {
       long ids[];
@@ -184,8 +165,8 @@
      {
       this.AddRow_TradingRisk(m_tabs_main,TAB_TAB_MAIN_TRADING,m_sections_trade_automation_setting,TRADE_AUTO_SECTION_LOTSIZE,i,i,::RiskModeText((ENUM_RISK_MODE)i),M_TRADE_AUTO_LABEL_WIDTH,
                               0,TRADE_AUTO_COLUMN_SWITCH,"RiskLot"+(string)i,TRADE_AUTO_SECTION_LOTSIZE,"",true);   // the switch only
-      const string mode_key=::RiskModeValueKey((ENUM_RISK_MODE)i);   // the amount of the mode
-      if(risk!=NULL)
+      const string mode_key=::RiskModeValueKey((ENUM_RISK_MODE)i);   // the amount of the mode ("": Min lot has none, the min lot of the symbol)
+      if(risk!=NULL && mode_key!="")
          this.AddValue_TradingRisk(m_tabs_main,TAB_TAB_MAIN_TRADING,m_sections_trade_automation_setting,TRADE_AUTO_SECTION_LOTSIZE,i,TRADE_AUTO_COLUMN_VALUE,i,
                                    mode_key,risk.Value(mode_key),"RiskLotValue"+(string)i);
      }
@@ -210,8 +191,7 @@
    this.SyncSections_TradingRisk();
    m_sections_trade_automation_setting.Arrange();
   }
- //--- Auto: its header toggle = the Automation ON / OFF, any number of strategies ON (EntryStrategies); Lot Size: one switch ON (the modes exclude each
- //--- other); Stop Loss, Trailing: any number ON (the best price wins). The header of the others tells what is ON
+ //--- The switches from Setting_Risk: Auto any number ON; Lot Size one ON; Stop Loss, Trailing any number ON (the best price wins)
  void CGUIPannel::SyncSections_TradingRisk(void)
   {
    if(m_TradingControl==NULL)
@@ -294,7 +274,7 @@
       if(m_sections_trade_select.AddSection(titles[s],icons,states,false)==WRONG_VALUE)   // closed at the start
          return false;
    //--- Entry: the names (the direction has none: its button says Buy / Sell)
-   const string names[]={"","SL","TP","MaxLot","Lot"};
+   const string names[]={"","SL","TP","MaxLot","Lot","Magic"};
    for(int r=1;r<::ArraySize(names);r++)
       if(!this.AddRow_TradingRisk(m_tabs_main,TAB_TAB_MAIN_TRADING,m_sections_trade_select,TRADE_SELECT_SECTION_ENTRY,r,r,names[r],M_TRADE_SELECT_LABEL_WIDTH,0,TRADE_SELECT_COLUMN_VALUE,"ManualEntry"+(string)r,TRADE_SLOT_LABEL))
          return false;
@@ -330,6 +310,14 @@
       return false;
    if(!m_sections_trade_select.AddControl(TRADE_SELECT_SECTION_ENTRY,::GetPointer(m_combobox_manual_lot),TRADE_SELECT_COLUMN_VALUE,4,4,TRADE_SLOT_LOT))
       return false;
+   //--- the magic: typed, the EA's first (0: none, as the terminal)
+   m_edit_manual_magic.Hide();
+   m_tabs_main.AddToElementsArray(TAB_TAB_MAIN_TRADING,m_edit_manual_magic);
+   if(!m_edit_manual_magic.CreateTextEdit(this.m_chart_id,M_SUBWINDOW_MAIN,"EditManualMagic",0,0,M_TRADE_SELECT_VALUE_WIDTH,M_CONTROL_HEIGHT,M_TRADE_SELECT_VALUE_WIDTH))
+      return false;
+   m_edit_manual_magic.SetText("");
+   if(!m_sections_trade_select.AddControl(TRADE_SELECT_SECTION_ENTRY,::GetPointer(m_edit_manual_magic),TRADE_SELECT_COLUMN_VALUE,5,5,TRADE_SLOT_MAGIC))
+      return false;
    //--- Order Type
    const string orders[]={"Market","Limit","Stop","Stop Limit"};         // the order types of the Manual Entry (Market only for now: TRADE_SETUP_EVENT_SEND)
    for(int i=0;i<::ArraySize(orders);i++)
@@ -355,7 +343,7 @@
    const string symbol=::Symbol();
    CSymbol *symbol_obj=m_SymbolsCollection.GetSymbolObjByName(symbol);
    STradePlan plan;
-   const bool ok=m_TradingControl.ManualPlan(symbol,(buy ? 1 : -1),plan);
+   const bool ok=m_TradingControl.ManualPlan(symbol,(buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL),plan);
    const int digits=(symbol_obj!=NULL ? symbol_obj.Digits() : _Digits);
    const double step=(symbol_obj!=NULL ? symbol_obj.LotsStep() : 0.01);
    const double min_lot=(symbol_obj!=NULL ? symbol_obj.LotsMin() : 0.01);
@@ -389,6 +377,8 @@
         }
      }
    m_sections_trade_select.SetHeaderText(TRADE_SELECT_SECTION_ENTRY,"Manual: "+(ok ? ::DoubleToString(plan.lotSize,lot_digits) : "no risk"));   // the lot (MaxLot), or no plan of the risk
+   if(m_edit_manual_magic.GetValue()=="")
+      m_edit_manual_magic.SetValue((string)m_TradingControl.MagicIdEA(symbol));   // the EA's until one is typed
    //--- Working on RAM: the list lives in the ListView; it is made again only when it changed (MaxLot, the count), not at each refresh (the open list kept)
    CListView *list=m_combobox_manual_lot.GetListViewPointer();
    const string first=(total>0 ? ::DoubleToString(lots[0],lot_digits) : "-");
@@ -431,8 +421,8 @@
       ::ChartRedraw(this.m_chart_id);
       return;
      }
-   //--- The results of the Automation again: a base in use refreshed at a tick of the chart's symbol (BaseIndicatorStrategy.md), a key of Setting_Risk changed
-   if((id==CHARTEVENT_CUSTOM+INDICATOR_EVENT_REFRESHED && sparam==::Symbol() && (int)dparam==(int)::Period()) || id==CHARTEVENT_CUSTOM+RISK_SETTING_EVENT_CHANGED)
+   //--- The results of the Automation again: a new bar of the chart, a key of Setting_Risk changed
+   if((id==CHARTEVENT_CUSTOM+SERIES_EVENTS_NEW_BAR && sparam==::Symbol() && (int)dparam==(int)::Period()) || id==CHARTEVENT_CUSTOM+RISK_SETTING_EVENT_CHANGED)
      {
       this.SyncSections_TradeSelect();
       ::ChartRedraw(this.m_chart_id);
@@ -440,8 +430,7 @@
      }
    if(id!=CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && id!=CHARTEVENT_CUSTOM+CHANGE_EVENT_END_EDIT && id!=CHARTEVENT_CUSTOM+CLICK_EVENT_INC && id!=CHARTEVENT_CUSTOM+CLICK_EVENT_DEC)
       return;
-   //--- The toggle of the header of Auto (as the Indicator tab): ON = every strategy below takes part in trading, OFF = none (dparam = the new state);
-   //--- the View only tells Setting_Risk.EntryStrategies. It does not make the slots: the toggle Trade of the Strategy tab does
+   //--- The header toggles; Auto: every strategy below allowed to Open Position or none (dparam = the new state)
    int which=0;
    const int toggle_section=(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON ? m_sections_trade_automation_setting.SectionOfToggle(lparam,which) : WRONG_VALUE);
    //--- The toggle of the header of Lot Size: a mode is always ON, the toggle goes back to ON
@@ -487,7 +476,7 @@
    if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && m_TradingControl!=NULL && m_sections_trade_automation_setting.BodyOf(lparam,row_id,slot,param) && slot!=TRADE_SLOT_LABEL)
      {
       CRiskSetting *risk=m_TradingControl.RiskSetting();
-      //--- Auto: a strategy takes part in trading or not (it does not make its slots: the toggle Trade of the Strategy tab does)
+      //--- Auto: a strategy allowed to Open Position or not
       if(slot==TRADE_AUTO_SECTION_AUTO)
          risk.SetIdOn("EntryStrategies",row_id,dparam!=0);
       else if(slot==TRADE_AUTO_SECTION_LOTSIZE && dparam!=0)
@@ -542,7 +531,7 @@
          return;
         }
       this.EventSend((ushort)TRADE_SETUP_EVENT_SEND,(m_btn_triggered_manual_trade_dirrection.State() ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL),
-                     ::StringToDouble(m_combobox_manual_lot.GetValue()),::Symbol());
+                     ::StringToDouble(m_combobox_manual_lot.GetValue()),::Symbol()+";"+m_edit_manual_magic.GetValue());   // "symbol;magic": the magic typed
       return;
      }
   }

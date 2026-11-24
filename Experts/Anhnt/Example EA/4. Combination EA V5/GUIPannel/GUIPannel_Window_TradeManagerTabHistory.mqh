@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //|                         GUIPannel_Window_TradeManagerTabHistory.mqh |
-//| The History tab of the Trade Manage window (TAB_TRADE_HISTORY_   |
+//| TAB_TRADE_HISTORY_   |
 //| POSITION): the trades, one row for each position that was closed,|
 //| newest first, from the deals of CHistoryCollection. A pending    |
 //| order that was deleted is not a trade: it is not shown           |
@@ -168,6 +168,11 @@
       cells[c++]=(commission[k]!=0 ? ::DoubleToString(commission[k],2) : "");
       cells[c++]=(swap[k]!=0 ? ::DoubleToString(swap[k],2) : "");
       cells[c++]=(string)ids[k];
+      long change_time[],change_event[],basket_id=0;   // the basket of the trade: what the table keeps of its position (0: not known, blank)
+      double change_sl[],change_tp[];
+      if(m_TradingControl!=NULL)
+         m_TradingControl.ReadDataFromDB(ids[k],change_time,change_event,change_sl,change_tp,basket_id);
+      cells[c++]=(basket_id!=0 ? (string)basket_id : "");
       cells[c++]=(t_open[k]>0 ? opened : "");
       cells[c++]=shut;
       cells[c++]=(vol_in[k]>0 ? ::DoubleToString(value_in[k]/vol_in[k],digits) : "");

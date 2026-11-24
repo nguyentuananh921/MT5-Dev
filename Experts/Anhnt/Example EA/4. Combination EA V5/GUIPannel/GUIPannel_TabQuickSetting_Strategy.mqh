@@ -110,8 +110,14 @@
         }
       if(!found)
         {
-         ::Print(__FUNCTION__," > ",slot.Slot()," timeframe ",(string)(int)slot.Timeframe()," is not in SymbolTFManager for ",::Symbol());
-         return false;
+         //--- the TF of the slot is not a pair of the chart's Symbol: shown last and chosen, the value on RAM stays
+         ::Print(__FUNCTION__," > ",slot.Slot()," timeframe ",::EnumToString(slot.Timeframe())," is not in SymbolTFManager for ",::Symbol());
+         tf.GetListViewPointer().Rebuilding(tf_total+2);
+         tf.SetValue(0,"Current");
+         for(int i=0;i<tf_total;i++)
+            tf.SetValue(i+1,m_SymbolTFManager.Read_RAM(tfs[i]));
+         tf.SetValue(tf_total+1,m_SymbolTFManager.Read_RAM(slot.Timeframe()));
+         selected=tf_total+1;
         }
       tf.SelectItem(selected);
       tf.GetListViewPointer().Draw(false);
@@ -120,6 +126,23 @@
          return false;
      }
    return true;
+  }
+ //--- The rows of every section again: the TFs follow CSymbolTFManager (a pair added / deleted, the chart moved to another Symbol)
+ void CGUIPannel::RebuildRows_Strategy(void)
+  {
+   if(m_first_start || m_StrategyManager==NULL)
+      return;   // the panel is not built yet
+   long ids[];
+   const int total=m_StrategyManager.Read_RAM(ids);
+   for(int s=0;s<total && s<m_sections_strategy.SectionsTotal();s++)
+     {
+      CStrategySetting *strategy=m_StrategyManager.Read_RAM(ids[s]);
+      m_sections_strategy.ClearBody(s);
+      if(strategy!=NULL)
+         this.AddRow_Strategy(s,strategy);
+     }
+   this.SyncSections_Strategy();
+   m_sections_strategy.Arrange();
   }
  //--- What the row shows: the slot, then the params it reads (CStrategyManager) as the templates show them ("Alligator  (13, 8, 8, 5, 5, 3, SMMA, MEDIAN)")
  string CGUIPannel::SlotText_Strategy(CStrategyIndicatorSetting *slot)
@@ -226,6 +249,13 @@
       id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_AVAILABLE_CHANGED)
      {
       this.SyncSections_Strategy();
+      ::ChartRedraw(this.m_chart_id);
+      return;
+     }
+   //--- A pair of the chart's Symbol added / deleted (CSymbolTFManager, sparam = its Symbol): the TFs of the slots follow
+   if((id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_ADDED || id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE) && sparam==::Symbol())
+     {
+      this.RebuildRows_Strategy();
       ::ChartRedraw(this.m_chart_id);
       return;
      }

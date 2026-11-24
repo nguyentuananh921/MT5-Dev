@@ -134,6 +134,8 @@
      case BAR_INFORMATION_JAPANESE_CANDLE: return "Candle patterns";
      case BAR_INFORMATION_PRICE_ACTION_CANDLE: return "Price Action";
      case BAR_INFORMATION_SMART_MONEY:         return "Smart Money";
+     case BAR_INFORMATION_HARMONIC:            return "Harmonic";
+     case BAR_INFORMATION_CHART_PATTERN:       return "Chart Pattern";
      case BAR_INFORMATION_SIGNAL:              return "Indicator signals";
      default:                return "Other";
     }
@@ -183,6 +185,20 @@
         {BAR_INFOR_TYPE_SWING_LOW,            "Swing Low",            BAR_INFORMATION_SMART_MONEY, 1, true,  false},
         {BAR_INFOR_TYPE_BOS,                  "BOS",                  BAR_INFORMATION_SMART_MONEY, 1, true,  true },
         {BAR_INFOR_TYPE_CHOCH,                "CHoCH",                BAR_INFORMATION_SMART_MONEY, 1, true,  true },
+      // --- Harmonic (New in V5): candles = the pivots of the pattern
+        {BAR_INFOR_TYPE_GARTLEY,              "Gartley",              BAR_INFORMATION_HARMONIC, 5, true,  true },
+        {BAR_INFOR_TYPE_BAT,                  "Bat",                  BAR_INFORMATION_HARMONIC, 5, true,  true },
+        {BAR_INFOR_TYPE_BUTTERFLY,            "Butterfly",            BAR_INFORMATION_HARMONIC, 5, true,  true },
+        {BAR_INFOR_TYPE_CRAB,                 "Crab",                 BAR_INFORMATION_HARMONIC, 5, true,  true },
+        {BAR_INFOR_TYPE_CYPHER,               "Cypher",               BAR_INFORMATION_HARMONIC, 5, true,  true },
+        {BAR_INFOR_TYPE_SHARK,                "Shark",                BAR_INFORMATION_HARMONIC, 5, true,  true },
+        {BAR_INFOR_TYPE_AB_CD,                "AB=CD",                BAR_INFORMATION_HARMONIC, 4, true,  true },
+        {BAR_INFOR_TYPE_THREE_DRIVES,         "3 Drives",             BAR_INFORMATION_HARMONIC, 6, true,  true },
+        {BAR_INFOR_TYPE_FIVE_DRIVES,          "5 Drives",             BAR_INFORMATION_HARMONIC, 6, true,  true },
+      // --- Chart Pattern (New in V5)
+        {BAR_INFOR_TYPE_HEAD_SHOULDERS,       "Head & Shoulders",     BAR_INFORMATION_CHART_PATTERN, 5, true,  true },
+        {BAR_INFOR_TYPE_DOUBLE_TOP_BOTTOM,    "Double Top / Bottom",  BAR_INFORMATION_CHART_PATTERN, 3, true,  true },
+        {BAR_INFOR_TYPE_QUASIMODO,            "Quasimodo",            BAR_INFORMATION_CHART_PATTERN, 4, true,  true },
      };
    int total = ArraySize(catalog);
    ArrayResize(out, total);
@@ -217,6 +233,19 @@
    if(param == BAR_PARAM_BARS_BEFORE)        return "Bars before";
    if(param == BAR_PARAM_SWING_STRENGTH)     return "Strength";
    if(param == BAR_PARAM_PRICE_BASIS)        return "Price basis";
+   if(param == BAR_PARAM_TOLERANCE)          return "Tolerance";
+   if(param == BAR_PARAM_AB_MIN)             return "AB min (of XA)";
+   if(param == BAR_PARAM_AB_MAX)             return "AB max (of XA)";
+   if(param == BAR_PARAM_BC_MIN)             return "BC min (of AB)";
+   if(param == BAR_PARAM_BC_MAX)             return "BC max (of AB)";
+   if(param == BAR_PARAM_CD_MIN)             return "CD min (of BC)";
+   if(param == BAR_PARAM_CD_MAX)             return "CD max (of BC)";
+   if(param == BAR_PARAM_SHOULDER_TOLERANCE) return "Shoulder tolerance (points)";
+   if(param == BAR_PARAM_TROUGH_TOLERANCE)   return "Trough tolerance (points)";
+   if(param == BAR_PARAM_MIN_BARS)           return "Min bars";
+   if(param == BAR_PARAM_MAX_BARS)           return "Max bars";
+   if(param == BAR_PARAM_BARS_MULTIPLIER)    return "Bars multiplier";
+   if(param == BAR_PARAM_LEG_BALANCE)        return "Leg balance %";
    return param;
   }
 
@@ -294,6 +323,30 @@
         {BAR_INFOR_TYPE_SWING_HIGH,           BAR_PARAM_PRICE_BASIS,        SWING_DEF_PRICE_BASIS},
         {BAR_INFOR_TYPE_SWING_LOW,            BAR_PARAM_SWING_STRENGTH,     SWING_DEF_STRENGTH},
         {BAR_INFOR_TYPE_SWING_LOW,            BAR_PARAM_PRICE_BASIS,        SWING_DEF_PRICE_BASIS},
+      // --- Harmonic (New in V5): the inputs of their EA
+        {BAR_INFOR_TYPE_GARTLEY,              BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_BAT,                  BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_BUTTERFLY,            BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_CRAB,                 BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_CYPHER,               BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_SHARK,                BAR_PARAM_AB_MIN,             SHARK_DEF_AB_MIN},
+        {BAR_INFOR_TYPE_SHARK,                BAR_PARAM_AB_MAX,             SHARK_DEF_AB_MAX},
+        {BAR_INFOR_TYPE_SHARK,                BAR_PARAM_BC_MIN,             SHARK_DEF_BC_MIN},
+        {BAR_INFOR_TYPE_SHARK,                BAR_PARAM_BC_MAX,             SHARK_DEF_BC_MAX},
+        {BAR_INFOR_TYPE_SHARK,                BAR_PARAM_CD_MIN,             SHARK_DEF_CD_MIN},
+        {BAR_INFOR_TYPE_SHARK,                BAR_PARAM_CD_MAX,             SHARK_DEF_CD_MAX},
+        {BAR_INFOR_TYPE_AB_CD,                BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_THREE_DRIVES,         BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+        {BAR_INFOR_TYPE_FIVE_DRIVES,          BAR_PARAM_TOLERANCE,          HARMONIC_DEF_TOLERANCE},
+      // --- Chart Pattern (New in V5)
+        {BAR_INFOR_TYPE_HEAD_SHOULDERS,       BAR_PARAM_SHOULDER_TOLERANCE, HS_DEF_SHOULDER_TOLERANCE_POINTS},
+        {BAR_INFOR_TYPE_HEAD_SHOULDERS,       BAR_PARAM_TROUGH_TOLERANCE,   HS_DEF_TROUGH_TOLERANCE_POINTS},
+        {BAR_INFOR_TYPE_HEAD_SHOULDERS,       BAR_PARAM_MIN_BARS,           HS_DEF_MIN_BARS},
+        {BAR_INFOR_TYPE_HEAD_SHOULDERS,       BAR_PARAM_MAX_BARS,           HS_DEF_MAX_BARS},
+        {BAR_INFOR_TYPE_HEAD_SHOULDERS,       BAR_PARAM_BARS_MULTIPLIER,    HS_DEF_BARS_MULTIPLIER},
+        {BAR_INFOR_TYPE_DOUBLE_TOP_BOTTOM,    BAR_PARAM_TOLERANCE,          DOUBLE_DEF_PEAK_TOLERANCE},
+        {BAR_INFOR_TYPE_DOUBLE_TOP_BOTTOM,    BAR_PARAM_MIN_BARS,           DOUBLE_DEF_MIN_BARS},
+        {BAR_INFOR_TYPE_DOUBLE_TOP_BOTTOM,    BAR_PARAM_LEG_BALANCE,        DOUBLE_DEF_LEG_BALANCE},
      };
    int total = ArraySize(catalog);
    ArrayResize(out, total);
@@ -396,6 +449,10 @@
      {
       this.EventSend((ushort)BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED, (long)BAR_INFOR_TYPE_BOS, 0.0, "");
       this.EventSend((ushort)BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED, (long)BAR_INFOR_TYPE_CHOCH, 0.0, "");
+      //--- New in V5: the pivot patterns are made of the swings too
+      for(int t = BAR_INFOR_TYPE_GARTLEY; t <= BAR_INFOR_TYPE_LAST; t++)
+         if(this.Read_RAM((ENUM_BAR_INFOR_TYPE)t) != NULL)
+            this.EventSend((ushort)BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED, (long)t, 0.0, "");
      }
    return true;
   }

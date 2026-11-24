@@ -40,8 +40,11 @@
    //--- before it (HH, else LH); lower: below the Swing Low before it (LL, else HL). The swing before must be confirmed at most STRUCTURE_LOOKBACK bars back
     bool              FindBrokenHigh(const int index,bool &higher) const;
     bool              FindBrokenLow(const int index,bool &lower) const;
-   //--- How many bars before the bar that confirms it the swing is (its row is on the pivot bar)
-    virtual int       Shift(void) const { return (int)::fmax(1,this.Param(BAR_PARAM_SWING_STRENGTH)); }
+   //--- How many bars before the bar that confirms it the swing is (its row is on the pivot bar): the strength of the type judged now
+    int               Strength(void) const { return (int)::fmax(1,this.Param(BAR_PARAM_SWING_STRENGTH)); }
+    virtual int       Shift(const ENUM_BAR_INFOR_TYPE type,const int index) const { return this.Strength(); }
+   //--- New in V5: the price a swing is found on, by the price_basis of the type judged now (CBarPattern reads the pivots of the swings with it)
+    bool              IsWick(void) const { return ((int)this.Param(BAR_PARAM_PRICE_BASIS)==SWING_PRICE_BASIS_WICK); }
    //--- The judge
                       CBarSwing(void) : m_list(NULL) { this.m_object_type=OBJECT_DE_TYPE_SERIES_SWING; }
   };
@@ -94,7 +97,7 @@
  //+------------------------------------------------------------------+
  ENUM_SIGNAL_DIRECTION CBarSwing::FindSwingHigh(const int index) const
   {
-   int strength=this.Shift();
+   int strength=this.Strength();
    int pivot=index-strength;
    if(this.m_list==NULL || pivot<strength || index>=this.m_list.Total())
       return SIGNAL_DIRECTION_NO_PATTERN;
@@ -113,7 +116,7 @@
  //+------------------------------------------------------------------+
  ENUM_SIGNAL_DIRECTION CBarSwing::FindSwingLow(const int index) const
   {
-   int strength=this.Shift();
+   int strength=this.Strength();
    int pivot=index-strength;
    if(this.m_list==NULL || pivot<strength || index>=this.m_list.Total())
       return SIGNAL_DIRECTION_NO_PATTERN;
@@ -137,7 +140,7 @@
   {
    if(this.m_list==NULL || index<0 || index>=this.m_list.Total())
       return -1;
-   const int strength=this.Shift();
+   const int strength=this.Strength();
    const int oldest=(int)::fmax(0,index-STRUCTURE_LOOKBACK);
    int confirm=-1,confirm_before=-1;
    for(int k=index;k>=oldest && confirm_before<0;k--)

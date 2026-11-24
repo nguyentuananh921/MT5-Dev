@@ -41,6 +41,7 @@
     //--- V5: the rows of the table are bits on the bars (CBar::AddPatternType): the bars of the series keep theirs, the bars before the series read for a view are here (one CBar each)
     CArrayObj         m_list_Table_BarTimeSeriesCollection;
     datetime          m_judged_to;                     // RAM only: the newest closed bar every type of the pair is judged to (0: not judged yet)
+    datetime          m_pivot_to;                      // New in V5, RAM only: the newest closed bar the FOUND / INVALID of the pivot patterns are looked at
     CSyncManager     *m_SyncManager;                   // The EA holds it: the progress of each type (Setting_Sync)
     long              m_sync_object;                   // The collection the rows are of (its m_type): sync_object of Setting_Sync
    //--- The bar of the series by its time
@@ -49,11 +50,17 @@
     CJudge           *Judge(const ENUM_BAR_INFOR_TYPE type);
    //--- V5: a row is the type and its side set on the bar. True when the bar did not have it
     bool              NewRow(CBar *bar,const long type,const long direction);
+   //--- New in V5: the index of the bar of the series by its time (-1: not there)
+    int               IndexOf(const datetime time);
+   //--- New in V5: the pivot patterns at the newest closed bar (live, RAM only, no row): FOUND when a Pivot Point Reversal makes the last pivot and the rule holds
+   //--- (its bit set on that bar, SERIES_EVENTS_PATTERN_FOUND); INVALID when the bar goes beyond a FOUND not confirmed yet, or the swing did not confirm it
+   //--- (its bit taken away, SERIES_EVENTS_PATTERN_INVALID). The CONFIRM is the row JudgeNewBars finds (SERIES_EVENTS_PATTERN)
+    void              CalculatePivotPatterns(const datetime last_closed,const ENUM_BAR_INFOR_TYPE &types[]);
    protected:
    //--- V5 CJudgeControl, the target is the type: (1) its judge, (2) its parameters set on the judge (from Find), (3) a row set on the bar of the series
     virtual CJudge   *JudgeOf(const int target)                                              { return this.Judge((ENUM_BAR_INFOR_TYPE)target); }
     virtual bool      Prepare(const int target,CArrayObj *list,const datetime since);
-    virtual bool      StoreRow(const int target,const datetime time,const ENUM_SIGNAL_DIRECTION side) { return this.NewRow(this.GetBar(time),target,side); }
+    virtual bool      StoreRow(const int target,const datetime time,const ENUM_SIGNAL_DIRECTION side);
    public:
    //--- V5: a row Python found (CPythonBridge) is set on its bar and told by the event of its type (Working with Event): lparam = EventPack(bar time,
    //--- type, side, is_new), dparam = the timeframe, sparam = the symbol. False when the bar had it already (judged on RAM before: no second event)
@@ -83,6 +90,9 @@
     int               DeleteRows(const datetime before);
    //--- The event that tells a new row of the type: the one of the class that finds it (CJudge::Event), SERIES_EVENTS_PATTERN for a type only Python finds
     ushort            EventOf(const ENUM_BAR_INFOR_TYPE type);
+   //--- New in V5: the pivots of the pivot pattern of the type whose row (its bit) is on the bar of the series at d_time, the oldest first: for the View
+   //--- (CPivotPatternShape) and Trading. Returns how many, 0 when the bar is not in the series or the rule does not hold there
+    int               PivotPoints(const ENUM_BAR_INFOR_TYPE type,const datetime d_time,long &times[],double &prices[],bool &highs[]);
    //--- Does this class find the type (CBarPattern, CBarSwing, CBarBOS or CBarCHoCH does; the others are found by Python only, or not yet)
     bool              IsFound(const ENUM_BAR_INFOR_TYPE type) { return (this.Judge(type)!=NULL); }
    //--- The types this class finds, in the order of the enum: returns how many
@@ -103,7 +113,7 @@
  //+------------------------------------------------------------------+
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
- CBarControl::CBarControl(void) : m_BarInformationManager(NULL),m_list_series(NULL),m_symbol(NULL),m_timeframe(PERIOD_CURRENT),m_judged_to(0),
+ CBarControl::CBarControl(void) : m_BarInformationManager(NULL),m_list_series(NULL),m_symbol(NULL),m_timeframe(PERIOD_CURRENT),m_judged_to(0),m_pivot_to(0),
                                  m_SyncManager(NULL),m_sync_object(0)
   {
    this.m_object_type=OBJECT_DE_TYPE_SERIES_BAR_CONTROL;
@@ -158,12 +168,57 @@
    return true;
   }
  //+------------------------------------------------------------------+
+ //| V5: a row judged on RAM goes to its bar. The CONFIRM of a pivot   |
+ //| pattern finds its bit there already when it was FOUND: it is told |
+ //| all the same (it is judged once, at the bar that confirms it)     |
+ //+------------------------------------------------------------------+
+ bool CBarControl::StoreRow(const int target,const datetime time,const ENUM_SIGNAL_DIRECTION side)
+  {
+   CBar *bar=this.GetBar(time);
+   if(this.NewRow(bar,target,side))
+      return true;
+   return (CBarPattern::IsPivotPattern((ENUM_BAR_INFOR_TYPE)target) && bar!=NULL && bar.InformationSide((ENUM_BAR_INFOR_TYPE)target)==side);
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: the pivots of a pivot pattern on the bar d_time: its   |
+ //| last pivot is a high or a low, the rule says which                |
+ //+------------------------------------------------------------------+
+ int CBarControl::PivotPoints(const ENUM_BAR_INFOR_TYPE type,const datetime d_time,long &times[],double &prices[],bool &highs[])
+  {
+   ::ArrayResize(times,0);
+   ::ArrayResize(prices,0);
+   ::ArrayResize(highs,0);
+   if(!CBarPattern::IsPivotPattern(type))
+      return 0;
+   const int d_index=this.IndexOf(d_time);
+   if(d_index<0 || !this.Prepare((int)type,this.m_list_series,0))
+      return 0;
+   for(int k=0;k<2;k++)
+     {
+      const int total=this.m_pattern_instance.Points(type,d_index,(k==0),times,prices,highs);
+      if(total>0)
+         return total;
+     }
+   return 0;
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: the index of the bar of the series by its time         |
+ //+------------------------------------------------------------------+
+ int CBarControl::IndexOf(const datetime time)
+  {
+   if(this.m_list_series==NULL)
+      return -1;
+   this.m_bar_tmp.SetSymbolPeriod(this.m_symbol,this.m_timeframe,time);
+   this.m_list_series.Sort(SORT_BY_BAR_TIME);
+   return this.m_list_series.Search(&this.m_bar_tmp);
+  }
+ //+------------------------------------------------------------------+
  //| Every type this class finds                                      |
  //+------------------------------------------------------------------+
  int CBarControl::Types(ENUM_BAR_INFOR_TYPE &types[])
   {
    ::ArrayResize(types,0);
-   for(int type=BAR_INFOR_TYPE_HAMMER;type<=BAR_INFOR_TYPE_CHOCH;type++)
+   for(int type=BAR_INFOR_TYPE_HAMMER;type<=BAR_INFOR_TYPE_LAST;type++)
       if(this.IsFound((ENUM_BAR_INFOR_TYPE)type))
         {
          int total=::ArraySize(types);
@@ -171,36 +226,7 @@
          types[total]=(ENUM_BAR_INFOR_TYPE)type;
         }
    return ::ArraySize(types);
-  }
- //+------------------------------------------------------------------+
- //| The rows of the last scan as the arrays the table is written from|
- //+------------------------------------------------------------------+
-// int CBarControl::RowsTo(long &times[],long &sides[]) const
-//  {
-//   int total=this.Rows();
-//   ::ArrayResize(times,total);
-//   ::ArrayResize(sides,total);
-//   for(int row=0;row<total;row++)
-//     {
-//      times[row]=(long)this.RowTime(row);
-//      sides[row]=(long)this.RowSide(row);
-//     }
-//   return total;
-//  }
- //+------------------------------------------------------------------+
- //| Judge the bars after `since` for a type: CBarControl gives the    |
- //| judge what it needs, the judge calculates (CJudge::Calculate)     |
- //+------------------------------------------------------------------+
-// int CBarControl::Find(const ENUM_BAR_INFOR_TYPE type,CArrayObj *list,const datetime since)
-//  {
-//   ::ArrayFree(this.m_row_time);
-//   ::ArrayFree(this.m_row_side);
-//   CJudge *judge=this.Judge(type);
-//   if(list==NULL || list.Total()==0 || this.m_BarInformationManager==NULL || judge==NULL)
-//      return 0;
-//   CBar *newest=list.At(list.Total()-1);
-//   if(newest==NULL)
-//      return 0;
+  } 
  //--- V5 (from Find): the judge of the type gets what it needs; CJudgeControl::JudgeNewBars calculates
  bool CBarControl::Prepare(const int target,CArrayObj *list,const datetime since)
   {
@@ -223,6 +249,19 @@
       this.m_swing_low_instance.SetJudge(list,low_names,low_values);
       this.m_bos_instance.SetJudge(&this.m_swing_instance,&this.m_swing_low_instance);
       this.m_choch_instance.SetJudge(&this.m_swing_instance,&this.m_swing_low_instance);
+     }
+   else if(CBarPattern::IsPivotPattern(type))
+     {
+      //--- New in V5: a pivot pattern has its parameters, its pivots are the swings of Swing High and Swing Low (their strength and price basis)
+      string swing_names[],low_names[];
+      double swing_values[],low_values[];
+      this.m_BarInformationManager.Read_RAM(BAR_INFOR_TYPE_SWING_HIGH,swing_names,displays,swing_values);
+      this.m_BarInformationManager.Read_RAM(BAR_INFOR_TYPE_SWING_LOW,low_names,displays,low_values);
+      this.m_swing_instance.SetJudge(list,swing_names,swing_values);
+      this.m_swing_low_instance.SetJudge(list,low_names,low_values);
+      this.m_BarInformationManager.Read_RAM(type,names,displays,values);
+      this.m_pattern_instance.SetJudge(list,::SymbolInfoDouble(newest.Symbol(),SYMBOL_POINT),names,values);
+      this.m_pattern_instance.SetSwings(&this.m_swing_instance,&this.m_swing_low_instance);
      }
    else
      {
@@ -329,69 +368,6 @@
    CBar *newest=(last_closed!=0 ? this.GetBar(last_closed) : NULL);
    if(newest==NULL || newest.Time()!=last_closed)
       return false;   // the series has not the newest closed bar yet (RefreshSeries adds it)
-//   long types[],last_bars[];
-//   this.m_SyncManager.Read_RAM(this.m_sync_object,this.m_symbol,this.m_timeframe,types,last_bars);
-//   ENUM_BAR_INFOR_TYPE found_types[];
-//   int found_total=this.Types(found_types);
-//   bool finished=true;        // every type of the pair is judged to the newest closed bar
-//   bool any_progress=false;   // a type of the pair has the row of progress of Python: the first chunk is there
-//   bool changed=false;        // a row or a mark is new in RAM
-//   long told_params[];        // each row added and the event that tells it
-//   ushort told_events[];
-//   for(int t=0;t<found_total;t++)
-//     {
-//      datetime since=0;
-//      bool has_progress=false;
-//      for(int k=0;k<::ArraySize(types);k++)
-//         if(types[k]==(long)found_types[t])
-//           {
-//            since=(datetime)last_bars[k];
-//            has_progress=true;
-//           }
-//      any_progress=any_progress || has_progress;
-//      if(!has_progress || since>=last_closed)
-//         continue;   // no row of progress: the history of the start is Python's
-//      CBar *oldest=this.m_list_series.At(0);
-//      if(oldest==NULL || oldest.Time()>since)
-//        {
-//         finished=false;   // what is missing is more than the series holds: Python fills it
-//         continue;
-//        }
-//      this.Find(found_types[t],this.m_list_series,since);
-//      long row_times[],row_sides[];
-//      this.RowsTo(row_times,row_sides);
-//      const ushort event_id=this.EventOf(found_types[t]);
-//      for(int i=0;i<::ArraySize(row_times);i++)
-//        {
-//         //--- V5: the row is set on the bar of the series (RAM only: Python saves it)
-//         if(!this.NewRow(this.GetBar((datetime)row_times[i]),(long)found_types[t],row_sides[i]))
-//            continue;
-//         int told=::ArraySize(told_events);
-//         ::ArrayResize(told_events,told+1);
-//         ::ArrayResize(told_params,told+1);
-//         told_events[told]=event_id;
-//         told_params[told]=this.EventPack((datetime)row_times[i],(long)found_types[t],(ENUM_SIGNAL_DIRECTION)row_sides[i],since==previous_closed);
-//        }
-//      this.m_SyncManager.Update_Sync_Setting(this.m_sync_object,(long)found_types[t],this.m_symbol,this.m_timeframe,last_closed,this.m_sync_object,true);
-//      changed=true;
-//     }
-//   if(found_total>0 && !any_progress)
-//      finished=false;   // Python has not made the first chunk of any type of the pair: the timer looks again
-//   if(finished)
-//      this.m_judged_to=last_closed;
-//   //--- RAM changed: told (Working with Event), each kind by its own event (EventOf), each row with what it is
-//   const ushort events[]={(ushort)SERIES_EVENTS_PATTERN,(ushort)SERIES_EVENTS_SWING,(ushort)SERIES_EVENTS_BOS,(ushort)SERIES_EVENTS_CHOCH};
-//   for(int e=0;e<::ArraySize(events);e++)
-//     {
-//      int told_total=0;
-//      for(int k=0;k<::ArraySize(told_events);k++)
-//         if(told_events[k]==events[e])
-//            told_total++;
-//      for(int k=0;k<::ArraySize(told_events);k++)
-//         if(told_events[k]==events[e])
-//            this.EventSend(events[e],told_params[k],(double)this.m_timeframe,this.EventPackText(this.m_symbol));
-//     }
-//   return changed;
    //--- V5: each type is judged by CJudgeControl::JudgeNewBars (the steps shared with the signals): its rows set on the bars, each told by its event
    ENUM_BAR_INFOR_TYPE found_types[];
    int found_total=this.Types(found_types);
@@ -416,7 +392,61 @@
       finished=false;   // Python has not made the first chunk of any type of the pair: the timer looks again
    if(finished)
       this.m_judged_to=last_closed;
+   //--- New in V5: after every row of the bar (the swings, the Pivot Point Reversal, the CONFIRM): the FOUND / INVALID of the pivot patterns, once a bar
+   if(finished)
+      this.CalculatePivotPatterns(last_closed,found_types);
    return changed;
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: FOUND / INVALID of the pivot patterns at the newest    |
+ //| closed bar (live, RAM only)                                       |
+ //+------------------------------------------------------------------+
+ void CBarControl::CalculatePivotPatterns(const datetime last_closed,const ENUM_BAR_INFOR_TYPE &types[])
+  {
+   if(this.m_pivot_to==last_closed || this.m_list_series==NULL)
+      return;
+   const int last=this.IndexOf(last_closed);
+   if(last<1)
+      return;
+   this.m_pivot_to=last_closed;
+   const string text=this.EventPackText(this.m_symbol);
+   for(int t=0;t<::ArraySize(types);t++)
+     {
+      const ENUM_BAR_INFOR_TYPE type=types[t];
+      if(!CBarPattern::IsPivotPattern(type) || !this.Prepare((int)type,this.m_list_series,0))
+         continue;
+      //--- INVALID: a FOUND (its bit on a last pivot whose next bar is the Pivot Point Reversal, not confirmed yet) the newest bar went beyond, or not confirmed
+      const int max_strength=(int)::fmax(this.m_pattern_instance.SwingStrength(true),this.m_pattern_instance.SwingStrength(false));
+      for(int d=last-1;d>=1 && d>=last-max_strength;d--)
+        {
+         CBar *bar=this.m_list_series.At(d);
+         CBar *next=this.m_list_series.At(d+1);
+         if(bar==NULL || next==NULL)
+            continue;
+         const ENUM_SIGNAL_DIRECTION side=bar.InformationSide(type);
+         const ENUM_SIGNAL_DIRECTION ppr=next.InformationSide(BAR_INFOR_TYPE_PIVOT_POINT_REVERSAL);
+         if(side==SIGNAL_DIRECTION_NO_PATTERN || ppr==SIGNAL_DIRECTION_NO_PATTERN)
+            continue;
+         const bool high=(ppr==SIGNAL_DIRECTION_SELL);
+         const int confirm=d+this.m_pattern_instance.SwingStrength(high);
+         bool invalid=false;
+         if(confirm>last)
+            invalid=this.m_pattern_instance.IsBeyond(last,d,high);
+         else if(confirm==last)
+            invalid=(this.m_pattern_instance.Find(type,last)==SIGNAL_DIRECTION_NO_PATTERN);
+         if(!invalid)
+            continue;
+         this.NewRow(bar,type,SIGNAL_DIRECTION_NO_PATTERN);
+         this.EventSend((ushort)SERIES_EVENTS_PATTERN_INVALID,this.EventPack(bar.Time(),(long)type,side,true),(double)this.m_timeframe,text);
+        }
+      //--- FOUND: the newest bar completes a Pivot Point Reversal whose middle bar is the last pivot of the pattern
+      int d_index=-1;
+      const ENUM_SIGNAL_DIRECTION side=this.m_pattern_instance.FindEarly(type,last,d_index);
+      CBar *pivot=(d_index>=0 ? this.m_list_series.At(d_index) : NULL);
+      if(side==SIGNAL_DIRECTION_NO_PATTERN || pivot==NULL || !this.NewRow(pivot,type,side))
+         continue;
+      this.EventSend((ushort)SERIES_EVENTS_PATTERN_FOUND,this.EventPack(pivot.Time(),(long)type,side,true),(double)this.m_timeframe,text);
+     }
   }
  //+------------------------------------------------------------------+
  //| The event of a type                                               |

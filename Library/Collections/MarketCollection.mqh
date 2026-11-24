@@ -89,6 +89,9 @@
       //--- Update the list of the pending orders and positions on the account (as RefreshAccount: not the Refresh of CBaseObjExt); a change sets IsTradeEvent (V1 / V3):
       //--- the EA (as CEngine::TradeEventsControl) gives the lists to CTradeEventsCollection, whose events go to the chart
         void              RefreshMarket(void);
+       //--- New in V5: the money of the positions on RAM follows the price (RefreshMarket makes them only at a trade): profit, swap, the price now, of the
+       //--- positions of a symbol ("" every symbol). TICK_EVENT_NEW of the symbol asks it (CTradingControl): the Basket reads RAM. Returns how many
+        int               RefreshMoney(const string symbol="");
       //--- Sum of live floating profit over a position set - four overloads, same name (Anhnt,
       //--- 2026-09-16): (1) pos.Profit()+pos.Swap() over the live positions matching symbol/dir ("" / WRONG_VALUE = all).
       //--- (2) OrderCalcProfit() per real Position at a hypothetical target_price for (symbol,dir).
@@ -106,7 +109,7 @@
        bool              HasPosition(const string symbol, const ENUM_POSITION_TYPE dir);
      //--- New in V5: the positions of a MagicID on a symbol seen as one, the margin of each leg from the account (false: no position).
      //--- Reference: Solomon Anietie Sunday\Risk Management\7. 24477 Consolidating the Risk Framework\Include\BasketRisk.mqh, CBasketRisk::GetState
-       bool              BasketState(const string symbol, const long magic_id, const CAccount *account, SBasketState &basket_state);
+       bool              BasketState(const string symbol, const ENUM_ORDER_TYPE type, const long magic_id, const CAccount *account, SBasketState &basket_state);
      //--- Distinct (Symbol,Direction) pairs currently holding at least one open Position - moved
      //--- here from CTradingEngine (Anhnt/Claude, 2026-09-13), pure Collection-only data.
        int               GetDistinctSymbolsAndDirections(string &symbols[], ENUM_POSITION_TYPE &dirs[]);
@@ -196,6 +199,24 @@
        this.m_is_event=true;
        this.SavePrevValues();
       }
+   }
+  //+------------------------------------------------------------------+
+  //| New in V5: the money of the positions on RAM follows the price    |
+  //+------------------------------------------------------------------+
+  int CMarketCollection::RefreshMoney(const string symbol="")
+   {
+    int refreshed=0;
+    for(int i=0; i<this.m_list_all_orders.Total(); i++)
+      {
+       COrder *order=this.m_list_all_orders.At(i);
+       if(!this.HasPosition(order,symbol) || !::PositionSelectByTicket(order.Ticket()))
+          continue;   // a position closed since the last trade: RefreshMarket (OnTrade) takes it away
+       order.SetProperty(ORDER_PROP_PROFIT,::PositionGetDouble(POSITION_PROFIT));
+       order.SetProperty(ORDER_PROP_SWAP,::PositionGetDouble(POSITION_SWAP));
+       order.SetProperty(ORDER_PROP_PRICE_CLOSE,::PositionGetDouble(POSITION_PRICE_CURRENT));
+       refreshed++;
+      }
+    return refreshed;
    }
   //+------------------------------------------------------------------+
   //| The order is on the account: it gets its control order the first |
@@ -470,25 +491,26 @@
     return true;
    }
   //+------------------------------------------------------------------+
-  //| New in V5: the positions of a MagicID on a symbol as one view    |
+  //| New in V5: the positions dealt on a symbol of one side            |
+  //| (ORDER_TYPE_BUY / ORDER_TYPE_SELL: a position has the same value  |
+  //| in POSITION_TYPE_*), of a MagicID (0: every one), as one view     |
   //+------------------------------------------------------------------+
-  bool CMarketCollection::BasketState(const string symbol, const long magic_id, const CAccount *account, SBasketState &basket_state)
+  bool CMarketCollection::BasketState(const string symbol, const ENUM_ORDER_TYPE type, const long magic_id, const CAccount *account, SBasketState &basket_state)
    {
     ::ZeroMemory(basket_state);
-    double weighted_entry_sum = 0.0, signed_volume = 0.0;
+    basket_state.type = type;
+    double weighted_entry_sum = 0.0;
     for(int i = 0; i < this.m_list_all_orders.Total(); i++)
      {
       COrder *order = this.m_list_all_orders.At(i);
-      if(!this.HasPosition(order, symbol, WRONG_VALUE, magic_id))
+      if(!this.HasPosition(order, symbol, (ENUM_POSITION_TYPE)type, magic_id))
          continue;
       const double volume = order.Volume();
-      const bool is_buy = (order.TypeOrder() == (long)POSITION_TYPE_BUY);
       basket_state.positionCount++;
       basket_state.totalVolume += volume;
       basket_state.floatingPL += order.Profit() + order.Swap();
       weighted_entry_sum += order.PriceOpen() * volume;
-      signed_volume += (is_buy ? volume : -volume);
-      const double leg_margin = (account != NULL ? account.MarginForAction((is_buy ? ORDER_TYPE_BUY : ORDER_TYPE_SELL), symbol, volume, order.PriceOpen()) : EMPTY_VALUE);
+      const double leg_margin = (account != NULL ? account.MarginForAction(type, symbol, volume, order.PriceOpen()) : EMPTY_VALUE);
       if(leg_margin != EMPTY_VALUE)
          basket_state.usedMargin += leg_margin;
       const datetime open_time = (datetime)(order.TimeOpen() / 1000);
@@ -499,7 +521,6 @@
        return false;
     if(basket_state.totalVolume > 0)
        basket_state.weightedEntryPrice = weighted_entry_sum / basket_state.totalVolume;
-    basket_state.netDirection = (signed_volume > 0 ? 1 : signed_volume < 0 ? -1 : 0);
     return true;
    }
 

@@ -191,6 +191,7 @@
     {
      this.SyncComboBox_SymbolTF();   // the chart moved to another Symbol / TF
      this.BuildTFSwitchButtons();
+     this.RebuildRows_Strategy();           // the TFs of the slots: the ones of the chart's Symbol
      this.SyncTreeView_SymbolTFSetting();   // the chart's own Symbol and TF are the active ones
      this.SyncTable_SymbolTFSetting();      // the row of the chart's own pair has the start icon, the others the delete icon
      this.UpdateStatusBar_SymbolSpread();

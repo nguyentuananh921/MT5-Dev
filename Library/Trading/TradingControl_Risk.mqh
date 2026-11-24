@@ -47,7 +47,7 @@
    if(this.m_risk_setting.RiskMode()==RISK_FIXED_CASH)
       amount=this.m_risk_setting.FixedCashRisk();
    else
-      amount=(this.m_risk_setting.RiskBase()==RISK_BASE_EQUITY ? this.m_account.Equity() : this.m_account.Balance())*(this.m_risk_setting.RiskPercent()/100.0);
+      amount=this.m_account.BaseAmount(this.m_risk_setting.RiskBase())*(this.m_risk_setting.RiskPercent()/100.0);
    return amount*this.RiskDrawdownFactor();
   }
  //+------------------------------------------------------------------+
@@ -97,32 +97,10 @@
          ::PrintFormat("%s > %s: invalid volume specification, cannot calculate the lot",__FUNCTION__,symbol.Name());
       return 0.0;
      }
-   //--- Fixed-lot mode never consults the risk budget
+   //--- Fixed-lot mode never consults the risk budget. Change in V5 (2026-11-23): it is always the min lot of the symbol (no FixedLotSize of 0.10 for every
+   //--- symbol, no shrink in drawdown: Part 7 FixedLotSize / ApplyDrawdownToFixedLot are gone)
    if(this.m_risk_setting.RiskMode()==RISK_FIXED_LOT)
-     {
-      //--- Change in V5: one key for every symbol, the volumes are of each symbol: 0 = the min lot of the symbol
-      double raw_lot=(this.m_risk_setting.FixedLotSize()>0.0 ? this.m_risk_setting.FixedLotSize() : min_lot);
-      if(this.m_risk_setting.EnableDrawdownScaling() && this.m_risk_setting.ApplyDrawdownToFixedLot())
-        {
-         const double factor=this.RiskDrawdownFactor();
-         if(factor<1.0)
-            raw_lot*=factor;
-        }
-      double lot=FloorToVolumeStep(raw_lot,lot_step);
-      if(lot>max_lot)
-         lot=FloorToVolumeStep(max_lot,lot_step);
-      if(lot<min_lot)
-        {
-         if(!this.m_risk_setting.AllowMinLotOverRisk())
-           {
-            if(!this.m_risk_silent)
-               ::PrintFormat("%s > fixed lot (%.4f) is below the minimum lot (%.2f): trade skipped",__FUNCTION__,raw_lot,min_lot);
-            return 0.0;
-           }
-         lot=min_lot;
-        }
-      return lot;
-     }
+      return min_lot;
    //--- Every other mode needs the stop
    if(stop_distance<=0)
      {
@@ -192,17 +170,17 @@
  //| corrects to (CSymbol::StopLevelMin, from the close price) plus the|
  //| spread (from the entry price)                                     |
  //+------------------------------------------------------------------+
- bool CTradingControl::BuildPlan(CSymbol *symbol,const long strategy_id,const int direction,const double stop_loss,STradePlan &plan)
+ bool CTradingControl::BuildPlan(CSymbol *symbol,const long strategy_id,const ENUM_ORDER_TYPE type,const double stop_loss,STradePlan &plan)
   {
    ::ZeroMemory(plan);
    if(this.m_account==NULL || symbol==NULL || !symbol.RefreshRates())
       return false;
    plan.strategy_id=strategy_id;
    plan.symbol=symbol.Name();
-   plan.direction=direction;
-   plan.orderType=(direction==1 ? ORDER_TYPE_BUY : ORDER_TYPE_SELL);
+   plan.orderType=type;
+   const int direction=(type==ORDER_TYPE_BUY ? 1 : -1);   // the sign of the price arithmetic of the side
    const int digits=symbol.Digits();
-   plan.entryPrice=::NormalizeDouble(direction==1 ? symbol.Ask() : symbol.Bid(),digits);
+   plan.entryPrice=::NormalizeDouble(type==ORDER_TYPE_BUY ? symbol.Ask() : symbol.Bid(),digits);
    if(plan.entryPrice<=0)
       return false;
    //--- The stop, widened to the broker minimum; the target from it
@@ -239,38 +217,58 @@
    return true;
   }
  //+------------------------------------------------------------------+
- //| BuildPlan, ValidatePlan; a failed plan is told (dparam 0)         |
+ //| The plan of an Entry: the lot of the risk from the stop of the    |
+ //| bases ON; no stop: the lot of the symbol (LotsMin, by hand: lots) |
+ //| without SL / TP. Both capped by the margin; a plan the margin     |
+ //| cannot carry is told (dparam 0). lots > 0: by hand, never over    |
+ //| the lot of the risk                                               |
  //| Reference: CTradeRisk::Check                                      |
  //+------------------------------------------------------------------+
- bool CTradingControl::CheckTradeRisk(CSymbol *symbol,const long strategy_id,const datetime bar_time,const int direction,const double stop_loss,STradePlan &plan)
+ bool CTradingControl::CheckTradeRisk(CSymbol *symbol,const long strategy_id,const datetime bar_time,const ENUM_ORDER_TYPE type,const double stop_loss,const double lots,STradePlan &plan)
   {
-   if(this.BuildPlan(symbol,strategy_id,direction,stop_loss,plan) && this.ValidatePlan(symbol,plan))
+   bool ok=(this.BuildPlan(symbol,strategy_id,type,stop_loss,plan) && this.ValidatePlan(symbol,plan));
+   if(ok && lots>0.0)
+      plan.lotSize=::MathMin(FloorToVolumeStep(lots,symbol.LotsStep()),plan.lotSize);
+   if(!ok && plan.entryPrice>0 && plan.stopDistance<=0)
+     {
+      plan.lotSize=(lots>0.0 ? FloorToVolumeStep(lots,symbol.LotsStep()) : symbol.LotsMin());
+      plan.riskAmount=0.0;
+      ok=(plan.lotSize>=symbol.LotsMin() && this.ValidatePlan(symbol,plan));
+     }
+   if(ok)
       return true;
-   const ENUM_SIGNAL_DIRECTION side=(direction==1 ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL);
-   ::PrintFormat("%s > %s strategy %I64d %s: Entry not traded (trade tier)",__FUNCTION__,(symbol!=NULL ? symbol.Name() : ""),strategy_id,(direction==1 ? "BUY" : "SELL"));
+   const ENUM_SIGNAL_DIRECTION side=(type==ORDER_TYPE_BUY ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL);   // the Event tells the side of the signal
+   ::PrintFormat("%s > %s strategy %I64d %s: not opened: the margin cannot carry lot %.2f",__FUNCTION__,(symbol!=NULL ? symbol.Name() : ""),strategy_id,::EnumToString(type),plan.lotSize);
    this.EventSend((ushort)RISK_EVENT_ENTRY_BLOCKED,this.EventPack(bar_time,strategy_id,side,true),0.0,(symbol!=NULL ? symbol.Name() : ""));
    return false;
   }
  //====================================================================
+ #define RISK_CUT_WAIT_MS  (5000)   // New in V5: after a cut, the basket / the portfolio is not looked at for this long (its closes reach OnTrade)
  //=== The basket tier. Reference: Include\BasketRisk.mqh (CBasketRisk)
- //=== the positions of the EA (MagicID) on one symbol, every strategy  =
+ //=== Change in V5 (Concepts.md, Phạm vi): a basket is the positions    =
+ //=== dealt on one symbol of one side (ORDER_TYPE_BUY / ORDER_TYPE_SELL),=
+ //=== every strategy and every magic: a symbol has two baskets          =
  //====================================================================
  //+------------------------------------------------------------------+
- //| The statistics of the basket of a symbol (made the first time),  |
- //| RAM only as the author (a restart resets them)                    |
+ //| The statistics of the basket of a symbol and a side (made the    |
+ //| first time), RAM only as the author (a restart resets them)       |
  //| Reference: CBasketRisk::IndexOf                                   |
  //+------------------------------------------------------------------+
- int CTradingControl::BasketIndexOf(const string symbol)
+ int CTradingControl::BasketIndexOf(const string symbol,const ENUM_ORDER_TYPE type)
   {
    const int n=::ArraySize(this.m_basket_symbols);
    for(int i=0;i<n;i++)
-      if(this.m_basket_symbols[i]==symbol)
+      if(this.m_basket_symbols[i]==symbol && this.m_basket_types[i]==type)
          return i;
    ::ArrayResize(this.m_basket_symbols,n+1);
+   ::ArrayResize(this.m_basket_types,n+1);
    ::ArrayResize(this.m_basket_max_adverse,n+1);
    ::ArrayResize(this.m_basket_max_favourable,n+1);
    ::ArrayResize(this.m_basket_peak_count,n+1);
+   ::ArrayResize(this.m_basket_cut_ms,n+1);
+   this.m_basket_cut_ms[n]=0;
    this.m_basket_symbols[n]=symbol;
+   this.m_basket_types[n]=type;
    this.m_basket_max_adverse[n]=0.0;
    this.m_basket_max_favourable[n]=0.0;
    this.m_basket_peak_count[n]=0;
@@ -284,7 +282,7 @@
   {
    if(!this.m_risk_setting.BasketTrackExcursion())
       return;
-   const int i=this.BasketIndexOf(symbol);
+   const int i=this.BasketIndexOf(symbol,basket_state.type);
    if(basket_state.positionCount>this.m_basket_peak_count[i])
       this.m_basket_peak_count[i]=basket_state.positionCount;
    if(basket_state.floatingPL<0 && ::MathAbs(basket_state.floatingPL)>this.m_basket_max_adverse[i])
@@ -296,41 +294,56 @@
  //| Report what the closed basket did, then start clean              |
  //| Reference: CBasketRisk::ResetTracking                             |
  //+------------------------------------------------------------------+
- void CTradingControl::BasketResetTracking(const string symbol)
+ void CTradingControl::BasketResetTracking(const string symbol,const ENUM_ORDER_TYPE type)
   {
-   const int i=this.BasketIndexOf(symbol);
+   const int i=this.BasketIndexOf(symbol,type);
    if(this.m_basket_peak_count[i]>0)
-      ::PrintFormat("%s > %s basket closed | peak positions: %d | max adverse excursion: %.2f | max favourable: %.2f",
-                    __FUNCTION__,symbol,this.m_basket_peak_count[i],this.m_basket_max_adverse[i],this.m_basket_max_favourable[i]);
+      ::PrintFormat("%s > %s %s basket closed | peak positions: %d | max adverse excursion: %.2f | max favourable: %.2f",
+                    __FUNCTION__,symbol,::EnumToString(type),this.m_basket_peak_count[i],this.m_basket_max_adverse[i],this.m_basket_max_favourable[i]);
    this.m_basket_max_adverse[i]=0.0;
    this.m_basket_max_favourable[i]=0.0;
    this.m_basket_peak_count[i]=0;
   }
  //+------------------------------------------------------------------+
- //| Basket-level protection, once per bar of the chart TF (instead of|
- //| the OnTick bar check of the author): the cut closes the positions |
- //| of the EA on the symbol (source Basket)                           |
- //| Reference: CBasketRisk::Manage, CBasketRisk::CloseAll             |
+ //| Basket-level protection of the two baskets of a symbol (BUY,     |
+ //| SELL), each on its own: looked at every tick (TICK_EVENT_NEW) and |
+ //| at a new bar of the chart TF                                      |
+ //| Reference: CBasketRisk::Manage                                    |
  //+------------------------------------------------------------------+
  void CTradingControl::BasketManage(const string symbol,const long magic_id,const ENUM_TIMEFRAMES timeframe)
   {
    if(!this.m_risk_setting.BasketEnabled())
       return;
+   this.BasketManageSide(symbol,ORDER_TYPE_BUY,magic_id,timeframe);
+   this.BasketManageSide(symbol,ORDER_TYPE_SELL,magic_id,timeframe);
+  }
+ //+------------------------------------------------------------------+
+ //| One basket: the cut closes its positions only (the other side    |
+ //| stays), source Basket                                             |
+ //| Reference: CBasketRisk::Manage, CBasketRisk::CloseAll             |
+ //+------------------------------------------------------------------+
+ void CTradingControl::BasketManageSide(const string symbol,const ENUM_ORDER_TYPE type,const long magic_id,const ENUM_TIMEFRAMES timeframe)
+  {
+   //--- A basket just cut waits for OnTrade to take its positions off RAM
+   const int basket=this.BasketIndexOf(symbol,type);
+   if(this.m_basket_cut_ms[basket]>0 && ::GetTickCount64()-this.m_basket_cut_ms[basket]<RISK_CUT_WAIT_MS)
+      return;
    SBasketState basket_state;
-   if(!this.m_market.BasketState(symbol,magic_id,this.m_account,basket_state))
+   if(!this.m_market.BasketState(symbol,type,magic_id,this.m_account,basket_state))
      {
-      this.BasketResetTracking(symbol);
+      this.BasketResetTracking(symbol,type);
       return;
      }
    this.BasketUpdateExcursion(symbol,basket_state);
    string reason="";
-   //--- Aggregate loss cut
+   //--- Aggregate loss cut. Change in V5: one position is cut at the risk of one trade (percentage_risk_per_operation), more at MaxBasketLossPercent
    if(this.m_risk_setting.BasketMaxLossPercent()>0)
      {
-      const double max_loss=(this.m_risk_setting.BasketLossBase()==RISK_BASE_EQUITY ? this.m_account.Equity() : this.m_account.Balance())*(this.m_risk_setting.BasketMaxLossPercent()/100.0);
+      const double loss_percent=(basket_state.positionCount>1 ? this.m_risk_setting.BasketMaxLossPercent() : this.m_risk_setting.RiskPercent());
+      const double max_loss=this.m_account.BaseAmount(this.m_risk_setting.BasketLossBase())*(loss_percent/100.0);
       if(basket_state.floatingPL<=-max_loss)
          reason=::StringFormat("aggregate loss %.2f breached the %.1f%% limit (%.2f) across %d position(s)",
-                               basket_state.floatingPL,this.m_risk_setting.BasketMaxLossPercent(),max_loss,basket_state.positionCount);
+                               basket_state.floatingPL,loss_percent,max_loss,basket_state.positionCount);
      }
    //--- Time stop: a basket underwater for too long
    if(reason=="" && this.m_risk_setting.BasketMaxHoldBars()>0 && basket_state.floatingPL<0 && basket_state.oldestOpenTime>0)
@@ -342,29 +355,32 @@
      }
    if(reason=="")
       return;
-   ::PrintFormat("%s > %s BASKET CLOSE | %s: %d position(s) closed",__FUNCTION__,symbol,reason,this.ClosePositions(symbol,0,0,"Basket"));
-   this.BasketResetTracking(symbol);
+   this.m_basket_cut_ms[basket]=::GetTickCount64();
+   ::PrintFormat("%s > %s %s BASKET CLOSE | %s: %d position(s) closed",__FUNCTION__,symbol,::EnumToString(type),reason,
+                 this.ClosePositions(symbol,0,type,"Basket",(magic_id==0)));
+   this.BasketResetTracking(symbol,type);
   }
  //+------------------------------------------------------------------+
- //| Would adding this trade push the basket past its limits?         |
+ //| Would adding this trade push its basket (the symbol, the side of |
+ //| the plan) past its limits?                                        |
  //| Reference: CBasketRisk::AcceptsNewTrade. Change in V5: no position|
  //| ceiling (MaxBasketPositions: one strategy, no stacking; here many |
  //| strategies add to the basket, its risk is the loss, the margin,   |
- //| the hold bars); AllowHedging (canOpenTrade of Part 1) is a rule of|
- //| the basket: off, no leg against the open ones                     |
+ //| the hold bars); AllowHedging off: no basket on the side opposite  |
+ //| to an open one of the symbol                                      |
  //+------------------------------------------------------------------+
  bool CTradingControl::BasketAcceptsNewTrade(const STradePlan &plan,const long magic_id)
   {
    if(!this.m_risk_setting.BasketEnabled())
       return true;
+   const ENUM_ORDER_TYPE opposite=(plan.orderType==ORDER_TYPE_BUY ? ORDER_TYPE_SELL : ORDER_TYPE_BUY);
    SBasketState basket_state;
-   const bool has_basket=this.m_market.BasketState(plan.symbol,magic_id,this.m_account,basket_state);
-   if(has_basket && !this.m_risk_setting.AllowHedging() &&
-      this.m_market.PositionsCount(plan.symbol,(plan.direction==1 ? POSITION_TYPE_SELL : POSITION_TYPE_BUY),magic_id)>0)
+   if(!this.m_risk_setting.AllowHedging() && this.m_market.BasketState(plan.symbol,opposite,magic_id,this.m_account,basket_state))
      {
-      ::PrintFormat("%s > %s %s: the basket has the opposite side and AllowHedging is off",__FUNCTION__,plan.symbol,(plan.direction==1 ? "BUY" : "SELL"));
+      ::PrintFormat("%s > %s %s: the %s basket is open and AllowHedging is off",__FUNCTION__,plan.symbol,::EnumToString(plan.orderType),::EnumToString(opposite));
       return false;
      }
+   const bool has_basket=this.m_market.BasketState(plan.symbol,plan.orderType,magic_id,this.m_account,basket_state);
    //--- Aggregate margin ceiling of the basket
    if(this.m_risk_setting.BasketMaxMarginPercent()>0)
      {
@@ -375,7 +391,8 @@
       const double ceiling=this.m_account.Equity()*(this.m_risk_setting.BasketMaxMarginPercent()/100.0);
       if(this.m_account.Equity()>0 && projected>ceiling)
         {
-         ::PrintFormat("%s > %s basket margin ceiling: %.2f of %.2f allowed (%.1f%% of equity)",__FUNCTION__,plan.symbol,projected,ceiling,this.m_risk_setting.BasketMaxMarginPercent());
+         ::PrintFormat("%s > %s %s basket margin ceiling: %.2f of %.2f allowed (%.1f%% of equity)",__FUNCTION__,plan.symbol,::EnumToString(plan.orderType),
+                       projected,ceiling,this.m_risk_setting.BasketMaxMarginPercent());
          return false;
         }
      }
@@ -389,14 +406,14 @@
   {
    if(this.BasketAcceptsNewTrade(plan,magic_id))
       return true;
-   this.EventSend((ushort)RISK_EVENT_ENTRY_BLOCKED,this.EventPack(bar_time,plan.strategy_id,(plan.direction==1 ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL),true),1.0,plan.symbol);
+   this.EventSend((ushort)RISK_EVENT_ENTRY_BLOCKED,this.EventPack(bar_time,plan.strategy_id,(plan.orderType==ORDER_TYPE_BUY ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL),true),1.0,plan.symbol);
    return false;
   }
  //====================================================================
  //=== The portfolio tier. Reference: Include\PortfolioRisk.mqh        =
  //=== (CPortfolioRisk): every position of the account, or of the EA   =
- //=== (its MagicID) and the ExtraPortfolioMagics. As the author it     =
- //=== only blocks new trades: it closes nothing                        =
+ //=== (its MagicID) and the ExtraPortfolioMagics. The author only      =
+ //=== blocks new trades; New in V5: PortfolioManage closes it (Exit)   =
  //====================================================================
  //+------------------------------------------------------------------+
  //| Does this order/position belong to the portfolio being measured? |
@@ -655,7 +672,43 @@
    if(this.PortfolioCanOpenPosition(plan.symbol,plan.orderType,plan.lotSize,plan.entryPrice,reason))
       return true;
    ::PrintFormat("%s > portfolio limit: %s. Trade skipped",__FUNCTION__,reason);
-   this.EventSend((ushort)RISK_EVENT_ENTRY_BLOCKED,this.EventPack(bar_time,plan.strategy_id,(plan.direction==1 ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL),true),2.0,plan.symbol);
+   this.EventSend((ushort)RISK_EVENT_ENTRY_BLOCKED,this.EventPack(bar_time,plan.strategy_id,(plan.orderType==ORDER_TYPE_BUY ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL),true),2.0,plan.symbol);
    return false;
+  }
+ //+------------------------------------------------------------------+
+ //| New in V5: Exit x Portfolio (Concepts.md, Quyết định x Phạm vi):  |
+ //| the floating loss of the portfolio (PortfolioScan, its scope) at  |
+ //| MaxPortfolioLossPercent of the balance closes every position of   |
+ //| it, source Portfolio; the same limit blocks the Entry             |
+ //| (PortfolioCanOpenPosition). Looked at every tick (TICK_EVENT_NEW) |
+ //+------------------------------------------------------------------+
+ void CTradingControl::PortfolioManage(void)
+  {
+   const double max_loss_percent=this.m_risk_setting.PortfolioMaxLossPercent();
+   if(!this.m_risk_setting.PortfolioEnabled() || max_loss_percent<=0)
+      return;
+   if(this.m_portfolio_cut_ms>0 && ::GetTickCount64()-this.m_portfolio_cut_ms<RISK_CUT_WAIT_MS)
+      return;
+   SPortfolioState state;
+   if(!this.PortfolioScan(state) || state.positionCount==0 || state.balance<=0)
+      return;
+   const double max_loss=state.balance*(max_loss_percent/100.0);
+   if(state.floatingPL>-max_loss)
+      return;
+   //--- The positions of the portfolio (its scope): their tickets first, a close changes the list
+   ulong tickets[];
+   CArrayObj *list=this.m_market.GetList();
+   for(int i=0;list!=NULL && i<list.Total();i++)
+     {
+      COrder *order=list.At(i);
+      if(!this.m_market.HasPosition(order) || !this.PortfolioIsTracked(order))
+         continue;
+      const int n=::ArraySize(tickets);
+      ::ArrayResize(tickets,n+1);
+      tickets[n]=order.Ticket();
+     }
+   this.m_portfolio_cut_ms=::GetTickCount64();
+   ::PrintFormat("%s > PORTFOLIO CLOSE | floating %.2f breached the %.1f%% limit (%.2f) across %d position(s): %d closed",__FUNCTION__,
+                 state.floatingPL,max_loss_percent,max_loss,state.positionCount,this.CloseTickets(tickets,"Portfolio"));
   }
 #endif // __TRADINGCONTROL_RISK_MQH__

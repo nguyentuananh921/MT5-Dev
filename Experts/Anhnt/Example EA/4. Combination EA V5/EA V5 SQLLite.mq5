@@ -136,7 +136,6 @@ int OnInit()
        ::Print(__FUNCTION__," > failed to OnInitEvent IndicatorsCollection");
        return INIT_FAILED;
       }
-    m_TradingControl.SyncRoleIndicators();   // New in V5: the bases ON in Stop Loss / Trailing on the chart TF follow the ticks (BaseIndicatorStrategy.md)
    // m_BarTimeSeriesCollection
     Breadcrumb("OnInit: m_BarTimeSeriesCollection.SetSyncManager");
     m_BarTimeSeriesCollection.SetSyncManager(&m_SyncManager);
@@ -232,6 +231,7 @@ void OnDeinit(const int reason)
    m_SignalsCollection.OnDeinitEvent(reason);
    m_StrategyCollection.OnDeinitEvent(reason);
    m_PythonBridge.OnDeinitEvent(reason);   // the EA is closed: the row of Python is cleared, Python stops with its workers
+   m_TradingControl.OnDeinitEvent(reason);   // the keys of Setting_Risk changed on RAM
    m_GUIPannel.OnDeinit(reason);
    //--- A chart change (or new inputs): the EA starts again at once with the same account. Every object stays, RAM keeps what was judged
    if(reason==REASON_CHARTCHANGE || reason==REASON_PARAMETERS)
@@ -371,30 +371,57 @@ void DispatchBusEvents(void)
 //+------------------------------------------------------------------+
 //| An event of the chart or of the bus to every child               |
 //+------------------------------------------------------------------+
+//--- MY DEBUG: the child that takes long on an event (the queue of the bus waits for it): told when it takes more than this
+#define DEBUG_DISPATCH_SLOW_MS  100
+ulong g_dispatch_mark=0;
+void DebugDispatchStep(const string child,const int id,const string sparam)
+  {
+   const ulong now=::GetMicrosecondCount();
+   if(id>=CHARTEVENT_CUSTOM && g_dispatch_mark>0 && (now-g_dispatch_mark)/1000>=DEBUG_DISPATCH_SLOW_MS)
+      ::Print("MY DEBUG DispatchEvent: custom ",id-CHARTEVENT_CUSTOM," ",sparam," -> ",child," took ",(now-g_dispatch_mark)/1000," ms");
+   g_dispatch_mark=now;
+  }
 void DispatchEvent(const int id,const long lparam,const double dparam,const string sparam)
   {
+   g_dispatch_mark=::GetMicrosecondCount();
    if(m_ChartObj!=NULL)
       m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
+   DebugDispatchStep("m_ChartObj",id,sparam);
    if(id>=CHARTEVENT_CUSTOM)
       Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);   // MY DEBUG: the events of the controls and of the managers, not the mouse
+   g_dispatch_mark=::GetMicrosecondCount();
    m_AccountsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a term of the account changed: its row of the table accounts
+   DebugDispatchStep("m_AccountsCollection",id,sparam);
    m_StrategyManager.OnChartEvent(id,lparam,dparam,sparam);   // New in V5: a template came or went, a slot changed: available of the strategies it touches
+   DebugDispatchStep("m_StrategyManager",id,sparam);
    m_SyncManager.OnChartEvent(id,lparam,dparam,sparam);   // Python wrote more marks: RAM first, the collections read it next; a parameter changed: its marks go
+   DebugDispatchStep("m_SyncManager",id,sparam);
    m_PythonBridge.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair came or went: Python calculates its history at once
+   DebugDispatchStep("m_PythonBridge",id,sparam);
    m_GUIPannel.OnChartEvent(id,lparam,dparam,sparam);
+   DebugDispatchStep("m_GUIPannel",id,sparam);
    m_TradingControl.OnChartEvent(id,lparam,dparam,sparam);   // the panel asked to close every position (emergency)
+   DebugDispatchStep("m_TradingControl",id,sparam);
    m_GraphElementsCollection.OnChartEvent(id,lparam,dparam,sparam);   // the layer follows the chart, the markers hear the mouse
+   DebugDispatchStep("m_GraphElementsCollection",id,sparam);
    //--- V2 CSignalsCollection: DeleteSignal BEFORE the indicator: the judge of a CSignal holds its CIndicatorDE (1-1), so a pair or a template deleted: the signals go
    //--- first; added: the indicators are made first, then their signals
    const bool deleted=(id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_DELETE || id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE);
    if(deleted)
       m_SignalsCollection.OnChartEvent(id,lparam,dparam,sparam);
    m_IndicatorsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a pair or a template added or deleted: its indicators are made or go
+   DebugDispatchStep("m_IndicatorsCollection",id,sparam);
    m_BarTimeSeriesCollection.OnChartEvent(id,lparam,dparam,sparam);   // a parameter of a type changed: its rows on RAM go
+   DebugDispatchStep("m_BarTimeSeriesCollection",id,sparam);
    if(!deleted)
       m_SignalsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a template or a pair added: their signals are made on the indicators; a new bar: its signals are judged
+   DebugDispatchStep("m_SignalsCollection",id,sparam);
    m_StrategyCollection.OnChartEvent(id,lparam,dparam,sparam);  // a new bar: its strategies are judged, before the markers: the rows are on RAM when they are drawn
+   DebugDispatchStep("m_StrategyCollection",id,sparam);
    m_BarMarkerCollection.OnChartEvent(id,lparam,dparam,sparam);   //--- A pair picked in the panel: the manager moves the chart itself
+   DebugDispatchStep("m_BarMarkerCollection",id,sparam);
    m_KronosForecastCollection.OnChartEvent(id,lparam,dparam,sparam);   // a new bar of the chart pair: the bars foretold it reached go
+   DebugDispatchStep("m_KronosForecastCollection",id,sparam);
    m_SymbolTFManager.OnChartEvent(id,lparam,dparam,sparam,m_ChartObj);
+   DebugDispatchStep("m_SymbolTFManager",id,sparam);
   }

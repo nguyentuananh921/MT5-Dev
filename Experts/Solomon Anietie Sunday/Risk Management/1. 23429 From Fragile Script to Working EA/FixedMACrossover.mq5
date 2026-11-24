@@ -167,16 +167,17 @@ void OnTick()
     if(fast[1] > slow[1] && fast[2] <= slow[2])
      {
       //--- Buy signal: Check if we can open a Buy position
-      bool canOpenTrade = false;
-      if(inpAllowHedging)
+       bool canOpenTrade = false;
+      //--- Hedging is allowed: Only block Buys if there is already a Buy
+       if(inpAllowHedging)
         {
-         //--- Hedging is allowed: Only block Buys if there is already a Buy
+         
          canOpenTrade = (CountOpenPositionsByDirection(1) == 0);
         }
-      else
+       else
         {
          //--- Hedging is not allowed: Block trades if there is any open position
-         canOpenTrade = (CountOpenPositions() == 0);
+          canOpenTrade = (CountOpenPositions() == 0);
         }
 
       if(canOpenTrade)

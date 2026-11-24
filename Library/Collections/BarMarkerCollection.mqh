@@ -9,6 +9,7 @@
  #include "..\Entities\Bases\BaseObj.mqh"
  #include "..\Entities\Graph\Composite\BarMarker.mqh"
  #include "..\Entities\Graph\Composite\StrategyTrade.mqh"
+ #include "..\Entities\Graph\Composite\PivotPatternShape.mqh"
  #include "..\Entities\Chart\ChartObj.mqh"
  #include "GraphElementsCollection.mqh"
  #include "BarTimeSeriesCollection.mqh"
@@ -32,6 +33,7 @@
    long              side;          // SIGNAL_DIRECTION_BUY or SIGNAL_DIRECTION_SELL
   };
  #define BAR_MARKER_TRADE_NAME      "StrategyTrade_"
+ #define BAR_MARKER_PIVOT_NAME      "PivotPattern_"
  //+------------------------------------------------------------------+
  //| Draws what was found on the candles of the chart                 |
  //+------------------------------------------------------------------+
@@ -57,6 +59,9 @@
     void                       CollectStrategies(CStrategyBase *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
    //--- The trades of the strategies of the chart pair that the chart shows (CStrategyTrade, entry to exit): made again, then placed
     void                       SyncTrades(void);
+   //--- New in V5: the pivot patterns (Harmonic, Chart Pattern) of the chart pair whose last pivot the chart shows, drawn as the EAs of the Reference draw them
+   //--- (CPivotPatternShape, made again: a few of them). The badge of the bar stays CBarMarker's; a type or a side the user does not show is not drawn
+    void                       SyncPivotPatterns(void);
    public:
                                CBarMarkerCollection(void) : m_ChartObj(NULL),m_GraphElementsCollection(NULL),m_BarTimeSeriesCollection(NULL),m_SignalsCollection(NULL),m_SymbolTFManager(NULL),
                                                             m_BarInformationManager(NULL),m_IndicatorTemplateManager(NULL),m_StrategyCollection(NULL),m_StrategyManager(NULL) { }
@@ -137,7 +142,7 @@
             break;
          if(bar.GetProperty(BAR_PROP_INFORMATION_CANDLE)==0 && bar.GetProperty(BAR_PROP_INFORMATION_SMART_MONEY)==0)
             continue;
-         for(int type=BAR_INFOR_TYPE_HAMMER;type<=BAR_INFOR_TYPE_CHOCH;type++)
+         for(int type=BAR_INFOR_TYPE_HAMMER;type<=BAR_INFOR_TYPE_LAST;type++)
            {
             const ENUM_SIGNAL_DIRECTION side=bar.InformationSide((ENUM_BAR_INFOR_TYPE)type);
             if(side!=SIGNAL_DIRECTION_BUY && side!=SIGNAL_DIRECTION_SELL)
@@ -415,6 +420,7 @@
    //--- The markers decide what they show, then the badges are placed: an event told one candle, the badges from it (the ones before it stay)
    CBarMarker::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_SymbolTFManager,this.m_BarInformationManager,this.m_IndicatorTemplateManager,this.m_StrategyManager,time);
    this.SyncTrades();
+   this.SyncPivotPatterns();
    const ulong debug_t4=::GetMicrosecondCount();
    ::ChartRedraw(this.m_ChartObj.ID());
    const ulong debug_t5=::GetMicrosecondCount();
@@ -482,6 +488,54 @@
    ::Print(debug_text);
   }
  //+------------------------------------------------------------------+
+ //| New in V5: the pivot patterns of the chart pair in view           |
+ //+------------------------------------------------------------------+
+ void CBarMarkerCollection::SyncPivotPatterns(void)
+  {
+   if(this.m_ChartObj==NULL || this.m_GraphElementsCollection==NULL || this.m_BarTimeSeriesCollection==NULL || this.m_BarInformationManager==NULL)
+      return;
+   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
+     {
+      CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
+      if(dynamic_cast<CPivotPatternShape *>(child)==NULL)
+         continue;
+      this.m_GraphElementsCollection.DeleteChild(child);
+      delete child;
+     }
+   datetime from_time=0,to_time=0;
+   if(!this.m_ChartObj.VisibleRange(from_time,to_time))
+      return;
+   const string symbol=this.m_ChartObj.Symbol();
+   const ENUM_TIMEFRAMES timeframe=this.m_ChartObj.Timeframe();
+   CBarSeriesDE *series=this.m_BarTimeSeriesCollection.GetSeries(symbol,timeframe);
+   if(series==NULL)
+      return;
+   SBarMarkerRow rows[];
+   this.CollectTypes(series,from_time,to_time,rows);
+   for(int r=0;r<::ArraySize(rows);r++)
+     {
+      const ENUM_BAR_INFOR_TYPE type=(ENUM_BAR_INFOR_TYPE)rows[r].type;
+      if(!CBarPattern::IsPivotPattern(type))
+         continue;
+      CBarInformationSetting *setting=this.m_BarInformationManager.Read_RAM(type);
+      const bool is_buy=(rows[r].side==SIGNAL_DIRECTION_BUY);
+      if(setting==NULL || !(is_buy ? setting.ShowBuy() : setting.ShowSell()))
+         continue;   // the user does not show this side of the type: no badge, no drawing
+      long times[];
+      double prices[];
+      bool highs[];
+      if(series.GetBarControl().PivotPoints(type,(datetime)rows[r].time,times,prices,highs)==0)
+         continue;
+      CPivotPatternShape *shape=new CPivotPatternShape();
+      if(shape==NULL || !shape.Create(this.m_ChartObj.ID(),BAR_MARKER_PIVOT_NAME+(string)(long)type+"_"+(string)rows[r].time,type,times,prices,highs,is_buy,setting.Name()) ||
+         !this.m_GraphElementsCollection.AddChild(shape))
+        {
+         delete shape;
+         continue;
+        }
+     }
+  }
+ //+------------------------------------------------------------------+
  //| The markers and the box on the candle go                         |
  //+------------------------------------------------------------------+
  void CBarMarkerCollection::DeleteMarkers(void)
@@ -492,7 +546,7 @@
    for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
      {
       CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
-      if(dynamic_cast<CBarMarker *>(child)==NULL && dynamic_cast<CStrategyTrade *>(child)==NULL)
+      if(dynamic_cast<CBarMarker *>(child)==NULL && dynamic_cast<CStrategyTrade *>(child)==NULL && dynamic_cast<CPivotPatternShape *>(child)==NULL)
          continue;
       this.m_GraphElementsCollection.DeleteChild(child);
       delete child;
@@ -515,7 +569,8 @@
      }
    //--- The data changed: the rows are read again
    if((id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SWING || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_BOS ||
-       id==CHARTEVENT_CUSTOM+SERIES_EVENTS_CHOCH || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SIGNAL) && (long)dparam==(long)chart_tf)
+       id==CHARTEVENT_CUSTOM+SERIES_EVENTS_CHOCH || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SIGNAL ||
+       id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN_FOUND || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN_INVALID) && (long)dparam==(long)chart_tf)
      {
       datetime bar;
       long key;

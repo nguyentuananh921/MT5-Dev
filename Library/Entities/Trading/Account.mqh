@@ -21,6 +21,7 @@
  #include "..\Defines\TradingDefines.mqh"
  #include "..\Defines\EventDefines.mqh"   // ACCOUNT_EVENT_PROPERTY_CHANGED
  #include "..\Bases\BaseObjExt.mqh"
+ #include "..\Defines\RiskManagementDefines.mqh"   // ENUM_RISK_BASE (BaseAmount)
  #ifndef CACCOUNT_MQH_DECLARATION
  #define CACCOUNT_MQH_DECLARATION
  //+------------------------------------------------------------------+
@@ -279,6 +280,9 @@
    //--- New in V5: how far the equity is under its peak since the EA started, %. Reference: Solomon Anietie Sunday\Risk Management\
    //--- 7. 24477 Consolidating the Risk Framework\Include\TradeRisk.mqh, CTradeRisk::DrawdownFactor (its peak equity)
     double            DrawdownPercent(void)                           const { return (this.m_peak_equity>0.0 ? (this.m_peak_equity-this.Equity())/this.m_peak_equity*100.0 : 0.0); }
+   //--- New in V5: the money a risk percent is measured against (Setting_Risk RiskBase, BasketLossBase). Reference: CTradeRisk::RiskAmount (balance / equity);
+   //--- RISK_BASE_FREEMARGIN: Allan Munene Mutiiria\Automating Trading Strategies\47. 21096 NRTR_-_Nick_Rypock_Trailing_Reverse_-_EA, CalculateLotSize
+    double            BaseAmount(const ENUM_RISK_BASE base)           const { return (base==RISK_BASE_EQUITY ? this.Equity() : base==RISK_BASE_FREEMARGIN ? this.MarginFree() : this.Balance()); }
   };
  #endif // CACCOUNT_MQH_DECLARATION
  #ifndef CACCOUNT_MQH_IMPLEMENTATION

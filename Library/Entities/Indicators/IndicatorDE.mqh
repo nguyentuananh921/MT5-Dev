@@ -34,7 +34,6 @@
     string            m_params_text;                                              // Its identity with its type: the column params of its template
     string            m_timeframe_description;                                    // The name of the timeframe (the table timeframes)
     CIndicatorDE     *m_source;                                                   // New in V5: the indicator it is made on (NULL: a price), owned by CIndicatorsCollection
-    bool              m_role_in_use;                                              // New in V5: its template is ON in a role (Stop Loss / Trailing) on the chart TF: it follows the ticks (CTradingControl marks it)
     CIndicatorTemplateManager *m_IndicatorTemplateManager;
    //--- Return the index of the array the indicator's (1) double and (2) string properties are actually located at
     int               IndexProp(ENUM_INDICATOR_PROP_DOUBLE property)        const { return(int)property-INDICATOR_PROP_INTEGER_TOTAL;                            }
@@ -50,7 +49,7 @@
                                    MqlParam &mql_params[]);
    public:
    //--- Default constructor
-                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE),m_source(NULL),m_role_in_use(false),m_IndicatorTemplateManager(NULL) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
+                      CIndicatorDE(void) : m_buffers_total(0),m_handle(INVALID_HANDLE),m_source(NULL),m_IndicatorTemplateManager(NULL) { this.m_object_type=OBJECT_DE_TYPE_INDICATOR; }
    //--- Destructor
                      ~CIndicatorDE(void);
    //--- Set indicator's (1) integer, (2) real and (3) string property
@@ -115,10 +114,6 @@
     virtual void      Refresh(void)                                   { this.m_series_data.Refresh(); }
     virtual bool      IsReady(const datetime time);
     virtual double    Value(const int buffer,const datetime time)     { return this.m_series_data.BufferValue(buffer,time); }
-   //--- New in V5 (BaseIndicatorStrategy.md): (1) its template is ON in a role, (2) a new tick of its symbol: in use, its values up to now and INDICATOR_EVENT_REFRESHED
-    void              SetRoleInUse(const bool in_use)                 { this.m_role_in_use=in_use; }
-    bool              RoleInUse(void)                           const { return this.m_role_in_use; }
-    void              OnNewTick(void);
    //--- Display the description of indicator object properties in the journal (full_prop=true - all properties, false - supported ones only)
     virtual void      Print(const bool full_prop=false,const bool dash=false);
    //--- Display (1) a short description, (2) description of indicator object parameters in the journal
@@ -179,7 +174,6 @@
        this.m_mql_param[i]=mql_params[i];
    //--- Create indicator handle
     this.m_source=NULL;
-    this.m_role_in_use=false;
     this.m_handle=::IndicatorCreate(symbol,timeframe,ind_type,count,this.m_mql_param);
     if(this.m_handle==INVALID_HANDLE)
        ::Print(__FUNCTION__," > IndicatorCreate failed for ",name," ",symbol," ",::EnumToString(timeframe),", error ",::GetLastError());
@@ -235,18 +229,6 @@
  bool CIndicatorDE::IsOf(const ENUM_INDICATOR type,const string params_text,const string symbol,const ENUM_TIMEFRAMES timeframe) const
   {
    return (this.TypeIndicator()==type && this.m_params_text==params_text && this.Symbol()==symbol && this.Timeframe()==timeframe);
-  }
- //+------------------------------------------------------------------+
- //| New in V5 (BaseIndicatorStrategy.md): a new tick of its symbol.   |
- //| In use in a role: its values up to now go to RAM and it tells it |
- //| (lparam the id of its template, dparam the TF, sparam the symbol) |
- //+------------------------------------------------------------------+
- void CIndicatorDE::OnNewTick(void)
-  {
-   if(!this.m_role_in_use)
-      return;
-   this.Refresh();
-   this.EventSend((ushort)INDICATOR_EVENT_REFRESHED,this.ID(),(double)this.Timeframe(),this.Symbol());
   }
  //+------------------------------------------------------------------+
  //| Return description of indicator's integer property               |

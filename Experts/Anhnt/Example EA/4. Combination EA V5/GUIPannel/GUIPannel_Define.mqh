@@ -309,6 +309,7 @@
     #define TRADE_SLOT_RESULT            104    // SL, TP, MaxLot
     #define TRADE_SLOT_LOT               105    // m_combobox_manual_lot
     #define TRADE_SLOT_KEY_ENUM          106  // an ENUM_ key of Setting_Risk (param = its name): a combobox of the texts of the author (RiskEnumItems)
+    #define TRADE_SLOT_MAGIC             107    // m_edit_manual_magic
     #define M_WINDOW_TRADEMANAGE_WIDTH   900
     #define M_WINDOW_TRADEMANAGE_HEIGHT  380
    //The History tab (GUIPannel_Window_TradeManagerTabHistory.mqh): the trades, one row for each position that was closed. Its deals (IN and OUT, with the Bid and the Ask)
@@ -317,6 +318,7 @@
     enum ENUM_COLUMN_TRADE
      {
       COL_T_SYMBOL,COL_T_DIRECTION,COL_T_REASON,COL_T_VOLUME,COL_T_TIME_HOLD,COL_T_COMMISSION,COL_T_SWAP,COL_T_POSITION_ID,
+      COL_T_BASKET_ID,   // TradingOrderDetail.basket_id (CTradingControl::ReadDataFromDB), blank: not known
       COL_T_TIME_OPEN,COL_T_TIME_CLOSE,COL_T_PRICE_OPEN,COL_T_PRICE_CLOSE,COL_T_FEE,COL_T_PROFIT,COL_T_DETAIL,
       COLUMNS_TRADE_TOTAL
      };
@@ -325,9 +327,9 @@
     const string TRADE_REASON_TOOLTIP[TRADE_REASON_TOTAL]={"The order was placed from a desktop terminal","The order was placed from a mobile application","The order was placed from a web platform",
                                                            "The order was placed from an MQL5-program, i.e. by an Expert Advisor or a script","The order was placed as a result of Stop Loss activation",
                                                            "The order was placed as a result of Take Profit activation","The order was placed as a result of the Stop Out event"};
-    const string TRADE_CAPTION[COLUMNS_TRADE_TOTAL]={"Symbol","Direction","Reason","Vol","Time hold","Commission","Swap","Position ID","Time open","Time close","Price open","Price close","Fee","Profit","Detail"};
+    const string TRADE_CAPTION[COLUMNS_TRADE_TOTAL]={"Symbol","Direction","Reason","Vol","Time hold","Commission","Swap","Position ID","Basket ID","Time open","Time close","Price open","Price close","Fee","Profit","Detail"};
     const int    TRADE_WIDTH[COLUMNS_TRADE_TOTAL]={M_SYMBOL_WITHICON_WIDTH,M_ICON16_WIDTH,M_ICON16_WIDTH,M_LOT_WIDTH,M_DURATION_WIDTH,M_MONEY_WIDTH,M_MONEY_WIDTH,M_TICKET_WIDTH,
-                                                  M_DATETIME_WIDTH,M_DATETIME_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_MONEY_WIDTH,M_MONEY_WIDTH,M_ICON16_WIDTH};
+                                                  M_TICKET_WIDTH,M_DATETIME_WIDTH,M_DATETIME_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_MONEY_WIDTH,M_MONEY_WIDTH,M_ICON16_WIDTH};
     const int    TRADE_NUMBER_COLUMNS[]={COL_T_VOLUME,COL_T_TIME_HOLD,COL_T_COMMISSION,COL_T_SWAP,COL_T_FEE,COL_T_PRICE_OPEN,COL_T_PRICE_CLOSE,COL_T_PROFIT};
    //The Open tab (GUIPannel_Window_TradeManagerPosition.mqh): the positions open now, one row each (CMarketCollection), with their SL and TP;
    //it starts as the trades do (Symbol, Direction), the widths are the ones of the trades; the Detail opens the Order detail window

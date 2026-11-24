@@ -39,6 +39,22 @@
   #define SWING_DEF_STRENGTH                       5.0    // Swing: how many candles each side must be lower (high) / higher (low) than it
   #define SWING_DEF_PRICE_BASIS                    (double)SWING_PRICE_BASIS_WICK   // Swing: the price it is found on
   #define STRUCTURE_LOOKBACK                       300    // BOS / CHoCH: the swing before the broken one is confirmed at most this many bars back (Python reads it: structure_lookback)
+ //--- New in V5: the pivot patterns (Harmonic, Chart Pattern), the inputs of their EA. Reference: Allan Munene Mutiiria\Automating Trading Strategies
+  #define HARMONIC_DEF_TOLERANCE                   0.10   // Tolerance of every Harmonic EA (08, 15, 27-33): the allowed deviation, a fraction of the leg it is measured on
+  #define SHARK_DEF_AB_MIN                         0.32   // 33. Shark: MinRetrace (AB of XA)
+  #define SHARK_DEF_AB_MAX                         0.50   // 33. Shark: MaxRetrace
+  #define SHARK_DEF_BC_MIN                         1.13   // 33. Shark: MinExt1 (BC of AB)
+  #define SHARK_DEF_BC_MAX                         1.618  // 33. Shark: MaxExt1
+  #define SHARK_DEF_CD_MIN                         1.618  // 33. Shark: MinExt2 (CD of BC)
+  #define SHARK_DEF_CD_MAX                         2.24   // 33. Shark: MaxExt2
+  #define HS_DEF_SHOULDER_TOLERANCE_POINTS         15.0   // 13. Head & Shoulders: ShoulderTolerancePoints
+  #define HS_DEF_TROUGH_TOLERANCE_POINTS           30.0   // 13. Head & Shoulders: TroughTolerancePoints
+  #define HS_DEF_MIN_BARS                          5.0    // 13. Head & Shoulders: MinBarRange (bars from a shoulder to the head)
+  #define HS_DEF_MAX_BARS                          30.0   // 13. Head & Shoulders: MaxBarRange
+  #define HS_DEF_BARS_MULTIPLIER                   2.0    // 13. Head & Shoulders: BarRangeMultiplier (the longer side at most this times the shorter)
+  #define DOUBLE_DEF_PEAK_TOLERANCE                10.0   // 53. Double Top / Bottom: InpPeakTolerancePercent (of the height)
+  #define DOUBLE_DEF_MIN_BARS                      10.0   // 53. Double Top / Bottom: InpMinPatternBars (first to second peak, 0 = off)
+  #define DOUBLE_DEF_LEG_BALANCE                   50.0   // 53. Double Top / Bottom: InpLegBalancePercent (the shorter leg of the longer, 0 = off)
  //+------------------------------------------------------------------+
  //| The names of the parameters of a type (column param of           |
  //| Setting_BarSetup): the values are percent of the range of the    |
@@ -70,6 +86,19 @@
   #define BAR_PARAM_BARS_BEFORE         "bars_before"
   #define BAR_PARAM_SWING_STRENGTH      "swing_strength"
   #define BAR_PARAM_PRICE_BASIS         "price_basis"
+  #define BAR_PARAM_TOLERANCE           "tolerance"            // the pivot patterns: a fraction of the leg (Harmonic), percent of the height (Double Top / Bottom)
+  #define BAR_PARAM_AB_MIN              "ab_min"
+  #define BAR_PARAM_AB_MAX              "ab_max"
+  #define BAR_PARAM_BC_MIN              "bc_min"
+  #define BAR_PARAM_BC_MAX              "bc_max"
+  #define BAR_PARAM_CD_MIN              "cd_min"
+  #define BAR_PARAM_CD_MAX              "cd_max"
+  #define BAR_PARAM_SHOULDER_TOLERANCE  "shoulder_tolerance_points"
+  #define BAR_PARAM_TROUGH_TOLERANCE    "trough_tolerance_points"
+  #define BAR_PARAM_MIN_BARS            "min_bars"
+  #define BAR_PARAM_MAX_BARS            "max_bars"
+  #define BAR_PARAM_BARS_MULTIPLIER     "bars_multiplier"
+  #define BAR_PARAM_LEG_BALANCE         "leg_balance"
  //+------------------------------------------------------------------+
  //| The group of an information of a bar (column group_infor)        |
  //+------------------------------------------------------------------+
@@ -78,9 +107,11 @@
    BAR_INFORMATION_JAPANESE_CANDLE,                                       // Candles
    BAR_INFORMATION_PRICE_ACTION_CANDLE,                                       // Price Action formations
    BAR_INFORMATION_SMART_MONEY,                                               // Smart Money: momentum candle, swing, BOS, CHoCH...
-   BAR_INFORMATION_SIGNAL,                                                    // The signal of an indicator template (not in Setting_BarInformation)
+   BAR_INFORMATION_HARMONIC,                                                  // New in V5: Harmonic patterns (pivot patterns of CBarPattern)
+   BAR_INFORMATION_CHART_PATTERN,                                             // New in V5: Chart patterns (pivot patterns of CBarPattern)
+   BAR_INFORMATION_SIGNAL,                                                    // The signal of an indicator template (not in Setting_BarInformation, its value is not saved)
   };
- #define BAR_INFORMATION_GROUP_TOTAL  (3)                           // Number of the groups of Setting_BarInformation: one switch of the Candle tab for each (BAR_INFORMATION_SIGNAL is after them)
+ #define BAR_INFORMATION_GROUP_TOTAL  (5)                           // Number of the groups of Setting_BarInformation: one switch of the Candle tab for each (BAR_INFORMATION_SIGNAL is after them)
  //+------------------------------------------------------------------+
  //| The kind of an information of a bar (column type_infor). A plain |
  //| integer, not a bit mask: the database is the key, the numbers    |
@@ -126,8 +157,25 @@
    BAR_INFOR_TYPE_SWING_LOW,                                // Swing Low (the Buy side)
    BAR_INFOR_TYPE_BOS,                                      // Break of Structure (Buy: up, Sell: down)
    BAR_INFOR_TYPE_CHOCH,                                    // Change of Character (Buy: up, Sell: down)
+  //--- New in V5: the pivot patterns (CBarPattern): N alternating swings, the row on the bar of the last pivot (Sell: it is a high, Buy: a low; QM: its own side).
+  //--- The bit is FOUND (live, RAM only) while the last pivot is a Pivot Point Reversal, CONFIRM (the row, Python saves it) when the swing confirms it
+  //--- Harmonic (BAR_INFORMATION_HARMONIC). Reference: Allan Munene Mutiiria\Automating Trading Strategies
+   BAR_INFOR_TYPE_GARTLEY = 401,                            // Gartley (29. 19111)
+   BAR_INFOR_TYPE_BAT,                                      // Bat (28. 19105)
+   BAR_INFOR_TYPE_BUTTERFLY,                                // Butterfly (08. 17223)
+   BAR_INFOR_TYPE_CRAB,                                     // Crab (27. 19099)
+   BAR_INFOR_TYPE_CYPHER,                                   // Cypher (15. 17865)
+   BAR_INFOR_TYPE_SHARK,                                    // Shark (33. 19479)
+   BAR_INFOR_TYPE_AB_CD,                                    // AB=CD (30. 19442)
+   BAR_INFOR_TYPE_THREE_DRIVES,                             // 3 Drives (31. 19449)
+   BAR_INFOR_TYPE_FIVE_DRIVES,                              // 5 Drives (32. 19463)
+  //--- Chart Pattern (BAR_INFORMATION_CHART_PATTERN)
+   BAR_INFOR_TYPE_HEAD_SHOULDERS = 501,                     // Head & Shoulders, Inverse (13. 17618)
+   BAR_INFOR_TYPE_DOUBLE_TOP_BOTTOM,                        // Double Top / Double Bottom (53. 23576)
+   BAR_INFOR_TYPE_QUASIMODO,                                // Quasimodo, QM (49. 23141)
   //--- Zones, FVG, trendlines and legs are not types: the View builds them in RAM from these rows (FVG, Supply/Demand: the Momentum Candle row)
   };
+ #define BAR_INFOR_TYPE_LAST  BAR_INFOR_TYPE_QUASIMODO                  // The last type: the loops over every type end here
  //+------------------------------------------------------------------+
  //| The price a swing is found on (the value of the parameter         |
  //| price_basis of a swing type). From Lib V2 SwingDefines.mqh        |

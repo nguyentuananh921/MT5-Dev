@@ -94,7 +94,7 @@
             ::Print(__FUNCTION__," > ",strategy.Name(),": no judge of the rule ",row.Rule()," (",row.Slot(),"): the row never holds");
          continue;
         }
-      //--- A slot on another tf (Strategy.md, TF của Slot): its newest bar closed when the bar of the pair closes, no look-ahead
+      //--- A slot on another tf (Concepts.md, TF của Slot): its newest bar closed when the bar of the pair closes, no look-ahead
       ENUM_TIMEFRAMES row_tf=timeframe;
       int row_shift=shift;
       CStrategyIndicatorSetting *source=strategy.Indicator(row.Slot());

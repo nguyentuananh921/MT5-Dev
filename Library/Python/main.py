@@ -35,6 +35,7 @@ import indicators
 import libdb
 import momentum
 import patterns
+import pivot_patterns
 import signals
 import structure
 import swing
@@ -266,6 +267,13 @@ def build_jobs(db):
             if name in types:
                 jobs.append(Job(name, source(types[name]), structure.context(high_params, low_params),
                                 lambda bars, since, until, bos=bos, hp=high_params, lp=low_params: structure.calculate(bos, bars, hp, lp, since, until)))
+        for name in pivot_patterns.RULES:   # V5: the pivot patterns (Harmonic, Chart Pattern) are made of the swings too; CONFIRM only (FOUND is the EA's, live)
+            if name in types:
+                params = all_params.get(types[name], {})
+                jobs.append(Job(name, source(types[name]), pivot_patterns.context(high_params, low_params),
+                                lambda bars, since, until, name=name, params=params, hp=high_params, lp=low_params:
+                                    pivot_patterns.calculate(name, bars, params, hp, lp, since, until),
+                                right=pivot_patterns.right(high_params, low_params)))
     # for type_enum, display, params_text, type_name, params_total in db.templates():
     for type_enum, display, params_text, type_name, params_total, level_high, level_low in db.templates():   # V5: the levels of the rule (table indicators)
         template = indicators.from_template(type_name, params_total, params_text)   # the type from the table indicators (the EA makes it), not from the display text

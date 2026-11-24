@@ -39,7 +39,7 @@ Note lại các command để chạy cho nhanh.
   git -C 'D:\MT5-Dev' ls-files --others --ignored --exclude-standard |
     git -C 'D:\MT5-Dev' check-ignore -v --stdin
   ```
-## Library\Python
+## Python Library
 
 
 ## Database

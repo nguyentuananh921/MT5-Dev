@@ -48,7 +48,7 @@ enum ENUM_RISK_MODE
   {
    RISK_PERCENT,                                            // Percentage of account
    RISK_FIXED_CASH,                                         // Fixed cash amount
-   RISK_FIXED_LOT                                           // Fixed lot size
+   RISK_FIXED_LOT                                           // Fixed lot size. Change in V5 (2026-11-23): always the min lot of the symbol (no FixedLotSize key)
   };
 #define RISK_MODES_TOTAL  (3)                               // the number of ENUM_RISK_MODE values
 //--- What the author wrote for each value (the comment of the enum: MQL5 cannot read it), for the View
@@ -58,36 +58,41 @@ string RiskModeText(const ENUM_RISK_MODE mode)
      {
       case RISK_PERCENT:    return "Percentage of account";
       case RISK_FIXED_CASH: return "Fixed cash amount";
-      case RISK_FIXED_LOT:  return "Fixed lot size";
+      case RISK_FIXED_LOT:  return "Min lot";
      }
    return "?";
   }
-//--- The key of Setting_Risk that holds the amount of each mode (the input of Part 7)
+//--- The key of Setting_Risk that holds the amount of each mode (the input of Part 7). "": the mode has no amount (RISK_FIXED_LOT: the min lot of the symbol)
 string RiskModeValueKey(const ENUM_RISK_MODE mode)
   {
    switch(mode)
      {
       case RISK_PERCENT:    return "percentage_risk_per_operation";
       case RISK_FIXED_CASH: return "FixedCashRisk";
-      case RISK_FIXED_LOT:  return "FixedLotSize";
+      case RISK_FIXED_LOT:  return "";
      }
    return "";
   }
 //+------------------------------------------------------------------+
 //| Balance ignores open floating P/L; equity includes it            |
+//| RISK_BASE_FREEMARGIN reference from                               |
+//| D:\MT5-Dev\Experts\Allan Munene Mutiiria\Automating Trading Strategies
+//| 47. 21096 NRTR_-_Nick_Rypock_Trailing_Reverse_-_EA
 //+------------------------------------------------------------------+
 enum ENUM_RISK_BASE
   {
    RISK_BASE_BALANCE,                                       // Account balance
-   RISK_BASE_EQUITY                                         // Account equity
+   RISK_BASE_EQUITY,                                        // Account equity
+   RISK_BASE_FREEMARGIN,                                    // Free margin
   };
-#define RISK_BASES_TOTAL  (2)                               // the number of ENUM_RISK_BASE values
+#define RISK_BASES_TOTAL  (3)                               // the number of ENUM_RISK_BASE values
 string RiskBaseText(const ENUM_RISK_BASE base)
   {
    switch(base)
      {
       case RISK_BASE_BALANCE: return "Balance";
       case RISK_BASE_EQUITY:  return "Equity";
+      case RISK_BASE_FREEMARGIN: return "Free Margin";
      }
    return "?";
   }
@@ -143,8 +148,7 @@ struct STradePlan
   {
    long              strategy_id;                           // the strategy of the Entry (goes into the magic)
    string            symbol;                                // the symbol of the Entry
-   int               direction;                             // 1 = Buy, -1 = Sell
-   ENUM_ORDER_TYPE   orderType;                             // ORDER_TYPE_BUY / ORDER_TYPE_SELL
+   ENUM_ORDER_TYPE   orderType;                             // ORDER_TYPE_BUY / ORDER_TYPE_SELL (the side; Change in V5: no int direction of the author)
    double            entryPrice;                            // Ask for a buy, Bid for a sell
    double            stopLoss;                              // 0: the strategy gave no stop
    double            takeProfit;                            // 0: no stop, no target
@@ -153,17 +157,19 @@ struct STradePlan
    double            riskAmount;                            // intended money risk (0 in fixed-lot mode)
   };
 //+------------------------------------------------------------------+
-//| Part 7 RiskTypes.mqh SBasketState: the positions of the EA on a  |
-//| symbol seen as one (CMarketCollection::BasketState)              |
+//| Part 7 RiskTypes.mqh SBasketState: the positions dealt on a      |
+//| symbol of one side seen as one (CMarketCollection::BasketState). |
+//| Change in V5: the side is the basket (Concepts.md, Phạm vi), no   |
+//| netDirection of the author                                       |
 //+------------------------------------------------------------------+
 struct SBasketState
   {
+   ENUM_ORDER_TYPE   type;                                  // ORDER_TYPE_BUY / ORDER_TYPE_SELL: the side of the basket
    int               positionCount;
    double            totalVolume;
    double            weightedEntryPrice;                    // volume-weighted average entry
    double            floatingPL;                            // profit + swap
    double            usedMargin;                            // computed per leg
-   int               netDirection;                          // 1 net long, -1 net short, 0 flat or balanced
    datetime          oldestOpenTime;
   };
 //+------------------------------------------------------------------+

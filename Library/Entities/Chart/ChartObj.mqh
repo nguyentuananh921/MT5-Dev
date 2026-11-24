@@ -72,13 +72,11 @@
    //--- (MT5 "First Indicator's Data": its applied param tells nothing, 1 when dropped by hand, a handle when made by a program): its source, TYPE(params)
     bool              LineIdentity(const CWndInd *ind,ENUM_INDICATOR &type,MqlParam &params[]) const;
    //--- New in V5: the subwindow whose first line is the indicator (WRONG_VALUE: none, or in the main window)
-    int               SourceWindow(const ENUM_INDICATOR type,const string params_text) const;
+    int               SourceWindow(const ENUM_INDICATOR type,const string params_text);
    //--- The same indicator of the chart: the name, the type and the params as text
     bool              SameOnChart(const CWndInd *first,const CWndInd *second) const;
-   //--- The parameters the chart indicator is made with (FRAMA: no Shift)
-    void              ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[]) const;
-   //--- (1) Check, (2) attach and (3) detach an indicator of the chart by its type and parameters
-    bool              IsIndicatorShownOnChart(const ENUM_INDICATOR type,const string params_text);
+   //--- (1) Check (the line in the list, NULL: not on the chart), (2) attach and (3) detach an indicator of the chart by its type and parameters (the list is read again after)
+    CWndInd          *IsIndicatorShownOnChart(const ENUM_INDICATOR type,const string params_text);
     void              ShowIndicatorOnChart(const ENUM_INDICATOR type,MqlParam &params[]);
     void              RemoveIndicatorFromChart(const ENUM_INDICATOR type,const string params_text);
    //--- The indicator of a template is on the chart when its template shows it (show_on_chart), not when it does not or the template is deleted
@@ -126,16 +124,17 @@
    //--- (the price scale of the old one), the view is told once, then
    if(!this.m_first_start)
       return true;
-   //--- A new attach: the view (told to nobody: the markers draw at PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE), the indicators of the chart, the ones the templates show
+   //--- A new attach: the view (told to nobody: the markers draw at PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE); the scan of the chart: a template on it is shown
+   //--- (Refresh tells its owner), then a template shown and not on the chart is attached. Nothing of the chart is removed
    bool older=false;
    this.SetView(older);
    this.Refresh();
    ENUM_INDICATOR types[];
-   string texts[];
+   string params[];
    bool buy[],sell[];
-   int total=this.m_IndicatorTemplateManager.Read_RAM(types,texts,buy,sell);
+   int total=this.m_IndicatorTemplateManager.Read_RAM(types,params,buy,sell);
    for(int row=0;row<total;row++)
-      this.SyncIndicatorOnChart(types[row],texts[row],false);
+      this.SyncIndicatorOnChart(types[row],params[row],false);
    this.m_first_start=false;
    return true;
   }
@@ -170,6 +169,15 @@
    ::ArrayInitialize(listed,false);
    ::ArrayInitialize(present,false);
    ::ArrayInitialize(taken,false);
+   //--- the templates of the listed lines, while the list is the one of the old chart (a line gone: its source may be gone too)
+   string old_params[];
+   ::ArrayResize(old_params,old_total);
+   for(int k=0;k<old_total && send_events;k++)
+     {
+      ENUM_INDICATOR line_type;
+      MqlParam line_params[];
+      old_params[k]=(this.LineIdentity(this.m_list_ind.At(k),line_type,line_params) ? this.m_IndicatorTemplateManager.ParamsText(line_type,line_params) : "");
+     }
    //--- the same indicator: the list takes the object of the chart, it knows where the indicator is now
    for(int j=0;j<now_total;j++)
      {
@@ -209,6 +217,7 @@
         }
      }
    //--- added: the list takes the object of the chart
+   CWndInd *added[];
    for(int j=0;j<now_total;j++)
      {
       if(present[j])
@@ -218,18 +227,42 @@
          continue;
       taken[j]=true;
       if(send_events)
+        {
+         ::ArrayResize(added,::ArraySize(added)+1);
+         added[::ArraySize(added)-1]=now;
          this.SendEvent(CHART_OBJ_EVENT_CHART_WND_IND_ADD,now);
+        }
      }
    //--- removed
+   ENUM_INDICATOR gone_types[];
+   string gone_params[];
    for(int k=old_total-1;k>WRONG_VALUE;k--)
      {
       CWndInd *old=this.m_list_ind.At(k);
       if(listed[k] || old==NULL)
          continue;
       if(send_events)
+        {
+         const int n=::ArraySize(gone_types);
+         ::ArrayResize(gone_types,n+1);
+         ::ArrayResize(gone_params,n+1);
+         gone_types[n]=old.TypeIndicator();
+         gone_params[n]=old_params[k];
          this.SendEvent(CHART_OBJ_EVENT_CHART_WND_IND_DEL,old);
+        }
       this.m_list_ind.Delete(k);
      }
+   //--- the list is the one of the chart now: the owner of a template writes its show_on_chart (a line came, or its last line went)
+   for(int n=0;n<::ArraySize(added);n++)
+     {
+      ENUM_INDICATOR line_type;
+      MqlParam line_params[];
+      if(this.LineIdentity(added[n],line_type,line_params) && this.m_IndicatorTemplateManager.Read_RAM(line_type,this.m_IndicatorTemplateManager.ParamsText(line_type,line_params))!=NULL)
+         this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(line_type,this.m_IndicatorTemplateManager.ParamsText(line_type,line_params),"show_on_chart",true,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
+     }
+   for(int n=0;n<::ArraySize(gone_types);n++)
+      if(gone_params[n]!="" && this.m_IndicatorTemplateManager.Read_RAM(gone_types[n],gone_params[n])!=NULL && this.IsIndicatorShownOnChart(gone_types[n],gone_params[n])==NULL)
+         this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(gone_types[n],gone_params[n],"show_on_chart",false,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
    for(int j=0;j<now_total;j++)
       if(!taken[j])
          delete current.At(j);
@@ -276,16 +309,16 @@
          MqlParam old_params[],new_params[];
          if(!this.LineIdentity(old_ind,old_type,old_params) || !this.LineIdentity(new_ind,new_type,new_params))
             return;
+         const string old_text=this.m_IndicatorTemplateManager.ParamsText(old_type,old_params);
          if(this.m_IndicatorTemplateManager.Read_RAM(new_type,this.m_IndicatorTemplateManager.ParamsText(new_type,new_params))!=NULL)
             return;
-         string old_text=this.m_IndicatorTemplateManager.ParamsText(old_type,old_params);
          if(this.m_IndicatorTemplateManager.Read_RAM(old_type,old_text)!=NULL)
             this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(old_type,old_text);
          if(this.m_IndicatorTemplateManager.Read_RAM(new_type,catalog))
             this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(new_type,new_params);
          return;
         }
-      //--- A supported standard indicator was added or restored directly on the chart
+      //--- A supported standard indicator was added or restored directly on the chart: its template is made (shown, the default)
       if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_CHART_WND_IND_ADD)
         {
          CWndInd *ind=this.GetIndicator((int)dparam,(int)lparam);
@@ -295,23 +328,8 @@
          MqlParam params[];
          if(!this.LineIdentity(ind,type,params) || !this.m_IndicatorTemplateManager.Read_RAM(type,catalog))
             return;
-         string text=this.m_IndicatorTemplateManager.ParamsText(type,params);
-         if(this.m_IndicatorTemplateManager.Read_RAM(type,text)==NULL)
+         if(this.m_IndicatorTemplateManager.Read_RAM(type,this.m_IndicatorTemplateManager.ParamsText(type,params))==NULL)
             this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(type,params);
-        }
-      //--- An indicator came to or left the chart: the show flags of the templates follow the chart
-      if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_CHART_WND_IND_DEL || id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_CHART_WND_IND_ADD)
-        {
-         ENUM_INDICATOR types[];
-         string texts[],display[];
-         bool buy[],sell[],sound[],message[],show[];
-         int total=this.m_IndicatorTemplateManager.Read_RAM(types,texts,display,buy,sell,sound,message,show);
-         for(int row=0;row<total;row++)
-           {
-            bool on_chart=this.IsIndicatorShownOnChart(types[row],texts[row]);
-            if(on_chart!=show[row])
-               this.m_IndicatorTemplateManager.Update_IndicatorTemplate_Setting(types[row],texts[row],"show_on_chart",on_chart,INDICATOR_TEMPLATE_MANAGER_EVENT_SHOW_CHANGED);
-           }
          return;
         }
      }
@@ -466,10 +484,16 @@
      {
       if(!this.m_IndicatorTemplateManager.TakesSource(type))
          return false;   // on the first line, but a type that can't be on an indicator (FRAMA): no template rather than a wrong one
-      CWndInd first(this.m_chart_id,ind.WindowNum(),0);
+      CWndInd *first=NULL;   // the first line of its subwindow, in the list (not read again from the chart)
+      for(int i=0;i<this.m_list_ind.Total() && first==NULL;i++)
+        {
+         CWndInd *line=this.m_list_ind.At(i);
+         if(line!=NULL && line.WindowNum()==ind.WindowNum() && line.Index()==0)
+            first=line;
+        }
       ENUM_INDICATOR source_type;
       MqlParam source_params[];
-      if(!first.GetIdentity(source_type,source_params) || !this.ChartIdentity(source_type,source_params))
+      if(first==NULL || !first.GetIdentity(source_type,source_params) || !this.ChartIdentity(source_type,source_params))
          return false;
       params[applied].string_value=this.m_IndicatorTemplateManager.SourceText(source_type,this.m_IndicatorTemplateManager.ParamsText(source_type,source_params));
       params[applied].integer_value=0;
@@ -477,20 +501,26 @@
      }
    return (params[applied].integer_value>=PRICE_CLOSE && params[applied].integer_value<=PRICE_WEIGHTED);
   }
- int CChartObj::SourceWindow(const ENUM_INDICATOR type,const string params_text) const
+ //+------------------------------------------------------------------+
+ //| The line of a template in the list of the chart (Refresh keeps   |
+ //| it as the chart is), NULL: not on the chart                      |
+ //+------------------------------------------------------------------+
+ CWndInd *CChartObj::IsIndicatorShownOnChart(const ENUM_INDICATOR type,const string params_text)
   {
-   int windows=(int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL);
-   for(int win=1;win<windows;win++)
+   for(int i=0;i<this.m_list_ind.Total() && this.m_IndicatorTemplateManager!=NULL;i++)
      {
-      if(::ChartIndicatorsTotal(this.m_chart_id,win)<1)
-         continue;
-      CWndInd first(this.m_chart_id,win,0);
+      CWndInd *ind=this.m_list_ind.At(i);
       ENUM_INDICATOR line_type;
       MqlParam line_params[];
-      if(this.LineIdentity(::GetPointer(first),line_type,line_params) && line_type==type && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
-         return win;
+      if(ind!=NULL && ind.TypeIndicator()==type && this.LineIdentity(ind,line_type,line_params) && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
+         return ind;
      }
-   return WRONG_VALUE;
+   return NULL;
+  }
+ int CChartObj::SourceWindow(const ENUM_INDICATOR type,const string params_text)
+  {
+   CWndInd *ind=this.IsIndicatorShownOnChart(type,params_text);
+   return (ind!=NULL && ind.WindowNum()>0 && ind.Index()==0 ? ind.WindowNum() : WRONG_VALUE);
   }
  bool CChartObj::SameOnChart(const CWndInd *first,const CWndInd *second) const
   {
@@ -501,45 +531,6 @@
    first.GetIdentity(first_type,first_params);
    second.GetIdentity(second_type,second_params);
    return (first_type==second_type && this.m_IndicatorTemplateManager.ParamsText(first_type,first_params)==this.m_IndicatorTemplateManager.ParamsText(second_type,second_params));
-  }
- //+------------------------------------------------------------------+
- //| The parameters the chart indicator is made with: FRAMA drops its  |
- //| Shift (the chart holds period, applied price)                    |
- //+------------------------------------------------------------------+
- void CChartObj::ChartParams(const ENUM_INDICATOR type,MqlParam &params[],MqlParam &out[]) const
-  {
-   int count=::ArraySize(params);
-   ::ArrayResize(out,count);
-   for(int i=0;i<count;i++)
-      out[i]=params[i];
-   if(type==IND_FRAMA && count==3)
-     {
-      out[1]=out[2];
-      ::ArrayResize(out,2);
-     }
-  }
- //+------------------------------------------------------------------+
- //| The identity is read from the chart itself (CWndInd), not from   |
- //| the list: nothing is stale                                       |
- //+------------------------------------------------------------------+
- bool CChartObj::IsIndicatorShownOnChart(const ENUM_INDICATOR type,const string params_text)
-  {
-   if(this.m_IndicatorTemplateManager==NULL)
-      return false;
-   int windows=(int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL);
-   for(int win=0;win<windows;win++)
-     {
-      int total=::ChartIndicatorsTotal(this.m_chart_id,win);
-      for(int k=0;k<total;k++)
-        {
-         CWndInd ind(this.m_chart_id,win,k);
-         ENUM_INDICATOR line_type;
-         MqlParam line_params[];
-         if(this.LineIdentity(::GetPointer(ind),line_type,line_params) && line_type==type && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
-            return true;
-        }
-     }
-   return false;
   }
  //+------------------------------------------------------------------+
  //| Attach the indicator: trend group to the main window, the rest   |
@@ -561,14 +552,10 @@
       ::Print(__FUNCTION__," > indicator is not in the standard catalog: ",EnumToString(type));
       return;
      }
-   MqlParam chart_params[];
-   this.ChartParams(type,params,chart_params);
-   if(type==IND_FRAMA)   // IndicatorCreate wants the Shift (4002 without it), the chart holds FRAMA without it
-     {
-      ::ArrayResize(chart_params,::ArraySize(params));
-      for(int i=0;i<::ArraySize(params);i++)
-         chart_params[i]=params[i];
-     }
+   MqlParam chart_params[];   // the params of the template as they are (FRAMA: IndicatorCreate wants its Shift, 4002 without it)
+   ::ArrayResize(chart_params,::ArraySize(params));
+   for(int i=0;i<::ArraySize(params);i++)
+      chart_params[i]=params[i];
    //--- New in V5: an MA on a source takes the handle of the first line of the subwindow of the source
    int source_window=WRONG_VALUE;
    ENUM_INDICATOR source_type;
@@ -599,7 +586,11 @@
    bool overlay=this.m_IndicatorTemplateManager.IsOverlay(type);
    int sub_window=(source_window>0 ? source_window : overlay ? 0 : (int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL));
    if(!::ChartIndicatorAdd(this.m_chart_id,sub_window,handle))
+     {
       ::Print(DFUN,indicator_name,": ChartIndicatorAdd failed, error ",::GetLastError());
+      return;
+     }
+   this.Refresh();   // the list has the new line (an MA on it next finds its source)
   }
  //+------------------------------------------------------------------+
  //| Detach the first indicator with this type and parameters         |
@@ -609,7 +600,7 @@
    MqlParam params[];
    if(!this.m_IndicatorTemplateManager.ParamsFromText(type,params_text,params))
       return;
-   const bool shown=this.IsIndicatorShownOnChart(type,params_text);
+   const bool shown=(this.IsIndicatorShownOnChart(type,params_text)!=NULL);
    CIndicatorSetting *setting=this.m_IndicatorTemplateManager.Read_RAM(type,params_text);
    const bool wanted=(!deleted && setting!=NULL && setting.ShowOnChart());
    if(wanted && !shown)
@@ -619,32 +610,27 @@
   }
  void CChartObj::RemoveIndicatorFromChart(const ENUM_INDICATOR type,const string params_text)
   {
-   if(this.m_IndicatorTemplateManager==NULL)
+   CWndInd *ind=this.IsIndicatorShownOnChart(type,params_text);
+   if(this.m_IndicatorTemplateManager==NULL || ind==NULL)
       return;
-   int windows=(int)::ChartGetInteger(this.m_chart_id,CHART_WINDOWS_TOTAL);
-   for(int win=0;win<windows;win++)
-     {
-      int total=::ChartIndicatorsTotal(this.m_chart_id,win);
-      for(int k=0;k<total;k++)
+   const int win=ind.WindowNum();
+   string names[];   // the list is read again after the deletes: the names are taken first
+   //--- Change in V5 (was the average of Volumes): the first line of a subwindow is the source of the MAs after it, they go with it (as MT5)
+   if(win>0 && ind.Index()==0)
+      for(int i=0;i<this.m_list_ind.Total();i++)
         {
-         CWndInd ind(this.m_chart_id,win,k);
-         ENUM_INDICATOR line_type;
-         MqlParam line_params[];
-         if(this.LineIdentity(::GetPointer(ind),line_type,line_params) && line_type==type && this.m_IndicatorTemplateManager.ParamsText(line_type,line_params)==params_text)
+         CWndInd *reader=this.m_list_ind.At(i);
+         if(reader!=NULL && reader.WindowNum()==win && reader.Index()>0 && this.m_IndicatorTemplateManager.TakesSource(reader.TypeIndicator()))
            {
-            //--- Change in V5 (was the average of Volumes): the first line of a subwindow is the source of the MAs after it, they go with it (as MT5)
-            if(win>0 && k==0)
-               for(int a=::ChartIndicatorsTotal(this.m_chart_id,win)-1;a>0;a--)
-                 {
-                  CWndInd reader(this.m_chart_id,win,a);
-                  if(this.m_IndicatorTemplateManager.TakesSource(reader.TypeIndicator()))
-                     ::ChartIndicatorDelete(this.m_chart_id,win,reader.Name());
-                 }
-            ::ChartIndicatorDelete(this.m_chart_id,win,ind.Name());
-            return;
+            ::ArrayResize(names,::ArraySize(names)+1);
+            names[::ArraySize(names)-1]=reader.Name();
            }
         }
-     }
+   ::ArrayResize(names,::ArraySize(names)+1);
+   names[::ArraySize(names)-1]=ind.Name();
+   for(int i=0;i<::ArraySize(names);i++)
+      ::ChartIndicatorDelete(this.m_chart_id,win,names[i]);
+   this.Refresh();   // the lines gone: their templates are told (show_on_chart off)
   }
 #endif // CCHARTOBJ_MQH_IMPLEMENTATION
 #endif // __CHARTOBJ_MQH__

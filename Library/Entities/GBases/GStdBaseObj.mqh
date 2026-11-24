@@ -39,6 +39,7 @@
      bool              SetPrice(const double price,const int modifier);
      bool              SetColor(const color colour);
      bool              SetWidth(const int width);
+     bool              SetStyle(const ENUM_LINE_STYLE style);   // New in V5: a dashed / dotted line (CPivotPatternShape)
      bool              SetFlagFill(const bool flag);
      bool              SetFlagRayRight(const bool flag);
      bool              SetText(const string text);
@@ -174,6 +175,13 @@
    if(!::ObjectSetInteger(CGBaseObj::ChartID(),CGBaseObj::Name(),OBJPROP_FILL,flag))
       return false;
    this.SetProperty(GRAPH_OBJ_PROP_FILL,0,flag);
+   return true;
+  }
+ bool CGStdBaseObj::SetStyle(const ENUM_LINE_STYLE style)
+  {
+   if(!::ObjectSetInteger(CGBaseObj::ChartID(),CGBaseObj::Name(),OBJPROP_STYLE,style))
+      return false;
+   this.SetProperty(GRAPH_OBJ_PROP_STYLE,0,style);
    return true;
   }
  bool CGStdBaseObj::SetFlagRayRight(const bool flag)

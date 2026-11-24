@@ -412,7 +412,6 @@
      int                 ReadDataFromDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const datetime from_time,const datetime to_time,const ENUM_INDICATOR type,const string params_text,long &times[],long &sides[]);
      //--- Removed in V5: results are saved by Live Python
      //bool                UpdateDataToDB(const string symbol,const ENUM_TIMEFRAMES timeframe,const ENUM_INDICATOR type,const string params_text,const long &times[],const long &sides[]);
-     //Working with DB
      //Woring in RAM
       //--- The index of a template in m_list_indicator (WRONG_VALUE: none), the template itself (NULL: none)
        CIndicatorSetting *Read_RAM(const ENUM_INDICATOR type, const string params_text) const;

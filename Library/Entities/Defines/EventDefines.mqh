@@ -93,7 +93,7 @@
  enum ENUM_TRADE_SETUP_EVENT
   {
    TRADE_SETUP_EVENT_NO_EVENT = BAR_MARKER_EVENTS_NEXT_CODE,  // No event
-   TRADE_SETUP_EVENT_SEND,                                  // Send order clicked: lparam SIGNAL_DIRECTION_BUY/SELL, dparam lots (the lot chosen, <= MaxLot of the risk), sparam symbol. From CButton, not the Automation of Entry x Order: no spread gate; the risk tiers as usual, or the lot alone without SL / TP when the risk makes no plan
+   TRADE_SETUP_EVENT_SEND,                                  // Send order clicked: lparam SIGNAL_DIRECTION_BUY/SELL, dparam lots (the lot chosen, <= MaxLot of the risk), sparam symbol, or "symbol;magic" (the magic typed in the panel). From CButton, not the Automation of Entry x Order: no spread gate; the risk tiers as usual, or the lot alone without SL / TP when the risk makes no plan
    TRADE_SETUP_EVENT_CLOSE,                                 // Close icon clicked: lparam SIGNAL_DIRECTION_BUY/SELL, sparam symbol
    TRADE_SETUP_EVENT_CLOSE_ALL,                             // Close all positions clicked (emergency, no confirmation): every position of the account
   };
@@ -161,8 +161,11 @@
    SERIES_EVENTS_BOS,                                                  // A BOS was found (CBarBOS): lparam = CBaseObj::EventPack, its time = the break bar, dparam = its timeframe, sparam = its symbol
    SERIES_EVENTS_CHOCH,                                                // A CHoCH was found (CBarCHoCH): lparam = CBaseObj::EventPack, its time = the break bar, dparam = its timeframe, sparam = its symbol
    SERIES_EVENTS_SIGNAL,                                               // The signal of an indicator template flipped (CSignal): lparam = CBaseObj::EventPack, its key = the type of the indicator, dparam = its timeframe, sparam = its symbol;the column params of its template
+   //--- New in V5: a pivot pattern (Harmonic, Chart Pattern: CBarPattern) before its CONFIRM (the row, SERIES_EVENTS_PATTERN). Live only, RAM only (no row in the table)
+   SERIES_EVENTS_PATTERN_FOUND,                                        // Its last pivot is a Pivot Point Reversal, the rule holds: lparam = CBaseObj::EventPack, its time = the bar of the last pivot, its key = the type, dparam = its timeframe, sparam = its symbol
+   SERIES_EVENTS_PATTERN_INVALID,                                      // A FOUND whose last pivot did not become the swing: the same contract (its bit on the bar is gone)
   };
- #define SERIES_EVENTS_NEXT_CODE  (SERIES_EVENTS_SIGNAL+1)  // The code of the next event after the last timeseries event code
+ #define SERIES_EVENTS_NEXT_CODE  (SERIES_EVENTS_PATTERN_INVALID+1)  // The code of the next event after the last timeseries event code
  //+------------------------------------------------------------------+
  //| Python bridge events (CPythonBridge, from the files Python makes  |
  //| at its milestones)                                                |
@@ -187,24 +190,13 @@
   };
  #define TICK_EVENTS_NEXT_CODE  (TICK_EVENT_NEW+1)  // The code of the next event after the last tick event code
  //+------------------------------------------------------------------+
- //| Indicator events (New in V5, BaseIndicatorStrategy.md: the value |
- //| of a base with the role SL / Trailing follows the ticks).         |
- //| lparam = the id of its template, dparam = the TF, sparam = symbol |
- //+------------------------------------------------------------------+
- enum ENUM_INDICATOR_EVENT
-  {
-   INDICATOR_EVENT_NO_EVENT = TICK_EVENTS_NEXT_CODE,       // No event
-   INDICATOR_EVENT_REFRESHED,                              // An indicator with a role in use refreshed its values on RAM at a new tick of its symbol
-  };
- #define INDICATOR_EVENTS_NEXT_CODE  (INDICATOR_EVENT_REFRESHED+1)  // The code of the next event after the last indicator event code
- //+------------------------------------------------------------------+
  //| Market Watch events (V3, CSymbolsCollection::MarketWatchEvents-  |
  //| Control): lparam = CBaseObj::EventPack (when, key = the index of |
  //| the symbol in CSymbolsCollection, is_new = added), sparam = name |
  //+------------------------------------------------------------------+
  enum ENUM_MW_EVENT
   {
-   MARKET_WATCH_EVENT_NO_EVENT = INDICATOR_EVENTS_NEXT_CODE,   // No event
+   MARKET_WATCH_EVENT_NO_EVENT = TICK_EVENTS_NEXT_CODE,   // No event (the value of an indicator is not an Event: Event.md)
    MARKET_WATCH_EVENT_SYMBOL_ADD,                           // Adding a symbol to the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_DEL,                           // Removing a symbol from the Market Watch window
    MARKET_WATCH_EVENT_SYMBOL_SORT,                          // Sorting symbols in the Market Watch window

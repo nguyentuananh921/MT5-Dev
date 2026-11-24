@@ -158,6 +158,20 @@
       bit=(int)type-(int)BAR_INFOR_TYPE_MOMENTUM_CANDLE;
       return true;
      }
+   //--- New in V5: the pivot patterns go on the free bits of Smart Money, after CHoCH (as Price Action goes after the candles)
+   const int smart_money=(int)BAR_INFOR_TYPE_CHOCH-(int)BAR_INFOR_TYPE_MOMENTUM_CANDLE+1;
+   if(type>=BAR_INFOR_TYPE_GARTLEY && type<=BAR_INFOR_TYPE_FIVE_DRIVES)
+     {
+      property=BAR_PROP_INFORMATION_SMART_MONEY;
+      bit=smart_money+(int)type-(int)BAR_INFOR_TYPE_GARTLEY;
+      return true;
+     }
+   if(type>=BAR_INFOR_TYPE_HEAD_SHOULDERS && type<=BAR_INFOR_TYPE_QUASIMODO)
+     {
+      property=BAR_PROP_INFORMATION_SMART_MONEY;
+      bit=smart_money+((int)BAR_INFOR_TYPE_FIVE_DRIVES-(int)BAR_INFOR_TYPE_GARTLEY+1)+(int)type-(int)BAR_INFOR_TYPE_HEAD_SHOULDERS;
+      return true;
+     }
    return false;
   }
  //+------------------------------------------------------------------+

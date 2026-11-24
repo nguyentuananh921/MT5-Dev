@@ -49,6 +49,7 @@
       CButton                             m_btn_manual_open_position;          // outside the sections: opens the direction chosen (TRADE_SETUP_EVENT_SEND), its text and colour follow it
       CButton                             m_btn_manual_close_all_Position;     // outside the sections: closes every position of the account (emergency, no confirmation)
       CComboBox                           m_combobox_manual_lot;               // in m_sections_trade_select: MinLot .. MaxLot of the Automation, step VolumeStep (CSymbol)
+      CTextEdit                           m_edit_manual_magic;                 // in m_sections_trade_select: the magic of the Manual Entry, typed (first: the EA's)
      // Quick Setting tab of m_tabs_main (GUIPannel_TabQuickSetting.mqh)
       CTabs                               m_tabs_quickSetting;  
      //Indicator tab
@@ -158,6 +159,7 @@
      // For the Strategy tab implementation in GUIPannel_TabQuickSetting_Strategy.mqh
       bool                                CreateSections_Strategy(void);
       bool                                AddRow_Strategy(const int section,CStrategySetting *strategy);
+      void                                RebuildRows_Strategy(void);
       string                              SlotText_Strategy(CStrategyIndicatorSetting *slot);
       void                                OpenWindow_EditSlot_Strategy(const long value);
       void                                SaveSlot_Strategy(void);

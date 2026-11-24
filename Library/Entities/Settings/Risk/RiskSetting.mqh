@@ -8,7 +8,8 @@
 //| and its comment, in its order. CTradingControl writes and reads  |
 //| the table. Not ported: the MA / ATR periods (slots of the        |
 //| Strategy), Order Execution (the Strategy decides the order type),|
-//| inpMagicNumber (the input of the EA). New in V5: the group "V5"  |
+//| inpMagicNumber (the input of the EA), MaxSpreadPips (a filter of |
+//| the example EA, not of the risk). New in V5: the group "V5"      |
 //| (StopLossTemplates, TrailingTemplates)                           |
 //+------------------------------------------------------------------+
 #ifndef __RISKSETTING_MQH__
@@ -46,17 +47,15 @@
       bool                       SetValue(const string name,const double value,const bool notify=true);
       string                     Text(const string name) const;
       bool                       SetText(const string name,const string text,const bool notify=true);
-    //--- Risk Model, Stops and Targets, Adaptive Risk, Broker & Margin Safety, Trading Signal (SRiskConfig)
+    //--- Risk Model, Stops and Targets, Adaptive Risk, Broker & Margin Safety (SRiskConfig)
       ENUM_RISK_MODE             RiskMode(void)                        const { return (ENUM_RISK_MODE)(int)Value("RiskMode");                      }
       ENUM_RISK_BASE             RiskBase(void)                        const { return (ENUM_RISK_BASE)(int)Value("RiskBase");                      }
       double                     RiskPercent(void)                     const { return Value("percentage_risk_per_operation");                      }
       double                     FixedCashRisk(void)                   const { return Value("FixedCashRisk");                                      }
-      double                     FixedLotSize(void)                    const { return Value("FixedLotSize");                                       }
       bool                       AllowMinLotOverRisk(void)             const { return Value("AllowMinLotOverRisk")!=0;                             }
       bool                       EnableDrawdownScaling(void)           const { return Value("EnableAdaptiveRisk")!=0;                              }
       double                     DrawdownTrigger(void)                 const { return Value("DropDownLevel");                                      }
       double                     DrawdownFactor(void)                  const { return Value("RiskReductionFactor");                                }
-      bool                       ApplyDrawdownToFixedLot(void)         const { return Value("ApplyDrawdownToFixedLot")!=0;                         }
       double                     StopATRMultiplier(void)               const { return Value("ATRMultiplier");                                      }
       double                     TPRatio(void)                         const { return Value("TakeProfitRatio");                                    }
       double                     MaxMarginUsagePercent(void)           const { return Value("MaxMarginUsagePercent");                              }
@@ -64,7 +63,6 @@
       double                     MarginLevelSafe(void)                 const { return Value("MarginLevelSafe");                                    }
       double                     MarginLevelDanger(void)               const { return Value("MarginLevelDanger");                                  }
       bool                       AllowHedging(void)                    const { return Value("AllowHedging")!=0;                                    }
-      double                     MaxSpreadPips(void)                   const { return Value("MaxSpreadPips");                                      }
      //--- New in V5: the strategies (strategy_id) that take part in trading
       string                    EntryStrategies(void)                 const { return Text("EntryStrategies");                                     }
      //--- The bases (Setting_IndicatorTemplate.id, comma-separated) that give the stop / trail it: any number ON, the best price wins
@@ -102,12 +100,11 @@
    {
     this.m_object_type=OBJECT_DE_TYPE_RISK_SETTING;
     this.m_name="Setting_Risk";
-    this.AddKey("Trading Signal",               "double",              "MaxSpreadPips",                 2.0,                    "","Maximum allowed spread");
     this.AddKey("Risk Model",                   "ENUM_RISK_MODE",      "RiskMode",                      RISK_PERCENT,           "","How risk per trade is defined");
     this.AddKey("Risk Model",                   "ENUM_RISK_BASE",      "RiskBase",                      RISK_BASE_BALANCE,      "","Risk percentage measured against");
     this.AddKey("Risk Model",                   "double",              "percentage_risk_per_operation", 1.0,                    "","Risk per trade [%] (percent mode)");
     this.AddKey("Risk Model",                   "double",              "FixedCashRisk",                 100.0,                  "","Risk per trade [account currency] (cash mode)");
-    this.AddKey("Risk Model",                   "double",              "FixedLotSize",                  0,                      "","Lot size (fixed-lot mode) [0 = min lot of the symbol]");
+    //--- Change in V5 (2026-11-23): no FixedLotSize (Part 7 0.10): the fixed-lot mode is the min lot of the symbol, no ApplyDrawdownToFixedLot (it cannot shrink)
     this.AddKey("Risk Model",                   "bool",                "AllowMinLotOverRisk",           1,                      "","Trade min lot even if it exceeds intended risk");
     this.AddKey("Stops and Targets",            "double",              "ATRMultiplier",                 1.5,                    "","ATR multiplier for stop distance");
     this.AddKey("Stops and Targets",            "double",              "TakeProfitRatio",               2.0,                    "","Take profit ratio");
@@ -115,7 +112,6 @@
     this.AddKey("Adaptive Risk (Drawdown)",     "bool",                "EnableAdaptiveRisk",            0,                      "","Reduce risk during drawdowns");
     this.AddKey("Adaptive Risk (Drawdown)",     "double",              "DropDownLevel",                 3.0,                    "","Drawdown % that triggers reduced risk");
     this.AddKey("Adaptive Risk (Drawdown)",     "double",              "RiskReductionFactor",           0.5,                    "","Risk multiplier when triggered");
-    this.AddKey("Adaptive Risk (Drawdown)",     "bool",                "ApplyDrawdownToFixedLot",       0,                      "","Also shrink the fixed lot");
     this.AddKey("Broker & Margin Safety",       "double",              "MaxMarginUsagePercent",         50.0,                   "","Max % of free margin one trade may use");
     this.AddKey("Broker & Margin Safety",       "bool",                "EnableAdaptiveMarginCap",       0,                      "","Scale the cap with account margin level");
     this.AddKey("Broker & Margin Safety",       "double",              "MarginLevelSafe",               500.0,                  "","Margin level [%] where the full cap applies");
