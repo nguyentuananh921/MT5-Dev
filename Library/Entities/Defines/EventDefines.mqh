@@ -2,6 +2,10 @@
 //|                                                 EventDefines.mqh |
 //| Event code chain: every group starts at the NEXT_CODE of the     |
 //| previous one so codes sent through EventChartCustom never clash  |
+//| (a new event: update the NEXT_CODE of its group). The comment of |
+//| each event is its contract (lparam, dparam, sparam). EventSend   |
+//| takes the code as it is here: the EA adds CHARTEVENT_CUSTOM when |
+//| it dispatches                                                    |
 //+------------------------------------------------------------------+
 #ifndef __EVENTDEFINES_MQH__
 #define __EVENTDEFINES_MQH__
@@ -94,10 +98,13 @@
   {
    TRADE_SETUP_EVENT_NO_EVENT = BAR_MARKER_EVENTS_NEXT_CODE,  // No event
    TRADE_SETUP_EVENT_SEND,                                  // Send order clicked: lparam SIGNAL_DIRECTION_BUY/SELL, dparam lots (the lot chosen, <= MaxLot of the risk), sparam symbol, or "symbol;magic" (the magic typed in the panel). From CButton, not the Automation of Entry x Order: no spread gate; the risk tiers as usual, or the lot alone without SL / TP when the risk makes no plan
-   TRADE_SETUP_EVENT_CLOSE,                                 // Close icon clicked: lparam SIGNAL_DIRECTION_BUY/SELL, sparam symbol
+   TRADE_SETUP_EVENT_CLOSE,                                 // Close clicked (the icon, the Action of the panel): lparam SIGNAL_DIRECTION_BUY/SELL (NONE: both sides), dparam > 0 only the positions in profit, < 0 only the ones in loss, 0 any; sparam symbol (the positions of the EA on it)
    TRADE_SETUP_EVENT_CLOSE_ALL,                             // Close all positions clicked (emergency, no confirmation): every position of the account
+   TRADE_SETUP_EVENT_LOT,                                   // New in V5: a lot chosen in the panel (the Manual Entry): dparam lots, sparam symbol. Working on RAM: the lot of RISK_FIXED_LOT on the symbol
+   TRADE_SETUP_EVENT_MODIFY,                                // New in V5 (2026-11-27): Modify of the box of a basket (CTradeSetupBox::SetManage): lparam SIGNAL_DIRECTION_BUY/SELL, dparam the SL, sparam "symbol;tp". Every position of the basket (symbol + side, every magic) takes them
+   TRADE_SETUP_EVENT_CLOSE_BASKET,                          // New in V5 (2026-11-27): Close of a row of the By Basket tab: lparam SIGNAL_DIRECTION_BUY/SELL, sparam symbol. Every position of the basket (every magic), not only the EA's as TRADE_SETUP_EVENT_CLOSE
   };
- #define TRADE_SETUP_EVENTS_NEXT_CODE  (TRADE_SETUP_EVENT_CLOSE_ALL+1)  // The code of the next event after the last trade setup event code
+ #define TRADE_SETUP_EVENTS_NEXT_CODE  (TRADE_SETUP_EVENT_CLOSE_BASKET+1)  // The code of the next event after the last trade setup event code
  //+------------------------------------------------------------------+
  //| Events of the bubbles of the trading levels                      |
  //+------------------------------------------------------------------+
@@ -267,7 +274,9 @@
  #define STRATEGY_TRADE_EVENTS_NEXT_CODE  (STRATEGY_TRADE_EVENT_CLICK+1)  // The code of the next event after the last strategy trade event code
  //+------------------------------------------------------------------+
  //| Events of the risk setting (CRiskSetting, Setting_Risk):         |
- //| dparam = the new value, sparam = the name of the key             |
+ //| lparam = save now (1: the Risk Management tab, written at once;  |
+ //| 0: working on RAM, written at OnDeinit), dparam = the new value, |
+ //| sparam = the name of the key                                     |
  //+------------------------------------------------------------------+
  enum ENUM_RISK_SETTING_EVENT
   {

@@ -47,6 +47,21 @@ Note lại các command để chạy cho nhanh.
 
 
 ## Skills
+ ### [Addon Skills]
+  Vendor skill ở `skills\Addon\.claude\skills\` (gitignore), cài bằng skills CLI theo `skills\Addon\skills-lock.json`; plugin `mt5-tools` load qua [marketplace.json](../../.claude-plugin/marketplace.json).
+  ```powershell
+  Set-Location 'D:\MT5-Dev\skills\Addon'
+  npx skills@latest experimental_install   # restore từ skills-lock.json (máy mới / sau khi clone)
+  npx skills@latest update -p              # cập nhật bản mới, ghi lại skills-lock.json
+  npx skills@latest list
+
+  # Addon bị gitignore nên marketplace phải là source local, không phải GitHub
+  claude plugin marketplace remove mt5-marketplace
+  claude plugin marketplace add D:\MT5-Dev
+  claude plugin install mt5-tools@mt5-marketplace
+  claude plugin marketplace update mt5-marketplace   # sau mỗi lần update skill, rồi mở session mới
+  ```
+ ### [Khác]
  ```powershell
   claude plugin marketplace add nguyentuananh921/MT5-Dev
   claude plugin install mt5-tools@mt5-marketplace
@@ -66,7 +81,21 @@ Note lại các command để chạy cho nhanh.
   //Create mcp server
    pip install mcp
    claude mcp add -s user mt5-tools -- python D:\MT5-Dev\scripts\mt5_mcp_server.py
+  //Skill
+   npx skills@latest add emilkowalski/skills --skill emil-design-eng -a claude-code -g
+   npx skills@latest add pbakaus/impeccable --skill impeccable -a claude-code -g
+  //Xóa bản cũ
+   npx skills remove --global emil-design-eng
+  //
+   Set-Location 'D:\MT5-Dev\skills\Addon'
+   cd /d D:\MT5-Dev\skills\Addon
+   npx skills@latest add emilkowalski/skills --skill emil-design-eng -a claude-code
+   npx skills@latest add pbakaus/impeccable --skill impeccable -a claude-code
+   claude --add-dir 'D:\MT5-Dev\skills\Addon'
  ```powershell
 
 /plugin marketplace add nguyentuananh921/MT5-Dev
 /plugin install nguyentuananh921@tradecanvasMT5-Dev
+
+/emil-design-eng Review the animation and interaction on this page.
+/impeccable Critique and polish this page for production.

@@ -9,5 +9,8 @@
 		{
 			"path": "D:/MT5-Dev/Library"
 		}
-	]
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
 }

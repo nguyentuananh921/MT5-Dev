@@ -19,6 +19,7 @@
    m_table_trade_history.View().GetHeaderViewPointer().CaptionVisible(COL_T_REASON,false);
    m_table_trade_history.ColumnContentAlign(COL_T_REASON,ALIGN_CENTER);
    m_table_trade_history.View().IsFilterMode(COL_T_REASON,true);
+   m_table_trade_history.View().IsFilterMode(COL_T_BASKET_ID,true);   // the trades of one basket
    m_table_trade_history.View().ColumnTooltips(COL_T_REASON,TRADE_REASON_VALUE,TRADE_REASON_TOOLTIP);
    m_table_trade_history.View().Rebuild(true);
    this.LoadLayout_Table(m_table_trade_history,this.LayoutFile_TradeManage(TAB_TRADE_HISTORY_POSITION));
@@ -168,10 +169,7 @@
       cells[c++]=(commission[k]!=0 ? ::DoubleToString(commission[k],2) : "");
       cells[c++]=(swap[k]!=0 ? ::DoubleToString(swap[k],2) : "");
       cells[c++]=(string)ids[k];
-      long change_time[],change_event[],basket_id=0;   // the basket of the trade: what the table keeps of its position (0: not known, blank)
-      double change_sl[],change_tp[];
-      if(m_TradingControl!=NULL)
-         m_TradingControl.ReadDataFromDB(ids[k],change_time,change_event,change_sl,change_tp,basket_id);
+      const long basket_id=(m_TradingControl!=NULL ? m_TradingControl.BasketId(ids[k]) : 0);   // the basket of the trade on RAM (0: not known, blank)
       cells[c++]=(basket_id!=0 ? (string)basket_id : "");
       cells[c++]=(t_open[k]>0 ? opened : "");
       cells[c++]=shut;

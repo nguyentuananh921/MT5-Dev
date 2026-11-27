@@ -35,6 +35,7 @@
   #include <Combination Lib V5\Collections\GraphElementsCollection.mqh>   // the markers: the popup lights the box of its candle
   #include <Combination Lib V5\Collections\BarMarkerCollection.mqh>   // the rows of a candle on RAM: the popup reads them
   #include <Combination Lib V5\Entities\Graph\Composite\BarMarker.mqh>
+  #include <Combination Lib V5\Entities\Graph\Composite\TradeSetupBox.mqh>   // the box of a basket (Manage of the By Basket tab)
  // Define GUI control
   #define M_SUBWINDOW_MAIN                0  //The EA runs in the main window of its own chart: one EA instance per chart
   // Main panel window m_window_main
@@ -79,7 +80,7 @@
    //m_sections_risk (the Risk Management tab, GUIPannel_TabQuickSetting_Risk.mqh): a section for each Setting_Risk.grp (the input group of the
    //author) that has a key shown, a row for each key (its index in CRiskSetting, param = its name), the control by Setting_Risk.type: bool a switch
    //(TRADE_SLOT_KEY_SWITCH), ENUM_ a combobox (TRADE_SLOT_KEY_ENUM), int / double a spin box (TRADE_SLOT_KEY_VALUE), string not shown.
-   //RiskMode and the amount of each mode are on the Trading tab
+   //Every key saved to DB, RiskMode and the amount of each mode too (also on the Trading tab, working on RAM): set here = saved at once
     enum ENUM_RISK_COLUMN
      {
       RISK_COLUMN_LABEL,
@@ -241,65 +242,82 @@
      {
       TAB_TRADE_OPEN_POSITION_BY_SYMBOL,
       TAB_TRADE_OPEN_POSITION,
+      TAB_TRADE_OPEN_POSITION_BY_BASKET,
       TAB_TRADE_PENDING_POSITION,
       TAB_TRADE_HISTORY_POSITION,
       TAB_TRADE_TOTAL
      };
     #define M_BUTTON_TRADEMANAGE_WIDTH   100
-    #define M_BUTTON_OPEN_POSITION_WIDTH 95     // Open Buy / Open Sell of the Trading tab
-    #define M_BUTTON_CLOSEALL_WIDTH      85
     #define M_BUTTON_TRADEMANAGE_TAB_WIDTH 100  // Trade Manage of the Trading tab (the window keeps M_BUTTON_TRADEMANAGE_WIDTH for its Columns button)
-    //--- The Trading tab, the top row left to right: the header of Auto, its ON / OFF, Open, Close All, Trade Manage; the settings of the Automation go down
-    //--- from the top row (Auto first), the Manual Entry is under the buttons
-    #define M_TRADING_X_OPEN             (M_CONTROL_BORDER_GAP+M_SECTION_BODY_INDENT+M_TRADE_AUTO_TOGGLE_X+M_SECTION_TEXT_TOGGLE_WIDTH+M_CONTROL_BORDER_GAP)   // right of the toggle of Auto
-    #define M_TRADING_X_CLOSEALL         (M_TRADING_X_OPEN+M_CONTROL_BORDER_GAP+M_BUTTON_OPEN_POSITION_WIDTH)
-    #define M_TRADING_X_TRADEMANAGE      (M_TRADING_X_CLOSEALL+M_CONTROL_BORDER_GAP+M_BUTTON_CLOSEALL_WIDTH)
-    #define M_TRADING_SECTIONS_TOP       (M_CONTROL_BORDER_GAP+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP)   // under the row of buttons: m_sections_trade_select
-    #define M_TRADE_AUTO_TOP             0                // m_sections_trade_automation_setting: its first header (Auto) on the row of the buttons
-    #define M_TRADE_AUTO_TOGGLE_X        70               // the toggle of the headers of Auto, Stop Loss, Trailing (from the indent of the body): right of "Stop Loss";
-                                                          // the header button ends there
+    //--- The Trading tab, the top row left to right (Concepts.md, Trading): Auto and Manual, the two ways of the Entry; Risk, every position; Trade Manage.
+    //--- Each is the pinned header of its CSections (SetPinnedHeader): one open at a time, its body goes down from the top row over the width of the tab
+    #define M_TRADE_MANUAL_HEADER_WIDTH  80               // the header of Manual (no toggle)
+    #define M_TRADE_RISK_HEADER_WIDTH    60               // the header of Risk (no toggle)
+    #define M_TRADE_AUTO_TOP             0                // the three CSections of the tab: their first header on the top row
+    #define M_TRADE_AUTO_TOGGLE_X        50               // the toggle of the header of Auto (from the indent of the body): right of "Auto"; the header button ends there
+    #define M_TRADE_MANUAL_PIN_X         (M_SECTION_BODY_INDENT+M_TRADE_AUTO_TOGGLE_X+M_SECTION_TEXT_TOGGLE_WIDTH+M_CONTROL_BORDER_GAP)   // right of the toggle of Auto
+    #define M_TRADE_RISK_PIN_X           (M_TRADE_MANUAL_PIN_X+M_TRADE_MANUAL_HEADER_WIDTH+M_CONTROL_BORDER_GAP)
+    #define M_TRADING_X_TRADEMANAGE      (M_CONTROL_BORDER_GAP+M_TRADE_RISK_PIN_X+M_TRADE_RISK_HEADER_WIDTH+M_CONTROL_BORDER_GAP)   // right of the header of Risk
+    #define M_TRADE_RISK_TOGGLE_X        100              // the toggle of the headers of Lot Size, Stop Loss, Trailing, Basket Risk, Portfolio Risk: right of "Portfolio Risk"
     #define M_TRADE_SWITCH_ONLY_WIDTH    24               // the switch of a strategy in Auto: the switch only (16 wide), no flag
-    //--- m_sections_trade_automation_setting (left): what the Automation uses for an Entry: the strategies that give it, then Setting_Risk. A row: [name][switch][value]
-    //--- the switch has the slot of the section, the value of the row is the strategy_id / the mode / the id of the template (the other keys: the Risk Management tab)
+    //--- m_sections_trade_automation_setting (left): the Automation is only ON / OFF: Auto, a row for each strategy available [name][switch], the value of
+    //--- the row = its strategy_id. Everything else of the tab is set by hand (m_sections_trade_manual_settup)
     enum ENUM_TRADE_AUTO_SECTION
      {
       TRADE_AUTO_SECTION_AUTO,               // the toggle of its header: every strategy below ON / OFF; the strategies available: their switch = take part in trading
                                              // (Setting_Risk.EntryStrategies), not trading_enabled (the Strategy tab: that one makes the templates of the slots)
-      TRADE_AUTO_SECTION_LOTSIZE,          // Setting_Risk.RiskMode, and the value of each mode
-      TRADE_AUTO_SECTION_STOPLOSS,           // Setting_Risk.StopLossTemplates
-      TRADE_AUTO_SECTION_TRAILING,           // Setting_Risk.TrailingTemplates
       TRADE_AUTO_SECTION_TOTAL
      };
     enum ENUM_TRADE_AUTO_COLUMN
      {
       TRADE_AUTO_COLUMN_LABEL,
       TRADE_AUTO_COLUMN_SWITCH,
-      TRADE_AUTO_COLUMN_VALUE,
       TRADE_AUTO_COLUMN_TOTAL
      };
-    #define M_TRADE_AUTO_WIDTH           258
     #define M_TRADE_AUTO_LABEL_WIDTH     115
-    #define M_TRADE_AUTO_VALUE_WIDTH     60
     #define M_TRADE_AUTO_COLUMN_SWITCH   (M_TRADE_AUTO_LABEL_WIDTH+M_CONTROL_BORDER_GAP)
-    #define M_TRADE_AUTO_COLUMN_VALUE    (M_TRADE_AUTO_COLUMN_SWITCH+M_FLAG_SWITCH_WIDTH+M_CONTROL_BORDER_GAP)
-    //--- m_sections_trade_select (right): the Manual Entry (only the lot is manual). Entry: direction, the results of the Automation (SL, TP, MaxLot), the lot; Order Type
-    enum ENUM_TRADE_SELECT_SECTION
+    //--- m_sections_trade_manual_settup: the Entry by hand (Manual), working on RAM. A row [name][control]; Manual: [the direction][Open], Order Type,
+    //--- SL, TP, MaxLot (the results of the risk), the lot, the magic in the column of the switches; Action (in Manual): the positions closed, each button
+    //--- with the floating profit of what it closes (CTradingControl::FloatingProfit)
+    enum ENUM_TRADE_MANUAL_SECTION
      {
-      TRADE_SELECT_SECTION_ENTRY,            // the direction, SL, TP, MaxLot, the lot chosen
-      TRADE_SELECT_SECTION_ORDERTYPE,        // CGUIPannel::m_manual_order_type
-      TRADE_SELECT_SECTION_TOTAL
+      TRADE_MANUAL_SECTION_ENTRY,            // [the direction][Open], Order Type, SL, TP, MaxLot, the lot chosen, the magic
+      TRADE_MANUAL_SECTION_ACTION,           // [Buy][Sell], [Lose][Profit] (the EA on the chart symbol, TRADE_SETUP_EVENT_CLOSE), [All] (the account, TRADE_SETUP_EVENT_CLOSE_ALL)
+      TRADE_MANUAL_SECTION_TOTAL
      };
-    enum ENUM_TRADE_SELECT_COLUMN
+    #define TRADE_MANUAL_ROW_ORDERTYPE   1      // the rows of Manual: 0 the direction and Open, then Order Type, SL, TP, MaxLot, Lot, Magic
+    #define TRADE_MANUAL_ROW_SL          2
+    #define TRADE_MANUAL_ROW_LOT         5
+    #define TRADE_MANUAL_ROW_MAGIC       6
+    #define M_TRADE_ACTION_WIDTH         115    // a button of Action: the group and its floating profit ("Profit  +12.34")
+    #define M_TRADE_ACTION_VALUE_GAP     6      // the floating profit (a child CLabel of the button, m_label_action_value) ends this far from its right edge
+    //--- m_sections_trade_risk: Setting_Risk on RAM, for every position (the Automation Entry and the Manual Entry alike). Nested in Risk, one open at a
+    //--- time; a switch has the slot of its section. Lot Size: the value of the row = the mode; Stop Loss, Trailing: the id of the template. Every other key:
+    //--- a row [name][control] (value = the property) in the section of its meaning (SectionOfKey_TradeRisk): Lot Size, Stop Loss, or a section for its
+    //--- input group after Trailing (index TRADE_RISK_SECTION_TOTAL + the group)
+    enum ENUM_TRADE_RISK_SECTION
      {
-      TRADE_SELECT_COLUMN_LABEL,
-      TRADE_SELECT_COLUMN_VALUE,
-      TRADE_SELECT_COLUMN_TOTAL
+      TRADE_RISK_SECTION_RISK,               // the pinned header on the top row
+      TRADE_RISK_SECTION_LOTSIZE,            // Setting_Risk.RiskMode, and the value of each mode (Fixed lot size: the lot of the Manual Entry)
+      TRADE_RISK_SECTION_STOPLOSS,           // Setting_Risk.StopLossTemplates
+      TRADE_RISK_SECTION_TRAILING,           // Setting_Risk.TrailingTemplates
+      TRADE_RISK_SECTION_TOTAL
      };
-    #define M_TRADE_SELECT_LEFT          (M_TRADE_AUTO_WIDTH+M_CONTROL_BORDER_GAP)
-    #define M_TRADE_SELECT_WIDTH         200
-    #define M_TRADE_SELECT_LABEL_WIDTH   50
-    #define M_TRADE_SELECT_VALUE_WIDTH   105
-    #define M_TRADE_SELECT_COLUMN_VALUE  (M_TRADE_SELECT_LABEL_WIDTH+M_CONTROL_BORDER_GAP)
+    enum ENUM_TRADE_MANUAL_COLUMN              // the columns of m_sections_trade_manual_settup and m_sections_trade_risk
+     {
+      TRADE_MANUAL_COLUMN_LABEL,
+      TRADE_MANUAL_COLUMN_SWITCH,
+      TRADE_MANUAL_COLUMN_VALUE,
+      TRADE_MANUAL_COLUMN_KEY,               // the control of a key of Setting_Risk (AddKeyRow_RiskSetting): right of its name, the names are long
+      TRADE_MANUAL_COLUMN_TOTAL
+     };
+    #define M_TRADE_KEY_LABEL_WIDTH      145    // the name of a key of Setting_Risk in m_sections_trade_manual_settup
+    #define M_TRADE_MANUAL_COLUMN_KEY    (M_TRADE_KEY_LABEL_WIDTH+M_CONTROL_BORDER_GAP)
+    #define M_TRADE_MANUAL_LABEL_WIDTH   115
+    #define M_TRADE_MANUAL_ENTRY_WIDTH   105    // the controls of the Manual Entry (in the column of the switches)
+    #define M_TRADE_KEY_VALUE_WIDTH      60     // the spin box of a key of Setting_Risk (the Trading tab, the Risk Management tab)
+    #define M_TRADE_MANUAL_COLUMN_SWITCH (M_TRADE_MANUAL_LABEL_WIDTH+M_CONTROL_BORDER_GAP)
+    #define M_TRADE_MANUAL_COLUMN_VALUE  (M_TRADE_MANUAL_COLUMN_SWITCH+M_FLAG_SWITCH_WIDTH+M_CONTROL_BORDER_GAP)
     #define M_TRADE_LOT_ITEMS_MAX        50     // the lots of m_combobox_manual_lot: from MaxLot down by the volume step, at most this many
     //--- The slots of the two sections that are not a section (a switch of a section has the slot of its section)
     #define TRADE_SLOT_LABEL             100    // a name
@@ -310,6 +328,9 @@
     #define TRADE_SLOT_LOT               105    // m_combobox_manual_lot
     #define TRADE_SLOT_KEY_ENUM          106  // an ENUM_ key of Setting_Risk (param = its name): a combobox of the texts of the author (RiskEnumItems)
     #define TRADE_SLOT_MAGIC             107    // m_edit_manual_magic
+    #define TRADE_SLOT_ACTION            108    // a button of Manual (Open) or of Action (Buy / Sell / Lose / Profit / All): the click is found by ObjectID
+    #define TRADE_SLOT_KEY_TEXT          109    // a string key of Setting_Risk (param = its name): a text box
+    #define TRADE_SLOT_ORDERTYPE         110    // m_combobox_manual_order_type
     #define M_WINDOW_TRADEMANAGE_WIDTH   900
     #define M_WINDOW_TRADEMANAGE_HEIGHT  380
    //The History tab (GUIPannel_Window_TradeManagerTabHistory.mqh): the trades, one row for each position that was closed. Its deals (IN and OUT, with the Bid and the Ask)
@@ -318,7 +339,7 @@
     enum ENUM_COLUMN_TRADE
      {
       COL_T_SYMBOL,COL_T_DIRECTION,COL_T_REASON,COL_T_VOLUME,COL_T_TIME_HOLD,COL_T_COMMISSION,COL_T_SWAP,COL_T_POSITION_ID,
-      COL_T_BASKET_ID,   // TradingOrderDetail.basket_id (CTradingControl::ReadDataFromDB), blank: not known
+      COL_T_BASKET_ID,   // CTradingControl::BasketId (RAM), blank: not known
       COL_T_TIME_OPEN,COL_T_TIME_CLOSE,COL_T_PRICE_OPEN,COL_T_PRICE_CLOSE,COL_T_FEE,COL_T_PROFIT,COL_T_DETAIL,
       COLUMNS_TRADE_TOTAL
      };
@@ -343,6 +364,18 @@
     const int    OPEN_POSITION_WIDTH[COLUMNS_OPEN_POSITION_TOTAL]={M_SYMBOL_WITHICON_WIDTH,M_ICON16_WIDTH,M_LOT_WIDTH,M_DURATION_WIDTH,M_MONEY_WIDTH,M_TICKET_WIDTH,M_DATETIME_WIDTH,
                                                                    M_PRICE_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_MONEY_WIDTH,M_ICON16_WIDTH};
     const int    OPEN_POSITION_NUMBER_COLUMNS[]={COL_P_VOLUME,COL_P_TIME_HOLD,COL_P_SWAP,COL_P_PRICE_OPEN,COL_P_SL,COL_P_TP,COL_P_PRICE_CURRENT,COL_P_PROFIT};
+   //The By Basket tab (GUIPannel_Window_TradeManagerOpenPositionByBasket.mqh): one row for each basket open now (Concepts.md, Phạm vi: a symbol and a side),
+   //what CMarketCollection::BasketState gives (every magic), its BasketID on RAM (CTradingControl::BasketId); the widths are the ones of the trades
+    enum ENUM_COLUMN_BASKET
+     {
+      COL_B_SYMBOL,COL_B_DIRECTION,COL_B_BASKET_ID,COL_B_POSITIONS,COL_B_VOLUME,COL_B_TIME_OPEN,COL_B_PRICE_OPEN,COL_B_PRICE_CURRENT,COL_B_MARGIN,COL_B_PROFIT,
+      COL_B_MANAGE,COL_B_CLOSE,   // New 2026-11-27: buttons: the box of the basket (its SL / TP), close the basket
+      COLUMNS_BASKET_TOTAL
+     };
+    const string BASKET_CAPTION[COLUMNS_BASKET_TOTAL]={"Symbol","Direction","Basket ID","Positions","Vol","Time open","Price open","Price","Margin","Profit","Manage","Close"};
+    const int    BASKET_WIDTH[COLUMNS_BASKET_TOTAL]={M_SYMBOL_WITHICON_WIDTH,M_ICON16_WIDTH,M_TICKET_WIDTH,M_LOT_WIDTH,M_LOT_WIDTH,M_DATETIME_WIDTH,M_PRICE_WIDTH,M_PRICE_WIDTH,M_MONEY_WIDTH,M_MONEY_WIDTH,
+                                                    M_ICON16_WIDTH,M_ICON16_WIDTH};   // the buttons: an icon, as the Detail of the other tabs
+    const int    BASKET_NUMBER_COLUMNS[]={COL_B_POSITIONS,COL_B_VOLUME,COL_B_PRICE_OPEN,COL_B_PRICE_CURRENT,COL_B_MARGIN,COL_B_PROFIT};
    //The colours of the Profit and the Net: a gain is green, a loss is red
     #define M_COLOR_PROFIT               C'0,160,0'
     #define M_COLOR_LOSS                 C'200,0,0'

@@ -310,14 +310,18 @@
    //--- A dialog window locks the main window while it is open
    if(id==CHARTEVENT_CUSTOM+WINDOW_EVENT_OPEN_DIALOG_BOX && (int)dparam==OBJECT_DE_TYPE_GUICONTROL_WINDOW_DIALOG)
      {
+      const ulong debug_t0=::GetMicrosecondCount();   // MY DEBUG: IsLocked of the main window (4.0-4.8 s before CGElement::IsLocked drew only the shown controls)
       m_window_main.IsLocked(true);
       ::ChartRedraw(this.m_chart_id);
+      ::Print("MY DEBUG CGUIPannel::OnEvent_Window_AddIndicator: m_window_main.IsLocked(true) for ",sparam," took ",(::GetMicrosecondCount()-debug_t0)/1000," ms");
       return;
      }
    if(id==CHARTEVENT_CUSTOM+WINDOW_EVENT_CLOSE_DIALOG_BOX && (int)dparam==OBJECT_DE_TYPE_GUICONTROL_WINDOW_DIALOG)
      {
+      const ulong debug_t0=::GetMicrosecondCount();   // MY DEBUG: as above
       m_window_main.IsLocked(false);
       ::ChartRedraw(this.m_chart_id);
+      ::Print("MY DEBUG CGUIPannel::OnEvent_Window_AddIndicator: m_window_main.IsLocked(false) for ",sparam," took ",(::GetMicrosecondCount()-debug_t0)/1000," ms");
       return;
      }
    //--- Window expanded again: Show() cascaded to the hidden form slots

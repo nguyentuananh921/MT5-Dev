@@ -24,6 +24,10 @@
 		"clangd.fallbackFlags": [
 			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management",
 			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Solomon Anietie Sunday/Risk Management/Include",
+			"-Id:/MT5-Dev/Library",
+			"-Id:/MT5-Dev/Library/Include",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5",
+			"-Ic:/Users/nguye/AppData/Roaming/MetaQuotes/Terminal/D0E8209F77C8CF37AD8BF550E51FF075/MQL5/Experts/Anhnt/Example EA/4. Combination EA V5/Include",
 			"-xc++",
 			"-std=c++17",
 			"-D__MQL__",
@@ -40,8 +44,8 @@
 			"-Wno-invalid-pp-directive",
 			"-Wno-unknown-directives",
 			"-Wno-language-extension-token",
-			"-Id:/MT5-Dev/Library",
-			"-Id:/MT5-Dev/Library/Include"
+			"-Id:/MT5-Dev/skills",
+			"-Id:/MT5-Dev/skills/Include"
 		],
 		"files.associations": {
 			"*.mqh": "cpp",

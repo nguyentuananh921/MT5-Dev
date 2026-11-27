@@ -56,6 +56,7 @@
     bool              m_focused;
     bool              m_is_pressed;
     bool              m_is_locked;
+    bool              m_draw_on_show;        // locked / unlocked while hidden: not drawn then, drawn once when shown (DrawIfPending)
     bool              m_is_available;
     bool              m_prev_left;
     bool              m_chart_tools_locked;
@@ -126,6 +127,8 @@
     bool              Create(const long chart_id,const int subwin,const string name,const int x,const int y,const int w,const int h);
     void              Destroy(void);
     virtual void      Draw(const bool chart_redraw);
+    //--- MY DEBUG (2026-11-27): the time of the steps of Draw, summed over every element (a caller resets and reads them): frame, image, content, Update
+    static ulong      s_debug_draw_us[4];
     void              Move(const int x,const int y);
     void              Resize(const int w,const int h);
     virtual void      ChangeWidthByRightWindowSide(void);
@@ -201,6 +204,7 @@
     CColorElement    *GetBorderColorActControl(void)              { return &this.m_color_border_act;     }
     bool              IsLocked(void)                        const { return this.m_is_locked;   }
     virtual void      IsLocked(const bool state);
+    void              DrawIfPending(void);   // what IsLocked changed while it was hidden: drawn once when shown (Show; a Show that does not call the base calls it)
     bool              IsAvailable(void)                     const { return this.m_is_available; }
     virtual void      IsAvailable(const bool state);
     bool              HasDescendant(const long element_id);
@@ -238,7 +242,7 @@
  //|                                                                  |
  //+------------------------------------------------------------------+
  CGElement::CGElement(void) : m_x(0),m_y(0),m_x_size(0),m_y_size(0),m_x_gap(0),m_y_gap(0),m_state(false),m_color_state(COLOR_STATE_DEFAULT),m_font(DEF_FONT),m_font_size(DEF_FONT_SIZE),m_back_alpha(255),
-                             m_mouse_focus(false),m_focused(false),m_is_pressed(false),m_is_locked(false),m_is_available(true),m_prev_left(false),
+                             m_mouse_focus(false),m_focused(false),m_is_pressed(false),m_is_locked(false),m_draw_on_show(false),m_is_available(true),m_prev_left(false),
                              m_chart_tools_locked(false),m_lock_chart_tools(true),m_mouse_event_last(MOUSE_EVENT_NO_EVENT),m_press_area(0),
                              m_act_shift_left(0),m_act_shift_top(0),m_act_shift_right(0),m_act_shift_bottom(0),
                              m_control_area_x(0),m_control_area_y(0),m_control_area_width(0),m_control_area_height(0),
@@ -365,6 +369,22 @@
      this.SetChartTools(true);
     }
    this.ColorChange(state ? COLOR_STATE_BLOCKED : COLOR_STATE_DEFAULT);
+   //--- Change 2026-11-26: a hidden control is not drawn now, it is drawn when shown (Show -> DrawIfPending). Was: every control of the tree drawn,
+   //--- the hidden tabs too: a dialog opened or closed (CWindow::OpenWindow / CloseWindow -> m_window_main.IsLocked) held the EA 4.0-4.8 s
+   //--- (MY DEBUG CGUIPannel::OnChartEvent 2026-11-26; Avoid Bug of skills\rules\2. CodingRule.md: do not do what nobody sees)
+   if(this.IsVisible())
+      this.Draw(false);
+   else
+      this.m_draw_on_show=true;
+  }
+ //+------------------------------------------------------------------+
+ //| What changed while it was hidden is drawn once, when it is shown |
+ //+------------------------------------------------------------------+
+ void CGElement::DrawIfPending(void)
+  {
+   if(!this.m_draw_on_show)
+      return;
+   this.m_draw_on_show=false;
    this.Draw(false);
   }
  //+------------------------------------------------------------------+
@@ -410,6 +430,7 @@
   {
    this.m_visible=true;
    ::ObjectSetInteger(this.m_chart_id,this.Name(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS);
+   this.DrawIfPending();   // locked / unlocked while hidden (IsLocked)
    for(int i=0; i<this.ChildrenTotal(); i++)
      {
       CGElement *child=dynamic_cast<CGElement *>(this.Child(i));
@@ -541,12 +562,22 @@
  //+------------------------------------------------------------------+
  //| Kazharski order: background, border, image, text                 |
  //+------------------------------------------------------------------+
+ ulong CGElement::s_debug_draw_us[4]={0,0,0,0};   // MY DEBUG
  void CGElement::Draw(const bool chart_redraw)
   {
+   ulong t0=::GetMicrosecondCount();   // MY DEBUG
    this.DrawFrame();
+   ulong t1=::GetMicrosecondCount();
    this.DrawImage();
+   ulong t2=::GetMicrosecondCount();
    this.DrawContent();
+   ulong t3=::GetMicrosecondCount();
    this.m_canvas.Update(chart_redraw);
+   ulong t4=::GetMicrosecondCount();
+   CGElement::s_debug_draw_us[0]+=t1-t0;
+   CGElement::s_debug_draw_us[1]+=t2-t1;
+   CGElement::s_debug_draw_us[2]+=t3-t2;
+   CGElement::s_debug_draw_us[3]+=t4-t3;
   }
  //+------------------------------------------------------------------+
  //| Check out of range                                               |

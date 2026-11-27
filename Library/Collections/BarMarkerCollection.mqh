@@ -36,6 +36,17 @@
  #define BAR_MARKER_PIVOT_NAME      "PivotPattern_"
  //+------------------------------------------------------------------+
  //| Draws what was found on the candles of the chart                 |
+ //| Avoid Bug (skills\rules\2. CodingRule.md), measured 2026-11-26:   |
+ //| a function that asks the chart (ChartSymbol, ChartPeriod,         |
+ //| ChartGetInteger, ObjectGet*, ObjectFind) waits for it, up to      |
+ //| ~1 s, and the whole EA waits (the bus). So here:                  |
+ //|  - OnChartEvent looks at the id (and the symbol of the event with |
+ //|    ::Symbol()) before it asks the chart                           |
+ //|  - each Sync (markers, trades, pivot patterns) keeps what is      |
+ //|    still wanted, deletes what is not, makes only the new ones:    |
+ //|    never all deleted and made again                               |
+ //|  - the symbol and the period are asked once a Sync (SyncMarkers   |
+ //|    gives them to SyncTrades and SyncPivotPatterns)                |
  //+------------------------------------------------------------------+
  class CBarMarkerCollection : public CBaseObj
   {
@@ -49,6 +60,10 @@
     CIndicatorTemplateManager *m_IndicatorTemplateManager;   // EA owns: what is shown (the templates of each side), given to CBarMarker::Arrange
     CStrategyCollection       *m_StrategyCollection;         // EA owns: the entries of the strategies on the pairs
     CStrategyManager          *m_StrategyManager;            // EA owns: what is shown (show_on_chart of each strategy), given to CBarMarker::Arrange
+    datetime                   m_pending_bars[];             // the candles events told since the last SyncPending (once each)
+    bool                       m_pending_all;                // an event asked every candle in view (scroll, zoom, Python wrote, a type changed)
+   //--- A candle to draw again at SyncPending (once, however many events tell it)
+    void                       AddPending(const datetime bar);
    //--- The candles and sides of the rows, sorted and once each: time of the candle * 2 + the side
     void                       Collect(const SBarMarkerRow &rows[],long &keys[]);
    //--- The rows on RAM from_time to to_time of (1) the series of a pair (the types of information, CBarControl), (2) the series of a template on a pair, after the ones in the list.
@@ -57,14 +72,20 @@
     void                       CollectIndicators(CSignal *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
    //--- (3) the entries and exits of a strategy on a pair (params: the role)
     void                       CollectStrategies(CStrategyBase *series,const datetime from_time,const datetime to_time,SBarMarkerRow &rows[]);
-   //--- The trades of the strategies of the chart pair that the chart shows (CStrategyTrade, entry to exit): made again, then placed
-    void                       SyncTrades(void);
+   //--- The trades of the strategies of the chart pair that the chart shows (CStrategyTrade, entry to exit): kept, deleted or made as the markers, then placed.
+   //--- The symbol and the period are SyncMarkers' (not asked again)
+    void                       SyncTrades(const string symbol,const ENUM_TIMEFRAMES timeframe);
    //--- New in V5: the pivot patterns (Harmonic, Chart Pattern) of the chart pair whose last pivot the chart shows, drawn as the EAs of the Reference draw them
-   //--- (CPivotPatternShape, made again: a few of them). The badge of the bar stays CBarMarker's; a type or a side the user does not show is not drawn
-    void                       SyncPivotPatterns(void);
+   //--- (CPivotPatternShape: kept, deleted or made as the markers of SyncMarkers). The badge of the bar stays CBarMarker's; a type or a side the user does not show is not drawn
+    void                       SyncPivotPatterns(const string symbol,const ENUM_TIMEFRAMES timeframe);
    public:
                                CBarMarkerCollection(void) : m_ChartObj(NULL),m_GraphElementsCollection(NULL),m_BarTimeSeriesCollection(NULL),m_SignalsCollection(NULL),m_SymbolTFManager(NULL),
-                                                            m_BarInformationManager(NULL),m_IndicatorTemplateManager(NULL),m_StrategyCollection(NULL),m_StrategyManager(NULL) { }
+                                                            m_BarInformationManager(NULL),m_IndicatorTemplateManager(NULL),m_StrategyCollection(NULL),m_StrategyManager(NULL),
+                                                            m_pending_all(false) { }
+   //--- New 2026-11-26: OnChartEvent only notes what is to be drawn; the EA calls this once at the end of each drain of its bus (DispatchBusEvents):
+   //--- the events of one candle (a signal of each template, the patterns, the entries: 14 at a new bar) are drawn once, not once each
+   //--- (was 110-520 ms each, a new bar held the EA 1.7 s, MY DEBUG 2026-11-26)
+    void                       SyncPending(void);
    //--- The classes it asks (the EA owns them)
     void                       SetChartObj(CChartObj *chart)                                  { this.m_ChartObj=chart;                   }
     void                       SetGraphElementsCollection(CGraphElementsCollection *collection) { this.m_GraphElementsCollection=collection; }
@@ -297,6 +318,7 @@
   {
    if(this.m_ChartObj==NULL || this.m_GraphElementsCollection==NULL)
       return;
+   const ulong debug_start=::GetMicrosecondCount();   // MY DEBUG: the time before Read_RAM (VisibleRange, ChartSymbol, ChartPeriod wait for the chart?)
    datetime from_time=time,to_time=time;
    if(time==0 && !this.m_ChartObj.VisibleRange(from_time,to_time))
       return;   // the chart has not its bars yet: the markers stay as they are
@@ -419,44 +441,44 @@
    const ulong debug_t3=::GetMicrosecondCount();
    //--- The markers decide what they show, then the badges are placed: an event told one candle, the badges from it (the ones before it stay)
    CBarMarker::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_SymbolTFManager,this.m_BarInformationManager,this.m_IndicatorTemplateManager,this.m_StrategyManager,time);
-   this.SyncTrades();
-   this.SyncPivotPatterns();
+   const ulong debug_t3a=::GetMicrosecondCount();
+   this.SyncTrades(symbol,timeframe);
+   const ulong debug_t3b=::GetMicrosecondCount();
+   this.SyncPivotPatterns(symbol,timeframe);
    const ulong debug_t4=::GetMicrosecondCount();
    ::ChartRedraw(this.m_ChartObj.ID());
    const ulong debug_t5=::GetMicrosecondCount();
    string debug_candle="all in view";
    if(time!=0)
       debug_candle=::TimeToString(time);
+   //--- MY DEBUG: the time of each step (before = VisibleRange, ChartSymbol, ChartPeriod; Arrange, SyncTrades, SyncPivotPatterns apart)
    string debug_text="MY DEBUG CBarMarkerCollection::SyncMarkers "+symbol+" "+::EnumToString(timeframe)+" candle "+debug_candle+", "+
-                     (string)rows_total+" rows, "+(string)total+" markers ("+(string)debug_created+" new). Read_RAM "+(string)((debug_t1-debug_t0)/1000)+
-                     " ms, create "+(string)((debug_t2-debug_t1)/1000)+" ms, SetMarker "+(string)((debug_t3-debug_t2)/1000)+" ms, Arrange "+(string)((debug_t4-debug_t3)/1000)+
-                     " ms, ChartRedraw "+(string)((debug_t5-debug_t4)/1000)+" ms";
+                     (string)rows_total+" rows, "+(string)total+" markers ("+(string)debug_created+" new). before "+(string)((debug_t0-debug_start)/1000)+
+                     " ms, Read_RAM "+(string)((debug_t1-debug_t0)/1000)+" ms, create "+(string)((debug_t2-debug_t1)/1000)+" ms, SetMarker "+(string)((debug_t3-debug_t2)/1000)+
+                     " ms, Arrange "+(string)((debug_t3a-debug_t3)/1000)+" ms, SyncTrades "+(string)((debug_t3b-debug_t3a)/1000)+" ms, SyncPivotPatterns "+
+                     (string)((debug_t4-debug_t3b)/1000)+" ms, ChartRedraw "+(string)((debug_t5-debug_t4)/1000)+" ms, total "+(string)((debug_t5-debug_start)/1000)+" ms";
    ::Print(debug_text);
   }
  //+------------------------------------------------------------------+
  //| The trades of the strategies on the chart pair that the chart     |
- //| shows: a trade a CStrategyTrade, made again (a few of them)       |
+ //| shows: a trade a CStrategyTrade. Change 2026-11-26: kept, deleted |
+ //| or made as the markers of SyncMarkers (was: every trade deleted   |
+ //| and made again at each call; class header: Avoid Bug)             |
  //+------------------------------------------------------------------+
- void CBarMarkerCollection::SyncTrades(void)
+ void CBarMarkerCollection::SyncTrades(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    if(this.m_ChartObj==NULL || this.m_GraphElementsCollection==NULL || this.m_StrategyCollection==NULL)
       return;
-   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
-     {
-      CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
-      if(dynamic_cast<CStrategyTrade *>(child)==NULL)
-         continue;
-      this.m_GraphElementsCollection.DeleteChild(child);
-      delete child;
-     }
+   //--- The trades wanted: the ones of the strategies of the chart pair in view (name = strategy_entry_exit)
+   string wanted[];
+   long wanted_id[];
+   datetime wanted_entry[],wanted_exit[];
+   bool wanted_buy[];
    datetime from_time=0,to_time=0;
-   if(!this.m_ChartObj.VisibleRange(from_time,to_time))
-      return;
-   const string symbol=this.m_ChartObj.Symbol();
-   const ENUM_TIMEFRAMES timeframe=this.m_ChartObj.Timeframe();
+   const bool in_view=this.m_ChartObj.VisibleRange(from_time,to_time);
    CArrayObj *list=this.m_StrategyCollection.GetList();
-   int debug_series=0,debug_rows=0,debug_trades=0,debug_made=0;
-   for(int s=0;s<list.Total();s++)
+   int debug_series=0,debug_rows=0,debug_trades=0,debug_kept=0,debug_deleted=0,debug_made=0;
+   for(int s=0;in_view && s<list.Total();s++)
      {
       CStrategyBase *series=list.At(s);
       if(series==NULL || series.Symbol()!=symbol || series.Timeframe()!=timeframe)
@@ -471,47 +493,91 @@
         {
          if(exits[t]<from_time || entries[t]>to_time+::PeriodSeconds(timeframe))
             continue;   // the trade is out of the view
-         CStrategyTrade *trade=new CStrategyTrade();
-         if(trade==NULL || !trade.Create(this.m_ChartObj.ID(),BAR_MARKER_TRADE_NAME+(string)series.StrategyId()+"_"+(string)(long)entries[t],series.StrategyId(),
-                                         entries[t],exits[t],is_buy[t]) ||
-            !this.m_GraphElementsCollection.AddChild(trade))
-           {
-            delete trade;
-            continue;
-           }
-         debug_made++;
+         const int n=::ArraySize(wanted);
+         ::ArrayResize(wanted,n+1,32);
+         ::ArrayResize(wanted_id,n+1,32);
+         ::ArrayResize(wanted_entry,n+1,32);
+         ::ArrayResize(wanted_exit,n+1,32);
+         ::ArrayResize(wanted_buy,n+1,32);
+         wanted[n]=BAR_MARKER_TRADE_NAME+(string)series.StrategyId()+"_"+(string)(long)entries[t]+"_"+(string)(long)exits[t];
+         wanted_id[n]=series.StrategyId();
+         wanted_entry[n]=entries[t];
+         wanted_exit[n]=exits[t];
+         wanted_buy[n]=is_buy[t];
         }
+     }
+   //--- A trade not wanted any more goes; the names of the ones that stay are kept
+   string kept[];
+   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
+     {
+      CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
+      if(dynamic_cast<CStrategyTrade *>(child)==NULL)
+         continue;
+      bool is_wanted=false;
+      for(int w=0;w<::ArraySize(wanted) && !is_wanted;w++)
+         is_wanted=(wanted[w]==child.Name());
+      if(is_wanted)
+        {
+         const int n=::ArraySize(kept);
+         ::ArrayResize(kept,n+1,32);
+         kept[n]=child.Name();
+         debug_kept++;
+         continue;
+        }
+      this.m_GraphElementsCollection.DeleteChild(child);
+      delete child;
+      debug_deleted++;
+     }
+   if(!in_view)
+      return;   // the chart has not its bars yet: every trade went, as before
+   //--- A wanted trade that is not on the chart yet is made
+   for(int w=0;w<::ArraySize(wanted);w++)
+     {
+      bool is_kept=false;
+      for(int k=0;k<::ArraySize(kept) && !is_kept;k++)
+         is_kept=(kept[k]==wanted[w]);
+      if(is_kept)
+         continue;
+      CStrategyTrade *trade=new CStrategyTrade();
+      if(trade==NULL || !trade.Create(this.m_ChartObj.ID(),wanted[w],wanted_id[w],wanted_entry[w],wanted_exit[w],wanted_buy[w]) ||
+         !this.m_GraphElementsCollection.AddChild(trade))
+        {
+         delete trade;
+         continue;
+        }
+      const int n=::ArraySize(kept);
+      ::ArrayResize(kept,n+1,32);
+      kept[n]=wanted[w];
+      debug_made++;
      }
    CStrategyTrade::Arrange(this.m_GraphElementsCollection,this.m_ChartObj,this.m_StrategyManager);
    string debug_text="MY DEBUG CBarMarkerCollection::SyncTrades "+symbol+" "+::EnumToString(timeframe)+" view "+::TimeToString(from_time)+" .. "+::TimeToString(to_time)+": "+
-                     (string)debug_series+" strategy series of the pair, "+(string)debug_rows+" rows on RAM, "+(string)debug_trades+" trades paired, "+(string)debug_made+" lines made in the view";
+                     (string)debug_series+" strategy series of the pair, "+(string)debug_rows+" rows on RAM, "+(string)debug_trades+" trades paired, "+
+                     (string)debug_kept+" lines kept, "+(string)debug_deleted+" deleted, "+(string)debug_made+" made in the view";
    ::Print(debug_text);
   }
  //+------------------------------------------------------------------+
  //| New in V5: the pivot patterns of the chart pair in view           |
  //+------------------------------------------------------------------+
- void CBarMarkerCollection::SyncPivotPatterns(void)
+ void CBarMarkerCollection::SyncPivotPatterns(const string symbol,const ENUM_TIMEFRAMES timeframe)
   {
    if(this.m_ChartObj==NULL || this.m_GraphElementsCollection==NULL || this.m_BarTimeSeriesCollection==NULL || this.m_BarInformationManager==NULL)
       return;
-   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
-     {
-      CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
-      if(dynamic_cast<CPivotPatternShape *>(child)==NULL)
-         continue;
-      this.m_GraphElementsCollection.DeleteChild(child);
-      delete child;
-     }
+   //--- Change 2026-11-26: as SyncMarkers does with CBarMarker, a shape whose pattern is still wanted stays, one not wanted any more goes,
+   //--- only a new one is made. Was: every shape deleted and made again at each call (29 shapes made in 2-10 s, the bus waited: each
+   //--- native object waits for the chart, CGStdBaseObj::CreateObject / CGStd*Obj::Create)
+   const ulong debug_t0=::GetMicrosecondCount();   // MY DEBUG: the shapes kept, deleted and made at each call
+   int debug_kept=0,debug_deleted=0,debug_made=0;
+   //--- The shapes wanted: the pivot patterns of the chart pair in view, of a type and a side the user shows (name = type_time_side)
+   string wanted[];
+   int wanted_row[];
    datetime from_time=0,to_time=0;
-   if(!this.m_ChartObj.VisibleRange(from_time,to_time))
-      return;
-   const string symbol=this.m_ChartObj.Symbol();
-   const ENUM_TIMEFRAMES timeframe=this.m_ChartObj.Timeframe();
-   CBarSeriesDE *series=this.m_BarTimeSeriesCollection.GetSeries(symbol,timeframe);
-   if(series==NULL)
-      return;
+   CBarSeriesDE *series=NULL;
    SBarMarkerRow rows[];
-   this.CollectTypes(series,from_time,to_time,rows);
+   if(this.m_ChartObj.VisibleRange(from_time,to_time))
+      series=this.m_BarTimeSeriesCollection.GetSeries(symbol,timeframe);   // SyncMarkers' symbol and period (not asked again)
+   if(series!=NULL)
+      this.CollectTypes(series,from_time,to_time,rows);
    for(int r=0;r<::ArraySize(rows);r++)
      {
       const ENUM_BAR_INFOR_TYPE type=(ENUM_BAR_INFOR_TYPE)rows[r].type;
@@ -521,19 +587,66 @@
       const bool is_buy=(rows[r].side==SIGNAL_DIRECTION_BUY);
       if(setting==NULL || !(is_buy ? setting.ShowBuy() : setting.ShowSell()))
          continue;   // the user does not show this side of the type: no badge, no drawing
+      const int n=::ArraySize(wanted);
+      ::ArrayResize(wanted,n+1,32);
+      ::ArrayResize(wanted_row,n+1,32);
+      wanted[n]=BAR_MARKER_PIVOT_NAME+(string)(long)type+"_"+(string)rows[r].time+"_"+(string)rows[r].side;
+      wanted_row[n]=r;
+     }
+   //--- A shape not wanted any more goes; the names of the ones that stay are kept
+   string kept[];
+   for(int i=this.m_GraphElementsCollection.ChildrenTotal()-1;i>=0;i--)
+     {
+      CGBaseObj *child=this.m_GraphElementsCollection.Child(i);
+      if(dynamic_cast<CPivotPatternShape *>(child)==NULL)
+         continue;
+      bool is_wanted=false;
+      for(int w=0;w<::ArraySize(wanted) && !is_wanted;w++)
+         is_wanted=(wanted[w]==child.Name());
+      if(is_wanted)
+        {
+         const int n=::ArraySize(kept);
+         ::ArrayResize(kept,n+1,32);
+         kept[n]=child.Name();
+         debug_kept++;
+         continue;
+        }
+      this.m_GraphElementsCollection.DeleteChild(child);
+      delete child;
+      debug_deleted++;
+     }
+   const ulong debug_t1=::GetMicrosecondCount();
+   //--- A wanted shape that is not on the chart yet is made (a row told twice is made once: its name goes to kept)
+   for(int w=0;w<::ArraySize(wanted);w++)
+     {
+      bool is_kept=false;
+      for(int k=0;k<::ArraySize(kept) && !is_kept;k++)
+         is_kept=(kept[k]==wanted[w]);
+      if(is_kept)
+         continue;
+      const int r=wanted_row[w];
+      const ENUM_BAR_INFOR_TYPE type=(ENUM_BAR_INFOR_TYPE)rows[r].type;
       long times[];
       double prices[];
       bool highs[];
       if(series.GetBarControl().PivotPoints(type,(datetime)rows[r].time,times,prices,highs)==0)
          continue;
+      CBarInformationSetting *setting=this.m_BarInformationManager.Read_RAM(type);
       CPivotPatternShape *shape=new CPivotPatternShape();
-      if(shape==NULL || !shape.Create(this.m_ChartObj.ID(),BAR_MARKER_PIVOT_NAME+(string)(long)type+"_"+(string)rows[r].time,type,times,prices,highs,is_buy,setting.Name()) ||
+      if(shape==NULL || !shape.Create(this.m_ChartObj.ID(),wanted[w],type,times,prices,highs,(rows[r].side==SIGNAL_DIRECTION_BUY),setting.Name()) ||
          !this.m_GraphElementsCollection.AddChild(shape))
         {
          delete shape;
          continue;
         }
+      const int n=::ArraySize(kept);
+      ::ArrayResize(kept,n+1,32);
+      kept[n]=wanted[w];
+      debug_made++;
      }
+   string debug_text="MY DEBUG CBarMarkerCollection::SyncPivotPatterns: "+(string)debug_kept+" shapes kept, "+(string)debug_deleted+" deleted in "+
+                     (string)((debug_t1-debug_t0)/1000)+" ms, "+(string)debug_made+" made in "+(string)((::GetMicrosecondCount()-debug_t1)/1000)+" ms";
+   ::Print(debug_text);
   }
  //+------------------------------------------------------------------+
  //| The markers and the box on the candle go                         |
@@ -553,24 +666,55 @@
      }
   }
  //+------------------------------------------------------------------+
+ //| A candle to draw again at SyncPending, once                      |
+ //+------------------------------------------------------------------+
+ void CBarMarkerCollection::AddPending(const datetime bar)
+  {
+   const int total=::ArraySize(this.m_pending_bars);
+   for(int i=0;i<total;i++)
+      if(this.m_pending_bars[i]==bar)
+         return;
+   ::ArrayResize(this.m_pending_bars,total+1,16);
+   this.m_pending_bars[total]=bar;
+  }
+ //+------------------------------------------------------------------+
+ //| What the events of the drain asked, drawn once: every candle in   |
+ //| view (it holds the candles told too), else each candle told       |
+ //+------------------------------------------------------------------+
+ void CBarMarkerCollection::SyncPending(void)
+  {
+   if(!this.m_pending_all && ::ArraySize(this.m_pending_bars)==0)
+      return;
+   if(this.m_ChartObj==NULL || !this.m_ChartObj.IsAvailable())
+      return;   // the chart is changing: kept for the next drain
+   if(this.m_pending_all)
+      this.SyncMarkers();
+   else
+      for(int i=0;i<::ArraySize(this.m_pending_bars);i++)
+         this.SyncMarkers(this.m_pending_bars[i]);
+   this.m_pending_all=false;
+   ::ArrayResize(this.m_pending_bars,0,16);
+  }
+ //+------------------------------------------------------------------+
  //| What changed what the markers show                               |
  //+------------------------------------------------------------------+
  void CBarMarkerCollection::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
    if(this.m_ChartObj==NULL)
       return;   // OnInit stopped before the setters
-   const string chart_symbol=this.m_ChartObj.Symbol();
-   const ENUM_TIMEFRAMES chart_tf=this.m_ChartObj.Timeframe();
+   //--- The id is looked at first, the chart is read after (&& stops at the id): ChartSymbol / ChartPeriod wait for the chart,
+   //--- they were read at every event (TICK_EVENT_NEW, ACCOUNT_EVENT_PROPERTY_CHANGED: up to 949 ms an event, MY DEBUG DispatchEvent 2026-11-26)
    //--- CChartObj: the chart shows other bars or prices: the rows of the bars in view (Read_RAM loads what RAM has not)
-   if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_VISIBLE_CHANGE && (long)dparam==(long)chart_tf)
+   //--- Change 2026-11-26: a branch notes what is to be drawn (AddPending, m_pending_all), SyncPending draws it once at the end of the drain
+   if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_VISIBLE_CHANGE && (long)dparam==(long)this.m_ChartObj.Timeframe())
      {
-      this.SyncMarkers();
+      this.m_pending_all=true;
       return;
      }
    //--- The data changed: the rows are read again
    if((id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SWING || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_BOS ||
        id==CHARTEVENT_CUSTOM+SERIES_EVENTS_CHOCH || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_SIGNAL ||
-       id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN_FOUND || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN_INVALID) && (long)dparam==(long)chart_tf)
+       id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN_FOUND || id==CHARTEVENT_CUSTOM+SERIES_EVENTS_PATTERN_INVALID) && (long)dparam==(long)this.m_ChartObj.Timeframe())
      {
       datetime bar;
       long key;
@@ -579,8 +723,10 @@
       string symbol,extra;
       this.EventUnpack(lparam,bar,key,side,is_new);
       this.EventUnpackText(sparam,symbol,extra);
-      if(symbol==chart_symbol)
-         this.SyncMarkers(bar);   // the library found something on a candle of the chart pair
+      //--- The symbol of the event is compared with ::Symbol() first (the program's chart, no wait), the chart is asked only when it matches:
+      //--- an event of another pair on the same tf waited for ChartSymbol for nothing (137-175 ms, MY DEBUG DispatchEvent 2026-11-26)
+      if(symbol==::Symbol() && symbol==this.m_ChartObj.Symbol())
+         this.AddPending(bar);   // the library found something on a candle of the chart pair
      }
    //--- A strategy entered or exited (dparam = the tf of its series, its key = the strategy_id): the candle of the chart that holds the bar
    if(id==CHARTEVENT_CUSTOM+STRATEGY_EVENT_ENTRY || id==CHARTEVENT_CUSTOM+STRATEGY_EVENT_EXIT)
@@ -592,17 +738,22 @@
       string symbol,extra;
       this.EventUnpack(lparam,bar,key,side,is_new);
       this.EventUnpackText(sparam,symbol,extra);
-      const int shift=::iBarShift(chart_symbol,chart_tf,bar,false);
-      if(symbol==chart_symbol && (long)dparam==(long)chart_tf && shift>=0)
-         this.SyncMarkers(::iTime(chart_symbol,chart_tf,shift));
+      if(symbol==::Symbol())   // another pair: the chart is not asked (as above)
+        {
+         const string chart_symbol=this.m_ChartObj.Symbol();
+         const ENUM_TIMEFRAMES chart_tf=this.m_ChartObj.Timeframe();
+         const int shift=::iBarShift(chart_symbol,chart_tf,bar,false);
+         if(symbol==chart_symbol && (long)dparam==(long)chart_tf && shift>=0)
+            this.AddPending(::iTime(chart_symbol,chart_tf,shift));
+        }
      }
    //--- Python wrote its part and the collections read it to RAM (they hear it before), a template went, the rows of a type went (its parameter changed): drawn once
    if(id==CHARTEVENT_CUSTOM+PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_DELETE ||
       id==CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SETUP_CHANGED)
-      this.SyncMarkers();
+      this.m_pending_all=true;
    //--- The view: a switch of what is shown changed, the data did not. The markers decide again (CBarMarker::Arrange)
-   if((id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED && sparam==chart_symbol && (ENUM_TIMEFRAMES)lparam==chart_tf) ||
+   if((id==CHARTEVENT_CUSTOM+SYMBOLTF_MANAGER_EVENT_BUYSELL_CHANGED && sparam==this.m_ChartObj.Symbol() && (ENUM_TIMEFRAMES)lparam==this.m_ChartObj.Timeframe()) ||
       id==CHARTEVENT_CUSTOM+BAR_INFORMATION_MANAGER_EVENT_SHOW_CHANGED ||
       id==CHARTEVENT_CUSTOM+INDICATOR_TEMPLATE_MANAGER_EVENT_BUYSELL_CHANGED ||
       id==CHARTEVENT_CUSTOM+STRATEGY_MANAGER_EVENT_SHOW_CHANGED)

@@ -105,34 +105,23 @@
       ::Print(__FUNCTION__," > Failed to create the Candle information window!");
       return(false);
      }
-    Breadcrumb("CreateGUIPannel: CreateButtons_OpenPosition");
-    if(!CreateButtons_OpenPosition())
+    //--- Manual first (the Entry by hand, Action in it), then Auto and Risk: CreateSections_TradingRisk fills both (PopulateSections_TradingRisk)
+    Breadcrumb("CreateGUIPannel: CreateSections_TradeManualSetup");
+    if(!CreateSections_TradeManualSetup())
      {
-      ::Print(__FUNCTION__," > Failed to create the Open button of the Trading tab!");
+      ::Print(__FUNCTION__," > Failed to create the manual setup of the Trading tab!");
       return(false);
      }
     Breadcrumb("CreateGUIPannel: CreateSections_TradingRisk");
     if(!CreateSections_TradingRisk())
      {
-      ::Print(__FUNCTION__," > Failed to create the settings of the Automation of the Trading tab!");
-      return(false);
-     }
-    Breadcrumb("CreateGUIPannel: CreateSections_TradeSelect");
-    if(!CreateSections_TradeSelect())
-     {
-      ::Print(__FUNCTION__," > Failed to create the Manual Entry of the Trading tab!");
+      ::Print(__FUNCTION__," > Failed to create the Automation ON / OFF of the Trading tab!");
       return(false);
      }
     Breadcrumb("CreateGUIPannel: CreateButton_TradeManage");
     if(!CreateButton_TradeManage())
      {
       ::Print(__FUNCTION__," > Failed to create the Trade Manage button!");
-      return(false);
-     }
-    Breadcrumb("CreateGUIPannel: CreateButton_CloseAllPosition");
-    if(!CreateButton_CloseAllPosition())
-     {
-      ::Print(__FUNCTION__," > Failed to create the Close all positions button!");
       return(false);
      }
     Breadcrumb("CreateGUIPannel: CreateWindow_TradeManage");
@@ -147,6 +136,16 @@
       ::Print(__FUNCTION__," > Failed to create the Order detail window!");
       return(false);
      }
+    //--- New 2026-11-27: the box of a basket, hidden; the collection gives it the events of the chart (the mouse too)
+    Breadcrumb("CreateGUIPannel: m_box_basket");
+    if(m_GraphElementsCollection==NULL || !m_box_basket.Create(this.m_chart_id,0,"BoxBasket") || !m_GraphElementsCollection.AddChild(::GetPointer(m_box_basket)))
+     {
+      ::Print(__FUNCTION__," > Failed to create the box of a basket!");
+      return(false);
+     }
+    m_box_basket.SetManage(true);
+    m_box_basket.SetLevels(1);   // one TP for the basket
+    m_box_basket.Hide();
     Breadcrumb("CreateGUIPannel: m_window_main.Show");
     m_window_main.Show();
     ::ChartRedraw(this.m_chart_id);
@@ -157,6 +156,7 @@
  //| Constructor                                                      |
  //+------------------------------------------------------------------+
  CGUIPannel::CGUIPannel(void) : m_manual_order_type(0),
+                               m_order_detail_position(0),
                                 m_SymbolsCollection(NULL),
                                 m_HistoryCollection(NULL),
                                 m_TradingControl(NULL),
@@ -171,6 +171,8 @@
                                 m_candle_info_shown_bar(0),
                                 m_candle_info_last_bar(0),
                                 m_candle_info_by_marker(false),
+                                m_box_basket_symbol(""),
+                                m_box_basket_buy(true),
                                 m_current_param_type(IND_CUSTOM),
                                 m_edit_strategy_id(WRONG_VALUE)
   {
@@ -195,6 +197,8 @@
      this.SyncTreeView_SymbolTFSetting();   // the chart's own Symbol and TF are the active ones
      this.SyncTable_SymbolTFSetting();      // the row of the chart's own pair has the start icon, the others the delete icon
      this.UpdateStatusBar_SymbolSpread();
+     if(m_box_basket_symbol!="")   // Manage of a basket of another symbol moved the chart: its box now
+        this.ShowBox_Basket();
     }
    return(true);
   }
@@ -244,13 +248,89 @@
  void CGUIPannel::OnDeinit(const int reason)
   {
    if(reason!=REASON_CHARTCHANGE)
+     {
+      if(m_GraphElementsCollection!=NULL)
+         m_GraphElementsCollection.DeleteChild(::GetPointer(m_box_basket));   // a member of the panel: not the collection's to delete
       ::ChartRedraw(this.m_chart_id);
+     }
+  }
+ //+------------------------------------------------------------------+
+ //| MY DEBUG: the time of each step at a change of the profit         |
+ //| (ACCOUNT_PROP_PROFIT), summed and told every 10 s: is it the      |
+ //| caption, the buttons of Action or the tables of Trade Manage?     |
+ //+------------------------------------------------------------------+
+ ulong g_debug_profit_ms=0,g_debug_profit_events=0,g_debug_profit_visible=0;
+ ulong g_debug_profit_caption=0,g_debug_profit_action=0,g_debug_profit_position=0,g_debug_profit_basket=0;
+ //--- MY DEBUG: the other parts of an account event (2026-11-26: m_GUIPannel 10-15 ms an event outside ACCOUNT_PROP_PROFIT): the steps before the
+ //--- children, the children (every window), each property branch; told with the line of the profit
+ ulong g_debug_account_events=0,g_debug_account_before=0,g_debug_account_children=0;
+ ulong g_debug_account_equity=0,g_debug_account_equity_n=0,g_debug_account_balance=0,g_debug_account_balance_n=0;
+ ulong g_debug_account_margin=0,g_debug_account_margin_n=0,g_debug_account_other_n=0;
+ //--- MY DEBUG: the whole CGUIPannel::OnChartEvent of a custom event, told when it takes 50 ms or more (opening Trade Manage took 4.6-4.8 s, 2026-11-26)
+ #define DEBUG_GUI_SLOW_US  50000
+ class CDebugGUIScope
+  {
+   private:
+     ulong             m_start;
+     int               m_id;
+     string            m_sparam;
+   public:
+                       CDebugGUIScope(const int id,const string sparam) : m_start(::GetMicrosecondCount()),m_id(id),m_sparam(sparam) {}
+                      ~CDebugGUIScope(void)
+                        {
+                         const ulong spent=::GetMicrosecondCount()-this.m_start;
+                         if(this.m_id>=CHARTEVENT_CUSTOM && spent>=DEBUG_GUI_SLOW_US)
+                            ::Print("MY DEBUG CGUIPannel::OnChartEvent: custom ",this.m_id-CHARTEVENT_CUSTOM," ",this.m_sparam," took ",spent/1000," ms in all");
+                        }
+  };
+ void DebugProfitStep(const ulong caption_us,const ulong action_us,const ulong position_us,const ulong basket_us,const bool visible)
+  {
+   g_debug_profit_events++;
+   g_debug_profit_visible+=(visible ? 1 : 0);
+   g_debug_profit_caption+=caption_us;
+   g_debug_profit_action+=action_us;
+   g_debug_profit_position+=position_us;
+   g_debug_profit_basket+=basket_us;
+   const ulong now=::GetTickCount64();
+   if(g_debug_profit_ms==0)
+      g_debug_profit_ms=now;
+   if(now-g_debug_profit_ms<10000)
+      return;
+   ::Print("MY DEBUG CGUIPannel::OnChartEvent ACCOUNT_PROP_PROFIT: ",g_debug_profit_events," events (Trade Manage shown at ",g_debug_profit_visible,"), positions ",::PositionsTotal(),
+           ": UpdateCaption_Position ",::DoubleToString(g_debug_profit_caption/1000.0,1)," ms, SyncButtons_Action ",::DoubleToString(g_debug_profit_action/1000.0,1),
+           " ms, FillTable_TradeManagerPosition ",::DoubleToString(g_debug_profit_position/1000.0,1)," ms, FillTable_TradeManagerOpenPositionByBasket ",
+           ::DoubleToString(g_debug_profit_basket/1000.0,1)," ms");
+   ::Print("MY DEBUG CGUIPannel::OnChartEvent ACCOUNT_EVENT_PROPERTY_CHANGED: ",g_debug_account_events," events: before the children ",
+           ::DoubleToString(g_debug_account_before/1000.0,1)," ms, the children ",::DoubleToString(g_debug_account_children/1000.0,1)," ms, EQUITY x",
+           g_debug_account_equity_n," ",::DoubleToString(g_debug_account_equity/1000.0,1)," ms, BALANCE x",g_debug_account_balance_n," ",
+           ::DoubleToString(g_debug_account_balance/1000.0,1)," ms, MARGIN / MARGIN_LEVEL x",g_debug_account_margin_n," ",
+           ::DoubleToString(g_debug_account_margin/1000.0,1)," ms, other properties x",g_debug_account_other_n);
+   g_debug_account_events=0;
+   g_debug_account_before=0;
+   g_debug_account_children=0;
+   g_debug_account_equity=0;
+   g_debug_account_equity_n=0;
+   g_debug_account_balance=0;
+   g_debug_account_balance_n=0;
+   g_debug_account_margin=0;
+   g_debug_account_margin_n=0;
+   g_debug_account_other_n=0;
+   g_debug_profit_ms=now;
+   g_debug_profit_events=0;
+   g_debug_profit_visible=0;
+   g_debug_profit_caption=0;
+   g_debug_profit_action=0;
+   g_debug_profit_position=0;
+   g_debug_profit_basket=0;
   }
  //+------------------------------------------------------------------+
  //| Every child gets the event and handles what is its own           |
  //+------------------------------------------------------------------+
  void CGUIPannel::OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
   {
+   CDebugGUIScope debug_scope(id,sparam);   // MY DEBUG: the whole call, told at its end when slow
+   const bool debug_account=(id==CHARTEVENT_CUSTOM+ACCOUNT_EVENT_PROPERTY_CHANGED);
+   const ulong debug_t0=::GetMicrosecondCount();
    //--- The objects of the chart changed (CChartObj: the terminal drew the arrows of a trade, on top of the windows): the shown windows go back on top (V2)
    if(id==CHARTEVENT_CUSTOM+CHART_OBJ_EVENT_OBJECTS_CHANGE)
      {
@@ -266,6 +346,9 @@
    this.OnEvent_Alert(id,lparam,dparam,sparam);
    //--- The popup of a candle opens on the chart, away from the windows: it hears the event before the filter below
    this.OnEvent_Window_CandleInfo(id,lparam,dparam,sparam);
+   const ulong debug_t1=::GetMicrosecondCount();
+   if(id>=CHARTEVENT_CUSTOM && debug_t1-debug_t0>=DEBUG_GUI_SLOW_US)
+      ::Print("MY DEBUG CGUIPannel::OnChartEvent: custom ",id-CHARTEVENT_CUSTOM," ",sparam," -> OnEvent_Alert + OnEvent_Window_CandleInfo took ",(debug_t1-debug_t0)/1000," ms");
    //--- The mouse over the chart, away from the windows and with no control focused or pressed, is not for any control: nobody is asked
    if((id==CHARTEVENT_MOUSE_MOVE || id==CHARTEVENT_MOUSE_WHEEL) && !CGElement::MouseBusy())
      {
@@ -285,12 +368,32 @@
         }
      }
    for(int i=0;i<this.ChildrenTotal();i++)
+     {
+      const ulong debug_child=::GetMicrosecondCount();   // MY DEBUG: a window that takes long on a custom event is told
       this.Child(i).OnChartEvent(id,lparam,dparam,sparam);
-   //--- A trading event (CTradeEvent::SendEvent, lparam = a ticket): the tables of the Trade Manage window show it
+      const ulong debug_child_us=::GetMicrosecondCount()-debug_child;
+      if(id>=CHARTEVENT_CUSTOM && debug_child_us>=DEBUG_GUI_SLOW_US)
+         ::Print("MY DEBUG CGUIPannel::OnChartEvent: custom ",id-CHARTEVENT_CUSTOM," ",sparam," -> child ",i," ",this.Child(i).Name()," took ",debug_child_us/1000," ms");
+     }
+   const ulong debug_t2=::GetMicrosecondCount();
+   if(debug_account)
+     {
+      g_debug_account_events++;
+      g_debug_account_before+=debug_t1-debug_t0;
+      g_debug_account_children+=debug_t2-debug_t1;
+     }
+   //--- A trading event (CTradeEvent::SendEvent, lparam = a ticket): the tables of the Trade Manage window show it; the Order detail of that position
+   //--- follows it live (the SL / TP changed, a deal), from RAM
    if(id>CHARTEVENT_CUSTOM+TRADE_EVENT_NO_EVENT && id<CHARTEVENT_CUSTOM+TRADE_EVENTS_NEXT_CODE)
      {
       this.RefreshTables_TradeManage();
       this.UpdateCaption_Position();
+      this.SyncButtons_Action();   // a position came or went: the groups of Action
+      if(m_window_order_detail.IsVisible() && lparam==m_order_detail_position)
+        {
+         this.FillTable_OrderDetail(m_order_detail_position);
+         ::ChartRedraw(this.m_chart_id);
+        }
       return;
      }
    //--- A property of the account changed (CAccount::SendChanges: the key = the property, the side = up / down)
@@ -301,18 +404,47 @@
       ENUM_SIGNAL_DIRECTION side;
       bool is_new;
       this.EventUnpack(lparam,time,property,side,is_new);
-      if(property==ACCOUNT_PROP_PROFIT)        // the caption follows, the numbers of the positions with it; the Open tab its Price and Profit
+      if(property==ACCOUNT_PROP_PROFIT)        // the caption follows, the numbers of the positions with it; the Open and By Basket tabs their Price and Profit
         {
+         const ulong debug_t0=::GetMicrosecondCount();   // MY DEBUG: the time of each step at a change of the profit (25-43 ms an event with 11 positions, 2026-11-26)
          this.UpdateCaption_Position();
-         if(m_window_tradeManage.IsVisible())
+         const ulong debug_t1=::GetMicrosecondCount();
+         this.SyncButtons_Action();             // the floating profit of each group of Action
+         const ulong debug_t2=::GetMicrosecondCount();
+         ulong debug_t3=debug_t2;
+         const bool debug_visible=m_window_tradeManage.IsVisible();
+         if(debug_visible)
+           {
             this.FillTable_TradeManagerPosition();
+            debug_t3=::GetMicrosecondCount();
+            this.FillTable_TradeManagerOpenPositionByBasket();
+           }
+         const ulong debug_t4=::GetMicrosecondCount();
+         DebugProfitStep(debug_t1-debug_t0,debug_t2-debug_t1,debug_t3-debug_t2,debug_t4-debug_t3,debug_visible);
         }
       else if(property==ACCOUNT_PROP_EQUITY)   // the arrow follows the side
+        {
+         const ulong debug_e=::GetMicrosecondCount();   // MY DEBUG
          this.UpdateStatusBar_Equity(side);
+         g_debug_account_equity+=::GetMicrosecondCount()-debug_e;
+         g_debug_account_equity_n++;
+        }
       else if(property==ACCOUNT_PROP_BALANCE)  // a position closed into the balance can leave the equity as it was: the status bar looks again whether it is flat
+        {
+         const ulong debug_b=::GetMicrosecondCount();   // MY DEBUG
          this.UpdateStatusBar_Equity();
+         g_debug_account_balance+=::GetMicrosecondCount()-debug_b;
+         g_debug_account_balance_n++;
+        }
       else if(property==ACCOUNT_PROP_MARGIN || property==ACCOUNT_PROP_MARGIN_LEVEL)   // a position opened / closed: the margin level
+        {
+         const ulong debug_m=::GetMicrosecondCount();   // MY DEBUG
          this.UpdateStatusBar_MarginLevel();
+         g_debug_account_margin+=::GetMicrosecondCount()-debug_m;
+         g_debug_account_margin_n++;
+        }
+      else
+         g_debug_account_other_n++;   // MY DEBUG: a property no branch draws
       return;
      }
    //--- MarginLevelSafe / MarginLevelDanger changed (the tab Risk): the colour of the margin level follows

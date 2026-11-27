@@ -2,10 +2,10 @@
 //|                                                   BaseObj.mqh    |
 //|                        Copyright 2019, MetaQuotes Software Corp. |
 //| https://www.mql5.com/en/articles/7124                            |
-//|Lib https://www.mql5.com/en/articles/14710                        |
-//|              Pure data — CGraphElmControl removed                |
-//|              Extracted from: BaseObj.mqh                         |
-//| Update in V4 Working with Event Event Rule                       |
+//| Lib https://www.mql5.com/en/articles/14710                       |
+//| Pure data — CGraphElmControl removed                             |
+//| Extracted from: BaseObj.mqh                                      |
+//| Update from V4 Working with Event Event Rule                     |
 //+------------------------------------------------------------------+
 #ifndef __CBASEOBJ_MQH__
 #define __CBASEOBJ_MQH__
@@ -48,8 +48,11 @@
      //New added in https://www.mql5.com/en/articles/9751
       virtual void       Print(const bool full_prop=false,const bool dash=false)      { return; }
       virtual void       PrintShort(const bool dash=false,const bool symbol=false)    { return; }
-     //New in V4 for woring with Event 
-     //The event of a row. lparam: bits 0-31 the open time of the bar, 32-47 the key, 48-49 the side, 50 the row is new (judged at one new closed bar), 51-62 for a class. sparam: the symbol;what a class adds
+     //New since V4 for woring with Event 
+     //The event of a row. 
+     // lparam: bits 0-31 the open time of the bar, 
+     // 32-47 the key, 48-49 the side, 50 the row is new (judged at one new closed bar), 
+     // 51-62 for a class. sparam: the symbol;what a class adds
       virtual long       EventPack(const datetime time,const long key,const ENUM_SIGNAL_DIRECTION side,const bool is_new) const;
       virtual string     EventPackText(const string symbol) const                     { return symbol; }
      //What the key and the text after the symbol mean is told by the id of the event (EventDefines.mqh)

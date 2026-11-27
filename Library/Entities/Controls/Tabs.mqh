@@ -418,6 +418,7 @@ void CTabs::Show(void)
   //--- No base cascade: the other tabs' content must never become visible, not even for one redraw
   this.m_visible=true;
   ::ObjectSetInteger(this.m_chart_id,this.Name(),OBJPROP_TIMEFRAMES,OBJ_ALL_PERIODS);
+  this.DrawIfPending();   // locked / unlocked while hidden (CGElement::IsLocked): the base Show is not called here
   this.m_tabs.Show();
   this.ShiftTabsHeader();
   this.ShowTabElements();

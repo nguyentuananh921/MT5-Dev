@@ -29,7 +29,7 @@
         {
          if(!this.CreateObject(OBJECT_DE_TYPE_GSTD_RECTANGLE,chart_id,subwin,name,2))
             return false;
-         this.SetProperty(GRAPH_OBJ_PROP_FILL,0,::ObjectGetInteger(chart_id,name,OBJPROP_FILL));
+         this.SetProperty(GRAPH_OBJ_PROP_FILL,0,false);   // the default of ObjectCreate, not read back (ObjectGetInteger waits for the chart: GStdBaseObj.mqh); SetFlagFill changes it
          return true;
         }
     //--- Supported object properties (1) real, (2) integer

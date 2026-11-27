@@ -36,6 +36,7 @@
   {
    TSB_NONE=0,
    TSB_STOP,        // the Stop box: the Stop price
+   TSB_TARGET,      // New in V5 (2026-11-27): the Target box: the Target price, free of the ratio
    TSB_BODY         // the grip icon at the start of the strip: the whole box
   };
  //+------------------------------------------------------------------+
@@ -43,10 +44,13 @@
  //| children. The zones, the take profit lines and their names are  |
  //| native objects anchored in time and price (the chart moves them);|
  //| the strip, the Stop and Target boxes are native rectangle        |
+ //| labels (both dragged: the Stop, the Target free of the ratio     |
+ //| until a ratio is chosen again; New in V5 2026-11-27)             |
  //| labels; the controls (combo boxes, check box, buttons,           |
  //| labels) are canvas elements over them. The box keeps its own     |
  //| state, handles the mouse, and tells the outside with chart events|
- //| (TRADE_SETUP_EVENT_SEND, TRADE_SETUP_EVENT_CLOSE)                      |
+ //| (TRADE_SETUP_EVENT_SEND, TRADE_SETUP_EVENT_CLOSE; the box of a   |
+ //| basket, SetManage: TRADE_SETUP_EVENT_MODIFY)                     |
  //+------------------------------------------------------------------+
  class CTradeSetupBox : public CGBaseObj
   {
@@ -65,6 +69,7 @@
      double            m_lots_shown;      // what the lot combo shows now (-1 manual, -2 unknown)
      bool              m_covered;         // a window covers the cursor
      bool              m_use_risk;        // the lots come from the risk (the check box)
+     bool              m_manage;          // New in V5 (2026-11-27): the box of a basket open now (SetManage): no flip, no RPT / lots, Modify instead of Send
      bool              m_shown;           // the children are on the chart
      int               m_tp_shown;        // how many take profit lines are on the chart
      bool              m_prev_left;
@@ -73,7 +78,8 @@
      ENUM_TSB_PART     m_drag;            // what is dragged now
      ENUM_TSB_PART     m_hover;           // what is under the cursor
      int               m_press_x,m_press_y;
-     double            m_press_price,m_press_entry,m_press_stop;
+     double            m_press_price,m_press_entry,m_press_stop,m_press_target;
+     bool              m_target_free;     // New in V5 (2026-11-27): the Target was dragged: it stays where it is (a Stop moved keeps it), until a ratio is chosen
      int               m_press_shift;     // shift of the left bar when the body was grabbed
      int               m_changes;         // how many times the user changed it (a test counts them)
      int               m_last_chart_w,m_last_chart_h;
@@ -159,6 +165,11 @@
      void              SetRiskPercent(const double percent);
      void              SetLots(const double lots);
      void              SetUseRisk(const bool use);
+   //--- New in V5 (2026-11-27): the box of a basket open now (the Manage of the By Basket tab). The side stays (no flip), the lots are the volume of
+   //--- the basket (SetLots, no RPT, no lot combo), the button says Modify and sends TRADE_SETUP_EVENT_MODIFY (lparam the side, dparam the Stop,
+   //--- sparam "symbol;target"); the close icon only hides the box. Call before Setup
+     void              SetManage(const bool manage);
+     bool              IsManage(void) const { return this.m_manage; }
      void              Show(void);
      void              Hide(void);
      double            Entry(void)  const { return this.m_entry;  }
@@ -179,8 +190,8 @@
 #ifndef CTRADESETUPBOX_COMPOSITE_IMPLEMENTATION
 #define CTRADESETUPBOX_COMPOSITE_IMPLEMENTATION
  CTradeSetupBox::CTradeSetupBox(void) : m_time_left(0),m_symbol(""),m_period(PERIOD_CURRENT),m_bars(30),m_entry(0),m_stop(0),m_side(SIGNAL_DIRECTION_BUY),m_target(0),m_levels(3),m_lots(0.1),m_risk_percent(0),
-                                        m_lots_shown(-2.0),m_covered(false),m_use_risk(true),m_shown(false),m_tp_shown(0),m_guide_shown(false),m_prev_left(false),m_grab(false),m_saved_scroll(true),
-                                        m_drag(TSB_NONE),m_hover(TSB_NONE),m_press_x(0),m_press_y(0),m_press_price(0),m_press_entry(0),m_press_stop(0),m_press_shift(0),m_changes(0),
+                                        m_lots_shown(-2.0),m_covered(false),m_use_risk(true),m_manage(false),m_shown(false),m_tp_shown(0),m_guide_shown(false),m_prev_left(false),m_grab(false),m_saved_scroll(true),
+                                        m_drag(TSB_NONE),m_hover(TSB_NONE),m_press_x(0),m_press_y(0),m_press_price(0),m_press_entry(0),m_press_stop(0),m_press_target(0),m_target_free(false),m_press_shift(0),m_changes(0),
                                         m_last_chart_w(0),m_last_chart_h(0),m_bars_used(0),m_xl(0),m_xr(0),m_y_entry(0),m_y_StopLost(0),m_y_TakeProfit(0),m_Box_StopLost_y(0),m_Box_TakeProfit_y(0),m_Box_StopLost_w(0),m_Box_TakeProfit_w(0),m_Box_strip_y(0)
   {
    ::ArrayInitialize(this.m_text_w,0);
@@ -369,6 +380,7 @@
    this.m_entry=entry;
    this.m_stop=stop;
    this.m_side=(stop<entry ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL);
+   this.m_target_free=false;
    this.UpdateTarget();
    this.ShowType();
    this.Apply();
@@ -376,6 +388,7 @@
  void CTradeSetupBox::SetLevels(const int count)
   {
    this.m_levels=(count<1 ? 1 : count>RISK_REWARD_RATIOS_TOTAL ? RISK_REWARD_RATIOS_TOTAL : count);
+   this.m_target_free=false;
    this.UpdateTarget();
    this.m_combo_ratio.SelectItem(this.m_levels-1);
    this.Apply();
@@ -396,6 +409,23 @@
    this.m_use_risk=use;
    this.m_check_risk.SetState(use);
    this.Apply();
+  }
+ void CTradeSetupBox::SetManage(const bool manage)
+  {
+   if(manage==this.m_manage)
+      return;
+   this.m_manage=manage;
+   if(manage)
+     {
+      this.m_use_risk=false;
+      this.m_check_risk.SetState(false);
+     }
+   if(this.m_shown)   // the controls of the strip change: shown again by Apply
+     {
+      this.SetShown(false);
+      this.Apply();
+     }
+   this.ShowType();
   }
  void CTradeSetupBox::Show(void)
   {
@@ -444,7 +474,7 @@
    color back=(buy ? TSB_COLOR_BUY : TSB_COLOR_SELL);
    this.m_button_type.IconFile(buy ? IMAGE_RESOURCE_BMP16_ORDER_BUY_PNG : IMAGE_RESOURCE_BMP16_ORDER_SELL_PNG);
    this.m_button_type.Draw(true);
-   this.m_button_OrderSend.SetText(buy ? "BUY" : "SELL");
+   this.m_button_OrderSend.SetText(this.m_manage ? "Modify" : (buy ? "BUY" : "SELL"));
    this.m_button_OrderSend.GetBackColorControl().InitColors(back,back,back,clrLightGray);
    this.m_button_OrderSend.GetForeColorControl().InitColors(clrWhite,clrWhite,clrWhite,clrGray);
    this.m_button_OrderSend.ColorChange(COLOR_STATE_DEFAULT);
@@ -453,6 +483,8 @@
  //--- The lot combo shows the computed lots with RPT, else the nearest choice to the fixed lots
  void CTradeSetupBox::ShowLots(const double lots)
   {
+   if(this.m_manage)
+      return;   // a basket: no lot combo
    double key=(this.m_use_risk ? lots : -1.0);
    if(key==this.m_lots_shown)
       return;
@@ -472,9 +504,10 @@
  void CTradeSetupBox::ReadBar(void)
   {
    int levels=this.m_combo_ratio.GetListViewPointer().SelectedItemIndex()+1;
-   if(levels>=1 && levels!=this.m_levels)
+   if(levels>=1 && (levels!=this.m_levels || this.m_target_free))   // a ratio chosen: the Target follows it again
      {
       this.m_levels=levels;
+      this.m_target_free=false;
       this.UpdateTarget();
       this.m_changes++;
      }
@@ -520,8 +553,11 @@
       this.m_label_pnl.Show();
       this.m_button_type.Show();
       this.m_combo_ratio.Show();
-      this.m_check_risk.Show();
-      this.m_combo_lots.Show();
+      if(!this.m_manage)   // a basket: its lots are its volume
+        {
+         this.m_check_risk.Show();
+         this.m_combo_lots.Show();
+        }
       this.m_button_OrderSend.Show();
       this.m_button_grip.Show();
       this.m_button_close.Show();
@@ -569,6 +605,8 @@
   }
  void CTradeSetupBox::UpdateTarget(void)
   {
+   if(this.m_target_free)
+      return;   // dragged: it stays
    this.m_target=this.LevelPrice(this.m_levels-1);
   }
  void CTradeSetupBox::SetCovered(const bool covered)
@@ -704,6 +742,14 @@
    this.m_Box_TakeProfit_w=this.m_Box_StopLost_w;
    this.m_Box_StopLost_y=(this.m_y_StopLost>this.m_y_entry ? this.m_y_StopLost : this.m_y_StopLost-M_CONTROL_HEIGHT);       // below its edge for a Buy, above for a Sell
    this.m_Box_TakeProfit_y=(this.m_y_TakeProfit>this.m_y_entry ? this.m_y_TakeProfit : this.m_y_TakeProfit-M_CONTROL_HEIGHT);
+   //--- New in V5 (2026-11-27): a Stop / Target far from the price (the SL of a basket: y -4219, MY DEBUG) put its box off the chart and nothing could be
+   //--- dragged: the two boxes stay at the edge of the chart, the zones still reach the price; dragged in, the price follows the cursor
+   const int chart_h=(int)::ChartGetInteger(this.ChartID(),CHART_HEIGHT_IN_PIXELS,this.m_subwindow);
+   if(chart_h>M_CONTROL_HEIGHT)
+     {
+      this.m_Box_StopLost_y=::MathMax(0,::MathMin(chart_h-M_CONTROL_HEIGHT,this.m_Box_StopLost_y));
+      this.m_Box_TakeProfit_y=::MathMax(0,::MathMin(chart_h-M_CONTROL_HEIGHT,this.m_Box_TakeProfit_y));
+     }
    return true;
   }
  //--- The texts of the two boxes, the P&L and the lots
@@ -714,7 +760,9 @@
    double gain=lots*tp_ticks*this.TickValue();
    double loss=lots*this.LossPerLot();
    string stop_text="StopLost: "+this.Distance(this.m_entry,this.m_stop)+", Amount: "+this.Money(loss);
-   string target_text="TakeProfit"+(string)this.m_levels+" "+this.RatioText(this.LevelRatio(this.m_levels-1))+": "+this.Distance(this.m_entry,this.m_target)+", Amount: "+this.Money(gain);
+   const double stop_ticks=::MathAbs(this.m_entry-this.m_stop)/this.Tick();
+   const double ratio=(this.m_target_free ? (stop_ticks>0 ? tp_ticks/stop_ticks : 0.0) : this.LevelRatio(this.m_levels-1));   // dragged: its own ratio
+   string target_text="TakeProfit"+(this.m_target_free ? "" : (string)this.m_levels)+" "+this.RatioText(::NormalizeDouble(ratio,1))+": "+this.Distance(this.m_entry,this.m_target)+", Amount: "+this.Money(gain);
    this.m_text_w[0]=this.TextWidth(stop_text);
    this.m_text_w[1]=this.TextWidth(target_text);
    this.UpdateText(this.m_Label_StopLost,stop_text);
@@ -764,7 +812,7 @@
    this.m_Rectangle_StopLost.SetTime(t_right,1);
    this.m_Rectangle_StopLost.SetPrice(this.m_stop,1);
    //--- a dotted line and its name at each take profit level; the last one is the edge of the zone
-   int want=this.m_levels-1;
+   int want=(this.m_target_free ? 0 : this.m_levels-1);   // a dragged Target: no level of a ratio before it
    for(int k=0;k<RISK_REWARD_RATIOS_TOTAL;k++)
      {
       bool on=(k<want);
@@ -791,11 +839,11 @@
    this.PlaceBox(this.m_Rectangle_TakeProfitBox,this.m_Box_TakeProfit_y,t_right);
    this.PlaceBox(this.m_Rectangle_strip,this.m_Box_strip_y,t_right);
    //--- the guide line: only while the Stop is dragged
-   bool guide=(this.m_drag==TSB_STOP || this.m_drag==TSB_BODY);
+   bool guide=(this.m_drag==TSB_STOP || this.m_drag==TSB_TARGET || this.m_drag==TSB_BODY);
    if(guide)
      {
-      double level=(this.m_drag==TSB_STOP ? this.m_stop : this.m_entry);   // the Stop, or the entry when the whole box moves
-      this.m_Line_Guide.SetColor(this.m_drag==TSB_STOP ? TSB_COLOR_STOP : clrDimGray);
+      double level=(this.m_drag==TSB_STOP ? this.m_stop : (this.m_drag==TSB_TARGET ? this.m_target : this.m_entry));   // the Stop, the Target, or the entry when the whole box moves
+      this.m_Line_Guide.SetColor(this.m_drag==TSB_STOP ? TSB_COLOR_STOP : (this.m_drag==TSB_TARGET ? TSB_COLOR_TARGET : clrDimGray));
       this.m_Line_Guide.SetTime(this.m_time_left,0);
       this.m_Line_Guide.SetPrice(level,0);
       this.m_Line_Guide.SetTime(t_right,1);
@@ -823,10 +871,13 @@
    x+=TSB_CAPTION_W;
    this.m_combo_ratio.Move(x,y);
    x+=M_TF_WITHICON_WIDTH+M_CONTROL_BORDER_GAP;
-   this.m_check_risk.Move(x,y);
-   x+=TSB_RPT_W+M_CONTROL_BORDER_GAP;
-   this.m_combo_lots.Move(x,y);
-   x+=M_LOT_WIDTH+M_CONTROL_BORDER_GAP;
+   if(!this.m_manage)   // a basket: no RPT, no lot combo
+     {
+      this.m_check_risk.Move(x,y);
+      x+=TSB_RPT_W+M_CONTROL_BORDER_GAP;
+      this.m_combo_lots.Move(x,y);
+      x+=M_LOT_WIDTH+M_CONTROL_BORDER_GAP;
+     }
    this.m_button_OrderSend.Move(x,y);
    x+=TSB_SEND_W+M_CONTROL_BORDER_GAP;
    this.m_label_pnl.Move(x,y);
@@ -842,6 +893,8 @@
       return TSB_NONE;
    if(x>=this.m_xl && x<this.m_xl+this.m_Box_StopLost_w && y>=this.m_Box_StopLost_y && y<this.m_Box_StopLost_y+M_CONTROL_HEIGHT)
       return TSB_STOP;
+   if(x>=this.m_xl && x<this.m_xl+this.m_Box_TakeProfit_w && y>=this.m_Box_TakeProfit_y && y<this.m_Box_TakeProfit_y+M_CONTROL_HEIGHT)
+      return TSB_TARGET;
    if(x>=this.GripX() && x<this.GripX()+M_ICON16_WIDTH && y>=this.m_Box_strip_y && y<this.m_Box_strip_y+M_CONTROL_HEIGHT)
       return TSB_BODY;
    return TSB_NONE;
@@ -855,6 +908,7 @@
  //--- Buy <-> Sell: the Stop goes to the other side of the entry
  void CTradeSetupBox::Flip(void)
   {
+   this.m_target_free=false;   // the Target goes back to the ratio, on the new side
    this.m_stop=this.Snap(2.0*this.m_entry-this.m_stop);
    this.m_side=(this.m_side==SIGNAL_DIRECTION_BUY ? SIGNAL_DIRECTION_SELL : SIGNAL_DIRECTION_BUY);
    this.UpdateTarget();
@@ -876,11 +930,17 @@
          this.m_stop=this.Snap(buy ? ::MathMin(price,this.m_entry-tick) : ::MathMax(price,this.m_entry+tick));
          this.UpdateTarget();
          break;
+      case TSB_TARGET:   // over the entry for a Buy, under it for a Sell: free of the ratio from now
+         this.m_target=this.Snap(buy ? ::MathMax(price,this.m_entry+tick) : ::MathMin(price,this.m_entry-tick));
+         this.m_target_free=true;
+         break;
       case TSB_BODY:
         {
          double moved=price-this.m_press_price;
          this.m_entry=this.Snap(this.m_press_entry+moved);
          this.m_stop=this.Snap(this.m_press_stop+moved);
+         if(this.m_target_free)
+            this.m_target=this.Snap(this.m_press_target+moved);
          this.UpdateTarget();
          int bars=(int)::MathRound((double)(x-this.m_press_x)/this.SlotWidth());   // right = newer bars = smaller shift
          int shift=this.m_press_shift-bars;
@@ -934,6 +994,8 @@
         {
          if(lparam==(long)this.m_button_type.ObjectID())
            {
+            if(this.m_manage)
+               return;   // the side of a basket stays
             this.Flip();
             this.ShowType();
             this.m_changes++;
@@ -941,10 +1003,21 @@
             ::ChartRedraw(this.ChartID());
            }
          else if(lparam==(long)this.m_button_OrderSend.ObjectID())
-            ::EventChartCustom(this.ChartID(),(ushort)TRADE_SETUP_EVENT_SEND,(long)this.m_side,this.LotsToTrade(),this.m_symbol);
+           {
+            if(this.m_manage)   // a basket: its SL and TP; the TP goes in sparam after the symbol
+              {
+               string target=this.m_symbol;
+               target+=";";
+               target+=::DoubleToString(this.m_target,(int)::SymbolInfoInteger(this.m_symbol,SYMBOL_DIGITS));
+               ::EventChartCustom(this.ChartID(),(ushort)TRADE_SETUP_EVENT_MODIFY,(long)this.m_side,this.m_stop,target);
+              }
+            else
+               ::EventChartCustom(this.ChartID(),(ushort)TRADE_SETUP_EVENT_SEND,(long)this.m_side,this.LotsToTrade(),this.m_symbol);
+           }
          else if(lparam==(long)this.m_button_close.ObjectID())
            {
-            ::EventChartCustom(this.ChartID(),(ushort)TRADE_SETUP_EVENT_CLOSE,(long)this.m_side,0.0,this.m_symbol);
+            if(!this.m_manage)   // a basket: the icon only hides the box (the Close of its row closes it)
+               ::EventChartCustom(this.ChartID(),(ushort)TRADE_SETUP_EVENT_CLOSE,(long)this.m_side,0.0,this.m_symbol);
             this.Hide();
             ::ChartRedraw(this.ChartID());
            }
@@ -975,6 +1048,10 @@
       return;
      }
    ENUM_TSB_PART part=(this.m_covered ? TSB_NONE : this.PartAt(x,y));
+   if(left && !this.m_prev_left)   // MY DEBUG (2026-11-27): the SL of the box of a basket could not be dragged: what a press hits
+      ::Print("MY DEBUG CTradeSetupBox::OnChartEvent press at ",x,",",y,": ",::EnumToString(part),(this.m_covered ? " (covered)" : ""),
+              ", Stop box y ",this.m_Box_StopLost_y,", Target box y ",this.m_Box_TakeProfit_y,", x ",this.m_xl,"..",this.m_xl+this.m_Box_StopLost_w,
+              ", grip x ",this.GripX(),", strip y ",this.m_Box_strip_y);
    this.m_hover=part;
    this.SetGrab(part!=TSB_NONE);
    if(part!=TSB_NONE && left && !this.m_prev_left)
@@ -987,6 +1064,7 @@
       this.m_press_price=price;
       this.m_press_entry=this.m_entry;
       this.m_press_stop=this.m_stop;
+      this.m_press_target=this.m_target;
       this.m_press_shift=::iBarShift(::ChartSymbol(this.ChartID()),(ENUM_TIMEFRAMES)::ChartPeriod(this.ChartID()),this.m_time_left,false);
       this.m_drag=part;
      }

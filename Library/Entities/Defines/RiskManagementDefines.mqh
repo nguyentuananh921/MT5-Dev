@@ -48,7 +48,7 @@ enum ENUM_RISK_MODE
   {
    RISK_PERCENT,                                            // Percentage of account
    RISK_FIXED_CASH,                                         // Fixed cash amount
-   RISK_FIXED_LOT                                           // Fixed lot size. Change in V5 (2026-11-23): always the min lot of the symbol (no FixedLotSize key)
+   RISK_FIXED_LOT                                           // Fixed lot size. Change in V5: no FixedLotSize key; the lot of the symbol on RAM (CTradingControl::FixedLot: min lot at the start, then the last lot chosen)
   };
 #define RISK_MODES_TOTAL  (3)                               // the number of ENUM_RISK_MODE values
 //--- What the author wrote for each value (the comment of the enum: MQL5 cannot read it), for the View
@@ -58,20 +58,9 @@ string RiskModeText(const ENUM_RISK_MODE mode)
      {
       case RISK_PERCENT:    return "Percentage of account";
       case RISK_FIXED_CASH: return "Fixed cash amount";
-      case RISK_FIXED_LOT:  return "Min lot";
+      case RISK_FIXED_LOT:  return "Fixed lot size";
      }
    return "?";
-  }
-//--- The key of Setting_Risk that holds the amount of each mode (the input of Part 7). "": the mode has no amount (RISK_FIXED_LOT: the min lot of the symbol)
-string RiskModeValueKey(const ENUM_RISK_MODE mode)
-  {
-   switch(mode)
-     {
-      case RISK_PERCENT:    return "percentage_risk_per_operation";
-      case RISK_FIXED_CASH: return "FixedCashRisk";
-      case RISK_FIXED_LOT:  return "";
-     }
-   return "";
   }
 //+------------------------------------------------------------------+
 //| Balance ignores open floating P/L; equity includes it            |
@@ -113,6 +102,71 @@ string PortfolioScopeText(const ENUM_PORTFOLIO_SCOPE scope)
       case PORTFOLIO_MAGIC_FILTERED: return "Only registered magic numbers";
      }
    return "?";
+  }
+//+------------------------------------------------------------------+
+//| The properties of CRiskSetting (Setting_Risk), as DoEasy declares |
+//| the properties of an object (BarDefines.mqh): integer (bool, int,|
+//| the enums), real, string. A new key of the risk = a new value    |
+//| here and its row in risk_property_list (RiskSetting.mqh)          |
+//+------------------------------------------------------------------+
+enum ENUM_RISK_PROP_INTEGER
+  {
+   RISK_PROP_RISK_MODE = 0,                                 // RiskMode (ENUM_RISK_MODE)
+   RISK_PROP_RISK_BASE,                                     // RiskBase (ENUM_RISK_BASE)
+   RISK_PROP_ALLOW_MIN_LOT_OVER_RISK,                       // AllowMinLotOverRisk
+   RISK_PROP_ALLOW_HEDGING,                                 // AllowHedging
+   RISK_PROP_ENABLE_ADAPTIVE_RISK,                          // EnableAdaptiveRisk
+   RISK_PROP_ENABLE_ADAPTIVE_MARGIN_CAP,                    // EnableAdaptiveMarginCap
+   RISK_PROP_ENABLE_BASKET_RISK,                            // EnableBasketRisk
+   RISK_PROP_BASKET_LOSS_BASE,                              // BasketLossBase (ENUM_RISK_BASE)
+   RISK_PROP_ENABLE_MAE_TRACKING,                           // EnableMAETracking
+   RISK_PROP_MAX_BASKET_HOLD_BARS,                          // MaxBasketHoldBars
+   RISK_PROP_ENABLE_PORTFOLIO_RISK,                         // EnablePortfolioRisk
+   RISK_PROP_PORTFOLIO_SCOPE,                               // PortfolioScope (ENUM_PORTFOLIO_SCOPE)
+   RISK_PROP_MAX_PORTFOLIO_POSITIONS,                       // MaxPortfolioPositions
+   RISK_PROP_MAX_POSITIONS_PER_SYMBOL,                      // MaxPositionsPerSymbol
+   RISK_PROP_MAX_PORTFOLIO_SYMBOLS,                         // MaxPortfolioSymbols
+   RISK_PROP_LOG_PORTFOLIO_SNAPSHOT,                        // LogPortfolioSnapshot
+  };
+#define RISK_PROP_INTEGER_TOTAL (16)                        // Total number of integer properties
+enum ENUM_RISK_PROP_DOUBLE
+  {
+   RISK_PROP_PERCENTAGE_RISK_PER_OPERATION = RISK_PROP_INTEGER_TOTAL,   // percentage_risk_per_operation
+   RISK_PROP_FIXED_CASH_RISK,                               // FixedCashRisk
+   RISK_PROP_ATR_MULTIPLIER,                                // ATRMultiplier
+   RISK_PROP_TAKE_PROFIT_RATIO,                             // TakeProfitRatio
+   RISK_PROP_DROP_DOWN_LEVEL,                               // DropDownLevel
+   RISK_PROP_RISK_REDUCTION_FACTOR,                         // RiskReductionFactor
+   RISK_PROP_MAX_MARGIN_USAGE_PERCENT,                      // MaxMarginUsagePercent
+   RISK_PROP_MARGIN_LEVEL_SAFE,                             // MarginLevelSafe
+   RISK_PROP_MARGIN_LEVEL_DANGER,                           // MarginLevelDanger
+   RISK_PROP_MAX_BASKET_LOSS_PERCENT,                       // MaxBasketLossPercent
+   RISK_PROP_MAX_BASKET_MARGIN_PERCENT,                     // MaxBasketMarginPercent
+   RISK_PROP_MAX_PORTFOLIO_MARGIN_PERCENT,                  // MaxPortfolioMarginPercent
+   RISK_PROP_MAX_PORTFOLIO_LOSS_PERCENT,                    // MaxPortfolioLossPercent
+   RISK_PROP_MAX_NET_CURRENCY_LOTS,                         // MaxNetCurrencyLots
+  };
+#define RISK_PROP_DOUBLE_TOTAL  (14)                        // Total number of real properties
+enum ENUM_RISK_PROP_STRING
+  {
+   RISK_PROP_EXTRA_PORTFOLIO_MAGICS = (RISK_PROP_INTEGER_TOTAL+RISK_PROP_DOUBLE_TOTAL),   // ExtraPortfolioMagics
+   RISK_PROP_ENTRY_STRATEGIES,                              // EntryStrategies (V5): Setting_Strategy.strategy_id that trade, comma-separated
+   RISK_PROP_STOP_LOSS_TEMPLATES,                           // StopLossTemplates (V5): Setting_IndicatorTemplate.id that give the stop
+   RISK_PROP_TRAILING_TEMPLATES,                            // TrailingTemplates (V5): Setting_IndicatorTemplate.id that trail the stop
+  };
+#define RISK_PROP_STRING_TOTAL  (4)                         // Total number of string properties
+#define RISK_PROP_TOTAL         (RISK_PROP_INTEGER_TOTAL+RISK_PROP_DOUBLE_TOTAL+RISK_PROP_STRING_TOTAL)
+//--- The property that holds the amount of each mode (the input of Part 7). WRONG_VALUE: the mode has no amount (RISK_FIXED_LOT: the lot of the
+//--- symbol on RAM, chosen in the Manual Entry)
+int RiskModeValueProperty(const ENUM_RISK_MODE mode)
+  {
+   switch(mode)
+     {
+      case RISK_PERCENT:    return RISK_PROP_PERCENTAGE_RISK_PER_OPERATION;
+      case RISK_FIXED_CASH: return RISK_PROP_FIXED_CASH_RISK;
+      case RISK_FIXED_LOT:  return WRONG_VALUE;
+     }
+   return WRONG_VALUE;
   }
 //--- The texts of the values of an enum by its type name (Setting_Risk.type), the value = the index; 0: not one of these enums
 int RiskEnumItems(const string type,string &items[])

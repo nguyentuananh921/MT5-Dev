@@ -29,6 +29,8 @@
   {
    if(!this.CreateObject(OBJECT_DE_TYPE_GSTD_RECTANGLE_LABEL,chart_id,subwin,name,1))
       return false;
+   //--- Still read back (each ObjectGetInteger waits for the chart, GStdBaseObj.mqh): the defaults of a rectangle label (size, border, colour) are not
+   //--- known for sure, and few are made (the box of CBarMarker, the bubbles of CTradingLevelBubble), not in a loop of drawing
    this.SetProperty(GRAPH_OBJ_PROP_XDISTANCE,0,::ObjectGetInteger(chart_id,name,OBJPROP_XDISTANCE));
    this.SetProperty(GRAPH_OBJ_PROP_YDISTANCE,0,::ObjectGetInteger(chart_id,name,OBJPROP_YDISTANCE));
    this.SetProperty(GRAPH_OBJ_PROP_XSIZE,0,::ObjectGetInteger(chart_id,name,OBJPROP_XSIZE));

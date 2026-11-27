@@ -1,3 +1,5 @@
 {
-    "cmake.sourceDirectory": "D:/MT5-Dev/Library/xgboost"
+    "cmake.sourceDirectory": "D:/MT5-Dev/Library/xgboost",
+    "chat.includeReferencedInstructions": true,
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true
 }

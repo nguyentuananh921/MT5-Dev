@@ -3,6 +3,13 @@
 //| Trimmed from DoEasy CGStdGraphObj (Lib V1): one standard chart   |
 //| object, created like CGElement (default ctor, then Create);      |
 //| more is pulled in when a class needs it                          |
+//| Change 2026-11-26: Create asks the chart nothing (Avoid Bug of    |
+//| skills\rules\2. CodingRule.md: a function that asks the chart     |
+//| waits for it). The subwindow is the one passed to ObjectCreate,   |
+//| the digits are of ::Symbol() on the program's chart, a property   |
+//| the setters own starts at the default of ObjectCreate (not read   |
+//| back). Was ObjectFind + ChartSymbol + ObjectGetInteger: 3-4 waits |
+//| an object, a pivot pattern of 19 objects took ~49 ms to draw      |
 //+------------------------------------------------------------------+
 #ifndef __GSTDBASEOBJ_MQH__
 #define __GSTDBASEOBJ_MQH__
@@ -88,8 +95,9 @@
    this.SetName(name);
    CGBaseObj::SetChartID(cid);
    CGBaseObj::SetTypeGraphObject(type);
-   CGBaseObj::SetSubwindow(cid,name);
-   CGBaseObj::SetDigits((int)::SymbolInfoInteger(::ChartSymbol(cid),SYMBOL_DIGITS));
+   this.m_subwindow=subwin;   // ObjectCreate put it there (was ObjectFind: a wait for the chart)
+   const string symbol=(cid==::ChartID() ? ::Symbol() : ::ChartSymbol(cid));   // the program's chart: no wait (another chart still asks it)
+   CGBaseObj::SetDigits((int)::SymbolInfoInteger(symbol,SYMBOL_DIGITS));
    this.SetProperty(GRAPH_OBJ_PROP_CHART_ID,0,CGBaseObj::ChartID());
    this.SetProperty(GRAPH_OBJ_PROP_WND_NUM,0,CGBaseObj::SubWindow());
    this.SetProperty(GRAPH_OBJ_PROP_TYPE,0,CGBaseObj::TypeGraphObject());

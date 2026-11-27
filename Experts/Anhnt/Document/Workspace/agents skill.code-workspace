@@ -5,6 +5,40 @@
 		},
 		{
 			"path": "D:/MT5-Dev/skills"
+		},
+		{
+			"path": "D:/MT5-Dev/Library"
+		},
+		{
+			"path": "../../Example EA/4. Combination EA V5"
 		}
-	]
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true,
+		"clangd.fallbackFlags": [
+			"-xc++",
+			"-std=c++17",
+			"-D__MQL__",
+			"-D__MQL5__",
+			"-includec:/Users/nguye/.antigravity-ide/extensions/ngsoftware.mql-clangd-1.2.1-universal/files/mql_clangd_compat.h",
+			"-fms-extensions",
+			"-fms-compatibility",
+			"-ferror-limit=0",
+			"-Wno-invalid-token-paste",
+			"-Wno-unused-value",
+			"-Wno-unknown-pragmas",
+			"-Wno-writable-strings",
+			"-Xclang",
+			"-Wno-invalid-pp-directive",
+			"-Wno-unknown-directives",
+			"-Wno-language-extension-token",
+			"-Id:/MT5-Dev/skills",
+			"-Id:/MT5-Dev/skills/Include"
+		],
+		"files.associations": {
+			"*.mqh": "cpp",
+			"*.mq4": "cpp",
+			"*.mq5": "cpp"
+		}
+	}
 }

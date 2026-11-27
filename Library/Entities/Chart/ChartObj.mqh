@@ -408,8 +408,11 @@
    int last=this.m_first_visible_bar-this.m_visible_bars+1;   // the chart can show room after the newest bar
    if(last<0)
       last=0;
-   from_time=::iTime(this.Symbol(),this.Timeframe(),this.m_first_visible_bar);
-   to_time=::iTime(this.Symbol(),this.Timeframe(),last);
+   //--- The symbol and the period are asked once (each ChartSymbol / ChartPeriod waits for the chart: Avoid Bug, CodingRule.md)
+   const string symbol=this.Symbol();
+   const ENUM_TIMEFRAMES timeframe=this.Timeframe();
+   from_time=::iTime(symbol,timeframe,this.m_first_visible_bar);
+   to_time=::iTime(symbol,timeframe,last);
    return (from_time!=0 && to_time!=0);
   }
  //+------------------------------------------------------------------+

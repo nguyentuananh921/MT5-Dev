@@ -1,0 +1,1 @@
+Before responding to requests or making changes in this repository, read and follow [the project rules](../skills/AGENTS.md) (`@../skills/AGENTS.md`). They define the project workflow, working areas, and rules for changes.

@@ -1,5 +1,7 @@
 # Implementation Harmonic Note
 
+> [!NOTE] Draft — chưa ổn định, sẽ dần được move sang `Notes/` khi đã chốt.
+
 
 ## Concept
  - Harmonic Pattern là một loại object. Thêm nhóm BAR_INFORMATION_HARMONIC, các type từ 401 trở đi, mỗi bài của tác giả là một type: Gartley, Bat, Butterfly, Crab, Cypher, Shark, AB=CD, Three Drives.
@@ -109,6 +111,13 @@ Xếp theo thành phần của [Workspace access policy](../AGENTS.md#workspace-
 - [] **Strategy đọc Bar information:** `CStrategySlots` mới có `Indicator` / `Signal`; slot `COLLECTION_SERIES_ID` chưa đọc được (mục treo "Slot Bar information"; `CStrategyManager::SlotAvailable` đã nhận slot này).
   - Đề xuất: rule chung `bar_info` (`CConditionBarInfo`) đọc `InformationSide(type)` trên bar, lùi thêm `Shift()` của type (row CONFIRM ở nến D, nến vừa đóng là nến xác nhận); dùng cho mọi type Bar information (Pin Bar, BOS, Sweep…). `engine.py` có rule tương ứng.
 - [] **SL/TP làm hai bước:** (a) Entry trước với SL/TP hiện có của Trading (base SL, `TakeProfitRatio`) để đo phát hiện + Entry; (b) sau đó `CTradingControl` nhận `STRATEGY_EVENT_ENTRY`, lấy điểm từ `CBarControl` (`CPivotPattern::Points`), luật SL/TP từng type theo tác giả.
+- [] CBarPattern::Param > the parameter tolerance is not in Setting_BarSetup
+- [] **View vẽ pattern (`CBarMarkerCollection`)**, theo [Avoid Bug](../rules/2.%20CodingRule.md#avoid-bug):
+  - [v] `SyncPivotPatterns` giữ / xoá / tạo như `SyncMarkers` (tên `type_time_side`); trước đó xoá rồi tạo lại mọi shape mỗi lần (29 shape: EA treo 2–14 s). Đo 2026-11-26: sang nến giữ shape, 0–1 ms (trước 2–14 s); zoom out chỉ tạo shape mới vào view (16 shape 778 ms ≈ 49 ms một shape → cần mục bỏ chờ chart bên dưới).
+  - [v] `SyncTrades` giữ / xoá / tạo như `SyncMarkers` (tên `strategy_entry_exit`); `SyncTrades`, `SyncPivotPatterns` nhận symbol / TF từ `SyncMarkers`; `CChartObj::VisibleRange` hỏi symbol / TF một lần. Compile 0/0, chờ đo.
+  - [v] `CGStdBaseObj::CreateObject` / `CGStd*Obj::Create` không hỏi chart: subwindow = tham số của `ObjectCreate`, Digits của `::Symbol()`, property mặc định không đọc lại (`Trend`, `Triangle`, `Rectangle`). Trace: 8 Composite dùng, không chỗ nào đọc lại các property đó. Compile 0/0, chờ đo.
+    + `CGStdRectangleLabelObj` vẫn đọc lại: mặc định chưa chắc, ít object (box của `CBarMarker`, `CTradingLevelBubble`).
+  - [] Zoom out ~1.1 s một lần (`Read_RAM` 580 ms đọc DB vùng trước RAM, `SyncTrades` 246 ms, `Arrange` 200 ms, tạo shape) và init `PYTHON_BRIDGE_EVENT_SYMBOLTF_DONE` 5–7 s: đo lại sau hai mục trên.
 
 ### Library\Python
 - [] Luật Harmonic / Chart Pattern cạnh `patterns.py`, Sweep trong `structure.py`: dùng `swing.find_swings`; cùng luật với EA (Sync Everywhere).

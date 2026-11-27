@@ -38,18 +38,32 @@
      // Main Tabs
       CTabs                               m_tabs_main;      
      //Trade tab
-      CSections                           m_sections_trade_automation_setting; // the settings of the Automation (Setting_Risk)
-      CSections                           m_sections_trade_select;             // the Manual Entry (only the lot is manual): direction, order type, the results of the Automation (SL, TP, MaxLot), the lot chosen
+      //--- The top row (Concepts.md, Trading): Auto, Manual (the two ways of the Entry), Risk (every position), Trade Manage; one section open at a time
+      CSections                           m_sections_trade_automation_setting; // Auto: the Automation Entry ON / OFF, the strategies that take part in trading (Setting_Risk.EntryStrategies)
+      //CSections                           m_sections_trade_select;             // the Manual Entry (only the lot is manual): direction, order type, the results of the Automation (SL, TP, MaxLot), the lot chosen
+      CSections                           m_sections_trade_manual_settup;      // Manual: the Entry by hand (RAM), and Action in it
+      CSections                           m_sections_trade_risk;               // Risk: Setting_Risk on RAM for every position: Lot Size, Stop Loss, Trailing, the groups of the author
       CButton                             m_btn_tradeManage;                   // in the Trading tab: opens m_window_tradeManage
-      CLabel                              m_label_manual_sl;                   // in m_sections_trade_select: the stop of the bases ON for the direction (CTradingControl::ManualPlan)
+      CButtonTriggered                    m_btn_triggered_manual_trade_dirrection; // in m_sections_trade_manual_settup: pressed Buy, released Sell; m_btn_manual_open_position follows it
+      CButton                             m_btn_manual_open_position;          // in Manual, next to the direction: opens the direction chosen (TRADE_SETUP_EVENT_SEND), its text and colour follow it
+      CLabel                              m_label_manual_sl;                   // in m_sections_trade_manual_settup: the stop of the bases ON for the direction (CTradingControl::ManualPlan)
       CLabel                              m_label_manual_tp;                   // and the take profit
       CLabel                              m_label_manual_maxlot;               // and the MaxLot of the risk (capped by the margin)
-      int                                 m_manual_order_type;                 // the row ON in Manual Order Type (0 Market; the others are not sent yet): m_btn_manual_open_position sends it
-      CButtonTriggered                    m_btn_triggered_manual_trade_dirrection; // in m_sections_trade_select: pressed Buy, released Sell; m_btn_manual_open_position follows it
-      CButton                             m_btn_manual_open_position;          // outside the sections: opens the direction chosen (TRADE_SETUP_EVENT_SEND), its text and colour follow it
-      CButton                             m_btn_manual_close_all_Position;     // outside the sections: closes every position of the account (emergency, no confirmation)
-      CComboBox                           m_combobox_manual_lot;               // in m_sections_trade_select: MinLot .. MaxLot of the Automation, step VolumeStep (CSymbol)
-      CTextEdit                           m_edit_manual_magic;                 // in m_sections_trade_select: the magic of the Manual Entry, typed (first: the EA's)
+      int                                 m_manual_order_type;                 // the item of m_combobox_manual_order_type (0 Market; the others are not sent yet): m_btn_manual_open_position sends it
+      CComboBox                           m_combobox_manual_order_type;        // in Manual: Market, Limit, Stop, Stop Limit
+      CButton                             m_btn_close_lose;                    // in Action: closes the positions in loss of the EA on the chart symbol (TRADE_SETUP_EVENT_CLOSE, dparam < 0); text: Lose + their profit
+      CButton                             m_btn_close_profit;                  // and the ones in profit (dparam > 0)
+      CButton                             m_btn_manual_close_buy;              // in Action: closes the Buy positions of the EA on the chart symbol (TRADE_SETUP_EVENT_CLOSE); text: Buy + their profit
+      CButton                             m_btn_manual_close_sell;             // and the Sell ones
+      CButton                             m_btn_manual_close_all_Position;     // in Action: All, closes every position of the account (TRADE_SETUP_EVENT_CLOSE_ALL, emergency, no confirmation)
+      //--- Change 2026-11-27 (skills\DRY\DRY_CButton.md): the floating profit of each button of Action is a child CLabel of the button (Parent Child), not a
+      //--- property of CButton: a change of the profit draws only this label. Order: Buy, Sell, Lose, Profit, All (ActionButton)
+      CLabel                              m_label_action_value[5];
+      string                              m_action_value_drawn[5];             // what each label shows now: drawn again only when it changes and is visible
+      CButton                            *ActionButton(const int index);       // the button of Action of m_label_action_value[index]
+      CComboBox                           m_combobox_manual_lot;               // in m_sections_trade_manual_settup: MinLot .. MaxLot of the Automation, step VolumeStep (CSymbol)
+      CTextEdit                           m_edit_manual_magic;                 // in m_sections_trade_manual_settup: the magic of the Manual Entry, typed (first: the EA's)
+      string                              m_trade_risk_groups[];               // the grp of Setting_Risk of each section of m_sections_trade_risk after Trailing (index - TRADE_RISK_SECTION_TOTAL)
      // Quick Setting tab of m_tabs_main (GUIPannel_TabQuickSetting.mqh)
       CTabs                               m_tabs_quickSetting;  
      //Indicator tab
@@ -71,10 +85,21 @@
       CButtonTriggered                    m_btn_table_columns;
       CTable                              m_table_trade_history; // the History tab (GUIPannel_Window_TradeManagerTabHistory.mqh): the trades
       CTable                              m_table_open_position; // the Open tab (GUIPannel_Window_TradeManagerPosition.mqh): the positions open now, their SL / TP
-      CTable                              m_table_open_position_by_basket;
+      CTable                              m_table_open_position_by_basket; // the By Basket tab (GUIPannel_Window_TradeManagerOpenPositionByBasket.mqh): the baskets open now
+      string                              m_shown_open_position[];         // the rows m_table_open_position shows (the position id of each): same rows, only the changed cells are drawn
+      string                              m_shown_open_position_by_basket[]; // the rows m_table_open_position_by_basket shows (symbol and side of each)
+      //--- New 2026-11-27: the box of a basket (Manage of a row of the By Basket tab): its SL / TP for every position of the basket (CTradeSetupBox::SetManage,
+      //--- TRADE_SETUP_EVENT_MODIFY). A child of m_GraphElementsCollection (it hears the mouse over the chart). A basket of another symbol: the chart moves
+      //--- there first (m_box_basket_symbol waits for OnInit of the chart change)
+      CTradeSetupBox                      m_box_basket;
+      string                              m_box_basket_symbol;               // the basket waiting for the chart to be on its symbol ("": none)
+      bool                                m_box_basket_buy;                  // and its side
+      void                                ManageBasket(const string symbol,const bool buy);   // the box shown for the basket (the chart moved to its symbol first)
+      void                                ShowBox_Basket(void);              // the chart is on the symbol of m_box_basket_symbol: the box shows the basket
      // Order detail window (GUIPannel_Window_OrderDetail.mqh): what happened to a position
       CWindow                             m_window_order_detail;
       CTable                              m_table_order_detail;
+      long                                m_order_detail_position;             // the position shown in m_window_order_detail: its trading events fill the table again (live, on RAM)
      // Candle information popup (GUIPannel_Window_CandleInfo.mqh): what was found in a candle, on its TF and the shorter ones
       CWindow                             m_window_candle_infomation;
       CTable                              m_table_candle_information_atBar;
@@ -109,10 +134,11 @@
      //For the Quick Setting tab implementation in GUIPannel_TabQuickSetting.mqh
       bool                                CreateTab_QuickSetting(const int x_gap,const int y_gap);
      // For the Trade Manage window implementation in GUIPannel_Window_TradeManager.mqh
-      bool                                CreateButtons_OpenPosition(void);   // the direction and the Open button: left of Close All in the Trading tab
+      bool                                AddButton_TradeManualSetup(const int section,CButton &button,const string text,const uint icon,const string key,const int column,const int row,const int width);   // a button of Manual / Action
       void                                SyncButton_OpenPosition(void);      // the text and the icon of m_btn_manual_open_position follow the direction
-      bool                                CreateSections_TradingRisk(void);   // m_sections_trade_automation_setting: Auto (ON / OFF, the strategies that trade), Lot Size, Stop Loss, Trailing of Setting_Risk
-      void                                PopulateSections_TradingRisk(void); // their rows: the modes and their values, the bases (templates) with the role
+      void                                SyncButtons_Action(void);           // the buttons of Action: the group and the floating profit of what each closes
+      bool                                CreateSections_TradingRisk(void);   // m_sections_trade_automation_setting (Auto) and m_sections_trade_risk (Risk), after m_sections_trade_manual_settup
+      void                                PopulateSections_TradingRisk(void); // the rows of Auto; of Risk: Lot Size (the modes, their values), Stop Loss, Trailing (the bases), the other keys
      //--- A row [name][switch] / a value of a key of Setting_Risk in the sections of a tab (the Trading tab, the Risk Management tab); flag_icon 0: the name only
       bool                                AddRow_TradingRisk(CTabs &tabs,const int tab,CSections &sections,const int section,const int row,const long value,const string text,const int label_width,
                                                              const uint flag_icon,const int switch_column,const string key,const int slot,const string param="",const bool switch_only=false);
@@ -121,11 +147,14 @@
       bool                                AddEnum_TradingRisk(CTabs &tabs,const int tab,CSections &sections,const int section,const int row,const int column,const long value,const string param,
                                                               const string &items[],const int selected,const string key);
       void                                SyncSections_TradingRisk(void);     // the switches, the values and the headers follow Setting_Risk
+      void                                SyncValues_TradingRisk(CSections &sections);   // the spin boxes / comboboxes of the keys (param = the name) take the value on RAM
       string                              BaseIds_TradingRisk(const int section);   // the ids of the bases of Stop Loss / Trailing (their header toggle ON)
-      bool                                CreateSections_TradeSelect(void);   // m_sections_trade_select: the Manual Entry (direction, SL, TP, MaxLot, the lot), Order Type
-      void                                SyncSections_TradeSelect(void);     // the results of the Automation for the direction (CTradingControl::ManualPlan), the lots up to MaxLot
+      int                                 SectionOfKey_TradeRisk(CRiskSetting *risk,const int property);     // the section of m_sections_trade_risk of a key of Setting_Risk (WRONG_VALUE: not there)
+      int                                 SwitchOfSection_TradeRisk(CRiskSetting *risk,const int section);   // the Enable key on the header of Adaptive Risk / Basket Risk / Portfolio Risk
+      void                                OpenOne_Trading(const long header_id); // the top row: a section opened closes the other two
+      bool                                CreateSections_TradeManualSetup(void);   // m_sections_trade_manual_settup: Manual (direction + Open, Order Type, SL, TP, MaxLot, the lot, the magic), Action
+      void                                SyncSections_TradeManualSetup(void);     // the results of the Automation for the direction (CTradingControl::ManualPlan), the lots up to MaxLot
       bool                                CreateButton_TradeManage(void);
-      bool                                CreateButton_CloseAllPosition(void);
       void                                OnEvent_Tab_Trading(const int id,const long &lparam,const double &dparam,const string &sparam);   // GUIPannel_TabTrading.mqh
       bool                                CreateWindow_TradeManage(const string caption_text,const int x_gap,const int y_gap);
       bool                                CreateTabs_TradeManage(void);
@@ -138,6 +167,8 @@
       int                                 FillTable_Trade(CTable &table,const string &cells[],const int rows,const int columns,const int symbol_column,const int &spread_columns[],
                                                           const int fee_column,const int volume_column,const int commission_column,const int swap_column);
       void                                FormatTradeRows(CTable &table,const int rows,const int symbol_column,const int direction_column,const int profit_column,const int detail_column);
+      bool                                UpdateTable_TradeCells(CTable &table,const string &cells[],const int rows,const int columns,const string &keys[],string &shown_keys[],
+                                                                 const int direction_column,const int profit_column);
       void                                OpenWindow_TradeManage(void);
       void                                OnEvent_Window_TradeManage(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the History tab of the Trade Manage window implementation in GUIPannel_Window_TradeManagerTabHistory.mqh
@@ -146,6 +177,9 @@
      // For the Open tab of the Trade Manage window implementation in GUIPannel_Window_TradeManagerPosition.mqh
       bool                                CreateTable_TradeManagerPosition(void);
       void                                FillTable_TradeManagerPosition(void);
+     // For the By Basket tab of the Trade Manage window implementation in GUIPannel_Window_TradeManagerOpenPositionByBasket.mqh
+      bool                                CreateTable_TradeManagerOpenPositionByBasket(void);
+      void                                FillTable_TradeManagerOpenPositionByBasket(void);
      // For the Order detail window implementation in GUIPannel_Window_OrderDetail.mqh
       bool                                CreateWindow_OrderDetail(const string caption_text,const int x_gap,const int y_gap);
       void                                OpenWindow_OrderDetail(const long position_id);
@@ -166,7 +200,10 @@
       void                                SyncSections_Strategy(void);
       void                                OnEvent_Tab_Strategy(const int id,const long &lparam,const double &dparam,const string &sparam);
      // For the Risk Management tab implementation in GUIPannel_TabQuickSetting_Risk.mqh
-      bool                                KeyShown_RiskSetting(CRiskSetting *risk,const int index);
+      bool                                KeyShown_RiskSetting(CRiskSetting *risk,const int property);
+      //--- A row of one property of Setting_Risk, the control by its type (bool a switch, ENUM_ a combobox, int / double a spin box, string a text box): both tabs
+      bool                                AddKeyRow_RiskSetting(CTabs &tabs,const int tab,CSections &sections,const int section,const int row,const int property,const int label_width,
+                                                                const int column,const string key);
       bool                                CreateSections_RiskSetting(void);
       void                                PopulateSections_RiskSetting(void);
       void                                SyncSections_RiskSetting(void);
@@ -268,6 +305,7 @@
  #include "GUIPannel_Window_TradeManager.mqh"            //The Trade Manage window: the tabs and the helpers of its tables
   #include "GUIPannel_Window_TradeManagerTabHistory.mqh"   //The History tab of the Trade Manage window: the trades
   #include "GUIPannel_Window_TradeManagerPosition.mqh"     //The Open tab of the Trade Manage window: the positions open now
+  #include "GUIPannel_Window_TradeManagerOpenPositionByBasket.mqh"   //The By Basket tab of the Trade Manage window: the baskets open now
  #include "GUIPannel_Window_OrderDetail.mqh"             //The Order detail window
  #include "GUIPannel_SoundAndMessageAlerts.mqh"        //The message and the sound of a new row
  #include "GUIPannel_Window_CandleInfo.mqh"            //The popup of what was found in a candle

@@ -24,8 +24,9 @@
   {
    if(!this.CreateObject(OBJECT_DE_TYPE_GSTD_TREND,chart_id,subwin,name,2))
       return false;
-   this.SetProperty(GRAPH_OBJ_PROP_RAY_LEFT,0,::ObjectGetInteger(chart_id,name,OBJPROP_RAY_LEFT));
-   this.SetProperty(GRAPH_OBJ_PROP_RAY_RIGHT,0,::ObjectGetInteger(chart_id,name,OBJPROP_RAY_RIGHT));
+   //--- The defaults of ObjectCreate, not read back (ObjectGetInteger waits for the chart: GStdBaseObj.mqh); SetFlagRayLeft / SetFlagRayRight change them
+   this.SetProperty(GRAPH_OBJ_PROP_RAY_LEFT,0,false);
+   this.SetProperty(GRAPH_OBJ_PROP_RAY_RIGHT,0,false);
    this.SetWidth(DEF_LINE_WIDTH);   // the default, SetWidth() overrides it
    return true;
   }

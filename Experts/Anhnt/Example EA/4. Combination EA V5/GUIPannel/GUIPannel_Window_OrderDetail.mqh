@@ -3,9 +3,12 @@
 //| The Order detail window (m_window_order_detail): what happened to |
 //| a position, one row each, oldest first: its order, each change   |
 //| that the terminal has: its orders and its deals (the list of     |
-//| CHistoryCollection), with the Bid and the Ask of a deal. Any table of the|
-//| panel with an order or a position opens it with                  |
-//| OpenWindow_OrderDetail(position_id)                              |
+//| CHistoryCollection), with the Bid and the Ask of a deal, and the  |
+//| changes of its SL / TP (CTradingControl::Read_RAM). Any table of  |
+//| the panel with an order or a position opens it with              |
+//| OpenWindow_OrderDetail(position_id). Live: working on RAM          |
+//| (TradingOrderDetail before it is written), a trading event of the |
+//| position shown fills it again (OnChartEvent of CGUIPannel)        |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_WINDOW_ORDERDETAIL_MQH
 #define CGUIPANNEL_WINDOW_ORDERDETAIL_MQH
@@ -29,12 +32,13 @@
  //--- The Detail button of a row: the table is filled, then the window opens
  void CGUIPannel::OpenWindow_OrderDetail(const long position_id)
   {
+   m_order_detail_position=position_id;
    this.FillTable_OrderDetail(position_id);
    m_window_order_detail.OpenWindow();
    ::ChartRedraw(this.m_chart_id);
   }
  //--- The orders and the deals of the position (the terminal; the Bid / Ask of a deal put on it by CTradingControl) and the changes of its SL / TP
- //--- (CTradingControl::ReadDataFromDB), oldest first. A zero is left blank
+ //--- (CTradingControl::Read_RAM), oldest first. A zero is left blank
  void CGUIPannel::FillTable_OrderDetail(const long position_id)
   {
    CArrayObj *list=(m_HistoryCollection!=NULL ? m_HistoryCollection.GetList() : NULL);
@@ -42,8 +46,7 @@
       return;
    long change_time[],change_event[];
    double change_sl[],change_tp[];
-   long basket_id=0;
-   const int changes=(m_TradingControl!=NULL ? m_TradingControl.ReadDataFromDB(position_id,change_time,change_event,change_sl,change_tp,basket_id) : 0);
+   const int changes=(m_TradingControl!=NULL ? m_TradingControl.Read_RAM(position_id,change_time,change_event,change_sl,change_tp) : 0);
    long keys[][2];   // the time, the index in the list (a change of the SL / TP: -1 - its index)
    int found=0;
    string symbol="",direction="";

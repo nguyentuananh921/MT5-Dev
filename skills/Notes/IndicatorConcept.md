@@ -18,7 +18,7 @@
 
 - Base Indicator Strategy là một [Strategy](Concepts.md#strategy) dựa trên Standard Indicator hoặc Indicator on Indicator ([Indicator](#indicator-defines)).
 - Mỗi Indicator template có một Base, định danh bằng `id` của template.
-- `CIndicatorTemplateManager` sở hữu CRUD template qua `CDatabaseService`, theo [Working with Event](Event.md#working-with-event).
+- `CIndicatorTemplateManager` sở hữu CRUD template qua `CDatabaseService`, theo [Working on Event](Event.md#system-concept-working-on-event).
 - Base tự bật với mọi role của nó khi Indicator có trong template; không có flag bật/tắt, không dùng `CStrategySetting` riêng.
 
 ### Rule và role

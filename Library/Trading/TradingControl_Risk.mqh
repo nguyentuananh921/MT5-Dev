@@ -97,10 +97,10 @@
          ::PrintFormat("%s > %s: invalid volume specification, cannot calculate the lot",__FUNCTION__,symbol.Name());
       return 0.0;
      }
-   //--- Fixed-lot mode never consults the risk budget. Change in V5 (2026-11-23): it is always the min lot of the symbol (no FixedLotSize of 0.10 for every
-   //--- symbol, no shrink in drawdown: Part 7 FixedLotSize / ApplyDrawdownToFixedLot are gone)
+   //--- Fixed-lot mode never consults the risk budget. Change in V5: no FixedLotSize of 0.10 for every symbol, no shrink in drawdown (Part 7 FixedLotSize /
+   //--- ApplyDrawdownToFixedLot are gone); 2026-11-25: the lot of the symbol on RAM (FixedLot: the min lot at the start, then the last lot chosen)
    if(this.m_risk_setting.RiskMode()==RISK_FIXED_LOT)
-      return min_lot;
+      return this.FixedLot(symbol);
    //--- Every other mode needs the stop
    if(stop_distance<=0)
      {
@@ -336,14 +336,19 @@
      }
    this.BasketUpdateExcursion(symbol,basket_state);
    string reason="";
-   //--- Aggregate loss cut. Change in V5: one position is cut at the risk of one trade (percentage_risk_per_operation), more at MaxBasketLossPercent
+   //--- Aggregate loss cut. Change in V5: one position is cut at the risk of one trade (percentage_risk_per_operation), more at MaxBasketLossPercent.
+   //--- New in V5 (Concepts.md, TP of a Basket): the target is the loss limit x TakeProfitRatio, as the TP of a trade is its SL distance x TakeProfitRatio
    if(this.m_risk_setting.BasketMaxLossPercent()>0)
      {
       const double loss_percent=(basket_state.positionCount>1 ? this.m_risk_setting.BasketMaxLossPercent() : this.m_risk_setting.RiskPercent());
       const double max_loss=this.m_account.BaseAmount(this.m_risk_setting.BasketLossBase())*(loss_percent/100.0);
+      const double target=max_loss*this.m_risk_setting.TPRatio();
       if(basket_state.floatingPL<=-max_loss)
          reason=::StringFormat("aggregate loss %.2f breached the %.1f%% limit (%.2f) across %d position(s)",
                                basket_state.floatingPL,loss_percent,max_loss,basket_state.positionCount);
+      else if(target>0 && basket_state.floatingPL>=target)
+         reason=::StringFormat("aggregate profit %.2f reached the %.1f%% target (%.2f = loss limit x TakeProfitRatio %.1f) across %d position(s)",
+                               basket_state.floatingPL,loss_percent*this.m_risk_setting.TPRatio(),target,this.m_risk_setting.TPRatio(),basket_state.positionCount);
      }
    //--- Time stop: a basket underwater for too long
    if(reason=="" && this.m_risk_setting.BasketMaxHoldBars()>0 && basket_state.floatingPL<0 && basket_state.oldestOpenTime>0)
@@ -680,7 +685,9 @@
  //| the floating loss of the portfolio (PortfolioScan, its scope) at  |
  //| MaxPortfolioLossPercent of the balance closes every position of   |
  //| it, source Portfolio; the same limit blocks the Entry             |
- //| (PortfolioCanOpenPosition). Looked at every tick (TICK_EVENT_NEW) |
+ //| (PortfolioCanOpenPosition); the floating profit at that limit x   |
+ //| TakeProfitRatio closes them too (the TP of the Portfolio). Looked |
+ //| at every tick (TICK_EVENT_NEW)                                    |
  //+------------------------------------------------------------------+
  void CTradingControl::PortfolioManage(void)
   {
@@ -693,7 +700,11 @@
    if(!this.PortfolioScan(state) || state.positionCount==0 || state.balance<=0)
       return;
    const double max_loss=state.balance*(max_loss_percent/100.0);
-   if(state.floatingPL>-max_loss)
+   //--- New in V5 (Concepts.md, TP of a Portfolio): the target is the loss limit x TakeProfitRatio, as the Basket
+   const double target=max_loss*this.m_risk_setting.TPRatio();
+   const bool cut=(state.floatingPL<=-max_loss);
+   const bool take=(!cut && target>0 && state.floatingPL>=target);
+   if(!cut && !take)
       return;
    //--- The positions of the portfolio (its scope): their tickets first, a close changes the list
    ulong tickets[];
@@ -708,7 +719,9 @@
       tickets[n]=order.Ticket();
      }
    this.m_portfolio_cut_ms=::GetTickCount64();
-   ::PrintFormat("%s > PORTFOLIO CLOSE | floating %.2f breached the %.1f%% limit (%.2f) across %d position(s): %d closed",__FUNCTION__,
-                 state.floatingPL,max_loss_percent,max_loss,state.positionCount,this.CloseTickets(tickets,"Portfolio"));
+   ::PrintFormat("%s > PORTFOLIO CLOSE | floating %.2f %s across %d position(s): %d closed",__FUNCTION__,state.floatingPL,
+                 (cut ? ::StringFormat("breached the %.1f%% limit (%.2f)",max_loss_percent,max_loss) :
+                        ::StringFormat("reached the %.1f%% target (%.2f = loss limit x TakeProfitRatio %.1f)",max_loss_percent*this.m_risk_setting.TPRatio(),target,this.m_risk_setting.TPRatio())),
+                 state.positionCount,this.CloseTickets(tickets,"Portfolio"));
   }
 #endif // __TRADINGCONTROL_RISK_MQH__

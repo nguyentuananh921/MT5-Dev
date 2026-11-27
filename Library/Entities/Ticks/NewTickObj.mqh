@@ -4,7 +4,8 @@
 //| Topic link https://www.mql5.com/en/articles/7695                 |
 //|Lib https://www.mql5.com/en/articles/14710                        |
 //+------------------------------------------------------------------+
-//--- Copy from DoEasy Objects\Ticks\NewTickObj.mqh (V2 Timeseries\Ticks\NewTickObj.mqh): the name CNewTickObj is kept
+//--- Copy from DoEasy Objects\Ticks\NewTickObj.mqh (V2 Timeseries\Ticks\NewTickObj.mqh): 
+// the name CNewTickObj is kept
 //--- Change from V2: base CBaseObj -> CBaseObjExt (events; m_tick is the one of CBaseObjExt). IsNewTick tells TICK_EVENT_PAUSE / TICK_EVENT_RESUME, and (V5) TICK_EVENT_NEW.
 //--- Its owner is CBarTimeSeriesDE (as DoEasy CTimeSeriesDE::m_new_tick), one for each symbol
 #property copyright "Copyright 2020, MetaQuotes Software Corp."

@@ -42,11 +42,13 @@
       ::ArraySort(order_keys);
    const int rows=::MathMin(total,TRADE_ROWS_MAX);
    const long now=::TimeCurrent();
-   string cells[];
+   string cells[],keys[];
    ::ArrayResize(cells,rows*COLUMNS_OPEN_POSITION_TOTAL);
+   ::ArrayResize(keys,rows);
    for(int row=0;row<rows;row++)
      {
       COrder *position=list.At((int)order_keys[total-1-row][1]);
+      keys[row]=(string)position.GetProperty(ORDER_PROP_POSITION_ID);
       const string symbol=position.GetProperty(ORDER_PROP_SYMBOL);
       const int digits=(int)::SymbolInfoInteger(symbol,SYMBOL_DIGITS);
       const bool buy=(position.GetProperty(ORDER_PROP_TYPE)==POSITION_TYPE_BUY);
@@ -71,6 +73,9 @@
       cells[c++]=(profit!=0 ? ::DoubleToString(profit,2) : "");
       cells[c++]="";
      }
+   //--- The same positions as shown: only the cells that changed are drawn (Price, Profit, Time hold...), not the whole table
+   if(this.UpdateTable_TradeCells(m_table_open_position,cells,rows,COLUMNS_OPEN_POSITION_TOTAL,keys,m_shown_open_position,COL_P_DIRECTION,COL_P_PROFIT))
+      return;
    int no_spread[];
    this.FillTable_Trade(m_table_open_position,cells,rows,COLUMNS_OPEN_POSITION_TOTAL,COL_P_SYMBOL,no_spread,WRONG_VALUE,WRONG_VALUE,WRONG_VALUE,WRONG_VALUE);
    this.FormatTradeRows(m_table_open_position,rows,COL_P_SYMBOL,COL_P_DIRECTION,COL_P_PROFIT,COL_P_DETAIL);

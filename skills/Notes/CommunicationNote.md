@@ -1,12 +1,12 @@
-## Communication Note
+# Communication Note
 
-Liệt kê contract giao tiếp trực tiếp giữa các [Working Area](../AGENTS.md#working-area-và-sync-everywhere) trong [System](../AGENTS.md#system).
+Liệt kê contract của [Communication Channel](Event.md#system-concept-communication-channel) giữa các [Working Area](../AGENTS.md#project-and-working-area) trong [System](../AGENTS.md#system).
 
 ## Working Area Connections
 
  - **EA Module ↔ Python Library:** TCP socket thuần qua [`CPythonBridge`](../../Library/Services/DELib/PythonBridge.mqh). Python gửi forecast; EA gửi danh sách Symbol+TF theo dõi.
  - **EA Module ↔ Database:** SQLite contract qua [`CDatabaseService`](../../Library/Services/DELib/DatabaseService.mqh) và các service liên quan.
- - **EA Module ↔ MT5 Library:** contract MQL5 trong process EA; adapter được EA sử dụng, không tạo kênh network riêng.
+ - **EA Module ↔ MT5 Library:** cùng process EA, không có Communication Channel; trao đổi qua [Event Channel](Event.md#system-concept-event-channel) và gọi method.
  - **EA Web ↔ Python Library:** HTTP API cho request/response; WebSocket `/socket` cho dữ liệu realtime.
  - **Python Library ↔ Database:** Python worker đọc/ghi dữ liệu phụ thuộc Worker và service; contract theo table hiện có, không suy ra schema mới trong Note.
  - **Python Library ↔ MT5 terminal/MT5 Library:** Python lấy rates và trạng thái market cần cho calculation; phần MQL5 của Library không triển khai WebSocket cho luồng này.
@@ -14,7 +14,7 @@ Liệt kê contract giao tiếp trực tiếp giữa các [Working Area](../AGEN
  - **Vendor Library:** dependency read-only cho EA Module và Python Library; không thêm kênh network mới.
  - **Skills:** tài liệu và rule; không tham gia runtime communication.
 
-## Channel Contracts
+## Communication Channel
 
 ### Database
 
@@ -26,7 +26,7 @@ Liệt kê contract giao tiếp trực tiếp giữa các [Working Area](../AGEN
 
 ### TCP
 
- Socket thuần giữa EA Module và Python Library. Không dùng để truyền điều khiển Worker qua `Event Bus`.
+ Socket thuần giữa EA Module và Python Library.
 
 ### WebSocket
 
@@ -35,8 +35,6 @@ Liệt kê contract giao tiếp trực tiếp giữa các [Working Area](../AGEN
 ### File
 
  Cờ điều khiển/tiến độ giữa EA Module và Python Library; không truyền forecast hoặc thay TCP/WebSocket.
-
- `Event Bus` của EA chỉ dispatch trong process EA. Không phải kênh trao đổi trực tiếp giữa các Working Area.
 
 ## Python Library
 

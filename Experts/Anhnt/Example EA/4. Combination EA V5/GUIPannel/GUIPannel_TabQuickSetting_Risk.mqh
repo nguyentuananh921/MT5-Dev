@@ -5,24 +5,20 @@
 //| declared them), a section for each input group, a row for each    |
 //| key in its order, the control by its type: bool a switch, ENUM_ a |
 //| combobox of the texts of the author (RiskEnumItems), int / double |
-//| a spin box, string not shown. RiskMode and the amount of each     |
-//| mode are on the Trading tab (what the Automation uses for an      |
-//| Entry). The View only tells CRiskSetting (it fires                |
-//| RISK_SETTING_EVENT_CHANGED, CTradingControl writes Setting_Risk)  |
+//| a spin box, string not shown. Every key saved to DB is here, also |
+//| RiskMode and the amount of each mode. Change in V5 (2026-11-25):  |
+//| this tab saves to DB at once (SetValue save_now); the Trading tab |
+//| works on RAM (written at OnDeinit). The View only tells           |
+//| CRiskSetting (it fires RISK_SETTING_EVENT_CHANGED,                |
+//| CTradingControl writes Setting_Risk); both tabs follow the event. |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_TABQUICKSETTING_RISK_MQH
 #define CGUIPANNEL_TABQUICKSETTING_RISK_MQH
 #include "GUIPannel.mqh"
- //--- A key shown on this tab: not a string, not of the group V5, not RiskMode nor the amount of a mode (those are on the Trading tab)
- bool CGUIPannel::KeyShown_RiskSetting(CRiskSetting *risk,const int index)
+ //--- A property shown on this tab: not a string (the lists of V5 are the switches of the Trading tab)
+ bool CGUIPannel::KeyShown_RiskSetting(CRiskSetting *risk,const int property)
   {
-   const string name=risk.KeyName(index);
-   if(risk.KeyIsText(index) || risk.KeyGroup(index)=="V5" || name=="RiskMode")
-      return false;
-   for(int m=0;m<RISK_MODES_TOTAL;m++)
-      if(name==::RiskModeValueKey((ENUM_RISK_MODE)m))
-         return false;
-   return true;
+   return (!risk.IsString(property) && risk.PropertyGroup(property)!="V5");
   }
  //--- One section for each input group with a key shown, in the order of the inputs, closed at the start (a list of numbers to look at when needed)
  bool CGUIPannel::CreateSections_RiskSetting(void)
@@ -39,11 +35,12 @@
       return true;
    uint icons[];
    bool states[];
-   for(int k=0;k<risk.KeysTotal();k++)
+   for(int k=0;k<risk.PropertiesTotal();k++)
      {
-      if(!this.KeyShown_RiskSetting(risk,k))
+      const int p=risk.PropertyOfRow(k);
+      if(!this.KeyShown_RiskSetting(risk,p))
          continue;
-      const string group=risk.KeyGroup(k);
+      const string group=risk.PropertyGroup(p);
       const int total=::ArraySize(m_risk_groups);
       if(total>0 && m_risk_groups[total-1]==group)
          continue;
@@ -67,46 +64,60 @@
    int rows[];
    ::ArrayResize(rows,sections);
    ::ArrayInitialize(rows,0);
-   for(int k=0;k<risk.KeysTotal();k++)
+   for(int k=0;k<risk.PropertiesTotal();k++)
      {
-      if(!this.KeyShown_RiskSetting(risk,k))
+      const int p=risk.PropertyOfRow(k);
+      if(!this.KeyShown_RiskSetting(risk,p))
          continue;
       int section=WRONG_VALUE;
       for(int s=0;s<sections && section<0;s++)
-         if(m_risk_groups[s]==risk.KeyGroup(k))
+         if(m_risk_groups[s]==risk.PropertyGroup(p))
             section=s;
       if(section<0)
          continue;
-      const int row=rows[section]++;
-      const string name=risk.KeyName(k);
-      const string type=risk.KeyType(k);
-      string items[];
-      if(type=="bool")
-        {
-         this.AddRow_TradingRisk(m_tabs_quickSetting,TAB_QUICK_SETTING_RISK_MANAGEMENT,m_sections_risk,section,row,k,name,M_RISK_LABEL_WIDTH,
-                                 IMAGE_RESOURCE_BMP16_RISK_MANAGEMENT_ON_PNG,RISK_COLUMN_VALUE,"RiskKey"+(string)k,TRADE_SLOT_KEY_SWITCH,name);
-         continue;
-        }
-      this.AddRow_TradingRisk(m_tabs_quickSetting,TAB_QUICK_SETTING_RISK_MANAGEMENT,m_sections_risk,section,row,k,name,M_RISK_LABEL_WIDTH,
-                              0,RISK_COLUMN_VALUE,"RiskKey"+(string)k,TRADE_SLOT_LABEL);
-      if(::RiskEnumItems(type,items)>0)
-         this.AddEnum_TradingRisk(m_tabs_quickSetting,TAB_QUICK_SETTING_RISK_MANAGEMENT,m_sections_risk,section,row,RISK_COLUMN_VALUE,k,name,items,(int)risk.KeyValue(k),"RiskKeyEnum"+(string)k);
-      else
-         this.AddValue_TradingRisk(m_tabs_quickSetting,TAB_QUICK_SETTING_RISK_MANAGEMENT,m_sections_risk,section,row,RISK_COLUMN_VALUE,k,name,risk.KeyValue(k),"RiskKeyValue"+(string)k,
-                                   (type=="int" ? 0 : 2),(type=="int" ? 1.0 : 0.1));
+      this.AddKeyRow_RiskSetting(m_tabs_quickSetting,TAB_QUICK_SETTING_RISK_MANAGEMENT,m_sections_risk,section,rows[section]++,p,M_RISK_LABEL_WIDTH,RISK_COLUMN_VALUE,"RiskKey");
      }
    this.SyncSections_RiskSetting();
    m_sections_risk.Arrange();
   }
- //--- The switches follow Setting_Risk on RAM (the spin boxes and the comboboxes are what the user chose)
- void CGUIPannel::SyncSections_RiskSetting(void)
+ //--- A row of one property (value = the property, param = the name of its input): [name][control of its type] in the column given; key: the start
+ //--- of the names of the objects (each tab its own). The Risk Management tab, and the Trading tab (the Manual Strategy on RAM)
+ bool CGUIPannel::AddKeyRow_RiskSetting(CTabs &tabs,const int tab,CSections &sections,const int section,const int row,const int property,const int label_width,
+                                        const int column,const string key)
   {
    CRiskSetting *risk=(m_TradingControl!=NULL ? m_TradingControl.RiskSetting() : NULL);
-   if(risk==NULL)
-      return;
-   for(int k=0;k<risk.KeysTotal();k++)
-      if(risk.KeyType(k)=="bool")
-         m_sections_risk.SetBodyState(k,TRADE_SLOT_KEY_SWITCH,risk.KeyValue(k)!=0);
+   if(risk==NULL || property<0 || property>=RISK_PROP_TOTAL)
+      return false;
+   const string name=risk.PropertyName(property);
+   const string type=risk.PropertyType(property);
+   if(type=="bool")
+      return this.AddRow_TradingRisk(tabs,tab,sections,section,row,property,name,label_width,IMAGE_RESOURCE_BMP16_RISK_MANAGEMENT_ON_PNG,column,key+(string)property,TRADE_SLOT_KEY_SWITCH,name);
+   if(!this.AddRow_TradingRisk(tabs,tab,sections,section,row,property,name,label_width,0,column,key+(string)property,TRADE_SLOT_LABEL))
+      return false;
+   string items[];
+   if(::RiskEnumItems(type,items)>0)
+      return this.AddEnum_TradingRisk(tabs,tab,sections,section,row,column,property,name,items,(int)risk.Value(property),key+"Enum"+(string)property);
+   if(risk.IsString(property))
+     {
+      //--- a string property: typed, as the magic of Manual
+      CTextEdit *edit=new CTextEdit();
+      if(edit==NULL)
+         return false;
+      edit.Hide();
+      tabs.AddToElementsArray(tab,edit);
+      if(!edit.CreateTextEdit(this.m_chart_id,M_SUBWINDOW_MAIN,key+"Text"+(string)property,0,0,M_TRADE_MANUAL_ENTRY_WIDTH,M_CONTROL_HEIGHT,M_TRADE_MANUAL_ENTRY_WIDTH))
+         return false;
+      edit.SetText("");
+      edit.SetValue(risk.Text(property));
+      return sections.AddControl(section,edit,column,row,property,TRADE_SLOT_KEY_TEXT,name);
+     }
+   return this.AddValue_TradingRisk(tabs,tab,sections,section,row,column,property,name,risk.Value(property),key+"Value"+(string)property,
+                                    (type=="int" ? 0 : 2),(type=="int" ? 1.0 : 0.1));
+  }
+ //--- The switches, the spin boxes and the comboboxes follow Setting_Risk on RAM (a key changed on the Trading tab shows here)
+ void CGUIPannel::SyncSections_RiskSetting(void)
+  {
+   this.SyncValues_TradingRisk(m_sections_risk);
   }
  //+------------------------------------------------------------------+
  //| What the user did in the Risk Management tab (param = the name)  |
@@ -117,13 +128,21 @@
    m_sections_risk.OnChartEvent(id,lparam,dparam,sparam);
    if(m_TradingControl==NULL)
       return;
+   //--- A key changed on RAM (this tab or the Trading tab): the controls follow it
+   if(id==CHARTEVENT_CUSTOM+RISK_SETTING_EVENT_CHANGED)
+     {
+      this.SyncSections_RiskSetting();
+      ::ChartRedraw(this.m_chart_id);
+      return;
+     }
    long row_id;
    int slot;
    string param;
+   //--- What is set here is saved to DB at once (save_now)
    //--- A switch of a bool key: its value
    if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON && m_sections_risk.BodyOf(lparam,row_id,slot,param) && slot==TRADE_SLOT_KEY_SWITCH)
      {
-      m_TradingControl.RiskSetting().SetValue(param,(dparam!=0 ? 1.0 : 0.0));
+      m_TradingControl.RiskSetting().SetValue(m_TradingControl.RiskSetting().Property(param),(dparam!=0 ? 1.0 : 0.0),true,true);
       this.SyncSections_RiskSetting();
       ::ChartRedraw(this.m_chart_id);
       return;
@@ -132,13 +151,13 @@
    if((id==CHARTEVENT_CUSTOM+CHANGE_EVENT_END_EDIT || id==CHARTEVENT_CUSTOM+CLICK_EVENT_INC || id==CHARTEVENT_CUSTOM+CLICK_EVENT_DEC) &&
       m_sections_risk.BodyOf(lparam,row_id,slot,param) && slot==TRADE_SLOT_KEY_VALUE)
      {
-      m_TradingControl.RiskSetting().SetValue(param,dparam);
+      m_TradingControl.RiskSetting().SetValue(m_TradingControl.RiskSetting().Property(param),dparam,true,true);
       return;
      }
    //--- An ENUM_ key: dparam = the index of the item = the value of the enum
    if(id==CHARTEVENT_CUSTOM+CLICK_EVENT_COMBOBOX_ITEM && m_sections_risk.BodyOf(lparam,row_id,slot,param) && slot==TRADE_SLOT_KEY_ENUM)
      {
-      m_TradingControl.RiskSetting().SetValue(param,(double)(int)dparam);
+      m_TradingControl.RiskSetting().SetValue(m_TradingControl.RiskSetting().Property(param),(double)(int)dparam,true,true);
       return;
      }
   }

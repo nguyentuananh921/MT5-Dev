@@ -231,7 +231,7 @@ void OnDeinit(const int reason)
    m_SignalsCollection.OnDeinitEvent(reason);
    m_StrategyCollection.OnDeinitEvent(reason);
    m_PythonBridge.OnDeinitEvent(reason);   // the EA is closed: the row of Python is cleared, Python stops with its workers
-   m_TradingControl.OnDeinitEvent(reason);   // the keys of Setting_Risk changed on RAM
+   m_TradingControl.OnDeinitEvent(reason);   // the keys of Setting_Risk changed on RAM, the lifecycle of the baskets still open (TradingOrderDetail)
    m_GUIPannel.OnDeinit(reason);
    //--- A chart change (or new inputs): the EA starts again at once with the same account. Every object stays, RAM keeps what was judged
    if(reason==REASON_CHARTCHANGE || reason==REASON_PARAMETERS)
@@ -344,6 +344,10 @@ void OnTrade()
 void OnTradeTransaction(const MqlTradeTransaction &trans,const MqlTradeRequest &request,const MqlTradeResult &result)
   {
    m_GUIPannel.OnTradeTransaction(trans);
+   //--- MT5 drops a Trade event that comes while OnTrade runs (5 SL deals in 30 ms: OnTrade saw one, RAM kept 4 positions closed for 7 minutes);
+   //--- the transactions are queued: a deal reads the market and the history again (OnTrade: a second call finds nothing new)
+   if(trans.type==TRADE_TRANSACTION_DEAL_ADD)
+      OnTrade();
   }
 //+------------------------------------------------------------------+
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
@@ -352,6 +356,105 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       return;
    DispatchEvent(id,lparam,dparam,sparam);
    DispatchBusEvents();
+  }
+//+------------------------------------------------------------------+
+//| MY DEBUG: the load of the bus, told every DEBUG_BUS_REPORT_SEC    |
+//| (is CNewTickObj to be an exception, as the Indicator? Event.md).  |
+//| Each custom event (by its name): how many, its time, and the time |
+//| of each child on it. The time of the debug itself is not given    |
+//| to a child (g_dispatch_mark is taken after it)                    |
+//+------------------------------------------------------------------+
+#define DEBUG_BUS_REPORT_SEC   10
+#define DEBUG_BUS_CHILD_MIN_MS 1.0   // a child that took less on an event in the window is not told
+ulong  g_bus_report_ms=0;
+ulong  g_bus_drains=0,g_bus_events=0,g_bus_max_events=0;
+ulong  g_bus_all_us=0,g_bus_max_drain_us=0;
+string g_bus_event="";        // the name of the custom event being dispatched
+string g_bus_name[];          // by event
+ulong  g_bus_name_count[];
+ulong  g_bus_name_us[];
+string g_bus_pair[];          // by event and child: "<event> <child>"
+ulong  g_bus_pair_count[];
+ulong  g_bus_pair_us[];
+void DebugBusAdd(string &names[],ulong &counts[],ulong &sums[],const string name,const ulong value)
+  {
+   const int total=::ArraySize(names);
+   for(int i=0;i<total;i++)
+      if(names[i]==name)
+        {
+         counts[i]++;
+         sums[i]+=value;
+         return;
+        }
+   ::ArrayResize(names,total+1,64);
+   ::ArrayResize(counts,total+1,64);
+   ::ArrayResize(sums,total+1,64);
+   names[total]=name;
+   counts[total]=1;
+   sums[total]=value;
+  }
+//--- The name of an event of EventDefines.mqh: the groups follow each other (*_NEXT_CODE), the trade events are below EVENTS_START_CODE
+string DebugEventName(const int id)
+  {
+   if(id<CHARTEVENT_CUSTOM)
+      return "chart "+(string)id;
+   const int code=id-CHARTEVENT_CUSTOM;
+   if(code<EVENTS_START_CODE)                          return ::EnumToString((ENUM_TRADE_EVENT)code);
+   if(code<CHART_OBJ_EVENTS_NEXT_CODE)                 return ::EnumToString((ENUM_CHART_OBJ_EVENT)code);
+   if(code<MOUSE_EVENT_NEXT_CODE)                      return ::EnumToString((ENUM_MOUSE_EVENT)code);
+   if(code<WINDOW_EVENTS_NEXT_CODE)                    return ::EnumToString((ENUM_WINDOW_EVENT)code);
+   if(code<CLICK_EVENTS_NEXT_CODE)                     return ::EnumToString((ENUM_CLICK_EVENT)code);
+   if(code<CHANGE_EVENTS_NEXT_CODE)                    return ::EnumToString((ENUM_CHANGE_EVENT)code);
+   if(code<BAR_MARKER_EVENTS_NEXT_CODE)                return ::EnumToString((ENUM_BAR_MARKER_EVENT)code);
+   if(code<TRADE_SETUP_EVENTS_NEXT_CODE)               return ::EnumToString((ENUM_TRADE_SETUP_EVENT)code);
+   if(code<BUBBLE_EVENTS_NEXT_CODE)                    return ::EnumToString((ENUM_BUBBLE_EVENT)code);
+   if(code<SYMBOLTF_MANAGER_EVENTS_NEXT_CODE)          return ::EnumToString((ENUM_SYMBOLTF_MANAGER_EVENT)code);
+   if(code<INDICATOR_TEMPLATE_MANAGER_EVENTS_NEXT_CODE) return ::EnumToString((ENUM_INDICATOR_TEMPLATE_MANAGER_EVENT)code);
+   if(code<BAR_INFORMATION_MANAGER_EVENTS_NEXT_CODE)   return ::EnumToString((ENUM_BAR_INFORMATION_MANAGER_EVENT)code);
+   if(code<SERIES_EVENTS_NEXT_CODE)                    return ::EnumToString((ENUM_SERIES_EVENT)code);
+   if(code<PYTHON_BRIDGE_EVENTS_NEXT_CODE)             return ::EnumToString((ENUM_PYTHON_BRIDGE_EVENT)code);
+   if(code<TICK_EVENTS_NEXT_CODE)                      return ::EnumToString((ENUM_TICK_EVENT)code);
+   if(code<SYMBOL_EVENTS_NEXT_CODE)                    return ::EnumToString((ENUM_MW_EVENT)code);
+   if(code<STRATEGY_MANAGER_EVENTS_NEXT_CODE)          return ::EnumToString((ENUM_STRATEGY_MANAGER_EVENT)code);
+   if(code<STRATEGY_EVENTS_NEXT_CODE)                  return ::EnumToString((ENUM_STRATEGY_EVENT)code);
+   if(code<ACCOUNT_EVENTS_NEXT_CODE)                   return ::EnumToString((ENUM_ACCOUNT_EVENT)code);
+   if(code<SYMBOL_OBJ_EVENTS_NEXT_CODE)                return ::EnumToString((ENUM_SYMBOL_EVENT)code);
+   if(code<STRATEGY_TRADE_EVENTS_NEXT_CODE)            return ::EnumToString((ENUM_STRATEGY_TRADE_EVENT)code);
+   if(code<RISK_SETTING_EVENTS_NEXT_CODE)              return ::EnumToString((ENUM_RISK_SETTING_EVENT)code);
+   if(code<RISK_EVENTS_NEXT_CODE)                      return ::EnumToString((ENUM_RISK_EVENT)code);
+   return "custom "+(string)code;
+  }
+void DebugBusReport(void)
+  {
+   const ulong now=::GetTickCount64();
+   if(g_bus_report_ms==0)
+      g_bus_report_ms=now;
+   if(now-g_bus_report_ms<DEBUG_BUS_REPORT_SEC*1000)
+      return;
+   ::Print("MY DEBUG DispatchBusEvents: ",(now-g_bus_report_ms)/1000," s, ",g_bus_drains," drains, ",g_bus_events," events of the bus (",g_bus_all_us/1000," ms), the most in one drain ",
+           g_bus_max_events," events, the longest drain ",g_bus_max_drain_us/1000," ms");
+   //--- one line for each event: its count, its time, then its children that took DEBUG_BUS_CHILD_MIN_MS or more
+   for(int i=0;i<::ArraySize(g_bus_name);i++)
+     {
+      string text="MY DEBUG DispatchEvent: "+g_bus_name[i]+" x"+(string)g_bus_name_count[i]+" "+::DoubleToString(g_bus_name_us[i]/1000.0,1)+" ms:";
+      const string prefix=g_bus_name[i]+" ";
+      for(int k=0;k<::ArraySize(g_bus_pair);k++)
+         if(::StringFind(g_bus_pair[k],prefix)==0 && g_bus_pair_us[k]/1000.0>=DEBUG_BUS_CHILD_MIN_MS)
+            text+=" "+::StringSubstr(g_bus_pair[k],::StringLen(prefix))+"="+::DoubleToString(g_bus_pair_us[k]/1000.0,1);
+      ::Print(text);
+     }
+   g_bus_report_ms=now;
+   g_bus_drains=0;
+   g_bus_events=0;
+   g_bus_max_events=0;
+   g_bus_all_us=0;
+   g_bus_max_drain_us=0;
+   ::ArrayResize(g_bus_name,0);
+   ::ArrayResize(g_bus_name_count,0);
+   ::ArrayResize(g_bus_name_us,0);
+   ::ArrayResize(g_bus_pair,0);
+   ::ArrayResize(g_bus_pair_count,0);
+   ::ArrayResize(g_bus_pair_us,0);
   }
 //+------------------------------------------------------------------+
 //| New in V5: the bus of the EA. The children send their events with |
@@ -365,8 +468,22 @@ void DispatchBusEvents(void)
    long lparam;
    double dparam;
    string sparam;
+   const ulong debug_start=::GetMicrosecondCount();   // MY DEBUG: the load of the bus
+   ulong debug_events=0;
    while((m_ChartObj==NULL || m_ChartObj.IsAvailable()) && CBaseObj::EventNext(id,lparam,dparam,sparam))
+     {
+      const ulong debug_event_start=::GetMicrosecondCount();
       DispatchEvent(CHARTEVENT_CUSTOM+id,lparam,dparam,sparam);   // an event a child sends while it handles one goes at the end of the queue: taken here too
+      debug_events++;
+      g_bus_all_us+=::GetMicrosecondCount()-debug_event_start;
+     }
+   //--- New 2026-11-26: the markers the events of this drain asked are drawn once (14 events at a new bar: was one SyncMarkers each)
+   m_BarMarkerCollection.SyncPending();
+   g_bus_drains++;
+   g_bus_events+=debug_events;
+   g_bus_max_events=::MathMax(g_bus_max_events,debug_events);
+   g_bus_max_drain_us=::MathMax(g_bus_max_drain_us,::GetMicrosecondCount()-debug_start);
+   DebugBusReport();
   }
 //+------------------------------------------------------------------+
 //| An event of the chart or of the bus to every child               |
@@ -378,18 +495,25 @@ void DebugDispatchStep(const string child,const int id,const string sparam)
   {
    const ulong now=::GetMicrosecondCount();
    if(id>=CHARTEVENT_CUSTOM && g_dispatch_mark>0 && (now-g_dispatch_mark)/1000>=DEBUG_DISPATCH_SLOW_MS)
-      ::Print("MY DEBUG DispatchEvent: custom ",id-CHARTEVENT_CUSTOM," ",sparam," -> ",child," took ",(now-g_dispatch_mark)/1000," ms");
-   g_dispatch_mark=now;
+      ::Print("MY DEBUG DispatchEvent: custom ",id-CHARTEVENT_CUSTOM," ",g_bus_event," ",sparam," -> ",child," took ",(now-g_dispatch_mark)/1000," ms");
+   if(id>=CHARTEVENT_CUSTOM && g_dispatch_mark>0)
+      DebugBusAdd(g_bus_pair,g_bus_pair_count,g_bus_pair_us,g_bus_event+" "+child,now-g_dispatch_mark);   // MY DEBUG: the load of the bus
+   g_dispatch_mark=::GetMicrosecondCount();   // after the debug: its time goes to no child
   }
 void DispatchEvent(const int id,const long lparam,const double dparam,const string sparam)
   {
+   const ulong debug_start=::GetMicrosecondCount();   // MY DEBUG: the load of the bus
+   if(id>=CHARTEVENT_CUSTOM)
+      g_bus_event=DebugEventName(id);
    g_dispatch_mark=::GetMicrosecondCount();
    if(m_ChartObj!=NULL)
       m_ChartObj.OnChartEvent(id,lparam,dparam,sparam);   // the chart changed: its indicators are compared; the terminal made the objects of a trade: the panel goes back on top
    DebugDispatchStep("m_ChartObj",id,sparam);
-   if(id>=CHARTEVENT_CUSTOM)
-      Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);   // MY DEBUG: the events of the controls and of the managers, not the mouse
-   g_dispatch_mark=::GetMicrosecondCount();
+   //--- MY DEBUG: the events of the controls and of the managers, not the mouse; not the ones of each tick (the file is written at each call:
+   //--- 200-350 ms in 10 s, MY DEBUG DispatchEvent 2026-11-26)
+   if(id>=CHARTEVENT_CUSTOM && id!=CHARTEVENT_CUSTOM+TICK_EVENT_NEW && id!=CHARTEVENT_CUSTOM+ACCOUNT_EVENT_PROPERTY_CHANGED)
+      Breadcrumb("OnChartEvent: custom "+(string)(id-CHARTEVENT_CUSTOM)+" "+sparam);
+   DebugDispatchStep("Breadcrumb",id,sparam);   // MY DEBUG: the file of the Breadcrumb is written at each event: its time is told too
    m_AccountsCollection.OnChartEvent(id,lparam,dparam,sparam);   // a term of the account changed: its row of the table accounts
    DebugDispatchStep("m_AccountsCollection",id,sparam);
    m_StrategyManager.OnChartEvent(id,lparam,dparam,sparam);   // New in V5: a template came or went, a slot changed: available of the strategies it touches
@@ -424,4 +548,6 @@ void DispatchEvent(const int id,const long lparam,const double dparam,const stri
    DebugDispatchStep("m_KronosForecastCollection",id,sparam);
    m_SymbolTFManager.OnChartEvent(id,lparam,dparam,sparam,m_ChartObj);
    DebugDispatchStep("m_SymbolTFManager",id,sparam);
+   if(id>=CHARTEVENT_CUSTOM)
+      DebugBusAdd(g_bus_name,g_bus_name_count,g_bus_name_us,g_bus_event,::GetMicrosecondCount()-debug_start);   // MY DEBUG: the load of the bus
   }

@@ -5,8 +5,8 @@
 //| the helpers every table of the window uses (CreateTable_Trade,   |
 //| FormatTradeRows), and the layout of the columns, kept in a file  |
 //| of the layout folder, FillTable_Trade (a query on the table      |
-//| Orders). The tables of the tabs: the History and the Open tab    |
-//| have their own module, the others come with their model          |
+//| Orders). The tables of the tabs: the History, the Open and the   |
+//| By Basket tab have their own module, the others come with theirs |
 //+------------------------------------------------------------------+
 #ifndef CGUIPANNEL_WINDOW_TRADEMANAGER_MQH
 #define CGUIPANNEL_WINDOW_TRADEMANAGER_MQH
@@ -14,7 +14,7 @@
  //--- The tabs of the window, under its caption: the header on top, the content fills what is left
  bool CGUIPannel::CreateTabs_TradeManage(void)
   {
-   string tabs_names[TAB_TRADE_TOTAL]={"By Symbol","Open","Pending","History"};   // the order of ENUM_TAB_TRADE
+   string tabs_names[TAB_TRADE_TOTAL]={"By Symbol","Open","By Basket","Pending","History"};   // the order of ENUM_TAB_TRADE
    m_tabs_tradeManage.PositionMode(TABS_TOP);
    m_tabs_tradeManage.AutoXResizeMode(true);
    m_tabs_tradeManage.AutoYResizeMode(true);
@@ -111,7 +111,7 @@
       return false;
    if(!CreateTabs_TradeManage())
       return false;
-   if(!this.CreateTable_TradeManagerTabHistory() || !this.CreateTable_TradeManagerPosition())   // the tabs that have a table: History, Open
+   if(!this.CreateTable_TradeManagerTabHistory() || !this.CreateTable_TradeManagerPosition() || !this.CreateTable_TradeManagerOpenPositionByBasket())   // the tabs that have a table: History, Open, By Basket
       return false;
    m_tabs_tradeManage.SelectTab(TAB_TRADE_HISTORY_POSITION);   // the first tab with a table
    m_btn_table_columns.Hide();   // it is there for the tabs that have a table: the window shows it when it opens
@@ -124,6 +124,8 @@
       return GetPointer(m_table_trade_history);
    if(tab==TAB_TRADE_OPEN_POSITION)
       return GetPointer(m_table_open_position);
+   if(tab==TAB_TRADE_OPEN_POSITION_BY_BASKET)
+      return GetPointer(m_table_open_position_by_basket);
    return NULL;
   }
  //--- The file of the columns the user chose for the table of a tab
@@ -273,6 +275,44 @@
      }
    return rows;
   }
+ //--- New 2026-11-26: the table shows the same rows as before (keys[] = shown_keys[]): only the values are set, a cell whose value did not change
+ //--- is not drawn (CTableCell::SetValue, CTableView::Update), the profit takes its colour. False: the rows changed, the caller fills and draws the
+ //--- whole table (then shown_keys[] = keys[]). Was: the whole table filled, formatted and rebuilt at each change of the profit (25-43 ms an event
+ //--- with 11 positions, MY DEBUG 2026-11-26; Avoid Bug of skills\rules\2. CodingRule.md: keep what is there, change only what changed)
+ bool CGUIPannel::UpdateTable_TradeCells(CTable &table,const string &cells[],const int rows,const int columns,const string &keys[],string &shown_keys[],
+                                         const int direction_column,const int profit_column)
+  {
+   bool same=(::ArraySize(shown_keys)==rows);
+   for(int row=0;row<rows && same;row++)
+      same=(shown_keys[row]==keys[row]);
+   if(!same)
+     {
+      ::ArrayResize(shown_keys,rows);
+      for(int row=0;row<rows;row++)
+         shown_keys[row]=keys[row];
+      return false;
+     }
+   for(int row=0;row<rows;row++)
+      for(int c=0;c<columns;c++)
+        {
+         if(c==direction_column)
+            continue;   // a picture (FormatTradeRows), its text is ""
+         const string value=cells[row*columns+c];
+         if(c==profit_column)
+           {
+            CTableCellView *profit=table.CellView(profit_column,row);
+            CTableCell *cell=table.Cell(profit_column,row);
+            if(profit!=NULL && cell!=NULL && cell.ValueS()!=value)
+              {
+               const double amount=::StringToDouble(value);
+               profit.TextColor(value=="" || amount==0 ? clrNONE : (amount>0 ? M_COLOR_PROFIT : M_COLOR_LOSS));   // as FormatTradeRows
+              }
+           }
+         table.SetValue(c,row,value);   // the same value: nothing to draw
+        }
+   table.Update(true);
+   return true;
+  }
  //--- The window opens with the rows of the tables as the history of the account has them now; the Columns button is there when the tab has a table
  void CGUIPannel::OpenWindow_TradeManage(void)
   {
@@ -290,6 +330,7 @@
       return;
    this.FillTable_TradeManagerTabHistory();
    this.FillTable_TradeManagerPosition();
+   this.FillTable_TradeManagerOpenPositionByBasket();
    ::ChartRedraw(this.m_chart_id);
   }
  //+------------------------------------------------------------------+
@@ -349,6 +390,25 @@
          CGElement *columns=table.ColumnsWindow();
          if(columns!=NULL)
             columns.BringToTop();   // its window is made on the first call: on top, or the window of the table covers it
+         return;
+        }
+      //--- New 2026-11-27: Manage / Close of a row of the By Basket tab: its key (shown rows) is "symbol BUY" / "symbol SELL"
+      if(lparam==m_table_open_position_by_basket.ObjectID())
+        {
+         int column,row;
+         if(!m_table_open_position_by_basket.CellIndexes(sparam,column,row) || (column!=COL_B_MANAGE && column!=COL_B_CLOSE) ||
+            row<0 || row>=::ArraySize(m_shown_open_position_by_basket))
+            return;
+         const string key=m_shown_open_position_by_basket[row];
+         const int space=::StringFind(key," ");
+         if(space<1)
+            return;
+         const string symbol=::StringSubstr(key,0,space);
+         const bool buy=(::StringSubstr(key,space+1)=="BUY");
+         if(column==COL_B_MANAGE)
+            this.ManageBasket(symbol,buy);
+         else
+            this.EventSend((ushort)TRADE_SETUP_EVENT_CLOSE_BASKET,(buy ? SIGNAL_DIRECTION_BUY : SIGNAL_DIRECTION_SELL),0,symbol);
          return;
         }
       //--- The Detail button of a row: the window of the order opens with what happened to its position. The table says it is its Detail column

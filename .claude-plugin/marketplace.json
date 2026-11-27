@@ -13,7 +13,7 @@
     "repository": "https://github.com/nguyentuananh921/MT5-Dev",
     "license": "MIT",
     "keywords": ["mql5", "mt5", "trading", "python", "quant"],
-    "skills": ["./skills"]
+    "skills": ["./skills", "./skills/Addon/.claude/skills"]
    }
   ]
 }

@@ -56,6 +56,10 @@
     int               m_width;                // the width they take, the scroll at its right end (0: to the right of the tab)
     int               m_toggle_x[];           // the x of each toggle of a header, from the indent of the body (the count of them is the number of toggles of a header)
     int               m_toggle_total;
+    int               m_header_width;         // the width of the header of the next AddSection with no toggle (M_SECTION_HEADER_WIDTH first)
+    bool              m_nested;               // the first section holds the others: they show (indented) under its body only while it is open
+    bool              m_accordion;            // nested: one section in the first one open at a time
+    int               m_pin_x;                // the header of the first section stays on the first line at this x (WRONG_VALUE: not pinned); the rest scrolls under it
     int               m_controls_made;        // for the names of the check boxes
     CSection         *Section(const int section);
     bool              IsHeaderOpen(const long value);
@@ -66,7 +70,7 @@
     void              StyleSwitch(CButton *button);
    //--- A switch with no text: the icon of the flag it stands for at the left, then the switch (red OFF, green ON). Call it before Create
     void              FlagSwitch(CButtonTriggered *button,const uint flag_icon);
-                      CSections(void) : m_tabs(NULL),m_tab(WRONG_VALUE),m_top_offset(0),m_left_offset(0),m_width(0),m_toggle_total(0),m_controls_made(0) {}
+                      CSections(void) : m_tabs(NULL),m_tab(WRONG_VALUE),m_top_offset(0),m_left_offset(0),m_width(0),m_toggle_total(0),m_header_width(M_SECTION_HEADER_WIDTH),m_nested(false),m_accordion(false),m_pin_x(WRONG_VALUE),m_controls_made(0) {}
                      ~CSections(void) {}
    //--- The x of each column of the bodies, from the indent
     void              SetColumns(const int &x[])  { ::ArrayCopy(m_column_x,x); }
@@ -77,6 +81,18 @@
    //--- The sections start this far right of the left of the tab and take this width (0: to the right of the tab): two of them side by side
     void              SetLeftOffset(const int offset)                         { m_left_offset=offset; }
     void              SetWidth(const int width)                               { m_width=width; }
+   //--- New in V5: the width of the headers with no toggle of the next AddSection (the first header shares a row with the owner's buttons). Call it before AddSection
+    void              SetHeaderWidth(const int width)                         { m_header_width=(width>0 ? width : M_SECTION_HEADER_WIDTH); }
+   //--- New in V5: the first section holds the others (its header opens and closes them all, they are indented under its body)
+    void              SetNested(const bool nested)                            { m_nested=nested; }
+   //--- New in V5: nested, one section in the first one open at a time (opening one closes the others)
+    void              SetAccordion(const bool accordion)                      { m_accordion=accordion; }
+   //--- New in V5: the header of the first section stays on the first line at this x from the left offset (several sections share that line, as
+   //--- the headers of a menu); the body and the other sections scroll under it from the left offset
+    void              SetPinnedHeader(const int x)                            { m_pin_x=x; }
+   //--- New in V5: a section opened or closed by the owner (one closes when another opens); then Arrange
+    void              SetOpened(const int section,const bool opened);
+    bool              IsOpened(const int section);
    //--- The rows of the body of a section go (their controls freed): the owner makes them again
     void              ClearBody(const int section);
    //--- The rows that hold a control of this value go (their controls freed), the rows under them move up: one template (one type) went
@@ -103,6 +119,8 @@
    //--- What the model holds goes into the controls
     void              SetToggle(const int section,const int which,const bool on);
     void              SetBodyState(const long value,const int slot,const bool on);
+   //--- The control of the bodies of this slot that edits this parameter (NULL: none): the owner puts the value of the model in it
+    CGElement        *BodyControl(const int slot,const string param);
    //--- The name of a section on its header (what is chosen in it)
     void              SetHeaderText(const int section,const string text);
     int               SectionsTotal(void) const { return this.ChildrenTotal(); }
@@ -272,7 +290,7 @@
    header.SetState(opened);
    m_tabs.AddToElementsArray(m_tab,header);
    //--- Change in V5: the header ends where its first toggle starts (a click on the toggle does not open / close the section)
-   int header_width=M_SECTION_HEADER_WIDTH;
+   int header_width=m_header_width;
    if(toggles>0)
       header_width=::MathMin(header_width,M_SECTION_BODY_INDENT+m_toggle_x[0]);
    if(!header.Create(m_chart_id,m_subwindow,m_name+"_Header"+(string)index,0,0,header_width,M_CONTROL_HEIGHT))
@@ -438,15 +456,36 @@
       return;   // another tab is open, or the window is hidden (born hidden: nothing is shown before it)
    const int x=m_tabs.X()+M_CONTROL_BORDER_GAP+m_left_offset;
    const int right=(m_width>0 ? x+m_width : m_tabs.X()+m_tabs.Width()-1);
-   const int top=m_tabs.Y()+M_CONTROL_BORDER_GAP+m_top_offset;
+   const int line=m_tabs.Y()+M_CONTROL_BORDER_GAP+m_top_offset;   // the first line: a pinned header stays on it
+   const bool pinned=(m_pin_x!=WRONG_VALUE);
+   const int top=(pinned ? line+M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP : line);   // what scrolls starts here
    const int bottom=m_tabs.Y()+m_tabs.Height()-M_CONTROL_BORDER_GAP;
    const int total=this.ChildrenTotal();
+   //--- Nested: the first section holds the others, they show under its body (indented) only while it is open
+   CSection *first=this.Section(0);
+   const bool first_open=(first!=NULL && first.m_header.State());
+   //--- Pinned: the header of the first section on the first line at its x, with its toggles; not scrolled
+   if(pinned && first!=NULL)
+     {
+      first.m_header.Move(x+m_pin_x,line);
+      if(!first.m_header.IsVisible())
+         first.m_header.Show();
+      for(int k=0;k<::ArraySize(first.m_toggle);k++)
+        {
+         first.m_toggle[k].Move(x+m_pin_x+M_SECTION_BODY_INDENT+m_toggle_x[k],line);
+         if(!first.m_toggle[k].IsVisible())
+            first.m_toggle[k].Show();
+        }
+     }
    //--- The height of all the sections: the scroll gets it in rows
    int total_h=M_CONTROL_BORDER_GAP;
    for(int s=0;s<total;s++)
      {
       CSection *item=this.Section(s);
-      total_h+=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
+      if(m_nested && s>0 && !first_open)
+         continue;
+      if(!(pinned && s==0))
+         total_h+=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
       if(item!=NULL && item.m_header.State())
         {
          int offset[];
@@ -466,23 +505,30 @@
       CSection *item=this.Section(s);
       if(item==NULL)
          continue;
-      bool in_view=(y>=top && y+M_CONTROL_HEIGHT<=bottom);
-      item.m_header.Move(x,y);
-      for(int k=0;k<::ArraySize(item.m_toggle);k++)
+      const bool folded=(m_nested && s>0 && !first_open);   // in the first one, closed: hidden, takes no room
+      const bool pin_head=(pinned && s==0);                  // placed above, on the first line
+      const int sx=x+(m_nested && s>0 ? M_SECTION_BODY_INDENT : 0);
+      bool in_view=(!folded && y>=top && y+M_CONTROL_HEIGHT<=bottom);
+      for(int k=0;k<::ArraySize(item.m_toggle) && !pin_head;k++)
         {
          CButtonTriggered *toggle=item.m_toggle[k];
-         toggle.Move(x+M_SECTION_BODY_INDENT+m_toggle_x[k],y);
+         toggle.Move(sx+M_SECTION_BODY_INDENT+m_toggle_x[k],y);
          if(in_view && !toggle.IsVisible())
             toggle.Show();
          else if(!in_view && toggle.IsVisible())
             toggle.Hide();
         }
-      if(in_view && !item.m_header.IsVisible())
-         item.m_header.Show();
-      else if(!in_view && item.m_header.IsVisible())
-         item.m_header.Hide();
-      y+=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
-      bool opened=item.m_header.State();
+      if(!pin_head)
+        {
+         item.m_header.Move(sx,y);
+         if(in_view && !item.m_header.IsVisible())
+            item.m_header.Show();
+         else if(!in_view && item.m_header.IsVisible())
+            item.m_header.Hide();
+        }
+      if(!folded && !pin_head)
+         y+=M_CONTROL_HEIGHT+M_CONTROL_BORDER_GAP;
+      bool opened=(!folded && item.m_header.State());
       int offset[];
       int visible=this.VisibleRows(item,offset);
       for(int r=0;r<item.ChildrenTotal();r++)
@@ -497,7 +543,7 @@
             bool waits=(row.m_owned[i] && !this.IsHeaderOpen(row.m_value[i]));
             if(opened && !waits && yc>=top && yc+M_CONTROL_HEIGHT<=bottom)
               {
-               int xc=x+M_SECTION_BODY_INDENT+(row.m_column[i]<::ArraySize(m_column_x) ? m_column_x[row.m_column[i]] : row.m_column[i]*M_SECTION_COLUMN_WIDTH);
+               int xc=sx+M_SECTION_BODY_INDENT+(row.m_column[i]<::ArraySize(m_column_x) ? m_column_x[row.m_column[i]] : row.m_column[i]*M_SECTION_COLUMN_WIDTH);
                if(control.X()!=xc || control.Y()!=yc)
                   control.Move(xc,yc);
                if(!control.IsVisible())
@@ -529,9 +575,15 @@
      }
    if(id!=CHARTEVENT_CUSTOM+CLICK_EVENT_BUTTON)
       return;
-   //--- A header of a section, or the header of a type: its body opens or closes and the sections under it move
-   if(this.SectionOfHeader(lparam)!=WRONG_VALUE)
+   //--- A header of a section, or the header of a type: its body opens or closes and the sections under it move. Accordion: a section in the
+   //--- first one opened closes the other ones in it
+   const int header=this.SectionOfHeader(lparam);
+   if(header!=WRONG_VALUE)
      {
+      if(m_accordion && m_nested && header>0 && this.IsOpened(header))
+         for(int s=1;s<this.ChildrenTotal();s++)
+            if(s!=header)
+               this.SetOpened(s,false);
       this.Arrange();
       return;
      }
@@ -620,6 +672,34 @@
               }
         }
      }
+  }
+ CGElement *CSections::BodyControl(const int slot,const string param)
+  {
+   for(int s=0;s<this.ChildrenTotal();s++)
+     {
+      CSection *item=this.Section(s);
+      for(int r=0;item!=NULL && r<item.ChildrenTotal();r++)
+        {
+         CSectionRow *row=dynamic_cast<CSectionRow *>(item.Child(r));
+         for(int i=0;row!=NULL && i<row.ControlsTotal();i++)
+            if(row.m_slot[i]==slot && row.m_param[i]==param)
+               return row.m_control[i];
+        }
+     }
+   return NULL;
+  }
+ void CSections::SetOpened(const int section,const bool opened)
+  {
+   CSection *item=this.Section(section);
+   if(item==NULL || item.m_header==NULL || item.m_header.State()==opened)
+      return;
+   item.m_header.SetState(opened);
+   item.m_header.Draw(false);
+  }
+ bool CSections::IsOpened(const int section)
+  {
+   CSection *item=this.Section(section);
+   return (item!=NULL && item.m_header!=NULL && item.m_header.State());
   }
  void CSections::SetHeaderText(const int section,const string text)
   {
